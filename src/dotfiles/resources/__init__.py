@@ -35,10 +35,10 @@ from dotfiles.session import Session
 class Verdict(enum.StrEnum):
     """What one item turned out to be.
 
-    `UNKNOWN` is first-class because the alternative is worse than useless:
-    `github-release-installer.sh` falls through an empty version string into
-    "will reinstall" today, which is the wrong answer with no way to tell it from
-    a measured one. Unverified is not permission.
+    `UNKNOWN` is first-class because the alternative is worse than useless: the
+    shell library this replaced fell through an empty version string into "will
+    reinstall", which is the wrong answer with no way to tell it from a measured
+    one. Unverified is not permission.
     """
 
     MATCHED = 'matched'

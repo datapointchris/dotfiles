@@ -103,9 +103,17 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 ReinstallOption = typer.Option(False, '--reinstall', help='Reinstall even when already present')
 OfflineOption = typer.Option(False, '--offline', help='Install from a staged offline bundle')
+OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 
 
-def _apply_phases(resource: str, machine: str | None, reinstall: bool, offline: bool, source: str | None) -> None:
+def _apply_phases(
+    resource: str,
+    machine: str | None,
+    reinstall: bool,
+    offline: bool,
+    source: str | None,
+    owner: str | None = None,
+) -> None:
     """Run the install phases this resource owns, or just the ones `--source` names.
 
     A section names a provider, and a phase declares which providers it installs,
@@ -117,6 +125,11 @@ def _apply_phases(resource: str, machine: str | None, reinstall: bool, offline: 
 
     Narrowing *below* a section — one tool out of `github_releases` — is still
     the resolver's, and still absent.
+
+    `--owner` is here because `update.sh --mine` reaches the converted phases
+    through this: `install/phases.sh` filters the phase list by its `owner_aware`
+    column, but a phase that runs Python and cannot be told whose entries were
+    asked for narrows nothing and updates the lot.
     """
     from dotfiles import apply
     from dotfiles import resolve
@@ -130,7 +143,14 @@ def _apply_phases(resource: str, machine: str | None, reinstall: bool, offline: 
         providers = frozenset({provider.name})
 
     raise typer.Exit(
-        apply.apply_machine(only=frozenset({resource}), machine=machine, reinstall=reinstall, offline=offline, providers=providers)
+        apply.apply_machine(
+            only=frozenset({resource}),
+            machine=machine,
+            reinstall=reinstall,
+            offline=offline,
+            owner=owner,
+            providers=providers,
+        )
     )
 
 
@@ -149,9 +169,10 @@ def packages_apply(
     source: str = SourceOption,
     reinstall: bool = ReinstallOption,
     offline: bool = OfflineOption,
+    owner: str = OwnerOption,
 ) -> None:
     """Install every declared package that is missing."""
-    _apply_phases('packages', machine, reinstall, offline, source)
+    _apply_phases('packages', machine, reinstall, offline, source, owner)
 
 
 @packages_app.command('list')

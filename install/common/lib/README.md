@@ -48,20 +48,6 @@ FAILURE_MANUAL_END
 
 This output goes to stderr and is captured by `run-installer.sh` for centralized failure logging.
 
-### github-release-installer.sh
-
-Download/extract/install helpers for a binary published on a GitHub release.
-
-**Only the custom installers use it now.** The 23 `github_releases` entries went to
-`src/dotfiles/providers/`, which is where the checksum policy, the archive shapes and the
-private-repo asset endpoint live — see `docs/architecture/github-releases.md`. What remains here
-serves `custom-installers/terraform-ls.sh`, whose release is not on GitHub at all, and it goes when
-the custom installers convert.
-
-Do not add a new consumer. The Python engine is the one that is tested against live releases.
-
-**Functions:** `rg '^[a-z_]+\(\)' install/common/lib/github-release-installer.sh`
-
 ### version-helpers.sh
 
 Version comparison and GitHub API lookups shared by the release installers.
@@ -132,11 +118,10 @@ eight syncer releases.
 These libraries provide utilities FOR installer scripts:
 
 ```yaml
-installer script (github-releases/lazygit.sh)
+installer script (language-tools/go-tools.sh)
     ↓ sources
 common/lib/ utilities
     - failure-logging.sh (error reporting)
-    - github-release-installer.sh (GitHub release helpers)
     - version-helpers.sh (version comparison, GitHub API)
     - installed-versions.sh (what is installed right now, for update reporting)
     - uv-git-tools.sh (release-pinned installs of the git-hosted Python CLIs)

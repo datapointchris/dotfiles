@@ -18,16 +18,16 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 ```bash
 # Parent wrapper (install.sh)
-run_installer "install/common/custom-installers/bats.sh" "bats" || true
-run_installer "install/common/custom-installers/mount-s3.sh" "mount-s3" || true
-# ... continues even if bats fails
+run_installer "install/common/language-tools/go-tools.sh" "go-tools" || true
+run_installer "install/common/plugins/tmux-plugins.sh" "tmux-plugins" || true
+# ... continues even if go-tools fails
 display_failure_summary  # Shows all failures at end
 ```
 
-The release installers this was first written against are Python now
-(`src/dotfiles/providers/ghrelease.py`), and the pattern survived the move
-unchanged: each install returns a `Result` rather than raising, and the phase
-runs the whole list before reporting.
+The release and custom installers this was first written against are Python now
+(`src/dotfiles/providers/`), and the pattern survived the move unchanged: each
+install returns a `Result` rather than raising, and the phase runs the whole list
+before reporting.
 
 ## Key Learnings
 

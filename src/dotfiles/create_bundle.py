@@ -289,10 +289,11 @@ def download(url: str, destination: Path) -> None:
 
 
 def run_installer_script(script: Path, *args: str) -> list[tuple[str, str, str]]:
-    """Ask an installer script for its download URLs.
+    """Ask an installer script for its download URLs, as `name|version|url` lines.
 
-    These scripts stay bash — they are a sequence of shell commands and gain
-    nothing from being anything else. Each line is name|version|url.
+    One caller left: `uv.sh`, which bootstraps the interpreter this package runs
+    on and so cannot be a function in it. Everything else that answered this
+    question is Python now, and reads the declaration or a provider directly.
     """
     result = subprocess.run(
         ['bash', str(script), *args],
@@ -833,27 +834,30 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
 
     Language managers are a hardcoded list because they are bootstrap
     infrastructure, outside the custom_installers model in packages.yml. Custom
-    installers opt in with bundle_install_script: true.
+    installers opt in with bundle_install_script: true, and their URL is read from
+    the declaration rather than asked of a script over a `name|version|url` pipe:
+    the script that answered that question is now a function, and the pipe was a
+    second place for the bundler and the installer to disagree about which file to
+    stage.
 
     These are never cached: every one is served from an unversioned URL, so a
     URL-keyed hit would pin whatever was current the first time.
     """
     log.info('Downloading install scripts...')
 
-    scripts = [paths.INSTALL_DIR / 'common' / 'language-managers' / 'uv.sh']
-    custom_dir = paths.INSTALL_DIR / 'common' / 'custom-installers'
+    declaration = catalog.load()
     for tool in parse_packages.filter_custom_installers_by_manifest(packages, manifest, filter_field='bundle_install_script'):
-        script = custom_dir / f'{tool}.sh'
-        if not script.is_file():
-            raise BundleError(f"packages.yml custom_installers entry '{tool}' has no script at {script}")
-        scripts.append(script)
+        entry = declaration.find('custom_installers', tool)
+        if not isinstance(entry, catalog.CustomInstaller) or not entry.install_url:
+            raise BundleError(f"packages.yml custom_installers entry '{tool}' opts into bundling but declares no install_url")
+        log.info('  %s...', tool)
+        download(entry.install_url, bundle.scripts / f'{tool}-install.sh')
+        bundle.record('script', tool, 'latest', f'{tool}-install.sh')
 
-    for script in scripts:
-        name, version, url = run_installer_script(script, '--print-url')[0]
-        filename = f'{name}-install.sh'
-        log.info('  %s...', name)
-        download(url, bundle.scripts / filename)
-        bundle.record('script', name, version, filename)
+    name, version, url = run_installer_script(paths.INSTALL_DIR / 'common' / 'language-managers' / 'uv.sh', '--print-url')[0]
+    log.info('  %s...', name)
+    download(url, bundle.scripts / f'{name}-install.sh')
+    bundle.record('script', name, version, f'{name}-install.sh')
 
 
 def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.date | None = None) -> Path:

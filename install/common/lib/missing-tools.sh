@@ -20,18 +20,6 @@ record_missing_tool() {
   printf '%s|%s\n' "$tool" "$phase" >>"$MISSING_LOG"
 }
 
-# Ends an installer's --update run for a tool that is not installed.
-#
-# Each caller keeps its own presence test, because they genuinely differ: a
-# binary on PATH for most, a git checkout for the sourced libraries, and a
-# binary whose name is not the entry's name for awscli and claude-code.
-skip_update_for_absent_tool() {
-  local tool="$1" phase="${2:-custom-installers}"
-  log_info "$tool not installed — skipping update"
-  record_missing_tool "$tool" "$phase"
-  exit 0
-}
-
 # Tools that are declared for this machine but absent, in discovery order.
 show_missing_summary() {
   [[ -n "${MISSING_LOG:-}" && -s "${MISSING_LOG:-}" ]] || return 0

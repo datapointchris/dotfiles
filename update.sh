@@ -400,31 +400,28 @@ update_npm_globals() {
   report_snapshot_changes "$before" "$after" "npm global packages already at latest"
 }
 
-# The one phase with no bash left to run. `apply` converges a release rather than
-# installing only what is absent, so narrowing it to this section is the whole of
-# what the per-tool loop here used to do — and it is the shape the rest of this
-# file takes as each phase converts.
+# The two phases with no bash left to run. `apply` converges rather than installing
+# only what is absent, so narrowing it to one section is the whole of what the
+# per-tool loops here used to do — and it is the shape the rest of this file takes
+# as each phase converts.
+#
+# --owner rather than PACKAGE_OWNER: the bash tool scripts read that variable out
+# of the environment, but a phase that runs the CLI has to be told, and a phase
+# selected by --mine that then updates every tool is worse than one that was
+# never selected.
+converge_section() {
+  local section="$1"
+  dotfiles_python -m dotfiles.main packages apply --source "$section" ${PACKAGE_OWNER:+--owner "$PACKAGE_OWNER"}
+}
+
 update_github_releases() {
   print_section "Updating GitHub Release Tools"
-  dotfiles_python -m dotfiles.main packages apply --source github_releases
+  converge_section github_releases
 }
 
 update_custom_installers() {
   print_section "Updating Custom Distribution Tools"
-  local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
-  local tool script count=0
-  while IFS= read -r tool; do
-    [[ -z "$tool" ]] && continue
-    count=$((count + 1))
-    script="$custom_installers/${tool}.sh"
-    if [[ ! -f "$script" ]]; then
-      log_warning "No installer script for custom installer: $tool (packages verify should have caught this)"
-      continue
-    fi
-    run_installer "$script" "$tool" --update
-  done < <(parse_packages --type=custom)
-  [[ $count -eq 0 ]] && log_info "no custom distribution tools selected"
-  return 0
+  converge_section custom_installers
 }
 
 update_shell_plugins() {

@@ -52,6 +52,7 @@ from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
 from dotfiles.resources import plugins
@@ -292,15 +293,6 @@ def _run_scripts(context: Run, scripts: list[Path], *, tier: str = '') -> bool:
     return all([run_installer(context, script, script.stem, env=environment) for script in scripts])
 
 
-def _run_directory_phase(context: Run, kind: str, directory: Path, title: str) -> bool:
-    """The phases that are a directory of per-tool scripts rather than one script."""
-    tools = context.declared(kind)
-    if not tools:
-        return True
-    heading(title)
-    return all([run_installer(context, directory / f'{tool}.sh', tool) for tool in tools])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The phases
 # ─────────────────────────────────────────────────────────────────────────────
@@ -437,18 +429,18 @@ def _install_release(context: Run, declaration: catalog.Catalog, tool: str, targ
 
     tag = ghrelease.resolve_tag(entry, offline=context.offline)
     if tag is None:
-        return _release_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
+        return _install_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
 
     if not context.reinstall and _already_at(entry, tag):
         err_console.print(f'{tool} already at {tag}')
         restored = ghrelease.ensure_companions(entry, target, tag, offline=context.offline)
-        return True if restored.ok else _release_failed(context, tool, restored.detail)
+        return True if restored.ok else _install_failed(context, tool, restored.detail)
 
     result = ghrelease.install(entry, target, offline=context.offline, tag=tag)
     if result.ok:
         err_console.print(f'[green]✓[/] {result.detail}')
         return True
-    return _release_failed(context, tool, result.detail)
+    return _install_failed(context, tool, result.detail)
 
 
 def _already_at(entry: catalog.GithubRelease, tag: str) -> bool:
@@ -464,7 +456,7 @@ def _already_at(entry: catalog.GithubRelease, tag: str) -> bool:
     return reported is not None and versions.at_least(reported, tag) is True
 
 
-def _release_failed(context: Run, tool: str, detail: str) -> bool:
+def _install_failed(context: Run, tool: str, detail: str) -> bool:
     warn(f'{tool} installation failed: {detail}')
     with context.failures_log.open('a') as log:
         log.write(f'{tool}: {detail}\n')
@@ -472,7 +464,39 @@ def _release_failed(context: Run, tool: str, detail: str) -> bool:
 
 
 def _custom_installers(context: Run) -> bool:
-    return _run_directory_phase(context, 'custom', COMMON / 'custom-installers', 'Custom distribution tools')
+    """The nine vendors that ship themselves, each converged by its own function.
+
+    Every one runs even after a failure, and for the same reason the release phase
+    does: nine unrelated vendors are nine independent chances to be having a bad
+    day, and a machine that stopped at the first would install none of the eight
+    behind it.
+    """
+    tools = context.declared('custom')
+    if not tools:
+        return True
+    heading('Custom distribution tools')
+
+    try:
+        declaration = context.declaration
+    except catalog.CatalogError as refused:
+        warn(f'cannot read the declaration, so no custom installer can run: {refused}')
+        return False
+
+    target = coordinates.target_for(coordinates.PLATFORM_BUNDLES[context.platform])
+    return all([_run_custom_installer(context, declaration, tool, target) for tool in tools])
+
+
+def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str, target: coordinates.Target) -> bool:
+    entry = declaration.find('custom_installers', tool)
+    assert isinstance(entry, catalog.CustomInstaller)
+
+    result = custom.install(entry, target, offline=context.offline, reinstall=context.reinstall)
+    if result.ok:
+        # The tool's name alone when the vendor streamed its own report, so this
+        # confirms the phase considered it without restating what it just said.
+        err_console.print(f'[green]✓[/] {result.detail or tool}')
+        return True
+    return _install_failed(context, tool, result.detail)
 
 
 def _cargo_packages(context: Run) -> bool:

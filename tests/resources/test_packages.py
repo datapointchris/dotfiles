@@ -126,22 +126,14 @@ def test_a_declared_install_path_is_the_evidence(tmp_path: Path, fake_bin: Path)
     """`bashselfupdate` is a sourced library: the checkout is the only evidence."""
     checkout = tmp_path / 'lib' / 'bashselfupdate'
     checkout.mkdir(parents=True)
-    declared = {
-        'custom_installers': [
-            {'name': 'bashselfupdate', 'source_type': 'github_clone', 'description': 'lib', 'installed_path': str(checkout)}
-        ]
-    }
+    declared = {'custom_installers': [{'name': 'bashselfupdate', 'description': 'lib', 'installed_path': str(checkout)}]}
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'custom_installers': ['bashselfupdate']})
 
     assert verdicts(live) == {'custom/bashselfupdate': Verdict.MATCHED}
 
 
 def test_a_declared_install_path_that_is_absent_is_missing(tmp_path: Path, fake_bin: Path) -> None:
-    declared = {
-        'custom_installers': [
-            {'name': 'bashselfupdate', 'source_type': 'github_clone', 'description': 'lib', 'installed_path': str(tmp_path / 'nowhere')}
-        ]
-    }
+    declared = {'custom_installers': [{'name': 'bashselfupdate', 'description': 'lib', 'installed_path': str(tmp_path / 'nowhere')}]}
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'custom_installers': ['bashselfupdate']})
 
     assert verdicts(live) == {'custom/bashselfupdate': Verdict.MISSING}
@@ -377,7 +369,7 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
 
 @pytest.fixture
 def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Record what would be installed, instead of reaching GitHub."""
+    """Record what would be installed, instead of reaching GitHub or a vendor."""
     attempted: list[str] = []
 
     def record(entry, target, *, offline=False):
@@ -385,6 +377,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         return ghrelease.Result(True, f'{entry.name} installed')
 
     monkeypatch.setattr(packages.ghrelease, 'install', record)
+    monkeypatch.setattr(packages.custom, 'install', record)
     return attempted
 
 
@@ -436,4 +429,28 @@ def test_a_provider_that_has_not_converted_is_refused_not_ignored(tmp_path: Path
     outcome = packages.RESOURCE.perform(live, only_change(live))
 
     assert outcome.status is OutcomeStatus.REFUSED
+    assert installs == []
+
+
+DECLARES_THEME = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['theme']}
+THEME = {'custom_installers': [{'name': 'theme', 'description': 'theme manager', 'repo': 'datapointchris/theme'}]}
+
+
+def test_a_missing_custom_installer_runs_its_own_function(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+    """Through the same function the phase calls, so the two front doors cannot
+    install one tool differently."""
+    live = session(tmp_path, THEME, DECLARES_THEME)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live))
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['theme']
+
+
+def test_a_custom_installer_that_arrived_since_the_report_is_skipped(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+    live = session(tmp_path, THEME, DECLARES_THEME)
+    change = only_change(live)
+    executable(fake_bin, 'theme')
+
+    assert packages.RESOURCE.perform(live, change).status is OutcomeStatus.SKIPPED
     assert installs == []

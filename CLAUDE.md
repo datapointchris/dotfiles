@@ -31,7 +31,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
    - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
 
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
-   - Custom installers in `install/common/custom-installers/`
+   - Installed by a function in `src/dotfiles/providers/custom.py`
    - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
    - Development in `~/tools/{app}/`, push to GitHub, run `{tool} update`
 

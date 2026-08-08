@@ -311,7 +311,7 @@ The `packages verify` subcommand (in `src/dotfiles/catalog.py`) enforces that pa
 
 - **Shape errors** — an entry missing required fields (e.g., a `github_releases` entry with no `repo`), or duplicate names within a section.
 - **Unresolved manifest names** — a manifest lists a name that has no corresponding packages.yml entry (the no-op that shipped `todoui` and `forge` ghost-installed for weeks).
-- **Script parity breaks** — a script in `install/common/github-releases/` or `install/common/custom-installers/` with no packages.yml entry, or vice versa.
+- **Uninstallable entries** — a `github_releases` or `custom_installers` entry with no installer function in `src/dotfiles/providers/`. Both sections were a directory of one script per entry, and the check followed them into Python: the guarantee was never "a file exists with this name", it was "something knows how to install this".
 - **Deprecated manifest keys** — `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true`; these runtime gates were removed in Phase 1.6 in favor of name-list derivation.
 
 A fifth, softer check warns when packages.yml defines an entry that no manifest subscribes to — useful for spotting orphans without failing the commit.
@@ -330,10 +330,8 @@ Located in `install/common/`:
 
 **Directory Structure**:
 
-- `github-releases/` - Installers for tools shipped as prebuilt GitHub release binaries
 - `language-managers/` - Language runtime / version-manager bootstrappers (uv, rustup, go)
 - `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
-- `custom-installers/` - Vendor-specific installers that don't fit the other patterns
 - `plugins/` - Editor and terminal plugin installers
 
 The specific tools in each category are defined in `install/packages.yml` (the single
@@ -342,9 +340,8 @@ source of truth) — this list describes what each directory is *for*, not its c
 **Core Library** (`install/common/lib/`):
 
 - `failure-logging.sh` - Structured failure reporting
-- `github-release-installer.sh` - Shared download/extract helpers, now used only by the custom installers
 
-All installer scripts support `--update` for the update system and use structured error reporting.
+The scripts that remain support `--update` for the update system and use structured error reporting. The `github_releases` and `custom_installers` sections do not: they are `src/dotfiles/providers/`, where one verb converges and there is no second mode to select. See `docs/architecture/github-releases.md` and `docs/architecture/custom-installers.md`.
 
 The root `install.sh` orchestrates the installation process, detecting the platform and running appropriate scripts from `install/{platform}/` and `install/common/{category}/`.
 

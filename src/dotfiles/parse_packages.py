@@ -465,6 +465,34 @@ def get_custom_installers(data, filter_field=None):
     return [i['name'] for i in installers]
 
 
+def print_custom_installer_sources(name: str) -> None:
+    """Every host one custom installer reaches, for the offline connectivity probe.
+
+    The URLs are code — `providers/custom.py` — so this is a window onto them
+    rather than a second answer. It replaced a `case` on `source_type` that could
+    say "a github_clone needs github.com" and nothing more: it could not express
+    that `theme` also fetches its script from raw.githubusercontent.com, that
+    `bats` needs three repos, or that `awscli` names a different zip per
+    architecture.
+
+    Imported here rather than at module scope: this module is loaded by shell
+    scripts on every install for questions that have nothing to do with providers,
+    and importing one drags in the catalog and coordinates behind it.
+    """
+    from dotfiles import catalog
+    from dotfiles import coordinates
+    from dotfiles.providers import custom
+
+    entry = catalog.load().find('custom_installers', name)
+    if not isinstance(entry, catalog.CustomInstaller):
+        print(f'Error: no custom_installers entry named {name!r}', file=sys.stderr)
+        sys.exit(1)
+
+    target = coordinates.Target(coordinates.detect().os_family, coordinates.detect_arch())
+    for source in custom.sources(entry, target):
+        print(f'{source.reach}|{source.url}')
+
+
 def get_custom_installer_field(data, name, field):
     """Get a field from a specific custom installer by name."""
     if 'custom_installers' not in data:
@@ -617,6 +645,7 @@ def build_parser():
     parser.add_argument('--taps', action='store_true', help='Get macOS Homebrew taps')
     parser.add_argument('--github-release', help='Name of GitHub release (e.g., neovim)')
     parser.add_argument('--custom-installer', help='Name of custom installer (e.g., terraform-ls)')
+    parser.add_argument('--sources', help='Every host one custom installer reaches, as reach|url lines')
     parser.add_argument('--field', help='Field to extract from --github-release or --custom-installer (e.g., repo, url)')
     parser.add_argument(
         '--optional',
@@ -696,6 +725,10 @@ def main():
         elif not args.optional:
             print(f'Error: {args.github_release}.{args.field} not found', file=sys.stderr)
             sys.exit(1)
+        return
+
+    if args.sources:
+        print_custom_installer_sources(args.sources)
         return
 
     if args.custom_installer:

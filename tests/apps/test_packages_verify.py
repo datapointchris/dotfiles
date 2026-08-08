@@ -31,7 +31,6 @@ def build_tree(
     *,
     packages: dict[str, Any] | None = None,
     manifests: dict[str, dict[str, Any]] | None = None,
-    custom_installer_scripts: list[str] | None = None,
 ) -> None:
     """Create a synthetic dotfiles tree under `root`.
 
@@ -49,12 +48,6 @@ def build_tree(
         manifests_dir.mkdir(parents=True, exist_ok=True)
         for name, content in manifests.items():
             (manifests_dir / f'{name}.yml').write_text(yaml.safe_dump(content, sort_keys=False))
-
-    if custom_installer_scripts is not None:
-        ci_dir = install_dir / 'common' / 'custom-installers'
-        ci_dir.mkdir(parents=True, exist_ok=True)
-        for stem in custom_installer_scripts:
-            (ci_dir / f'{stem}.sh').write_text('#!/usr/bin/env bash\n')
 
 
 def run_verify(root: Path) -> subprocess.CompletedProcess:
@@ -103,7 +96,7 @@ def test_clean_tree_verifies_with_zero_issues(tmp_path: Path) -> None:
         packages={
             'go_tools': [{'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}],
             'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf'}],
-            'custom_installers': [{'name': 'theme', 'source_type': 'github_clone', 'description': 'Theme installer'}],
+            'custom_installers': [{'name': 'theme', 'description': 'Theme installer'}],
         },
         manifests={
             'test-machine': {
@@ -114,7 +107,6 @@ def test_clean_tree_verifies_with_zero_issues(tmp_path: Path) -> None:
                 'custom_installers': ['theme'],
             }
         },
-        custom_installer_scripts=['theme'],
     )
     assert_clean(run_verify(tmp_path))
 
@@ -160,9 +152,8 @@ def test_manifest_names_unknown_custom_installer_flags_error(tmp_path: Path) -> 
     """Manifest's custom_installers list references a name with no packages.yml entry."""
     build_tree(
         tmp_path,
-        packages={'custom_installers': [{'name': 'theme', 'source_type': 'github_clone', 'description': 'Theme installer'}]},
+        packages={'custom_installers': [{'name': 'theme', 'description': 'Theme installer'}]},
         manifests={'test-machine': {'custom_installers': ['theme', 'unknown-installer']}},
-        custom_installer_scripts=['theme'],
     )
     assert_error(run_verify(tmp_path), "names 'unknown-installer'")
 
@@ -178,54 +169,26 @@ def test_manifest_names_unknown_npm_global_flags_error(tmp_path: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tier 1 — script parity (bidirectional)
+# Tier 1 — every entry names something that can install it
 # ─────────────────────────────────────────────────────────────────────────────
+# This was bidirectional script parity, against a directory of one script per
+# entry. Both sections are functions now, and the guarantee did not change with
+# them: it was never "a file exists with this name", it was "something knows how
+# to install this". Only this direction can be asked against a synthetic tree,
+# because the functions are code and are always the real ones — the reverse is a
+# gate in tests/install/ against the real declaration.
 
 
-def test_github_release_entry_without_an_asset_function_flags_error(tmp_path: Path) -> None:
-    """A release entry nothing can name an asset for installs nothing, silently.
-
-    The functions are code, so unlike the script checks either side of this there
-    is no synthetic version of them — which is why only this direction is asked
-    here and the reverse is a pytest gate against the real declaration.
-    """
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'nosuchtool', 'repo': 'someone/nosuchtool'}]},
-        manifests={},
-    )
-    assert_error(
-        run_verify(tmp_path),
-        "packages.yml entry 'nosuchtool' has no asset function in providers/releases.py",
-    )
-
-
-def test_custom_installer_script_without_entry_flags_error(tmp_path: Path) -> None:
-    """Custom installer script on disk with no packages.yml custom_installers entry."""
-    build_tree(
-        tmp_path,
-        packages={},
-        manifests={},
-        custom_installer_scripts=['bats'],
-    )
-    assert_error(
-        run_verify(tmp_path),
-        'install/common/custom-installers/bats.sh exists but no packages.yml custom_installers entry',
-    )
-
-
-def test_custom_installer_entry_without_script_flags_error(tmp_path: Path) -> None:
-    """packages.yml custom_installers entry with no matching script file."""
-    build_tree(
-        tmp_path,
-        packages={'custom_installers': [{'name': 'theme', 'source_type': 'github_clone', 'description': 'Theme installer'}]},
-        manifests={},
-        custom_installer_scripts=[],
-    )
-    assert_error(
-        run_verify(tmp_path),
-        "custom_installers entry 'theme' has no install/common/custom-installers/theme.sh script",
-    )
+@pytest.mark.parametrize(
+    ('section', 'entry', 'module'),
+    [
+        ('github_releases', {'name': 'nosuchtool', 'repo': 'someone/nosuchtool'}, 'providers/releases.py'),
+        ('custom_installers', {'name': 'nosuchtool', 'description': 'invented'}, 'providers/custom.py'),
+    ],
+)
+def test_entry_with_no_installer_function_flags_error(tmp_path: Path, section: str, entry: dict, module: str) -> None:
+    build_tree(tmp_path, packages={section: [entry]}, manifests={})
+    assert_error(run_verify(tmp_path), f"packages.yml entry 'nosuchtool' has no installer function in {module}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,15 +238,14 @@ def test_custom_installer_unreferenced_is_warning(tmp_path: Path) -> None:
         tmp_path,
         packages={
             'custom_installers': [
-                {'name': 'theme', 'source_type': 'github_clone', 'description': 'used'},
-                {'name': 'orphan', 'source_type': 'github_clone', 'description': 'unused'},
+                {'name': 'theme', 'description': 'used'},
+                {'name': 'font', 'description': 'unused'},
             ]
         },
         manifests={'test-machine': {'custom_installers': ['theme']}},
-        custom_installer_scripts=['theme', 'orphan'],
     )
     result = run_verify(tmp_path)
-    assert_warning(result, "'orphan' defined in packages.yml but not referenced by any manifest")
+    assert_warning(result, "'font' defined in packages.yml but not referenced by any manifest")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -338,4 +300,4 @@ def test_root_flag_reads_only_synthetic_tree(tmp_path: Path) -> None:
     )
     # If --root leaked and fell back to the real repo, we'd get "0 errors" (the real
     # repo is clean). Asserting the ghost error proves the synthetic tree drove verify.
-    assert_error(run_verify(tmp_path), "'ghost' has no asset function in providers/releases.py")
+    assert_error(run_verify(tmp_path), "'ghost' has no installer function in providers/releases.py")

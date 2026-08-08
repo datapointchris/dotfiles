@@ -25,7 +25,6 @@ disagree with the report the user was just shown.
 
 from __future__ import annotations
 
-import dataclasses as dc
 import enum
 import shutil
 import tempfile
@@ -38,6 +37,10 @@ from dotfiles import paths
 from dotfiles.coordinates import Target
 from dotfiles.output import err_console
 from dotfiles.output import warn
+from dotfiles.providers import Result
+from dotfiles.providers import bin_dir
+from dotfiles.providers import bundle_file
+from dotfiles.providers import local_dir
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Asset
@@ -46,13 +49,7 @@ BUNDLE_MANIFEST = 'manifest.txt'
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
-
-@dc.dataclass(frozen=True, slots=True)
-class Result:
-    """What one install did, in the form a caller can turn into an Outcome."""
-
-    ok: bool
-    detail: str
+__all__ = ['Result', 'bin_dir', 'bundle_file', 'ensure_companions', 'install', 'local_dir', 'resolve_tag', 'unresolved']
 
 
 def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
@@ -105,24 +102,6 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
     if not shutil.which(entry.executable):
         return Result(False, f'{entry.executable} installed but is not on PATH — is {bin_dir()} in it?')
     return Result(True, f'{entry.name} {tag}')
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Where things land
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def local_dir() -> Path:
-    """`~/.local`, where a tree-installed release unpacks."""
-    return Path.home() / '.local'
-
-
-def bin_dir() -> Path:
-    return local_dir() / 'bin'
-
-
-def bundle_file(name: str) -> Path:
-    return paths.BUNDLE_DIR / name
 
 
 # ─────────────────────────────────────────────────────────────────────────────

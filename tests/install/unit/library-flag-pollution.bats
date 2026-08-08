@@ -61,7 +61,7 @@ TESTEOF
 # Every library, one test
 # ================================================================
 # The list is the point: a new library is one line here, not a copy of the whole
-# @test. This was seven identical tests differing only in the path.
+# @test. This was one identical test per library, differing only in the path.
 
 @test "library_flags: no library adds -e to its caller" {
   local library
@@ -70,7 +70,6 @@ TESTEOF
     configs/common/.local/shell/formatting.sh \
     configs/common/.local/shell/error-handling.sh \
     install/common/lib/failure-logging.sh \
-    install/common/lib/github-release-installer.sh \
     install/common/lib/version-helpers.sh \
     install/platform-detection.sh; do
 

@@ -7,8 +7,10 @@
 # as a side effect of upgrading — so whether update installed a newly declared
 # tool came down to which section of packages.yml it sat in.
 #
-# These exercise the two shared pieces that decide it, rather than each of the
-# eight installers that call them.
+# Two of them settled the question by removing it: `github-releases` and
+# `custom-installers` are `packages apply --source <section>` now, which converges
+# on purpose, and the tool it installs is a difference `check` already reported.
+# What is left here is the phases that still answer it in bash.
 # ================================================================
 
 load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
@@ -59,51 +61,6 @@ setup() {
   '
   assert_success
   assert_output "done"
-}
-
-@test "missing-tools: skip_update_for_absent_tool exits zero and records" {
-  run bash -c '
-    source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-    source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
-    skip_update_for_absent_tool "theme"
-    echo "NOT REACHED"
-  '
-  assert_success
-  refute_output --partial "NOT REACHED"
-  assert_output --partial "theme not installed"
-  run cat "$MISSING_LOG"
-  assert_output --partial "theme|custom-installers"
-}
-
-# ================================================================
-# The shared release helper
-# ================================================================
-# It backed all 23 github-releases scripts, which are Python now; what still
-# calls it is custom-installers/terraform-ls.sh. The rule it encodes is the one
-# under test, and it outlives the callers.
-
-@test "github-release: an absent binary is installed under install" {
-  run bash -c '
-    export INSTALLER_ACTION=install
-    source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-    source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
-    check_if_update_needed "definitely-not-a-real-binary" "v1.0.0"
-  '
-  assert_success
-  assert_output --partial "will install"
-}
-
-@test "github-release: an absent binary is reported, not installed, under update" {
-  run bash -c '
-    export INSTALLER_ACTION=update
-    source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-    source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
-    check_if_update_needed "definitely-not-a-real-binary" "v1.0.0"
-  '
-  assert_failure
-  assert_output --partial "not installed"
-  run cat "$MISSING_LOG"
-  assert_output --partial "definitely-not-a-real-binary|github-releases"
 }
 
 # ================================================================

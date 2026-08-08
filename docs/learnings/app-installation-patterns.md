@@ -57,13 +57,7 @@ function cannot be invoked the wrong way, which is the real reason to prefer it.
 
 **Examples**: `theme`, `font`
 
-**Installation**: Custom installers clone from GitHub to `~/.local/share/`, symlink bin to `~/.local/bin/`:
-
-```bash
-# In install/common/custom-installers/theme.sh
-git clone https://github.com/datapointchris/theme.git ~/.local/share/theme
-ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
-```
+**Installation**: `src/dotfiles/providers/custom.py` runs the vendor's own install script, which clones from GitHub to `~/.local/share/` and symlinks its bin into `~/.local/bin/`. Once the checkout exists, converging means delegating to the tool's own `update` rather than re-running the installer over a live checkout.
 
 **Development**: Source code in `~/tools/theme/` and `~/tools/font/`. Changes tested locally, pushed to GitHub. Run `theme update` or `font update` to pull updates to installed version.
 
@@ -118,5 +112,5 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 
 - `install/packages.yml` - Go tools list
 - `src/dotfiles/symlinks/core.py` - Symlink management (apps linked via `create_symlinks` to `~/.local/bin/`)
-- `install/common/custom-installers/theme.sh` - Personal tool installer
+- `src/dotfiles/providers/custom.py` - Personal tool installers
 - `configs/common/.config/zsh/.zshrc` - PATH configuration

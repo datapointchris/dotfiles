@@ -78,6 +78,7 @@ UNREAD_KEYS: dict[str, str] = {
     'install_dir': 'only tmux_plugins declares one; a release binary uses binary_link',
     'install_script': 'the installer is found by name at install/common/<dir>/<name>.sh',
     'build_method': 'nothing branches on how upstream builds its release',
+    'source_type': 'how a custom installer distributes itself is its function in providers/custom.py, not a word here',
 }
 """Keys that were carried for long enough to look like configuration.
 
@@ -290,11 +291,15 @@ class GithubRelease(Entry):
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class CustomInstaller(Entry):
-    """A tool with its own distribution mechanism, wrapped by one script."""
+    """A tool with its own distribution mechanism, installed by its own function.
+
+    Everything here is declarative — a host, a repo, a path. *How* the bytes are
+    fetched, verified and placed is `providers/custom.py`, because nine vendors
+    with nothing in common do not survive being flattened into fields.
+    """
 
     section: ClassVar[str] = 'custom_installers'
 
-    source_type: str
     description: str
     repo: str = ''
     support_repo: str = ''

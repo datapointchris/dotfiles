@@ -31,7 +31,6 @@ Test specific installation phases or components together. All use BATS framework
 - `installation-orchestration.bats` - Full installation orchestration
 - `language-managers-pattern.bats` - Language manager installer patterns
 - `language-managers-update.bats` - Language manager updates
-- `custom-installers-update.bats` - Custom installer updates
 - `bats-installer.bats` - BATS installer itself
 - `version-helpers.bats` - Version comparison helpers
 

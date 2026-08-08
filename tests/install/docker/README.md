@@ -22,7 +22,7 @@ builds and tags an older one separately.
 
 ```bash
 ./build-base.sh                                              # one-time, minutes
-./run-installer-test.sh install/common/custom-installers/bats.sh --validate bats
+./run-installer-test.sh install/common/language-tools/uv-tools.sh --validate ruff
 ./run-installer-test.sh install/wsl/system-packages.sh       # should skip: already installed
 ```
 
@@ -31,13 +31,14 @@ builds and tags an older one separately.
 
 ## What this no longer covers
 
-The `github_releases` installers were 23 bash scripts and are now
-`src/dotfiles/providers/`, so there is nothing here to point at one. Their
-coverage is `tests/install/test_ghrelease.py` for the install sequence,
+The `github_releases` and `custom_installers` entries were 32 bash scripts and are
+now `src/dotfiles/providers/`, so there is nothing here to point at one. Their
+coverage is `tests/install/test_ghrelease.py` and
+`tests/install/test_custom_installers.py` for the install sequences,
 `tests/install/test_release_urls.py --e2e` for what upstream actually publishes,
 and `tests/e2e/` for a real install in a real container.
 
-What remains testable here is a script: the custom installers, and the
+What remains testable here is a script: the language-tool installers and the
 per-platform system-package scripts.
 
 ## Troubleshooting

@@ -53,16 +53,16 @@ NAME_SUBSCRIBED_SECTIONS = (
 # Runtime installation is now derived from name-list presence (e.g. go_tools non-empty → Go).
 DEPRECATED_MANIFEST_KEYS = ('go', 'rust', 'nvm', 'uv', 'tenv')
 
-# Sections whose entries have a 1:1 script in a directory under install/common/.
-# Maps section name → subdir name.
-#
-# `github_releases` left when its scripts did. The parity that replaced it is
-# `check_release_assets` below: the guarantee was never "a file exists with this
-# name", it was "something knows how to install this entry", and a function in
-# providers/releases.py is that something now.
-SCRIPT_BACKED_SECTIONS = {
-    'custom_installers': 'custom-installers',
+INSTALLED_BY_CODE = {
+    'github_releases': 'providers/releases.py',
+    'custom_installers': 'providers/custom.py',
 }
+"""Sections whose entries are installed by a function, checked by `check_installable`.
+
+Both of these were a directory of one script per entry, and `verify` asserted
+that the file existed. The guarantee was never "a file exists with this name" —
+it was "something knows how to install this entry" — so the check followed the
+installers into Python rather than being deleted with the scripts."""
 
 
 class Color(Enum):
@@ -510,14 +510,6 @@ def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
     return manifests
 
 
-def list_installer_scripts(root: Path, subdir: str) -> set[str]:
-    """Return the stem (filename without .sh) of every *.sh in install/common/<subdir>/."""
-    script_dir = root / 'install' / 'common' / subdir
-    if not script_dir.exists():
-        return set()
-    return {p.stem for p in script_dir.glob('*.sh')}
-
-
 def iter_section_entries(data: dict[str, Any], section: str):
     """Yield each entry from a section. For dict-of-lists (npm_globals/uv_tools),
     flatten subcategories. For dict-of-dicts (tmux_plugins), synthesize a 'name'
@@ -584,44 +576,22 @@ def check_manifest_name_resolution(
                     )
 
 
-def check_script_parity(
-    data: dict[str, Any],
-    scripts_by_section: dict[str, set[str]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check 4: bidirectional script ↔ packages.yml parity for every script-backed section."""
-    for section, subdir in SCRIPT_BACKED_SECTIONS.items():
-        section_ids = get_section_ids(data, section)
-        scripts = scripts_by_section.get(section, set())
+def check_installable(data: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
+    """Every entry in a code-installed section names a function that installs it.
 
-        for script_name in sorted(scripts - section_ids):
-            issues.append((section, 'error', f'install/common/{subdir}/{script_name}.sh exists but no packages.yml {section} entry'))
-
-        for entry_name in sorted(section_ids - scripts):
-            issues.append(
-                (section, 'error', f"packages.yml {section} entry '{entry_name}' has no install/common/{subdir}/{entry_name}.sh script")
-            )
-
-
-def check_release_assets(data: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
-    """Every `github_releases` entry names an asset something knows how to build.
-
-    What `check_script_parity` did for this section before its scripts were
-    deleted, against the functions that replaced them. The guarantee was never
-    "a file exists with this name" — it was "something can install this entry".
-
-    One direction only, unlike the script check. The other half — a function
-    naming a tool nothing declares — cannot be asked here, because `--root`
-    points this at a synthetic tree while the functions are code and are always
-    the real ones. It is asserted instead by
-    `tests/install/test_release_urls.py::TestCorpus`, which compares both sets
-    against the real declaration.
+    One direction only, unlike the script parity this replaces. The other half —
+    a function naming a tool nothing declares — cannot be asked here, because
+    `--root` points this at a synthetic tree while the functions are code and are
+    always the real ones. It is asserted instead by the corpus tests in
+    `tests/install/`, which compare both sets against the real declaration.
     """
+    from dotfiles.providers import custom
     from dotfiles.providers import releases
 
-    for name in sorted(get_section_ids(data, 'github_releases') - set(releases.ASSETS)):
-        uninstallable = f"packages.yml entry '{name}' has no asset function in providers/releases.py"
-        issues.append(('github_releases', 'error', uninstallable))
+    known = {'github_releases': set(releases.ASSETS), 'custom_installers': set(custom.INSTALLERS)}
+    for section, module in INSTALLED_BY_CODE.items():
+        for name in sorted(get_section_ids(data, section) - known[section]):
+            issues.append((section, 'error', f"packages.yml entry '{name}' has no installer function in {module}"))
 
 
 def check_deprecated_manifest_keys(
@@ -668,14 +638,11 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     # Reload from the resolved root to guarantee data matches root when --root overrides default
     data = load_packages(root=root)
     manifests = load_manifests(root)
-    scripts_by_section = {section: list_installer_scripts(root, subdir) for section, subdir in SCRIPT_BACKED_SECTIONS.items()}
-
     issues: list[tuple[str, str, str]] = []  # (section, severity, message)
 
     check_entry_shapes(root, issues)
     check_manifest_name_resolution(data, manifests, issues)
-    check_script_parity(data, scripts_by_section, issues)
-    check_release_assets(data, issues)
+    check_installable(data, issues)
     check_deprecated_manifest_keys(manifests, issues)
     check_unreferenced_entries(data, manifests, issues)
 

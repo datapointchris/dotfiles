@@ -901,29 +901,25 @@ github_releases:
 # CUSTOM INSTALLERS
 # ================================================================
 # Tools with bespoke install logic that doesn't match other categories.
-# Each has a dedicated script in install/common/custom-installers/<name>.sh.
-# This section is the source of truth: every script here must have an entry,
-# and every entry must have a script. Verified by `packages verify`.
-#
-# source_type values:
-#   github_clone       — clone a GitHub repo and run its own installer
-#   hashicorp_release  — download from releases.hashicorp.com (GitHub repo for version lookup)
-#   official_installer — run a vendor-provided install script or package (awscli pkg, claude.ai)
-#   aws_release        — download an arch-specific binary tarball from an AWS S3 release
-#                        bucket (latest/ path, no version lookup), GPG-verified
+# Each has a dedicated function in src/dotfiles/providers/custom.py, and this
+# section is the source of truth: every entry must have one, verified by
+# `packages verify`. See docs/architecture/custom-installers.md.
 #
 # bundle_install_script: true marks installers whose downloadable script should
 # be cached in offline bundles (see src/dotfiles/create_bundle.py).
 
 custom_installers:
+  # How each of these is installed is a function in src/dotfiles/providers/custom.py,
+  # for the same reason release asset naming is: nine distribution mechanisms with
+  # nothing in common do not survive being flattened into a schema. What stays here
+  # is what is declarative — the host, the repo a version comes from, and where a
+  # tool that puts nothing on PATH lands.
   - name: awscli
     command: aws
-    source_type: official_installer
     url: https://awscli.amazonaws.com
     description: AWS Command Line Interface v2 (official installer, platform-specific archive)
 
   - name: bats
-    source_type: github_clone
     repo: bats-core/bats-core
     support_repo: bats-core/bats-support
     assert_repo: bats-core/bats-assert
@@ -931,18 +927,19 @@ custom_installers:
 
   - name: claude-code
     command: claude
-    source_type: official_installer
-    url: https://claude.ai/install.sh
+    install_url: https://claude.ai/install.sh
     bundle_install_script: true
     description: Claude Code CLI (self-updating, installs to ~/.local/bin via official installer)
 
+  # Distributed from AWS's own bucket, which serves only `latest/` and no version.
+  # `repo` is where the version lives: awslabs publishes the same builds as GitHub
+  # releases, so currency costs one API call instead of the whole tarball.
   - name: mount-s3
-    source_type: aws_release
+    repo: awslabs/mountpoint-s3
     url: https://s3.amazonaws.com/mountpoint-s3-release
     description: Mountpoint for Amazon S3 — mount an S3 bucket as a local filesystem (Linux only, GPG-verified)
 
   - name: terraform-ls
-    source_type: hashicorp_release
     repo: hashicorp/terraform-ls
     description: Terraform Language Server (direct download from releases.hashicorp.com)
 
@@ -950,7 +947,6 @@ custom_installers:
   # and daily update notice. Both bootstrap it themselves if it is missing, so
   # ordering here is a convenience rather than a hard dependency.
   - name: bashselfupdate
-    source_type: github_clone
     repo: datapointchris/bashselfupdate
     install_url: https://raw.githubusercontent.com/datapointchris/bashselfupdate/main/install.sh
     # Sourced library, no binary on PATH — the checkout is the only evidence it
@@ -960,21 +956,18 @@ custom_installers:
     description: Sourced bash library providing update and update-notify for git-checkout tools
 
   - name: theme
-    source_type: github_clone
     repo: datapointchris/theme
     install_url: https://raw.githubusercontent.com/datapointchris/theme/main/install.sh
     bundle_install_script: true
     description: Unified theme manager across ghostty, tmux, btop, Neovim
 
   - name: font
-    source_type: github_clone
     repo: datapointchris/font
     install_url: https://raw.githubusercontent.com/datapointchris/font/main/install.sh
     bundle_install_script: true
     description: Font management CLI with terminal/platform awareness
 
   - name: zmk-build
-    source_type: github_clone
     repo: datapointchris/zmk-build
     install_url: https://raw.githubusercontent.com/datapointchris/zmk-build/main/install.sh
     bundle_install_script: true

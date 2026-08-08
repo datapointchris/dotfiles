@@ -199,7 +199,6 @@ def test_a_declared_install_path_becomes_the_evidence(tmp_path: Path) -> None:
             'custom_installers': [
                 {
                     'name': 'bashselfupdate',
-                    'source_type': 'github_clone',
                     'description': 'sourced library',
                     'installed_path': '~/.local/lib/bashselfupdate',
                 }

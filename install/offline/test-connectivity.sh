@@ -158,37 +158,29 @@ if [[ "$(yq -r '.shell_plugins // false' "$MANIFEST_FILE")" == "true" ]]; then
 fi
 
 # --- Custom installers --------------------------------------------------------
-# source_type says where the bytes come from: a github_clone needs github.com, the
-# others each have their own vendor host that no other probe covers.
+# Each installer names the hosts it reaches, in providers/custom.py. A source_type
+# word here could express "a github_clone needs github.com" and nothing else: not
+# that theme also fetches its script from raw.githubusercontent.com, not that bats
+# needs three repos, not that awscli names a different zip per architecture.
 
 print_section "Custom installers"
 while IFS= read -r tool; do
   [[ -z "$tool" ]] && continue
-  source_type=$(packages_query --custom-installer "$tool" --field source_type 2>/dev/null || echo "")
-  case "$source_type" in
-    github_clone)
-      repo=$(packages_query --custom-installer "$tool" --field repo) || continue
-      probe_clone custom_installer "$tool" "https://github.com/${repo}.git"
-      ;;
-    hashicorp_release)
-      probe_url custom_installer "$tool" "https://releases.hashicorp.com/${tool}/"
-      ;;
-    official_installer | aws_release)
-      # The installer's own --print-url, not packages.yml's url: that field is a
-      # bucket root, and probing a root nothing ever requests reports a block
-      # that is really just S3 refusing to list (mount-s3, 403).
-      url=$(bash "$DOTFILES_DIR/install/common/custom-installers/${tool}.sh" --print-url 2>/dev/null | cut -d'|' -f3)
-      # An installer that skips on this platform logs instead of printing, and a
-      # log line has no pipes, so cut hands back the whole line. Probing that
-      # reports a block for a tool the machine was never going to install.
-      if [[ "$url" == http* ]]; then
-        probe_url custom_installer "$tool" "$url"
-      else
-        log_warning "$tool reports no download URL on this platform; unprobed"
-      fi
-      ;;
-    *) log_warning "$tool has no source_type in packages.yml; unprobed" ;;
-  esac
+  probed=0
+  while IFS='|' read -r reach url; do
+    [[ -z "$url" ]] && continue
+    probed=1
+    if [[ "$reach" == "clone" ]]; then
+      probe_clone custom_installer "$tool" "$url"
+    else
+      probe_url custom_installer "$tool" "$url"
+    fi
+  done < <(packages_query --sources "$tool")
+  # No sources is a platform that installs the tool from somewhere else — awscli
+  # from Homebrew, mount-s3 not at all — and not a failure to look.
+  if [[ $probed -eq 0 ]]; then
+    log_warning "$tool installs from nothing on this platform; unprobed"
+  fi
 done < <(packages_query --type=custom --manifest="$MANIFEST")
 
 # --- Language runtimes and their registries -----------------------------------

@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 """GitHub release asset resolution and checksum verification.
 
-Imported by src/dotfiles/create_bundle.py, which verifies assets while
-building an offline bundle, and invoked as a CLI by
-install/common/lib/github-release-installer.sh, which verifies them while
-installing. Those were separate implementations — an awk program and Python —
-of rules subtle enough that a divergence would have gone unnoticed until a
-bundle verified differently from a live install.
+Imported by src/dotfiles/create_bundle.py, which verifies assets while building
+an offline bundle, and by the providers, which verify them while installing.
+Those were separate implementations — an awk program in the shell library, and
+this — of rules subtle enough that a divergence would have gone unnoticed until
+a bundle verified differently from a live install. The CLI below outlives the
+shell that needed it, because it is how the rules are exercised by hand.
 
     github_release.py verify <file> <asset> [repo] [tag]   see Verification for the exit codes
     github_release.py parse-url <url>                      prints repo|tag, empty if not a release

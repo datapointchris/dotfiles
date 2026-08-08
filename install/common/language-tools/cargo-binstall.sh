@@ -14,11 +14,11 @@ fi
 
 REPO="cargo-bins/cargo-binstall"
 
-# cargo-binstall publishes no checksums, only minisign signatures, so this cannot
-# go through github-release-installer.sh without weakening its required-checksum
-# rule for every other tool. `cargo install` stays as the fallback rather than a
-# relaxed verification: it is also the only path that works on the work box,
-# where release asset downloads are blocked but crates.io is reachable.
+# cargo-binstall publishes no checksums, only minisign signatures, so it cannot be
+# a github_releases entry without declaring the exception that lets an unverified
+# asset install. `cargo install` stays as the fallback rather than a relaxed
+# verification: it is also the only path that works on the work box, where release
+# asset downloads are blocked but crates.io is reachable.
 install_from_release() {
   local arch target archive url tmp
   arch=$(uname -m)
