@@ -140,7 +140,7 @@ def test_create_symlinks(tmp_path):
     target = tmp_path / 'home'
     target.mkdir()
 
-    count = core.create_symlinks(source, 'common', target_dir=target)
+    count = core.create_symlinks(source, 'common', target_dir=target).created
 
     assert count == 1
     assert (target / 'test.txt').is_symlink()
@@ -157,7 +157,7 @@ def test_create_nested_symlinks(tmp_path):
     target = tmp_path / 'home'
     target.mkdir()
 
-    count = core.create_symlinks(source, 'common', target_dir=target)
+    count = core.create_symlinks(source, 'common', target_dir=target).created
 
     assert count == 1
     assert (target / '.config' / 'nvim' / 'init.lua').is_symlink()
@@ -209,3 +209,75 @@ def test_check_and_clean(tmp_path):
 
     assert count == 1
     assert not broken_link.exists()
+
+
+def test_a_real_file_at_the_target_is_refused_not_replaced(tmp_path):
+    """The unlink in create_symlinks removes whatever is at the path. Without
+    this guard, `uv tool install` writing an executable into ~/.local/bin and a
+    link pass writing into the same directory means the second destroys the
+    first, silently."""
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'dotfiles').write_text('the repo copy')
+
+    target = tmp_path / 'target'
+    target.mkdir()
+    executable = target / 'dotfiles'
+    executable.write_text('an installed console script')
+
+    result = core.create_symlinks(source, 'apps', target_dir=target)
+
+    assert result.created == 0
+    assert result.refused == (executable,)
+    assert executable.read_text() == 'an installed console script'
+    assert not executable.is_symlink()
+
+
+def test_force_adopts_a_target_the_manager_did_not_create(tmp_path):
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / '.zshrc').write_text('managed')
+
+    target = tmp_path / 'target'
+    target.mkdir()
+    (target / '.zshrc').write_text('whatever was here before')
+
+    result = core.create_symlinks(source, 'common', target_dir=target, force=True)
+
+    assert result.created == 1
+    assert result.refused == ()
+    assert (target / '.zshrc').is_symlink()
+
+
+def test_a_link_this_manager_made_is_replaced_without_force(tmp_path):
+    """Relinking has to stay idempotent, or every second run refuses everything."""
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / '.zshrc').write_text('managed')
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    core.create_symlinks(source, 'common', target_dir=target)
+    result = core.create_symlinks(source, 'common', target_dir=target)
+
+    assert result.created == 1
+    assert result.refused == ()
+
+
+def test_a_symlink_pointing_outside_the_repo_is_refused(tmp_path):
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / '.zshrc').write_text('managed')
+
+    elsewhere = tmp_path / 'elsewhere'
+    elsewhere.mkdir()
+    (elsewhere / 'other.zshrc').write_text('someone else manages this')
+
+    target = tmp_path / 'target'
+    target.mkdir()
+    (target / '.zshrc').symlink_to(elsewhere / 'other.zshrc')
+
+    result = core.create_symlinks(source, 'common', target_dir=target)
+
+    assert result.refused == (target / '.zshrc',)
+    assert (target / '.zshrc').resolve() == (elsewhere / 'other.zshrc').resolve()

@@ -44,7 +44,7 @@ def test_complete_symlink_workflow(dotfiles_structure):
     macos = dotfiles_structure['macos']
 
     # Create common symlinks
-    count = core.create_symlinks(common, 'common', target_dir=home)
+    count = core.create_symlinks(common, 'common', target_dir=home).created
     assert count == 3  # init.lua, .zshrc, tools (no excluded files)
 
     # Verify common symlinks exist and work
@@ -58,7 +58,7 @@ def test_complete_symlink_workflow(dotfiles_structure):
     assert not (home / 'node_modules' / 'package').exists()
 
     # Create platform symlinks
-    count = core.create_symlinks(macos, 'macos', target_dir=home)
+    count = core.create_symlinks(macos, 'macos', target_dir=home).created
     assert count == 3  # .gitconfig, .profile, ghostty/config
 
     # Verify platform symlinks

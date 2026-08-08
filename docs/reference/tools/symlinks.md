@@ -8,13 +8,15 @@ All symlinks commands are run via Task from the dotfiles root directory. The too
 
 ### task symlinks:link
 
-Deploy symlinks for current platform (common + platform layers). Additive only - creates new symlinks without removing existing ones.
+Deploy symlinks for current platform (common + platform layers). Create-only: it
+adds links and refreshes the ones it already owns, but **does not prune** a link
+whose source is gone. Removing or renaming a file needs `relink`.
 
 ```bash
-task symlinks:link         # Create symlinks (safe, no removal)
+task symlinks:link         # Create and refresh; never prunes
 ```
 
-Use when adding new dotfiles to create their symlinks without disturbing existing ones.
+Use when adding new dotfiles.
 
 ### task symlinks:relink
 
@@ -96,6 +98,26 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - Directory vs directory: Merged (both symlinked)
 - File vs directory: Error (must resolve manually)
 
+## Targets this manager did not create
+
+A link pass replaces a target only when it owns it — a symlink pointing into the
+repo, including a broken one left by a deleted source. Anything else (a real
+file, or a symlink pointing somewhere else) is **refused, listed, and left
+untouched**, and the run exits non-zero.
+
+This is not politeness about a user's files. The write is an unlink followed by a
+symlink, so it removes whatever is at the path, and `uv tool dir --bin` is
+`~/.local/bin` — the same directory the apps layer links into. Without the check,
+installing this project as a uv tool and then running a link pass means the
+second silently deletes the executable that the first installed.
+
+`--force` adopts refused targets, which is what a machine that already had
+dotfiles of its own needs on first install:
+
+```bash
+uv run symlinks link macos --force
+```
+
 ## Special Directory Handling
 
 The symlinks manager maps `apps/` and `shell/` to specific target directories rather than `$HOME`, using the same `create_symlinks` function with a custom `target_dir`.
@@ -162,14 +184,17 @@ No installation required - `uv run` executes the tool in-place.
 
 ## Testing
 
-The symlinks tool has comprehensive pytest test suite.
+Tests live under `tests/symlinks/`, with the rest of the suite, and run on every
+commit:
 
 ```bash
-cd ~/dotfiles/symlinks
-uv run python -m pytest tests/ -v     # Run all tests
-uv run python -m pytest tests/test_core.py          # Unit tests
-uv run python -m pytest tests/test_integration.py  # Integration tests
+uv run pytest tests/symlinks/
 ```
+
+They sat in `symlinks/tests/` until 2026-08-08 and were collected by nothing —
+`testpaths` names `tests` only, so the whole file ran for no one. A test
+directory outside the collected root is worse than no tests, because the count
+reads as coverage.
 
 Tests cover:
 
@@ -229,9 +254,12 @@ See: `docs/learnings/symlinks-path-gotchas.md`
 
 **Broken symlinks**:
 
-- Run `task symlinks:check` to find them
-- Remove: `find ~ -type l ! -exec test -e {} \; -delete`
+- Run `task symlinks:check`, which finds and removes them
 - Re-run: `task symlinks:link`
+
+Do not sweep them by hand with a `find -delete` across `$HOME`. That deletes
+every broken link on the machine, including ones this manager never created and
+is not responsible for; `check` only touches links resolving into the repo.
 
 **File conflicts**:
 
@@ -252,7 +280,8 @@ The package lives at `symlinks/` in the repo root as part of the main dotfiles p
 
 **Dependencies**: typer (CLI framework), rich (console output)
 
-**Python version**: 3.12+ (requires `Path.relative_to(walk_up=True)`)
+**Python version**: whatever `requires-python` in the root `pyproject.toml` says.
+The floor this module itself needs is 3.12, for `Path.relative_to(walk_up=True)`.
 
 ## See Also
 

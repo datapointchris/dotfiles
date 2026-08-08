@@ -4,6 +4,7 @@ import contextlib
 import fnmatch
 import os
 from pathlib import Path
+from typing import NamedTuple
 
 from rich import print
 
@@ -183,22 +184,61 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
 # ─── Symlink Management ───────────────────────────────────────────────────────
 
 
+class LinkResult(NamedTuple):
+    """What a link pass did, and what it declined to touch."""
+
+    created: int
+    refused: tuple[Path, ...] = ()
+
+
+def link_ownership(target_path: Path, *roots: Path) -> str:
+    """Who put this target here: `absent`, `ours`, or `foreign`.
+
+    `ours` is a symlink pointing anywhere inside the repo or inside one of
+    `roots`, including a broken one left by a deleted source — that is still
+    this manager's to replace. `roots` carries the tree currently being linked,
+    so a caller pointed at a tree that is not the installed repo still
+    recognises its own links.
+    """
+    if not (target_path.exists() or target_path.is_symlink()):
+        return 'absent'
+    if not target_path.is_symlink():
+        return 'foreign'
+
+    destination = resolve_broken_symlink(target_path) if not target_path.exists() else target_path.resolve()
+    if not destination:
+        return 'foreign'
+
+    owned = (DOTFILES_DIR, *(root.resolve() for root in roots))
+    return 'ours' if any(str(destination).startswith(str(root)) for root in owned) else 'foreign'
+
+
 def create_symlinks(
     source_dir: Path,
     layer: str,
     *,
     verbose: bool = False,
     target_dir: Path | None = None,
-) -> int:
-    """Create symlinks from source_dir into target_dir, preserving relative paths."""
+    force: bool = False,
+) -> LinkResult:
+    """Create symlinks from source_dir into target_dir, preserving relative paths.
+
+    A target this manager did not create is refused rather than replaced. The
+    unlink below removes whatever is at the path — a real file included — so
+    without the check, `uv tool install` putting an executable in ~/.local/bin
+    and a link pass writing into the same directory means the second silently
+    destroys the first. `force` is the deliberate override, for adopting a
+    machine that already had dotfiles of its own.
+    """
     _target_dir = (target_dir or TARGET_DIR).resolve()
 
     if not source_dir.exists():
         print(f'[red]✗[/] Source directory does not exist: {source_dir}')
-        return 0
+        return LinkResult(0)
 
     print(f'[blue]Creating {layer} symlinks...[/]')
     count = 0
+    refused: list[Path] = []
 
     for item in source_dir.rglob('*'):
         if not (item.is_file() or item.is_symlink()):
@@ -213,6 +253,10 @@ def create_symlinks(
             continue
 
         target_path = _target_dir / relative_path
+        if not force and link_ownership(target_path, source_dir) == 'foreign':
+            refused.append(target_path)
+            continue
+
         target_path.parent.mkdir(parents=True, exist_ok=True)
         relative_link = make_relative_symlink(item, target_path)
 
@@ -227,7 +271,12 @@ def create_symlinks(
             print(f'[yellow]⚠[/] Failed to link {relative_path}: {e}')
 
     print(f'[green]Created {count} symlinks[/]')
-    return count
+    if refused:
+        print(f'[red]✗[/] Refused {len(refused)} target(s) this manager did not create:')
+        for path in refused:
+            print(f'    {path}')
+        print('[yellow]Nothing was overwritten. Re-run with --force to replace them.[/]')
+    return LinkResult(count, tuple(refused))
 
 
 def remove_symlinks(
@@ -367,8 +416,11 @@ def relink(
     verbose: bool = False,
     dotfiles_dir: Path | None = None,
     target_dir: Path | None = None,
-) -> None:
-    """Complete refresh: remove old symlinks, clean up broken ones, recreate everything."""
+) -> list[Path]:
+    """Complete refresh: remove old symlinks, clean up broken ones, recreate everything.
+
+    Returns the targets it refused to replace, so the caller can fail on them.
+    """
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
     _target_dir = (target_dir or TARGET_DIR).resolve()
 
@@ -383,9 +435,11 @@ def relink(
     # platform config remove/create steps and let common + shell/apps carry it.
     has_platform_config = platform_dir.exists()
 
+    refused: list[Path] = []
+
     def link_if_exists(source: Path, layer: str, dest: Path) -> None:
         if source.exists():
-            create_symlinks(source, layer, verbose=verbose, target_dir=dest)
+            refused.extend(create_symlinks(source, layer, verbose=verbose, target_dir=dest).refused)
 
     def remove_platform_config() -> None:
         if has_platform_config:
@@ -393,7 +447,10 @@ def relink(
 
     def create_platform_config() -> None:
         if has_platform_config:
-            create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
+            refused.extend(create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir).refused)
+
+    def create_common_layer() -> None:
+        refused.extend(create_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir).refused)
 
     def link_shell_files() -> None:
         link_if_exists(shell_dir / 'common', 'shell-common', target_shell)
@@ -411,7 +468,7 @@ def relink(
         ('Removing common symlinks', lambda: remove_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
         ('Removing shell symlinks', lambda: remove_symlinks(shell_dir, 'shell', verbose=verbose, target_dir=_target_dir)),
         ('Checking for broken symlinks', lambda: check_and_clean(_target_dir, _dotfiles_dir)),
-        ('Creating common base layer', lambda: create_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
+        ('Creating common base layer', create_common_layer),
         ('Creating platform overlay', create_platform_config),
         ('Linking shell files', link_shell_files),
         ('Linking apps', link_apps),
@@ -423,3 +480,4 @@ def relink(
         print()
 
     print(f'[bold green]✓ Relink complete![/] {platform} environment refreshed.')
+    return refused

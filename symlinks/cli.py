@@ -29,6 +29,7 @@ def main(
 @app.command()
 def link(
     target: str = typer.Argument(..., help='Target to link (common, macos, wsl, archlinux, linux, etc.)'),
+    force: bool = typer.Option(False, '--force', help='Replace targets this manager did not create'),
 ):
     """Create symlinks for common or platform layer, including apps.
 
@@ -37,22 +38,30 @@ def link(
     missing layer is skipped rather than treated as an error. A genuine typo
     (nothing found in any layer) still fails.
     """
+    empty = core.LinkResult(0)
     source_dir = core.DOTFILES_DIR / 'configs' / target
-    count = core.create_symlinks(source_dir, target, verbose=verbose) if source_dir.exists() else 0
+    configs = core.create_symlinks(source_dir, target, verbose=verbose, force=force) if source_dir.exists() else empty
 
     shell_dir = core.DOTFILES_DIR / 'shell' / target
-    shell_count = (
-        core.create_symlinks(shell_dir, f'shell-{target}', verbose=verbose, target_dir=core.TARGET_DIR / '.local' / 'shell')
+    shell = (
+        core.create_symlinks(shell_dir, f'shell-{target}', verbose=verbose, force=force, target_dir=core.TARGET_DIR / '.local' / 'shell')
         if shell_dir.exists()
-        else 0
+        else empty
     )
 
     apps_dir = core.DOTFILES_DIR / 'apps' / target
-    app_count = (
-        core.create_symlinks(apps_dir, f'apps-{target}', verbose=verbose, target_dir=core.TARGET_DIR / '.local' / 'bin')
+    apps = (
+        core.create_symlinks(apps_dir, f'apps-{target}', verbose=verbose, force=force, target_dir=core.TARGET_DIR / '.local' / 'bin')
         if apps_dir.exists()
-        else 0
+        else empty
     )
+
+    count, shell_count, app_count = configs.created, shell.created, apps.created
+
+    # A refusal is a failure to converge, not a warning: the machine is not what
+    # the repo says it is, and the caller has to hear that in the exit code.
+    if configs.refused or shell.refused or apps.refused:
+        raise typer.Exit(1)
 
     if count == 0 and shell_count == 0 and app_count == 0:
         console.print(f'[red]✗[/] No configs, shell, or apps overlay found for: {target}')
@@ -141,7 +150,8 @@ def relink(
                     console.print(f'  - {item.name}')
         raise typer.Exit(1)
 
-    core.relink(platform, verbose=verbose)
+    if core.relink(platform, verbose=verbose):
+        raise typer.Exit(1)
 
 
 @app.command()
