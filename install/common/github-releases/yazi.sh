@@ -118,7 +118,6 @@ export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=/dev/null
 
 log_info "Installing plugins..."
-ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
 ya pkg add yazi-rs/plugins:git || true
 log_success "yazi plugins synced"

@@ -1,9 +1,4 @@
 [[plugin.deps]]
-use = "AnirudhG07/nbpreview"
-rev = "b504594"
-hash = "b83919985400521dee78e1c352b5d9db"
-
-[[plugin.deps]]
 use = "pirafrank/what-size"
 rev = "d896656"
 hash = "62251f94eb67648d42cdfcfb8be0fad2"

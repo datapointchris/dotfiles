@@ -1199,9 +1199,6 @@ uv_tools:
       command: keymap
       description: Generate keyboard layout diagrams
 
-    - name: nbpreview
-      description: Jupyter notebook preview in terminal
-
     - name: numpy
       # Installed for other tools to import, and ships no entry point of its own,
       # so verification has no command to look for.

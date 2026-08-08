@@ -28,7 +28,3 @@ id    = "git"
 group = "git"
 url   = "*/"
 run   = "git"
-
-[[plugin.prepend_previewers]]
-url = "*.ipynb"
-run = "nbpreview"

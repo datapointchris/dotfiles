@@ -84,7 +84,6 @@ uv_tools:
   - sqlfluff
   - djlint
   - keymap-drawer
-  - nbpreview
   - numpy
   - jupyterlab
   - pre-commit
