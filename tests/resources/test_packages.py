@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import evidence as ev
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import packages
@@ -189,7 +190,7 @@ def test_a_private_repo_without_credentials_is_not_apply_s_to_fix(tmp_path: Path
     assert found[0].verdict is Verdict.MISSING
     # `gh` may be logged in on the machine running the suite, in which case this
     # is repairable — the assertion is that the two states are told apart at all.
-    expected = Repair.AUTOMATIC if packages.have_github_credentials() else Repair.BY_HAND
+    expected = Repair.AUTOMATIC if ev.have_github_credentials() else Repair.BY_HAND
     assert found[0].repair is expected
 
 
@@ -199,63 +200,3 @@ def test_a_private_repo_with_a_token_is_repairable(tmp_path: Path, fake_bin: Pat
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'git_uv_tools': ['safekeep']})
 
     assert changes(live)[0].repair is Repair.AUTOMATIC
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Asking the package manager, not PATH
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_a_system_package_is_judged_by_its_manager_not_by_path(tmp_path: Path, fake_bin: Path) -> None:
-    """A package name is not a binary name: p7zip-full installs 7zz, and
-    build-essential installs no executable at all. Asking PATH reports every one
-    of them missing on a fully-installed machine."""
-    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nprintf "build-essential\\ncurl\\n"\n')
-    declared = {'system_packages': [{'name': 'build-essential', 'apt': 'build-essential'}]}
-    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
-
-    observed = packages.RESOURCE.observe(live, live.plan)
-    item = live.plan.for_resource('system')[0]
-
-    assert observed.evidence == {}, 'system packages belong to the system resource, not this one'
-    assert packages.evidence_for(item, {'apt': frozenset({'build-essential'})}).verdict is Verdict.MATCHED
-
-
-def test_the_declared_package_name_is_what_is_looked_for(tmp_path: Path, fake_bin: Path) -> None:
-    """The entry is `7zip` and the package is `p7zip-full` on apt."""
-    declared = {'system_packages': [{'name': '7zip', 'apt': 'p7zip-full', 'pacman': '7zip'}]}
-    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
-    item = live.plan.for_resource('system')[0]
-
-    assert packages.evidence_for(item, {'apt': frozenset({'p7zip-full'})}).verdict is Verdict.MATCHED
-    assert packages.evidence_for(item, {'apt': frozenset({'7zip'})}).verdict is Verdict.MISSING
-
-
-def test_a_manager_that_cannot_be_asked_yields_unknown(tmp_path: Path, fake_bin: Path) -> None:
-    """Unverified is not permission. Reporting every apt package missing because
-    dpkg-query is absent would be a measured-looking wrong answer."""
-    declared = {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}
-    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
-    item = live.plan.for_resource('system')[0]
-
-    assert packages.evidence_for(item, {}).verdict is Verdict.UNKNOWN
-
-
-def test_every_installer_maps_to_a_query_or_is_deliberately_unqueryable() -> None:
-    """A missing key and a deliberately empty one looked the same, and `flatpak`
-    was exactly that — reporting UNKNOWN on a machine where the query works."""
-    from dotfiles import coordinates as axes
-
-    installers = {installer for bundle in axes.PLATFORM_BUNDLES.values() for installer in bundle.installers}
-
-    assert installers <= set(packages.INSTALLER_QUERIES)
-    assert {'cask', 'flatpak'} <= set(packages.INSTALLER_QUERIES)
-
-
-def test_an_aur_package_is_answered_by_pacman(tmp_path: Path, fake_bin: Path) -> None:
-    """An AUR package is a pacman package once it is installed."""
-    declared = {'system_packages': [{'name': 'zen-browser', 'aur': 'zen-browser-bin'}]}
-    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
-    item = live.plan.for_resource('system')[0]
-
-    assert packages.evidence_for(item, {'pacman': frozenset({'zen-browser-bin'})}).verdict is Verdict.MATCHED

@@ -112,6 +112,21 @@ def check_env(session: Session) -> ResourceResult:
     return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
 
 
+def check_system(session: Session) -> ResourceResult:
+    """What the OS package manager installed, read without escalating.
+
+    The configuration half — login shell, /etc/zshenv, the Xcode licence, the
+    macOS defaults — arrives with the sudo chokepoint in step 6, and the detail
+    line says so rather than implying it has been checked.
+    """
+    from dotfiles.resources import system
+
+    observed = system.RESOURCE.observe(session, session.plan)
+    changes = system.RESOURCE.diff(session.plan, observed)
+    asked = ', '.join(sorted(observed.asked)) or 'nothing'
+    return from_changes('system', changes, f'all {len(observed.evidence)} declared system packages installed (asked {asked})')
+
+
 def check_plugins(session: Session) -> ResourceResult:
     """The cloned plugins only, and the detail line says so.
 
@@ -190,7 +205,7 @@ CHECKERS: dict[str, Checker] = {
     'plugins': check_plugins,
     'symlinks': check_symlinks,
     'env': check_env,
-    'system': _pending('system'),
+    'system': check_system,
     'identity': check_identity,
 }
 """Keyed by address and ordered as the machine converges — see `vocabulary.RESOURCES`."""

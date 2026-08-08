@@ -537,9 +537,9 @@ system_packages:
     pacman: waybar
     description: Wayland status bar
 
-  - name: rofi-wayland
-    pacman: rofi-wayland
-    description: Application launcher (Wayland fork)
+  - name: rofi
+    pacman: rofi
+    description: Application launcher — upstream rofi 2.0 absorbed the Wayland fork
 
   - name: dunst
     pacman: dunst

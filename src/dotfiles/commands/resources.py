@@ -292,7 +292,7 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 @system_app.command('check')
 def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report system configuration drift."""
-    _report(reconcile.CHECKERS['system'](_session(machine)), as_json)
+    _report(reconcile.check_system(_session(machine)), as_json)
 
 
 @system_app.command('apply')
