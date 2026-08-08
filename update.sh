@@ -520,7 +520,7 @@ update_nvim_plugins() {
 usage() {
   help_header "update" "Update system packages, language tools, and plugins."
   help_text "With no SELECTOR, every group runs. Update never installs a tool that"
-  help_text "is missing — it reports it and leaves it to \`dotfiles install\`."
+  help_text "is missing — it reports it and leaves it to \`dotfiles apply\`."
   help_usage "$(basename "$0") [SELECTOR...] [OPTIONS]"
 
   help_section "Groups"

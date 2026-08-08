@@ -158,8 +158,8 @@ screen() {
 }
 
 @test "help_usage owns the Usage label and aligns continuation lines" {
-  run screen 'help_usage "install.sh --machine NAME" "install.sh --create-offline-bundle"'
+  run screen 'help_usage "install.sh --machine NAME" "install.sh --machine NAME --offline"'
   assert_success
   assert_line "Usage: install.sh --machine NAME"
-  assert_line "       install.sh --create-offline-bundle"
+  assert_line "       install.sh --machine NAME --offline"
 }

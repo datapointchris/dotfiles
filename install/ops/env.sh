@@ -2,7 +2,7 @@
 set -uo pipefail
 
 # Shared implementation of the ~/.env operations.
-# Called by both front doors: `dotfiles env <verb>` and `task env:*`.
+# Called by `dotfiles env` through bridge.py, and by `task env:*`.
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export DOTFILES_DIR

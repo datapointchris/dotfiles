@@ -15,7 +15,7 @@
 #   default      the value written when a manifest does not override it
 #   consumers    where it is read, so a dead flag is visible at a glance
 #
-# A manifest overrides a default in its own `flags:` block. `dotfiles doctor`
+# A manifest overrides a default in its own `flags:` block. `dotfiles check`
 # reports flags declared here but absent from ~/.env, and values that are
 # neither truthy nor falsey.
 #
@@ -31,7 +31,7 @@
 #
 # Each entry may narrow to a platform and/or a machine; an entry with neither
 # applies everywhere. The generated section names the ones that apply, and
-# `dotfiles doctor` fails while one is missing — without that, an unset value
+# `dotfiles check` fails while one is missing — without that, an unset value
 # just silently produces a wrong path at the point of use.
 # Only values whose absence is *silent* belong here. An unset WINDOWS_USER builds
 # /mnt/c/Users// and mounts a share with an empty username; an unset
@@ -56,7 +56,7 @@ required:
 # required value.
 #
 # These are restored by safekeep, not created by hand and not installed, so they
-# are absent between `dotfiles install` and the restore step of a rebuild. That
+# are absent between `dotfiles apply` and the restore step of a rebuild. That
 # window is why `doctor` reporting one missing is the accurate state of the
 # machine rather than a fault in the install.
 required_files:

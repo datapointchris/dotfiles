@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Documentation site operations shared by `dotfiles docs` and `task docs:*`.
+# Documentation site operations, driven by `task docs:*`.
 # mkdocs is a project dependency rather than an installed binary, so it must run
 # through `uv run` from the repo — plain `mkdocs` only resolves inside an
 # activated venv.

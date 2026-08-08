@@ -205,7 +205,7 @@ else
   echo -e "${RED}Some dotfiles components are not working correctly.${NC}"
   echo ""
   echo "Common fixes:"
-  echo "  - Run: task symlinks:link"
+  echo "  - Run: dotfiles symlinks apply"
   echo "  - Run: source ~/.config/zsh/.zshrc"
   echo "  - Check: ls -la ~/.config for broken symlinks"
   exit 1

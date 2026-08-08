@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# BATS suite runner shared by `dotfiles test` and `task test*`.
+# BATS suite runner, driven by `task test*`.
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export DOTFILES_DIR

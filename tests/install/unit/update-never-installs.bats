@@ -35,7 +35,7 @@ setup() {
   assert_success
   assert_output --partial "ifiles"
   assert_output --partial "go-tools"
-  assert_output --partial "dotfiles install"
+  assert_output --partial "dotfiles apply"
 }
 
 @test "missing-tools: the summary is silent when nothing is missing" {

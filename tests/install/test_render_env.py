@@ -151,7 +151,7 @@ def test_generated_section_omits_the_file_block_when_nothing_applies():
 
 
 def test_check_reports_a_required_file_that_is_missing(env_file, capsys):
-    # Expected between `dotfiles install` and the restore step of a rebuild: the
+    # Expected between `dotfiles apply` and the restore step of a rebuild: the
     # remedy is a safekeep restore, not creating the file by hand.
     render_env.sync(env_file, MANIFEST, FLAGS, [])
     assert render_env.check(env_file, MANIFEST, FLAGS, [], REQUIRED_FILES) == 1

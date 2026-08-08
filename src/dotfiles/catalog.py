@@ -826,7 +826,7 @@ def cmd_missing(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print(f'  {colorize(section.ljust(width), Color.BRIGHT_BLACK)}  {name}')
     print()
     print(colorize(f'⚠ {len(missing)} not installed', Color.YELLOW))
-    print('Install them with: dotfiles install')
+    print('Install them with: dotfiles apply')
     sys.exit(1)
 
 

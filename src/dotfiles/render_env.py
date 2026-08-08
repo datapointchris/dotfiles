@@ -119,7 +119,7 @@ def render_generated_section(manifest, flags, required=None, required_files=None
         '# Machine Environment',
         '# ================================================================',
         f'# Generated from install/manifests/{machine}.yml and install/flags.yml.',
-        '# Refresh with: dotfiles env sync',
+        '# Refresh with: dotfiles env apply',
         '#',
         '# Everything above the OVERRIDES marker is regenerated and will be',
         '# overwritten. Put secrets and machine-local values below it.',
@@ -150,7 +150,7 @@ def render_generated_section(manifest, flags, required=None, required_files=None
         lines += [
             '',
             '# This machine also needs these set by hand BELOW the marker. Their values are',
-            '# machine-local and deliberately not in the repo; `dotfiles doctor` fails until',
+            '# machine-local and deliberately not in the repo; `dotfiles check` fails until',
             '# each one is set.',
         ]
         lines += [f'#   {entry["name"]} - {entry.get("description", "")}'.rstrip(' -') for entry in needed]
@@ -162,8 +162,8 @@ def render_generated_section(manifest, flags, required=None, required_files=None
         lines += [
             '',
             '# This machine also expects these files, which safekeep restores rather than',
-            '# `dotfiles install` creating them. They are missing between an install and the',
-            '# restore step of a rebuild, which is what `dotfiles doctor` reports.',
+            '# `dotfiles apply` creating them. They are missing between an install and the',
+            '# restore step of a rebuild, which is what `dotfiles check` reports.',
         ]
         lines += [f'#   {entry["path"]} - {entry.get("description", "")}'.rstrip(' -') for entry in needed_files]
 
@@ -220,7 +220,7 @@ def check(path, manifest, flags, required=None, required_files=None):
     problems = []
 
     if not path.exists():
-        print(f'✗ {path} does not exist — run `dotfiles env sync`')
+        print(f'✗ {path} does not exist — run `dotfiles env apply`')
         return 1
 
     present = parse_env_assignments(path.read_text())

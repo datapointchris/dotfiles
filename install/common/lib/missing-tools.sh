@@ -47,5 +47,5 @@ show_missing_summary() {
 
   echo ""
   print_info "$count tool(s) in this machine's manifest are not installed."
-  print_info "Install them with: dotfiles install${PACKAGE_OWNER:+ --mine}"
+  print_info "Install them with: dotfiles apply${PACKAGE_OWNER:+ --owner $PACKAGE_OWNER}"
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Health check shared by `dotfiles doctor` and `task doctor`.
+# Health check shared by `dotfiles check` and `task doctor`.
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export DOTFILES_DIR
@@ -61,12 +61,12 @@ fi
 if [[ $missing_status -eq 0 ]]; then
   print_success "Every package this machine declares is installed"
 else
-  print_error "Declared packages are missing — run 'dotfiles install'"
+  print_error "Declared packages are missing — run 'dotfiles apply'"
 fi
 if [[ $env_status -eq 0 ]]; then
   print_success "Machine environment matches the manifest and the declared flags"
 else
-  print_error "Machine environment has drifted — run 'dotfiles env sync'"
+  print_error "Machine environment has drifted — run 'dotfiles env apply'"
 fi
 if [[ $identity_status -eq 0 ]]; then
   print_success "Git identity is set for this machine"
