@@ -102,7 +102,7 @@ the machine rather than something the install detects.
 
 ```bash
 dotfiles check       # symlink, package and flag drift in one place
-packages missing     # declared but not installed
+dotfiles packages check   # declared but not installed
 syncer check         # repos the registry expects, against what is on disk
 ```
 

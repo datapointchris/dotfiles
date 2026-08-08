@@ -637,67 +637,6 @@ def check_unreferenced_entries(
             issues.append((section, 'warning', f"'{name}' defined in packages.yml but not referenced by any manifest"))
 
 
-def iter_manifest_declared_entries(data: dict[str, Any], manifest: dict[str, Any]):
-    """Yield (section, entry) for every packages.yml entry this manifest names.
-
-    Only the name-subscribed sections: the rest are either installed wholesale by
-    a system package manager or gated by a boolean, and neither has a per-entry
-    name for the machine to be missing.
-    """
-    for section in NAME_SUBSCRIBED_SECTIONS:
-        declared = manifest.get(section)
-        if not isinstance(declared, list):
-            continue
-        wanted = set(declared)
-        for entry in iter_section_entries(data, section):
-            if isinstance(entry, dict) and entry.get('name') in wanted:
-                yield section, {**entry, '_section': section}
-
-
-def cmd_missing(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Report packages this machine's manifest declares that are not installed.
-
-    Deliberately separate from `verify`, which compares packages.yml against the
-    manifests and installer scripts and runs on every commit. Machine state has
-    no business failing a commit — a box part-way through a rollout is not a
-    repo defect. This is the check `update` leans on to report the tools it
-    declines to install, and the one `doctor` needs to earn its summary line.
-    """
-    root = resolve_repo_root(args.root)
-    machine = args.machine or os.environ.get('MACHINE')
-    if not machine:
-        print('Error: no machine given — pass --machine or set MACHINE', file=sys.stderr)
-        sys.exit(1)
-
-    manifests = load_manifests(root)
-    if machine not in manifests:
-        print(f'Error: manifest not found: {machine}', file=sys.stderr)
-        sys.exit(1)
-
-    missing: list[tuple[str, str]] = []
-    for section, entry in iter_manifest_declared_entries(data, manifests[machine]):
-        status, _ = check_installed(entry)
-        if status is InstallStatus.NOT_INSTALLED:
-            missing.append((section, entry['name']))
-
-    if args.json:
-        print(json.dumps([{'section': s, 'name': n} for s, n in missing], indent=2))
-        sys.exit(0)
-
-    if not missing:
-        print(colorize(f'✓ every package {machine} declares is installed', Color.GREEN))
-        sys.exit(0)
-
-    print_section(f'Declared by {machine} but not installed', Color.YELLOW)
-    width = max(len(section) for section, _ in missing)
-    for section, name in missing:
-        print(f'  {colorize(section.ljust(width), Color.BRIGHT_BLACK)}  {name}')
-    print()
-    print(colorize(f'⚠ {len(missing)} not installed', Color.YELLOW))
-    print('Install them with: dotfiles apply')
-    sys.exit(1)
-
-
 def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Verify packages.yml against manifests and installer script directories."""
     root = resolve_repo_root(args.root)
@@ -796,13 +735,6 @@ def main(argv: list[str] | None = None) -> None:
     verify_parser = subparsers.add_parser('verify', help='Check packages.yml against manifests and installer scripts')
     verify_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
     verify_parser.set_defaults(func=cmd_verify)
-
-    # missing command
-    missing_parser = subparsers.add_parser('missing', help='Show packages this machine declares but has not installed')
-    missing_parser.add_argument('--machine', help='Manifest to check (default: $MACHINE)')
-    missing_parser.add_argument('--json', action='store_true', help='Output as JSON')
-    missing_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
-    missing_parser.set_defaults(func=cmd_missing)
 
     args = parser.parse_args(argv)
 

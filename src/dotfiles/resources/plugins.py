@@ -34,8 +34,6 @@ from dotfiles.session import Session
 
 NAME = 'plugins'
 
-PROVIDERS = ('shell-plugin', 'tpm')
-
 SHELL_PLUGIN_DIR = Path('.config/zsh/plugins')
 """Where `.zshrc` sources them from. Not declared per entry in `packages.yml`,
 because every shell plugin lands in the same place and a field repeating that on
@@ -133,7 +131,7 @@ def clone(session: Session, stage: Stage) -> bool:
 
 
 def _planned(plan: Plan) -> tuple[DesiredItem, ...]:
-    return tuple(item for provider in PROVIDERS for item in plan.for_provider(provider))
+    return plan.for_resource(NAME)
 
 
 RESOURCE = PluginsResource()

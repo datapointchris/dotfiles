@@ -194,10 +194,10 @@ Every phase now skips a tool it finds missing, records it through
 installed. Reported rather than silently fixed, so adding a tool on one machine and
 pulling on another still surfaces — which is the job the accidental behaviour was doing.
 
-`packages missing` answers the same question on demand, and is what `check` calls. It
-is deliberately separate from `packages verify`, which runs on every commit: `verify`
-compares `packages.yml` against the manifests and installer scripts, and a machine
-part-way through a rollout is not a repo defect that should fail a commit.
+`dotfiles packages check` answers the same question on demand. It is deliberately
+separate from `packages verify`, which runs on every commit: `verify` compares
+`packages.yml` against the manifests and installer scripts, and a machine part-way
+through a rollout is not a repo defect that should fail a commit.
 
 ### What a phase is allowed to claim
 
@@ -250,10 +250,10 @@ real type system, a test suite, and dependencies it can declare.
 | Updating | `update.sh` over `install/phases.sh`, not yet converted |
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
 | Composite operations | `install/ops/` — reached through `src/dotfiles/bridge.py` |
-| Symlink management | `src/dotfiles/symlinks/cli.py` |
+| Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Registry drift | `packages verify` — packages.yml vs manifests vs scripts |
-| Machine drift | `packages missing` — this machine vs what its manifest declares |
+| Machine drift | `dotfiles check` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 

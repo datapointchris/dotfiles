@@ -90,10 +90,10 @@ make each test a description of today's package list, failing on the next
 unrelated addition and passing for reasons that have nothing to do with the
 check.
 
-`packages missing` needs the same isolation for *installed-ness*, which is
-ambient. Those tests run with `PATH` pointed at a temp directory holding only
-`uv` — needed for the script's own shebang — plus whatever binaries that
-specific test decides exist.
+The package resource needs the same isolation for *installed-ness*, which is
+ambient. `tests/resources/test_packages.py` injects it through the knobs the code
+already honours — `PATH` and `UV_TOOL_DIR` — with `/usr/bin:/bin` kept behind the
+fake bin dir so the fixture's own helpers still resolve.
 
 ## packages verify
 

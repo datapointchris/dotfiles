@@ -71,13 +71,17 @@ def _from_status(address: str, status: int, converged: str, drifted: str) -> Res
 
 
 def check_packages(session: Session) -> ResourceResult:
-    status = bridge.declaration('missing', '--machine', session.machine_name, output=Output.STREAM)
-    return _from_status(
-        'packages',
-        status,
-        'every declared package is installed',
-        "declared packages are missing — 'dotfiles packages apply' installs them",
-    )
+    """Every tool this machine declares, against the evidence for it.
+
+    One inventory query per package manager rather than one probe per package,
+    which is what `packages missing` did — and it asked PATH about apt and pacman
+    names, so it skipped those sections entirely rather than getting them wrong.
+    """
+    from dotfiles.resources import packages
+
+    observed = packages.RESOURCE.observe(session, session.plan)
+    changes = packages.RESOURCE.diff(session.plan, observed)
+    return from_changes('packages', changes, f'all {len(observed.evidence)} declared packages are installed')
 
 
 def check_symlinks(session: Session) -> ResourceResult:

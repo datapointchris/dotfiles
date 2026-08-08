@@ -4,7 +4,7 @@
 
 ```sh
 dotfiles check       # symlink health and package-manifest drift
-packages missing     # declared in packages.yml but not installed
+dotfiles packages check   # declared in packages.yml but not installed
 toolbox check        # registry vs PATH vs disk
 ```
 

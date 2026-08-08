@@ -91,6 +91,7 @@ class DesiredItem:
 
     section: str
     provider: str
+    resource: str
     stage: Stage
     name: str
     executable: str
@@ -107,6 +108,7 @@ class DesiredItem:
         return {
             'section': self.section,
             'provider': self.provider,
+            'resource': self.resource,
             'stage': self.stage.name.lower(),
             'name': self.name,
             'executable': self.executable,
@@ -124,6 +126,9 @@ class Plan:
     def for_provider(self, provider: str) -> tuple[DesiredItem, ...]:
         return tuple(item for item in self.items if item.provider == provider)
 
+    def for_resource(self, resource: str) -> tuple[DesiredItem, ...]:
+        return tuple(item for item in self.items if item.resource == resource)
+
     def for_stage(self, stage: Stage) -> tuple[DesiredItem, ...]:
         return tuple(item for item in self.items if item.stage is stage)
 
@@ -131,22 +136,37 @@ class Plan:
         return tuple(item for item in self.items if item.section == section)
 
 
-PROVIDERS: dict[str, tuple[str, Stage]] = {
-    'system_packages': ('system', Stage.SYSTEM),
-    'macos_casks': ('cask', Stage.SYSTEM),
-    'mas_apps': ('mas', Stage.SYSTEM),
-    'flatpak_apps': ('flatpak', Stage.SYSTEM),
-    'github_releases': ('ghrelease', Stage.TOOLS),
-    'custom_installers': ('custom', Stage.TOOLS),
-    'cargo_packages': ('cargo', Stage.TOOLS),
-    'go_tools': ('go', Stage.TOOLS),
-    'npm_globals': ('npm', Stage.NODE_TOOLS),
-    'uv_tools': ('uv', Stage.PYTHON_TOOLS),
-    'git_uv_tools': ('uv-git', Stage.PYTHON_TOOLS),
-    'shell_plugins': ('shell-plugin', Stage.SHELL_PLUGINS),
-    'tmux_plugins': ('tpm', Stage.EDITOR_PLUGINS),
+@dc.dataclass(frozen=True, slots=True)
+class Provider:
+    """Who installs a section, when, and which resource owns the answer.
+
+    The `resource` column is what `install/phases.sh`'s registry hand-maintained.
+    It lives here because it is a property of the section rather than of the
+    resource: a resource asking the plan for its own items cannot then disagree
+    with the phase that installs them.
+    """
+
+    name: str
+    stage: Stage
+    resource: str
+
+
+PROVIDERS: dict[str, Provider] = {
+    'system_packages': Provider('system', Stage.SYSTEM, 'system'),
+    'macos_casks': Provider('cask', Stage.SYSTEM, 'system'),
+    'mas_apps': Provider('mas', Stage.SYSTEM, 'system'),
+    'flatpak_apps': Provider('flatpak', Stage.SYSTEM, 'system'),
+    'github_releases': Provider('ghrelease', Stage.TOOLS, 'packages'),
+    'custom_installers': Provider('custom', Stage.TOOLS, 'packages'),
+    'cargo_packages': Provider('cargo', Stage.TOOLS, 'packages'),
+    'go_tools': Provider('go', Stage.TOOLS, 'packages'),
+    'npm_globals': Provider('npm', Stage.NODE_TOOLS, 'packages'),
+    'uv_tools': Provider('uv', Stage.PYTHON_TOOLS, 'packages'),
+    'git_uv_tools': Provider('uv-git', Stage.PYTHON_TOOLS, 'packages'),
+    'shell_plugins': Provider('shell-plugin', Stage.SHELL_PLUGINS, 'plugins'),
+    'tmux_plugins': Provider('tpm', Stage.EDITOR_PLUGINS, 'plugins'),
 }
-"""Which provider installs a section, and when.
+"""Which provider installs a section, when, and for which resource.
 
 `system_packages` resolves to one provider whatever the manager is, because the
 manager is a coordinate the provider reads — a provider per manager would be
@@ -175,7 +195,7 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
     """
     items: list[DesiredItem] = []
 
-    for section, (provider, stage) in PROVIDERS.items():
+    for section, provider in PROVIDERS.items():
         subscription = machine.subscription(section)
         for entry in declaration.section(section):
             if not subscription.wants(entry) or not available(entry, machine.coordinates):
@@ -185,8 +205,9 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
             items.append(
                 DesiredItem(
                     section=section,
-                    provider=provider,
-                    stage=stage,
+                    provider=provider.name,
+                    resource=provider.resource,
+                    stage=provider.stage,
                     name=entry.name,
                     executable=_executable(entry),
                     evidence_path=getattr(entry, 'installed_path', ''),
