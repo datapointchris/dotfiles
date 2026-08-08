@@ -41,7 +41,15 @@ def _ensure_identity_file() -> None:
     hint on a fresh machine commits an identity into the checkout. An empty file
     redirects the write and deliberately carries no [user], so `useConfigOnly`
     still refuses to commit until someone sets one.
+
+    A dangling link has to go first: `exists()` follows it and so reads as absent,
+    while `write_text()` follows it and creates its target. Every machine that
+    predates this file had `~/.gitconfig` linked into `configs/<platform>/`, so
+    the link left behind by that source's removal aims the write at the one place
+    the placeholder exists to stay out of.
     """
+    if IDENTITY_FILE.is_symlink() and not IDENTITY_FILE.exists():
+        IDENTITY_FILE.unlink()
     if IDENTITY_FILE.exists():
         return
     IDENTITY_FILE.write_text(IDENTITY_PLACEHOLDER)
