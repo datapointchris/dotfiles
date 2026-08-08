@@ -735,7 +735,7 @@ runtimes:
 # both were carried for 22 and 23 entries respectively while no code read either,
 # so they drifted into describing assets that no longer existed. Naming an asset
 # from data would mean the URL vocabulary living here too; that trade is the
-# rejected alternative in docs/architecture/github-release-installer.md.
+# rejected alternative in docs/architecture/github-releases.md.
 #
 # Latest is the default. An entry pins itself with `version:` — a bare version,
 # never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0

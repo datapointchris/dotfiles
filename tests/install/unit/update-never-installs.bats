@@ -76,9 +76,11 @@ setup() {
 }
 
 # ================================================================
-# GitHub release installers
+# The shared release helper
 # ================================================================
-# The single decision point for every script in install/common/github-releases.
+# It backed all 23 github-releases scripts, which are Python now; what still
+# calls it is custom-installers/terraform-ls.sh. The rule it encodes is the one
+# under test, and it outlives the callers.
 
 @test "github-release: an absent binary is installed under install" {
   run bash -c '

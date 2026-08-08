@@ -400,22 +400,13 @@ update_npm_globals() {
   report_snapshot_changes "$before" "$after" "npm global packages already at latest"
 }
 
+# The one phase with no bash left to run. `apply` converges a release rather than
+# installing only what is absent, so narrowing it to this section is the whole of
+# what the per-tool loop here used to do — and it is the shape the rest of this
+# file takes as each phase converts.
 update_github_releases() {
   print_section "Updating GitHub Release Tools"
-  local github_releases="$DOTFILES_DIR/install/common/github-releases"
-  local tool script count=0
-  while IFS= read -r tool; do
-    [[ -z "$tool" ]] && continue
-    count=$((count + 1))
-    script="$github_releases/${tool}.sh"
-    if [[ ! -f "$script" ]]; then
-      log_warning "No installer script for github release: $tool (packages verify should have caught this)"
-      continue
-    fi
-    run_installer "$script" "$tool" --update
-  done < <(parse_packages --type=github)
-  [[ $count -eq 0 ]] && log_info "no GitHub release tools selected"
-  return 0
+  dotfiles_python -m dotfiles.main packages apply --source github_releases
 }
 
 update_custom_installers() {

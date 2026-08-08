@@ -82,11 +82,16 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 | Visual structure | formatting.sh | `print_header/section/banner/title` |
 | Cleanup/error traps | error-handling.sh | `enable_error_traps`, `register_cleanup` |
 
-**GitHub Release Installers** (⚠️ Use library for new installers):
+**GitHub Release Installers** (⚠️ Python, not a script per tool):
 
-- Use `install/common/lib/github-release-installer.sh` for new GitHub release installers
-- See `install/common/github-releases/` for all current scripts
-- See `docs/architecture/github-release-installer.md`
+- A new release tool is one function in `src/dotfiles/providers/releases.py` naming its
+  asset, plus its `packages.yml` entry. There is no script to write, and
+  `packages verify` fails an entry that has neither
+- `src/dotfiles/providers/ghrelease.py` is the engine every one of them goes through
+- Verification is required by default; an entry that cannot satisfy it declares
+  `checksum: unpublished` or `checksum: unlisted` and is measured against the live
+  release by `tests/install/test_release_urls.py --e2e`
+- See `docs/architecture/github-releases.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 

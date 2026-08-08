@@ -125,7 +125,7 @@ nav:
       - tmux Sessions: architecture/tmux-sessions.md
       - Package Management: architecture/package-management.md
       - Tool Composition: architecture/tool-composition.md
-      - GitHub Release Installer: architecture/github-release-installer.md
+      - GitHub Releases: architecture/github-releases.md
   - Configuration:
       - Docker Setup: configuration/docker.md
       - Hyprland: configuration/hyprland.md

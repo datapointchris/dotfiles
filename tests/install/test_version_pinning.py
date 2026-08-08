@@ -4,118 +4,90 @@ The capability exists so a machine can hold a known-good release while upstream
 is broken, and so an older distro can run an older build than the rest of the
 fleet. Vocabulary and the reasoning: .planning/version-constraints.md.
 
-DOTFILES_DIR is the injection point — a real knob every installer already reads,
-so a synthetic tree needs no seam added to production code — it carries install/
-and src/ because the installers reach the package through PYTHONPATH. The ambient
-environment is passed through deliberately: /usr/bin/python3 finds PyYAML via a
-relocated PYTHONUSERBASE, so a stripped env cannot read packages.yml at all and
-would be testing the wrong failure.
-
-Marked e2e because resolving a bare version to a tag means asking the repo which
+Marked e2e where resolving a bare version to a tag means asking the repo which
 tags it published. That is not incidental: the constraint is deliberately a bare
 version rather than a tag, because the same release is spelled v0.56.0 by lazygit
 and cli/v0.9.0 by the personal CLIs, and only the publisher knows which.
 """
 
-import os
-import shutil
-import subprocess
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
+import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from dotfiles import apply
+from dotfiles import catalog
+from dotfiles import paths
+from dotfiles.providers import ghrelease
 
 PINNED_TOOL = 'lazygit'
 PINNED_REPO = 'jesseduffield/lazygit'
 PINNED_VERSION = '0.56.0'
 
 
-@pytest.fixture
-def pinned_tree(tmp_path: Path) -> Path:
-    """A copy of install/ whose lazygit entry declares a pin."""
-    root = tmp_path / 'dotfiles'
-    shutil.copytree(REPO_ROOT / 'install', root / 'install')
-    shutil.copytree(REPO_ROOT / 'src', root / 'src')
-
-    packages = root / 'install' / 'packages.yml'
-    declaration = f'  - name: {PINNED_TOOL}\n    repo: {PINNED_REPO}\n'
-    text = packages.read_text()
-    assert declaration in text, 'the lazygit entry no longer opens with name then repo'
-    packages.write_text(text.replace(declaration, f'{declaration}    version: "{PINNED_VERSION}"\n', 1))
-    return root
-
-
-def print_url(root: Path, tool: str) -> tuple[str, str, str]:
-    result = subprocess.run(
-        ['bash', str(root / 'install' / 'common' / 'github-releases' / f'{tool}.sh'), '--print-url', 'linux', 'x86_64'],
-        capture_output=True,
-        text=True,
-        check=True,
-        env={**os.environ, 'DOTFILES_DIR': str(root)},
-    )
-    name, version, url = result.stdout.strip().splitlines()[0].split('|')
-    return name, version, url
+def declared(tmp_path: Path, **fields: str) -> catalog.GithubRelease:
+    """One release entry, through the real loader so the pin is validated as one."""
+    packages = tmp_path / 'packages.yml'
+    packages.write_text(yaml.safe_dump({'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO, **fields}]}))
+    entry = catalog.load(packages).find('github_releases', PINNED_TOOL)
+    assert isinstance(entry, catalog.GithubRelease)
+    return entry
 
 
 @pytest.mark.e2e
-def test_a_pinned_tool_resolves_to_the_pinned_release(pinned_tree):
-    _, version, url = print_url(pinned_tree, PINNED_TOOL)
-
-    # The pin is written bare and comes back as the tag the repo publishes.
-    assert version == f'v{PINNED_VERSION}'
-    assert f'/download/v{PINNED_VERSION}/' in url
-    assert PINNED_VERSION in url.rsplit('/', 1)[-1]
+def test_a_pinned_tool_resolves_to_the_pinned_release(tmp_path: Path):
+    """The pin is written bare and comes back as the tag the repo publishes."""
+    assert ghrelease.resolve_tag(declared(tmp_path, version=PINNED_VERSION)) == f'v{PINNED_VERSION}'
 
 
 @pytest.mark.e2e
-def test_an_unpinned_tool_still_resolves_to_latest(pinned_tree):
+def test_an_unpinned_tool_still_resolves_to_latest(tmp_path: Path):
     """The pin must narrow one entry, not switch the whole catalog into pinned mode."""
-    _, pinned, _ = print_url(pinned_tree, PINNED_TOOL)
-    _, unpinned, _ = print_url(pinned_tree, 'glow')
+    latest = ghrelease.resolve_tag(declared(tmp_path))
 
-    assert pinned == f'v{PINNED_VERSION}'
-    assert unpinned and unpinned != f'v{PINNED_VERSION}'
+    assert latest
+    assert latest != f'v{PINNED_VERSION}'
 
 
 @pytest.mark.e2e
-def test_a_pin_no_release_matches_fails_rather_than_installing_latest(tmp_path: Path):
-    """Falling through to latest is exactly what the pin exists to prevent, so an
-    unmatchable pin has to be loud."""
-    root = tmp_path / 'dotfiles'
-    shutil.copytree(REPO_ROOT / 'install', root / 'install')
-    shutil.copytree(REPO_ROOT / 'src', root / 'src')
+def test_a_pin_no_release_matches_resolves_to_nothing(tmp_path: Path):
+    """Falling through to latest is exactly what the pin exists to prevent."""
+    entry = declared(tmp_path, version='9999.0.0')
 
-    packages = root / 'install' / 'packages.yml'
-    declaration = f'  - name: {PINNED_TOOL}\n    repo: {PINNED_REPO}\n'
-    packages.write_text(packages.read_text().replace(declaration, f'{declaration}    version: "0.0.0-nope"\n', 1))
+    assert ghrelease.resolve_tag(entry) is None
+    assert 'publishes no release for' in ghrelease.unresolved(entry, offline=False)
 
-    result = subprocess.run(
-        ['bash', str(root / 'install' / 'common' / 'github-releases' / f'{PINNED_TOOL}.sh'), '--print-url', 'linux', 'x86_64'],
-        capture_output=True,
-        text=True,
-        check=False,
-        env={**os.environ, 'DOTFILES_DIR': str(root)},
+
+def test_a_pin_the_catalog_refuses_is_never_silently_dropped(tmp_path: Path):
+    """No network. A tag where a bare version belongs is refused at load, so it
+    cannot reach the resolver as a pin that matches nothing and read as upstream
+    having gone quiet."""
+    packages = tmp_path / 'packages.yml'
+    packages.write_text(yaml.safe_dump({'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO, 'version': 'v0.56.0'}]}))
+
+    with pytest.raises(catalog.CatalogError) as refused:
+        catalog.load(packages)
+
+    assert 'which is a tag' in str(refused.value)
+
+
+def test_an_unreadable_catalog_stops_the_phase_rather_than_installing_latest(tmp_path: Path, monkeypatch):
+    """No network, and the bug the bash version of this file caught: a failed
+    lookup and a declared-nothing lookup both exited 1 there, so swallowing the
+    difference installed latest over a pin nobody could see. A raise cannot be
+    confused with an empty answer."""
+    broken = tmp_path / 'packages.yml'
+    broken.write_text('github_releases: [unclosed\n')
+    monkeypatch.setattr(paths, 'PACKAGES_FILE', broken)
+
+    context = apply.Run(
+        machine='linux-lxc-server',
+        platform='linux',
+        packages={'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO}]},
+        manifest={'github_releases': [PINNED_TOOL]},
     )
-    assert 'publishes no release for' in result.stderr
-    assert '/download//' not in result.stdout, 'an unresolved pin leaked an empty version into the URL'
 
-
-def test_an_unreadable_catalog_fails_rather_than_assuming_nothing_is_pinned(tmp_path: Path):
-    """Needs no network, and is the bug this file caught while being written: a
-    failed lookup and a declared-nothing lookup both exit 1, so swallowing the
-    difference installs latest over a pin nobody can see."""
-    root = tmp_path / 'dotfiles'
-    shutil.copytree(REPO_ROOT / 'install', root / 'install')
-    shutil.copytree(REPO_ROOT / 'src', root / 'src')
-    (root / 'install' / 'packages.yml').write_text('github_releases: [unclosed\n')
-
-    result = subprocess.run(
-        ['bash', str(root / 'install' / 'common' / 'github-releases' / f'{PINNED_TOOL}.sh'), '--print-url', 'linux', 'x86_64'],
-        capture_output=True,
-        text=True,
-        check=False,
-        env={**os.environ, 'DOTFILES_DIR': str(root)},
-    )
-    assert 'whether lazygit is pinned is unknown' in result.stderr
-    assert 'releases/download' not in result.stdout
+    with pytest.raises(Exception, match='unclosed|expected|while parsing'):
+        _ = context.declaration

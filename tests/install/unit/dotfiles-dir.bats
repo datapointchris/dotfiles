@@ -21,7 +21,7 @@ setup_file() {
   assert [ -n "$DOTFILES_DIR" ]
   assert [ -d "$DOTFILES_DIR" ]
   assert [ -f "$DOTFILES_DIR/install.sh" ]
-  assert [ -d "$DOTFILES_DIR/install/common/github-releases" ]
+  assert [ -d "$DOTFILES_DIR/install/common/custom-installers" ]
 }
 
 @test "dotfiles_dir: the BASH_SOURCE fallback resolves when run via bash" {

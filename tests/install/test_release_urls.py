@@ -1,10 +1,12 @@
-"""Every declared GitHub release publishes the asset its installer asks for.
+"""Every declared GitHub release publishes the asset this repo asks it for.
 
-This is the gate that lets the 23 installer scripts be replaced by Python: a URL
-builder can only be rewritten safely against proof that the current one is
-correct for every tool on every platform that declares it, not just the platform
-the developer happens to be sitting at. Run it before deleting a script, and
-again after.
+This was the gate that let the 23 installer scripts be replaced by Python: it
+resolved a URL from each script and from `providers/releases.py` and asserted
+the two agreed, for every tool on every platform declared rather than the one
+the developer happened to be sitting at. That parity pass has done its job — the
+scripts are gone, and asking a deleted file what it would download is not a
+weaker test, it is no test. What remains is the same corpus asked of the code
+that ships.
 
 Two assertions per case, because they fail independently. The URL has to serve
 bytes — the only proof that the host, the path shape and a tag containing a
@@ -19,8 +21,6 @@ Run with: pytest tests/install/test_release_urls.py --e2e
 """
 
 import json
-import os
-import subprocess
 import tempfile
 from collections.abc import Callable
 from collections.abc import Iterator
@@ -36,10 +36,10 @@ from dotfiles import github_release
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.providers import ghrelease
 from dotfiles.providers import releases as providers
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-INSTALLERS = REPO_ROOT / 'install' / 'common' / 'github-releases'
 MANIFESTS = REPO_ROOT / 'install' / 'manifests'
 PACKAGES_YML = REPO_ROOT / 'install' / 'packages.yml'
 
@@ -55,6 +55,10 @@ PLATFORM_TARGETS = {
 }
 
 Case = tuple[str, str, str]
+
+LINUX = Target(OSFamily.LINUX, Arch.X86_64)
+"""Enough to ask an asset function whether it has companions — the answer does
+not vary by target for any of them, and every declared tool covers this one."""
 
 
 def _read_yaml(path: Path) -> dict:
@@ -79,33 +83,33 @@ def build_corpus() -> list[Case]:
 CORPUS = build_corpus()
 
 
-def print_url(tool: str, os_name: str, arch: str) -> tuple[str, str, str]:
-    """Ask an installer what it would download, in the mode the bundler uses."""
-    result = subprocess.run(
-        ['bash', str(INSTALLERS / f'{tool}.sh'), '--print-url', os_name, arch],
-        capture_output=True,
-        text=True,
-        check=True,
-        env={**os.environ, 'DOTFILES_DIR': str(REPO_ROOT)},
-    )
-    name, version, url = result.stdout.strip().splitlines()[0].split('|')
-    return name, version, url
+def resolve_url(tool: str, os_name: str, arch: str) -> tuple[str, str, str]:
+    """What this repo would download for one tool on one platform."""
+    entry = catalog.load(PACKAGES_YML).find('github_releases', tool)
+    assert isinstance(entry, catalog.GithubRelease)
+
+    tag = ghrelease.resolve_tag(entry)
+    if tag is None:
+        raise AssertionError(ghrelease.unresolved(entry, offline=False))
+
+    asset = providers.ASSETS[tool](tag, Target(OSFamily(os_name), Arch(arch)))
+    return tool, tag, providers.asset_url(entry.repo, tag, asset)
 
 
 @pytest.fixture(scope='session')
 def resolved_urls() -> dict[Case, tuple[str, str, str] | Exception]:
     """Resolve the whole matrix once, concurrently.
 
-    Each invocation costs a release API call, and a tool declared on three
-    platforms resolves its version three times, so the matrix is network-bound
-    rather than CPU-bound. A failure is returned rather than raised so it lands
-    on the case that owns it instead of taking the fixture, and the rest of the
-    matrix down with it.
+    Each entry costs a release API call, and a tool declared on three platforms
+    resolves its version three times, so the matrix is network-bound rather than
+    CPU-bound. A failure is returned rather than raised so it lands on the case
+    that owns it instead of taking the fixture, and the rest of the matrix down
+    with it.
     """
 
     def resolve(case: Case) -> tuple[str, str, str] | Exception:
         try:
-            return print_url(*case)
+            return resolve_url(*case)
         except Exception as error:
             return error
 
@@ -168,8 +172,8 @@ class TestCorpus:
             ('linux', 'x86_64'),
         }
 
-    def test_every_declared_release_has_an_installer_to_ask(self):
-        assert {path.stem for path in INSTALLERS.glob('*.sh')} == declared_releases()
+    def test_every_declared_release_has_an_asset_function_to_ask(self):
+        assert set(providers.ASSETS) == declared_releases()
 
 
 def asset_under_test(case: Case, resolved_urls) -> tuple[str, str, str]:
@@ -188,7 +192,7 @@ def asset_under_test(case: Case, resolved_urls) -> tuple[str, str, str]:
 
 @pytest.mark.e2e
 @pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
-def test_the_installer_url_serves_the_asset(tool, os_name, arch, resolved_urls, repo_is_private, http):
+def test_the_resolved_url_serves_the_asset(tool, os_name, arch, resolved_urls, repo_is_private, http):
     repo, _, url = asset_under_test((tool, os_name, arch), resolved_urls)
 
     status = http.head(url).status_code
@@ -199,7 +203,7 @@ def test_the_installer_url_serves_the_asset(tool, os_name, arch, resolved_urls, 
 
 @pytest.mark.e2e
 @pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
-def test_the_release_publishes_the_asset_the_installer_asks_for(tool, os_name, arch, resolved_urls, published_assets):
+def test_the_release_publishes_the_asset_asked_for(tool, os_name, arch, resolved_urls, published_assets):
     repo, tag, url = asset_under_test((tool, os_name, arch), resolved_urls)
 
     asset_name = url.rsplit('/', 1)[-1]
@@ -208,13 +212,16 @@ def test_the_release_publishes_the_asset_the_installer_asks_for(tool, os_name, a
 
 
 @pytest.mark.e2e
-def test_the_fzf_tmux_companion_resolves_at_the_same_tag(http):
-    """fzf-tmux is a shell script in the repo tree, not a release asset, so it is
+@pytest.mark.parametrize('tool', sorted(tool for tool in providers.ASSETS if providers.ASSETS[tool]('v0', LINUX).companions))
+def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
+    """A companion is fetched from the repo tree rather than the release, so it is
     the one download the asset-list check above cannot see."""
-    _, version, _ = print_url('fzf', 'linux', 'x86_64')
-    response = http.get(f'https://raw.githubusercontent.com/junegunn/fzf/{version}/bin/fzf-tmux')
-    assert response.status_code == 200, f'fzf-tmux at {version} answered {response.status_code}'
-    assert response.text.startswith('#!'), 'fzf-tmux did not come back as a script'
+    _, tag, _ = asset_under_test((tool, 'linux', 'x86_64'), resolved_urls)
+
+    for companion in providers.ASSETS[tool](tag, LINUX).companions:
+        response = http.get(companion.url)
+        assert response.status_code == 200, f'{companion.name} at {tag} answered {response.status_code}'
+        assert response.text.startswith('#!'), f'{companion.name} did not come back as a script'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -283,34 +290,3 @@ def test_every_declared_checksum_state_is_one_the_engine_acts_on():
     """No network. A value the catalog accepts and the install engine has no
     branch for would install unverified while reading as declared."""
     assert set(STATE_FOR_DECLARATION) == catalog.CHECKSUM_STATES
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Parity with the installers the Python replaces
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# The gate for deleting the 23 scripts. A URL builder can only be rewritten
-# safely against proof that the new one agrees with the old for every tool on
-# every platform declared — not just the platform the developer is sitting at.
-# Both sides are asked for the same resolved tag, so this compares naming alone
-# and a version that moved mid-run cannot make it flap.
-
-
-def python_asset_url(tool: str, tag: str, repo: str, os_name: str, arch: str) -> str:
-    target = Target(OSFamily(os_name), Arch(arch))
-    return providers.asset_url(repo, tag, providers.ASSETS[tool](tag, target))
-
-
-def test_python_covers_exactly_the_declared_releases():
-    """No network. A tool in packages.yml with no function would fall through to
-    whatever the registry's default was, which is how a section ends up silently
-    installing nothing."""
-    assert set(providers.ASSETS) == declared_releases()
-
-
-@pytest.mark.e2e
-@pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
-def test_the_python_asset_is_the_one_the_installer_asks_for(tool, os_name, arch, resolved_urls):
-    repo, tag, url = asset_under_test((tool, os_name, arch), resolved_urls)
-
-    assert python_asset_url(tool, tag, repo, os_name, arch) == url

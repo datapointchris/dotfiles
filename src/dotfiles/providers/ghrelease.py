@@ -17,10 +17,10 @@ the variation moved into `providers.releases.Asset`, where a bare binary is an
     TARBALL / ZIP    unpack, then take `path` out of it, plus any `extras`
     Asset.tree       unpack into ~/.local and symlink `path` out of the tree
 
-Nothing here decides *whether* to install. That is the resource's `diff`, which
-has already compared what is on the machine against what is declared — an engine
-re-deciding it would be a second implementation of the question `check` answers,
-free to disagree with the report the user was just shown.
+Nothing here decides *whether* to install. Its callers do — the resource from a
+`diff` it already computed, the phase by comparing what is installed against
+`resolve_tag`. An engine deciding for them would be a third opinion, free to
+disagree with the report the user was just shown.
 """
 
 from __future__ import annotations
@@ -55,8 +55,13 @@ class Result:
     detail: str
 
 
-def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False) -> Result:
+def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
     """Put one declared release on this machine.
+
+    `tag` is for a caller that already resolved one to decide *whether* to
+    install — passing it back is what keeps that decision from costing a second
+    API call, and from being made about a different release than the one that
+    then gets installed.
 
     Every failure returns rather than raises, and names the step it failed at.
     An install phase runs the whole list before reporting, because a broken
@@ -66,9 +71,9 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
     if build is None:
         return Result(False, f'nothing in providers.releases names an asset for {entry.name}')
 
-    tag = resolve_tag(entry, offline=offline)
+    tag = tag or resolve_tag(entry, offline=offline)
     if tag is None:
-        return Result(False, _unresolved(entry, offline=offline))
+        return Result(False, unresolved(entry, offline=offline))
 
     asset = build(tag, target)
     url = f'https://github.com/{entry.repo}/releases/download/{tag}/{asset.name}'
@@ -93,7 +98,7 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         if not placed.ok:
             return placed
 
-    missing = _companions(asset, offline=offline)
+    missing = _companions(asset, offline=offline, only_missing=False)
     if missing:
         return Result(False, missing)
 
@@ -166,7 +171,12 @@ def bundle_version(name: str) -> str | None:
     return None
 
 
-def _unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
+def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
+    """Why no tag could be decided, in the caller's words rather than a bare None.
+
+    Public because the phase resolves a tag itself — to decide whether anything
+    needs installing at all — and must report the same reason this would.
+    """
     if offline:
         return f'the offline bundle at {paths.BUNDLE_DIR} stages no version of {entry.name}'
     if entry.version:
@@ -220,7 +230,14 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
         # about why nothing could be checked.
         outcome = github_release.verify_from_bundle(download, asset_name, checksums) if checksums.is_file() else None
         if outcome is None:
-            return _permitted(entry, f'the offline bundle records no digest for {asset_name}')
+            # Either exception excuses this, and the bundle cannot say which:
+            # `create_bundle` records only digests it verified upstream, so an
+            # entry whose release publishes none is simply absent from that file
+            # — indistinguishable from one whose file does not name it. What is
+            # *not* excused is `required`, where a missing digest means the
+            # bundle failed at the one job it exists for.
+            because = f'the offline bundle records no digest for {asset_name}'
+            return _permitted(entry, because, catalog.CHECKSUM_UNPUBLISHED, catalog.CHECKSUM_UNLISTED)
         return '' if outcome is github_release.Verification.VERIFIED else f'checksum mismatch against the offline bundle for {asset_name}'
 
     outcome = github_release.verify_release_checksum(
@@ -240,16 +257,17 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
     return _permitted(entry, f"{entry.repo}'s checksums file for {tag} does not name {asset_name}", catalog.CHECKSUM_UNLISTED)
 
 
-def _permitted(entry: catalog.GithubRelease, because: str, allowed_by: str = '') -> str:
+def _permitted(entry: catalog.GithubRelease, because: str, *excused_by: str) -> str:
     """Whether the entry's declaration excuses an unverified install of it.
 
-    Anything the declaration does not name is refused. That is the whole value of
-    defaulting to `required`: an install that cannot be verified stops, and making
-    it proceed means writing down which of the two reasons applies, where a test
-    can check the claim against what upstream actually publishes.
+    Anything the declaration does not name is refused, and `required` is never in
+    `excused_by`. That is the whole value of defaulting to it: an install that
+    cannot be verified stops, and making it proceed means writing down which
+    reason applies, where a test can check the claim against what upstream
+    actually publishes.
     """
-    if allowed_by and entry.checksum == allowed_by:
-        warn(f'{because} (declared {allowed_by}), so {entry.name} installs unverified')
+    if entry.checksum in excused_by:
+        warn(f'{because} (declared {entry.checksum}), so {entry.name} installs unverified')
         return ''
     return f'{because}, and {entry.name} does not declare that'
 
@@ -322,15 +340,37 @@ def _place_tree(asset: Asset, download: Path, target: Path) -> Result:
     return Result(True, f'{target} -> {binary}')
 
 
-def _companions(asset: Asset, *, offline: bool) -> str:
+def ensure_companions(entry: catalog.GithubRelease, target: Target, tag: str, *, offline: bool = False) -> Result:
+    """Restore anything the release does not publish that has gone missing.
+
+    For the caller that decided not to install: a companion is a separate file
+    under `~/.local/bin` and nothing about the binary being current says it is
+    still there. The bash this replaces re-ran its companion install on every
+    invocation for exactly that reason — fzf without `fzf-tmux` installs cleanly
+    and then the tmux popup binding does nothing, which surfaces days later at a
+    keystroke rather than here.
+
+    Only what is missing, unlike an install, which refreshes all of them: a
+    companion is fetched at the binary's tag and the two are a matched pair.
+    """
+    build = ASSETS.get(entry.name)
+    if build is None:
+        return Result(False, f'nothing in providers.releases names an asset for {entry.name}')
+
+    problem = _companions(build(tag, target), offline=offline, only_missing=True)
+    return Result(not problem, problem)
+
+
+def _companions(asset: Asset, *, offline: bool, only_missing: bool) -> str:
     """Fetch the files that ship with a tool without being in its release.
 
-    '' when there is nothing to do or it was done. A companion is not optional:
-    fzf without `fzf-tmux` installs cleanly and then the tmux popup binding does
-    nothing, which is a failure that surfaces days later at a keystroke.
+    '' when there is nothing to do or it was done. A companion is not optional,
+    which is why a failure here fails the install rather than warning.
     """
     for companion in asset.companions:
         destination = bin_dir() / companion.name
+        if only_missing and destination.exists():
+            continue
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         cached = bundle_file(BUNDLE_BINARIES) / companion.name

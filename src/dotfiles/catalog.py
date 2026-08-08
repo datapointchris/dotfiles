@@ -257,7 +257,7 @@ class GithubRelease(Entry):
     the 23 defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
     and a `.tar.xz`, trivy needs `ARM64`/`64bit`, and zk spells its architecture
     per OS. Measured across all 23 and rejected twice; see
-    `docs/architecture/github-release-installer.md` § "Why Not More Abstraction?".
+    `docs/architecture/github-releases.md` § "Why asset naming is code".
     """
 
     section: ClassVar[str] = 'github_releases'

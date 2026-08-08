@@ -13,7 +13,7 @@ data twice, because no placeholder vocabulary survives contact with them:
 
 `packages.yml` keeps only the declarative facts it already carries — `repo`,
 `release_tag_prefix`, `min_version`, `binary_link` — and the rationale from
-`docs/architecture/github-release-installer.md` § "Why Not More Abstraction?"
+`docs/architecture/github-releases.md` § "Why asset naming is code"
 holds identically in Python: URL patterns vary enough that a template becomes
 complex, and inline keeps it explicit and traceable.
 

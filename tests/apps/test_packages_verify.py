@@ -31,7 +31,6 @@ def build_tree(
     *,
     packages: dict[str, Any] | None = None,
     manifests: dict[str, dict[str, Any]] | None = None,
-    github_release_scripts: list[str] | None = None,
     custom_installer_scripts: list[str] | None = None,
 ) -> None:
     """Create a synthetic dotfiles tree under `root`.
@@ -50,12 +49,6 @@ def build_tree(
         manifests_dir.mkdir(parents=True, exist_ok=True)
         for name, content in manifests.items():
             (manifests_dir / f'{name}.yml').write_text(yaml.safe_dump(content, sort_keys=False))
-
-    if github_release_scripts is not None:
-        gh_dir = install_dir / 'common' / 'github-releases'
-        gh_dir.mkdir(parents=True, exist_ok=True)
-        for stem in github_release_scripts:
-            (gh_dir / f'{stem}.sh').write_text('#!/usr/bin/env bash\n')
 
     if custom_installer_scripts is not None:
         ci_dir = install_dir / 'common' / 'custom-installers'
@@ -121,7 +114,6 @@ def test_clean_tree_verifies_with_zero_issues(tmp_path: Path) -> None:
                 'custom_installers': ['theme'],
             }
         },
-        github_release_scripts=['fzf'],
         custom_installer_scripts=['theme'],
     )
     assert_clean(run_verify(tmp_path))
@@ -143,7 +135,6 @@ def test_a_refused_entry_is_reported_as_an_error(tmp_path: Path) -> None:
         tmp_path,
         packages={'github_releases': [{'name': 'fzf'}]},  # no `repo`
         manifests={},
-        github_release_scripts=['fzf'],
     )
     assert_error(run_verify(tmp_path), 'fzf is missing required field(s) repo')
 
@@ -191,31 +182,21 @@ def test_manifest_names_unknown_npm_global_flags_error(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_github_release_script_without_entry_flags_error(tmp_path: Path) -> None:
-    """tree-sitter.sh exists on disk but has no packages.yml github_releases entry."""
+def test_github_release_entry_without_an_asset_function_flags_error(tmp_path: Path) -> None:
+    """A release entry nothing can name an asset for installs nothing, silently.
+
+    The functions are code, so unlike the script checks either side of this there
+    is no synthetic version of them — which is why only this direction is asked
+    here and the reverse is a pytest gate against the real declaration.
+    """
     build_tree(
         tmp_path,
-        packages={},
+        packages={'github_releases': [{'name': 'nosuchtool', 'repo': 'someone/nosuchtool'}]},
         manifests={},
-        github_release_scripts=['tree-sitter'],  # script exists
     )
     assert_error(
         run_verify(tmp_path),
-        'install/common/github-releases/tree-sitter.sh exists but no packages.yml github_releases entry',
-    )
-
-
-def test_github_release_entry_without_script_flags_error(tmp_path: Path) -> None:
-    """packages.yml has a github_releases entry but no matching .sh script on disk."""
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf'}]},
-        manifests={},
-        github_release_scripts=[],  # empty directory
-    )
-    assert_error(
-        run_verify(tmp_path),
-        "packages.yml github_releases entry 'fzf' has no install/common/github-releases/fzf.sh script",
+        "packages.yml entry 'nosuchtool' has no asset function in providers/releases.py",
     )
 
 
@@ -349,13 +330,12 @@ def test_warnings_only_exits_0(tmp_path: Path) -> None:
 def test_root_flag_reads_only_synthetic_tree(tmp_path: Path) -> None:
     """--root must drive the entire resolution — real repo packages.yml must not leak in."""
     # Synthetic tree is intentionally broken in a way the real repo isn't:
-    # a github_releases entry with no matching script.
+    # a github_releases entry nothing can name an asset for.
     build_tree(
         tmp_path,
         packages={'github_releases': [{'name': 'ghost', 'repo': 'example/ghost'}]},
         manifests={},
-        github_release_scripts=[],
     )
     # If --root leaked and fell back to the real repo, we'd get "0 errors" (the real
     # repo is clean). Asserting the ghost error proves the synthetic tree drove verify.
-    assert_error(run_verify(tmp_path), "'ghost' has no install/common/github-releases/ghost.sh script")
+    assert_error(run_verify(tmp_path), "'ghost' has no asset function in providers/releases.py")

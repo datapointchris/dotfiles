@@ -27,8 +27,8 @@ if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo ""
   echo "Examples:"
   echo "  $(basename "$0") install/wsl/system-packages.sh"
-  echo "  $(basename "$0") install/common/github-releases/lazygit.sh --validate lazygit"
-  echo "  $(basename "$0") install/common/github-releases/lazygit.sh --validate lazygit --keep"
+  echo "  $(basename "$0") install/common/custom-installers/bats.sh --validate bats"
+  echo "  $(basename "$0") install/common/custom-installers/bats.sh --validate bats --keep"
   exit 0
 fi
 

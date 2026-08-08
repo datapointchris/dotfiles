@@ -16,11 +16,14 @@ Usage:
 Output:
     dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
 
-Runs under the same interpreter as parse_packages.py, which it imports: the
-system python3, which is the one guaranteed to have PyYAML. That is why this
-file is stdlib-only and carries `from __future__ import annotations` — the
-macOS system interpreter is still 3.9, where builtin generics in annotations
-are otherwise a syntax error.
+Runs under the interpreter the CLI runs under, which is the only way it is
+reached: `dotfiles bundle create` imports `main` in-process. It was written for
+the macOS system python3, still 3.9, back when bash invoked it — and it kept the
+stdlib-only rule after `dotfiles_python` stopped ever being that interpreter.
+The rule holds for third-party packages, which are still worth not depending on
+here; it no longer holds for this package's own modules, which is why the
+release assets are read from `providers/releases.py` rather than through a pipe
+from twenty-three bash scripts.
 
 Streams: everything a person reads goes to stderr, and stdout carries the
 tarball path under --print-path and nothing else, so the build can be piped
@@ -48,9 +51,15 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotfiles import catalog
 from dotfiles import github_release
 from dotfiles import parse_packages
 from dotfiles import paths
+from dotfiles.coordinates import Arch
+from dotfiles.coordinates import OSFamily
+from dotfiles.coordinates import Target
+from dotfiles.providers import ghrelease
+from dotfiles.providers import releases
 
 log = logging.getLogger('create-bundle')
 
@@ -587,33 +596,49 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
 
 
 def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+    """Stage every declared release, named by the same functions that install it.
+
+    The bundler used to ask each installer script what it would download, over a
+    `name|version|url` pipe, because bash could not hand back anything richer.
+    Asking `providers.releases` directly removes that pipe and the twenty-three
+    subprocesses behind it — and removes the way a bundle could stage one asset
+    while the installer went looking for another.
+
+    The version recorded is the tag without its prefix, which is what
+    `ghrelease.resolve_tag` reads back when installing offline. Recording the
+    full `cli/v0.9.0` would have the install rebuild it as `cli/cli/v0.9.0`.
+    """
     log.info('Downloading GitHub releases...')
-    script_dir = paths.INSTALL_DIR / 'common' / 'github-releases'
+    declaration = catalog.load()
+    target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
 
     for tool in parse_packages.filter_github_releases_by_manifest(packages, manifest):
-        script = script_dir / f'{tool}.sh'
-        if not script.is_file():
-            raise BundleError(f"packages.yml github_releases entry '{tool}' has no script at {script}")
+        entry = declaration.find('github_releases', tool)
+        if not isinstance(entry, catalog.GithubRelease):
+            raise BundleError(f"packages.yml github_releases entry '{tool}' is not a release entry")
 
-        name, version, url = run_installer_script(script, '--print-url', bundle.os_name, bundle.arch)[0]
-        asset = release_asset(url)
+        build = releases.ASSETS.get(tool)
+        if build is None:
+            raise BundleError(f"packages.yml github_releases entry '{tool}' has no asset function in providers/releases.py")
+
+        tag = ghrelease.resolve_tag(entry)
+        if tag is None:
+            raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
+        version = tag.removeprefix(entry.release_tag_prefix)
+
+        published = build(tag, target)
+        asset = github_asset(entry.repo, tag, published.name)
         destination = bundle.binaries / asset.filename
-        cache.fetch(asset, destination, f'  {name} ({version})')
+        cache.fetch(asset, destination, f'  {tool} ({version})')
         verify_against_upstream(bundle, cache, destination, asset)
-        bundle.record('binary', name, version, asset.filename)
+        bundle.record('binary', tool, version, asset.filename)
 
-        # Companion files (e.g. fzf-tmux for fzf). Scripts opt in by handling
-        # --print-extras. Scripts without the handler would fall through to
-        # their full install path if invoked with the flag, so capability-check
-        # before calling.
-        if '--print-extras' not in script.read_text():
-            continue
-        for extra_name, extra_version, extra_url in run_installer_script(script, '--print-extras', bundle.os_name, bundle.arch):
-            extra = release_asset(extra_url)
-            extra_destination = bundle.binaries / extra.filename
-            cache.fetch(extra, extra_destination, f'    extra: {extra_name} ({extra_version})')
+        for companion in published.companions:
+            extra = url_asset(companion.url)
+            extra_destination = bundle.binaries / companion.name
+            cache.fetch(extra, extra_destination, f'    extra: {companion.name} ({version})')
             verify_against_upstream(bundle, cache, extra_destination, extra)
-            bundle.record('extra', extra_name, extra_version, extra.filename)
+            bundle.record('extra', companion.name, version, companion.name)
 
 
 def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:

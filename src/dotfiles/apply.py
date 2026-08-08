@@ -38,11 +38,13 @@ from dotfiles import catalog
 from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import envfile
+from dotfiles import evidence as ev
 from dotfiles import failure_report
 from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import resolve as resolver
+from dotfiles import versions
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
@@ -396,10 +398,16 @@ def _github_releases(context: Run) -> bool:
     this repo can fix. Warned rather than silent: credentials are a state a
     machine can lose, unlike the WSL host `requires_wsl_host` tests for.
 
-    Present-means-skip is what the scripts this replaces did in install mode, and
-    it is kept exactly: `apply` here installs what is absent. Upgrading what is
-    *behind* is `PackagesResource.perform`, which acts on a STALE verdict that
-    `check` measured and printed — a decision this phase has no plan to make.
+    The scripts this replaces had two modes, and which one ran decided whether a
+    tool that was present but behind got upgraded: `install.sh` skipped it,
+    `update.sh` did not. There is one verb here. `apply` means "make this machine
+    match what it declares", latest is what a release entry declares unless it
+    pins, and a tool behind latest is drift — the same drift `check` already
+    prints as STALE. So it is repaired, and the mode goes away with the scripts.
+
+    The cost is one release lookup per declared tool, where present-means-skip
+    cost none. That is the right trade for a verb someone typed on purpose;
+    `check` is the one that has to stay cheap, and it reads a cache instead.
     """
     tools = context.declared('github')
     if not _have_github_credentials():
@@ -427,18 +435,39 @@ def _install_release(context: Run, declaration: catalog.Catalog, tool: str, targ
     entry = declaration.find('github_releases', tool)
     assert isinstance(entry, catalog.GithubRelease)
 
-    if not context.reinstall and shutil.which(entry.executable):
-        err_console.print(f'{tool} already installed: {shutil.which(entry.executable)}')
-        return True
+    tag = ghrelease.resolve_tag(entry, offline=context.offline)
+    if tag is None:
+        return _release_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
 
-    result = ghrelease.install(entry, target, offline=context.offline)
+    if not context.reinstall and _already_at(entry, tag):
+        err_console.print(f'{tool} already at {tag}')
+        restored = ghrelease.ensure_companions(entry, target, tag, offline=context.offline)
+        return True if restored.ok else _release_failed(context, tool, restored.detail)
+
+    result = ghrelease.install(entry, target, offline=context.offline, tag=tag)
     if result.ok:
         err_console.print(f'[green]✓[/] {result.detail}')
         return True
+    return _release_failed(context, tool, result.detail)
 
-    warn(f'{tool} installation failed: {result.detail}')
+
+def _already_at(entry: catalog.GithubRelease, tag: str) -> bool:
+    """Whether the installed binary is the release this run would install.
+
+    Anything unmeasurable answers False, which reinstalls: a binary that will not
+    report a version, or reports one nothing can parse, is not a binary known to
+    be current. That is the same call `check_if_update_needed` made — "could not
+    parse, will reinstall" — and the same rule `Verdict.UNKNOWN` states, except
+    that here there is something to do about it.
+    """
+    reported = ev.reported_version(entry.executable)
+    return reported is not None and versions.at_least(reported, tag) is True
+
+
+def _release_failed(context: Run, tool: str, detail: str) -> bool:
+    warn(f'{tool} installation failed: {detail}')
     with context.failures_log.open('a') as log:
-        log.write(f'{tool}: {result.detail}\n')
+        log.write(f'{tool}: {detail}\n')
     return False
 
 
@@ -664,8 +693,14 @@ def apply_machine(
     reinstall: bool = False,
     offline: bool = False,
     owner: str | None = None,
+    providers: frozenset[str] | None = None,
 ) -> ExitCode:
-    """Run the selected phases and report whether the machine converged."""
+    """Run the selected phases and report whether the machine converged.
+
+    `providers` and `owner` narrow the same way and compose by intersection: one
+    says which section was asked for and the other which owner's entries are
+    wanted, and a run asking for both means the phases satisfying both.
+    """
     try:
         context = Run.resolve(machine, reinstall=reinstall, offline=offline, owner=owner)
     except Declaration as problem:
@@ -673,11 +708,12 @@ def apply_machine(
         return ExitCode.USAGE
 
     try:
-        narrowed = _owned_providers(context.machine, owner) if owner else None
+        owned = _owned_providers(context.machine, owner) if owner else None
     except (catalog.CatalogError, machines.MachineError) as refused:
         warn(f'cannot narrow to --owner {owner}: {refused}')
         return ExitCode.ISSUE
 
+    narrowed = owned if providers is None else (providers if owned is None else providers & owned)
     phases = select(skip, only, narrowed)
     if not phases:
         warn(f'nothing selected for owner {owner}' if owner else 'nothing selected')

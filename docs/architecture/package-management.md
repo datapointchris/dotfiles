@@ -342,7 +342,7 @@ source of truth) — this list describes what each directory is *for*, not its c
 **Core Library** (`install/common/lib/`):
 
 - `failure-logging.sh` - Structured failure reporting
-- `github-release-installer.sh` - Shared functions for GitHub release tools
+- `github-release-installer.sh` - Shared download/extract helpers, now used only by the custom installers
 
 All installer scripts support `--update` for the update system and use structured error reporting.
 
@@ -377,9 +377,8 @@ The `Taskfile.yml` provides convenience tasks for common operations but delegate
 # Rust tools
 cargo binstall -y <package>
 
-# GitHub release tools — re-run installer script directly
-bash install/common/github-releases/neovim.sh
-bash install/common/github-releases/lazygit.sh
+# GitHub release tools — converge them all, or narrow to one section
+dotfiles packages apply --source github_releases
 
 # System packages
 sudo apt update && sudo apt upgrade

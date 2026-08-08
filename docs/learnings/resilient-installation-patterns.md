@@ -18,11 +18,16 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 ```bash
 # Parent wrapper (install.sh)
-run_installer "install/common/github-releases/yazi.sh" "yazi" || true
-run_installer "install/common/github-releases/lazygit.sh" "lazygit" || true
-# ... continues even if yazi fails
+run_installer "install/common/custom-installers/bats.sh" "bats" || true
+run_installer "install/common/custom-installers/mount-s3.sh" "mount-s3" || true
+# ... continues even if bats fails
 display_failure_summary  # Shows all failures at end
 ```
+
+The release installers this was first written against are Python now
+(`src/dotfiles/providers/ghrelease.py`), and the pattern survived the move
+unchanged: each install returns a `Result` rather than raising, and the phase
+runs the whole list before reporting.
 
 ## Key Learnings
 
@@ -62,16 +67,22 @@ condition is "the binary exists":
 ```yaml
 install-yazi:
   cmds:
-    - bash install/common/github-releases/yazi.sh
+    - dotfiles packages apply --source github_releases
   status:
-    - command -v yazi >/dev/null 2>&1   # wrong for this script
+    - command -v yazi >/dev/null 2>&1   # wrong: yazi is more than its binary
 ```
 
-Yazi's installer also installs flavors and plugins. Once the binary is on disk
-the task never runs again, so a plugin added to the script afterwards is never
-installed on any machine that already has yazi — and nothing reports a problem,
-because the task is "up to date". The same freeze happens from inside a script
-that opens with `command -v x && exit 0`.
+Yazi's installer also installed flavors and plugins. Once the binary was on disk
+the task never ran again, so a plugin added afterwards reached no machine that
+already had yazi — and nothing reported a problem, because the task was "up to
+date". The same freeze happens from inside a script that opens with
+`command -v x && exit 0`.
+
+The shape outlived the script. `providers/ghrelease.py` skips a release whose
+binary is already at the resolved tag, and `fzf-tmux` is a separate file beside
+`fzf` that the binary being current says nothing about — so the skip path calls
+`ensure_companions` rather than returning. Any "is it installed" check that
+guards more than the thing it names has this bug.
 
 The distinction is whether the script installs one thing or several:
 

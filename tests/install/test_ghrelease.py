@@ -14,6 +14,7 @@ refuses.
 
 from __future__ import annotations
 
+import contextlib
 import gzip
 import io
 import os
@@ -211,6 +212,29 @@ class TestCompanions:
         assert placed.read_bytes() == b'companion'
         assert placed.stat().st_mode & stat.S_IXUSR
 
+    def test_a_missing_companion_is_restored_without_reinstalling_the_binary(self, home, bundle):
+        """The self-heal the bash had by re-running its companion install every
+        time. A current binary says nothing about whether the separate file beside
+        it is still there."""
+        (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
+        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
+
+        result = ensure_one(asset, entry(), offline=True)
+
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo-tmux').read_bytes() == b'companion'
+
+    def test_a_companion_already_there_is_left_alone(self, home, bundle):
+        """Unlike an install, which refreshes them: a companion is fetched at the
+        binary's tag and the two are a matched pair."""
+        placed = home / '.local' / 'bin' / 'demo-tmux'
+        placed.write_bytes(b'whatever is already installed')
+        (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
+        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
+
+        assert ensure_one(asset, entry(), offline=True).ok
+        assert placed.read_bytes() == b'whatever is already installed'
+
     def test_a_companion_that_cannot_be_had_fails_the_install(self, home, bundle):
         """Silently skipping it installs a tool whose tmux binding does nothing,
         which surfaces days later at a keystroke rather than here."""
@@ -263,6 +287,21 @@ class TestChecksumPolicy:
 
         assert not result.ok
         assert 'records no digest' in result.detail
+
+    @pytest.mark.parametrize('declared', [catalog.CHECKSUM_UNPUBLISHED, catalog.CHECKSUM_UNLISTED])
+    def test_an_offline_entry_that_declares_it_cannot_verify_still_installs(self, home, bundle, declared):
+        """Found by round-tripping a real bundle: `yq` staged fine and then could
+        not be installed from it. `create_bundle` records only digests it verified
+        upstream, so an entry whose release publishes none is *correctly* absent
+        from checksums.txt — and refusing it there makes the two exceptions mean
+        'installable online only', which is the opposite of what a bundle is for."""
+        (bundle / 'binaries' / 'demo').write_bytes(PAYLOAD)
+        (bundle / 'manifest.txt').write_text('binary|demo|v1.2.3|demo\n')
+
+        result = install_one(Asset('demo', Archive.RAW), entry(checksum=declared), offline=True)
+
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
 
     def test_a_bundled_asset_that_was_tampered_with_is_refused(self, home, bundle):
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
@@ -330,19 +369,32 @@ class TestPreconditions:
 
 
 def install_one(asset: Asset, declared: catalog.GithubRelease, *, offline: bool) -> ghrelease.Result:
-    """Run the engine against one synthetic asset.
+    """Run the engine against one synthetic asset."""
+    with registered(asset, declared):
+        return ghrelease.install(declared, LINUX, offline=offline)
 
-    The asset table is keyed by `packages.yml` name and every real entry in it is
-    covered by the parity test against live releases, so a test that wanted a
-    controlled archive shape would otherwise have to pick a real tool and inherit
-    its spelling. Registering one for the duration is the smaller lie.
+
+def ensure_one(asset: Asset, declared: catalog.GithubRelease, *, offline: bool) -> ghrelease.Result:
+    """Run the companion self-heal against one synthetic asset."""
+    with registered(asset, declared):
+        return ghrelease.ensure_companions(declared, LINUX, 'v1.2.3', offline=offline)
+
+
+@contextlib.contextmanager
+def registered(asset: Asset, declared: catalog.GithubRelease):
+    """Put one synthetic asset in the table for the length of a test.
+
+    The table is keyed by `packages.yml` name and every real entry in it is
+    covered against live releases, so a test wanting a controlled archive shape
+    would otherwise have to pick a real tool and inherit its spelling. Registering
+    one for the duration is the smaller lie.
     """
     from dotfiles.providers import releases
 
     original = dict(releases.ASSETS)
     releases.ASSETS[declared.name] = lambda tag, target: asset
     try:
-        return ghrelease.install(declared, LINUX, offline=offline)
+        yield
     finally:
         releases.ASSETS.clear()
         releases.ASSETS.update(original)

@@ -55,8 +55,12 @@ DEPRECATED_MANIFEST_KEYS = ('go', 'rust', 'nvm', 'uv', 'tenv')
 
 # Sections whose entries have a 1:1 script in a directory under install/common/.
 # Maps section name → subdir name.
+#
+# `github_releases` left when its scripts did. The parity that replaced it is
+# `check_release_assets` below: the guarantee was never "a file exists with this
+# name", it was "something knows how to install this entry", and a function in
+# providers/releases.py is that something now.
 SCRIPT_BACKED_SECTIONS = {
-    'github_releases': 'github-releases',
     'custom_installers': 'custom-installers',
 }
 
@@ -599,6 +603,27 @@ def check_script_parity(
             )
 
 
+def check_release_assets(data: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
+    """Every `github_releases` entry names an asset something knows how to build.
+
+    What `check_script_parity` did for this section before its scripts were
+    deleted, against the functions that replaced them. The guarantee was never
+    "a file exists with this name" — it was "something can install this entry".
+
+    One direction only, unlike the script check. The other half — a function
+    naming a tool nothing declares — cannot be asked here, because `--root`
+    points this at a synthetic tree while the functions are code and are always
+    the real ones. It is asserted instead by
+    `tests/install/test_release_urls.py::TestCorpus`, which compares both sets
+    against the real declaration.
+    """
+    from dotfiles.providers import releases
+
+    for name in sorted(get_section_ids(data, 'github_releases') - set(releases.ASSETS)):
+        uninstallable = f"packages.yml entry '{name}' has no asset function in providers/releases.py"
+        issues.append(('github_releases', 'error', uninstallable))
+
+
 def check_deprecated_manifest_keys(
     manifests: dict[str, dict[str, Any]],
     issues: list[tuple[str, str, str]],
@@ -650,6 +675,7 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     check_entry_shapes(root, issues)
     check_manifest_name_resolution(data, manifests, issues)
     check_script_parity(data, scripts_by_section, issues)
+    check_release_assets(data, issues)
     check_deprecated_manifest_keys(manifests, issues)
     check_unreferenced_entries(data, manifests, issues)
 

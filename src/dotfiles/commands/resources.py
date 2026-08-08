@@ -106,21 +106,32 @@ OfflineOption = typer.Option(False, '--offline', help='Install from a staged off
 
 
 def _apply_phases(resource: str, machine: str | None, reinstall: bool, offline: bool, source: str | None) -> None:
-    """Run the install phases this resource owns.
+    """Run the install phases this resource owns, or just the ones `--source` names.
 
-    `--source` is accepted and refused rather than silently ignored: narrowing
-    below a phase is a real capability of the resolver in step 4 and the phase
-    registry has no equivalent, so honouring it would quietly install more than
-    was asked for.
+    A section names a provider, and a phase declares which providers it installs,
+    so narrowing to a section is an intersection rather than a guess. This was
+    refused until `Phase.providers` replaced the hand-written `owner_aware`
+    column — before that the registry genuinely had no way to say which phase
+    installs a section, and honouring the flag would have installed more than was
+    asked for.
+
+    Narrowing *below* a section — one tool out of `github_releases` — is still
+    the resolver's, and still absent.
     """
-    if source:
-        error(f'--source is not yet honoured by {resource} apply (it arrives with the resolver)')
-        hint(f'run the whole resource with: dotfiles {resource} apply')
-        raise typer.Exit(ExitCode.USAGE)
-
     from dotfiles import apply
+    from dotfiles import resolve
 
-    raise typer.Exit(apply.apply_machine(only=frozenset({resource}), machine=machine, reinstall=reinstall, offline=offline))
+    providers = None
+    if source:
+        provider = resolve.PROVIDERS.get(source)
+        if provider is None:
+            error(f'nothing installs {source}: {resolve.UNPROVIDED.get(source, "no provider claims that section")}')
+            raise typer.Exit(ExitCode.USAGE)
+        providers = frozenset({provider.name})
+
+    raise typer.Exit(
+        apply.apply_machine(only=frozenset({resource}), machine=machine, reinstall=reinstall, offline=offline, providers=providers)
+    )
 
 
 packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
