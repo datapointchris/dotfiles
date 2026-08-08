@@ -30,7 +30,15 @@ if command -v parallel >/dev/null 2>&1; then
   BATS_ARGS=(--jobs "$cores")
 fi
 
+# A tier whose suites have all ported to pytest hands this nothing, and bats
+# called with no files prints its usage screen and exits 1. Say so instead —
+# loudly enough to notice, because a tier silently running nothing is how the
+# generated CI step went unread for months.
 run_bats() {
+  if [[ $# -eq 0 ]]; then
+    print_info "no bats suites left in this tier — see tests/shell/ and the pytest suites"
+    return 0
+  fi
   bats "${BATS_ARGS[@]}" "$@"
 }
 
