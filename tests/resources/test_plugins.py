@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Stage
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
@@ -86,35 +87,35 @@ def test_tpm_lands_where_the_declaration_says(tmp_path: Path) -> None:
     assert plugins.destination(item, live.home) == live.home / '.config' / 'tmux' / 'plugins' / 'tpm'
 
 
-def test_cloning_puts_the_checkout_at_the_declared_path(tmp_path: Path, upstream: Path) -> None:
+def test_cloning_puts_the_checkout_at_the_declared_path(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
     live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}]})
 
-    outcome = plugins.RESOURCE.perform(live, changes(live)[0])
+    outcome = plugins.RESOURCE.perform(live, changes(live)[0], unprivileged)
 
     assert outcome.status is OutcomeStatus.DONE
     assert (live.home / '.config' / 'zsh' / 'plugins' / 'forgit' / 'forgit.plugin.zsh').read_text() == '# forgit\n'
 
 
-def test_a_cloned_plugin_reports_nothing(tmp_path: Path, upstream: Path) -> None:
+def test_a_cloned_plugin_reports_nothing(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
     live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}]})
-    plugins.RESOURCE.perform(live, changes(live)[0])
+    plugins.RESOURCE.perform(live, changes(live)[0], unprivileged)
 
     assert changes(live) == ()
 
 
-def test_a_checkout_that_appeared_since_the_check_is_skipped(tmp_path: Path, upstream: Path) -> None:
+def test_a_checkout_that_appeared_since_the_check_is_skipped(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
     """`perform` re-reads live, because `observe` ran before the report printed."""
     live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}]})
     change = changes(live)[0]
     (live.home / '.config' / 'zsh' / 'plugins' / 'forgit').mkdir(parents=True)
 
-    assert plugins.RESOURCE.perform(live, change).status is OutcomeStatus.SKIPPED
+    assert plugins.RESOURCE.perform(live, change, unprivileged).status is OutcomeStatus.SKIPPED
 
 
-def test_an_unreachable_repo_fails_rather_than_raising(tmp_path: Path) -> None:
+def test_an_unreachable_repo_fails_rather_than_raising(tmp_path: Path, unprivileged: Privilege) -> None:
     live = session(tmp_path, packages={'shell_plugins': [{'name': 'ghost', 'repo': str(tmp_path / 'nowhere')}]})
 
-    outcome = plugins.RESOURCE.perform(live, changes(live)[0])
+    outcome = plugins.RESOURCE.perform(live, changes(live)[0], unprivileged)
 
     assert outcome.status is OutcomeStatus.FAILED
     assert not outcome.ok

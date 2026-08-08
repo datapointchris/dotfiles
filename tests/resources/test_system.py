@@ -9,7 +9,6 @@ each manager.
 
 from __future__ import annotations
 
-import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -19,41 +18,42 @@ import yaml
 
 from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
+from dotfiles.privilege import Escalation
+from dotfiles.privilege import Privilege
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import system
 from dotfiles.session import Session
 
 
-@pytest.fixture
-def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A bin directory first on PATH, with the real system dirs still behind it.
-
-    `/usr/bin:/bin` stays, or `git` and `bash` raise FileNotFoundError and the
-    fixture cannot run its own helpers.
-    """
-    directory = tmp_path / 'bin'
-    directory.mkdir()
-    monkeypatch.setenv('PATH', f'{directory}{os.pathsep}/usr/bin{os.pathsep}/bin')
-    return directory
-
-
-def executable(directory: Path, name: str, script: str) -> Path:
+def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
+    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
     return target
 
 
-def session(tmp_path: Path, packages: dict[str, Any], manifest: dict[str, Any]) -> Session:
+def session(
+    tmp_path: Path,
+    packages: dict[str, Any],
+    manifest: dict[str, Any],
+    system_config: dict[str, Any] | None = None,
+    **overrides: Any,
+) -> Session:
     repo = tmp_path / 'repo'
     (repo / 'install' / 'manifests').mkdir(parents=True, exist_ok=True)
     (repo / 'install' / 'packages.yml').write_text(yaml.safe_dump(packages, sort_keys=False))
     (repo / 'install' / 'flags.yml').write_text('{}')
     (repo / 'install' / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
+    # Absent rather than empty when nothing is declared, because that is the state
+    # every other test in this file runs in and the one a synthetic tree has.
+    if system_config is not None:
+        (repo / 'install' / 'system.yml').write_text(yaml.safe_dump(system_config, sort_keys=False))
     home = tmp_path / 'home'
     home.mkdir(exist_ok=True)
-    return Session(machine_name='box', repo=repo, home=home)
+    return Session(machine_name='box', repo=repo, home=home, **overrides)
 
 
 def only_item(live: Session):
@@ -155,3 +155,104 @@ def test_the_system_resource_takes_only_its_own_items(tmp_path: Path, fake_bin: 
 
     assert {item.address for item in live.plan.for_resource('system')} == {'system/curl'}
     assert {item.address for item in live.plan.for_resource('packages')} == {'go/task'}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The configuration half
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def zshenv(tmp_path: Path) -> dict[str, Any]:
+    """One managed file, pointed somewhere writable so a repair can be measured."""
+    return {'managed_files': [{'name': 'zdotdir', 'path': str(tmp_path / 'zshenv'), 'append_line': 'export ZDOTDIR="$HOME/.config/zsh"'}]}
+
+
+def test_a_configuration_row_is_planned_beside_the_packages(tmp_path: Path) -> None:
+    """One resource, two authorities. Both need root and neither is a tool, which
+    is why the group membership and the apt package answer to the same noun."""
+    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION, zshenv(tmp_path))
+
+    assert {item.address for item in live.plan.for_resource('system')} == {'system/curl', 'file/zdotdir'}
+
+
+def test_a_configuration_change_declares_that_it_needs_root(tmp_path: Path) -> None:
+    """Declared on the change rather than discovered when the write is attempted,
+    so the whole list can be named at one prompt before any of it runs."""
+    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
+    change = only_change(live)
+
+    assert change.verdict is Verdict.MISSING
+    assert change.privileged
+    assert change.actionable
+
+
+def test_a_package_row_does_not_claim_to_need_root(tmp_path: Path, fake_bin: Path) -> None:
+    """The package backends have not converted, so their changes are still the
+    phase registry's — and a change nothing here writes must not put a password
+    prompt in front of a run."""
+    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nexit 0\n')
+    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
+
+    assert not only_change(live).privileged
+
+
+def test_configuration_is_absent_from_an_owner_narrowed_plan(tmp_path: Path) -> None:
+    """`--mine` means "just my tools", usually right after releasing one. A group
+    membership belongs to nobody on GitHub, so filtering by owner would drop every
+    row for the wrong reason — and running them anyway would turn a tool update
+    into a password prompt for a reconfiguration nobody asked for."""
+    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path), owner='datapointchris')
+
+    assert live.plan.for_resource('system') == ()
+
+
+def test_applying_a_configuration_row_writes_it(tmp_path: Path, granted: Privilege) -> None:
+    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
+    change = only_change(live)
+
+    outcome = system.RESOURCE.perform(live, change, granted)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert (tmp_path / 'zshenv').read_text() == 'export ZDOTDIR="$HOME/.config/zsh"\n'
+
+
+def test_a_row_that_became_true_since_the_report_is_skipped(tmp_path: Path, granted: Privilege) -> None:
+    """`observe` ran before the report was printed and before the packages phase
+    installed anything, so the state it decided from can be minutes old."""
+    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
+    change = only_change(live)
+    (tmp_path / 'zshenv').write_text('export ZDOTDIR="$HOME/.config/zsh"\n')
+
+    assert system.RESOURCE.perform(live, change, granted).status is OutcomeStatus.SKIPPED
+
+
+def test_a_package_row_is_still_refused_rather_than_silently_skipped(tmp_path: Path, fake_bin: Path) -> None:
+    """Installing an apt package means the package backends, which convert with
+    their own step. Saying so is what stops a run reporting converged for work it
+    never did."""
+    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nprintf "" \n')
+    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
+
+    outcome = system.RESOURCE.perform(live, only_change(live), Privilege())
+
+    assert outcome.status is OutcomeStatus.REFUSED
+
+
+def test_a_machine_with_no_root_reports_the_refusal_rather_than_crashing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The LXC container and the Docker harnesses. Everything unprivileged still
+    lands; this row is reported and the run continues."""
+    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
+    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
+
+    privilege = Privilege()
+    privilege.authorize((Escalation('write the system zshenv'),))
+    outcome = system.RESOURCE.perform(live, only_change(live), privilege)
+
+    assert outcome.status is OutcomeStatus.FAILED
+    assert 'no sudo' in outcome.message
+
+
+def only_change(live: Session):
+    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
+    assert len(changes) == 1, changes
+    return changes[0]

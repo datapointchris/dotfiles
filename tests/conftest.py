@@ -9,10 +9,15 @@ rather than only exercised through a subprocess.
 
 import importlib.machinery
 import importlib.util
+import os
+import stat
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+
+from dotfiles.privilege import Escalation
+from dotfiles.privilege import Privilege
 
 APPS_DIR = Path(__file__).resolve().parent.parent / 'apps'
 
@@ -95,3 +100,56 @@ def load_app(name: str, platform: str = 'common') -> ModuleType:
 @pytest.fixture(scope='session')
 def aws_profiles():
     return load_app('_aws-profiles')
+
+
+@pytest.fixture
+def unprivileged() -> Privilege:
+    """A `Privilege` that has never been authorized, which is what refuses.
+
+    Every resource but `system` takes one and ignores it — `perform` carries it
+    so that `observe` cannot — so a test of one of those wants the object that
+    proves nothing escalated rather than a mock that would let it.
+    """
+    return Privilege()
+
+
+@pytest.fixture
+def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A bin directory first on PATH, with the real system dirs still behind it.
+
+    `/usr/bin:/bin` stays, or `git`, `bash` and `install` raise FileNotFoundError
+    and a fixture cannot run its own helpers. Shadowing by name rather than
+    emptying PATH is what keeps these tests from reading the machine they run on:
+    without it, "dpkg-query refuses to answer" holds on Arch for the wrong reason
+    and inverts on every Debian CI runner.
+    """
+    directory = tmp_path / 'bin'
+    directory.mkdir()
+    monkeypatch.setenv('PATH', f'{directory}{os.pathsep}/usr/bin{os.pathsep}/bin')
+    return directory
+
+
+def _executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
+    """Local to this file on purpose. `tests/conftest.py` and `tests/e2e/conftest.py`
+    are both the module `conftest` to an importer, so a `from conftest import ...`
+    resolves to whichever one the tool looked at first — which typechecks as the
+    wrong file and would run as the wrong one from another working directory.
+    Fixtures are injected and have no such problem; a plain helper is copied."""
+    target = directory / name
+    target.write_text(script)
+    target.chmod(target.stat().st_mode | stat.S_IEXEC)
+    return target
+
+
+@pytest.fixture
+def granted(fake_bin: Path):
+    """An authorized `Privilege` whose sudo runs the command instead of dropping it.
+
+    A fake that logged and exited 0 would let every write test pass without a file
+    ever being written, which is the one result they must not be able to produce.
+    """
+    _executable(fake_bin, 'sudo', '#!/bin/sh\n[ "$1" = "-n" ] && shift\n[ "$1" = "-v" ] && exit 0\nexec "$@"\n')
+    privilege = Privilege()
+    privilege.authorize((Escalation('a privileged action'),))
+    yield privilege
+    privilege.stop()

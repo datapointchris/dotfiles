@@ -17,15 +17,24 @@ is a statement about.
 before the report was printed and before anything upstream in the stage order
 installed a toolchain, so the state it decided from may be minutes old. It
 refuses rather than forces.
+
+`Privilege` is a parameter of `perform` and of nothing else, which is what makes
+"`check` never escalates" structural rather than a promise: `observe` is not
+handed one, so the code to ask for a password is not reachable from the half
+`check` runs. Six of the seven resources ignore it, and that is the point — an
+unused parameter is cheaper than a subsystem that has to be trusted.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
 import enum
+from collections.abc import Sequence
 from typing import Protocol
 from typing import runtime_checkable
 
+from dotfiles.privilege import Escalation
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -80,6 +89,12 @@ class Change:
     desired: DesiredItem | None = None
     observed: str = ''
 
+    privileged: bool = False
+    """Whether repairing this needs root, declared here rather than discovered
+    when the write is attempted. The plan is complete before anything runs, so
+    the whole list can be named at one prompt at the front — and `check` can say
+    how many of its findings will need a password without asking for one."""
+
     @property
     def drifted(self) -> bool:
         """Whether the machine differs from its declaration at all."""
@@ -99,6 +114,7 @@ class Change:
             'repair': str(self.repair),
             'detail': self.detail,
             'observed': self.observed,
+            'privileged': str(self.privileged).lower(),
         }
 
 
@@ -145,7 +161,7 @@ class Resource(Protocol):
         """Pure. Desired × observed → decided work, in the order it must happen."""
         ...
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Do one Change, re-checking live that it is still the right thing to do."""
         ...
 
@@ -158,6 +174,11 @@ def survey(session: Session, plan: Plan, resources: tuple[Resource, ...]) -> lis
     return sorted(changes, key=lambda change: (change.stage, change.resource, change.item))
 
 
-def reconcile(session: Session, changes: list[Change], resources: dict[str, Resource]) -> list[Outcome]:
+def escalations(changes: Sequence[Change]) -> tuple[Escalation, ...]:
+    """What a run will need root for, in the words the prompt should use."""
+    return tuple(Escalation(f'{change.item}: {change.detail}') for change in changes if change.actionable and change.privileged)
+
+
+def reconcile(session: Session, changes: list[Change], resources: dict[str, Resource], privilege: Privilege) -> list[Outcome]:
     """The half only `apply` reaches."""
-    return [resources[change.resource].perform(session, change) for change in changes if change.actionable]
+    return [resources[change.resource].perform(session, change, privilege) for change in changes if change.actionable]

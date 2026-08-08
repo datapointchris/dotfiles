@@ -17,6 +17,7 @@ import dataclasses as dc
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -61,7 +62,7 @@ class IdentityResource:
             if not observed.values[field]
         )
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Never reached — every change here is BY_HAND, so `actionable` is false.
 
         Present because the protocol has three methods and a resource that

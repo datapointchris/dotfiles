@@ -23,6 +23,7 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import success
 from dotfiles.output import warn
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -85,7 +86,7 @@ class PluginsResource:
             if item.address not in observed.present
         )
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Clone one plugin.
 
         A shallow clone is deliberately *not* used: `zsh-vi-mode` and `forgit` are
@@ -119,7 +120,9 @@ def clone(session: Session, stage: Stage) -> bool:
         for change in RESOURCE.diff(session.plan, RESOURCE.observe(session, session.plan))
         if change.actionable and change.stage is stage
     ]
-    outcomes = [RESOURCE.perform(session, change) for change in changes]
+    # Nothing here escalates — a plugin is a clone into $HOME — so the privilege
+    # is constructed and never authorized, which is the state that refuses.
+    outcomes = [RESOURCE.perform(session, change, Privilege()) for change in changes]
 
     for outcome in outcomes:
         if outcome.ok:

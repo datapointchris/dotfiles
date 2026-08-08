@@ -24,6 +24,7 @@ import dataclasses as dc
 from collections.abc import Iterator
 from pathlib import Path
 
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -155,7 +156,7 @@ class SymlinksResource:
         )
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Create one link, or remove one orphan.
 
         Re-checked live rather than trusting what `diff` saw: an earlier change in

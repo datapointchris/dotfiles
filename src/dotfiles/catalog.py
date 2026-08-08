@@ -32,6 +32,7 @@ from typing import Self
 
 import yaml
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 
 
@@ -162,6 +163,9 @@ class Entry:
     section: ClassVar[str]
     structure: ClassVar[Structure] = Structure.LIST
     honoured_constraints: ClassVar[tuple[str, ...]] = ()
+    declared_in: ClassVar[str] = 'packages.yml'
+    """Which declaration file holds this section, so an error names the file a
+    reader has to open rather than the one most sections happen to live in."""
 
     @property
     def executable(self) -> str:
@@ -451,6 +455,109 @@ class ZenExtension(Entry):
     url: str
 
 
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class SystemConfig(Entry):
+    """Configuration the machine owns, rather than payload it installs.
+
+    Its own file, because `packages --source <section>` names a payload and these
+    are not payloads: nothing here is fetched, versioned or upgraded. What they
+    share with a package is the shape of the question — declared, observed,
+    repaired — which is why they are `Entry` rows and not a second mechanism.
+
+    Narrowing is per entry rather than per section, because these rows do not
+    divide the way a package section does. TTY auto-login belongs to a machine
+    whose compositor replaced the display manager, the docker group belongs to a
+    machine that installed docker, and pointing `/etc/zshenv` at the XDG config
+    belongs to every machine that asked for zsh. Three unrelated questions, and
+    no one coordinate answers them — so an entry names the one that decides it,
+    and a new axis is a new field rather than a general narrowing language.
+    """
+
+    declared_in: ClassVar[str] = 'system.yml'
+
+    display_stack: str = ''
+    """Only where the machine's compositor matches. Hyprland replacing gdm is a
+    fact about the display stack, not about Arch."""
+
+    requires_package: str = ''
+    """Only where this machine's plan installs that system package. Configuring
+    docker's group on a server that never installs docker would create a group
+    for nothing, and report drift forever on a machine with nothing wrong."""
+
+    feature: str = ''
+    """Only where the manifest sets this boolean — `configure_zsh` and its kind."""
+
+    def problems(self) -> tuple[str, ...]:
+        if not self.display_stack or self.display_stack in set(axes.DisplayStack):
+            return Entry.problems(self)
+        known = ', '.join(axes.DisplayStack)
+        return (f'declares display_stack {self.display_stack!r}, which is not an axis value. Known: {known}', *Entry.problems(self))
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class GroupMembership(SystemConfig):
+    """The current user belongs to a group. `name` is the group."""
+
+    section: ClassVar[str] = 'group_memberships'
+
+    create_group: bool = False
+    """Whether to create the group when the package that owns it did not."""
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class SystemdUnit(SystemConfig):
+    """A unit's enablement, and optionally that it is running. `name` is the unit."""
+
+    section: ClassVar[str] = 'systemd_units'
+
+    enabled: bool = True
+    active: bool = False
+    """An *additional* requirement to start it, and only meaningful beside
+    `enabled: true` — disabling a unit has never stopped one, and asserting that
+    it also stopped would report drift on the machine that just disabled it."""
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class ManagedFile(SystemConfig):
+    """A file under `/etc` this repo owns some or all of.
+
+    `content` means the whole file is ours and is compared exactly; `append_line`
+    means the file is the OS's and only the presence of one line is ours. Exactly
+    one of them, because a file that is both wholly ours and only partly ours is
+    not a state anything can converge on.
+    """
+
+    section: ClassVar[str] = 'managed_files'
+
+    path: str
+    content: str = ''
+    append_line: str = ''
+    mode: str = '0644'
+
+    alternate_path: str = ''
+    """Where the file lives instead, when that path's parent directory exists.
+
+    One entry rather than two, and one field rather than a coordinate, because
+    the fact is neither a distribution nor a package manager: Debian builds zsh
+    with `--enable-etcdir=/etc/zsh`, so its system zshenv is `/etc/zsh/zshenv`
+    and everyone else's is `/etc/zshenv`. Writing ours to the wrong one is silent
+    — zsh reads the other, and `~/.config/zsh/.zshrc` never loads at all.
+    """
+
+    def problems(self) -> tuple[str, ...]:
+        if bool(self.content) == bool(self.append_line):
+            declared = 'both content and append_line' if self.content else 'neither content nor append_line'
+            return (f'declares {declared}; a managed file is either wholly ours or one line of ours', *SystemConfig.problems(self))
+        return SystemConfig.problems(self)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class LoginShell(SystemConfig):
+    """The current user's login shell. `name` is the shell's binary."""
+
+    section: ClassVar[str] = 'login_shell'
+
+
 SECTION_CLASSES: tuple[type[Entry], ...] = (
     SystemPackage,
     Runtime,
@@ -472,6 +579,19 @@ SECTION_CLASSES: tuple[type[Entry], ...] = (
 
 SECTIONS: dict[str, type[Entry]] = {cls.section: cls for cls in SECTION_CLASSES}
 
+SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (GroupMembership, SystemdUnit, ManagedFile, LoginShell)
+"""`system.yml`, in its own map rather than merged into `SECTIONS`.
+
+`SECTIONS` is what a manifest subscribes to, what `packages list --section`
+offers and what `packages verify` walks. None of those are true of a group
+membership, so merging the two would put system configuration behind the
+`packages` noun — which the whole point of a `system` resource is to stop.
+"""
+
+SYSTEM_SECTIONS: dict[str, type[Entry]] = {cls.section: cls for cls in SYSTEM_SECTION_CLASSES}
+
+ALL_SECTIONS: dict[str, type[Entry]] = {**SECTIONS, **SYSTEM_SECTIONS}
+
 BARE_SECTIONS = frozenset({'macos_taps'})
 """Sections holding bare strings, so there is no row to carry a field or a
 constraint. `macos_taps` is the only one, and a dataclass for it would validate
@@ -490,9 +610,13 @@ class Catalog:
     entries: Mapping[str, tuple[Entry, ...]]
     macos_taps: tuple[str, ...]
     source: Path
+    system_source: Path
 
     def section(self, name: str) -> tuple[Entry, ...]:
         return self.entries[name]
+
+    def file_for(self, section: str) -> Path:
+        return self.system_source if section in SYSTEM_SECTIONS else self.source
 
     def find(self, section: str, name: str) -> Entry:
         """Fail rather than default: a manifest naming a package that does not
@@ -501,7 +625,7 @@ class Catalog:
         for entry in self.entries[section]:
             if entry.name == name:
                 return entry
-        raise CatalogError((Issue(section, f'no entry named {name!r} in {self.source}'),))
+        raise CatalogError((Issue(section, f'no entry named {name!r} in {self.file_for(section)}'),))
 
     def runtime(self, name: str) -> Runtime:
         found = self.find('runtimes', name)
@@ -509,30 +633,52 @@ class Catalog:
         return found
 
     def all_entries(self) -> Iterator[Entry]:
-        for section in SECTIONS:
+        for section in ALL_SECTIONS:
             yield from self.entries[section]
 
 
-def load(path: Path | None = None) -> Catalog:
-    """Parse and validate the whole declaration, or raise with every problem in it."""
+def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
+    """Parse and validate the whole declaration, or raise with every problem in it.
+
+    Two files, one object. `system` defaults to `system.yml` beside the packages
+    file rather than to an absolute path, so a test pointing `path` at a
+    synthetic tree gets that tree's system declaration — or, where it wrote none,
+    an empty one — instead of silently reading the real machine's.
+    """
     source = path or paths.PACKAGES_FILE
-    raw = yaml.safe_load(source.read_text()) or {}
+    system_source = system or (source.parent / 'system.yml')
+    declared = {
+        source: yaml.safe_load(source.read_text()) or {},
+        system_source: (yaml.safe_load(system_source.read_text()) or {}) if system_source.is_file() else {},
+    }
 
     issues: list[Issue] = []
     entries: dict[str, tuple[Entry, ...]] = {}
 
-    for section, cls in SECTIONS.items():
-        rows, section_issues = _build(raw.get(section), cls)
+    for section, cls in ALL_SECTIONS.items():
+        rows, section_issues = _build(declared[_file_for(cls, source, system_source)].get(section), cls)
         entries[section] = rows
         issues.extend(section_issues)
 
-    for unknown in sorted(set(raw) - set(SECTIONS) - BARE_SECTIONS):
-        issues.append(Issue(unknown, 'is not a section any reader knows, so nothing installs it'))
+    for file, raw in declared.items():
+        known = set(SYSTEM_SECTIONS) if file == system_source else set(SECTIONS) | BARE_SECTIONS
+        for unknown in sorted(set(raw) - known):
+            where = 'system.yml' if file == system_source else 'packages.yml'
+            issues.append(Issue(unknown, f'is not a section any reader knows, so nothing reads it out of {where}'))
 
     if issues:
         raise CatalogError(tuple(issues))
 
-    return Catalog(entries=entries, macos_taps=tuple(raw.get('macos_taps') or ()), source=source)
+    return Catalog(
+        entries=entries,
+        macos_taps=tuple(declared[source].get('macos_taps') or ()),
+        source=source,
+        system_source=system_source,
+    )
+
+
+def _file_for(cls: type[Entry], packages: Path, system: Path) -> Path:
+    return system if cls.declared_in == 'system.yml' else packages
 
 
 def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[Issue]]:

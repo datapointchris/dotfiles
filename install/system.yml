@@ -1,0 +1,72 @@
+# ================================================================
+# System Configuration
+# ================================================================
+# The half of system state that is configuration rather than payload:
+# group memberships, unit enablement, files under /etc, and the login shell.
+# `install/packages.yml` says what a machine installs; this says what a machine
+# *is* once the packages are on it.
+#
+# Two files rather than one because `packages --source <section>` names a
+# payload, and nothing here is fetched, versioned or upgraded. They share the
+# shape of the question — declared, observed, repaired — which is why these are
+# catalog rows and not a second mechanism.
+#
+# Every observation here is unprivileged and every repair needs root. That is
+# what makes `dotfiles check` able to report this subsystem from a plain shell,
+# and it is why the writes go through one authorization in
+# `src/dotfiles/privilege.py` instead of a `sudo` per script.
+#
+# Narrowing is per entry, and an entry carries only the key that decides it:
+#   display_stack      the machine's compositor
+#   requires_package   a system package this machine's manifest installs
+#   feature            a manifest boolean
+# An entry with none of them applies to every machine.
+
+group_memberships:
+  - name: docker
+    description: Docker socket access without sudo
+    requires_package: docker
+    create_group: true
+
+systemd_units:
+  - name: docker.socket
+    description: Socket-activated Docker
+    requires_package: docker
+    enabled: true
+    active: true
+
+  - name: gdm
+    description: TTY auto-login into Hyprland replaces the display manager
+    display_stack: wayland
+    enabled: false
+
+managed_files:
+  - name: tty1-autologin
+    description: Auto-login on TTY1, which is what starts the compositor
+    display_stack: wayland
+    path: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    # `\\u`, not `\u`: systemd unescapes `\\` to `\` when it parses the line, and
+    # agetty's -o reads `\u` as the username. system-config.sh wrote a single
+    # backslash — its heredoc was unquoted, so bash ate the other one before tee
+    # ever saw it — and the working machine carries two. Declaring what works is
+    # the first thing this conversion has been able to notice.
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin {user} %I $TERM
+
+  # Without this, ~/.config/zsh/.zshrc never loads at all, on any platform.
+  # $HOME is deliberately unexpanded: zsh expands it when it reads the file, and
+  # baking this user's home into a system-wide file would be wrong for every
+  # other account on the machine.
+  - name: zdotdir
+    description: XDG zsh config location, system-wide
+    feature: configure_zsh
+    path: /etc/zshenv
+    alternate_path: /etc/zsh/zshenv
+    append_line: export ZDOTDIR="$HOME/.config/zsh"
+
+login_shell:
+  - name: zsh
+    description: The login shell for this account
+    feature: configure_zsh

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+from collections.abc import Iterator
 
 from dotfiles import catalog
 from dotfiles import coordinates as axes
@@ -53,6 +54,16 @@ class Stage(enum.IntEnum):
     SHELL_PLUGINS = 80
     SYMLINKS = 90
     EDITOR_PLUGINS = 100
+
+    SYSTEM_CONFIG = 110
+    """Last, where `install.sh` put the two halves of it that existed.
+
+    Not beside SYSTEM, despite the name. Every row needs the package it
+    configures to be installed first — the docker group, the unit that serves the
+    socket, zsh before it can be the login shell — and nothing installed later
+    needs any of them. `apply` ending on the one stage that asks for a password
+    is a property worth keeping rather than an accident of where it landed.
+    """
 
 
 class Precondition(enum.StrEnum):
@@ -192,6 +203,21 @@ manager is a coordinate the provider reads — a provider per manager would be
 three copies of one apply loop.
 """
 
+SYSTEM_PROVIDERS: dict[str, Provider] = {
+    'group_memberships': Provider('group', Stage.SYSTEM_CONFIG, 'system'),
+    'systemd_units': Provider('systemd', Stage.SYSTEM_CONFIG, 'system'),
+    'managed_files': Provider('file', Stage.SYSTEM_CONFIG, 'system'),
+    'login_shell': Provider('login-shell', Stage.SYSTEM_CONFIG, 'system'),
+}
+"""`system.yml`'s sections, resolved in a second pass rather than beside the rest.
+
+They cannot be in `PROVIDERS`: that loop asks the manifest what it subscribes to,
+and no manifest subscribes to a group membership. What decides a system-config
+row instead is a coordinate, a feature, or *the result of the first pass* — the
+docker group applies where this machine's plan installs docker, which is not
+knowable until the packages have resolved.
+"""
+
 UNPROVIDED: dict[str, str] = {
     'runtimes': 'derived by the toolchain resource from the tool sections that need one, never subscribed to directly',
     'zen_extensions': 'declared and installed by nothing; the browser profile is not managed from here yet',
@@ -236,11 +262,70 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
                 )
             )
 
+    if owner is None:
+        items.extend(_system_configuration(declaration, machine, {item.name for item in items if item.section == 'system_packages'}))
+
     return Plan(
         machine=machine,
         items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))),
         runtimes=tuple(entry for entry in declaration.section('runtimes') if isinstance(entry, catalog.Runtime)),
     )
+
+
+def _system_configuration(
+    declaration: catalog.Catalog,
+    machine: machines.Machine,
+    installed: set[str],
+) -> Iterator[DesiredItem]:
+    """The `system.yml` rows this machine wants, given what it already resolved.
+
+    Absent entirely from an owner-narrowed plan, rather than filtered by it: a
+    group membership belongs to nobody on GitHub, so every row would answer
+    `owner is None` and be dropped for the wrong reason. `--mine` means "just my
+    tools" — usually right after releasing one — and it must not turn into a
+    password prompt for a system reconfiguration nobody asked for.
+    """
+    for section, provider in SYSTEM_PROVIDERS.items():
+        for entry in declaration.section(section):
+            assert isinstance(entry, catalog.SystemConfig)
+            if not configures(entry, machine, installed):
+                continue
+            yield DesiredItem(
+                section=section,
+                provider=provider.name,
+                resource=provider.resource,
+                stage=provider.stage,
+                name=entry.name,
+                executable='',
+                evidence_path='',
+                precondition=Precondition.NONE,
+                entry=entry,
+                reason=Reason(section, _decided_by(entry)),
+            )
+
+
+def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed: set[str]) -> bool:
+    """Whether one system-config row applies to this machine.
+
+    Each key narrows independently and all of them must hold, so an entry needing
+    two conditions says both rather than needing a new combined axis.
+    """
+    if entry.display_stack and entry.display_stack != str(machine.coordinates.display_stack):
+        return False
+    if entry.requires_package and entry.requires_package not in installed:
+        return False
+    return not (entry.feature and not machine.wants(entry.feature))
+
+
+def _decided_by(entry: catalog.SystemConfig) -> str:
+    """What put this row in the plan, for `machines show` to print."""
+    narrowings = (
+        ('package', entry.requires_package),
+        ('display_stack', entry.display_stack),
+        ('feature', entry.feature),
+    )
+    named = ', '.join(f'{key}:{value}' for key, value in narrowings if value)
+    return named or 'every machine'
 
 
 def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:

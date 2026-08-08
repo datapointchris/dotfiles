@@ -343,21 +343,9 @@ source of truth) — this list describes what each directory is *for*, not its c
 
 The scripts that remain support `--update` for the update system and use structured error reporting. The `github_releases` and `custom_installers` sections do not: they are `src/dotfiles/providers/`, where one verb converges and there is no second mode to select. See `docs/architecture/github-releases.md` and `docs/architecture/custom-installers.md`.
 
-The root `install.sh` orchestrates the installation process, detecting the platform and running appropriate scripts from `install/{platform}/` and `install/common/{category}/`.
-
 ### Main Installation Flow
 
-`install.sh` orchestrates installation phases:
-
-1. System packages (brew/apt/pacman)
-2. GitHub release tools
-3. Rust/cargo tools
-4. Language package managers
-5. Shell configuration
-6. Custom Go applications
-7. Symlink dotfiles
-8. Theme system
-9. Plugin installation
+`install.sh` is a POSIX bootstrap whose only job is reaching the CLI: check `git` and `tar`, stage a bundle, install uv, install this package, `exec dotfiles apply`. The phases and their order are `apply.REGISTRY` in `src/dotfiles/apply.py`, and the order is a dependency chain rather than a listing — symlinks land after the tools that provide `task` and before tpm reads the tmux config it deploys, and system configuration is last because every row of it needs the package it configures to be installed first.
 
 ### Taskfile Tasks
 

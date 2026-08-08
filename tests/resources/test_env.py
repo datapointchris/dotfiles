@@ -22,6 +22,7 @@ import yaml
 
 from dotfiles import envfile
 from dotfiles import machine as machines
+from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import env as env_resource
@@ -364,24 +365,24 @@ def test_a_present_required_file_reports_nothing(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_applying_writes_the_file_and_converges(tmp_path: Path) -> None:
+def test_applying_writes_the_file_and_converges(tmp_path: Path, unprivileged: Privilege) -> None:
     live = session(tmp_path)
     found = env_resource.RESOURCE.diff(live.plan, env_resource.RESOURCE.observe(live, live.plan))
 
-    outcome = env_resource.RESOURCE.perform(live, found[0])
+    outcome = env_resource.RESOURCE.perform(live, found[0], unprivileged)
 
     assert outcome.ok
     assert env_resource.RESOURCE.diff(live.plan, env_resource.RESOURCE.observe(live, live.plan)) == ()
 
 
-def test_a_second_change_in_one_run_skips_rather_than_rewriting(tmp_path: Path) -> None:
+def test_a_second_change_in_one_run_skips_rather_than_rewriting(tmp_path: Path, unprivileged: Privilege) -> None:
     """N drifted flags are one write. `perform` re-reads live rather than trusting
     what `diff` saw, which is what collapses them."""
     live = session(tmp_path, MANIFEST, {'flags': [{'name': f'FLAG_{index}', 'default': True} for index in range(3)]})
     live.env_file.write_text(f'{envfile.MARKER}\n')
     found = env_resource.RESOURCE.diff(live.plan, env_resource.RESOURCE.observe(live, live.plan))
 
-    outcomes = [env_resource.RESOURCE.perform(live, change) for change in found if change.actionable]
+    outcomes = [env_resource.RESOURCE.perform(live, change, unprivileged) for change in found if change.actionable]
 
     assert [outcome.status for outcome in outcomes] == ['done', 'skipped', 'skipped', 'skipped', 'skipped']
 

@@ -24,10 +24,10 @@ thing that keeps the halves from drifting while both exist.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import functools
 import os
-import shutil
 import sys
 import tempfile
 from collections.abc import Callable
@@ -43,6 +43,7 @@ from dotfiles import failure_report
 from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
+from dotfiles import privilege as privileges
 from dotfiles import resolve as resolver
 from dotfiles import versions
 from dotfiles.effects import Completed
@@ -55,7 +56,9 @@ from dotfiles.output import warn
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
+from dotfiles.resources import escalations
 from dotfiles.resources import plugins
+from dotfiles.resources import system
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -311,9 +314,14 @@ def _system_packages(context: Run) -> bool:
     """The OS package manager, plus whatever else that platform configures.
 
     The tier gates only the package payload. Everything beside it — fontconfig on
-    WSL, `system-config.sh` on Arch, preferences and the Xcode licence on macOS —
-    runs whether or not this machine wants packages, because it is configuration
-    rather than payload.
+    WSL, preferences and the Xcode licence on macOS — runs whether or not this
+    machine wants packages, because it is configuration rather than payload.
+
+    What is left here is the configuration that has not converted yet. Arch's
+    `system-config.sh` was the first of it to go: its docker group, its two units
+    and its TTY auto-login are `system.yml` rows now, applied by the
+    `system-config` phase at the end of the run rather than in the middle of this
+    one. Nothing installed later depended on them.
     """
     if context.platform not in SYSTEM_SCRIPTS:
         raise Declaration(f'unsupported platform: {context.platform}')
@@ -330,10 +338,8 @@ def _system_packages(context: Run) -> bool:
 
     if context.platform == 'wsl':
         scripts.append(platform_dir / 'fontconfig-setup.sh')
-    if context.platform == 'archlinux':
-        if context.wants('flatpak'):
-            scripts.append(platform_dir / 'flatpak.sh')
-        scripts.append(platform_dir / 'system-config.sh')
+    if context.platform == 'archlinux' and context.wants('flatpak'):
+        scripts.append(platform_dir / 'flatpak.sh')
 
     return _run_scripts(context, scripts, tier=context.system_tier or 'workstation')
 
@@ -559,70 +565,53 @@ def _nvim_plugins(context: Run) -> bool:
     return run_installer(context, COMMON / 'plugins' / 'nvim-plugins.sh', 'nvim-plugins')
 
 
-def _zsh_config(context: Run) -> bool:
-    """Point the system zshenv at the XDG config, and make zsh the login shell.
+def _system_config(context: Run) -> bool:
+    """Group memberships, unit enablement, files under `/etc`, and the login shell.
 
-    Both sudo calls sit here rather than in a `privilege.py` because that module
-    is a design with a shape — declared privilege, one authorisation up front, a
-    keepalive for `pacman -Syu` — and writing it around these two would be a
-    different thing wearing the name. Step 6 builds it with the system resource.
+    The system resource's own apply walk — observe, diff, perform — reached from
+    the phase registry, because that is still what `dotfiles apply` drives. There
+    is no second description of the work here: what this phase writes is exactly
+    what `dotfiles system check` prints.
 
-    Every state check is an unprivileged read, so a machine already configured
-    never prompts for a password.
+    **The password is asked for here rather than at the front of the run**, which
+    is not where the design wants it and is where it has to be while the package
+    backends are still bash. What decides whether root is needed at all is the
+    observation, and the observation is not right until the packages are
+    installed: on a fresh machine zsh does not exist yet, so an up-front look
+    would find the login shell unrepairable, ask for nothing, and then refuse the
+    one write it turns out to need. Asking for a password that may not be needed
+    is the other wrong answer. It moves to the front when the package backends
+    convert and the whole privileged list is knowable before anything runs.
     """
-    if not context.wants('configure_zsh'):
-        return True
-    heading('Shell configuration')
-    return _ensure_zdotdir() and _ensure_login_shell()
-
-
-def _ensure_zdotdir() -> bool:
-    """Without this `~/.config/zsh/.zshrc` never loads at all, on any platform."""
-    zshenv = Path('/etc/zsh/zshenv') if Path('/etc/zsh').is_dir() else Path('/etc/zshenv')
-
-    if zshenv.is_file() and 'ZDOTDIR' in zshenv.read_text():
-        err_console.print(f'ZDOTDIR already configured in {zshenv}')
+    session = context.session
+    plan = dataclasses.replace(session.plan, items=tuple(item for item in session.plan.items if item.stage is Stage.SYSTEM_CONFIG))
+    if not plan.items:
         return True
 
-    # $HOME has to expand when zsh reads the file, not now.
-    line = 'export ZDOTDIR="$HOME/.config/zsh"'
-    if not zshenv.parent.is_dir() and not run(['sudo', 'mkdir', '-p', str(zshenv.parent)]).ok:
-        return False
-    if not run(['sudo', 'sh', '-c', f'printf "%s\\n" {line!r} >> {zshenv}'], output=Output.QUIET).ok:
-        warn(f'could not write ZDOTDIR into {zshenv}')
-        return False
-    err_console.print(f'ZDOTDIR configured in {zshenv}')
-    return True
-
-
-def _ensure_login_shell() -> bool:
-    """A no-op, and no sudo, where zsh is already the login shell — always on macOS.
-
-    Two shell idioms that do not survive translation into subprocess calls, and
-    both were here: `command -v` is a builtin no `exec` can find, and `$USER` is
-    unset in any context without a login shell — `docker exec`, a systemd timer,
-    cron — where `chsh -s zsh ""` then fails with `user "" does not exist`.
-    """
-    if 'zsh' in os.environ.get('SHELL', ''):
-        err_console.print('Default shell is already zsh')
+    resource = system.RESOURCE
+    changes = resource.diff(plan, resource.observe(session, plan))
+    if not changes:
         return True
 
-    zsh = shutil.which('zsh')
-    if not zsh:
-        warn('zsh is not installed, so it cannot be made the login shell')
-        return False
+    heading('System configuration')
+    privilege = privileges.Privilege()
+    privilege.authorize(escalations(changes))
+    try:
+        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
+    finally:
+        privilege.stop()
 
-    if not run(['sudo', 'chsh', '-s', zsh, _current_user()]).ok:
-        return False
-    err_console.print('Default shell changed to zsh (effective at next login)')
-    return True
+    for outcome in outcomes:
+        if outcome.ok:
+            err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
+        else:
+            _install_failed(context, outcome.change.item, outcome.message)
 
+    for change in changes:
+        if not change.actionable:
+            warn(f'{change.item}: {change.detail}')
 
-def _current_user() -> str:
-    """Whose login shell this is, from the uid rather than the environment."""
-    import pwd
-
-    return pwd.getpwuid(os.getuid()).pw_name
+    return all(outcome.ok for outcome in outcomes)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -667,7 +656,7 @@ REGISTRY = (
     Phase('symlinks', 'symlinks', (), _symlinks),
     Phase('tmux-plugins', 'plugins', ('tpm',), _tmux_plugins),
     Phase('nvim-plugins', 'plugins', (), _nvim_plugins),
-    Phase('zsh-config', 'system', (), _zsh_config),
+    Phase('system-config', 'system', (), _system_config),
 )
 
 

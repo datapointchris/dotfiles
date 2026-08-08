@@ -127,6 +127,7 @@ nav:
       - Tool Composition: architecture/tool-composition.md
       - GitHub Releases: architecture/github-releases.md
       - Custom Installers: architecture/custom-installers.md
+      - System Configuration: architecture/system-configuration.md
   - Configuration:
       - Docker Setup: configuration/docker.md
       - Hyprland: configuration/hyprland.md

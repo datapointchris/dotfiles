@@ -51,9 +51,22 @@ def _reconcile_one(resource: Resource, session: Session) -> ExitCode:
     The same walk with the last step run, which is the whole of the check/apply
     symmetry: nothing here decides whether to write, it decides whether to call
     the only thing that does.
+
+    Authorization happens once, between the two, with the list of what needs it —
+    which is only possible because the changes are decided before any of them
+    runs. A resource with nothing privileged never prompts.
     """
+    from dotfiles import privilege as privileges
+    from dotfiles.resources import escalations
+
     changes = resource.diff(session.plan, resource.observe(session, session.plan))
-    outcomes = [resource.perform(session, change) for change in changes if change.actionable]
+
+    privilege = privileges.Privilege()
+    privilege.authorize(escalations(changes))
+    try:
+        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
+    finally:
+        privilege.stop()
 
     for outcome in outcomes:
         if outcome.ok:

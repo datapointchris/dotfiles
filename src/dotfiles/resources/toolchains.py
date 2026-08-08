@@ -20,6 +20,7 @@ import shutil
 from dotfiles import versions
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -122,7 +123,7 @@ class ToolchainsResource:
                 )
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Not yet this resource's to do.
 
         Each toolchain installs through its own version manager — rustup, fnm, the

@@ -50,7 +50,7 @@ def assert_named(found: list[str], fragment: str) -> None:
 
 
 def test_the_repo_declaration_parses() -> None:
-    """The one test that reads the real file. Everything else is a fixture.
+    """The one test that reads the real files. Everything else is a fixture.
 
     This is what makes a new key an error at the moment it is added rather than
     on the machine that eventually installs it.
@@ -58,23 +58,37 @@ def test_the_repo_declaration_parses() -> None:
     loaded = catalog.load(REPO_ROOT / 'install' / 'packages.yml')
 
     assert loaded.section('github_releases'), 'the declaration parsed but came back empty'
-    assert set(loaded.entries) == set(catalog.SECTIONS)
+    assert loaded.section('managed_files'), 'system.yml parsed but came back empty'
+    assert set(loaded.entries) == set(catalog.ALL_SECTIONS)
 
 
-def test_every_section_in_the_file_has_a_class() -> None:
+@pytest.mark.parametrize(('file', 'known'), [('packages.yml', catalog.SECTIONS), ('system.yml', catalog.SYSTEM_SECTIONS)])
+def test_every_section_in_a_declaration_file_has_a_class(file: str, known: dict[str, type[catalog.Entry]]) -> None:
     """A section with no dataclass is not validated leniently but not at all.
 
     `runtimes` was in exactly that state while declaring both a `version` and a
     `min_version` — which is what the constraint rule exists to police — and no
     per-rule test could see it, because each one names its own section.
     """
-    declared = yaml.safe_load((REPO_ROOT / 'install' / 'packages.yml').read_text())
-    unmodelled = set(declared) - set(catalog.SECTIONS) - catalog.BARE_SECTIONS
+    declared = yaml.safe_load((REPO_ROOT / 'install' / file).read_text())
+    unmodelled = set(declared) - set(known) - catalog.BARE_SECTIONS
 
     assert not unmodelled, (
-        f'sections in packages.yml with no dataclass in catalog.py: {sorted(unmodelled)}. '
+        f'sections in {file} with no dataclass in catalog.py: {sorted(unmodelled)}. '
         'Add one, or add to catalog.BARE_SECTIONS with the reason.'
     )
+
+
+def test_a_section_is_read_out_of_exactly_one_file() -> None:
+    """The two maps partition the sections rather than overlapping.
+
+    A section in both would be read from whichever file `_file_for` picked and
+    silently ignored in the other, which is a declaration that can be edited with
+    no effect — the failure mode this whole module was rewritten to end.
+    """
+    assert not set(catalog.SECTIONS) & set(catalog.SYSTEM_SECTIONS)
+    assert all(cls.declared_in == 'system.yml' for cls in catalog.SYSTEM_SECTIONS.values())
+    assert all(cls.declared_in == 'packages.yml' for cls in catalog.SECTIONS.values())
 
 
 # ─────────────────────────────────────────────────────────────────────────────

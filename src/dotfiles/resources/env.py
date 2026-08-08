@@ -19,6 +19,7 @@ import dataclasses as dc
 from pathlib import Path
 
 from dotfiles import envfile
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -75,7 +76,7 @@ class EnvResource:
         changes.extend(_undeclared(machine, observed))
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Rewrite the generated section.
 
         Every automatic change here is repaired by one write, so this re-reads

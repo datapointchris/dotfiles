@@ -261,3 +261,96 @@ def test_the_four_manifests_do_not_collapse_an_axis() -> None:
 
     collapsed = [axis for axis, values in seen.items() if len(values) < 2]
     assert not collapsed, f'every real manifest agrees on {collapsed}, so nothing here tests those axes'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# System configuration: narrowed per entry, not per section
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def system_plan(tmp_path: Path, system_config: dict[str, Any], manifest: dict[str, Any], **kwargs: Any) -> resolve.Plan:
+    install = tmp_path / 'install'
+    (install / 'manifests').mkdir(parents=True)
+    (install / 'packages.yml').write_text(yaml.safe_dump({'system_packages': [{'name': 'docker', 'pacman': 'docker'}]}))
+    (install / 'system.yml').write_text(yaml.safe_dump(system_config, sort_keys=False))
+    (install / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
+    (install / 'flags.yml').write_text('{}')
+    return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), **kwargs)
+
+
+def test_every_system_section_has_a_provider() -> None:
+    """The same rule as the packages side: a section nothing resolves is a
+    declaration that can be edited with no effect."""
+    assert set(catalog.SYSTEM_SECTIONS) == set(resolve.SYSTEM_PROVIDERS)
+
+
+@pytest.mark.parametrize(
+    ('platform', 'wanted'),
+    [('archlinux', True), ('linux', False), ('macos', False)],
+)
+def test_display_stack_narrows_an_entry_to_the_machines_with_that_compositor(tmp_path: Path, platform: str, wanted: bool) -> None:
+    """Hyprland replacing the display manager is a fact about the display stack,
+    not about Arch — which is what stops a Ubuntu-with-Wayland box needing a
+    second copy of the entry."""
+    declared = {'systemd_units': [{'name': 'gdm', 'display_stack': 'wayland', 'enabled': False}]}
+    plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': platform})
+
+    assert bool(plan.for_resource('system')) is wanted
+
+
+def test_an_entry_is_dropped_where_the_package_it_configures_is_not_installed(tmp_path: Path) -> None:
+    """Creating a docker group on a server that never installs docker would leave
+    a group configured for nothing and report drift forever on a correct box."""
+    declared = {'group_memberships': [{'name': 'docker', 'requires_package': 'docker', 'create_group': True}]}
+
+    with_docker = system_plan(tmp_path / 'a', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
+    without = system_plan(tmp_path / 'b', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': False})
+
+    assert [item.address for item in with_docker.for_resource('system')] == ['system/docker', 'group/docker']
+    assert without.for_resource('system') == ()
+
+
+def test_a_feature_narrows_an_entry_to_the_manifests_that_asked_for_it(tmp_path: Path) -> None:
+    declared = {'login_shell': [{'name': 'zsh', 'feature': 'configure_zsh'}]}
+
+    asked = system_plan(tmp_path / 'a', declared, {'machine': 'box', 'platform': 'linux', 'configure_zsh': True})
+    silent = system_plan(tmp_path / 'b', declared, {'machine': 'box', 'platform': 'linux'})
+
+    assert [item.address for item in asked.for_resource('system')] == ['login-shell/zsh']
+    assert silent.for_resource('system') == ()
+
+
+def test_every_narrowing_on_an_entry_has_to_hold(tmp_path: Path) -> None:
+    """They compose by conjunction, so an entry needing two conditions says both
+    rather than needing a new combined axis invented for it."""
+    declared = {'systemd_units': [{'name': 'docker.socket', 'requires_package': 'docker', 'display_stack': 'wayland'}]}
+    plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
+
+    assert plan.for_resource('system') == ()
+
+
+def test_the_reason_names_what_put_the_row_in_the_plan(tmp_path: Path) -> None:
+    """`machines show` is an audit, not a listing: under overlays "what does this
+    machine get" stops being answerable by reading one directory."""
+    declared = {'group_memberships': [{'name': 'docker', 'requires_package': 'docker'}]}
+    plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
+
+    assert [item.reason.selector for item in plan.for_resource('system') if item.provider == 'group'] == ['package:docker']
+
+
+def test_an_unconditional_entry_says_so_rather_than_saying_nothing(tmp_path: Path) -> None:
+    declared = {'managed_files': [{'name': 'zdotdir', 'path': '/etc/zshenv', 'append_line': 'x'}]}
+    plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'linux'})
+
+    assert [item.reason.selector for item in plan.for_resource('system')] == ['every machine']
+
+
+def test_system_configuration_runs_after_everything_it_configures(tmp_path: Path) -> None:
+    """The docker group needs docker, the login shell needs zsh, and nothing
+    installed later needs any of them."""
+    declared = {'login_shell': [{'name': 'zsh'}]}
+    plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
+
+    stages = [item.stage for item in plan.items]
+    assert max(stages) is resolve.Stage.SYSTEM_CONFIG
+    assert [item.stage for item in plan.for_resource('system')][-1] is resolve.Stage.SYSTEM_CONFIG

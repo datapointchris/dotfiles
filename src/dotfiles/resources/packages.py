@@ -27,6 +27,7 @@ from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import releases
 from dotfiles import versions
+from dotfiles.privilege import Privilege
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import DesiredItem
@@ -104,7 +105,7 @@ class PackagesResource:
                 changes.extend(currency_of(item, observed))
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Two providers have moved; the rest still run through the phase registry.
 
         Refused rather than silently skipped for the ones that have not, because a

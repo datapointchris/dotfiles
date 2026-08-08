@@ -151,6 +151,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
   - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
   - `packages.yml` - Package definitions
+  - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
 - `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides and status tracking

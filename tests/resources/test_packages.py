@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
-import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,7 @@ import yaml
 
 from dotfiles import evidence as ev
 from dotfiles import releases
+from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -33,13 +33,12 @@ from dotfiles.resources import packages
 from dotfiles.session import Session
 
 
-@pytest.fixture
-def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A bin directory first on PATH, with the real system dirs still behind it."""
-    directory = tmp_path / 'bin'
-    directory.mkdir()
-    monkeypatch.setenv('PATH', f'{directory}{os.pathsep}/usr/bin{os.pathsep}/bin')
-    return directory
+def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
+    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    target = directory / name
+    target.write_text(script)
+    target.chmod(target.stat().st_mode | stat.S_IEXEC)
+    return target
 
 
 @pytest.fixture
@@ -48,13 +47,6 @@ def uv_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory.mkdir()
     monkeypatch.setenv('UV_TOOL_DIR', str(directory))
     return directory
-
-
-def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    target = directory / name
-    target.write_text(script)
-    target.chmod(target.stat().st_mode | stat.S_IEXEC)
-    return target
 
 
 def session(tmp_path: Path, packages_yml: dict[str, Any], manifest: dict[str, Any]) -> Session:
@@ -387,16 +379,20 @@ def only_change(live: Session) -> Change:
     return found[0]
 
 
-def test_a_missing_release_is_installed(tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str]) -> None:
+def test_a_missing_release_is_installed(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
-    outcome = packages.RESOURCE.perform(live, only_change(live))
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
     assert outcome.status is OutcomeStatus.DONE
     assert installs == ['lazygit']
 
 
-def test_a_stale_release_is_upgraded_rather_than_reported(tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str]) -> None:
+def test_a_stale_release_is_upgraded_rather_than_reported(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     """The verdict the phase registry cannot act on, because a phase has no plan
     to read it from."""
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
@@ -405,11 +401,13 @@ def test_a_stale_release_is_upgraded_rather_than_reported(tmp_path: Path, fake_b
 
     change = only_change(live)
     assert change.verdict is Verdict.STALE
-    assert packages.RESOURCE.perform(live, change).status is OutcomeStatus.DONE
+    assert packages.RESOURCE.perform(live, change, unprivileged).status is OutcomeStatus.DONE
     assert installs == ['lazygit']
 
 
-def test_a_release_that_arrived_since_the_report_is_skipped(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+def test_a_release_that_arrived_since_the_report_is_skipped(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     """`observe` ran before the report was printed and before any earlier stage
     installed anything. Reinstalling over what turned up would replace a binary
     nobody asked about with whatever upstream calls latest now."""
@@ -417,16 +415,18 @@ def test_a_release_that_arrived_since_the_report_is_skipped(tmp_path: Path, fake
     change = only_change(live)
     executable(fake_bin, 'lazygit')
 
-    outcome = packages.RESOURCE.perform(live, change)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
 
     assert outcome.status is OutcomeStatus.SKIPPED
     assert installs == []
 
 
-def test_a_provider_that_has_not_converted_is_refused_not_ignored(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+def test_a_provider_that_has_not_converted_is_refused_not_ignored(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
-    outcome = packages.RESOURCE.perform(live, only_change(live))
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
     assert outcome.status is OutcomeStatus.REFUSED
     assert installs == []
@@ -436,21 +436,25 @@ DECLARES_THEME = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['
 THEME = {'custom_installers': [{'name': 'theme', 'description': 'theme manager', 'repo': 'datapointchris/theme'}]}
 
 
-def test_a_missing_custom_installer_runs_its_own_function(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+def test_a_missing_custom_installer_runs_its_own_function(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     """Through the same function the phase calls, so the two front doors cannot
     install one tool differently."""
     live = session(tmp_path, THEME, DECLARES_THEME)
 
-    outcome = packages.RESOURCE.perform(live, only_change(live))
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
     assert outcome.status is OutcomeStatus.DONE
     assert installs == ['theme']
 
 
-def test_a_custom_installer_that_arrived_since_the_report_is_skipped(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+def test_a_custom_installer_that_arrived_since_the_report_is_skipped(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
     live = session(tmp_path, THEME, DECLARES_THEME)
     change = only_change(live)
     executable(fake_bin, 'theme')
 
-    assert packages.RESOURCE.perform(live, change).status is OutcomeStatus.SKIPPED
+    assert packages.RESOURCE.perform(live, change, unprivileged).status is OutcomeStatus.SKIPPED
     assert installs == []

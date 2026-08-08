@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import symlinks
@@ -60,8 +61,14 @@ def changes(session: Session) -> tuple:
 
 
 def apply(session: Session) -> list:
-    """Run the same two halves the CLI runs, and return the outcomes."""
-    return [symlinks.RESOURCE.perform(session, change) for change in changes(session) if change.actionable]
+    """Run the same two halves the CLI runs, and return the outcomes.
+
+    The `Privilege` is constructed here and never authorized, which is the state
+    that refuses: nothing a symlink pass does needs root, so a test that somehow
+    reached an escalation would fail rather than prompt.
+    """
+    privilege = Privilege()
+    return [symlinks.RESOURCE.perform(session, change, privilege) for change in changes(session) if change.actionable]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -46,7 +46,7 @@ PHASE_REGISTRY=(
   "symlinks|config|no|install_symlinks|-"
   "tmux-plugins|plugins|no|install_tmux_plugins|update_tmux_plugins"
   "nvim-plugins|plugins|no|install_nvim_plugins|update_nvim_plugins"
-  "zsh-config|config|no|install_zsh_config|-"
+  "system-config|config|no|install_system_config|-"
 )
 
 GROUPS_SELECTED=()

@@ -115,18 +115,23 @@ def check_toolchains(session: Session) -> ResourceResult:
 
 
 def check_system(session: Session) -> ResourceResult:
-    """What the OS package manager installed, read without escalating.
+    """What the OS package manager installed and how the OS is configured, without escalating.
 
-    The configuration half — login shell, /etc/zshenv, the Xcode licence, the
-    macOS defaults — arrives with the sudo chokepoint in step 6, and the detail
-    line says so rather than implying it has been checked.
+    Every row is read unprivileged — the package inventories, the group database,
+    `systemctl is-enabled`, a 0644 file under `/etc`, field 7 of the passwd entry
+    — so this answers at a prompt and in a container. The Xcode licence and the
+    macOS defaults are the half still missing, and they arrive with the rest of
+    step 6.
     """
     from dotfiles.resources import system
 
     observed = system.RESOURCE.observe(session, session.plan)
     changes = system.RESOURCE.diff(session.plan, observed)
     asked = ', '.join(sorted(observed.asked)) or 'nothing'
-    return from_changes('system', changes, f'all {len(observed.evidence)} declared system packages installed (asked {asked})')
+    converged = f'all {len(observed.evidence)} declared system packages installed (asked {asked})'
+    if observed.config:
+        converged += f', and {len(observed.config)} configuration item(s) match'
+    return from_changes('system', changes, converged)
 
 
 def check_plugins(session: Session) -> ResourceResult:
