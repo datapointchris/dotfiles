@@ -33,10 +33,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotfiles import catalog
 from dotfiles import deploy
+from dotfiles import envfile
 from dotfiles import failure_report
+from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
+from dotfiles import resolve as resolver
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
@@ -532,48 +536,75 @@ class Phase:
     resource: str
     """Which CLI resource owns it, so `dotfiles packages apply` selects a subset."""
 
-    owner_aware: bool
-    """Whether its contents can be traced to a GitHub owner.
+    providers: tuple[str, ...]
+    """Which of `resolve.PROVIDERS` this phase installs, or () for one that installs
+    no catalogued item at all — a toolchain, the symlinks, the zsh setup.
 
-    A phase driven by a registry instead — apt, npm, PyPI — has no owner, and is
-    skipped under `--owner` rather than silently running in full.
+    This replaces a hand-maintained `owner_aware` boolean. Ownership is already a
+    fact about the entries, so the question "can `--owner` narrow this phase" is
+    answered by resolving the plan for that owner and asking which providers it
+    left, never by a column someone has to remember to update.
     """
 
     run: Callable[[Run], bool]
 
 
 REGISTRY = (
-    Phase('system-packages', 'system', False, _system_packages),
-    Phase('go-toolchain', 'toolchains', False, _go_toolchain),
-    Phase('rust-toolchain', 'toolchains', False, _rust_toolchain),
-    Phase('uv', 'toolchains', False, _uv_toolchain),
-    Phase('go-tools', 'packages', True, _go_tools),
-    Phase('github-releases', 'packages', True, _github_releases),
-    Phase('custom-installers', 'packages', True, _custom_installers),
-    Phase('cargo', 'packages', True, _cargo_packages),
-    Phase('node-toolchain', 'toolchains', False, _node_toolchain),
-    Phase('npm-globals', 'packages', False, _npm_globals),
-    Phase('uv-tools', 'packages', True, _uv_tools),
-    Phase('shell-plugins', 'plugins', False, _shell_plugins),
-    Phase('symlinks', 'symlinks', False, _symlinks),
-    Phase('tmux-plugins', 'plugins', False, _tmux_plugins),
-    Phase('nvim-plugins', 'plugins', False, _nvim_plugins),
-    Phase('zsh-config', 'system', False, _zsh_config),
+    Phase('system-packages', 'system', ('system', 'cask', 'mas', 'flatpak'), _system_packages),
+    Phase('go-toolchain', 'toolchains', (), _go_toolchain),
+    Phase('rust-toolchain', 'toolchains', (), _rust_toolchain),
+    Phase('uv', 'toolchains', (), _uv_toolchain),
+    Phase('go-tools', 'packages', ('go',), _go_tools),
+    Phase('github-releases', 'packages', ('ghrelease',), _github_releases),
+    Phase('custom-installers', 'packages', ('custom',), _custom_installers),
+    Phase('cargo', 'packages', ('cargo',), _cargo_packages),
+    Phase('node-toolchain', 'toolchains', (), _node_toolchain),
+    Phase('npm-globals', 'packages', ('npm',), _npm_globals),
+    Phase('uv-tools', 'packages', ('uv', 'uv-git'), _uv_tools),
+    Phase('shell-plugins', 'plugins', ('shell-plugin',), _shell_plugins),
+    Phase('symlinks', 'symlinks', (), _symlinks),
+    Phase('tmux-plugins', 'plugins', ('tpm',), _tmux_plugins),
+    Phase('nvim-plugins', 'plugins', (), _nvim_plugins),
+    Phase('zsh-config', 'system', (), _zsh_config),
 )
 
 
-def select(skip: frozenset[str] = frozenset(), only: frozenset[str] | None = None, owner: str | None = None) -> list[Phase]:
+def select(
+    skip: frozenset[str] = frozenset(),
+    only: frozenset[str] | None = None,
+    providers: frozenset[str] | None = None,
+) -> list[Phase]:
     """Which phases a run covers, in registry order.
 
     Pure, and separate from running them, so "what would this do" is answerable
     without doing it. `only` is how a resource sub-app narrows to its own subtree;
     `skip` is the subtraction the composite offers and the noun form cannot say.
+
+    `providers` is `Plan.providers` — pass it to narrow to the phases that have
+    something to install, which is the whole of `--owner`. `None` means no
+    narrowing, and is not the same as the empty set: a run whose owner matched
+    nothing selects no phases and says so.
     """
     return [
         phase
         for phase in REGISTRY
-        if phase.resource not in skip and (only is None or phase.resource in only) and (owner is None or phase.owner_aware)
+        if phase.resource not in skip
+        and (only is None or phase.resource in only)
+        and (providers is None or bool(providers.intersection(phase.providers)))
     ]
+
+
+def _owned_providers(machine: str, owner: str) -> frozenset[str]:
+    """Which providers still have work once the plan is narrowed to `owner`.
+
+    Resolved rather than looked up, because ownership is a property of the
+    catalog entries and the manifest decides which of them this machine wants.
+    A boolean column could only ever answer the first half, which is why
+    `shell-plugins` was marked "no owner" when every one of its five plugins has
+    one — none of them Chris's.
+    """
+    plan = resolver.resolve(catalog.load(), machines.load(machine), owner=owner)
+    return plan.providers
 
 
 def apply_machine(
@@ -592,9 +623,15 @@ def apply_machine(
         warn(str(problem))
         return ExitCode.USAGE
 
-    phases = select(skip, only, owner)
+    try:
+        narrowed = _owned_providers(context.machine, owner) if owner else None
+    except (catalog.CatalogError, machines.MachineError) as refused:
+        warn(f'cannot narrow to --owner {owner}: {refused}')
+        return ExitCode.ISSUE
+
+    phases = select(skip, only, narrowed)
     if not phases:
-        warn('nothing selected')
+        warn(f'nothing selected for owner {owner}' if owner else 'nothing selected')
         return ExitCode.USAGE
 
     if offline and not paths.BUNDLE_DIR.is_dir():
@@ -607,9 +644,6 @@ def apply_machine(
     # Before the phases, so the run and every later shell agree on what this
     # machine is. Nothing is read back: the platform and the flags come from the
     # manifest, which is the file ~/.env is generated from.
-    from dotfiles import envfile
-    from dotfiles import machine as machines
-
     heading('Machine environment')
     try:
         envfile.write(Path.home() / '.env', machines.load(context.machine))

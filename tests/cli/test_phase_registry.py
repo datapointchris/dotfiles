@@ -24,13 +24,18 @@ import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
+import pytest
+
 from dotfiles import apply
+from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve
 
 
-def bash_registry() -> list[tuple[str, str]]:
-    """Every (phase, owner_aware) bash declares, straight from the sourced array."""
-    script = f'PHASE_VERB=install; source "{paths.INSTALL_DIR}/phases.sh"; printf "%s\\n" "${{PHASE_REGISTRY[@]}}"'
+def sourced(*expressions: str) -> list[str]:
+    """Ask bash to print something after sourcing phases.sh, never parse the file."""
+    script = f'PHASE_VERB=install; source "{paths.INSTALL_DIR}/phases.sh"; ' + '; '.join(expressions)
     result = subprocess.run(
         ['bash', '-c', script],
         capture_output=True,
@@ -38,14 +43,22 @@ def bash_registry() -> list[tuple[str, str]]:
         env={'DOTFILES_DIR': str(paths.REPO_ROOT), 'PATH': '/usr/bin:/bin', 'TERM': 'dumb'},
         check=True,
     )
+    return result.stdout.splitlines()
+
+
+def bash_registry() -> list[tuple[str, str]]:
+    """Every (phase, owner_aware) bash declares, straight from the sourced array."""
     entries = []
-    for line in result.stdout.splitlines():
+    for line in sourced('printf "%s\\n" "${PHASE_REGISTRY[@]}"'):
         name, _group, owner_aware, *_ = line.split('|')
         entries.append((name, owner_aware))
     return entries
 
 
 REGISTERED = bash_registry()
+BASH_OWNER = sourced('printf "%s\\n" "$OWNER"')[0]
+"""Read rather than typed here: a second copy of the name would be one more
+thing that can disagree with the file it is asserting about."""
 
 
 def test_the_bash_registry_was_actually_read() -> None:
@@ -57,11 +70,24 @@ def test_both_registries_name_the_same_phases_in_the_same_order() -> None:
     assert [phase.name for phase in apply.REGISTRY] == [name for name, _ in REGISTERED]
 
 
-def test_both_registries_agree_on_which_phases_have_an_owner() -> None:
-    """`--owner` skips a phase driven by a registry — apt, npm, PyPI — rather than
-    silently running it in full, so disagreeing here means the two verbs narrow to
-    different sets of tools."""
-    assert [phase.owner_aware for phase in apply.REGISTRY] == [flag == 'yes' for _, flag in REGISTERED]
+def test_the_bash_owner_column_says_what_the_catalog_says() -> None:
+    """Bash cannot resolve a plan, so it keeps a hand-written column. This is what
+    stops that column being a third opinion.
+
+    Python derives the answer now — `Plan.providers` after an owner-narrowed
+    resolve — and bash's `yes`/`no` has to be the same answer for the same reason:
+    does any entry this phase installs belong to `$OWNER`. It caught the column
+    marking `shell-plugins` ownerless when all five of its plugins have owners,
+    none of them Chris's; the boolean was right by accident.
+    """
+    declaration = catalog.load()
+    derived = {phase.name: _installs_something_owned_by(phase, BASH_OWNER, declaration) for phase in apply.REGISTRY}
+    assert {name: flag == 'yes' for name, flag in REGISTERED} == derived
+
+
+def _installs_something_owned_by(phase: apply.Phase, owner: str, declaration: catalog.Catalog) -> bool:
+    sections = [section for section, provider in resolve.PROVIDERS.items() if provider.name in phase.providers]
+    return any(entry.owner == owner for section in sections for entry in declaration.section(section))
 
 
 def test_the_tool_path_matches_what_update_puts_on_path() -> None:
@@ -110,10 +136,25 @@ def test_skipping_everything_leaves_no_work() -> None:
     assert apply.select(frozenset({phase.resource for phase in apply.REGISTRY})) == []
 
 
-def test_owner_narrowing_keeps_only_the_traceable_phases() -> None:
-    selected = apply.select(owner='datapointchris')
-    assert selected, 'no owner-aware phases, so the assertion below is vacuous'
-    assert all(phase.owner_aware for phase in selected)
+def test_every_phase_names_providers_the_resolver_knows() -> None:
+    """A typo here would silently make a phase unselectable under `--owner`, which
+    reads as "this machine owns none of that" rather than as a broken registry."""
+    named = {provider for phase in apply.REGISTRY for provider in phase.providers}
+    assert named <= {provider.name for provider in resolve.PROVIDERS.values()}
+
+
+@pytest.mark.parametrize('name', machines.names())
+def test_owner_narrowing_keeps_only_the_phases_with_something_to_install(name: str) -> None:
+    plan = resolve.resolve(catalog.load(), machines.load(name), owner=BASH_OWNER)
+    selected = apply.select(providers=plan.providers)
+    assert all(set(phase.providers) & plan.providers for phase in selected)
+    assert {phase.name for phase in selected} <= {phase.name for phase in apply.select()}
+
+
+def test_an_owner_with_nothing_here_selects_no_phases() -> None:
+    """The empty set is not `None`: narrowing to a stranger must select nothing,
+    where passing no narrowing at all selects everything."""
+    assert apply.select(providers=frozenset()) == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
