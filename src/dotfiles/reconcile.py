@@ -13,6 +13,7 @@ turning the set of them into the number a caller branches on.
 from __future__ import annotations
 
 from collections.abc import Callable
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -20,6 +21,10 @@ from dotfiles import bridge
 from dotfiles import vocabulary
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.output import render_change
+from dotfiles.resources import Change
+from dotfiles.resources import Repair
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 
@@ -66,9 +71,8 @@ def _from_status(address: str, status: int, converged: str, drifted: str) -> Res
     return ResourceResult(address, Verdict.ISSUE, f'the checker exited {status} and could not answer')
 
 
-def check_packages(machine: str | None = None) -> ResourceResult:
-    arguments = ['missing', *(('--machine', machine) if machine else ())]
-    status = bridge.declaration(*arguments, output=Output.STREAM)
+def check_packages(session: Session) -> ResourceResult:
+    status = bridge.declaration('missing', '--machine', session.machine_name, output=Output.STREAM)
     return _from_status(
         'packages',
         status,
@@ -90,15 +94,17 @@ def check_symlinks() -> ResourceResult:
     return _from_status('symlinks', 0 if healthy else 1, 'symlinks are healthy', 'symlinks are broken or missing')
 
 
-def check_env(machine: str | None = None) -> ResourceResult:
-    arguments = ['check', *(('--machine', machine) if machine else ())]
-    status = bridge.ops('env', *arguments).returncode
-    return _from_status(
-        'env',
-        status,
-        '~/.env matches the manifest and the declared flags',
-        "~/.env has drifted — 'dotfiles env apply' rewrites it",
-    )
+def check_env(session: Session) -> ResourceResult:
+    """The first resource driven by the Resource protocol rather than by bash.
+
+    Its changes are rendered here rather than returned, because the composite
+    walk prints one row per resource: the detail line says how many and of what
+    kind, and the rows above it say which.
+    """
+    from dotfiles.resources import env
+
+    changes = env.RESOURCE.diff(session.plan, env.RESOURCE.observe(session, session.plan))
+    return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
 
 
 def check_identity() -> ResourceResult:
@@ -136,26 +142,49 @@ def check_declaration() -> ResourceResult:
     return ResourceResult('machines', Verdict.ISSUE, "the declaration is invalid — 'dotfiles machines check' lists why")
 
 
-Checker = Callable[[str | None], ResourceResult]
-"""Every checker takes the machine, so the walk needs no special case for the one
-that uses it. The discarding lambdas below are the honest way to say "not this one"
-— the alternative was an `if address == 'env'` branch in the walk, which is where a
-second machine-aware resource would have had to be remembered and would not be.
+def from_changes(address: str, changes: Sequence[Change], converged: str) -> ResourceResult:
+    """Fold one resource's per-item changes into the row the composite prints.
+
+    Each change is rendered as it is folded, so the reader sees what drifted and
+    then the summary of it. Drift rather than Issue whatever the mix: a machine
+    differing from its declaration is what `apply` is for, and only a checker that
+    could not answer is an Issue.
+    """
+    drifted = [change for change in changes if change.drifted]
+    for change in drifted:
+        render_change(change)
+
+    if not drifted:
+        return ResourceResult(address, Verdict.CONVERGED, converged)
+
+    by_hand = sum(1 for change in drifted if change.repair is Repair.BY_HAND)
+    detail = f'{len(drifted)} item(s) differ from the declaration'
+    if by_hand:
+        detail += f', {by_hand} of them repairable only by hand'
+    return ResourceResult(address, Verdict.DRIFT, detail)
+
+
+Checker = Callable[[Session], ResourceResult]
+"""Every checker takes the session, so the walk needs no special case for the ones
+that read the declaration. The discarding lambdas below are the honest way to say
+"not this one" — the alternative was an `if address == 'env'` branch in the walk,
+which is where a second machine-aware resource would have had to be remembered and
+would not be.
 """
 
 
 def _pending(address: str) -> Checker:
-    return lambda _machine: ResourceResult(address, Verdict.PENDING, PENDING_DETAIL)
+    return lambda _session: ResourceResult(address, Verdict.PENDING, PENDING_DETAIL)
 
 
 CHECKERS: dict[str, Checker] = {
     'packages': check_packages,
     'toolchains': _pending('toolchains'),
     'plugins': _pending('plugins'),
-    'symlinks': lambda _machine: check_symlinks(),
+    'symlinks': lambda _session: check_symlinks(),
     'env': check_env,
     'system': _pending('system'),
-    'identity': lambda _machine: check_identity(),
+    'identity': lambda _session: check_identity(),
 }
 """Keyed by address and ordered as the machine converges — see `vocabulary.RESOURCES`."""
 
@@ -167,8 +196,9 @@ def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None
     verdict: it was not examined, so it has nothing to report, and inventing a
     row for it would put something in `--json` that no checker produced.
     """
+    session = Session.resolve(machine)
     results = [] if 'machines' in skip else [check_declaration()]
-    results.extend(CHECKERS[address](machine) for address in vocabulary.RESOURCES if address not in skip)
+    results.extend(CHECKERS[address](session) for address in vocabulary.RESOURCES if address not in skip)
     return results
 
 

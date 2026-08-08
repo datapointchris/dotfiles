@@ -21,6 +21,7 @@ from dotfiles import paths
 from dotfiles import resolve as resolver
 from dotfiles.output import console
 from dotfiles.output import emit_json
+from dotfiles.output import emit_text
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.vocabulary import ExitCode
@@ -83,9 +84,7 @@ def show_machine(
     path = _manifest_path(resolved)
 
     if raw:
-        # markup off: a manifest is data, and a `[tool]`-shaped line in one would
-        # otherwise be eaten as a Rich tag rather than printed.
-        console.print(path.read_text(), end='', markup=False, highlight=False)
+        emit_text(path.read_text())
         return
 
     plan = _plan(resolved, owner)

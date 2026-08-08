@@ -4,9 +4,9 @@
 structural rather than a promise: nothing here takes a `--dry-run`, because there
 is no code path a flag could switch off.
 
-Every leaf still shells out — see `bridge.py`. The grammar is what this step
-lands, so that the control inversion in step 4 happens behind a surface that has
-already stopped moving.
+The leaves are converting one at a time. `env` is driven by the Resource protocol
+in `resources/`; the rest still shell out through `bridge.py`, which is where the
+remaining work is legible as a list of callers.
 """
 
 from __future__ import annotations
@@ -16,11 +16,16 @@ import typer
 from dotfiles import bridge
 from dotfiles import paths
 from dotfiles import reconcile
-from dotfiles.effects import Output
 from dotfiles.output import emit_json
+from dotfiles.output import emit_text
 from dotfiles.output import error
 from dotfiles.output import hint
+from dotfiles.output import render_change
 from dotfiles.output import render_result
+from dotfiles.output import success
+from dotfiles.resources import Resource
+from dotfiles.session import NoMachine
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 
@@ -31,6 +36,39 @@ def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
     else:
         render_result(result)
     raise typer.Exit(reconcile.exit_code([result]))
+
+
+def _session(machine: str | None) -> Session:
+    try:
+        return Session.resolve(machine)
+    except NoMachine as unresolved:
+        raise typer.BadParameter(str(unresolved)) from unresolved
+
+
+def _reconcile_one(resource: Resource, session: Session) -> ExitCode:
+    """`check` plus acting on what it found, for one resource.
+
+    The same walk with the last step run, which is the whole of the check/apply
+    symmetry: nothing here decides whether to write, it decides whether to call
+    the only thing that does.
+    """
+    changes = resource.diff(session.plan, resource.observe(session, session.plan))
+    outcomes = [resource.perform(session, change) for change in changes if change.actionable]
+
+    for outcome in outcomes:
+        if outcome.ok:
+            success(f'{outcome.change.item}: {outcome.message or outcome.status}')
+        else:
+            error(f'{outcome.change.item}: {outcome.message or outcome.status}')
+
+    if any(not outcome.ok for outcome in outcomes):
+        return ExitCode.ISSUE
+    # What `apply` could not repair is still drift, and saying so is what keeps a
+    # machine awaiting a safekeep restore from reading as converged.
+    remaining = [change for change in changes if change.drifted and not change.actionable]
+    for change in remaining:
+        render_change(change)
+    return ExitCode.DRIFT if remaining else ExitCode.CONVERGED
 
 
 def available_sources() -> list[str]:
@@ -91,7 +129,7 @@ packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from
 @packages_app.command('check')
 def packages_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report packages this machine declares but has not installed."""
-    _report(reconcile.check_packages(machine), as_json)
+    _report(reconcile.check_packages(_session(machine)), as_json)
 
 
 @packages_app.command('apply')
@@ -128,9 +166,9 @@ toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and t
 
 
 @toolchains_app.command('check')
-def toolchains_check(as_json: bool = JsonOption) -> None:
+def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report toolchain drift."""
-    _report(reconcile.CHECKERS['toolchains'](None), as_json)
+    _report(reconcile.CHECKERS['toolchains'](_session(machine)), as_json)
 
 
 @toolchains_app.command('apply')
@@ -156,9 +194,9 @@ plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plu
 
 
 @plugins_app.command('check')
-def plugins_check(as_json: bool = JsonOption) -> None:
+def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report plugin drift."""
-    _report(reconcile.CHECKERS['plugins'](None), as_json)
+    _report(reconcile.CHECKERS['plugins'](_session(machine)), as_json)
 
 
 @plugins_app.command('apply')
@@ -226,30 +264,32 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report drift between the declared flags and this machine."""
-    _report(reconcile.check_env(machine), as_json)
+    _report(reconcile.check_env(_session(machine)), as_json)
 
 
 @env_app.command('apply')
 def env_apply(machine: str = MachineOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
-    arguments = ['sync', *(('--machine', machine) if machine else ())]
-    raise typer.Exit(bridge.ops('env', *arguments).returncode)
+    from dotfiles.resources import env as env_resource
+
+    raise typer.Exit(_reconcile_one(env_resource.RESOURCE, _session(machine)))
 
 
 @env_app.command('show')
 def env_show(machine: str = MachineOption) -> None:
     """Print the generated section without writing anything."""
-    arguments = ['show', *(('--machine', machine) if machine else ())]
-    raise typer.Exit(bridge.ops('env', *arguments, output=Output.DATA).returncode)
+    from dotfiles import envfile
+
+    emit_text(envfile.render(_session(machine).machine))
 
 
 system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
 
 
 @system_app.command('check')
-def system_check(as_json: bool = JsonOption) -> None:
+def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report system configuration drift."""
-    _report(reconcile.CHECKERS['system'](None), as_json)
+    _report(reconcile.CHECKERS['system'](_session(machine)), as_json)
 
 
 @system_app.command('apply')

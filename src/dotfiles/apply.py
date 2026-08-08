@@ -591,11 +591,15 @@ def apply_machine(
 
     # Before the phases, so the run and every later shell agree on what this
     # machine is. Nothing is read back: the platform and the flags come from the
-    # manifest above, which is the file ~/.env is generated from.
-    from dotfiles import bridge
+    # manifest, which is the file ~/.env is generated from.
+    from dotfiles import envfile
+    from dotfiles import machine as machines
 
-    if not bridge.ops('env', 'sync', '--machine', context.machine).ok:
-        warn('could not sync ~/.env — continuing with the existing file')
+    heading('Machine environment')
+    try:
+        envfile.write(Path.home() / '.env', machines.load(context.machine))
+    except (machines.MachineError, OSError) as problem:
+        warn(f'could not write ~/.env, continuing with the existing file: {problem}')
 
     failed = [phase.name for phase in phases if not phase.run(context)]
 

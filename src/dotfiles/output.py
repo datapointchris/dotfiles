@@ -21,11 +21,14 @@ from rich.console import Console
 
 if TYPE_CHECKING:
     from dotfiles.reconcile import ResourceResult
+    from dotfiles.resources import Change
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
 
 VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red', 'pending': 'blue'}
+
+CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
 
 
 def emit_json(data: Any) -> None:
@@ -38,6 +41,16 @@ def emit_json(data: Any) -> None:
     print(json.dumps(data, indent=2, default=str))
 
 
+def emit_text(text: str) -> None:
+    """Write a file's contents to stdout, byte for byte.
+
+    `print`, not `console.print`, for the same reason `emit_json` uses it: Rich
+    wraps at the terminal width, and a wrapped `~/.env` line or manifest key is a
+    different file from the one that was asked for.
+    """
+    print(text, end='')
+
+
 def render_result(result: ResourceResult) -> None:
     """One resource's verdict, as a row.
 
@@ -47,6 +60,19 @@ def render_result(result: ResourceResult) -> None:
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
     console.print(f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}')
+
+
+def render_change(change: Change) -> None:
+    """One item's verdict, on stderr.
+
+    Below a composite `check`, these are the evidence for the row that follows,
+    not the answer a caller parses — which is `--json`. Keyed on the verdict's
+    string value for the same reason `render_result` is: presentation should not
+    be a reason to import the logic.
+    """
+    colour = CHANGE_COLOURS[str(change.verdict)]
+    observed = f' (is {change.observed!r})' if change.observed else ''
+    err_console.print(f'  [{colour}]{change.verdict:<11}[/] {change.item:<28} {change.detail}{observed}')
 
 
 def heading(text: str) -> None:

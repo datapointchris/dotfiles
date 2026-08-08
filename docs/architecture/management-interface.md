@@ -51,7 +51,7 @@ answers three questions — which machine this is (`MACHINE`), which OS it runs
 never be checked in.
 
 `MACHINE` is the only one of the three that is chosen: it names a manifest, and
-everything else is derived from that manifest by `render_env.py`. Placing this file by
+everything else is derived from that manifest by the resolver. Placing this file by
 hand is therefore the whole of the pre-install bootstrap — `install.sh` sources it with
 `set -a` before any phase, so a rebuild that copies `~/.env` into place first never needs
 `--machine`.
