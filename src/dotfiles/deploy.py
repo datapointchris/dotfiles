@@ -1,15 +1,14 @@
 """Deploying the repo into $HOME, and the two things that go with it.
 
-This was `install/ops/symlinks.sh`, and the reason it is no longer a shell script
-is the bootstrap: that file reached the symlink manager as `uv run symlinks`,
-which resolves a project from the working directory. A machine that has just run
+Python rather than a shell script reaching `uv run symlinks`, because `uv run`
+resolves a project from the working directory: a machine that has just run
 `install.sh` has the CLI installed as a tool and no synced virtualenv in the
-checkout, so `uv run` there means "sync from the network" — which is exactly what
-the offline path cannot do, on the one machine that needs it most.
+checkout, so `uv run` there means "sync from the network" — exactly what the
+offline path cannot do, on the one machine that needs it most.
 
-There is one deployment verb. `link` was create-only, so a deleted source left a
-broken link behind in `$HOME` and the caller had to know which kind of change they
-had made; reconciling always prunes, so `relink` is the whole of it.
+There is one deployment verb, because reconciling always prunes. A create-only
+pass leaves a broken link behind whenever a source is deleted, and asks the
+caller to know which kind of change they just made.
 """
 
 from __future__ import annotations

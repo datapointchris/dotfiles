@@ -97,9 +97,9 @@ def windows_create(archive: str = typer.Argument(None, help='Output archive (def
     a Linux or macOS machine, and this packs Windows executables that WSL copies
     onto its PATH. Collapsing them would make `--platform` mean two things.
 
-    The old `windows sync` is gone rather than renamed: `install/ops/symlinks.sh`
-    already runs `sync-windows-shell.sh` after both link and relink on WSL, so
-    `dotfiles symlinks apply` is the same act with one fewer way to forget it.
+    There is deliberately no `windows sync`: deploying on WSL already runs
+    `sync-windows-shell.sh`, so a separate verb would be the same act with one
+    more way to forget it.
     """
     completed = bridge.wsl_script('setup-windows.sh', '--bundle', *((archive,) if archive else ()))
     raise typer.Exit(completed.returncode)
