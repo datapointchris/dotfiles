@@ -104,6 +104,11 @@ def test_a_manager_that_cannot_be_asked_yields_unknown(tmp_path: Path) -> None:
 
 
 def test_an_unmeasurable_package_is_nobody_s_to_repair(tmp_path: Path, fake_bin: Path) -> None:
+    """The manager is present and refuses to answer, which is the state that must
+    not read as missing. Shadowed rather than left to the host: without this the
+    assertion holds on Arch only because dpkg-query is absent there, and inverts
+    on any Debian machine — including every CI runner."""
+    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nexit 1\n')
     live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
 
     observed = system.RESOURCE.observe(live, live.plan)

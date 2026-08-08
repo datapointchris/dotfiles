@@ -19,6 +19,15 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict as Change_Verdict
 from dotfiles.vocabulary import ExitCode
 
+MACHINE = 'linux-lxc-server'
+"""Named rather than left to `$MACHINE`.
+
+The two walk tests below stub every checker, so which machine it is cannot
+change their answer — but `check_machine` resolves a Session before reaching
+them, and an unset `MACHINE` raises there. That passes on a developer's box,
+where `~/.env` exports one, and fails on every runner.
+"""
+
 
 def result(verdict: Verdict, address: str = 'packages') -> ResourceResult:
     return ResourceResult(address, verdict, 'detail')
@@ -58,7 +67,7 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
     monkeypatch.setattr(reconcile, 'CHECKERS', {name: (lambda _m, n=name: result(Verdict.CONVERGED, n)) for name in reconcile.CHECKERS})
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
 
-    walked = reconcile.check_machine(skip=frozenset({'packages', 'system'}))
+    walked = reconcile.check_machine(skip=frozenset({'packages', 'system'}), machine=MACHINE)
     addresses = [item.address for item in walked]
 
     assert 'packages' not in addresses
@@ -70,7 +79,7 @@ def test_skipping_machines_skips_the_declaration_check(monkeypatch: pytest.Monke
     monkeypatch.setattr(reconcile, 'CHECKERS', {})
     monkeypatch.setattr('dotfiles.vocabulary.RESOURCES', ())
 
-    assert reconcile.check_machine(skip=frozenset({'machines'})) == []
+    assert reconcile.check_machine(skip=frozenset({'machines'}), machine=MACHINE) == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
