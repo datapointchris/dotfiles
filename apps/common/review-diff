@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 # Two-pane diff review: the change in Diffview on the left, Claude on the right.
 #
-# The range defaults to everything committed since the last `menu review done
-# review-diff`, so the cadence register doubles as the review watermark and
-# there is no second store to keep in step with it. The watermark is fleet-wide,
-# not per-machine — ~/.local/state/menu is the `menu-state` Syncthing folder
-# (see ~/homelab/containers/syncthing-lxc/folders-manifest.yml).
+# The range defaults to everything committed since the last `review-diff mark`,
+# recorded in this tool's own watermark store. A tmux keybinding must not depend
+# on an installed Python app being present and healthy, so the cadence register
+# is a reminder that this exists and nothing more — marking the cadence done and
+# advancing the watermark are two acts against two stores.
 #
-# menu records a date while commits carry a timestamp, and DiffviewOpen wants a
-# rev range rather than either. Resolving the date to the newest commit that
-# preceded it means anything committed later on that same day is shown again on
-# the next run. Repeating a few commits is the right direction to be wrong in;
-# the alternative rounds the other way and drops them unread.
+# The store is one append-only JSONL file per machine under
+# $XDG_STATE_HOME/review-diff. Append-only means no read-modify-write race
+# between two shells, and the review history comes free. Per machine because
+# Syncthing replicates whole files and cannot merge them: two boxes appending to
+# one file produce .sync-conflict copies. A read takes the newest entry for the
+# repo across every file in the directory, so a review done on the Mac counts at
+# the Arch desk.
+#
+# Entries are keyed on the git remote, never the working-copy path: $HOME differs
+# between macOS (/Users/chris) and Arch (/home/chris), so a path key makes every
+# repo look unreviewed after a desk switch — the file syncs correctly and
+# silently does nothing.
 #
 # nvim listens on a socket so `review-diff here` can ask it what the cursor is
 # sitting on. That is what lets the Claude pane answer "explain what I'm looking
@@ -19,8 +26,8 @@
 
 set -euo pipefail
 
-REGISTER_ID=review-diff
 FALLBACK_WINDOW='7 days'
+WATERMARK_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/review-diff"
 
 usage() {
   cat <<'EOF'
@@ -28,12 +35,13 @@ Usage: review-diff [range]
        review-diff <command>
 
 Opens a review window: the diff in Diffview on the left, Claude on the right.
-With no range, reviews everything committed since your last
-`menu review done review-diff`.
+With no range, reviews everything committed since your last `review-diff mark`
+in this repo.
 
 Commands:
   working           Review uncommitted changes instead of a commit range
   range             Print the range that would be reviewed, then exit
+  mark              Record that this repo is reviewed up to now
   here              Print file:line under the cursor in the review nvim
 EOF
 }
@@ -61,16 +69,59 @@ socket_path() {
   echo "${tmpdir%/}/review-diff-$(basename "$root").sock"
 }
 
-# Empty when menu is absent or the item has never been marked done, which the
-# caller treats as "fall back to the fixed window" rather than as an error —
-# menu is a convenience here, not the source of the commits themselves.
-last_review_date() {
-  command -v menu >/dev/null 2>&1 || return 0
-  command -v jq >/dev/null 2>&1 || return 0
+# Identifies the repo across machines. The remote is stable; the checkout path is
+# not, because $HOME differs between macOS and Arch.
+repo_key() {
+  local url
+  url="$(git config --get remote.origin.url 2>/dev/null || true)"
+  if [[ -n $url ]]; then
+    echo "$url"
+    return 0
+  fi
+  # No remote — collapse $HOME so the key at least survives the two machines'
+  # different home directories. A repo outside $HOME keeps its real path, since
+  # a `~` prefix there would name a location that does not exist.
+  local top
+  top="$(git rev-parse --show-toplevel)"
+  case "$top" in
+    "$HOME"/*) echo "~${top#"$HOME"}" ;;
+    *) echo "$top" ;;
+  esac
+}
 
-  menu review list --json 2>/dev/null \
-    | jq -r --arg id "$REGISTER_ID" '.[] | select(.id == $id) | .last // empty' \
-    || true
+watermark_file() {
+  local machine
+  machine="$(uname -n | cut -d. -f1 | tr '[:upper:]' '[:lower:]')"
+  echo "${WATERMARK_DIR}/watermarks-${machine}.jsonl"
+}
+
+mark_reviewed() {
+  command -v jq >/dev/null 2>&1 || die "jq is required to record a watermark"
+  local key stamp file
+  key="$(repo_key)"
+  stamp="$(date +%Y-%m-%dT%H:%M:%S%z)"
+  file="$(watermark_file)"
+
+  mkdir -p "$WATERMARK_DIR"
+  # jq builds the line so a remote URL containing a quote or backslash cannot
+  # produce a JSONL row that no longer parses.
+  jq -cn --arg repo "$key" --arg at "$stamp" '{repo: $repo, at: $at}' >>"$file"
+  echo "review-diff: marked $key reviewed as of $stamp"
+}
+
+# Empty when nothing has been marked for this repo, which the caller treats as
+# "fall back to the fixed window" rather than as an error. Reads every machine's
+# file, so the newest review wins wherever it happened.
+last_review_date() {
+  command -v jq >/dev/null 2>&1 || return 0
+  [[ -d $WATERMARK_DIR ]] || return 0
+
+  local key
+  key="$(repo_key)"
+  cat "$WATERMARK_DIR"/watermarks-*.jsonl 2>/dev/null \
+    | jq -r --arg repo "$key" 'select(.repo == $repo) | .at' 2>/dev/null \
+    | sort \
+    | tail -1
 }
 
 resolve_range() {
@@ -81,8 +132,10 @@ resolve_range() {
   local origin=""
 
   if [[ -n $since ]]; then
+    # A full timestamp, not a date, so a commit made later on the day of the last
+    # review is not shown again on the next run.
     base="$(git rev-list -1 --before="$since" HEAD 2>/dev/null || true)"
-    origin="everything since your last review on $since"
+    origin="everything since your last review at $since"
   fi
 
   if [[ -z $base ]]; then
@@ -151,6 +204,10 @@ main() {
     range)
       require_repo
       resolve_range
+      ;;
+    mark)
+      require_repo
+      mark_reviewed
       ;;
     working)
       require_repo
