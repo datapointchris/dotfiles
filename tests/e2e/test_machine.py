@@ -156,6 +156,30 @@ def test_the_bundle_installed_the_tools_the_network_could_not(machine: Machine, 
     assert machine.succeeds(f'command -v {tool}')
 
 
+def test_the_offline_run_used_an_interpreter_the_machine_already_had(machine: Machine) -> None:
+    """`--no-python-downloads` is otherwise untested, and one deletion from gone.
+
+    It is the only thing between an offline install and fetching an interpreter
+    over the network the bundle exists to avoid — but this image ships a python
+    that satisfies `requires-python`, and uv picks it without being told to, so
+    the install passes identically with the flag removed. Arch is the environment
+    that would exercise it, and Arch runs online.
+
+    Asserting the outcome instead: the interpreter is not one uv fetched. The
+    firewall would stop the fetch anyway — interpreters come from
+    `objects.githubusercontent.com`, which is blackholed — which is belt and
+    braces, not a reason to leave the flag unasserted.
+    """
+    if not machine.environment.offline:
+        pytest.skip('only the offline environment forbids interpreter downloads')
+
+    managed = machine.read('uv python dir')
+    interpreter = machine.read('readlink -f "$(uv tool dir)/dotfiles/bin/python"')
+
+    assert managed and interpreter
+    assert not interpreter.startswith(managed), f'the offline install fetched an interpreter: {interpreter}'
+
+
 def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> None:
     """The version has to come from the bundle manifest, or the filename built
     from it names a file the cache does not hold.
