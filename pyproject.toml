@@ -168,9 +168,15 @@ managed = [
 ]
 
 [dependency-groups]
+# The pre-commit hook runs `uv run mypy`, so mypy has to resolve from this
+# environment: without it the command falls through to the uv *tool* mypy, whose
+# venv has no pip, and the hook's own `--install-types` then dies fetching the
+# stubs below. Declaring them is what makes the hook deterministic per machine.
 dev = [
+    "mypy>=1.10.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    "types-PyYAML>=6.0.12",
 ]
 
 # mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this

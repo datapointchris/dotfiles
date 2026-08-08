@@ -26,7 +26,7 @@ COLOR_CHOICE = os.environ.get('LOG_COLORS', 'auto')
 
 EVENT_LOG_HANDLER_NAME = 'dotfiles_event_log'
 
-SHARED_PROCESSORS = [
+SHARED_PROCESSORS: list[structlog.typing.Processor] = [
     structlog.contextvars.merge_contextvars,
     structlog.processors.add_log_level,
     structlog.processors.TimeStamper(fmt='iso', utc=True),

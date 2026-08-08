@@ -118,7 +118,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     keeping: list[pytest.Item] = []
     dropping: list[pytest.Item] = []
     for item in items:
-        environment = getattr(item, 'callspec', None) and item.callspec.params.get('container')
+        callspec = getattr(item, 'callspec', None)
+        environment = callspec.params.get('container') if callspec else None
         (dropping if environment is not None and environment.name not in names else keeping).append(item)
 
     if dropping:
