@@ -23,8 +23,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from rich.console import Console
-from rich.table import Table
 
 import dotfiles
 from dotfiles import paths
@@ -891,79 +889,12 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     sys.exit(1 if errors else 0)
 
 
-HELP_SECTIONS = (
-    (
-        'Commands',
-        (
-            ('packages list', '', 'List all packages'),
-            ('packages show', '<name>', 'Show package details'),
-            ('packages search', '<query>', 'Search by name'),
-            ('packages sections', '', 'List all sections'),
-            ('packages stats', '', 'Show package counts'),
-            ('packages tags', '', 'List all tags with counts'),
-            ('packages verify', '', 'Check drift between packages.yml, manifests, and scripts'),
-            ('packages missing', '', 'Show what this machine declares but has not installed'),
-        ),
-    ),
-    (
-        'List filters',
-        (
-            ('--section', '<section>', 'Filter by section'),
-            ('--tag', '<tag>', 'Filter by tag (gui, cli, terminal, etc.)'),
-            ('--platform', '<plat>', 'Filter by platform (macos, linux, all)'),
-            ('--verbose', '', 'Show section, tags, platform'),
-            ('--json', '', 'Output as JSON'),
-        ),
-    ),
-    (
-        'Examples',
-        (
-            ('packages list --section=go_tools', '', 'Just Go tools'),
-            ('packages list --tag=terminal', '', 'Terminal emulators'),
-            ('packages list --platform=macos', '', 'macOS packages'),
-            ('packages show ghostty', '', 'Package details'),
-            ('packages search neovim', '', 'Find by name'),
-        ),
-    ),
-    (
-        'Tag vocabulary',
-        (
-            ('Interface', '', 'gui, cli, tui'),
-            ('Environment', '', 'terminal, browser, editor'),
-            ('Purpose', '', 'lsp, linter, formatter, build, search, monitoring'),
-            ('Type', '', 'font, plugin, runtime'),
-        ),
-    ),
-)
-
-
-def show_help() -> None:
-    """Render help through rich, whose tables compute their own column widths.
-
-    A typed width is a misalignment waiting for the first entry that outgrows it,
-    which is why the shell side computes one too.
-    """
-    console = Console()
-    console.print('[bold]packages[/] — browse and search packages across all sections and platforms')
-    console.print('\n[bold]Usage:[/] packages <command> [FILTERS]')
-
-    for heading, rows in HELP_SECTIONS:
-        table = Table(show_header=False, box=None, padding=(0, 2, 0, 0), title=f'\n[bold]{heading}[/]', title_justify='left')
-        for name, argument, summary in rows:
-            table.add_row(f'[cyan]{name}[/]', argument, summary)
-        console.print(table)
-
-    console.print(f'\n[bold]Catalog:[/] {get_packages_file()}')
-
-
 def main() -> None:
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
         prog='packages',
         description='Query packages.yml for browsing and discovery',
-        add_help=False,
     )
-    parser.add_argument('--help', '-h', action='store_true', help='Show help')
     parser.add_argument('--version', '-V', action='store_true', help='Show version')
 
     subparsers = parser.add_subparsers(dest='command')
@@ -1019,8 +950,8 @@ def main() -> None:
         print(f'packages {dotfiles.__version__}')
         return
 
-    if args.help or not args.command:
-        show_help()
+    if not args.command:
+        parser.print_help()
         return
 
     root_override = getattr(args, 'root', None)
