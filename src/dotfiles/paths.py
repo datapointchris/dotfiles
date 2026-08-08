@@ -76,7 +76,8 @@ def cache_home() -> Path:
 CACHE_HOME = cache_home()
 
 # Where install.sh untars an offline bundle, and where every provider looks for
-# one. Under $HOME rather than somewhere ephemeral because a bundle outlives the
-# install that consumes it: a restricted-network machine is rebuilt from the same
-# staged files more than once, and $DOTFILES_BUNDLE overrides for a test.
+# one. Still under $HOME because nothing has moved it yet, not because that is
+# right: a staged bundle has to be deleted by hand along with the tarball beside
+# it. The plan moves staging to $XDG_RUNTIME_DIR so it evaporates on reboot.
+# $DOTFILES_BUNDLE overrides it for a test.
 BUNDLE_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or Path.home() / 'installers')
