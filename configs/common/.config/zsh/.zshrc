@@ -61,11 +61,6 @@ else
   log_error "Env" "PLATFORM not set in .env"
 fi
 
-# The OS cannot answer what a machine is *for*, so unlike PLATFORM this has no
-# detection fallback and defaults to the majority case rather than erroring.
-export MACHINE_ROLE="${MACHINE_ROLE:-personal}"
-log "Env" "$(color_cyan "MACHINE_ROLE")=$(color_green "$MACHINE_ROLE")"
-
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
