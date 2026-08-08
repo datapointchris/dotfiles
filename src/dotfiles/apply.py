@@ -549,11 +549,23 @@ def _tmux_plugins(context: Run) -> bool:
     resolver to plan per plugin.
     """
     heading('tmux plugins')
-    if not plugins.clone(context.session, Stage.EDITOR_PLUGINS):
+    if not plugins.clone(context.session, Stage.TMUX_PLUGINS):
         return False
     if not context.wants('tmux_plugins'):
         return True
     return run_installer(context, COMMON / 'plugins' / 'tmux-plugins.sh', 'tmux-plugins')
+
+
+def _yazi_plugins(context: Run) -> bool:
+    """Declared clones, so there is no second half and no script.
+
+    Its own phase rather than riding tmux's: it is a different program's plugins,
+    and the two were only ever adjacent. It runs after the symlink pass because
+    that is what deploys the config asking for these — and because `ya pkg add`
+    running six stages *earlier* is what put two writers on one path.
+    """
+    heading('yazi plugins')
+    return plugins.clone(context.session, Stage.YAZI_PLUGINS)
 
 
 def _nvim_plugins(context: Run) -> bool:
@@ -653,6 +665,7 @@ REGISTRY = (
     Phase('shell-plugins', 'plugins', ('shell-plugin',), _shell_plugins),
     Phase('symlinks', 'symlinks', (), _symlinks),
     Phase('tmux-plugins', 'plugins', ('tpm',), _tmux_plugins),
+    Phase('yazi-plugins', 'plugins', ('yazi-plugin',), _yazi_plugins),
     Phase('nvim-plugins', 'plugins', (), _nvim_plugins),
     Phase('system-config', 'system', (), _system_config),
 )

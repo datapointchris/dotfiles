@@ -82,6 +82,7 @@ SUBSCRIPTIONS: dict[str, tuple[Spelling, str]] = {
     'git_uv_tools': (Spelling.NAMES, 'git_uv_tools'),
     'shell_plugins': (Spelling.GATE, 'shell_plugins'),
     'tmux_plugins': (Spelling.GATE, 'tmux_plugins'),
+    'yazi_plugins': (Spelling.GATE, 'yazi_plugins'),
     'flatpak_apps': (Spelling.GATE, 'flatpak'),
     'macos_casks': (Spelling.WHOLESALE, ''),
     'mas_apps': (Spelling.WHOLESALE, ''),

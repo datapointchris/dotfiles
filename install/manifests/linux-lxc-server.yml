@@ -50,5 +50,6 @@ git_uv_tools: []
 
 shell_plugins: true
 tmux_plugins: true
+yazi_plugins: true
 nvim_plugins: true
 configure_zsh: true

@@ -45,6 +45,10 @@ PHASE_REGISTRY=(
   "shell-plugins|plugins|no|install_shell_plugins|update_shell_plugins"
   "symlinks|config|no|install_symlinks|-"
   "tmux-plugins|plugins|no|install_tmux_plugins|update_tmux_plugins"
+  # No update half, and no bash half at all: yazi plugins are declared clones the
+  # Python resource owns. The row exists so the two registries keep naming the
+  # same phases in the same order, which is what stops them drifting.
+  "yazi-plugins|plugins|no|install_yazi_plugins|-"
   "nvim-plugins|plugins|no|install_nvim_plugins|update_nvim_plugins"
   "system-config|config|no|install_system_config|-"
 )

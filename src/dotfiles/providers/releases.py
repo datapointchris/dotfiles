@@ -238,9 +238,11 @@ def win32yank(tag: str, target: Target) -> Asset:
 def yazi(tag: str, target: Target) -> Asset:
     """GNU triples like `just`, but a zip, and gnu rather than musl on Linux.
 
-    `ya` is yazi's own package manager, and the plugins it installs are declared
-    nowhere in this repo — it reads them from yazi's config. So it ships here and
-    the plugin sync belongs to the plugins resource, not to this install.
+    `ya` is yazi's own package manager and ships beside the binary, but nothing
+    here calls it: the plugins are declared in `packages.yml` under
+    `yazi_plugins` and cloned by the plugins resource, four stages later. `ya pkg
+    add` ran from this install once, six stages before the symlink pass, and
+    wrote its state file to a path this repo also deployed to.
     """
     if target.is_darwin:
         triple = 'aarch64-apple-darwin' if target.is_arm else 'x86_64-apple-darwin'

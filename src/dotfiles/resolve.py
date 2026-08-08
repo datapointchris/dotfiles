@@ -53,7 +53,12 @@ class Stage(enum.IntEnum):
     PYTHON_TOOLS = 70
     SHELL_PLUGINS = 80
     SYMLINKS = 90
-    EDITOR_PLUGINS = 100
+    TMUX_PLUGINS = 100
+    YAZI_PLUGINS = 105
+    """Both after SYMLINKS, because each program reads the config that pass just
+    deployed. Two stages rather than one so each is a phase a caller can select,
+    and because only one of them has a bash half left: `update.sh` still runs
+    tpm, and nothing in bash has ever installed a yazi plugin."""
 
     SYSTEM_CONFIG = 110
     """Last, where `install.sh` put the two halves of it that existed.
@@ -194,7 +199,8 @@ PROVIDERS: dict[str, Provider] = {
     'uv_tools': Provider('uv', Stage.PYTHON_TOOLS, 'packages'),
     'git_uv_tools': Provider('uv-git', Stage.PYTHON_TOOLS, 'packages'),
     'shell_plugins': Provider('shell-plugin', Stage.SHELL_PLUGINS, 'plugins'),
-    'tmux_plugins': Provider('tpm', Stage.EDITOR_PLUGINS, 'plugins'),
+    'tmux_plugins': Provider('tpm', Stage.TMUX_PLUGINS, 'plugins'),
+    'yazi_plugins': Provider('yazi-plugin', Stage.YAZI_PLUGINS, 'plugins'),
 }
 """Which provider installs a section, when, and for which resource.
 

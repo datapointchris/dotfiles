@@ -88,10 +88,16 @@ The distinction is whether the script installs one thing or several:
 
 - **Binary only** (lazygit, yq, uv) — keep `status:`, and drop any redundant
   `command -v ... && exit 0` from the script. One layer should own the skip.
-- **Binary plus sub-components** (yazi, npm globals, cargo tools) — no `status:`.
+- **Binary plus sub-components** (npm globals, cargo tools) — no `status:`.
   Let the script run every time, guard the binary download with its own check,
-  and always run the component step. `ya pkg add` and `npm install -g` are
-  idempotent, so re-running is cheap and adding a component just works.
+  and always run the component step. `npm install -g` is idempotent, so
+  re-running is cheap and adding a component just works.
+
+Yazi was the example here and is no longer one: its plugins are declared in
+`packages.yml` under `yazi_plugins` and cloned by the plugins resource, so the
+release install is binary-only and the sub-component question does not arise.
+Splitting them out is the stronger version of this lesson — a step that installs
+one kind of thing cannot freeze another.
 
 Never paper over the difference with `|| echo "Failed (continuing)"`. That turns
 a real error into a line of output nobody reads.

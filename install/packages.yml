@@ -1090,6 +1090,33 @@ tmux_plugins:
     description: Tmux Plugin Manager - auto-installs plugins declared in tmux.conf
 
 # ================================================================
+# YAZI PLUGINS
+# ================================================================
+# Cloned into ~/.config/yazi/plugins/<name>.yazi, in the same stage as tpm:
+# after the symlink pass that deploys the config asking for them.
+#
+# Declared here rather than installed by `ya pkg add`, which is yazi's own
+# package manager. `ya` writes its state to ~/.config/yazi/package.toml, a path
+# this repo also deployed a file to — two writers on one path, and the symptom
+# was every fresh install failing the symlink phase. Nothing reads that file at
+# runtime: init.lua does require('git') and keymap.toml runs `plugin what-size`,
+# both resolving from the plugin directory. Splitting the plugins out of the
+# yazi install rather than moving the whole install after the symlinks is what
+# makes this a plugin question rather than an ordering workaround.
+#
+# `name` is what the config asks for and what the directory is called; yazi
+# appends the .yazi suffix itself.
+
+yazi_plugins:
+  - name: git
+    repo: https://github.com/yazi-rs/plugins
+    subdirectory: git.yazi
+    description: Git status indicators beside each file
+  - name: what-size
+    repo: https://github.com/pirafrank/what-size.yazi
+    description: Calculate the size of the selection or the working directory
+
+# ================================================================
 # NPM GLOBAL PACKAGES
 # ================================================================
 # Installed via: npm install -g <package>

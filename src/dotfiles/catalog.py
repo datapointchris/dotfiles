@@ -417,6 +417,33 @@ class TmuxPlugin(Entry):
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
+class YaziPlugin(Entry):
+    """A yazi plugin, cloned to `~/.config/yazi/plugins/<name>.yazi`.
+
+    Declared here rather than left to `ya pkg add`, which is yazi's own package
+    manager and writes its state to `~/.config/yazi/package.toml` — a path this
+    repo also deployed a file to. Two writers on one path, and the symptom was
+    every fresh install failing the symlink phase.
+
+    `name` is what the config asks for and what the directory is called: yazi
+    appends the `.yazi` suffix itself, `init.lua` says `require('git')`, and
+    `keymap.toml` says `plugin what-size`.
+    """
+
+    section: ClassVar[str] = 'yazi_plugins'
+
+    repo: str
+    subdirectory: str = ''
+    """Where the plugin sits inside its repo, for the one that is a monorepo.
+    `yazi-rs/plugins` carries two dozen plugins at its root, so cloning it whole
+    would put all of them at the path yazi expects to be one."""
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
 class Runtime(Entry):
     """A language runtime, installed by its own version manager."""
 
@@ -679,6 +706,7 @@ SECTION_CLASSES: tuple[type[Entry], ...] = (
     GitUvTool,
     ShellPlugin,
     TmuxPlugin,
+    YaziPlugin,
     MasApp,
     MacosCask,
     FlatpakApp,
