@@ -463,7 +463,7 @@ system_packages:
     brew: nmap
     description: Network scanner
 
-  # apt-only: mount-cifs in shell/wsl/wsl.sh and the named wrappers around it in
+  # apt-only: mount-cifs in shell/host/wsl/wsl.sh and the named wrappers around it in
   # the work box's machine-local ~/.local/shell/local.sh are the only consumers.
   # Supplies mount.cifs and cifs.upcall — without the latter the kernel
   # cannot resolve a share's hostname and the mount fails as "no route to host"

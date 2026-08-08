@@ -303,7 +303,7 @@ def symlinks_unlink(
 
     from dotfiles import deploy
 
-    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(_session(machine).machine.platform_label) else ExitCode.ISSUE)
+    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(_session(machine)) else ExitCode.ISSUE)
 
 
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')

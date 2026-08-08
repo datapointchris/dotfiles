@@ -43,15 +43,15 @@ A first-class `linux` platform plus a tiered system-package model:
   (apt, no GUI/flatpak/preferences steps), the Taskfile resolves a generic Linux
   host to `linux`, and `install/linux/system-packages.sh` installs the core tier.
 
-- **Optional overlays.** The `linux` platform ships only a shell overlay
-  (`shell/linux/linux.sh`, apt-oriented helpers) and no `configs/linux/`. The
-  symlinks manager now treats a platform overlay as optional in every layer, so
-  `link`/`relink` proceed on common + shell and only fail on a genuine typo
-  (nothing found in configs/, shell/, or apps/).
+- **Optional overlays.** The server ships only a shell overlay and no configs of
+  its own, and the symlinks manager treats every overlay as optional. Those
+  overlays are keyed on coordinates now rather than on the platform string, so
+  the apt helpers this called `shell/linux/linux.sh` are `shell/pkg/apt/apt.sh`
+  and reach the Ubuntu work box too — see `docs/reference/tools/symlinks.md`.
 
 Provision one with `install.sh --machine linux-lxc-server`. The interactive zsh
-overlay loads when `~/.env` sets `PLATFORM=linux`, which the install now writes
-from the manifest rather than leaving to be typed by hand — see
+overlays load from the `DOTFILES_*` coordinates in `~/.env`, which the install
+writes from the manifest rather than leaving to be typed by hand — see
 `docs/architecture/management-interface.md` § "The machine environment".
 
 ## Key Learnings
@@ -75,5 +75,5 @@ from the manifest rather than leaving to be typed by hand — see
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
 - `src/dotfiles/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
 - `install.sh` / `update.sh` — `linux` platform branch and tier gating
-- `install/linux/system-packages.sh`, `shell/linux/linux.sh` — linux overlays
-- `src/dotfiles/symlinks/cli.py`, `src/dotfiles/symlinks/core.py` — optional-overlay link/relink
+- `shell/pkg/apt/apt.sh` — the apt overlay these helpers moved to
+- `src/dotfiles/resources/symlinks.py` — `layers()`, where an overlay is optional

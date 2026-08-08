@@ -2,9 +2,9 @@
 # shellcheck disable=SC2154
 # SC2154 = Variables referenced but not assigned (from sourced files)
 
-# Generic Debian/Ubuntu Linux overlay — loaded when PLATFORM=linux (headless
-# LXCs and small boxes). Keep this apt-oriented and diagnosis-friendly; the
-# workstation platforms have their own overlays.
+# Loaded by every apt machine — the headless LXC and the Ubuntu-on-WSL work box
+# alike. Keyed on the platform, this reached only the LXC: the work box has run
+# apt for its whole life and had none of these.
 
 #@list_installed_packages
 #--> List explicitly installed apt packages (manually chosen, not dependencies)

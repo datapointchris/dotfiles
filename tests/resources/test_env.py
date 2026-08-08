@@ -384,7 +384,11 @@ def test_a_second_change_in_one_run_skips_rather_than_rewriting(tmp_path: Path, 
 
     outcomes = [env_resource.RESOURCE.perform(live, change, unprivileged) for change in found if change.actionable]
 
-    assert [outcome.status for outcome in outcomes] == ['done', 'skipped', 'skipped', 'skipped', 'skipped']
+    # Asserted as a shape rather than a literal list: every identity value and
+    # every flag is one change, so a count here would be rewritten by any commit
+    # that adds either.
+    assert outcomes[0].status == 'done'
+    assert {outcome.status for outcome in outcomes[1:]} == {'skipped'}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

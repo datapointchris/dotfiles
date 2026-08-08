@@ -23,6 +23,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from dotfiles import coordinates as axes
 from dotfiles.machine import Machine
 
 MARKER = '# OVERRIDES - hand-edited; everything below is preserved on regenerate'
@@ -41,6 +42,20 @@ def assignment(name: str, value: str) -> str:
     indirection is load-bearing and must not be simplified away.
     """
     return f'export {name}="${{{name}:-{value}}}"'
+
+
+def coordinate_exports(machine: Machine) -> dict[str, str]:
+    """The coordinate variables `~/.env` carries, and what they should say.
+
+    One function for both halves: `render` writes these and `resources/env.py`
+    checks a machine against them, so the file `apply` produces and the file
+    `check` demands cannot disagree about a name or a spelling.
+
+    Named `DOTFILES_*` because the bare axis names are not safe in a shell — zsh
+    sets `HOST` itself, and `OS` and `CAPACITY` are generic enough that something
+    else will want them eventually.
+    """
+    return {f'DOTFILES_{directory.upper()}': str(getattr(machine.coordinates, axis)) for axis, directory in axes.OVERLAY_DIRS.items()}
 
 
 def render(machine: Machine) -> str:
@@ -63,6 +78,15 @@ def render(machine: Machine) -> str:
         '# anything else, so this file is also the install bootstrap.',
         assignment('MACHINE', machine.name),
         assignment('PLATFORM', machine.platform_label),
+        '',
+        '# Coordinates. Where this machine sits on each axis, which is what selects the',
+        '# overlay directories under configs/, shell/ and apps/ — .zshrc builds its',
+        '# source list from exactly these six. Prefixed because zsh already sets HOST.',
+    ]
+
+    lines += [assignment(name, value) for name, value in coordinate_exports(machine).items()]
+
+    lines += [
         '',
         '# Features. Every declared flag is written explicitly, so a machine is never',
         '# silently running on a default it never saw.',

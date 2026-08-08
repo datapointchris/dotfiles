@@ -29,8 +29,10 @@
 # repo knows a machine needs them; it must never know their values, because they
 # are account names, employee IDs, and the like.
 #
-# Each entry may narrow to a platform and/or a machine; an entry with neither
-# applies everywhere. The generated section names the ones that apply, and
+# Each entry may narrow to a machine, or to any coordinate axis, or to neither —
+# in which case it applies everywhere. Narrow on the axis that actually decides
+# it: WINDOWS_USER is a fact about the host, so `host: wsl` reaches an
+# Arch-on-WSL box that `platform: wsl` would have missed entirely. The generated section names the ones that apply, and
 # `dotfiles check` fails while one is missing — without that, an unset value
 # just silently produces a wrong path at the point of use.
 # Only values whose absence is *silent* belong here. An unset WINDOWS_USER builds
@@ -40,15 +42,15 @@
 required:
   - name: WINDOWS_USER
     description: Windows account name, for the /mnt/c/Users path
-    platform: wsl
+    host: wsl
     consumers:
-      - shell/wsl/wsl.sh
+      - shell/host/wsl/wsl.sh
 
   - name: WINDOWS_DOMAIN
     description: Windows domain the account authenticates against, for CIFS mounts
-    platform: wsl
+    host: wsl
     consumers:
-      - shell/wsl/wsl.sh
+      - shell/host/wsl/wsl.sh
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and

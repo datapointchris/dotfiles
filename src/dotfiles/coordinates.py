@@ -84,8 +84,43 @@ class Coordinates:
     def installers(self) -> tuple[str, ...]:
         return INSTALLER_FAMILIES[self.package_manager]
 
+    @property
+    def overlays(self) -> tuple[str, ...]:
+        """The `<axis>/<value>` directories this machine loads, in axis order.
+
+        One per axis, always — a machine is at exactly one point on each. Which
+        of them exist on disk is a separate question, and most do not: an axis
+        earns a directory only when something differs along it.
+        """
+        return tuple(f'{directory}/{getattr(self, axis)}' for axis, directory in OVERLAY_DIRS.items())
+
     def as_dict(self) -> dict[str, str]:
         return {field.name: str(getattr(self, field.name)) for field in dc.fields(self)}
+
+
+def incoherent(point: Coordinates) -> tuple[str, ...]:
+    """Combinations no machine can be, each with the reason it cannot.
+
+    Six independent axes is what makes a fifth machine cheap; it is also what
+    lets a manifest name a point that does not exist. `platform:` could not — it
+    was four hand-written tuples — so nothing has ever had to check this, and a
+    manifest declaring `coordinates:` directly is new surface.
+
+    Deliberately only the four that are *impossible*, not the ones that are
+    merely unused. Homebrew on Linux is a real thing nobody here runs, and
+    forbidding it would be inventing a constraint rather than recording one.
+    """
+    problems = []
+    if point.os_family is OSFamily.DARWIN:
+        if point.package_manager is not PackageManager.BREW:
+            problems.append(f'{point.package_manager} is not a macOS package manager')
+        if point.host is Host.WSL:
+            problems.append('wsl hosts Linux; there is no macOS inside it')
+        if point.display_stack is DisplayStack.WAYLAND:
+            problems.append('wayland is a Linux display stack; macOS draws on aqua')
+    elif point.display_stack is DisplayStack.AQUA:
+        problems.append('aqua is the macOS display stack')
+    return tuple(problems)
 
 
 PLATFORM_BUNDLES: dict[str, Coordinates] = {
@@ -115,6 +150,34 @@ AXIS_TYPES: dict[str, type[enum.StrEnum]] = {
 `from __future__ import annotations` leaves as strings to be resolved by name."""
 
 AXES = tuple(AXIS_TYPES)
+
+OVERLAY_DIRS: dict[str, str] = {
+    'package_manager': 'pkg',
+    'os_family': 'os',
+    'display_stack': 'display',
+    'host': 'host',
+    'network_trust': 'trust',
+    'capacity': 'capacity',
+}
+"""What each axis is called when it names a directory in `configs/`, `shell/`
+and `apps/`.
+
+Short rather than the field name, because these appear in every deployed path
+and `package_manager/pacman/.config/…` reads worse than `pkg/pacman/…` for no
+extra information. The mapping is a design constant — six axes, fixed — so it is
+written once here and read everywhere else, including by `.zshrc`, which spells
+the same six pairs to build its source list.
+"""
+
+
+def overlay_names() -> frozenset[str]:
+    """Every `<axis>/<value>` directory a tree may legally contain.
+
+    The tree validator's whole vocabulary: anything under `configs/`, `shell/` or
+    `apps/` that is neither `common` nor one of these is a typo that would
+    otherwise deploy to nobody and say nothing.
+    """
+    return frozenset(f'{directory}/{value}' for axis, directory in OVERLAY_DIRS.items() for value in AXIS_TYPES[axis])
 
 
 class Arch(enum.StrEnum):

@@ -43,15 +43,17 @@ SHELL_FILES=(
   prompt.bash
 )
 
-# Where each file comes from. The repo splits them across configs/ and
-# shell/<platform>/; on the Windows side they are siblings in one directory.
+# Where each file comes from. The repo splits them across configs/ and the
+# coordinate overlays under shell/; on the Windows side they are siblings in one
+# directory, because Git Bash is not a machine this repo deploys to and has no
+# coordinates of its own.
 shell_file_source() {
   case "$1" in
     colors.sh | formatting.sh | prompt-lib.sh | prompt.bash)
       echo "$DOTFILES_DIR/configs/common/.local/shell/$1"
       ;;
-    wsl.sh) echo "$DOTFILES_DIR/shell/wsl/$1" ;;
-    windows.sh) echo "$DOTFILES_DIR/shell/windows/$1" ;;
+    wsl.sh) echo "$DOTFILES_DIR/shell/host/wsl/$1" ;;
+    windows.sh) echo "$DOTFILES_DIR/shell/git-bash/$1" ;;
     *) echo "$DOTFILES_DIR/shell/common/$1" ;;
   esac
 }
@@ -123,10 +125,11 @@ export PATH="$HOME/.local/bin:$PATH"
 
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
-# The libraries resolve each other through SHELL_DIR, and `menu` reads PLATFORM
-# to find the platform's own functions and aliases. Both precede the load below.
+# The libraries resolve each other through SHELL_DIR, so it precedes the load
+# below. There is no PLATFORM here: the files are named in SHELL_FILES rather
+# than found by a coordinate, which is what makes this side work without the
+# machine declaration the fleet reads its overlays from.
 export SHELL_DIR="$HOME/.local/shell"
-export PLATFORM="windows"
 
 # One source per file, in dependency order. These were concatenated into a
 # generated combined.sh until a syntax error partway through cost every alias

@@ -50,12 +50,29 @@ side-by-side = true
 [include]
 path = ~/.config/delta/current.gitconfig
 
-# Whatever this platform needs that the others do not — the gh path differs,
-# WSL needs autocrlf. Absolute rather than relative because this file is reached
-# through a symlink and a relative include would resolve against the repo.
-# Ignored while absent, so a platform shipping none needs no file.
+# GitHub credentials through gh. The empty helper = clears any inherited or
+# system helper before setting ours, so git does not stack several and prompt
+# unexpectedly.
+#
+# `gh` unqualified, not the absolute path `gh auth setup-git` writes: that path
+# was the only thing making this per-platform — /usr/bin on Linux, /usr/local/bin
+# on an Intel Mac, and /opt/homebrew/bin on an Apple Silicon one, which no
+# platform string distinguishes. PATH resolves it everywhere git runs here.
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+
+# Whatever one coordinate needs that the rest do not. WSL is the only machine
+# with anything left, and what it needs is autocrlf. Absolute rather than
+# relative because this file is reached through a symlink and a relative include
+# would resolve against the repo. Ignored while absent, so a machine shipping
+# none needs no file.
 [include]
-path = ~/.config/git/platform.gitconfig
+path = ~/.config/git/overlay.gitconfig
 
 # %cs/%cr rather than %ad with --date=short, so the format carries its own date
 # rendering and stays usable from any alias without a paired flag.

@@ -14,23 +14,17 @@ How the dotfiles repository is organized and why.
 
 ## Symlink System
 
-Two-layer approach: common base + platform overlay.
-
-**How it works**:
-
-1. Links `configs/common/` configs to `$HOME`
-2. Overlays platform-specific files (auto-detected: macos, wsl, arch, or generic linux)
-3. Links apps from `apps/{platform}/` to `~/.local/bin/`
-4. Links shell source files from `shell/{platform}/` to `~/.local/shell/`
+A common base plus one overlay per coordinate axis, across three trees:
+`configs/` into `$HOME`, `apps/` into `~/.local/bin/`, `shell/` into
+`~/.local/shell/`. Which overlays a machine loads is decided by its coordinates
+rather than by a platform string, so the Wayland tree lives once under
+`display/wayland/` regardless of which Linux is underneath it, and the apt
+helpers reach the Ubuntu work box as well as the LXC.
 
 Driven through `dotfiles symlinks`, which works from any directory; `task` is equivalent
 but only from inside the repo — see [Management Interface](management-interface.md).
-
-**Example results**:
-
-- `configs/common/.config/zsh/.zshrc` → `~/.config/zsh/.zshrc`
-- `configs/macos/.config/git/platform.gitconfig` → `~/.config/git/platform.gitconfig` (adds to common)
-- `apps/common/menu` → `~/.local/bin/menu`
+The layer scheme, and why two overlays may never claim one target, is
+[Symlinks Manager](../reference/tools/symlinks.md).
 
 ## Package Management
 
@@ -86,41 +80,46 @@ The repo knows it exists without knowing its contents. `install/flags.yml` decla
 
 It is restored by `safekeep`, not installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild. Both consumers guard on the file existing, and `relink` only removes symlinks that resolve into the repo, so a real file there survives every relink untouched.
 
-The split to hold to is mechanism versus values: mounting a Windows share is a WSL capability, so `mount-cifs` lives in `shell/wsl/wsl.sh` and takes the share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
+The split to hold to is mechanism versus values: mounting a Windows share is a WSL capability, so `mount-cifs` lives in `shell/host/wsl/wsl.sh` and takes the share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
 
 Windows Git Bash cannot follow symlinks across the WSL boundary, so `install/wsl/sync-windows-shell.sh` copies the files instead and writes the `.bashrc` that loads them. The load order is the `SHELL_FILES` array in that script, which is also its copy manifest. The generated `.bashrc` sources each file separately: a broken file then costs only itself and names itself on the way out. An earlier version concatenated everything into one `combined.sh` for startup speed, which measured at ~0.1ms of saved file opens against a ~60ms startup, and turned one syntax error into a shell with no aliases or functions at all.
 
-## Platform Detection
+## What a machine is, and who says so
 
-**Shell** (`configs/common/.config/zsh/.zshrc`):
+Nothing detects it. `MACHINE` is the one hand-chosen value; it selects a
+manifest, and the manifest declares where the machine sits on each of the six
+axes in `src/dotfiles/coordinates.py`. `dotfiles env apply` writes those
+coordinates into `~/.env` as `DOTFILES_PKG`, `DOTFILES_OS` and their four
+siblings, which is what every shell and every overlay reads.
 
-```sh
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-elif [[ -f /proc/version ]] && grep -q Microsoft /proc/version; then
-    # WSL
-elif [[ -f /etc/arch-release ]]; then
-    # Arch
-else
-    # generic Debian/Ubuntu Linux → the `linux` platform (LXCs, small boxes)
-fi
-```
+Detection was tried and is what the declaration replaced: a wsl manifest whose
+`~/.env` was missing fell back to a guess and deployed the linux shell overlay
+for a whole install. A guess also cannot answer half the axes — nothing on a box
+knows whether it is on employer or fleet network, or whether it is meant to be a
+workstation or a server.
 
-**Install script**: Platform is read from the machine manifest via `manifest_field "platform"` rather than auto-detected.
+`dotfiles machines show <name>` prints the resolved tuple for any manifest,
+including ones this machine is not.
 
 ## Configuration Layers
 
-Configurations use inheritance: shared base with platform overrides.
+Configurations use inheritance: a shared base with coordinate overlays on top.
 
 **Example: Git Config**
 
 Git reads both `~/.config/git/config` and `~/.gitconfig`, in that order, and the repo uses the
 split deliberately. Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships
-from `configs/common/.config/git/config`, which git loads natively with no include wiring. Each
-platform adds only what genuinely differs through `configs/<platform>/.config/git/platform.gitconfig`:
-the `gh` credential helper path, and `core.autocrlf` on WSL. That file is pulled in by an include
-at the end of the common config and is ignored while absent, so a platform needing nothing ships
-nothing.
+from `configs/common/.config/git/config`, which git loads natively with no include wiring. One
+coordinate adds what genuinely differs, through `configs/host/wsl/.config/git/overlay.gitconfig`:
+`core.autocrlf`, because a checkout on the Linux side is edited from Windows tools too. That file
+is pulled in by an include at the end of the common config and is ignored while absent, so every
+other machine ships nothing.
+
+The `gh` credential helper used to be in that overlay and is now common, which is what collapsed
+three near-identical files into one. It was per-platform only because it named an absolute path —
+`/usr/bin/gh` on Linux, `/usr/local/bin/gh` on an Intel Mac, and `/opt/homebrew/bin/gh` on an Apple
+Silicon one, a distinction no platform string draws. `gh` unqualified resolves everywhere git runs
+here.
 
 Identity is the exception, and it is not in this repo at all. `user.name` and `user.email` differ
 per *machine* rather than per platform — a machine that hosts both employer and personal

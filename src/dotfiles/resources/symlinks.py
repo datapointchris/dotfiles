@@ -24,6 +24,7 @@ import dataclasses as dc
 from collections.abc import Iterator
 from pathlib import Path
 
+from dotfiles import coordinates as axes
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -82,28 +83,44 @@ class Observed:
     are pruned rather than repaired."""
 
 
-def layers(repo: Path, platform: str, home: Path) -> Iterator[tuple[Path, Path, str]]:
+TREES: tuple[tuple[str, tuple[str, ...], bool], ...] = (
+    ('configs', (), False),
+    ('shell', ('.local', 'shell'), True),
+    ('apps', ('.local', 'bin'), False),
+)
+"""The three deployed trees: name, destination below `$HOME`, and whether an
+overlay keeps its `<axis>/<value>` path at the destination.
+
+`shell/` nests and the other two flatten. A config has to land where the program
+reading it looks, so `configs/display/wayland/.config/hypr/` deploys to
+`~/.config/hypr/`; nothing but `.zshrc` reads `~/.local/shell`, so keeping the
+axis in the path there costs nothing and makes a sourced file say which
+coordinate asked for it.
+"""
+
+
+def layers(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[tuple[Path, Path, str]]:
     """The declared (source tree, destination, layer) triples, in deployment order.
 
-    The platform config overlay is optional: a minimal platform like `linux`
-    ships only a shell overlay, and the common layer plus shell and apps carries
-    the rest.
+    `common` first, then one directory per coordinate axis. Every overlay is
+    optional and most are absent: an axis earns a directory only when something
+    actually differs along it, and implying a directory per axis value is the
+    overlay explosion this design exists to avoid.
     """
-    yield repo / 'configs' / 'common', home, 'common'
-    yield repo / 'configs' / platform, home, platform
-    yield repo / 'shell' / 'common', home / '.local' / 'shell', 'shell-common'
-    yield repo / 'shell' / platform, home / '.local' / 'shell', f'shell-{platform}'
-    yield repo / 'apps' / 'common', home / '.local' / 'bin', 'apps-common'
-    yield repo / 'apps' / platform, home / '.local' / 'bin', f'apps-{platform}'
+    for tree, below, nested in TREES:
+        destination = home.joinpath(*below)
+        yield repo / tree / 'common', destination, f'{tree}/common'
+        for overlay in coordinates.overlays:
+            yield repo / tree / overlay, destination / overlay if nested else destination, f'{tree}/{overlay}'
 
 
-def declared(session: Session, platform: str) -> tuple[Link, ...]:
+def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...]:
     """Every link this machine should have. Pure: a walk of the repo, no `$HOME` reads."""
     reserved = core.console_script_names(session.repo / 'pyproject.toml')
     home = session.home.resolve()
 
     links = []
-    for source_dir, destination, layer in layers(session.repo, platform, home):
+    for source_dir, destination, layer in layers(session.repo, coordinates, home):
         if not source_dir.exists():
             continue
         for item in sorted(source_dir.rglob('*')):
@@ -121,7 +138,7 @@ class SymlinksResource:
     help = 'deployed dotfiles: the repo linked into $HOME'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        links = declared(session, plan.machine.platform_label)
+        links = declared(session, plan.machine.coordinates)
         ownership: dict[Path, str] = {}
         pointing_at: dict[Path, Path | None] = {}
         adoptable: set[Path] = set()
@@ -236,7 +253,7 @@ def _destination(target: Path) -> Path | None:
 
 
 def _link_for(session: Session, change: Change) -> Link | None:
-    return next((link for link in declared(session, session.machine.platform_label) if link.address == change.item), None)
+    return next((link for link in declared(session, session.machine.coordinates) if link.address == change.item), None)
 
 
 RESOURCE = SymlinksResource()

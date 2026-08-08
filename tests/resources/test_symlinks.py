@@ -90,20 +90,35 @@ def test_every_layer_is_deployed_to_its_own_destination(session: Session, repo: 
     }
 
 
-def test_the_platform_overlay_is_optional(session: Session, repo: Path) -> None:
-    """A minimal platform like `linux` ships only a shell overlay, and the common
-    layer carries the rest."""
+def test_every_overlay_is_optional(session: Session, repo: Path) -> None:
+    """A machine sits on all six axes and has a directory for two or three of
+    them. An absent overlay is the normal case, not a gap."""
     declare(repo, 'configs/common/.bashrc')
 
     assert len(symlinks.RESOURCE.observe(session, session.plan).links) == 1
 
 
-def test_the_platform_overlay_is_deployed_when_present(session: Session, repo: Path, home: Path) -> None:
-    declare(repo, 'configs/linux/.config/hypr/hyprland.conf')
+def test_an_overlay_the_coordinates_select_is_deployed(session: Session, repo: Path, home: Path) -> None:
+    """`box` declares `platform: linux`, which is `{apt, linux, none, native,
+    fleet, server}` — so the apt overlay is its overlay, and no other machine's
+    is."""
+    declare(repo, 'configs/pkg/apt/.config/apt/preferences')
+    declare(repo, 'configs/pkg/pacman/.config/pacman/makepkg.conf')
 
     targets = {link.target for link in symlinks.RESOURCE.observe(session, session.plan).links}
 
-    assert targets == {home / '.config/hypr/hyprland.conf'}
+    assert targets == {home / '.config/apt/preferences'}
+
+
+def test_a_configs_overlay_flattens_and_a_shell_overlay_keeps_its_axis(session: Session, repo: Path, home: Path) -> None:
+    """A config has to land where the program reading it looks; a shell overlay
+    is read only by `.zshrc`, which walks the axis directories by name."""
+    declare(repo, 'configs/host/native/.config/foo/foo.conf')
+    declare(repo, 'shell/pkg/apt/apt.sh')
+
+    targets = {link.target for link in symlinks.RESOURCE.observe(session, session.plan).links}
+
+    assert targets == {home / '.config/foo/foo.conf', home / '.local/shell/pkg/apt/apt.sh'}
 
 
 def test_an_excluded_path_is_never_declared(session: Session, repo: Path) -> None:
@@ -137,7 +152,7 @@ def test_a_declared_link_that_was_never_deployed_is_missing(session: Session, re
     found = changes(session)
 
     assert [change.verdict for change in found] == [Verdict.MISSING]
-    assert found[0].item == 'common/.config/tmux/tmux.conf'
+    assert found[0].item == 'configs/common/.config/tmux/tmux.conf'
 
 
 def test_a_deployed_link_reports_nothing(session: Session) -> None:

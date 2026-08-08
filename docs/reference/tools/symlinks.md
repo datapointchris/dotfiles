@@ -1,7 +1,7 @@
 # Symlinks Manager
 
-Deploys this repo into `$HOME` as symlinks, in two layers: a common base and a
-platform overlay on top of it.
+Deploys this repo into `$HOME` as symlinks, in layers: a common base and one
+overlay per coordinate axis on top of it.
 
 `dotfiles symlinks --help` lists the verbs. There is one deployment verb —
 `apply` — because reconciling means the machine ends up matching the
@@ -20,17 +20,25 @@ watching its own config used to regenerate a default inside.
 
 ## Architecture
 
-**Common base** (`configs/common/`) links first. **Platform overlay**
-(`configs/macos/`, `wsl/`, `archlinux/`, `linux/`) links second and can override
-it.
+Each of the three trees — `configs/`, `shell/`, `apps/` — is `common/` plus
+`<axis>/<value>/` directories, one per coordinate axis the machine sits on.
+`common` links first and the overlays follow in axis order.
 
-A layer is optional: a minimal platform like `linux` ships only a shell overlay
-(`shell/linux/`) and no `configs/linux/` or `apps/linux/`. A missing layer is
-skipped rather than failing; only a platform absent from *every* layer — which
-means a typo — is an error.
+Which directory names are legal is `OVERLAY_DIRS` in `src/dotfiles/coordinates.py`,
+and a machine's own list is the `DOTFILES_*` block of `~/.env`. Nearly all of
+them are absent on disk: an axis earns a directory only where something actually
+differs along it, and implying one per axis value is the overlay explosion this
+scheme exists to avoid.
 
-Conflicts resolve by kind. File vs file: the overlay wins. Directory vs
-directory: merged, both symlinked. File vs directory: refused, resolve by hand.
+Overlays flatten onto the destination in `configs/` and `apps/`, because a config
+has to land where the program reading it looks. `shell/` keeps the
+`<axis>/<value>` path, because the only thing that reads `~/.local/shell` is
+`.zshrc`, which walks those directories by name.
+
+Two overlays are never allowed to claim one target. Deployment is ordered, so a
+conflict would not fail — it would deploy whichever layer comes later and report
+success — which is why `tests/symlinks/test_overlays.py` asserts it against every
+machine the axes can express rather than the four that exist.
 
 ## Targets this manager did not create
 

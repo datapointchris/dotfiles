@@ -73,13 +73,15 @@ explicit fetch, and exits 1 when there is something to pull.
 ## The machine environment (`~/.env`)
 
 `~/.env` is the first thing `.zshrc` sources and the first thing `install.sh` reads. It
-answers three questions — which machine this is (`MACHINE`), which OS it runs
-(`PLATFORM`), and which features it wants running (the flags from
-`install/flags.yml`) — and it also carries secrets and machine-local values that must
-never be checked in.
+answers three questions — which machine this is (`MACHINE`), where it sits on each of
+the six coordinate axes (the `DOTFILES_*` block, plus `PLATFORM` where the tuple has a
+bundle name), and which features it wants running (the flags from `install/flags.yml`) —
+and it also carries secrets and machine-local values that must never be checked in.
 
 `MACHINE` is the only one of the three that is chosen: it names a manifest, and
-everything else is derived from that manifest by the resolver. Placing this file by
+everything else is derived from that manifest by the resolver. The coordinates are what
+select the overlay directories under `configs/`, `shell/` and `apps/`, so a shell reads
+them directly — `.zshrc` builds its source list from exactly those six variables. Placing this file by
 hand is therefore the whole of the pre-install bootstrap — `install.sh` sources it with
 `set -a` before any phase, so a rebuild that copies `~/.env` into place first never needs
 `--machine`.
@@ -109,7 +111,7 @@ environment still wins for a single shell — `ZSHRC_DEBUG=1 zsh` and
 Flags are for behavior that is present and cheap, where the only question is whether this
 machine wants it. Payload that is expensive to install stays a manifest tool list, and
 config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays
-a platform overlay under `configs/`.
+a coordinate overlay under `configs/`.
 
 ### Which gates are flags
 
@@ -136,10 +138,12 @@ Two ordering hazards, both real and both now handled:
 ### Beyond the shell
 
 Neovim reads the same vocabulary. `core/profiles.lua` derives its plugin profile from
-`PLATFORM` — `linux` is this repo's headless platform, so a machine declaring it has
-already said everything needed to pick the minimal set — with `NVIM_PROFILE` kept as the
-override for anything that does not follow. That removed a second variable which had to
-be set by hand on every server.
+`DOTFILES_CAPACITY` — a machine declaring itself a server has already said everything
+needed to pick the minimal set — with `NVIM_PROFILE` kept as the override for anything
+that does not follow. That removed a second variable which had to be set by hand on
+every server. It read `PLATFORM == 'linux'` until the axes split, which was the right
+answer for the wrong reason: `linux` happened to be the one headless platform, so a
+graphical Ubuntu desktop would have got the lean set.
 
 `plugins/typos.lua` is the counter-example, and worth keeping in mind before reaching for
 this vocabulary at all. It was `PLATFORM ~= 'wsl'`, then `MACHINE_ROLE ~= 'work'`, then a
@@ -149,10 +153,11 @@ so a machine without one writes nothing, and `setup()` creates no directories. T
 existed only because a `dir =` local checkout errors on every startup when the directory is
 absent, which is a fact about local specs rather than about machines.
 
-`core/options.lua` keeps its `PLATFORM == 'wsl'` check, because win32yank genuinely is a
-WSL fact rather than a stand-in for one. The test: if the condition can be stated as
-something the code needs, state that; reach for `MACHINE` or `PLATFORM` only when the
-difference really is which machine this is.
+`core/options.lua` keeps its check and now spells it `DOTFILES_HOST == 'wsl'`, because
+win32yank genuinely is a fact about the host rather than a stand-in for one. The test: if
+the condition can be stated as something the code needs, state that; reach for a
+coordinate only when the difference really is which kind of machine this is — and then
+reach for the *one* axis that decides it, not the whole point.
 
 tmux gets nothing. Every conditional in `tmux.conf` is real runtime detection — is this
 pane running vim, is `$WSL_DISTRO_NAME` set, does the theme file exist, is tpm cloned —

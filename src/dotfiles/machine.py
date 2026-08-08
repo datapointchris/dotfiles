@@ -297,18 +297,26 @@ def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[Issue]) -> 
     collected issues and a second exception here would hide the rest of them.
     """
     values: dict[str, Any] = {}
+    substituted = False
     for axis, enum_type in axes.AXIS_TYPES.items():
         raw = overrides.get(axis)
         if raw is None:
             issues.append(Issue(name, f'declares coordinates without {axis}; every axis is required once one is named'))
         elif raw not in set(enum_type):
             issues.append(Issue(name, f'declares {axis} {raw!r}. Known: {", ".join(enum_type)}'))
+        substituted = substituted or raw not in set(enum_type)
         values[axis] = enum_type(raw) if raw in set(enum_type) else next(iter(enum_type))
 
     for unknown in sorted(set(overrides) - set(axes.AXES)):
         issues.append(Issue(name, f'declares coordinate {unknown!r}, which is not one of the axes'))
 
-    return axes.Coordinates(**values)
+    # Only where the manifest named every axis: a substituted placeholder makes
+    # an arbitrary tuple, and reporting that it cannot exist would bury the real
+    # problem under a contradiction the manifest never wrote.
+    point = axes.Coordinates(**values)
+    if not substituted:
+        issues.extend(Issue(name, f'declares a machine that cannot exist: {problem}') for problem in axes.incoherent(point))
+    return point
 
 
 def _subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:

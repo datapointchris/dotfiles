@@ -28,6 +28,46 @@ def test_the_bundles_are_distinct_points() -> None:
     assert len({tuple(bundle.as_dict().items()) for bundle in axes.PLATFORM_BUNDLES.values()}) == len(axes.PLATFORM_BUNDLES)
 
 
+def test_every_axis_names_an_overlay_directory() -> None:
+    """A machine has a value on every axis, so every axis can carry an overlay.
+    Missing one here means a coordinate that silently selects nothing."""
+    assert set(axes.OVERLAY_DIRS) == set(axes.AXES)
+
+
+def test_a_machine_loads_one_overlay_per_axis_in_axis_order() -> None:
+    assert axes.PLATFORM_BUNDLES['archlinux'].overlays == (
+        'pkg/pacman',
+        'os/linux',
+        'display/wayland',
+        'host/native',
+        'trust/fleet',
+        'capacity/workstation',
+    )
+
+
+@pytest.mark.parametrize(
+    ('point', 'expected_problem'),
+    [
+        (('pacman', 'darwin', 'aqua', 'native', 'fleet', 'workstation'), 'not a macOS package manager'),
+        (('brew', 'darwin', 'aqua', 'wsl', 'fleet', 'workstation'), 'wsl hosts Linux'),
+        (('brew', 'darwin', 'wayland', 'native', 'fleet', 'workstation'), 'wayland is a Linux display stack'),
+        (('pacman', 'linux', 'aqua', 'native', 'fleet', 'workstation'), 'aqua is the macOS display stack'),
+    ],
+)
+def test_a_point_no_machine_can_be_is_named_as_such(point: tuple[str, ...], expected_problem: str) -> None:
+    """Six independent axes is what makes a fifth machine cheap, and also what
+    lets a manifest name a machine that cannot exist. `platform:` could not — it
+    was four hand-written tuples — so nothing has ever had to check this."""
+    found = axes.incoherent(axes.Coordinates(*(axes.AXIS_TYPES[axis](value) for axis, value in zip(axes.AXES, point, strict=True))))
+
+    assert any(expected_problem in problem for problem in found), found
+
+
+def test_every_bundle_is_a_machine_that_can_exist() -> None:
+    for label, bundle in axes.PLATFORM_BUNDLES.items():
+        assert axes.incoherent(bundle) == (), label
+
+
 @pytest.mark.parametrize(
     ('version_text', 'expected'),
     [

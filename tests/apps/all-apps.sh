@@ -18,27 +18,19 @@
 set -euo pipefail
 
 # ================================================================
-# PLATFORM DETECTION
+# THE MACHINE'S DECLARATION
 # ================================================================
 
-# Get dotfiles directory
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-
-# Source platform detection utility (same as install.sh)
-source "$DOTFILES_DIR/install/platform-detection.sh"
-
-# The machine's declaration first, the way the verification scripts read it.
-# detect_platform greps /proc/version, which is right on a real WSL box and
-# wrong in a container modelling one: it answered `linux`, then failed on a
-# linux.sh that a wsl machine never deploys.
-if [[ -z "${PLATFORM:-}" && -f "$HOME/.env" ]]; then
+# Read, never detected. A detector answered `linux` inside a container modelling
+# WSL and then failed on an overlay that machine never deploys — and it cannot
+# answer the trust or capacity axes at all, because nothing on a box knows them.
+if [[ -f "$HOME/.env" ]]; then
   # shellcheck disable=SC1091
   source "$HOME/.env"
 fi
-PLATFORM=$(detect_platform)
 
-if [[ "$PLATFORM" == "unknown" ]]; then
-  echo "ERROR: Unsupported platform: $OSTYPE"
+if [[ -z "${MACHINE:-}" || -z "${DOTFILES_PKG:-}" ]]; then
+  echo "ERROR: ~/.env does not declare this machine. Run: dotfiles env apply"
   exit 1
 fi
 
@@ -96,7 +88,7 @@ test_symlink() {
   fi
 }
 
-echo -e "${CYAN}Testing Dotfiles Installation - $PLATFORM${NC}"
+echo -e "${CYAN}Testing Dotfiles Installation - $MACHINE${NC}"
 echo "============================="
 echo -e "${YELLOW}Run this after install.sh and symlinks deployment${NC}"
 echo ""
@@ -121,7 +113,9 @@ test_file "error-handling.sh exists" "$HOME/.local/shell/error-handling.sh"
 test_file "colors.sh exists" "$HOME/.local/shell/colors.sh"
 test_file "functions.sh exists" "$HOME/.local/shell/functions.sh"
 test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
-test_file "${PLATFORM}.sh exists" "$HOME/.local/shell/${PLATFORM}.sh"
+# Every machine has a package manager and every package manager has an
+# overlay, so this is the one coordinate directory that must always deploy.
+test_file "the ${DOTFILES_PKG} overlay is deployed" "$HOME/.local/shell/pkg/${DOTFILES_PKG}/${DOTFILES_PKG}.sh"
 
 # Test they can be sourced
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"
@@ -171,32 +165,21 @@ test_cmd "nvim installed" "command -v nvim"
 test_cmd "fzf installed" "command -v fzf"
 
 # ================================================================
-# 7. PLATFORM-SPECIFIC APPS
+# 7. COORDINATE-SPECIFIC APPS
 # ================================================================
-if [[ "$PLATFORM" == "macos" ]]; then
+if [[ "$DOTFILES_OS" == "darwin" ]]; then
   echo ""
-  echo "macOS Specific Apps:"
-  # The command is the underscored half; `aws-profiles` is a shell function,
-  # which is not visible from this script's own shell.
-  test_cmd "_aws-profiles available" "command -v _aws-profiles"
-  test_cmd "stitch-udacity-videos available" "command -v stitch-udacity-videos"
+  echo "macOS:"
   test_file "ghostty config exists" "$HOME/.config/ghostty/config"
   test_cmd "brew installed" "command -v brew"
 fi
 
-# Add WSL-specific tests here when WSL apps are added
-# if [[ "$PLATFORM" == "wsl" ]]; then
-#   echo ""
-#   echo "WSL Specific Apps:"
-#   # test_cmd "wsl-app help" "wsl-app --help"
-# fi
-
-# Add Arch Linux-specific tests here when archlinux apps are added
-# if [[ "$PLATFORM" == "archlinux" ]]; then
-#   echo ""
-#   echo "Arch Linux Specific Apps:"
-#   # test_cmd "archlinux-app help" "archlinux-app --help"
-# fi
+if [[ "$DOTFILES_DISPLAY" == "wayland" ]]; then
+  echo ""
+  echo "Wayland:"
+  test_cmd "rofi-power available" "command -v rofi-power"
+  test_file "hyprland config exists" "$HOME/.config/hypr/hyprland.conf"
+fi
 
 # ================================================================
 # SUMMARY

@@ -97,8 +97,16 @@ class EnvResource:
 
 
 def _identity(machine, observed: Observed) -> list[Change]:
+    """What machine this is, and where it sits on each axis.
+
+    The coordinates are identity rather than configuration: they select which
+    overlays every shell sources, so one of them missing or stale is a machine
+    loading someone else's files, not a preference that drifted.
+    """
+    expected_values = {'MACHINE': machine.name, 'PLATFORM': machine.platform_label, **envfile.coordinate_exports(machine)}
+
     changes = []
-    for key, expected in (('MACHINE', machine.name), ('PLATFORM', machine.platform_label)):
+    for key, expected in expected_values.items():
         actual = observed.values.get(key)
         if actual is None:
             changes.append(Change(NAME, Stage.ENVIRONMENT, key, Verdict.MISSING, detail=f'the manifest declares {expected}'))

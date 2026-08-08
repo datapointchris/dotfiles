@@ -1,0 +1,4 @@
+# A checkout on the Linux side is edited from Windows tools too, which write
+# CRLF. `input` normalises on commit and leaves the working tree alone.
+[core]
+	autocrlf = input

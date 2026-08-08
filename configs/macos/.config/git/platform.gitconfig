@@ -1,9 +1,0 @@
-# The empty helper = clears any inherited/system helpers before setting ours,
-# preventing git from stacking multiple helpers and causing unexpected prompts.
-[credential "https://github.com"]
-	helper =
-	helper = !/usr/local/bin/gh auth git-credential
-
-[credential "https://gist.github.com"]
-	helper =
-	helper = !/usr/local/bin/gh auth git-credential

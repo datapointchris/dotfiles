@@ -15,12 +15,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import symlinks
 from dotfiles.session import Session
@@ -60,9 +62,13 @@ def _ensure_identity_file() -> None:
     hint(f'created {IDENTITY_FILE} — set an identity with: git config --global user.email <address>')
 
 
-def _sync_windows_shell(platform: str) -> None:
-    """WSL only: copy the shell profile onto the Windows host beside it."""
-    if platform != 'wsl':
+def _sync_windows_shell(coordinates: axes.Coordinates) -> None:
+    """Copy the shell profile onto the Windows host beside this one.
+
+    Keyed on the host rather than on `wsl` the platform: there is a Windows side
+    to copy to whenever WSL is the host, whatever distro is running inside it.
+    """
+    if coordinates.host is not axes.Host.WSL:
         return
     run(['bash', str(paths.INSTALL_DIR / 'wsl' / 'sync-windows-shell.sh')], cwd=paths.REPO_ROOT)
 
@@ -83,7 +89,12 @@ def deploy(session: Session) -> bool:
     err_console.print('[bold blue]Deploying symlinks[/]')
 
     changes = symlinks.RESOURCE.diff(session.plan, symlinks.RESOURCE.observe(session, session.plan))
-    outcomes = [symlinks.RESOURCE.perform(session, change) for change in changes if change.actionable]
+    # Constructed and never authorized, which is the state that refuses. Nothing
+    # a link pass does needs root; the parameter exists because `perform` takes
+    # one everywhere, and passing an unauthorized one is how this resource says
+    # so rather than being an exception to the protocol.
+    unprivileged = Privilege()
+    outcomes = [symlinks.RESOURCE.perform(session, change, unprivileged) for change in changes if change.actionable]
 
     for outcome in outcomes:
         if not outcome.ok:
@@ -99,18 +110,22 @@ def deploy(session: Session) -> bool:
     err_console.print(f'{sum(1 for outcome in outcomes if outcome.ok)} of {len(changes)} link(s) updated')
 
     _ensure_identity_file()
-    _sync_windows_shell(session.machine.platform_label)
-    _reload_compositor(session.machine.platform_label)
+    _sync_windows_shell(session.machine.coordinates)
+    _reload_compositor(session.machine.coordinates)
     return not refused and all(outcome.ok for outcome in outcomes)
 
 
-def unlink(platform: str) -> bool:
-    """Remove every link this repo deployed, overlay first."""
+def unlink(session: Session) -> bool:
+    """Remove every link this repo deployed, overlay first.
+
+    Driven by the same `layers()` the deployment is, so a tree gaining an overlay
+    cannot leave a layer that only one of the two halves knows about.
+    """
     err_console.print('[bold blue]Removing symlinks[/]')
-    for target in (platform, 'common'):
-        source = paths.REPO_ROOT / 'configs' / target
+    triples = list(symlinks.layers(session.repo, session.machine.coordinates, session.home.resolve()))
+    for source, _, layer in reversed(triples):
         if source.is_dir():
-            core.remove_symlinks(source, target)
+            core.remove_symlinks(source, layer)
     return True
 
 
@@ -136,8 +151,12 @@ def show(session: Session) -> None:
     err_console.print(f'\n{len(observed.links)} declared, {len(verdicts)} not deployed as declared')
 
 
-def _reload_compositor(platform: str) -> None:
+def _reload_compositor(coordinates: axes.Coordinates) -> None:
     """Hyprland reads the config files the pass above just deployed, so the reload
-    belongs with the deployment rather than at the end of a run."""
-    if platform == 'archlinux' and run(['hyprctl', 'reload'], output=Output.QUIET).ok:
+    belongs with the deployment rather than at the end of a run.
+
+    Keyed on the display stack, which is what put those files in the plan: the
+    compositor is a fact about Wayland, not about Arch.
+    """
+    if coordinates.display_stack is axes.DisplayStack.WAYLAND and run(['hyprctl', 'reload'], output=Output.QUIET).ok:
         err_console.print('Hyprland configuration reloaded')

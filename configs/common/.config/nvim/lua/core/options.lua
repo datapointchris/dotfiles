@@ -63,8 +63,10 @@ vim.opt.undofile = true
 -- Enable mouse support in all modes
 vim.opt.mouse = 'a'
 
--- Use win32yank if on wsl
-if vim.env.PLATFORM == 'wsl' then
+-- Use win32yank if on wsl. Keyed on the host rather than the platform: there is
+-- a Windows clipboard to reach whenever WSL is the host, whatever distro runs
+-- inside it.
+if vim.env.DOTFILES_HOST == 'wsl' then
   vim.g.clipboard = {
     name = 'win32yank-wsl',
     copy = {
