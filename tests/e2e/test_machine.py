@@ -70,12 +70,17 @@ def test_nothing_but_uv_reached_for_the_system_python(machine: Machine) -> None:
 def test_no_phase_crashed(machine: Machine) -> None:
     """A phase may fail; none may raise.
 
-    A traceback means the walk stopped, so every phase after it silently did not
-    run — which is how a symlink pass that had already deployed everything took
-    tmux, Neovim and the shell config down with it.
+    A traceback in our own code means the walk stopped, so every phase after it
+    silently did not run — which is how a symlink pass that had already deployed
+    everything took tmux, Neovim and the shell config down with it.
+
+    Scoped to frames naming this package. Matching any `Traceback` also caught
+    setuptools building someone else's sdist: Pillow failing to find zlib is a
+    real problem and a different one, and it made a third-party build failure
+    read as the walk collapsing.
     """
-    assert 'Traceback' not in machine.install_log
-    assert 'FileNotFoundError' not in machine.install_log
+    ours = [line for line in machine.install_log.splitlines() if '/dotfiles/src/dotfiles/' in line]
+    assert not ours, ours[:10]
 
 
 def test_the_run_reports_its_own_outcome(machine: Machine) -> None:

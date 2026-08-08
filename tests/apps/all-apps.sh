@@ -27,7 +27,14 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 # Source platform detection utility (same as install.sh)
 source "$DOTFILES_DIR/install/platform-detection.sh"
 
-# Detect current platform
+# The machine's declaration first, the way the verification scripts read it.
+# detect_platform greps /proc/version, which is right on a real WSL box and
+# wrong in a container modelling one: it answered `linux`, then failed on a
+# linux.sh that a wsl machine never deploys.
+if [[ -z "${PLATFORM:-}" && -f "$HOME/.env" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.env"
+fi
 PLATFORM=$(detect_platform)
 
 if [[ "$PLATFORM" == "unknown" ]]; then
