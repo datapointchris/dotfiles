@@ -56,9 +56,18 @@ done < <(parse_packages --type=uv)
 
 print_section "Git Python Tools (uv)"
 
-while IFS='|' read -r name repo ref_mode; do
+while IFS='|' read -r name repo ref_mode auth; do
   if uv tool list | grep -q "^$name "; then
     log_success "$name already installed, skipping"
+    continue
+  fi
+
+  # A private repo's clone cannot succeed without credentials, so attempting it
+  # produces a failure record for something this machine was never able to have.
+  # A warning rather than silence: credentials are a state a machine can lose,
+  # and a lost `gh` login going unmentioned is how a tool quietly stops updating.
+  if [[ "$auth" == "auth" && -z "$(github_token)" ]]; then
+    log_warning "$name: skipped, its repo is private and this machine has no GitHub credentials"
     continue
   fi
 

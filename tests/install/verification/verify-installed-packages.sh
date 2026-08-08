@@ -15,6 +15,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/python.sh"
+source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 
 # Counters
 TOTAL_CHECKS=0
@@ -181,6 +182,18 @@ verify_declared_packages() {
           check_command "$value" "SKIP_VERSION"
         else
           log_info "$value: skipped, needs a Windows host"
+        fi
+        ;;
+      # A private repo's tool cannot install without credentials, so a machine
+      # that has none is accurately described as lacking it rather than broken.
+      # Reported rather than silently skipped, unlike the WSL case: credentials
+      # are a state a machine can lose, and a lost `gh` login going unmentioned
+      # is how these three would quietly stop being updated.
+      command_github_auth)
+        if [[ -n "$(github_token)" ]]; then
+          check_command "$value" "SKIP_VERSION"
+        else
+          log_warning "$value: skipped, its repo is private and this machine has no GitHub credentials"
         fi
         ;;
     esac

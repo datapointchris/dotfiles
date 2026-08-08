@@ -21,6 +21,8 @@ apart a second time.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Callable
+from pathlib import Path
 
 from dotfiles import apply
 from dotfiles import paths
@@ -208,3 +210,53 @@ def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:
         if directory.startswith('/usr'):
             continue
         assert directory in exported[0], f'{directory} is on the phase PATH but not on a non-interactive shell PATH'
+
+
+def recorder(attempted: list[str]) -> Callable[..., bool]:
+    """Stands in for `run_installer`, recording which tools the phase reached for."""
+
+    def record(_context: apply.Run, _script: Path, tool: str) -> bool:
+        attempted.append(tool)
+        return True
+
+    return record
+
+
+def test_a_private_repo_tool_is_skipped_where_there_are_no_credentials(monkeypatch) -> None:
+    """Its download cannot succeed, so attempting it records a failure for
+    something the machine was never able to have and exits 3 for a reason no
+    change to this repo can fix — which is what made a container's e2e red.
+
+    The public tools in the same phase must still run: skipping the phase
+    wholesale would trade one wrong answer for a worse one.
+    """
+    packages = {
+        'github_releases': [
+            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
+            {'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True},
+        ]
+    }
+    manifest = {'github_releases': ['lazygit', 'learning']}
+    context = apply.Run(machine='linux-lxc-server', platform='linux', packages=packages, manifest=manifest)
+
+    attempted: list[str] = []
+    monkeypatch.setattr(apply, '_have_github_credentials', lambda: False)
+    monkeypatch.setattr(apply, 'run_installer', recorder(attempted))
+
+    assert apply._github_releases(context)
+    assert attempted == ['lazygit']
+
+
+def test_a_private_repo_tool_is_installed_where_there_are_credentials(monkeypatch) -> None:
+    """The inverse mistake: a machine that can install these and does not, which
+    reads as converged while three tools are quietly absent."""
+    packages = {'github_releases': [{'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True}]}
+    manifest = {'github_releases': ['learning']}
+    context = apply.Run(machine='linux-lxc-server', platform='linux', packages=packages, manifest=manifest)
+
+    attempted: list[str] = []
+    monkeypatch.setattr(apply, '_have_github_credentials', lambda: True)
+    monkeypatch.setattr(apply, 'run_installer', recorder(attempted))
+
+    assert apply._github_releases(context)
+    assert attempted == ['learning']

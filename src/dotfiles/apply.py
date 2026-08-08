@@ -348,8 +348,31 @@ def _go_tools(context: Run) -> bool:
     return run_installer(context, COMMON / 'language-tools' / 'go-tools.sh', 'go-tools')
 
 
+def _have_github_credentials() -> bool:
+    """The same question `github_token` in `version-helpers.sh` asks, so the phase
+    and the installers it runs cannot disagree about whether to try."""
+    return bool(os.environ.get('GITHUB_TOKEN')) or run(['gh', 'auth', 'token'], output=Output.QUIET).ok
+
+
 def _github_releases(context: Run) -> bool:
-    return _run_directory_phase(context, 'github', COMMON / 'github-releases', 'GitHub release tools')
+    """A private repo's tool is skipped where there are no credentials for it.
+
+    Its download cannot succeed, so attempting it records a failure for something
+    this machine was never able to have, and the run exits 3 for a reason no
+    change to this repo can fix. Warned rather than silent: credentials are a
+    state a machine can lose, unlike the WSL host `requires_wsl_host` tests for.
+    """
+    tools = context.declared('github')
+    if not _have_github_credentials():
+        private = parse_packages.names_requiring_github_auth(context.packages, 'github_releases')
+        if skipping := sorted(set(tools) & private):
+            warn(f'no GitHub credentials on this machine, so these private-repo tools are skipped: {", ".join(skipping)}')
+            tools = [tool for tool in tools if tool not in private]
+
+    if not tools:
+        return True
+    heading('GitHub release tools')
+    return all([run_installer(context, COMMON / 'github-releases' / f'{tool}.sh', tool) for tool in tools])
 
 
 def _custom_installers(context: Run) -> bool:

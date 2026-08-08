@@ -870,8 +870,10 @@ github_releases:
   # under a `cli/v*` tag so it never collides with the app's tag namespace.
   # Their installers use the prefixed version lookup rather than
   # /releases/latest, which would return whichever release is newest overall.
-  # Two of the repos are private; the installer library downloads those through
-  # the REST asset endpoint with a token, since the browser URL 404s on them.
+  # A private repo's browser URL 404s no matter what, so its installer downloads
+  # through the REST asset endpoint with a token — and says so with
+  # `requires_github_auth: true`, which is also what stops verification reporting
+  # a correctly-installed machine with no credentials as a broken one.
   - name: icb
     repo: datapointchris/ichrisbirch
     install_script: github-releases/icb.sh
@@ -883,6 +885,7 @@ github_releases:
     repo: datapointchris/learning
     install_script: github-releases/learning.sh
     release_tag_prefix: "cli/"
+    requires_github_auth: true
     description: Structured learning tracks, sections, topics, and resources
     tags: [cli, personal]
 
@@ -890,6 +893,7 @@ github_releases:
     repo: datapointchris/nomad
     install_script: github-releases/nomad.sh
     release_tag_prefix: "cli/"
+    requires_github_auth: true
     description: Digital-nomad city research, trip planning, stops, and attractions
     tags: [cli, personal]
 
@@ -1254,6 +1258,7 @@ git_uv_tools:
 
   - name: relate
     repo: https://github.com/datapointchris/relate.git
+    requires_github_auth: true
     description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
 
   - name: logsift

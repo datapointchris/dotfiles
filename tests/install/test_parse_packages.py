@@ -115,7 +115,7 @@ def test_get_git_uv_packages_defaults_to_release_mode():
     """
     data = {'git_uv_tools': [{'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'}]}
 
-    assert parse_packages.get_git_uv_packages(data) == ['syncer|https://github.com/datapointchris/syncer.git|release']
+    assert parse_packages.get_git_uv_packages(data) == ['syncer|https://github.com/datapointchris/syncer.git|release|open']
 
 
 def test_get_git_uv_packages_marks_a_branch_tracking_tool():
@@ -130,16 +130,63 @@ def test_get_git_uv_packages_marks_a_branch_tracking_tool():
         ]
     }
 
-    assert parse_packages.get_git_uv_packages(data) == ['keymap-align|https://github.com/datapointchris/keymap-align.git|branch']
+    assert parse_packages.get_git_uv_packages(data) == ['keymap-align|https://github.com/datapointchris/keymap-align.git|branch|open']
 
 
 def test_get_git_uv_packages_is_pipe_delimited(real_packages_data):
     """Pipe, not colon: a clone URL contains colons, so the shell cannot split on them."""
     for entry in parse_packages.get_git_uv_packages(real_packages_data):
-        name, repo, ref_mode = entry.split('|')
+        name, repo, ref_mode, auth = entry.split('|')
         assert name
         assert repo.startswith('https://')
         assert ref_mode in ('release', 'branch')
+        assert auth in ('open', 'auth')
+
+
+def test_a_capability_requirement_reaches_verification_as_its_own_kind(real_packages_data):
+    """A tool a machine cannot have is not a broken machine.
+
+    `requires_wsl_host` and `requires_github_auth` say the same kind of thing —
+    this needs something of the machine — and verification has to make the same
+    test the installer makes, or a container reports every private-repo tool as
+    missing and a correct machine reads as broken. Derived from packages.yml and
+    every manifest, so a third capability needs no edit here beyond the mapping.
+    """
+    capabilities = {'requires_wsl_host': 'command_wsl_host', 'requires_github_auth': 'command_github_auth'}
+    flagged = {
+        entry['name']: capabilities[flag]
+        for section in real_packages_data.values()
+        if isinstance(section, list)
+        for entry in section
+        if isinstance(entry, dict)
+        for flag in capabilities
+        if entry.get(flag)
+    }
+    assert flagged, 'nothing declares a capability requirement, so this asserts nothing'
+
+    checked = 0
+    for manifest_path in sorted(MANIFESTS_DIR.glob('*.yml')):
+        with open(manifest_path) as handle:
+            manifest = yaml.safe_load(handle)
+        for row in parse_packages.verifiable_commands(real_packages_data, manifest):
+            _section, kind, _value, name = row.split('|')
+            if name in flagged:
+                assert kind == flagged[name], f'{name} in {manifest_path.name} is verified as {kind}'
+                checked += 1
+
+    assert checked, 'no manifest declares a tool with a capability requirement'
+
+
+def test_the_git_uv_installer_is_told_which_clones_need_credentials(real_packages_data):
+    """`uv-tools.sh` reads the auth field to decide whether to try at all, so a
+    private repo missing it is an install that fails for a reason no change here
+    can fix, and a public one carrying it is a tool silently never installed."""
+    private = parse_packages.names_requiring_github_auth(real_packages_data, 'git_uv_tools')
+    assert private, 'no private git uv tool, so the credential-less path is untested'
+
+    for row in parse_packages.get_git_uv_packages(real_packages_data):
+        name, _repo, _ref_mode, auth = row.split('|')
+        assert auth == ('auth' if name in private else 'open'), row
 
 
 def test_get_go_packages(sample_packages_data):

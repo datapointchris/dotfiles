@@ -141,7 +141,11 @@ def verifiable_commands(data, manifest):
                 kind = 'path'
                 value = entry['installed_path']
             else:
-                kind = 'command_wsl_host' if entry.get('requires_wsl_host') else 'command'
+                kind = 'command'
+                if entry.get('requires_wsl_host'):
+                    kind = 'command_wsl_host'
+                elif entry.get('requires_github_auth'):
+                    kind = 'command_github_auth'
                 value = entry_command(entry)
             rows.append(f'{section}|{kind}|{value}|{entry["name"]}')
     return rows
@@ -176,6 +180,15 @@ def filter_github_releases_by_manifest(data, manifest):
         return []
     all_binaries = data.get('github_releases', [])
     return [pkg['name'] for pkg in all_binaries if pkg['name'] in manifest_releases]
+
+
+def names_requiring_github_auth(data, section):
+    """Names in one section whose repo is private, so installing needs credentials.
+
+    Read off the declaration rather than listed anywhere, because which repos are
+    private is a fact about GitHub that changes without anything here changing.
+    """
+    return {entry['name'] for entry in data.get(section) or [] if isinstance(entry, dict) and entry.get('requires_github_auth')}
 
 
 def filter_git_uv_packages_by_manifest(data, manifest):
@@ -356,19 +369,21 @@ def get_uv_packages(data):
 
 
 def format_git_uv_package(pkg):
-    """Format one git uv tool as 'name|repo|ref_mode'.
+    """Format one git uv tool as 'name|repo|ref_mode|auth'.
 
-    Pipe-delimited because a clone URL contains colons, and three fields because
-    the ref mode decides how the tool is installed: 'release' pins the newest
-    release tag, 'branch' follows the default branch for a repo that publishes
-    no releases. See install/common/lib/uv-git-tools.sh for why the pin matters.
+    Pipe-delimited because a clone URL contains colons. The ref mode decides how
+    the tool is installed: 'release' pins the newest release tag, 'branch'
+    follows the default branch for a repo that publishes no releases. See
+    install/common/lib/uv-git-tools.sh for why the pin matters. `auth` is 'auth'
+    for a private repo, whose clone needs credentials a container has none of.
     """
     ref_mode = 'branch' if pkg.get('tracks_branch') else 'release'
-    return f'{pkg["name"]}|{pkg["repo"]}|{ref_mode}'
+    auth = 'auth' if pkg.get('requires_github_auth') else 'open'
+    return f'{pkg["name"]}|{pkg["repo"]}|{ref_mode}|{auth}'
 
 
 def get_git_uv_packages(data):
-    """Extract git uv tool name|repo|ref_mode triples."""
+    """Extract git uv tool name|repo|ref_mode|auth rows."""
     if 'git_uv_tools' not in data:
         return []
     return [format_git_uv_package(pkg) for pkg in data['git_uv_tools']]
