@@ -30,7 +30,7 @@ init_package_filters() {
 }
 
 parse_packages() {
-  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" "$@" "${PACKAGE_FILTER_FLAGS[@]}"
+  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages "$@" "${PACKAGE_FILTER_FLAGS[@]}"
 }
 
 # True when the current narrowing leaves at least one entry for this query.

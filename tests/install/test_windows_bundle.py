@@ -10,7 +10,8 @@ Run with: pytest tests/install/test_windows_bundle.py
 import zipfile
 
 import pytest
-import windows_bundle
+
+from dotfiles import windows_bundle
 
 
 class TestAssetNames:

@@ -5,7 +5,8 @@ is broken, and so an older distro can run an older build than the rest of the
 fleet. Vocabulary and the reasoning: .planning/version-constraints.md.
 
 DOTFILES_DIR is the injection point — a real knob every installer already reads,
-so a synthetic tree needs no seam added to production code. The ambient
+so a synthetic tree needs no seam added to production code — it carries install/
+and src/ because the installers reach the package through PYTHONPATH. The ambient
 environment is passed through deliberately: /usr/bin/python3 finds PyYAML via a
 relocated PYTHONUSERBASE, so a stripped env cannot read packages.yml at all and
 would be testing the wrong failure.
@@ -35,6 +36,7 @@ def pinned_tree(tmp_path: Path) -> Path:
     """A copy of install/ whose lazygit entry declares a pin."""
     root = tmp_path / 'dotfiles'
     shutil.copytree(REPO_ROOT / 'install', root / 'install')
+    shutil.copytree(REPO_ROOT / 'src', root / 'src')
 
     packages = root / 'install' / 'packages.yml'
     declaration = f'  - name: {PINNED_TOOL}\n    repo: {PINNED_REPO}\n'
@@ -82,6 +84,7 @@ def test_a_pin_no_release_matches_fails_rather_than_installing_latest(tmp_path: 
     unmatchable pin has to be loud."""
     root = tmp_path / 'dotfiles'
     shutil.copytree(REPO_ROOT / 'install', root / 'install')
+    shutil.copytree(REPO_ROOT / 'src', root / 'src')
 
     packages = root / 'install' / 'packages.yml'
     declaration = f'  - name: {PINNED_TOOL}\n    repo: {PINNED_REPO}\n'
@@ -104,6 +107,7 @@ def test_an_unreadable_catalog_fails_rather_than_assuming_nothing_is_pinned(tmp_
     difference installs latest over a pin nobody can see."""
     root = tmp_path / 'dotfiles'
     shutil.copytree(REPO_ROOT / 'install', root / 'install')
+    shutil.copytree(REPO_ROOT / 'src', root / 'src')
     (root / 'install' / 'packages.yml').write_text('github_releases: [unclosed\n')
 
     result = subprocess.run(

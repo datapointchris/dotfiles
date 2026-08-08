@@ -40,7 +40,7 @@ fi
 # Read a manifest field via parse_packages.py
 manifest_field() {
   local field="$1"
-  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
     --manifest-field="$field" --manifest="$MACHINE"
 }
 
@@ -423,7 +423,7 @@ parse_args() {
         # /usr/bin/python3 for the same reason parse_packages.py uses it: it is
         # the interpreter guaranteed to have PyYAML, which create_bundle.py
         # needs because it imports parse_packages rather than shelling out to it.
-        exec /usr/bin/python3 "$DOTFILES_DIR/install/offline/create_bundle.py" "$@"
+        exec PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.create_bundle "$@"
         ;;
       --help | -h)
         usage

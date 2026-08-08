@@ -18,7 +18,7 @@ ARCH=$(detect_arch)
 
 awscli_zip_url() {
   local url_base
-  url_base=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  url_base=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
     --custom-installer awscli --field url) || return 1
   case $ARCH in
     amd64) echo "${url_base}/awscli-exe-linux-x86_64.zip" ;;

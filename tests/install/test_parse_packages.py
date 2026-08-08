@@ -7,9 +7,10 @@ Or from project root: python -m pytest tests/install/
 
 from pathlib import Path
 
-import parse_packages
 import pytest
 import yaml
+
+from dotfiles import parse_packages
 
 PACKAGES_YML = Path(__file__).parent.parent.parent / 'install' / 'packages.yml'
 MANIFESTS_DIR = Path(__file__).parent.parent.parent / 'install' / 'manifests'

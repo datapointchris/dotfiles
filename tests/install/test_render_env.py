@@ -11,7 +11,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
-import render_env
+
+from dotfiles import render_env
 
 MANIFEST = {
     'machine': 'test-machine',

@@ -69,7 +69,7 @@ case $ARCH in
 esac
 
 # AWS publishes at latest/{arch}/ — no version lookup needed. url is the bucket root.
-URL_BASE=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+URL_BASE=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
   --custom-installer=mount-s3 --field=url) \
   || {
     log_error "Could not read mount-s3.url from packages.yml"

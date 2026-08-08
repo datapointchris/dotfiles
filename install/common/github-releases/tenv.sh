@@ -134,7 +134,7 @@ if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then
 fi
 
 # Read Terraform version from packages.yml
-TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --get=runtimes.terraform.version)
+TERRAFORM_VERSION=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --get=runtimes.terraform.version)
 
 print_section "Terraform"
 

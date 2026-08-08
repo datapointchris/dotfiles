@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Build the Windows tool bundle for a Git Bash machine behind a firewall.
 
-The WSL counterpart of install/offline/create_bundle.py: run it where GitHub is
+The WSL counterpart of src/dotfiles/create_bundle.py: run it where GitHub is
 reachable, move the tarball across, then `task windows:offline`.
 
     windows_bundle.py <output.tar.gz> [--print-path]
@@ -14,7 +14,7 @@ the machine this is built for cannot reach the release API, so it cannot learn
 which asset holds a checksum, and verification has to happen where it can. The
 shell version this replaced did not verify at all.
 
-Stdlib-only; see install/offline/create_bundle.py.
+Stdlib-only; see src/dotfiles/create_bundle.py.
 """
 
 from __future__ import annotations
@@ -29,10 +29,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-DOTFILES_DIR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(DOTFILES_DIR / 'install'))
-
-import github_release  # noqa: E402
+from dotfiles import github_release
 
 log = logging.getLogger('windows-bundle')
 

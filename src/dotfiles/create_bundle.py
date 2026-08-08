@@ -45,11 +45,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-DOTFILES_DIR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(DOTFILES_DIR / 'install'))
-
-import github_release  # noqa: E402  (path must be set before these resolve)
-import parse_packages  # noqa: E402
+from dotfiles import github_release
+from dotfiles import parse_packages
+from dotfiles import paths
 
 log = logging.getLogger('create-bundle')
 
@@ -531,7 +529,7 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
 
 def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
     log.info('Downloading GitHub releases...')
-    script_dir = DOTFILES_DIR / 'install' / 'common' / 'github-releases'
+    script_dir = paths.INSTALL_DIR / 'common' / 'github-releases'
 
     for tool in parse_packages.filter_github_releases_by_manifest(packages, manifest):
         script = script_dir / f'{tool}.sh'
@@ -607,8 +605,8 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
     """
     log.info('Downloading install scripts...')
 
-    scripts = [DOTFILES_DIR / 'install' / 'common' / 'language-managers' / 'uv.sh']
-    custom_dir = DOTFILES_DIR / 'install' / 'common' / 'custom-installers'
+    scripts = [paths.INSTALL_DIR / 'common' / 'language-managers' / 'uv.sh']
+    custom_dir = paths.INSTALL_DIR / 'common' / 'custom-installers'
     for tool in parse_packages.filter_custom_installers_by_manifest(packages, manifest, filter_field='bundle_install_script'):
         script = custom_dir / f'{tool}.sh'
         if not script.is_file():
@@ -631,9 +629,9 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
     """
     os_name, arch = parse_platform(target_platform)
 
-    manifest_file = DOTFILES_DIR / 'install' / 'manifests' / f'{manifest_name}.yml'
+    manifest_file = paths.MANIFESTS_DIR / f'{manifest_name}.yml'
     if not manifest_file.is_file():
-        available = '\n'.join(f'  {path.stem}' for path in sorted((DOTFILES_DIR / 'install' / 'manifests').glob('*.yml')))
+        available = '\n'.join(f'  {path.stem}' for path in sorted((paths.MANIFESTS_DIR).glob('*.yml')))
         raise BundleError(f'Manifest not found: {manifest_file}\nAvailable manifests:\n{available}')
 
     packages = parse_packages.load_packages()
@@ -645,7 +643,7 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
     log.info('Manifest filter: %s', manifest_name)
 
     cache = DownloadCache(enabled=use_cache)
-    tarball_path = DOTFILES_DIR / f'{name}.tar.gz'
+    tarball_path = paths.REPO_ROOT / f'{name}.tar.gz'
 
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / 'installers', os_name, arch)

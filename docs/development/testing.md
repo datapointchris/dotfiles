@@ -46,8 +46,8 @@ file on disk".
 
 ## pytest (Python Tests)
 
-Python-side coverage for `install/parse_packages.py`, `apps/common/packages`
-(including `packages verify`), and `install/offline/create_bundle.py`:
+Python-side coverage for `src/dotfiles/parse_packages.py`, `apps/common/packages`
+(including `packages verify`), and `src/dotfiles/create_bundle.py`:
 
 ```sh
 uv run pytest tests/

@@ -29,6 +29,8 @@ from pathlib import Path
 
 import yaml
 
+from dotfiles import paths
+
 MARKER = '# OVERRIDES - hand-edited; everything below is preserved on regenerate'
 
 # Kept in step with flag_classify() in configs/common/.local/shell/flags.sh.
@@ -37,7 +39,7 @@ FALSEY = {'0', 'false', 'no', 'off'}
 
 SELF_DEFAULT = re.compile(r'\$\{(\w+):-(.*)\}')
 
-INSTALL_DIR = Path(__file__).resolve().parent
+INSTALL_DIR = paths.INSTALL_DIR
 
 
 def load_yaml(path):

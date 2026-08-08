@@ -492,7 +492,7 @@ check_declared_tools() {
   fi
 
   local rows section kind value name
-  if ! rows=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  if ! rows=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
     --manifest="$manifest_name" --verify-commands 2>&1); then
     log_error "Could not read the manifest's declared tools: $rows"
     return 1

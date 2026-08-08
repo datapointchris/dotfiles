@@ -39,7 +39,7 @@ The build log is unaffected — it goes to stderr either way, so it still reache
 the terminal — and the path is printed only after the cache prune finishes, so
 nothing downstream sees a bundle that is still being written.
 
-The builder is `install/offline/create_bundle.py`, run under the system
+The builder is `src/dotfiles/create_bundle.py`, run under the system
 `python3` for the same reason `parse_packages.py` is: that is the interpreter
 guaranteed to have PyYAML, and the builder imports `parse_packages` directly
 rather than shelling out to it. It was shell until the naming above proved the
@@ -63,7 +63,7 @@ cache. If you change the bundle format, that test is what catches it.
 `task windows:bundle` and `task windows:offline` are the same idea for the Git
 Bash side. See [Task Reference](../tools/tasks.md).
 
-`install/wsl/windows_bundle.py` builds it, sharing `install/github_release.py`
+`src/dotfiles/windows_bundle.py` builds it, sharing `src/dotfiles/github_release.py`
 with the Linux bundler — so a Windows asset is now verified against the checksum
 its release published, wherever one exists. The shell version it replaced
 verified nothing at all, which mattered most on exactly the network this page is

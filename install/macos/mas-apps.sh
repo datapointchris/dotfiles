@@ -39,7 +39,7 @@ while read -r app_id; do
     FAILED=$((FAILED + 1))
     log_error "Failed to install app $app_id"
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=mas)
+done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=mas)
 
 echo ""
 if [ $INSTALLED -gt 0 ]; then

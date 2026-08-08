@@ -10,7 +10,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 print_section "Installing macOS casks"
 
 log_info "Installing casks from packages.yml..."
-CASKS=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=macos-casks | tr '\n' ' ')
+CASKS=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=macos-casks | tr '\n' ' ')
 
 # shellcheck disable=SC2086
 if brew install --quiet --cask $CASKS; then

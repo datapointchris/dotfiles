@@ -28,12 +28,14 @@ Manifest-filtered usage:
     python parse_packages.py --manifest-field=platform --manifest=archlinux-personal-workstation
     python parse_packages.py --manifest-field=go_tools --manifest=wsl-work-workstation
 
-Note: This script requires PyYAML to be installed.
-    - Install scripts use /usr/bin/python3 which has PyYAML installed
-    - If running manually and getting "No module named 'yaml'", use:
-        /usr/bin/python3 install/parse_packages.py [args]
-      OR
-        uv run --python python3 install/parse_packages.py [args]
+Invoked as a module, never as a path, because it imports its siblings:
+
+    PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages [args]
+    uv run python -m dotfiles.parse_packages [args]
+
+The system interpreter is what the installers use, and it needs PyYAML — a
+declared system package, present in the Ubuntu rootfs, and pip-installed on
+macOS. "No module named 'yaml'" means that bootstrap has not run yet.
 """
 
 import argparse
@@ -42,11 +44,12 @@ from pathlib import Path
 
 import yaml
 
+from dotfiles import paths
+
 
 def get_packages_file():
-    """Find packages.yml relative to script location."""
-    script_dir = Path(__file__).parent
-    packages_file = script_dir / 'packages.yml'
+    """The catalog this repo declares, or exit saying where it looked."""
+    packages_file = paths.PACKAGES_FILE
     if not packages_file.exists():
         print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
         sys.exit(1)
@@ -61,9 +64,8 @@ def load_packages():
 
 
 def get_manifest_file(machine_name):
-    """Find machine manifest YAML relative to script location."""
-    script_dir = Path(__file__).parent
-    manifest_file = script_dir / 'manifests' / f'{machine_name}.yml'
+    """The named machine's manifest, or exit saying where it looked."""
+    manifest_file = paths.MANIFESTS_DIR / f'{machine_name}.yml'
     if not manifest_file.exists():
         print(f'Error: manifest not found at {manifest_file}', file=sys.stderr)
         sys.exit(1)

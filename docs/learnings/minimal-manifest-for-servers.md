@@ -73,7 +73,7 @@ from the manifest rather than leaving to be typed by hand — see
 
 - `install/manifests/linux-lxc-server.yml` — the minimal profile
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
-- `install/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
+- `src/dotfiles/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
 - `install.sh` / `update.sh` — `linux` platform branch and tier gating
 - `install/linux/system-packages.sh`, `shell/linux/linux.sh` — linux overlays
 - `src/dotfiles/symlinks/cli.py`, `src/dotfiles/symlinks/core.py` — optional-overlay link/relink

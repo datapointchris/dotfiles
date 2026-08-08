@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """GitHub release asset resolution and checksum verification.
 
-Imported by install/offline/create_bundle.py, which verifies assets while
+Imported by src/dotfiles/create_bundle.py, which verifies assets while
 building an offline bundle, and invoked as a CLI by
 install/common/lib/github-release-installer.sh, which verifies them while
 installing. Those were separate implementations — an awk program and Python —
@@ -14,7 +14,7 @@ bundle verified differently from a live install.
     github_release.py sha256 <file>
 
 Stdlib-only, and annotations are deferred: this runs under the system python3,
-still 3.9 on macOS. See install/offline/create_bundle.py.
+still 3.9 on macOS. See src/dotfiles/create_bundle.py.
 """
 
 from __future__ import annotations

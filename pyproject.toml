@@ -78,15 +78,6 @@ addopts = "-vv"
 minversion = "8.0"
 testpaths = ["tests"]
 markers = ["e2e: reaches the real network, a real HOME or a container; opt in with --e2e"]
-# The code under test is deployed to a machine, not installed as a package, so
-# it has no importable location. Naming the directories here lets a test say
-# `import create_bundle` instead of walking .parent up to the repo root and
-# guessing how many levels away it is.
-pythonpath = [
-    "install",
-    "install/offline",
-    "install/wsl",
-]
 
 
 [tool.refurb]

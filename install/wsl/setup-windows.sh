@@ -81,7 +81,7 @@ resolve_windows_dest() {
 # Mode: --bundle (download Windows binaries on an unblocked machine)
 # ================================================================
 build_bundle() {
-  /usr/bin/python3 "$DOTFILES_DIR/install/wsl/windows_bundle.py" "$1"
+  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.windows_bundle "$1"
 }
 
 # ================================================================
@@ -202,7 +202,7 @@ case "${1:-}" in
   --bundle)
     MODE="bundle"
     # Optional: default to a dated archive at the repo root, like the main
-    # offline bundler (install/offline/create_bundle.py). *.tar.gz is gitignored.
+    # offline bundler (src/dotfiles/create_bundle.py). *.tar.gz is gitignored.
     BUNDLE_DIR="${2:-$DOTFILES_DIR/dotfiles-windows-tools-v$(date +%Y%m%d).tar.gz}"
     ;;
   --offline)

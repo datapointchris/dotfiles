@@ -8,7 +8,7 @@ or: python3 tests/install/test_parse_packages_simple.py (if yaml is available)
 
 import sys
 
-import parse_packages
+from dotfiles import parse_packages
 
 
 def test_get_value():

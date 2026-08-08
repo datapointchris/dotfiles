@@ -19,7 +19,7 @@ BATS_LIB_DIR="$INSTALL_PREFIX/lib"
 
 # Repositories — read from packages.yml so they stay in sync with the SOT
 read_custom_field() {
-  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
     --custom-installer bats --field "$1"
 }
 

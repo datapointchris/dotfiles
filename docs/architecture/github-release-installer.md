@@ -165,7 +165,7 @@ These scripts use library helpers where applicable but handle their unique requi
 
 ## Bundler Contract
 
-`install/offline/create_bundle.py` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
+`src/dotfiles/create_bundle.py` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
 
 - `--print-url <os> <arch>` — required. Emits one line: `name|version|url`, or **exits non-zero**
   when it cannot resolve a version. That guard is not decoration: without it a failed lookup printed
@@ -382,7 +382,7 @@ Every download is checked against the SHA-256 the release published, before extr
 the installers level with `goselfupdate`, which each tool's own `update` command already uses — the
 two paths install the same binary and now trust it on the same terms.
 
-The rules below live in `install/github_release.py`, not in the shell library. Both the installer
+The rules below live in `src/dotfiles/github_release.py`, not in the shell library. Both the installer
 and the offline bundler need the same ones — one to verify a download, the other to record a digest
 the first will later trust — and they were separate implementations, awk and Python, until the
 bundler was rewritten. Two implementations of rules this fiddly can disagree without anything

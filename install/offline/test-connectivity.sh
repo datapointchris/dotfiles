@@ -9,7 +9,7 @@
 #
 # What a NO means depends on the section, which is why the section is in the output:
 # a blocked registry kills a whole install method, a blocked single repo kills one
-# tool. Feed the result to install/offline/create_bundle.py.
+# tool. Feed the result to src/dotfiles/create_bundle.py.
 #
 # Usage:
 #   bash test-connectivity.sh                              # wsl-work-workstation
@@ -58,7 +58,7 @@ FAILED=0
 RESULTS=()
 
 packages_query() {
-  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" "$@"
+  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages "$@"
 }
 
 record() {

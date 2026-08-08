@@ -26,10 +26,11 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import github_release
 import httpx2
 import pytest
 import yaml
+
+from dotfiles import github_release
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALLERS = REPO_ROOT / 'install' / 'common' / 'github-releases'

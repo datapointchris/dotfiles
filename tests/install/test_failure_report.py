@@ -9,7 +9,7 @@ Run with: pytest tests/install/test_failure_report.py
 
 import json
 
-import failure_report
+from dotfiles import failure_report
 
 
 def record(**overrides):

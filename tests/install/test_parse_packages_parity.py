@@ -23,8 +23,9 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-import parse_packages
 import pytest
+
+from dotfiles import parse_packages
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_NAMES = sorted(path.stem for path in (REPO_ROOT / 'install' / 'manifests').glob('*.yml'))
@@ -167,6 +168,8 @@ def test_the_command_line_prints_exactly_what_the_pure_seam_returns(current_answ
 
     Run under this interpreter rather than the /usr/bin/python3 the installers
     use: the contract under test is argv to stdout, not which python has PyYAML.
+    The installers reach the same module through `-m` with PYTHONPATH pointed at
+    src, because there is no distribution installed during a bootstrap.
     """
     sample = [
         Query('cargo'),
@@ -180,7 +183,7 @@ def test_the_command_line_prints_exactly_what_the_pure_seam_returns(current_answ
 
     for query in sample:
         result = subprocess.run(
-            [sys.executable, str(REPO_ROOT / 'install' / 'parse_packages.py'), *query.as_argv()],
+            [sys.executable, '-m', 'dotfiles.parse_packages', *query.as_argv()],
             capture_output=True,
             text=True,
             check=True,

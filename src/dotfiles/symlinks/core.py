@@ -2,15 +2,16 @@
 
 import contextlib
 import fnmatch
-import os
 from pathlib import Path
 from typing import NamedTuple
 
 from rich import print
 
+from dotfiles import paths
+
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-DOTFILES_DIR = Path(os.environ.get('DOTFILES', Path.home() / 'dotfiles')).resolve()
+DOTFILES_DIR = paths.REPO_ROOT
 TARGET_DIR = Path.home().resolve()
 SEARCH_DEPTH = 5
 

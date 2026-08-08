@@ -266,7 +266,7 @@ already the update mechanism, which is what `dotfiles pull` wraps.
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
 | Composite operations | `install/ops/` — shared by both front doors |
 | Symlink management | `src/dotfiles/symlinks/cli.py` |
-| Package queries | `install/parse_packages.py` — types, manifests, owners |
+| Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Registry drift | `packages verify` — packages.yml vs manifests vs scripts |
 | Machine drift | `packages missing` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |

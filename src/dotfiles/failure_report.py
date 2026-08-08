@@ -17,7 +17,7 @@ and splitting several failures apart needed an awk state machine. A file of JSON
 objects has none of those problems, and the path is in an environment variable
 rather than a file descriptor, so it can be printed and read.
 
-Stdlib-only; see install/offline/create_bundle.py.
+Stdlib-only; see src/dotfiles/create_bundle.py.
 """
 
 from __future__ import annotations

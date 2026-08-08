@@ -89,7 +89,7 @@ telling several failures apart needed an awk state machine.
 
 Records now go to a JSON file named by `$FAILURE_RECORDS`, which leaves stdout and stderr
 carrying only what a person reads — so they are merged, shown live, and kept whole for the
-report. `install/failure_report.py` writes and renders them; the shell wrappers are a line
+report. `src/dotfiles/failure_report.py` writes and renders them; the shell wrappers are a line
 each. The stdout-versus-stderr trap that caused two of the rounds above cannot recur, because
 nothing decides anything based on which of the two a line arrived on.
 

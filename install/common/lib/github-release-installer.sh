@@ -13,12 +13,13 @@ source "$SCRIPT_DIR/missing-tools.sh"
 # here: two implementations could disagree silently, and a bundle would then
 # verify differently from a live install. /usr/bin/python3 for the same reason
 # parse_packages.py uses it.
-GITHUB_RELEASE_PY=(/usr/bin/python3 "${DOTFILES_DIR:-$(cd "$SCRIPT_DIR/../../.." && pwd)}/install/github_release.py")
+GITHUB_RELEASE_ROOT="${DOTFILES_DIR:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+GITHUB_RELEASE_PY=(env "PYTHONPATH=$GITHUB_RELEASE_ROOT/src" /usr/bin/python3 -m dotfiles.github_release)
 
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
-# Digests recorded by install/offline/create_bundle.py, each already checked
+# Digests recorded by src/dotfiles/create_bundle.py, each already checked
 # against the checksum its release published. Learning which asset holds that
 # checksum costs a release API call, so a network that blocks GitHub cannot
 # verify a cached binary at all — every offline install would fail on a missing

@@ -19,7 +19,7 @@ sudo pacman -S --needed --noconfirm python-yaml
 
 # Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=pacman --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
+PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=pacman --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
 # shellcheck disable=SC2086
 sudo pacman -S --needed --noconfirm $PACKAGES
 
@@ -57,7 +57,7 @@ else
   mkdir -p "$GNUPGHOME"
   chmod 700 "$GNUPGHOME"
 
-  AUR_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=aur --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
+  AUR_PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=aur --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
   if [[ -n "$AUR_PACKAGES" ]]; then
     # shellcheck disable=SC2086
     yay -S --needed --noconfirm $AUR_PACKAGES

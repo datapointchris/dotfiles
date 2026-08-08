@@ -115,7 +115,7 @@ mkdir -p "$ZSH_CUSTOM"
 print_banner "Installing Shell Plugins"
 
 # Read plugins from packages.yml (name|repo format)
-/usr/bin/python3 "$DOTFILES_DIR/install/parse-packages.py" --type=shell-plugins --format=name_repo | while IFS='|' read -r name repo; do
+PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=shell-plugins --format=name_repo | while IFS='|' read -r name repo; do
   PLUGIN_DIR="$ZSH_CUSTOM/$name"
 
   if [[ -d "$PLUGIN_DIR" ]]; then
@@ -250,7 +250,7 @@ mkdir -p "$ZSH_CUSTOM"
 print_banner "Installing Shell Plugins"
 
 # Parse shell plugins from packages.yml (returns "name|repo" pairs)
-/usr/bin/python3 "$DOTFILES_DIR/install/parse-packages.py" --type=shell-plugins --format=name_repo | while IFS='|' read -r name repo; do
+PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=shell-plugins --format=name_repo | while IFS='|' read -r name repo; do
   PLUGIN_DIR="$ZSH_CUSTOM/$name"
 
   if [[ -d "$PLUGIN_DIR" ]]; then

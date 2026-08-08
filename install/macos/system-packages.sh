@@ -30,7 +30,7 @@ while IFS= read -r tap; do
   else
     log_warning "Failed to tap $tap"
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --taps)
+done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --taps)
 
 # Step 3: Install system packages from packages.yml.
 # Try one batched install for speed, but a batched `brew install` aborts before
@@ -44,7 +44,7 @@ log_info "Installing system packages from packages.yml..."
 SYSTEM_PACKAGES=()
 while IFS= read -r pkg; do
   [[ -n "$pkg" ]] && SYSTEM_PACKAGES+=("$pkg")
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew --tier="${SYSTEM_PACKAGE_TIER:-workstation}")
+done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=brew --tier="${SYSTEM_PACKAGE_TIER:-workstation}")
 
 if brew install --quiet "${SYSTEM_PACKAGES[@]}"; then
   log_success "System packages installed"

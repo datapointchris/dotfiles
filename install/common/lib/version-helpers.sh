@@ -84,7 +84,7 @@ pinned_release_tag() {
   # would quietly install latest over a pin — the failure this whole path exists
   # to prevent, reintroduced one level down.
   local pinned
-  if ! pinned=$(/usr/bin/python3 "${DOTFILES_DIR}/install/parse_packages.py" --github-release="$tool" --field=version --optional 2>/dev/null); then
+  if ! pinned=$(env PYTHONPATH="${DOTFILES_DIR}/src" /usr/bin/python3 -m dotfiles.parse_packages --github-release="$tool" --field=version --optional 2>/dev/null); then
     echo "cannot read $DOTFILES_DIR/install/packages.yml with /usr/bin/python3, so whether $tool is pinned is unknown" >&2
     return 2
   fi

@@ -7,7 +7,7 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
-import github_release
+from dotfiles import github_release
 
 
 class TestChecksumAssetSelection:

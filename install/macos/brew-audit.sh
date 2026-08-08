@@ -12,7 +12,7 @@ log_info "Getting installed formulae..."
 INSTALLED=$(brew list --formula | sort)
 
 log_info "Getting packages from packages.yml..."
-EXPECTED=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew | sort)
+EXPECTED=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=brew | sort)
 
 echo ""
 log_info "=== INSTALLED BUT NOT IN packages.yml ==="

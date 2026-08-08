@@ -11,8 +11,9 @@ import datetime as dt
 import tarfile
 import zipfile
 
-import create_bundle
 import pytest
+
+from dotfiles import create_bundle
 
 
 class TestPlatform:

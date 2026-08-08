@@ -24,7 +24,7 @@ log_info "Installing bootstrap packages..."
 sudo apt install -y python3-yaml
 
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=apt --tier="$TIER" | tr '\n' ' ')
+PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=apt --tier="$TIER" | tr '\n' ' ')
 
 # shellcheck disable=SC2086
 if sudo apt install -y $PACKAGES; then

@@ -2,7 +2,7 @@
 # Universal Package Configuration
 # ================================================================
 # Single source of truth for ALL packages across ALL platforms
-# Parsed by install/parse_packages.py
+# Parsed by src/dotfiles/parse_packages.py
 
 # ================================================================
 # MACOS HOMEBREW TAPS
@@ -28,7 +28,7 @@ system_packages:
   #   (no tier)    -> workstation-only extras (the default). Kept off servers.
   # A manifest picks its tier via `system_packages: core|workstation`; a
   # workstation request installs everything, a core request only the tagged
-  # base. See install/parse_packages.py:get_system_packages.
+  # base. See src/dotfiles/parse_packages.py:get_system_packages.
 
   # Essential Build Tools
   - name: build-essential
@@ -923,7 +923,7 @@ github_releases:
 #                        bucket (latest/ path, no version lookup), GPG-verified
 #
 # bundle_install_script: true marks installers whose downloadable script should
-# be cached in offline bundles (see install/offline/create_bundle.py).
+# be cached in offline bundles (see src/dotfiles/create_bundle.py).
 
 custom_installers:
   - name: awscli
@@ -1635,7 +1635,7 @@ macos_casks:
 # NOTES
 # ================================================================
 # This file is the single source of truth for package installation
-# Parsed by install/parse_packages.py (Python)
+# Parsed by src/dotfiles/parse_packages.py (Python)
 #
 # Package Management Philosophy:
 #   - System packages: apt/pacman/brew for OS-level tools (see system_packages)

@@ -3,7 +3,7 @@ set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
-FONT_INSTALL_URL=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+FONT_INSTALL_URL=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
   --custom-installer font --field install_url) \
   || {
     echo "Error: could not read font.install_url from packages.yml" >&2

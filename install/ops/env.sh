@@ -74,15 +74,15 @@ main() {
 
   case "$verb" in
     show)
-      "$python" install/render_env.py --machine "$machine"
+      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine"
       ;;
     sync)
       print_section "Syncing ~/.env" "brightcyan"
-      "$python" install/render_env.py --machine "$machine" --sync
+      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine" --sync
       ;;
     check)
       print_section "Checking ~/.env" "brightcyan"
-      "$python" install/render_env.py --machine "$machine" --check
+      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine" --check
       ;;
     *)
       log_error "Unknown verb: $verb"

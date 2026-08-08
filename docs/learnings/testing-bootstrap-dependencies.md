@@ -30,7 +30,7 @@ python3 parse_packages.py --type=system --manager=apt
 
 To ensure parse_packages.py works across all platforms regardless of which Python is in PATH:
 
-**1. Use system Python via shebang** (`install/parse_packages.py:1`):
+**1. Use system Python via shebang** (`src/dotfiles/parse_packages.py:1`):
 
 ```python
 #!/usr/bin/python3  # System Python, not #!/usr/bin/env python3
@@ -84,7 +84,7 @@ This provides **100% accurate testing** - if it fails in the test, it will fail 
 **4. Verify the script works** (`tests/install/verification/verify-installed-packages.sh`):
 
 ```bash
-if python3 "$HOME/dotfiles/install/parse_packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+if python3 -m dotfiles.parse_packages --type=system --manager=apt >/dev/null 2>&1; then
   print_success "parse_packages.py: working (yaml module available)"
 else
   print_error "parse_packages.py: FAILED (yaml module missing)"
@@ -157,5 +157,5 @@ Best practice for testing system installations:
 - `tests/install/README.md` - Full install-test suite (e2e, integration, unit)
 - `install/wsl/` - WSL installation scripts
 - `tests/install/verification/verify-installed-packages.sh` - Installation verification
-- `install/parse_packages.py` - Package list parser
+- `src/dotfiles/parse_packages.py` - Package list parser
 - `docs/development/testing.md` - Testing documentation

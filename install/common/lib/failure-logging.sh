@@ -16,11 +16,12 @@
 #
 # The record is appended to $FAILURE_RECORDS, which run-installer.sh sets and
 # then renders. Nothing is written when that is unset, so an installer run by
-# hand prints its failure instead. See install/failure_report.py.
+# hand prints its failure instead. See src/dotfiles/failure_report.py.
 #
 # Note: Libraries that are sourced should not set shell options.
 
-FAILURE_REPORT_PY=(/usr/bin/python3 "${DOTFILES_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}/install/failure_report.py")
+FAILURE_REPORT_ROOT="${DOTFILES_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+FAILURE_REPORT_PY=(env "PYTHONPATH=$FAILURE_REPORT_ROOT/src" /usr/bin/python3 -m dotfiles.failure_report)
 
 output_failure_data() {
   "${FAILURE_REPORT_PY[@]}" record "$1" "$2" "${3:-unknown}" "${4:-Installation failed}" "${5:-}"

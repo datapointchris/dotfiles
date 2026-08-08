@@ -157,7 +157,7 @@ verify_declared_packages() {
   fi
 
   local rows section kind value name last_section=""
-  if ! rows=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  if ! rows=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
     --manifest="$manifest_name" --verify-commands 2>&1); then
     log_error "Could not read the manifest's declared commands: $rows"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
@@ -424,7 +424,7 @@ print_section "Package Management Scripts (Universal)"
 
 # Test parse_packages.py can run and import yaml
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if /usr/bin/python3 "$HOME/dotfiles/install/parse_packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+if env PYTHONPATH="$HOME/dotfiles/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=apt >/dev/null 2>&1; then
   log_success "parse_packages.py: working (yaml module available)"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
