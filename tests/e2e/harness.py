@@ -42,6 +42,7 @@ ASSET_CDN_HOSTS = (
 # that cannot find `uv` reports the machine broken when only the harness was.
 CONTAINER_PATH_DIRS = (
     '$HOME/.local/share/fnm/aliases/default/bin',
+    '$HOME/.local/share/npm/bin',
     '$HOME/.local/bin',
     '$HOME/.cargo/bin',
     '$HOME/go/bin',

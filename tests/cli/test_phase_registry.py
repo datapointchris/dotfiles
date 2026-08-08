@@ -170,3 +170,41 @@ def test_a_bare_true_system_packages_still_means_the_full_set() -> None:
     assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': True}).system_tier == 'workstation'
     assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': 'core'}).system_tier == 'core'
     assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': False}).system_tier == ''
+
+
+def test_every_directory_an_installer_writes_binaries_to_is_on_the_phase_path() -> None:
+    """A phase installing into a directory no later phase can see is a silent
+    failure, and it happened: npm-install-globals.sh sets its own
+    NPM_CONFIG_PREFIX, `.zshrc` adds that prefix's bin for interactive shells,
+    and nothing else did. All eleven language servers installed correctly and
+    every non-interactive check — including the install's own verification —
+    reported them missing.
+
+    The prefix is read out of the installer rather than restated here, so moving
+    it fails this instead of going unnoticed until a container reports sixteen
+    missing tools.
+    """
+    installer = (paths.INSTALL_DIR / 'common' / 'language-tools' / 'npm-install-globals.sh').read_text()
+    declared = [line for line in installer.splitlines() if 'NPM_CONFIG_PREFIX=' in line and 'export' in line]
+    assert declared, 'npm-install-globals.sh no longer sets a prefix; this test needs rewriting'
+
+    prefix = declared[0].split('=', 1)[1].strip().strip('"')
+    assert f'{prefix}/bin' in apply.TOOL_PATH_DIRS, f'{prefix}/bin is where npm globals land, and no phase can see it'
+
+
+def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:
+    """`.zshenv` is the PATH a script, an SSH command, a timer and an LSP spawned
+    outside a login shell all get. Anything only `.zshrc` adds exists for a human
+    at a prompt and for nobody else.
+    """
+    zshenv = (paths.REPO_ROOT / 'configs' / 'common' / '.config' / 'zsh' / '.zshenv').read_text()
+    exported = [line for line in zshenv.splitlines() if line.startswith('export PATH=')]
+    assert exported, '.zshenv no longer sets PATH'
+
+    # /usr/local/go/bin is deliberately absent: `go` is reached through the
+    # symlink the release installer puts in ~/.local/bin, and .zshenv is meant to
+    # stay minimal.
+    for directory in apply.TOOL_PATH_DIRS:
+        if directory.startswith('/usr'):
+            continue
+        assert directory in exported[0], f'{directory} is on the phase PATH but not on a non-interactive shell PATH'

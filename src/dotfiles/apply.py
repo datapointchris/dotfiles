@@ -48,6 +48,7 @@ from dotfiles.vocabulary import ExitCode
 
 TOOL_PATH_DIRS = (
     '$HOME/.local/share/fnm/aliases/default/bin',
+    '$HOME/.local/share/npm/bin',
     '$HOME/.local/bin',
     '$HOME/.cargo/bin',
     '$HOME/go/bin',
