@@ -29,7 +29,7 @@ get_fzf_tmux_url() {
 if [[ "${1:-}" == "--print-url" ]]; then
   OS="${2:-linux}"
   ARCH="${3:-x86_64}"
-  VERSION=$(fetch_github_latest_version "$REPO")
+  VERSION=$(fetch_github_latest_version "$REPO") || exit 1
   URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
   echo "$BINARY_NAME|$VERSION|$URL"
   exit 0
@@ -40,7 +40,7 @@ fi
 # create_bundle.py fetches each into the offline cache so install_fzf_tmux()
 # below can resolve them via cache when the network is restricted.
 if [[ "${1:-}" == "--print-extras" ]]; then
-  VERSION=$(fetch_github_latest_version "$REPO")
+  VERSION=$(fetch_github_latest_version "$REPO") || exit 1
   echo "fzf-tmux|$VERSION|$(get_fzf_tmux_url "$VERSION")"
   exit 0
 fi

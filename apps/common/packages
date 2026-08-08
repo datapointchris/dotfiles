@@ -619,6 +619,52 @@ def get_section_ids(data: dict[str, Any], section: str) -> set[str]:
     }
 
 
+VERSION_CONSTRAINTS = ("version", "min_version", "max_version")
+
+# Which constraint keys each section honours today. Enforcement arrives per
+# section because each one pins by a different mechanism, and a key declared
+# where nothing reads it is an error rather than a no-op: four such fields sat in
+# packages.yml unread until a URL audit found them, one of them eight versions
+# stale. .planning/version-constraints.md carries the vocabulary.
+HONOURED_CONSTRAINTS: dict[str, tuple[str, ...]] = {
+    "github_releases": ("version",),
+}
+
+# Floors that predate enforcement. Both are satisfied, so they mislead nobody,
+# and naming them here keeps the information alive for the resolver instead of
+# deleting it to silence a check.
+GRANDFATHERED_CONSTRAINTS = {
+    ("github_releases", "neovim", "min_version"),
+    ("github_releases", "fzf", "min_version"),
+}
+
+
+def check_version_constraints(section: str, label: str, entry: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
+    declared = [key for key in VERSION_CONSTRAINTS if key in entry]
+    if not declared:
+        return
+
+    honoured = HONOURED_CONSTRAINTS.get(section, ())
+    for key in declared:
+        if key in honoured or (section, label, key) in GRANDFATHERED_CONSTRAINTS:
+            continue
+        issues.append((section, "error",
+                       f"{label}: '{key}' is declared but nothing honours it for {section}. "
+                       f"Remove it, or make it real and widen HONOURED_CONSTRAINTS in the same change."))
+
+    if "version" in entry and ({"min_version", "max_version"} & entry.keys()):
+        issues.append((section, "error",
+                       f"{label}: 'version' pins exactly, so a floor or ceiling beside it "
+                       f"describes a window nobody can predict. Declare one or the other."))
+
+    for key in declared:
+        value = str(entry[key])
+        if value.startswith("v") or "/" in value:
+            issues.append((section, "error",
+                           f"{label}: '{key}' is '{value}', which is a tag. Constraints are bare "
+                           f"versions — resolving one to this tool's tag spelling is the resolver's job."))
+
+
 def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[str, str, str]]) -> None:
     """Tier 1 checks 1 and 2: required fields + no duplicate ids within a section."""
     spec = SECTION_SPECS[section]
@@ -642,6 +688,8 @@ def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[s
             if not any(f in entry for f in any_of_group):
                 issues.append((section, "error",
                                f"{label}: must have at least one of {list(any_of_group)}"))
+
+        check_version_constraints(section, str(label), entry, issues)
 
         for field, reason in forbidden.items():
             if field in entry:

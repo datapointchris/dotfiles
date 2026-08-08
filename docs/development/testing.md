@@ -53,6 +53,25 @@ Python-side coverage for `install/parse_packages.py`, `apps/common/packages`
 uv run pytest tests/
 ```
 
+### The `e2e` marker
+
+A test that reaches the real network is marked `@pytest.mark.e2e` and is **deselected unless
+`--e2e` is passed**, so a commit never depends on GitHub being reachable or on a rate limit:
+
+```sh
+uv run pytest --e2e
+```
+
+Two suites live behind it. `tests/install/test_release_urls.py` asks every release installer what it
+would download, for every platform whose manifest declares it, and asserts both that the URL serves
+the asset and that the filename is exactly the one the release published — the second catching what
+the first cannot, since GitHub resolves asset paths case-insensitively.
+`tests/install/test_version_pinning.py` proves a declared pin is what installs.
+
+The deselection is implemented in `tests/conftest.py` rather than as `-m 'not e2e'` in `addopts`,
+because forge owns `addopts` — a deselection written there is erased by the next
+`sync-pyproject` run.
+
 **Logic belongs here rather than in BATS, and moving it is the cheaper fix.**
 The offline bundler was shell until the cost showed: verifying a checksum parser
 written in awk meant a fixture tree and a subprocess per case, while the same

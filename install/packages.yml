@@ -743,6 +743,12 @@ runtimes:
 # so they drifted into describing assets that no longer existed. Naming an asset
 # from data would mean the URL vocabulary living here too; that trade is the
 # rejected alternative in docs/architecture/github-release-installer.md.
+#
+# Latest is the default. An entry pins itself with `version:` — a bare version,
+# never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0
+# by the personal CLIs. This is the one section where a pin is honoured today;
+# `packages verify` rejects one written anywhere it is not. Vocabulary and the
+# reasoning: .planning/version-constraints.md.
 
 github_releases:
   - name: neovim
@@ -755,7 +761,6 @@ github_releases:
 
   - name: lazygit
     repo: jesseduffield/lazygit
-    version: "0.56.0"
     install_script: install-lazygit.sh
     description: Terminal UI for git
     tags: [cli, tui, git]
@@ -799,7 +804,6 @@ github_releases:
 
   - name: terraformer
     repo: GoogleCloudPlatform/terraformer
-    version: "0.8.30"
     install_script: install-terraformer.sh
     description: Generate Terraform from existing infrastructure
 

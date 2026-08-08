@@ -104,8 +104,9 @@ def checksum_for_asset(checksums_text: str, asset_name: str, from_sidecar: bool 
     Three fallbacks, each earned by a real release. A leading path is stripped
     only after an exact match fails, because `sha256sum ./*.tar.gz` in CI records
     ./tool.tar.gz for an asset published as tool.tar.gz. Case is ignored last,
-    because GitHub resolves asset paths case-insensitively and lazygit is
-    downloaded as Linux_x86_64 while recorded as linux_x86_64.
+    because GitHub resolves asset paths case-insensitively, so a misspelled
+    asset downloads fine and then misses its checksum line — lazygit fetched
+    Linux_x86_64 against a recorded linux_x86_64 until its URL was corrected.
 
     A digest on a line of its own names no asset, so in a combined file it could
     belong to any of them and is only trusted when nothing else is there.

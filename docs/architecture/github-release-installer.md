@@ -46,11 +46,11 @@ Handles platform/architecture detection with customizable capitalization.
 PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
 ```
 
-**Why it exists:** Different GitHub projects use different naming conventions:
-
-- `lazygit`: `Darwin_x86_64`
-- `duf`: `darwin_x86_64` (lowercase)
-- `zk`: `macos-x86_64` (different platform name)
+**Why it exists:** Different GitHub projects use different naming conventions — `darwin_x86_64`
+against `macos-x86_64` against `Darwin_arm64`, and `zk` spells its architecture differently per OS.
+In practice the variation defeated the helper: only `glow` still calls it
+(`rg -l get_platform_arch install/common/github-releases/`), and every other installer writes a
+`get_download_url` function instead, because that is also what `--print-url` needs.
 
 #### 2. `get_latest_version()`
 
@@ -143,40 +143,14 @@ ARCH=$(get_arch)
 
 ### Simple Tarball Installer
 
-Most common pattern (majority of tools):
+`install/common/github-releases/lazygit.sh` is the canonical one — read it rather than a copy here,
+which is how a template drifts into naming functions no script calls.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
-enable_error_traps
-source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
-
-BINARY_NAME="lazygit"
-REPO="jesseduffield/lazygit"
-TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
-
-print_banner "Installing LazyGit"
-
-if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
-fi
-
-VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
-
-PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
-
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit"
-
-print_banner_success "LazyGit installation complete"
-exit_success
-```
-
-**Lines:** ~40-50 (was 90-120)
+The shape: declare `BINARY_NAME` and `REPO`, define `get_download_url version os arch`, handle
+`--print-url` before sourcing anything that logs, then source the logging libraries, resolve a
+version, skip if already installed, and hand off to `install_from_tarball`. `get_download_url` is
+written as a function taking `os` and `arch` rather than reading the running machine, because
+`--print-url` has to answer for a platform the bundler is not standing on.
 
 ### Custom Installer (Special Cases)
 
@@ -193,7 +167,11 @@ These scripts use library helpers where applicable but handle their unique requi
 
 `install/offline/create_bundle.py` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
 
-- `--print-url <os> <arch>` — required. Emits one line: `name|version|url`. The bundler downloads `url` into `installers/binaries/`. See `install/common/github-releases/lazygit.sh` for the canonical implementation.
+- `--print-url <os> <arch>` — required. Emits one line: `name|version|url`, or **exits non-zero**
+  when it cannot resolve a version. That guard is not decoration: without it a failed lookup printed
+  `releases/download//tool__linux_x86_64.tar.gz` and exited 0, which the bundler then cached. Any
+  rate-limited run did this. See `install/common/github-releases/lazygit.sh` for the canonical
+  implementation.
 - `--print-extras <os> <arch>` — optional. Emits zero or more lines in the same `name|version|url` format for companion files that aren't included in the release tarball. The bundler downloads each into `installers/binaries/` alongside the main artifact. The fzf installer uses this for `fzf-tmux`, the popup wrapper script that the tmux `prefix+s` binding calls — it lives in the fzf repo but is not bundled into release tarballs.
 
 Both flags must be handled *before* the script sources logging/error-handling libraries and before any installation logic, so invocation is fast and side-effect-free. The bundler grep-detects `--print-extras` support before invoking it; scripts without the flag are skipped (calling them would otherwise fall through to their full install path).
@@ -221,7 +199,9 @@ Each asset's progress line is emitted by the download helper rather than its cal
 
 ## Code Savings
 
-The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
+The library exists because each script had duplicated platform detection, version fetching, download
+and installation. An earlier iteration over-corrected into 16 functions and was cut back; what
+survives is the set that every script actually calls.
 
 See `install/common/github-releases/` for all current scripts.
 
@@ -283,18 +263,30 @@ neither was read, neither was validated, and both drifted into naming assets tha
 longer existed. A field that only looks like configuration is worse than none, because
 it reads as authoritative to whoever edits the file next.
 
-### Why Not Version Checking?
+### Version Pinning
 
-**Rejected:** Minimum version requirements, complex version comparison
+**Latest is the default.** An entry that declares nothing installs whatever the release API calls
+newest, which is what almost every entry wants.
 
-**Chosen:** Always install latest from GitHub API
+**A `version:` in `packages.yml` is honoured, exactly.** The capability is operational rather than
+theoretical: a machine has to be able to hold a known-good release while upstream is broken, and an
+older distro has to be able to run an older build than the rest of the fleet. `pinned_release_tag`
+in `version-helpers.sh` is where it lands — inside the two shared version-lookup functions, so all
+of the installers inherit it without a per-script edit, exactly as the `OFFLINE_MODE` short-circuit
+beside it does.
 
-**Rationale:**
+The constraint is a **bare version, never a tag**, because the same release is spelled `v0.56.0` by
+lazygit, `0.8.30` by terraformer and `cli/v0.9.0` by the personal CLIs. Matching it against
+published tags is what lets one spelling work everywhere.
 
-- Simpler code
-- Latest is usually what you want
-- Can pin specific version by editing script if needed
-- Reduces maintenance burden
+Two failure modes are deliberate, and both are loud: a pin no release matches aborts rather than
+falling through to latest, and a `packages.yml` that cannot be read aborts rather than assuming
+nothing is pinned. Falling through is the exact outcome a pin exists to prevent.
+
+The earlier answer here was "always latest, pin by editing the script", and the cost of that showed
+up in the data: `version:` and `min_version:` sat on four entries that no code read, one of them
+eight versions stale. `packages verify` now rejects a constraint declared in any section that does
+not honour one.
 
 ### Why Inline Download/Extract/Install?
 
@@ -356,14 +348,9 @@ Auto-detects terminal vs pipe:
 2. Use template pattern (see Simple Tarball Installer above)
 3. Configure: BINARY_NAME, REPO, download URL pattern
 4. Handle special cases inline if needed
-5. Test on all platforms
-
-### Time Required
-
-- **Before library:** 30-60 minutes (80-120 lines of boilerplate)
-- **After library:** 5-10 minutes (40-50 lines, mostly copy-paste)
-
-**6x faster**
+5. Add the entry to `packages.yml` and subscribe a manifest to it
+6. Run `uv run pytest tests/install/test_release_urls.py --e2e`, which asserts the URL the new
+   script builds serves the asset the release actually published, on every platform declaring it
 
 ## Testing
 
@@ -416,8 +403,12 @@ Those are excluded by suffix, or the asset would be compared against a signature
 `*` binary marker, then the name. A CI step written as `sha256sum ./*.tar.gz` records `./tool.tar.gz`
 while the asset is named `tool.tar.gz`, so an exact match is tried first and the base name only
 consulted when nothing matched exactly. A case-insensitive match is the last resort: GitHub resolves
-release asset paths case-insensitively, so lazygit downloads as `Linux_x86_64` while its checksums
-file records `linux_x86_64`, and rejecting that discards a checksum the project did publish.
+release asset paths case-insensitively, so an installer can download an asset under a spelling the
+checksums file never records, and rejecting that discards a checksum the project did publish.
+lazygit is where this came from — it was fetched as `Linux_x86_64` against a published
+`linux_x86_64` until its URL builder was corrected. Note what that cost: because the download
+succeeded anyway, the mismatch was invisible, and the asset-id lookup that private repos need
+silently never matched.
 
 **Offline.** A cached file is verified against `installers/checksums.txt`, never the network —
 discovering which asset holds a checksum costs a release API call, and the network a bundle exists
@@ -434,8 +425,8 @@ failed. A release publishing no checksum file at all is a different case, decide
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `CHECKSUM_REQUIRED` | `true` | `false` permits an install with a warning when upstream publishes nothing. Set only with a comment saying why. Currently `shellcheck`, `zk`, `win32yank`. |
-| `CHECKSUM_URL` | unset | Names the checksums file directly, for a release not on GitHub where the asset list cannot be queried. Currently `terraform-ls`. |
+| `CHECKSUM_REQUIRED` | `true` | `false` permits an install with a warning when upstream publishes nothing. Set only with a comment saying why. Who sets it: `rg -l 'CHECKSUM_REQUIRED=false' install/common/`. |
+| `CHECKSUM_URL` | unset | Names the checksums file directly, for a release not on GitHub where the asset list cannot be queried. Who sets it: `rg -l 'CHECKSUM_URL=' install/common/`. |
 
 Defaulting to required means a project that *starts* publishing checksums is covered automatically,
 and one that *stops* fails loudly instead of silently downgrading.
@@ -456,15 +447,13 @@ asset — that needs a signature verified against a key distributed out of band.
 ### Not Recommended
 
 - ❌ Complex packages.yml parsing - contradicts straightforward principle
-- ❌ Automatic version checking/upgrades - adds complexity
 - ❌ Rollback capability - idempotency is sufficient
 - ❌ More abstraction layers - keep it simple
 
 ## Related Documentation
 
 - [Shell Libraries](shell-libraries.md)
-- [Shell Libraries](shell-libraries.md)
-- Production-Grade Management Enhancements (planning doc)
+- [Package Management](package-management.md)
 
 ## Files
 

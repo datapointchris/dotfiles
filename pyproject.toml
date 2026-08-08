@@ -5,13 +5,10 @@ description = "Cross-platform dotfiles with comprehensive tooling and documentat
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "markdown>=3.10",
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.23",
-    "mkdocstrings[python]>=0.30.1",
-    "pygments>=2.19.2",
-    "pymdown-extensions>=10.16.1",
+    "httpx2>=2.9.1",
+    "pyyaml>=6.0.3",
     "rich>=13.0.0",
+    "structlog>=25.0.0",
     "typer>=0.12.0",
 ]
 
@@ -39,11 +36,12 @@ check-filenames = true
 [tool.coverage.run]
 parallel = true
 branch = true
-source = ["symlinks"]
+source = ["install", "symlinks"]
 omit = []
 
 [tool.coverage.paths]
-source = ["symlinks"]
+install = ["install"]
+symlinks = ["symlinks"]
 
 [tool.coverage.report]
 fail_under = 70
@@ -79,6 +77,7 @@ analyzeUnannotatedFunctions = true  # or pylance stops analyzing in vscode
 addopts = "-vv"
 minversion = "8.0"
 testpaths = ["tests"]
+markers = ["e2e: reaches the real network, a real HOME or a container; opt in with --e2e"]
 # The code under test is deployed to a machine, not installed as a package, so
 # it has no importable location. Naming the directories here lets a test say
 # `import create_bundle` instead of walking .parent up to the repo root and
@@ -171,6 +170,22 @@ dev = [
     # with importlib, so its imports resolve against THIS environment instead.
     "pytermstyle",
 ]
+
+# mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this
+# package to a machine that never builds the site.
+docs = [
+    "markdown>=3.10",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.23",
+    "mkdocstrings[python]>=0.30.1",
+    "pygments>=2.19.2",
+    "pymdown-extensions>=10.16.1",
+]
+
+[tool.uv]
+# pre-commit's mkdocs-strict hook, deploy-docs.yml and install/ops/docs.sh all
+# run a bare `uv run mkdocs`, so the docs group has to be synced by default.
+default-groups = ["dev", "docs"]
 
 [tool.uv.sources]
 # Pinned to a tag rather than tracking main, so a push to pytermstyle cannot

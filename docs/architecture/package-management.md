@@ -277,42 +277,33 @@ All package versions, repositories, and configurations are centralized in `insta
 
 **Every installation type is catalogued in packages.yml, including custom installers.** There is no auto-detection anywhere: `install.sh`, `update.sh`, and `install/offline/create_bundle.py` all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see [Drift Detection](#drift-detection) below.
 
-Package definitions in packages.yml:
+Read the file for the entries; the header comment on each section states what its fields mean. What
+is worth stating here is the part that is not obvious from any single entry.
 
-```yaml
-runtimes:
-  go:
-    min_version: "1.23"
-  node:
-    version: "24.11.0"
-  python:
-    min_version: "3.12"
+### Version constraints
 
-github_releases:
-  - name: neovim
-    repo: neovim/neovim
-    version: "0.11.0"
-  - name: lazygit
-    repo: jesseduffield/lazygit
-    version: "0.44.1"
-  # ... more tools
+**Latest is the default.** An entry that declares no constraint installs whatever upstream calls
+newest, and almost every entry declares none.
 
-cargo_packages:
-  - name: bat
-    command: bat
-    description: cat with syntax highlighting
-  - name: fd-find
-    command: fd
-    description: modern find replacement
-  # ... more tools (bat, eza, zoxide, git-delta, oxker, broot)
+Three optional keys express the exceptions, valid in principle on any entry:
 
-uv_tools:
-  - name: ruff
-    package: ruff
-  # ... more tools
-```
+| key | means |
+| --- | --- |
+| `version` | install exactly this |
+| `min_version` | a resolved version below this is a problem, not drift |
+| `max_version` | resolve to the newest release at or below this |
 
-All installation scripts read from this single source. Change a version once, and it applies everywhere.
+`version` is exclusive with the other two — a pin already answers both bounds, and accepting all
+three describes a window nobody can predict. Values are **bare versions, never tags and never
+operators**: `0.56.0`, not `v0.56.0`, `cli/v0.9.0` or `>=0.56.0`. The same release is spelled three
+different ways across this catalog, so resolving a version to a tag is the resolver's job, not the
+declaration's.
+
+Enforcement arrives per section, because pinning means a different mechanism in each
+(`cargo install --version`, `go install pkg@v1.2.3`, `uv tool install pkg==1.2.3`). Exact pins are
+honoured for `github_releases` today. **`packages verify` rejects a constraint declared in a section
+that does not yet honour one** — that rule is the whole design, because the failure it prevents
+already happened: four version fields sat in this file unread, one of them eight versions stale.
 
 ### Drift Detection
 

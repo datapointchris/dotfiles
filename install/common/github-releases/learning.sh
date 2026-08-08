@@ -31,7 +31,7 @@ go_arch_for() {
 if [[ "${1:-}" == "--print-url" ]]; then
   OS="${2:-linux}"
   ARCH="${3:-x86_64}"
-  TAG=$(fetch_github_latest_version_prefixed "$REPO" "$TAG_PREFIX")
+  TAG=$(fetch_github_latest_version_prefixed "$REPO" "$TAG_PREFIX") || exit 1
   URL=$(get_download_url "$TAG" "$OS" "$(go_arch_for "$ARCH")")
   echo "$BINARY_NAME|${TAG#"$TAG_PREFIX"}|$URL"
   exit 0

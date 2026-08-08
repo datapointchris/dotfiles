@@ -170,6 +170,50 @@ def test_forbidden_field_flags_error(tmp_path: Path, field: str, value: str) -> 
     assert_error(run_verify(tmp_path), f"field '{field}' is read by no code")
 
 
+def test_a_pin_is_accepted_where_it_is_honoured(tmp_path: Path) -> None:
+    build_tree(
+        tmp_path,
+        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0'}]},
+        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'github_releases': ['fzf']}},
+        github_release_scripts=['fzf'],
+    )
+    assert_clean(run_verify(tmp_path))
+
+
+def test_a_constraint_no_section_honours_flags_error(tmp_path: Path) -> None:
+    """The failure this check exists for: four version fields sat in packages.yml
+    unread, one of them eight versions stale, because nothing objected."""
+    build_tree(
+        tmp_path,
+        packages={'cargo_packages': [{'name': 'fd', 'version': '10.0.0'}]},
+        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'cargo_packages': ['fd']}},
+    )
+    assert_error(run_verify(tmp_path), 'nothing honours it for cargo_packages')
+
+
+def test_a_pin_beside_a_bound_flags_error(tmp_path: Path) -> None:
+    build_tree(
+        tmp_path,
+        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0', 'min_version': '0.40'}]},
+        manifests={},
+        github_release_scripts=['fzf'],
+    )
+    assert_error(run_verify(tmp_path), 'Declare one or the other')
+
+
+@pytest.mark.parametrize('pinned', ['v0.50.0', 'cli/v0.9.0'])
+def test_a_constraint_written_as_a_tag_flags_error(tmp_path: Path, pinned: str) -> None:
+    """One tool spells a release v0.56.0 and another cli/v0.9.0, so a declared tag
+    is only ever correct for its own tool and cannot be compared at all."""
+    build_tree(
+        tmp_path,
+        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': pinned}]},
+        manifests={},
+        github_release_scripts=['fzf'],
+    )
+    assert_error(run_verify(tmp_path), 'which is a tag')
+
+
 def test_forbidden_fields_do_not_apply_to_other_sections(tmp_path: Path) -> None:
     """binary_pattern is live on cargo_packages, where it does build a release URL."""
     build_tree(

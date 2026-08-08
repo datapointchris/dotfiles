@@ -19,7 +19,7 @@ get_download_url() {
 }
 
 if [[ "${1:-}" == "--print-url" ]]; then
-  VERSION=$(fetch_github_latest_version "$REPO")
+  VERSION=$(fetch_github_latest_version "$REPO") || exit 1
   URL=$(get_download_url "$VERSION")
   echo "$BINARY_NAME|$VERSION|$URL"
   exit 0

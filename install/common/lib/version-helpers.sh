@@ -62,6 +62,54 @@ offline_bundle_version() {
   echo "$version"
 }
 
+# The release tag a declared pin resolves to.
+#
+# Returns 0 with the tag, 1 when nothing is pinned, 2 when a pin is declared and
+# no release matches it — which must fail the install rather than fall through to
+# latest, because falling through is precisely what the pin exists to prevent.
+#
+# The constraint in packages.yml is a bare version and never a tag, because the
+# same idea is spelled v0.56.0 by lazygit, 0.8.30 by terraformer and cli/v0.9.0
+# by the personal CLIs. Matching it against published tags is what lets one
+# spelling work everywhere. Vocabulary: .planning/version-constraints.md.
+#
+# Usage: pinned_release_tag <tool_name> <repo> [tag_prefix]
+pinned_release_tag() {
+  local tool="${1%.exe}" repo="$2" prefix="${3:-}"
+
+  [[ -z "$tool" || -z "$repo" ]] && return 1
+
+  # --optional is what separates "declares no pin" from "the lookup itself
+  # failed". Without it both arrive as exit 1, and an unreadable packages.yml
+  # would quietly install latest over a pin — the failure this whole path exists
+  # to prevent, reintroduced one level down.
+  local pinned
+  if ! pinned=$(/usr/bin/python3 "${DOTFILES_DIR}/install/parse_packages.py" --github-release="$tool" --field=version --optional 2>/dev/null); then
+    echo "cannot read $DOTFILES_DIR/install/packages.yml with /usr/bin/python3, so whether $tool is pinned is unknown" >&2
+    return 2
+  fi
+  [[ -n "$pinned" ]] || return 1
+
+  local -a curl_opts=(-fsSL)
+  local token
+  token=$(github_token)
+  if [[ -n "$token" ]]; then
+    curl_opts+=(-H "Authorization: Bearer $token")
+  fi
+
+  local tag
+  tag=$(curl "${curl_opts[@]}" "https://api.github.com/repos/${repo}/releases?per_page=100" 2>/dev/null \
+    | jq -r --arg p "$prefix" --arg v "${pinned#v}" \
+      'map(select(.draft | not) | select(.tag_name | startswith($p)) | select((.tag_name | ltrimstr($p) | ltrimstr("v")) == $v)) | .[0].tag_name // empty')
+
+  if [[ -z "$tag" ]]; then
+    echo "$tool is pinned to $pinned, which $repo publishes no release for" >&2
+    return 2
+  fi
+
+  echo "$tag"
+}
+
 fetch_github_latest_version() {
   local repo="$1"
 
@@ -74,6 +122,15 @@ fetch_github_latest_version() {
   if [[ "${OFFLINE_MODE:-false}" == "true" ]] && offline_bundle_version "${BINARY_NAME:-}"; then
     return 0
   fi
+
+  local pinned_tag pin_status
+  pinned_tag=$(pinned_release_tag "${BINARY_NAME:-}" "$repo")
+  pin_status=$?
+  [[ $pin_status -eq 0 ]] && {
+    echo "$pinned_tag"
+    return 0
+  }
+  [[ $pin_status -eq 2 ]] && return 1
 
   local api_url="https://api.github.com/repos/${repo}/releases/latest"
   local version
@@ -108,6 +165,15 @@ fetch_github_latest_version_prefixed() {
   if [[ "${OFFLINE_MODE:-false}" == "true" ]] && offline_bundle_version "${BINARY_NAME:-}"; then
     return 0
   fi
+
+  local pinned_tag pin_status
+  pinned_tag=$(pinned_release_tag "${BINARY_NAME:-}" "$repo" "$prefix")
+  pin_status=$?
+  [[ $pin_status -eq 0 ]] && {
+    echo "$pinned_tag"
+    return 0
+  }
+  [[ $pin_status -eq 2 ]] && return 1
 
   local -a curl_opts=(-fsSL)
   local token

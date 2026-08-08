@@ -12,9 +12,9 @@ get_download_url() {
   local version="$1" os="$2" arch="$3"
   local platform_arch
   if [[ "$os" == "darwin" ]]; then
-    [[ "$arch" == "arm64" ]] && platform_arch="Darwin_arm64" || platform_arch="Darwin_x86_64"
+    [[ "$arch" == "arm64" ]] && platform_arch="darwin_arm64" || platform_arch="darwin_x86_64"
   else
-    platform_arch="Linux_x86_64"
+    platform_arch="linux_x86_64"
   fi
   echo "https://github.com/${REPO}/releases/download/${version}/lazygit_${version#v}_${platform_arch}.tar.gz"
 }
@@ -23,7 +23,7 @@ get_download_url() {
 if [[ "${1:-}" == "--print-url" ]]; then
   OS="${2:-linux}"
   ARCH="${3:-x86_64}"
-  VERSION=$(fetch_github_latest_version "$REPO")
+  VERSION=$(fetch_github_latest_version "$REPO") || exit 1
   URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
   echo "$BINARY_NAME|$VERSION|$URL"
   exit 0

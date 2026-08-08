@@ -117,6 +117,18 @@ These differences cause tests to pass when they shouldn't.
 
 **Defense in depth**: Even with perfect test environment, add verification checks that test functionality (not just presence) to catch edge cases.
 
+## The bootstrap goes away on Ubuntu 26.04
+
+Measured 2026-08-08 against `wsl-ubuntu:26.04`, imported from a real rootfs by
+`tests/install/e2e/wsl-docker.sh`: it ships `/usr/bin/python3` at **3.14.4** and **PyYAML 6.0.3**
+already installed. The premise above — that a fresh WSL install has no PyYAML — no longer holds for
+that release, and the bootstrap step this learning exists to fix has nothing left to do there.
+
+Do not read that as "the problem was imaginary". It is the same shape as the original bug, inverted:
+the environment happening to carry the dependency is exactly what let the wrong package name pass
+unnoticed the first time. The durable fix is the one the Python conversion makes — installing the
+package with its dependencies declared, so nothing has to be true about the machine beforehand.
+
 ## Testing Approach
 
 Best practice for testing system installations:

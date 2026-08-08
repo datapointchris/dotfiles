@@ -527,31 +527,96 @@ def filter_packages_by_owner(data, owner):
     return filtered
 
 
-def main():
+class QueryError(Exception):
+    """A query that cannot be answered as asked. main() renders it as exit 1."""
+
+
+def select_packages(data, manifest, args):
+    """Everything --type resolves to: declaration in, lines out, no I/O.
+
+    Separate from main() because both callers that matter need it without the
+    printing — the parity harness, which answers hundreds of queries against one
+    load of packages.yml, and every future caller that wants a value rather than
+    a subprocess and a text stream to re-parse.
+    """
+    if args.owner:
+        data = filter_packages_by_owner(data, args.owner)
+
+    if args.type == 'system':
+        if not args.manager:
+            raise QueryError('--manager required for system packages')
+        return get_system_packages(data, args.manager, args.tier)
+    if args.type == 'cargo':
+        output_format = args.format or 'names'
+        if manifest:
+            return filter_cargo_packages_by_manifest(data, manifest, output_format)
+        return get_cargo_packages(data, output_format)
+    if args.type == 'npm':
+        return filter_npm_packages_by_manifest(data, manifest) if manifest else get_npm_packages(data)
+    if args.type == 'uv':
+        return filter_uv_packages_by_manifest(data, manifest) if manifest else get_uv_packages(data)
+    if args.type == 'git_uv':
+        return filter_git_uv_packages_by_manifest(data, manifest) if manifest else get_git_uv_packages(data)
+    if args.type == 'go':
+        output_format = args.format if args.format in ('packages', 'name_package', 'binary_info') else 'packages'
+        if manifest:
+            return filter_go_packages_by_manifest(data, manifest, output_format)
+        return get_go_packages(data, output_format)
+    if args.type == 'mas':
+        return get_mas_apps(data)
+    if args.type == 'github':
+        return filter_github_releases_by_manifest(data, manifest) if manifest else get_github_packages(data)
+    if args.type == 'custom':
+        if manifest:
+            return filter_custom_installers_by_manifest(data, manifest, filter_field=args.filter)
+        return get_custom_installers(data, filter_field=args.filter)
+    if args.type == 'shell-plugins':
+        return get_shell_plugins(data, args.format)
+    if args.type == 'flatpak':
+        return get_flatpak_apps(data)
+    if args.type == 'macos-casks':
+        return get_macos_casks(data)
+    return []
+
+
+# Named rather than inlined into build_parser so a caller enumerating the query
+# space reads the same list argparse validates against.
+PACKAGE_TYPES = ['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks']
+SYSTEM_TIERS = ['core', 'workstation']
+PACKAGE_MANAGERS = ['apt', 'pacman', 'brew', 'aur']
+OUTPUT_FORMATS = ['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info']
+
+
+def build_parser():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
     parser.add_argument(
         '--type',
-        choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
+        choices=PACKAGE_TYPES,
         help='Type of packages to extract',
     )
     parser.add_argument(
         '--tier',
-        choices=['core', 'workstation'],
+        choices=SYSTEM_TIERS,
         default='workstation',
         help='System-package tier: core (minimal base for servers) or workstation (everything). Default workstation.',
     )
-    parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'], help='Package manager for system packages')
+    parser.add_argument('--manager', choices=PACKAGE_MANAGERS, help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
     parser.add_argument('--taps', action='store_true', help='Get macOS Homebrew taps')
     parser.add_argument('--github-release', help='Name of GitHub release (e.g., neovim)')
     parser.add_argument('--custom-installer', help='Name of custom installer (e.g., terraform-ls)')
     parser.add_argument('--field', help='Field to extract from --github-release or --custom-installer (e.g., repo, url)')
     parser.add_argument(
+        '--optional',
+        action='store_true',
+        help='With --field: an absent field prints nothing and exits 0, so a caller can tell it apart from a failed lookup',
+    )
+    parser.add_argument(
         '--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)'
     )
     parser.add_argument(
         '--format',
-        choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'],
+        choices=OUTPUT_FORMATS,
         default='names',
         help=(
             'Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), '
@@ -566,7 +631,11 @@ def main():
         action='store_true',
         help='With --manifest: emit section|command for every executable the manifest should install',
     )
+    return parser
 
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
 
     # Handle manifest-field extraction (no packages.yml needed)
@@ -612,7 +681,7 @@ def main():
         value = get_github_release_field(data, args.github_release, args.field)
         if value is not None:
             print(value)
-        else:
+        elif not args.optional:
             print(f'Error: {args.github_release}.{args.field} not found', file=sys.stderr)
             sys.exit(1)
         return
@@ -624,7 +693,7 @@ def main():
         value = get_custom_installer_field(data, args.custom_installer, args.field)
         if value is not None:
             print(value)
-        else:
+        elif not args.optional:
             print(f'Error: {args.custom_installer}.{args.field} not found', file=sys.stderr)
             sys.exit(1)
         return
@@ -638,61 +707,11 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    if args.owner:
-        data = filter_packages_by_owner(data, args.owner)
-
-    packages = []
-
-    if args.type == 'system':
-        if not args.manager:
-            print('Error: --manager required for system packages', file=sys.stderr)
-            sys.exit(1)
-        packages = get_system_packages(data, args.manager, args.tier)
-    elif args.type == 'cargo':
-        fmt = args.format if hasattr(args, 'format') and args.format else 'names'
-        if manifest:
-            packages = filter_cargo_packages_by_manifest(data, manifest, fmt)
-        else:
-            packages = get_cargo_packages(data, fmt)
-    elif args.type == 'npm':
-        if manifest:
-            packages = filter_npm_packages_by_manifest(data, manifest)
-        else:
-            packages = get_npm_packages(data)
-    elif args.type == 'uv':
-        if manifest:
-            packages = filter_uv_packages_by_manifest(data, manifest)
-        else:
-            packages = get_uv_packages(data)
-    elif args.type == 'git_uv':
-        if manifest:
-            packages = filter_git_uv_packages_by_manifest(data, manifest)
-        else:
-            packages = get_git_uv_packages(data)
-    elif args.type == 'go':
-        fmt = args.format if args.format in ('packages', 'name_package', 'binary_info') else 'packages'
-        if manifest:
-            packages = filter_go_packages_by_manifest(data, manifest, fmt)
-        else:
-            packages = get_go_packages(data, fmt)
-    elif args.type == 'mas':
-        packages = get_mas_apps(data)
-    elif args.type == 'github':
-        if manifest:
-            packages = filter_github_releases_by_manifest(data, manifest)
-        else:
-            packages = get_github_packages(data)
-    elif args.type == 'custom':
-        if manifest:
-            packages = filter_custom_installers_by_manifest(data, manifest, filter_field=args.filter)
-        else:
-            packages = get_custom_installers(data, filter_field=args.filter)
-    elif args.type == 'shell-plugins':
-        packages = get_shell_plugins(data, args.format)
-    elif args.type == 'flatpak':
-        packages = get_flatpak_apps(data)
-    elif args.type == 'macos-casks':
-        packages = get_macos_casks(data)
+    try:
+        packages = select_packages(data, manifest, args)
+    except QueryError as error:
+        print(f'Error: {error}', file=sys.stderr)
+        sys.exit(1)
 
     for pkg in packages:
         print(pkg)

@@ -27,7 +27,7 @@ get_download_url() {
 # --print-url mode for offline bundle creator
 if [[ "${1:-}" == "--print-url" ]]; then
   ARCH="${3:-x86_64}"
-  VERSION=$(fetch_github_latest_version "$REPO")
+  VERSION=$(fetch_github_latest_version "$REPO") || exit 1
   URL=$(get_download_url "$VERSION" "$ARCH")
   echo "$BINARY_NAME|$VERSION|$URL"
   exit 0

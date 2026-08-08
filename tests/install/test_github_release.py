@@ -49,7 +49,8 @@ class TestChecksumLookup:
         assert github_release.checksum_for_asset(text, 'tool.tar.gz') == 'bbb'
 
     def test_case_differences_are_accepted_because_github_resolves_them(self):
-        # lazygit is downloaded as Linux_x86_64 and recorded as linux_x86_64.
+        # The shape that earned this: lazygit fetched Linux_x86_64 against a
+        # recorded linux_x86_64, until its URL builder was corrected.
         text = 'def456  lazygit_0.44_linux_x86_64.tar.gz\n'
         assert github_release.checksum_for_asset(text, 'lazygit_0.44_Linux_x86_64.tar.gz') == 'def456'
 
