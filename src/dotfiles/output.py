@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
 
-VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red', 'pending': 'blue'}
+VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
 
 CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
 

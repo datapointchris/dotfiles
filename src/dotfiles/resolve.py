@@ -122,6 +122,13 @@ class DesiredItem:
 class Plan:
     machine: machines.Machine
     items: tuple[DesiredItem, ...]
+    runtimes: tuple[catalog.Runtime, ...] = ()
+    """The declared runtimes, carried rather than looked up.
+
+    They are `Spelling.DERIVED` — no manifest subscribes to one — but the
+    toolchain resource needs their version constraints, and resolution finishing
+    here means it must not reach back into the catalog for them.
+    """
 
     def for_provider(self, provider: str) -> tuple[DesiredItem, ...]:
         return tuple(item for item in self.items if item.provider == provider)
@@ -217,7 +224,11 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
                 )
             )
 
-    return Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
+    return Plan(
+        machine=machine,
+        items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))),
+        runtimes=tuple(entry for entry in declaration.section('runtimes') if isinstance(entry, catalog.Runtime)),
+    )
 
 
 def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:

@@ -168,7 +168,7 @@ toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and t
 @toolchains_app.command('check')
 def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report toolchain drift."""
-    _report(reconcile.CHECKERS['toolchains'](_session(machine)), as_json)
+    _report(reconcile.check_toolchains(_session(machine)), as_json)
 
 
 @toolchains_app.command('apply')

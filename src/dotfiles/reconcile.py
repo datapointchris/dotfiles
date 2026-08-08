@@ -33,14 +33,17 @@ class Verdict(StrEnum):
     `DRIFT` and `ISSUE` are different kinds, not degrees. Drift is expected and
     benign — the machine differs from its declaration, which is what `apply` is
     for. An Issue is something wrong: a checker crashed, a declaration is
-    invalid, a required file is absent. Collapsing them is what would make an
-    exit code meaningless and the shell nudge not worth having.
+    invalid. Collapsing them is what would make an exit code meaningless and the
+    shell nudge not worth having.
+
+    There was a fourth, `PENDING`, for a resource whose checker had not been
+    written yet. Every one of the seven answers for itself now, so a verdict
+    meaning "no evidence either way" has nothing to report it.
     """
 
     CONVERGED = 'converged'
     DRIFT = 'drift'
     ISSUE = 'issue'
-    PENDING = 'pending'
 
 
 @dataclass(frozen=True)
@@ -51,23 +54,6 @@ class ResourceResult:
 
     def as_dict(self) -> dict[str, str]:
         return {'address': self.address, 'verdict': str(self.verdict), 'detail': self.detail}
-
-
-PENDING_DETAIL = 'no checker yet; apply still installs it'
-
-
-def _from_status(address: str, status: int, converged: str, drifted: str) -> ResourceResult:
-    """Read a shelled-out checker's exit status as a verdict.
-
-    Anything above 1 is an Issue rather than worse drift: the scripts behind this
-    use 1 for "found something" and reserve the rest for their own failures, so a
-    2 means the checker itself could not answer.
-    """
-    if status == 0:
-        return ResourceResult(address, Verdict.CONVERGED, converged)
-    if status == 1:
-        return ResourceResult(address, Verdict.DRIFT, drifted)
-    return ResourceResult(address, Verdict.ISSUE, f'the checker exited {status} and could not answer')
 
 
 def check_packages(session: Session) -> ResourceResult:
@@ -110,6 +96,21 @@ def check_env(session: Session) -> ResourceResult:
 
     changes = env.RESOURCE.diff(session.plan, env.RESOURCE.observe(session, session.plan))
     return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
+
+
+def check_toolchains(session: Session) -> ResourceResult:
+    """The runtimes this machine's tool lists imply, and whether they meet their floors.
+
+    Never what a manifest asked for: a machine gets Go because it declared
+    `go_tools`, which is why the booleans that used to gate the toolchains were
+    removed.
+    """
+    from dotfiles.resources import toolchains
+
+    observed = toolchains.RESOURCE.observe(session, session.plan)
+    changes = toolchains.RESOURCE.diff(session.plan, observed)
+    named = ', '.join(sorted(observed.installed))
+    return from_changes('toolchains', changes, f'{named or "none needed"}')
 
 
 def check_system(session: Session) -> ResourceResult:
@@ -188,20 +189,12 @@ def from_changes(address: str, changes: Sequence[Change], converged: str) -> Res
 
 Checker = Callable[[Session], ResourceResult]
 """Every checker takes the session, so the walk needs no special case for the ones
-that read the declaration. The discarding lambdas below are the honest way to say
-"not this one" — the alternative was an `if address == 'env'` branch in the walk,
-which is where a second machine-aware resource would have had to be remembered and
-would not be.
-"""
-
-
-def _pending(address: str) -> Checker:
-    return lambda _session: ResourceResult(address, Verdict.PENDING, PENDING_DETAIL)
+that read the declaration."""
 
 
 CHECKERS: dict[str, Checker] = {
     'packages': check_packages,
-    'toolchains': _pending('toolchains'),
+    'toolchains': check_toolchains,
     'plugins': check_plugins,
     'symlinks': check_symlinks,
     'env': check_env,
@@ -225,7 +218,7 @@ def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None
 
 
 def exit_code(results: list[ResourceResult]) -> ExitCode:
-    """One number from many verdicts. Issue outranks drift; pending counts for nothing."""
+    """One number from many verdicts. An Issue outranks drift."""
     verdicts = {result.verdict for result in results}
     if Verdict.ISSUE in verdicts:
         return ExitCode.ISSUE
