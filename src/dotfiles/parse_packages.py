@@ -1,41 +1,36 @@
-#!/usr/bin/python3
 """
 Parse packages.yml and output package lists for installation.
 
+Reached as a module, never as a path, because it imports its siblings — and
+under whichever interpreter the caller has: `$DOTFILES_PYTHON` for a shell
+installer, `uv run` otherwise. Never the system python, which is the one
+interpreter that will not have this package's dependencies.
+
 Usage:
-    python parse_packages.py --type=system --manager=apt
-    python parse_packages.py --type=cargo
-    python parse_packages.py --type=npm
-    python parse_packages.py --type=uv
-    python parse_packages.py --type=git_uv
-    python parse_packages.py --type=go
-    python parse_packages.py --type=mas
-    python parse_packages.py --type=github
-    python parse_packages.py --type=custom
-    python parse_packages.py --type=custom --filter=bundle_install_script
-    python parse_packages.py --type=flatpak
-    python parse_packages.py --type=macos-casks
-    python parse_packages.py --taps
-    python parse_packages.py --get=runtimes.node.version
-    python parse_packages.py --custom-installer=terraform-ls --field=repo
+    python -m dotfiles.parse_packages --type=system --manager=apt
+    python -m dotfiles.parse_packages --type=cargo
+    python -m dotfiles.parse_packages --type=npm
+    python -m dotfiles.parse_packages --type=uv
+    python -m dotfiles.parse_packages --type=git_uv
+    python -m dotfiles.parse_packages --type=go
+    python -m dotfiles.parse_packages --type=mas
+    python -m dotfiles.parse_packages --type=github
+    python -m dotfiles.parse_packages --type=custom
+    python -m dotfiles.parse_packages --type=custom --filter=bundle_install_script
+    python -m dotfiles.parse_packages --type=flatpak
+    python -m dotfiles.parse_packages --type=macos-casks
+    python -m dotfiles.parse_packages --taps
+    python -m dotfiles.parse_packages --get=runtimes.node.version
+    python -m dotfiles.parse_packages --custom-installer=terraform-ls --field=repo
 
 Owner-filtered usage (drives `update.sh --mine`):
-    python parse_packages.py --type=github --owner=datapointchris
-    python parse_packages.py --type=go --owner=datapointchris --format=name_package
+    python -m dotfiles.parse_packages --type=github --owner=datapointchris
+    python -m dotfiles.parse_packages --type=go --owner=datapointchris --format=name_package
 
 Manifest-filtered usage:
-    python parse_packages.py --type=go --manifest=wsl-work-workstation
-    python parse_packages.py --manifest-field=platform --manifest=archlinux-personal-workstation
-    python parse_packages.py --manifest-field=go_tools --manifest=wsl-work-workstation
-
-Invoked as a module, never as a path, because it imports its siblings:
-
-    PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages [args]
-    uv run python -m dotfiles.parse_packages [args]
-
-The system interpreter is what the installers use, and it needs PyYAML — a
-declared system package, present in the Ubuntu rootfs, and pip-installed on
-macOS. "No module named 'yaml'" means that bootstrap has not run yet.
+    python -m dotfiles.parse_packages --type=go --manifest=wsl-work-workstation
+    python -m dotfiles.parse_packages --manifest-field=platform --manifest=archlinux-personal-workstation
+    python -m dotfiles.parse_packages --manifest-field=go_tools --manifest=wsl-work-workstation
 """
 
 import argparse

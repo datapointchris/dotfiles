@@ -24,7 +24,6 @@ while IFS= read -r tap; do
   fi
 done < <(dotfiles_python -m dotfiles.parse_packages --taps)
 
-# Step 3: Install system packages from packages.yml.
 # Try one batched install for speed, but a batched `brew install` aborts before
 # touching anything if a single formula is unresolvable — silently skipping every
 # package. So on failure, retry per-package to isolate the bad formula(e) and
@@ -53,7 +52,6 @@ else
   fi
 fi
 
-# Step 4: Link libpq to make psql available in PATH
 # libpq is keg-only (not linked by default) because it conflicts with postgresql
 if brew list libpq &>/dev/null; then
   log_info "Linking libpq to make psql available..."

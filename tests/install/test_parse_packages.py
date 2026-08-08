@@ -439,7 +439,7 @@ def test_system_core_includes_essential_base(real_packages_data):
     servers" guarantee now lives in test_ripgrep_reaches_servers_via_cargo.
     """
     core = set(parse_packages.get_system_packages(real_packages_data, 'apt', 'core'))
-    for pkg in ['git', 'zsh', 'tmux', 'python3-yaml', 'curl']:
+    for pkg in ['git', 'zsh', 'tmux', 'curl']:
         assert pkg in core, f'{pkg} missing from the core (server) tier'
 
 

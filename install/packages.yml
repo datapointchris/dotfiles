@@ -81,13 +81,6 @@ system_packages:
     pacman: openssl
     description: SSL development libraries
 
-  # Python YAML library (needed for parse_packages.py)
-  - name: python3-yaml
-    tier: core
-    apt: python3-yaml
-    pacman: python-yaml
-    description: Python YAML library for parsing packages.yml
-
   # Core Development Tools
   - name: git
     tier: core
