@@ -152,6 +152,18 @@ class Target:
         return self.arch is Arch.ARM64
 
 
+def target_for(declared: Coordinates) -> Target:
+    """What this machine's release assets are named for.
+
+    The OS is taken from the manifest and the CPU is measured, which is the split
+    the two halves are: a fresh machine has no `~/.env` to read its platform from
+    and detecting it instead is how a wsl manifest once deployed the linux shell
+    overlay for a whole install — while no manifest anywhere says what processor
+    a box has.
+    """
+    return Target(declared.os_family, detect_arch())
+
+
 def detect_arch(machine: str | None = None) -> Arch:
     """`uname -m`, reduced to the two the fleet runs.
 

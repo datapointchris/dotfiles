@@ -24,6 +24,9 @@ import yaml
 
 from dotfiles import evidence as ev
 from dotfiles import releases
+from dotfiles.providers import ghrelease
+from dotfiles.resources import Change
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import packages
@@ -361,3 +364,76 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
     observed = packages.RESOURCE.observe(live, live.plan)
 
     assert observed.consulted_network is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Which changes this resource can actually perform
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `perform` is converting provider by provider, so what it refuses matters as
+# much as what it does: a resource that silently did nothing would leave `apply`
+# reporting a converged machine it never touched.
+
+
+@pytest.fixture
+def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Record what would be installed, instead of reaching GitHub."""
+    attempted: list[str] = []
+
+    def record(entry, target, *, offline=False):
+        attempted.append(entry.name)
+        return ghrelease.Result(True, f'{entry.name} installed')
+
+    monkeypatch.setattr(packages.ghrelease, 'install', record)
+    return attempted
+
+
+def only_change(live: Session) -> Change:
+    found = changes(live)
+    assert len(found) == 1, f'expected one change, got {[change.verdict for change in found]}'
+    return found[0]
+
+
+def test_a_missing_release_is_installed(tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str]) -> None:
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live))
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['lazygit']
+
+
+def test_a_stale_release_is_upgraded_rather_than_reported(tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str]) -> None:
+    """The verdict the phase registry cannot act on, because a phase has no plan
+    to read it from."""
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    change = only_change(live)
+    assert change.verdict is Verdict.STALE
+    assert packages.RESOURCE.perform(live, change).status is OutcomeStatus.DONE
+    assert installs == ['lazygit']
+
+
+def test_a_release_that_arrived_since_the_report_is_skipped(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+    """`observe` ran before the report was printed and before any earlier stage
+    installed anything. Reinstalling over what turned up would replace a binary
+    nobody asked about with whatever upstream calls latest now."""
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+    change = only_change(live)
+    executable(fake_bin, 'lazygit')
+
+    outcome = packages.RESOURCE.perform(live, change)
+
+    assert outcome.status is OutcomeStatus.SKIPPED
+    assert installs == []
+
+
+def test_a_provider_that_has_not_converted_is_refused_not_ignored(tmp_path: Path, fake_bin: Path, installs: list[str]) -> None:
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live))
+
+    assert outcome.status is OutcomeStatus.REFUSED
+    assert installs == []

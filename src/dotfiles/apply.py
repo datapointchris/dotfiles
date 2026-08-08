@@ -25,6 +25,7 @@ thing that keeps the halves from drifting while both exist.
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import os
 import shutil
 import sys
@@ -34,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import envfile
 from dotfiles import failure_report
@@ -48,6 +50,7 @@ from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
 from dotfiles.resources import plugins
 from dotfiles.session import Session
@@ -90,6 +93,18 @@ class Run:
     offline: bool = False
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
+
+    @functools.cached_property
+    def declaration(self) -> catalog.Catalog:
+        """The typed declaration, beside the raw `packages` dict above.
+
+        Two readings of one file, for the length of the conversion. The dict is
+        what the remaining bash phases query through `parse_packages`; the catalog
+        is what a converted phase needs, because an installer wants `repo`,
+        `checksum` and `release_tag_prefix` as fields rather than as `.get` calls
+        that cannot be wrong out loud. Both go when `Run` collapses into `Session`.
+        """
+        return catalog.load()
 
     @property
     def session(self) -> Session:
@@ -373,12 +388,18 @@ def _have_github_credentials() -> bool:
 
 
 def _github_releases(context: Run) -> bool:
-    """A private repo's tool is skipped where there are no credentials for it.
+    """Every declared release, installed by `providers.ghrelease` rather than by bash.
 
-    Its download cannot succeed, so attempting it records a failure for something
-    this machine was never able to have, and the run exits 3 for a reason no
-    change to this repo can fix. Warned rather than silent: credentials are a
-    state a machine can lose, unlike the WSL host `requires_wsl_host` tests for.
+    A private repo's tool is skipped where there are no credentials for it. Its
+    download cannot succeed, so attempting it records a failure for something this
+    machine was never able to have, and the run exits 3 for a reason no change to
+    this repo can fix. Warned rather than silent: credentials are a state a
+    machine can lose, unlike the WSL host `requires_wsl_host` tests for.
+
+    Present-means-skip is what the scripts this replaces did in install mode, and
+    it is kept exactly: `apply` here installs what is absent. Upgrading what is
+    *behind* is `PackagesResource.perform`, which acts on a STALE verdict that
+    `check` measured and printed — a decision this phase has no plan to make.
     """
     tools = context.declared('github')
     if not _have_github_credentials():
@@ -390,7 +411,35 @@ def _github_releases(context: Run) -> bool:
     if not tools:
         return True
     heading('GitHub release tools')
-    return all([run_installer(context, COMMON / 'github-releases' / f'{tool}.sh', tool) for tool in tools])
+
+    try:
+        declaration = context.declaration
+    except catalog.CatalogError as refused:
+        warn(f'cannot read the declaration, so no release can be installed: {refused}')
+        return False
+
+    target = coordinates.target_for(coordinates.PLATFORM_BUNDLES[context.platform])
+    return all([_install_release(context, declaration, tool, target) for tool in tools])
+
+
+def _install_release(context: Run, declaration: catalog.Catalog, tool: str, target: coordinates.Target) -> bool:
+    """One release, reporting the same way a failed installer script did."""
+    entry = declaration.find('github_releases', tool)
+    assert isinstance(entry, catalog.GithubRelease)
+
+    if not context.reinstall and shutil.which(entry.executable):
+        err_console.print(f'{tool} already installed: {shutil.which(entry.executable)}')
+        return True
+
+    result = ghrelease.install(entry, target, offline=context.offline)
+    if result.ok:
+        err_console.print(f'[green]✓[/] {result.detail}')
+        return True
+
+    warn(f'{tool} installation failed: {result.detail}')
+    with context.failures_log.open('a') as log:
+        log.write(f'{tool}: {result.detail}\n')
+    return False
 
 
 def _custom_installers(context: Run) -> bool:

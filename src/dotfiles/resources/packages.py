@@ -4,10 +4,16 @@ What the machine *should* have is `resolve.py`, and whether it has it is
 `evidence.py`. What is left here is the resource: which of the plan's items are
 this one's, and what a difference means.
 
-`perform` is provider by provider, and none of them has moved yet — every install
-still runs through the phase registry in `apply.py`, which knows the PATH each one
-needs and the order they have to happen in. That is the remaining conversion work,
-and it is legible as one method rather than spread through five scripts.
+`perform` is provider by provider, and `ghrelease` has moved: it installs through
+`providers.ghrelease`, which is also what the phase registry now calls, so the two
+front doors cannot install a release differently. The rest still run through the
+phase registry in `apply.py`, which knows the PATH each one needs and the order
+they have to happen in.
+
+This is the only path that acts on `STALE`. The phase registry installs what is
+absent, because that is all a phase knows; a tool that is present but behind is a
+verdict `check` measured against the release cache, and repairing it needs the
+Change that carries it.
 """
 
 from __future__ import annotations
@@ -16,9 +22,11 @@ import dataclasses as dc
 import datetime as dt
 
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import releases
 from dotfiles import versions
+from dotfiles.providers import ghrelease
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Precondition
@@ -95,12 +103,37 @@ class PackagesResource:
         return tuple(changes)
 
     def perform(self, session: Session, change: Change) -> Outcome:
-        """Not yet this resource's to do.
+        """One provider has moved; the rest still run through the phase registry.
 
-        Refused rather than silently skipped, because a resource that did nothing
-        quietly would leave `apply` reporting a converged machine.
+        Refused rather than silently skipped for the ones that have not, because a
+        resource that did nothing quietly would leave `apply` reporting a converged
+        machine.
         """
-        return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles packages apply', which still drives the phase registry")
+        item = change.desired
+        if item is None or item.provider != CURRENCY_PROVIDER:
+            return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles packages apply', which still drives the phase registry")
+        return _install_release(session, change, item)
+
+
+def _install_release(session: Session, change: Change, item: DesiredItem) -> Outcome:
+    """Install or upgrade one release, re-checking that it still needs doing.
+
+    The re-check is not defensive padding. `observe` ran before the report was
+    printed and before anything upstream in the stage order installed a toolchain,
+    so a MISSING item may have arrived since — and reinstalling over it would
+    replace a binary nobody asked about with whatever upstream calls latest now.
+    A STALE one is deliberately *not* re-checked the same way: being behind is
+    exactly the state this repairs.
+    """
+    entry = item.entry
+    if not isinstance(entry, catalog.GithubRelease):
+        return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a github_releases entry')
+
+    if change.verdict is Verdict.MISSING and ev.evidence_for(item, {}).verdict is Verdict.MATCHED:
+        return Outcome(change, OutcomeStatus.SKIPPED, f'{item.executable} arrived before this ran')
+
+    result = ghrelease.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+    return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
 def repair_for(item: DesiredItem, evidence: ev.Evidence, credentials: bool) -> Repair:

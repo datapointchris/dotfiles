@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from pathlib import Path
 
 import pytest
 
@@ -254,9 +253,9 @@ def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:
 
 
 def recorder(attempted: list[str]) -> Callable[..., bool]:
-    """Stands in for `run_installer`, recording which tools the phase reached for."""
+    """Stands in for `_install_release`, recording which tools the phase reached for."""
 
-    def record(_context: apply.Run, _script: Path, tool: str) -> bool:
+    def record(_context: apply.Run, _declaration: object, tool: str, _target: object) -> bool:
         attempted.append(tool)
         return True
 
@@ -282,7 +281,7 @@ def test_a_private_repo_tool_is_skipped_where_there_are_no_credentials(monkeypat
 
     attempted: list[str] = []
     monkeypatch.setattr(apply, '_have_github_credentials', lambda: False)
-    monkeypatch.setattr(apply, 'run_installer', recorder(attempted))
+    monkeypatch.setattr(apply, '_install_release', recorder(attempted))
 
     assert apply._github_releases(context)
     assert attempted == ['lazygit']
@@ -297,7 +296,7 @@ def test_a_private_repo_tool_is_installed_where_there_are_credentials(monkeypatc
 
     attempted: list[str] = []
     monkeypatch.setattr(apply, '_have_github_credentials', lambda: True)
-    monkeypatch.setattr(apply, 'run_installer', recorder(attempted))
+    monkeypatch.setattr(apply, '_install_release', recorder(attempted))
 
     assert apply._github_releases(context)
     assert attempted == ['learning']
