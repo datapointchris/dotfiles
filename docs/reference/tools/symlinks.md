@@ -118,6 +118,13 @@ dotfiles of its own needs on first install:
 uv run symlinks link macos --force
 ```
 
+**A name `[project.scripts]` declares is skipped outright, `--force` or not.**
+The two are competing for one path and the declaration wins; there is no state of
+the machine in which linking an `apps/` file over the console script is right.
+The names are read from `pyproject.toml` rather than from the installed
+distribution, because during a bootstrap nothing is installed yet and the answer
+has to be the same either way.
+
 ## Special Directory Handling
 
 The symlinks manager maps `apps/` and `shell/` to specific target directories rather than `$HOME`, using the same `create_symlinks` function with a custom `target_dir`.

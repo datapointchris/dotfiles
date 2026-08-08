@@ -2,6 +2,7 @@
 
 import contextlib
 import fnmatch
+import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
@@ -192,6 +193,25 @@ class LinkResult(NamedTuple):
     refused: tuple[Path, ...] = ()
 
 
+def console_script_names(pyproject: Path | None = None) -> set[str]:
+    """Names `[project.scripts]` claims in ~/.local/bin.
+
+    Read from pyproject rather than from the installed distribution's entry
+    points, because during a bootstrap nothing is installed yet and the answer
+    has to be the same either way — the declaration is what reserves the name,
+    not the state of the machine.
+
+    `uv tool dir --bin` is ~/.local/bin, the same directory the apps layer links
+    into, so a console script and an apps/ file of the same name are two things
+    competing for one path. The declaration wins; linking the other over it would
+    replace the executable that is running.
+    """
+    declaration = pyproject or paths.PYPROJECT_FILE
+    if not declaration.exists():
+        return set()
+    return set(tomllib.loads(declaration.read_text()).get('project', {}).get('scripts', {}))
+
+
 def link_ownership(target_path: Path, *roots: Path) -> str:
     """Who put this target here: `absent`, `ours`, or `foreign`.
 
@@ -221,6 +241,7 @@ def create_symlinks(
     verbose: bool = False,
     target_dir: Path | None = None,
     force: bool = False,
+    reserved_names: set[str] | None = None,
 ) -> LinkResult:
     """Create symlinks from source_dir into target_dir, preserving relative paths.
 
@@ -230,8 +251,14 @@ def create_symlinks(
     and a link pass writing into the same directory means the second silently
     destroys the first. `force` is the deliberate override, for adopting a
     machine that already had dotfiles of its own.
+
+    A name `[project.scripts]` declares is skipped outright, force or not. The
+    two are competing for one path in ~/.local/bin and the declaration wins;
+    there is no state of the machine in which linking over the console script is
+    the right answer.
     """
     _target_dir = (target_dir or TARGET_DIR).resolve()
+    reserved = console_script_names() if reserved_names is None else reserved_names
 
     if not source_dir.exists():
         print(f'[red]✗[/] Source directory does not exist: {source_dir}')
@@ -251,6 +278,11 @@ def create_symlinks(
             continue
 
         if should_exclude(relative_path):
+            continue
+
+        if relative_path.name in reserved:
+            if verbose:
+                print(f'[dim]skipped {relative_path} — [project.scripts] declares it[/]')
             continue
 
         target_path = _target_dir / relative_path

@@ -281,3 +281,58 @@ def test_a_symlink_pointing_outside_the_repo_is_refused(tmp_path):
 
     assert result.refused == (target / '.zshrc',)
     assert (target / '.zshrc').resolve() == (elsewhere / 'other.zshrc').resolve()
+
+
+def test_a_name_project_scripts_declares_is_never_linked(tmp_path):
+    """`uv tool dir --bin` is ~/.local/bin, the same directory the apps layer
+    links into, so a console script and an apps/ file of the same name compete
+    for one path. The declaration wins."""
+    source = tmp_path / 'apps'
+    source.mkdir()
+    (source / 'dotfiles').write_text('the bash front door')
+    (source / 'notes').write_text('an ordinary app')
+
+    target = tmp_path / 'bin'
+    target.mkdir()
+
+    result = core.create_symlinks(source, 'apps-common', target_dir=target, reserved_names={'dotfiles'})
+
+    assert result.created == 1
+    assert (target / 'notes').is_symlink()
+    assert not (target / 'dotfiles').exists()
+
+
+def test_force_does_not_override_a_reserved_name(tmp_path):
+    """There is no state of the machine in which replacing the console script
+    with an apps/ file is right, so --force must not reach this one."""
+    source = tmp_path / 'apps'
+    source.mkdir()
+    (source / 'dotfiles').write_text('the bash front door')
+
+    target = tmp_path / 'bin'
+    target.mkdir()
+    (target / 'dotfiles').write_text('the installed console script')
+
+    result = core.create_symlinks(source, 'apps-common', target_dir=target, force=True, reserved_names={'dotfiles'})
+
+    assert result.created == 0
+    assert (target / 'dotfiles').read_text() == 'the installed console script'
+
+
+def test_the_reserved_names_come_from_pyproject(tmp_path):
+    """Read from the declaration rather than the installed distribution: during
+    a bootstrap nothing is installed, and the answer has to be the same."""
+    pyproject = tmp_path / 'pyproject.toml'
+    pyproject.write_text('[project.scripts]\ndotfiles = "dotfiles.cli:app"\nsymlinks = "dotfiles.symlinks.cli:app"\n')
+
+    assert core.console_script_names(pyproject) == {'dotfiles', 'symlinks'}
+
+
+def test_a_missing_pyproject_reserves_nothing(tmp_path):
+    assert core.console_script_names(tmp_path / 'absent.toml') == set()
+
+
+def test_this_repo_declares_its_own_scripts(tmp_path):
+    """The default path resolves, so the exclusion is live rather than a
+    parameter nothing ever fills."""
+    assert 'symlinks' in core.console_script_names()

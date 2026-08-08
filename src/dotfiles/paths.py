@@ -29,6 +29,7 @@ def _xdg_home(variable: str, fallback: str) -> Path:
 
 REPO_ROOT = _repo_root()
 
+PYPROJECT_FILE = REPO_ROOT / 'pyproject.toml'
 INSTALL_DIR = REPO_ROOT / 'install'
 PACKAGES_FILE = INSTALL_DIR / 'packages.yml'
 MANIFESTS_DIR = INSTALL_DIR / 'manifests'
