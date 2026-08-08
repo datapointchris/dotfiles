@@ -1,9 +1,10 @@
-"""The declaration side: what a machine says it should be, before anything checks it.
+"""The declaration side: what a machine resolves to, before anything checks it.
 
-`machines show` becomes the resolver's `resolve` command in step 4 — the one
-`machine-axes.md` insists must exist before any overlay layering, or the system
-becomes unauditable. Today it prints the manifest as written, which is the
-honest subset of that: what the machine declares, with nothing derived yet.
+`machines show` is the resolve command — the one `machine-axes.md` § 8 insists
+must exist *before* any overlay layering, or the system becomes unauditable. It
+renders the whole `Plan`: the coordinates, the flags, and every item with the
+selector that pulled it in. Nothing about an install is decided outside that
+object, so what this prints is what a run will do.
 """
 
 from __future__ import annotations
@@ -14,7 +15,10 @@ from pathlib import Path
 import typer
 
 from dotfiles import bridge
+from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve as resolver
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
@@ -61,12 +65,81 @@ def list_machines(as_json: bool = typer.Option(False, '--json', help='Emit the n
 
 
 @app.command('show')
-def show_machine(name: str = typer.Argument(None, help='Machine name (default: $MACHINE)')) -> None:
-    """Print what a machine declares."""
-    path = _manifest_path(_resolve_machine(name))
-    # markup off: a manifest is data, and a `[tool]`-shaped line in one would
-    # otherwise be eaten as a Rich tag rather than printed.
-    console.print(path.read_text(), end='', markup=False, highlight=False)
+def show_machine(
+    name: str = typer.Argument(None, help='Machine name (default: $MACHINE)'),
+    owner: str = typer.Option(None, '--owner', help='Only what this GitHub owner publishes'),
+    raw: bool = typer.Option(False, '--raw', help='Print the manifest as written, resolving nothing'),
+    as_json: bool = typer.Option(False, '--json', help='Emit the resolved plan as JSON'),
+) -> None:
+    """Resolve a machine and print everything it should have.
+
+    `--raw` is the manifest as written. Everything else is the resolution, which
+    is a different question: the manifest says `system_packages: core` and the
+    resolution says which 25 packages that is on this machine's package manager.
+    """
+    resolved = _resolve_machine(name)
+    # Before resolving, so a typo stays a usage error naming the machines that do
+    # exist rather than a report that this one's declaration cannot be read.
+    path = _manifest_path(resolved)
+
+    if raw:
+        # markup off: a manifest is data, and a `[tool]`-shaped line in one would
+        # otherwise be eaten as a Rich tag rather than printed.
+        console.print(path.read_text(), end='', markup=False, highlight=False)
+        return
+
+    plan = _plan(resolved, owner)
+
+    if as_json:
+        emit_json({**plan.machine.as_dict(), 'items': [item.as_dict() for item in plan.items]})
+        return
+
+    _render(plan)
+
+
+def _plan(name: str, owner: str | None = None) -> resolver.Plan:
+    """Resolve, turning either loader's refusal into the report it is.
+
+    A traceback would be the wrong shape for both: an invalid declaration is a
+    finding about the repo, not a crash in the tool reading it.
+    """
+    try:
+        return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
+    except (catalog.CatalogError, machines.MachineError) as refused:
+        error(f'{name} cannot be resolved:')
+        for issue in refused.issues:
+            console.print(f'  {issue}', markup=False, highlight=False)
+        raise typer.Exit(ExitCode.ISSUE) from refused
+
+
+def _render(plan: resolver.Plan) -> None:
+    machine = plan.machine
+    console.print(f'[bold]{machine.name}[/]  {machine.platform_label or "custom coordinates"}')
+    console.print()
+
+    for axis, value in machine.coordinates.as_dict().items():
+        console.print(f'  {axis:<16} {value}')
+
+    console.print()
+    for flag, value in machine.flags.items():
+        console.print(f'  {flag:<26} {value}')
+
+    for requirement in machine.requirements:
+        console.print()
+        console.print(f'  needs by hand: {requirement.path or requirement.name} — {requirement.description}')
+
+    for stage in resolver.Stage:
+        items = plan.for_stage(stage)
+        if not items:
+            continue
+        console.print()
+        console.print(f'[bold blue]{stage.name.lower()}[/]  {len(items)}')
+        for item in items:
+            note = f'  [{item.precondition}]' if item.precondition else ''
+            console.print(f'  {item.provider:<14} {item.name:<28} {item.reason.selector}{note}')
+
+    console.print()
+    console.print(f'{len(plan.items)} items')
 
 
 @app.command('check')
