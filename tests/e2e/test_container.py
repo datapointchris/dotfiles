@@ -15,9 +15,12 @@ after touching what actually installs a machine.
 from __future__ import annotations
 
 import pytest
+from harness import SHADOW_BIN
+from harness import SHADOW_REFUSAL
 from harness import Machine
 from harness import measured_network
 from harness import reachable_probes
+from harness import shadow_calls
 
 pytestmark = pytest.mark.docker
 
@@ -73,14 +76,29 @@ def test_the_bootstrap_has_what_install_sh_requires(container: Machine) -> None:
         assert container.succeeds(f'command -v {tool}'), tool
 
 
-def test_there_is_no_python_before_the_bootstrap_installs_one(container: Machine) -> None:
-    """Only where the image genuinely ships none — Arch. It is the environment
-    that proves the system-python bootstrap is really gone, because a python here
-    would let `install.sh` pass by using it instead of uv's.
+def test_the_system_python_is_shadowed_rather_than_absent(container: Machine) -> None:
+    """The stub has to win the PATH lookup, or the install it is meant to break
+    runs against the real interpreter and passes for the wrong reason.
+
+    Absence is the weaker property and only one image can express it: Arch ships
+    no python, so asserting `command -v python3` fails there proves that Arch is
+    Arch, and the same assertion on a Mac fails against Xcode's.
     """
-    if container.environment.name != 'archlinux':
-        pytest.skip('the Ubuntu images ship a python, which is the point of testing Arch too')
-    assert not container.succeeds('command -v python3')
+    home = container.environment.home
+    assert container.read('command -v python3') == f'{home}/{SHADOW_BIN}/python3'
+
+    refused = container.exec('python3 --version')
+    assert refused.returncode == 1
+    assert SHADOW_REFUSAL in refused.stderr
+
+
+def test_the_shadow_names_whoever_called_it(container: Machine) -> None:
+    """The log is the diagnosis when an install dies, and a log that records the
+    call without the caller answers the wrong half of the question."""
+    container.exec('python3 -c pass')
+    called = [call for call in shadow_calls(container) if 'python3' in call.argv]
+    assert called, 'the stub ran and recorded nothing'
+    assert all(call.caller for call in called)
 
 
 def test_the_machine_declares_itself_before_anything_runs(container: Machine) -> None:

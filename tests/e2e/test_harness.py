@@ -16,11 +16,16 @@ from harness import CONNECTIVITY_RESULTS
 from harness import CONTAINER_PATH_DIRS
 from harness import ENVIRONMENTS
 from harness import PROBE_AGENT
+from harness import SHADOW_BIN
+from harness import SHADOW_LOG
+from harness import SHADOW_REFUSAL
 from harness import Environment
+from harness import ShadowCall
 from harness import blocked_host_args
 from harness import exec_script
 from harness import measured_network
 from harness import reachable_probes
+from harness import shadow_source
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The measured network
@@ -158,6 +163,37 @@ def test_home_is_exported_before_the_command_runs() -> None:
 def test_a_home_with_a_space_survives_the_shell() -> None:
     """Quoted rather than interpolated bare, so a path never splits into two words."""
     assert "'/home/a tester'" in exec_script('echo hi', '/home/a tester')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The hostile system python
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_shadow_wins_the_path_lookup() -> None:
+    """Behind `/usr/bin` it shadows nothing and every assertion built on it is
+    vacuous — the install would use the real interpreter and pass."""
+    script = exec_script('python3 --version', '/home/tester')
+    assert script.index(f'$HOME/{SHADOW_BIN}') < script.index('/usr/bin')
+
+
+def test_the_shadow_refuses_and_says_why() -> None:
+    """Exit 1 rather than 127: a caller that tolerates "not found" would carry on
+    to a fallback, and the fallback is the code path being deleted."""
+    source = shadow_source('/home/tester')
+    assert 'exit 1\n' in source
+    assert SHADOW_REFUSAL in source
+    assert f'/home/tester/{SHADOW_LOG}' in source
+
+
+def test_a_uv_probe_is_not_a_stranger() -> None:
+    """uv scanning PATH for an interpreter is expected; a phase script calling
+    `python3` is the bug. Matched on basename, because `~/.local/share/uv` puts
+    the substring in paths that have nothing to do with uv running."""
+    assert ShadowCall(caller='/home/tester/.local/bin/uv tool install', argv='python3 -c ...').by_uv
+    assert not ShadowCall(caller='bash /home/tester/dotfiles/install/common/thing.sh', argv='python3 x.py').by_uv
+    assert not ShadowCall(caller='/home/tester/.local/share/uv/tools/dotfiles/bin/curl', argv='python3').by_uv
+    assert not ShadowCall(caller='', argv='python3').by_uv
 
 
 def test_a_probe_is_replayed_the_way_the_measurement_ran_it() -> None:

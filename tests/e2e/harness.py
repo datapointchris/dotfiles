@@ -39,13 +39,20 @@ ASSET_CDN_HOSTS = (
     'github-releases.githubusercontent.com',
 )
 
+SHADOW_BIN = '.dotfiles-shadow-bin'
+"""Where the hostile `python3` lives, first on every PATH the rig hands out."""
+
+SHADOW_LOG = '.dotfiles-shadow-calls'
+"""One line per invocation of it: who called, and with what."""
+
+
 # On a real machine the tool directories are prepended to a PATH that already
 # exists; `docker exec` supplies almost nothing, so the system half has to be
 # named here. The tool half is imported rather than copied — a fourth list of the
 # same directories is how the npm prefix came to be on three of them and not the
 # fourth, which reported eleven installed tools as missing.
 SYSTEM_PATH_DIRS = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin')
-CONTAINER_PATH_DIRS = (*apply.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
+CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *apply.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -198,9 +205,9 @@ ARCHLINUX = Environment(
     user='archlinuxuser',
     home='/home/archlinuxuser',
     manifest='archlinux-personal-workstation',
-    # git only, and sudo for the phases that need it. Deliberately no python:
-    # install.sh must reach `dotfiles apply` on a box that has none, and a python
-    # here would let it pass by using this one instead of uv's.
+    # git only, and sudo for the phases that need it. No python either, which is
+    # the state the other three images cannot reach — `plant_python_shadow` gives
+    # every environment the hostile version of the same question.
     prepare=(
         'pacman -Sy --noconfirm sudo git',
         'useradd -m -G wheel -s /bin/bash archlinuxuser',
@@ -299,6 +306,84 @@ class Machine:
 
     def read(self, command: str) -> str:
         return self.exec(command).stdout.strip()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The hostile system python
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+SHADOW_REFUSAL = 'the e2e harness shadows the system python'
+
+
+def shadow_source(home: str) -> str:
+    """A `python3` that records who wanted it and then refuses.
+
+    Shadowed rather than absent, because absence is a weaker property and only
+    one image can even express it: Arch ships no python, so asserting
+    `command -v python3` fails there proves that Arch is Arch, and the same
+    assertion on a Mac fails against Xcode's. A stub that is present, first on
+    PATH and loud says "nothing reached for it" on every machine.
+
+    The caller comes from `/proc/$PPID/cmdline` because the argv alone does not
+    say who ran it, and who ran it is the entire diagnosis — uv probing PATH for
+    an interpreter is expected, a phase script calling `python3` is the bug this
+    step deleted.
+    """
+    return (
+        '#!/bin/sh\n'
+        "caller=$(tr '\\0' ' ' < \"/proc/$PPID/cmdline\" 2>/dev/null || echo unknown)\n"
+        f'printf \'%s\\t%s\\n\' "$caller" "$0 $*" >> {home}/{SHADOW_LOG}\n'
+        f'echo "{SHADOW_REFUSAL}: nothing may call it by name" >&2\n'
+        'exit 1\n'
+    )
+
+
+@dataclass(frozen=True)
+class ShadowCall:
+    """One invocation of the shadowed interpreter."""
+
+    caller: str
+    argv: str
+
+    @property
+    def by_uv(self) -> bool:
+        """uv scanning PATH for an interpreter, which is uv's business and not ours.
+
+        The offline path passes `--no-python-downloads`, so an interpreter uv can
+        find is a documented requirement there; it finds this one first, rejects
+        it for exiting 1, and carries on to the real one. Matched on the parent's
+        basename rather than a substring, or every path containing `uv` — which
+        is most of them once `~/.local/share/uv` exists — would qualify.
+        """
+        first = self.caller.split()
+        return bool(first) and Path(first[0]).name == 'uv'
+
+
+def plant_python_shadow(machine: Machine) -> None:
+    """Put the stub on PATH under every name a caller might reach for."""
+    home = machine.environment.home
+    machine.exec(
+        f'mkdir -p {home}/{SHADOW_BIN} && '
+        f'printf %s {shlex.quote(shadow_source(home))} > {home}/{SHADOW_BIN}/python3 && '
+        f'chmod +x {home}/{SHADOW_BIN}/python3 && '
+        f'ln -sf python3 {home}/{SHADOW_BIN}/python',
+        check=True,
+    )
+
+
+def clear_shadow_calls(machine: Machine) -> None:
+    machine.exec(f'rm -f {machine.environment.home}/{SHADOW_LOG}', check=True)
+
+
+def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
+    log = machine.read(f'cat {machine.environment.home}/{SHADOW_LOG} 2>/dev/null')
+    calls = []
+    for line in log.splitlines():
+        caller, _, argv = line.partition('\t')
+        if line.strip():
+            calls.append(ShadowCall(caller=caller.strip(), argv=argv.strip()))
+    return tuple(calls)
 
 
 def blocked_host_args(environment: Environment) -> list[str]:

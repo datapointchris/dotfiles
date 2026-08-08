@@ -51,9 +51,11 @@ import pytest
 from harness import ENVIRONMENTS
 from harness import Environment
 from harness import Machine
+from harness import clear_shadow_calls
 from harness import copy_repo
 from harness import docker
 from harness import image_exists
+from harness import plant_python_shadow
 from harness import stage_bundle
 from harness import start
 
@@ -100,6 +102,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
                 subject.exec(command, user='root', check=True)
 
         copy_repo(subject)
+        plant_python_shadow(subject)
 
         if environment.env_file:
             subject.exec(f'printf %s {shlex.quote(environment.env_file)} > {environment.home}/.env', check=True)
@@ -128,6 +131,11 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
         # half a gigabyte and several minutes. Rebuilt by default so a change to
         # the bundle format cannot ship against a bundle in the old layout.
         stage_bundle(container, reuse=request.config.getoption('--reuse'))
+
+    # Truncated here rather than at planting time, so the log covers the install
+    # and nothing else: the container tier probes the shadow deliberately to
+    # prove it works, and those probes are not the run under test.
+    clear_shadow_calls(container)
 
     flags = ' --offline' if environment.offline else ''
     completed = container.exec(f'cd {environment.home}/dotfiles && ./install.sh --machine {environment.manifest}{flags}')
