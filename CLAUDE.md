@@ -165,7 +165,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. It removes every symlink and recreates them, so it prunes the dangling ones a deletion leaves behind — there is no create-only verb to pick between, and it is idempotent.
+After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. It prunes the links a deletion left dangling and then recreates every declared one, so there is no create-only verb to pick between, and it is idempotent. It deliberately does **not** unlink everything first: that gave a daemon watching its own config — Hyprland — a window to find the file gone and write itself a default, which the create pass then refused. Never reinstate a remove-everything pass; `tests/symlinks/test_integration.py` pins this.
 
 `task relink` is equivalent but only works from inside the repo.
 

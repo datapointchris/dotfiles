@@ -478,7 +478,19 @@ def relink(
     dotfiles_dir: Path | None = None,
     target_dir: Path | None = None,
 ) -> list[Path]:
-    """Complete refresh: remove old symlinks, clean up broken ones, recreate everything.
+    """Prune the links whose source is gone, then recreate every declared link.
+
+    Deliberately without a remove-everything pass first. That pass left the
+    target tree unlinked for the length of the create pass, and a daemon
+    watching its own config in there reloads inside that window, finds nothing,
+    and writes itself a default — which the create pass then refuses as a target
+    it did not create, so the run fails and the daemon keeps running the default.
+    Hyprland does exactly this, every run, on an established machine.
+
+    Nothing is lost by dropping it: `create_symlinks` already replaces any target
+    it owns, and `check_and_clean` already removes the links whose source was
+    deleted. The one case the removal pass covered and this does not is a source
+    still present in the repo but newly excluded, whose link now survives.
 
     Returns the targets it refused to replace, so the caller can fail on them.
     """
@@ -493,7 +505,7 @@ def relink(
 
     # The platform config overlay is optional: a minimal platform like `linux`
     # ships only a shell overlay. When configs/<platform> is absent, skip the
-    # platform config remove/create steps and let common + shell/apps carry it.
+    # platform config create step and let common + shell/apps carry it.
     has_platform_config = platform_dir.exists()
 
     refused: list[Path] = []
@@ -501,10 +513,6 @@ def relink(
     def link_if_exists(source: Path, layer: str, dest: Path) -> None:
         if source.exists():
             refused.extend(create_symlinks(source, layer, verbose=verbose, target_dir=dest).refused)
-
-    def remove_platform_config() -> None:
-        if has_platform_config:
-            remove_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
 
     def create_platform_config() -> None:
         if has_platform_config:
@@ -525,10 +533,7 @@ def relink(
     print()
 
     steps = [
-        ('Removing platform symlinks', remove_platform_config),
-        ('Removing common symlinks', lambda: remove_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
-        ('Removing shell symlinks', lambda: remove_symlinks(shell_dir, 'shell', verbose=verbose, target_dir=_target_dir)),
-        ('Checking for broken symlinks', lambda: check_and_clean(_target_dir, _dotfiles_dir)),
+        ('Pruning links whose source is gone', lambda: check_and_clean(_target_dir, _dotfiles_dir)),
         ('Creating common base layer', create_common_layer),
         ('Creating platform overlay', create_platform_config),
         ('Linking shell files', link_shell_files),

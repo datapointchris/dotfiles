@@ -128,7 +128,7 @@ def check(
 def relink(
     platform: str = typer.Argument(..., help='Platform to relink (macos, wsl, archlinux, linux, etc.)'),
 ):
-    """Complete refresh: unlink platform, unlink common, check, link common, link platform.
+    """Complete refresh: prune links whose source is gone, then link common and platform.
 
     The platform overlay is optional per layer (a minimal `linux` platform has
     only a shell overlay), so relink proceeds as long as the platform exists in
