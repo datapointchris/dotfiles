@@ -83,38 +83,39 @@ def git(*args: str, output: Output = Output.QUIET) -> Completed:
     return run(['git', '-C', str(paths.REPO_ROOT), *args], output=output)
 
 
-def catalog(*args: str, output: Output = Output.DATA) -> int:
-    """Query the packages catalog, in-process, returning its exit status.
+def declaration(*args: str, output: Output = Output.DATA) -> int:
+    """Query the declaration, in-process, returning its exit status.
 
-    A call rather than a subprocess because the catalog is already part of this
-    package. `install/ops/doctor.sh` reaches it as `uv run packages`, which needs
-    a uv project on disk — true in the repo, false for the installed tool this
-    CLI is becoming.
+    A call rather than a subprocess because it is already part of this package.
+    `install/ops/doctor.sh` reaches it as `uv run packages`, which needs a uv
+    project on disk — true in the repo, false for the installed tool this CLI is
+    becoming.
 
-    `catalog.main` signals through `sys.exit`, so the SystemExit it raises is the
-    return value and not an error. Converting it here rather than letting it
+    `declaration.main` signals through `sys.exit`, so the SystemExit it raises is
+    the return value and not an error. Converting it here rather than letting it
     propagate is what stops a `packages verify` finding from killing the whole
     `check` walk before the resources after it have run.
 
-    Running in-process means the catalog prints to *our* stdout, so the same
-    stream discipline `effects.run` applies to a subprocess has to be applied
-    here by hand. `Output.STREAM` sends its output to stderr, which is what a
-    caller wants when the catalog is answering a check rather than being the
-    command: without it `dotfiles check --json` emits two progress lines above
-    the document and every parse of it fails.
+    Running in-process means it prints to *our* stdout, so the same stream
+    discipline `effects.run` applies to a subprocess has to be applied here by
+    hand. `Output.STREAM` sends its output to stderr, which is what a caller
+    wants when it is answering a check rather than being the command: without it
+    `dotfiles check --json` emits two progress lines above the document and every
+    parse of it fails.
 
-    Imported inside the function, against the usual rule: `import dotfiles.catalog`
-    costs 78ms (29ms of it yaml, measured 2026-08-08), and most invocations —
-    `--help`, `report latest`, `repo path` — never reach the catalog at all.
+    Imported inside the function, against the usual rule: `import
+    dotfiles.declaration` costs 78ms (29ms of it yaml, measured 2026-08-08), and
+    most invocations — `--help`, `report latest`, `repo path` — never read the
+    declaration at all.
     """
-    from dotfiles import catalog as catalog_module
+    from dotfiles import declaration as declaration_module
 
     redirect: contextlib.AbstractContextManager = (
         contextlib.redirect_stdout(sys.stderr) if output is Output.STREAM else contextlib.nullcontext()
     )
     try:
         with redirect:
-            catalog_module.main(list(args))
+            declaration_module.main(list(args))
     except SystemExit as requested:
         return int(requested.code or 0)
     return 0

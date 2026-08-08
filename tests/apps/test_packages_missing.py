@@ -22,7 +22,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PACKAGES = [sys.executable, '-m', 'dotfiles.catalog']
+PACKAGES = [sys.executable, '-m', 'dotfiles.declaration']
 
 
 def build_tree(root: Path, *, packages: dict[str, Any], manifests: dict[str, dict[str, Any]]) -> None:

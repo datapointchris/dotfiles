@@ -109,19 +109,19 @@ def packages_apply(
 def packages_list(source: str = SourceOption, as_json: bool = JsonOption) -> None:
     """List declared packages."""
     arguments = ['list', *(('--section', source) if source else ()), *(('--json',) if as_json else ())]
-    raise typer.Exit(bridge.catalog(*arguments))
+    raise typer.Exit(bridge.declaration(*arguments))
 
 
 @packages_app.command('show')
 def packages_show(name: str = typer.Argument(..., help='Package name')) -> None:
     """Show one package's declaration."""
-    raise typer.Exit(bridge.catalog('show', name))
+    raise typer.Exit(bridge.declaration('show', name))
 
 
 @packages_app.command('search')
 def packages_search(query: str = typer.Argument(..., help='Substring to match')) -> None:
     """Search declared packages by name, description or tag."""
-    raise typer.Exit(bridge.catalog('search', query))
+    raise typer.Exit(bridge.declaration('search', query))
 
 
 toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and their version managers')
@@ -143,13 +143,13 @@ def toolchains_apply(machine: str = MachineOption, reinstall: bool = ReinstallOp
 def toolchains_list(as_json: bool = JsonOption) -> None:
     """List the declared toolchains."""
     arguments = ['list', '--section', 'runtimes', *(('--json',) if as_json else ())]
-    raise typer.Exit(bridge.catalog(*arguments))
+    raise typer.Exit(bridge.declaration(*arguments))
 
 
 @toolchains_app.command('show')
 def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> None:
     """Show one toolchain's declaration."""
-    raise typer.Exit(bridge.catalog('show', name))
+    raise typer.Exit(bridge.declaration('show', name))
 
 
 plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plugins')
@@ -171,7 +171,7 @@ def plugins_apply(machine: str = MachineOption, reinstall: bool = ReinstallOptio
 def plugins_list(as_json: bool = JsonOption) -> None:
     """List the declared plugins."""
     arguments = ['list', '--section', 'shell_plugins', *(('--json',) if as_json else ())]
-    raise typer.Exit(bridge.catalog(*arguments))
+    raise typer.Exit(bridge.declaration(*arguments))
 
 
 symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the repo linked into $HOME')

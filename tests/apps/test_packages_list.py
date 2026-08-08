@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 import yaml
 
-PACKAGES = [sys.executable, '-m', 'dotfiles.catalog']
+PACKAGES = [sys.executable, '-m', 'dotfiles.declaration']
 
 # One real section per declared structure, so the fixture exercises the same
 # specs the real file does rather than inventing section names.

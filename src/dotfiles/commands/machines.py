@@ -82,7 +82,7 @@ def check_machines(name: str = typer.Argument(None, help='Machine name (default:
     if name:
         _manifest_path(name)
         hint(f'checking every manifest, not only {name}: packages.yml is shared by all of them')
-    raise typer.Exit(bridge.catalog('verify'))
+    raise typer.Exit(bridge.declaration('verify'))
 
 
 @app.command('edit')

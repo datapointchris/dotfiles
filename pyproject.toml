@@ -14,7 +14,7 @@ dependencies = [
 
 [project.scripts]
 dotfiles = "dotfiles.main:app"
-packages = "dotfiles.catalog:main"
+packages = "dotfiles.declaration:main"
 symlinks = "dotfiles.symlinks.cli:app"
 
 

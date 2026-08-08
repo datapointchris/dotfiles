@@ -18,8 +18,7 @@ from typing import Any
 import pytest
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-PACKAGES = [sys.executable, '-m', 'dotfiles.catalog']
+PACKAGES = [sys.executable, '-m', 'dotfiles.declaration']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -129,154 +128,24 @@ def test_clean_tree_verifies_with_zero_issues(tmp_path: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tier 1 — section shape: required fields + duplicates
+# Tier 1 — section shape
+#
+# Every per-entry rule is the section's dataclass now, and is tested directly
+# against `catalog.load` in tests/resolver/test_catalog.py — no subprocess, no
+# synthetic tree. What stays here is the wiring: that a refused entry reaches
+# this command's report and its exit code, which no unit test of the loader can
+# answer.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_missing_required_field_flags_error(tmp_path: Path) -> None:
-    """github_releases entry missing its required `repo` field."""
+def test_a_refused_entry_is_reported_as_an_error(tmp_path: Path) -> None:
     build_tree(
         tmp_path,
         packages={'github_releases': [{'name': 'fzf'}]},  # no `repo`
         manifests={},
         github_release_scripts=['fzf'],
     )
-    assert_error(run_verify(tmp_path), "missing required field 'repo'")
-
-
-def test_required_any_of_flags_error_when_none_present(tmp_path: Path) -> None:
-    """system_packages requires at least one of apt/pacman/brew/aur."""
-    build_tree(
-        tmp_path,
-        packages={'system_packages': [{'name': 'git'}]},  # no package-manager key
-        manifests={},
-    )
-    assert_error(run_verify(tmp_path), 'must have at least one of')
-
-
-@pytest.mark.parametrize(
-    ('field', 'value'),
-    [('binary_pattern', 'fzf-{version}-{os}.tar.gz'), ('install_dir', '~/.local/bin')],
-)
-def test_forbidden_field_flags_error(tmp_path: Path, field: str, value: str) -> None:
-    """Both fields read as configuration but are read by no code, so they drifted
-    into naming assets that no longer existed. Verify rejects them on sight."""
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', field: value}]},
-        manifests={},
-        github_release_scripts=['fzf'],
-    )
-    assert_error(run_verify(tmp_path), f"field '{field}' is read by no code")
-
-
-def test_a_pin_is_accepted_where_it_is_honoured(tmp_path: Path) -> None:
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0'}]},
-        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'github_releases': ['fzf']}},
-        github_release_scripts=['fzf'],
-    )
-    assert_clean(run_verify(tmp_path))
-
-
-def test_a_constraint_no_section_honours_flags_error(tmp_path: Path) -> None:
-    """The failure this check exists for: four version fields sat in packages.yml
-    unread, one of them eight versions stale, because nothing objected."""
-    build_tree(
-        tmp_path,
-        packages={'cargo_packages': [{'name': 'fd', 'version': '10.0.0'}]},
-        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'cargo_packages': ['fd']}},
-    )
-    assert_error(run_verify(tmp_path), 'nothing honours it for cargo_packages')
-
-
-def test_every_section_carrying_entries_is_validated() -> None:
-    """The check that catches a whole section sitting outside the walk.
-
-    Every per-entry rule — required fields, duplicates, dead version constraints —
-    runs by iterating SECTION_SPECS, so a section absent from it is not validated
-    leniently but not at all. `runtimes` was in exactly that state while declaring
-    a `version` and a `min_version`, which is what the constraint rule exists to
-    police, and no per-rule test could see it because each one names its section.
-
-    Reads the real packages.yml rather than a fixture: the drift being guarded
-    against is a section added there and nowhere else.
-    """
-    from dotfiles.catalog import SECTION_SPECS
-
-    declared = yaml.safe_load((REPO_ROOT / 'install' / 'packages.yml').read_text())
-    # macos_taps holds bare strings, so it has no entry to carry a field or a
-    # constraint and there is nothing for a spec to say about it.
-    unvalidated = set(declared) - set(SECTION_SPECS) - {'macos_taps'}
-
-    assert not unvalidated, (
-        f'sections in packages.yml with no SECTION_SPECS entry: {sorted(unvalidated)}. '
-        'Add a spec, or add to the exemption above with the reason.'
-    )
-
-
-def test_a_pin_beside_a_bound_flags_error(tmp_path: Path) -> None:
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0', 'min_version': '0.40'}]},
-        manifests={},
-        github_release_scripts=['fzf'],
-    )
-    assert_error(run_verify(tmp_path), 'Declare one or the other')
-
-
-@pytest.mark.parametrize('pinned', ['v0.50.0', 'cli/v0.9.0'])
-def test_a_constraint_written_as_a_tag_flags_error(tmp_path: Path, pinned: str) -> None:
-    """One tool spells a release v0.56.0 and another cli/v0.9.0, so a declared tag
-    is only ever correct for its own tool and cannot be compared at all."""
-    build_tree(
-        tmp_path,
-        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': pinned}]},
-        manifests={},
-        github_release_scripts=['fzf'],
-    )
-    assert_error(run_verify(tmp_path), 'which is a tag')
-
-
-def test_forbidden_fields_do_not_apply_to_other_sections(tmp_path: Path) -> None:
-    """binary_pattern is live on cargo_packages, where it does build a release URL."""
-    build_tree(
-        tmp_path,
-        packages={'cargo_packages': [{'name': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'}]},
-        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'cargo_packages': ['fd']}},
-    )
-    assert_clean(run_verify(tmp_path))
-
-
-def test_duplicate_name_within_section_flags_error(tmp_path: Path) -> None:
-    """Two github_releases entries sharing the same name."""
-    build_tree(
-        tmp_path,
-        packages={
-            'github_releases': [
-                {'name': 'fzf', 'repo': 'junegunn/fzf'},
-                {'name': 'fzf', 'repo': 'other/fzf'},
-            ]
-        },
-        manifests={},
-        github_release_scripts=['fzf'],
-    )
-    assert_error(run_verify(tmp_path), "duplicate name: 'fzf'")
-
-
-def test_dict_of_lists_flattens_for_shape_check(tmp_path: Path) -> None:
-    """npm_globals is a dict of categories — shape check must traverse into each list."""
-    build_tree(
-        tmp_path,
-        packages={
-            'npm_globals': {
-                'language_servers': [{'description': 'missing name'}],  # no `name`
-            }
-        },
-        manifests={},
-    )
-    assert_error(run_verify(tmp_path), "missing required field 'name'")
+    assert_error(run_verify(tmp_path), 'fzf is missing required field(s) repo')
 
 
 # ─────────────────────────────────────────────────────────────────────────────

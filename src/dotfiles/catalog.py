@@ -1,961 +1,603 @@
-"""The catalog: packages.yml, and every question asked of it.
+"""`packages.yml`, parsed once into typed rows.
 
-Browsing and search, plus the two drift checks — `verify` compares the repo
-against itself and runs on every commit, `missing` compares *this machine*
-against what its manifest declares and is what `doctor` calls. They are separate
-because a box part-way through a rollout is not a repo defect.
+One dataclass per section, rather than one generic row plus a table of
+`required` / `forbidden` / `id_field` rules. The table existed because nothing
+else pinned a section's shape, and it only ever described the fields someone
+remembered to describe: `install_script` sat on all 23 `github_releases` entries
+naming scripts that half of them no longer had, and `binary_pattern` drifted into
+naming assets that no longer existed. Both were invisible for the same reason —
+no reader consumed them, and nothing said one had to.
 
-This owns the schema. It used to be a standalone script carrying its own second
-description of packages.yml — SECTION_SPECS beside parse_packages's own reading
-of the same file — which is exactly the drift `verify` exists to catch, in the
-one place nothing was checking.
+A field on a dataclass is either read by its provider or visibly unused, and a
+key that is not a field is an error at load time rather than decoration. That is
+the whole argument for the rewrite: the section's schema and the section's reader
+stop being two documents that can disagree.
+
+Everything is collected before anything is raised. A caller fixing `packages.yml`
+wants every problem in it, not the first one — which is also what lets
+`dotfiles machines check` render this as a report instead of a stack trace.
 """
 
-import argparse
-import json
-import os
-import platform
-import shutil
-import sys
-from collections import Counter
-from enum import Enum
+from __future__ import annotations
+
+import dataclasses as dc
+import enum
+import typing
+from collections.abc import Iterator
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+from typing import ClassVar
+from typing import Self
 
 import yaml
 
-import dotfiles
 from dotfiles import paths
 
-SECTION_SPECS: dict[str, dict[str, Any]] = {
-    'system_packages': {
-        'structure': 'list',
-        'required': ['name'],
-        'required_any_of': [('apt', 'pacman', 'brew', 'aur')],
-        'id_field': 'name',
-    },
-    'github_releases': {
-        'structure': 'list',
-        'required': ['name', 'repo'],
-        # Both were carried on nearly every entry while every reader gated on
-        # `github_repo`, which this section does not use — so they went unvalidated
-        # and drifted into naming assets that no longer existed.
-        'forbidden': {
-            'binary_pattern': "the asset URL comes from the script's get_download_url",
-            'install_dir': 'only tmux_plugins.install_dir is read; use binary_link',
-        },
-        'id_field': 'name',
-    },
-    'custom_installers': {
-        'structure': 'list',
-        'required': ['name', 'source_type', 'description'],
-        'id_field': 'name',
-    },
-    'cargo_packages': {'structure': 'list', 'required': ['name'], 'id_field': 'name'},
-    'npm_globals': {'structure': 'dict_of_lists', 'required': ['name'], 'id_field': 'name'},
-    'uv_tools': {'structure': 'dict_of_lists', 'required': ['name'], 'id_field': 'name'},
-    'git_uv_tools': {'structure': 'list', 'required': ['name', 'repo'], 'id_field': 'name'},
-    'go_tools': {'structure': 'list', 'required': ['name', 'package'], 'id_field': 'name'},
-    'shell_plugins': {'structure': 'list', 'required': ['name', 'repo'], 'id_field': 'name'},
-    'tmux_plugins': {'structure': 'dict_of_dicts', 'required': ['repo', 'install_dir'], 'id_field': 'name'},
-    'mas_apps': {'structure': 'list', 'required': ['id', 'name'], 'id_field': 'name'},
-    'flatpak_apps': {'structure': 'list', 'required': ['flatpak_id'], 'id_field': 'flatpak_id'},
-    'macos_casks': {'structure': 'list', 'required': ['name'], 'id_field': 'name'},
-    'runtimes': {'structure': 'dict_of_dicts', 'required': ['install_method'], 'id_field': 'name'},
-    'zen_extensions': {'structure': 'list', 'required': ['name', 'url'], 'id_field': 'name'},
+
+@dc.dataclass(frozen=True, slots=True)
+class Issue:
+    """One thing wrong with the declaration, named where it is."""
+
+    section: str
+    message: str
+
+    def __str__(self) -> str:
+        return f'{self.section}: {self.message}'
+
+
+class CatalogError(Exception):
+    """`packages.yml` declares something no reader can consume."""
+
+    def __init__(self, issues: tuple[Issue, ...]) -> None:
+        self.issues = issues
+        super().__init__('\n'.join(str(issue) for issue in issues))
+
+
+class EntryError(ValueError):
+    """One row cannot be built. Caught by `load`, which reports it as an Issue."""
+
+
+class Structure(enum.Enum):
+    """How a section is spelled in the YAML.
+
+    `GROUPED` sections nest their rows under editorial category keys
+    (`npm_globals.language_servers`); the categories organise the file and are
+    read by nothing, so they are flattened away here rather than carried as a
+    field no provider consumes. `KEYED` sections are a mapping whose key is the
+    row's name.
+    """
+
+    LIST = enum.auto()
+    GROUPED = enum.auto()
+    KEYED = enum.auto()
+
+
+UNREAD_KEYS: dict[str, str] = {
+    'binary_pattern': 'the asset URL is built in code for this section, so a pattern here goes unread and drifts',
+    'install_dir': 'only tmux_plugins declares one; a release binary uses binary_link',
+    'install_script': 'the installer is found by name at install/common/<dir>/<name>.sh',
+    'build_method': 'nothing branches on how upstream builds its release',
 }
-# `macos_taps` is deliberately absent and is the only section that stays out: it
-# holds bare strings, so there is no entry to carry a required field or a version
-# constraint, and a spec for it would validate nothing.
+"""Keys that were carried for long enough to look like configuration.
 
-PACKAGE_SECTIONS = tuple(SECTION_SPECS.keys())
+An unknown key is an error either way; these get the reason attached, because
+"unknown key" tells a reader what happened and not what to do instead. Each one
+here was measured as read by nothing before it was removed.
+"""
 
-# Sections whose manifest field is a list of names that must resolve to packages.yml entries.
-NAME_SUBSCRIBED_SECTIONS = (
-    'go_tools',
-    'cargo_packages',
-    'npm_globals',
-    'uv_tools',
-    'git_uv_tools',
-    'github_releases',
-    'custom_installers',
+CONSTRAINTS = ('version', 'min_version', 'max_version')
+
+GRANDFATHERED_CONSTRAINTS = frozenset(
+    {
+        ('github_releases', 'neovim', 'min_version'),
+        ('github_releases', 'fzf', 'min_version'),
+        # go.sh fetches whatever go.dev currently offers and never reads this floor.
+        ('runtimes', 'go', 'min_version'),
+    }
 )
-
-# Manifest keys that used to gate runtimes but were removed in Phase 1.6.
-# Runtime installation is now derived from name-list presence (e.g. go_tools non-empty → Go).
-DEPRECATED_MANIFEST_KEYS = ('go', 'rust', 'nvm', 'uv', 'tenv')
-
-# Sections whose entries have a 1:1 script in a directory under install/common/.
-# Maps section name → subdir name.
-SCRIPT_BACKED_SECTIONS = {
-    'github_releases': 'github-releases',
-    'custom_installers': 'custom-installers',
-}
+"""Floors that predate enforcement. All are satisfied, so they mislead nobody, and
+naming them keeps the information alive for the resolver instead of deleting it to
+silence a check."""
 
 
-class Color(Enum):
-    """ANSI color codes."""
+def owner_of(value: str) -> str | None:
+    """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
 
-    RESET = '\033[0m'
-    RED = '\033[0;31m'
-    CYAN = '\033[0;36m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[0;33m'
-    MAGENTA = '\033[0;35m'
-    BRIGHT_CYAN = '\033[0;96m'
-    BRIGHT_MAGENTA = '\033[0;95m'
-    BRIGHT_YELLOW = '\033[0;93m'
-    BRIGHT_BLUE = '\033[0;94m'
-    BRIGHT_BLACK = '\033[0;90m'
-    ORANGE = '\033[38;5;208m'
-
-
-class InstallStatus(Enum):
-    """Package installation status."""
-
-    INSTALLED = 'installed'
-    APP_ONLY = 'app-only'
-    NOT_INSTALLED = 'not-installed'
-    NOT_AVAILABLE = 'not-available'
+    Derived rather than tagged, per `data.md` § "Ownership is derived from data,
+    never from a tag" — it is what `--owner` filters on, and it caught an entry
+    the four hand-written tags had missed. The shapes disagree: `owner/name`, a
+    clone URL, and a Go import path all appear.
+    """
+    path = value.split('://', 1)[-1].removesuffix('.git').strip('/')
+    segments = [segment for segment in path.split('/') if segment]
+    # A leading host (github.com) appears only in the URL and Go-import forms.
+    if segments and '.' in segments[0]:
+        segments = segments[1:]
+    return segments[0] if segments else None
 
 
-class Platform(Enum):
-    """Supported platforms."""
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class Entry:
+    """One row of `packages.yml`. The subclass is the section's schema.
 
-    MACOS = 'macos'
-    ARCH = 'archlinux'
-    LINUX = 'linux'
-    UNKNOWN = 'unknown'
+    The three version constraints sit here rather than on the sections that pin
+    today, because any section could grow one and only its *provider* decides
+    whether it means anything. `honoured_constraints` is that decision, declared
+    beside the class whose installer reads it — so declaring a constraint where
+    nothing honours it is an error rather than a silent no-op. Four such fields
+    sat unread in `packages.yml` until a URL audit found them, one eight versions
+    stale. `.planning/version-constraints.md` carries the vocabulary.
+    """
 
+    name: str
+    description: str = ''
+    tags: tuple[str, ...] = ()
+    command: str = ''
+    version: str = ''
+    min_version: str = ''
+    max_version: str = ''
 
-def use_color() -> bool:
-    """Check if terminal supports color output."""
-    return sys.stdout.isatty() and os.environ.get('TERM', '') != 'dumb'
+    section: ClassVar[str]
+    structure: ClassVar[Structure] = Structure.LIST
+    honoured_constraints: ClassVar[tuple[str, ...]] = ()
 
+    @property
+    def executable(self) -> str:
+        """The binary this entry puts on PATH.
 
-USE_COLOR = use_color()
+        `command` is the override for a package whose binary is named differently
+        — ripgrep ships rg, `@taplo/cli` ships taplo.
+        """
+        return self.command or self.name
 
+    @property
+    def owner(self) -> str | None:
+        """The GitHub owner, or None for an entry sourced from a registry.
 
-def colorize(text: str, color: Color) -> str:
-    """Apply color to text if terminal supports it."""
-    if USE_COLOR:
-        return f'{color.value}{text}{Color.RESET.value}'
-    return text
-
-
-def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
-    """Print a section header with underline."""
-    print(f'\n{title}')
-    line_char = '─' if USE_COLOR else '-'
-    line = line_char * (len(title) + 15)
-    print(colorize(line, color) if USE_COLOR else line)
-
-
-def print_header(title: str) -> None:
-    """Print a main header with box drawing."""
-    line = '━' * 50
-    if USE_COLOR:
-        print(colorize(line, Color.BRIGHT_CYAN))
-        print(colorize(f' {title}', Color.BRIGHT_CYAN))
-        print(colorize(line, Color.BRIGHT_CYAN))
-    else:
-        print(line)
-        print(f' {title}')
-        print(line)
-
-
-def get_packages_file(root: Path | None = None) -> Path:
-    """Find packages.yml. If root is given, look under <root>/install/; else walk to git root."""
-    if root is not None:
-        packages_file = root / 'install' / 'packages.yml'
-        if packages_file.exists():
-            return packages_file
-        print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
-        sys.exit(1)
-
-    if paths.PACKAGES_FILE.exists():
-        return paths.PACKAGES_FILE
-
-    print('Error: packages.yml not found', file=sys.stderr)
-    sys.exit(1)
-
-
-def load_packages(root: Path | None = None) -> dict[str, Any]:
-    """Load and parse packages.yml, optionally rooted at an override path."""
-    with get_packages_file(root).open() as f:
-        return yaml.safe_load(f)
-
-
-def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Get all packages with their section attached as _section."""
-    all_packages = []
-    for section in PACKAGE_SECTIONS:
-        for pkg in iter_section_entries(data, section):
-            if isinstance(pkg, dict) and 'name' in pkg:
-                pkg_copy = dict(pkg)
-                pkg_copy['_section'] = section
-                all_packages.append(pkg_copy)
-    return all_packages
-
-
-def get_current_platform() -> Platform:
-    """Detect the current operating system platform."""
-    system = platform.system()
-    if system == 'Darwin':
-        return Platform.MACOS
-    if system == 'Linux':
-        if Path('/etc/arch-release').exists():
-            return Platform.ARCH
-        return Platform.LINUX
-    return Platform.UNKNOWN
-
-
-def is_available_on_platform(pkg: dict[str, Any]) -> bool:
-    """Check if package is available on the current platform."""
-    section = pkg.get('_section', '')
-    current = get_current_platform()
-
-    # Platform-exclusive sections
-    macos_only = ('macos_casks', 'mas_apps')
-    linux_only = ('flatpak_apps',)
-
-    if section in macos_only and current != Platform.MACOS:
-        return False
-    if section in linux_only and current == Platform.MACOS:
-        return False
-
-    # System packages must have an entry for the current package manager
-    if section == 'system_packages':
-        if current == Platform.MACOS:
-            return 'brew' in pkg
-        if current == Platform.ARCH:
-            return 'pacman' in pkg or 'aur' in pkg
-        return 'apt' in pkg  # Linux/Ubuntu default
-
-    return True
-
-
-def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
-    """Check if a package is installed and return its status and path."""
-    if not is_available_on_platform(pkg):
-        return InstallStatus.NOT_AVAILABLE, None
-
-    name = pkg.get('name', '')
-    cmd_name = pkg.get('command', name)
-    section = pkg.get('_section', '')
-
-    # Check binary_link field (used by github_releases)
-    binary_link = pkg.get('binary_link', '')
-    if binary_link:
-        link_path = Path(binary_link).expanduser()
-        if link_path.exists():
-            return InstallStatus.INSTALLED, str(link_path)
-
-    # An explicit path, for the entries that install no binary at all — a sourced
-    # bash library has nothing for `which` to find, and would read as missing
-    # forever.
-    installed_path = pkg.get('installed_path', '')
-    if installed_path:
-        target = Path(installed_path).expanduser()
-        if target.exists():
-            return InstallStatus.INSTALLED, str(target)
-        return InstallStatus.NOT_INSTALLED, None
-
-    # Check if command is in PATH
-    which_path = shutil.which(cmd_name)
-    if which_path:
-        return InstallStatus.INSTALLED, which_path
-
-    # uv installs a tool per directory, and some of them are libraries pulled in
-    # for another tool's benefit (numpy for the Jupyter stack) with no console
-    # script of their own.
-    if section in ('uv_tools', 'git_uv_tools'):
-        uv_dir = Path(os.environ.get('UV_TOOL_DIR', Path.home() / '.local/share/uv/tools')) / name
-        if uv_dir.is_dir():
-            return InstallStatus.INSTALLED, str(uv_dir)
-
-    # Check macOS application bundles
-    if section in ('macos_casks', 'mas_apps'):
-        app_path = find_macos_app(name)
-        if app_path:
-            return InstallStatus.APP_ONLY, str(app_path)
-
-    return InstallStatus.NOT_INSTALLED, None
-
-
-def find_macos_app(name: str) -> Path | None:
-    """Find a macOS .app bundle by name (case-insensitive)."""
-    target = f'{name}.app'.lower()
-    for base in (Path('/Applications'), Path.home() / 'Applications'):
-        if not base.exists():
-            continue
-        for entry in base.iterdir():
-            if entry.name.lower() == target:
-                return entry
-    return None
-
-
-def format_status(status: InstallStatus, path: str | None) -> str | None:
-    """Format installation status for display."""
-    if status == InstallStatus.INSTALLED:
-        return colorize(f'✓ {path}', Color.GREEN)
-    if status == InstallStatus.APP_ONLY:
-        return colorize(f'⚠ app exists but CLI not in PATH: {path}', Color.YELLOW)
-    if status == InstallStatus.NOT_AVAILABLE:
+        npm, PyPI, apt/brew/pacman entries have no owner and correctly match
+        nothing under `--owner`.
+        """
         return None
-    return colorize('✗ not installed', Color.BRIGHT_BLACK)
 
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> Self:
+        fields = {field.name: field for field in dc.fields(cls)}
 
-def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
-    """Calculate optimal column widths for a list of items."""
-    max_widths = max_widths or {}
-    widths = {}
-    for field in fields:
-        width = max(len(str(item.get(field, ''))) for item in items) + 2
-        if field in max_widths:
-            width = min(width, max_widths[field])
-        widths[field] = width
-    return widths
+        if unknown := sorted(set(raw) - set(fields)):
+            named = ', '.join(f'{key} ({UNREAD_KEYS[key]})' if key in UNREAD_KEYS else key for key in unknown)
+            raise EntryError(f'declares {named}, which no reader consumes')
 
+        if missing := sorted(name for name, field in fields.items() if _is_required(field) and name not in raw):
+            raise EntryError(f'is missing required field(s) {", ".join(missing)}')
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Commands
-# ─────────────────────────────────────────────────────────────────────────────
+        hints = _hints(cls)
+        return cls(**{key: _typed(key, hints[key], value) for key, value in raw.items()})
 
+    def problems(self) -> tuple[str, ...]:
+        """Cross-field rules a single field cannot express."""
+        found = []
+        declared = [key for key in CONSTRAINTS if getattr(self, key)]
 
-def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all package sections with counts."""
-    print_section('Package Sections')
-    print()
-    for section in PACKAGE_SECTIONS:
-        packages = list(iter_section_entries(data, section))
-        if packages:
-            print(f'  {section:<20} {len(packages):3d} packages')
-
-
-def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Show package statistics by section."""
-    print_section('Package Statistics')
-    print()
-
-    print(f'{"Section":<24} {"Count":>5}')
-    print('─' * 32)
-
-    total = 0
-    for section in PACKAGE_SECTIONS:
-        count = sum(1 for _ in iter_section_entries(data, section))
-        if count:
-            print(f'{section:<24} {count:5d}')
-            total += count
-
-    print('─' * 32)
-    print(f'{"Total":<24} {total:5d}')
-
-
-def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all tags with package counts."""
-    print_section('Available Tags')
-    print()
-
-    tag_counts: Counter[str] = Counter()
-    for pkg in get_all_packages(data):
-        tag_counts.update(pkg.get('tags', []))
-
-    if not tag_counts:
-        print('  No tags defined yet.')
-        print()
-        print('  Add tags to packages.yml entries:')
-        print('    - name: ghostty')
-        print('      description: GPU-accelerated terminal')
-        print('      tags: [gui, terminal]')
-        return
-
-    for tag, count in tag_counts.most_common():
-        print(f'  {tag:<16} {count:3d} packages')
-
-
-def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Show details for a specific package."""
-    name_lower = args.name.lower()
-    matches = [p for p in get_all_packages(data) if p.get('name', '').lower() == name_lower]
-
-    if not matches:
-        print(f'Error: Package not found: {args.name}', file=sys.stderr)
-        print('\nSimilar packages:', file=sys.stderr)
-        similar = [p for p in get_all_packages(data) if name_lower in p.get('name', '').lower()]
-        for pkg in similar[:5]:
-            print(f'  {pkg["name"]:<28} {pkg.get("description", "")}', file=sys.stderr)
-        sys.exit(1)
-
-    # Sort with available-on-this-platform first
-    matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)
-
-    for pkg in matches:
-        print()
-        print(colorize(f'Package: {pkg["name"]}', Color.CYAN))
-        print('━' * 40)
-        print()
-
-        print(f'Description: {pkg.get("description", "N/A")}')
-        print(f'Section:     {pkg["_section"]}')
-        print(f'Tags:        {", ".join(pkg.get("tags", [])) or "none"}')
-
-        # Platform package names
-        platform_fields = ('apt', 'brew', 'pacman', 'aur')
-        platforms = [(f, pkg[f]) for f in platform_fields if f in pkg]
-        if platforms:
-            print('\nPlatform Packages:')
-            for field, value in platforms:
-                print(f'  {field}:    {value}')
-
-        # Additional metadata fields
-        for field, label in (('package', 'Package'), ('repo', 'Repository'), ('github_repo', 'GitHub')):
-            if field in pkg:
-                print(f'{label}:     {pkg[field]}')
-
-        # Installation status
-        if is_available_on_platform(pkg):
-            status, path = check_installed(pkg)
-            status_str = format_status(status, path)
-            if status_str:
-                print(f'\nStatus:      {status_str}')
-
-        print()
-
-
-def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Search packages by name."""
-    query_lower = args.query.lower()
-    results = [p for p in get_all_packages(data) if query_lower in p.get('name', '').lower()]
-
-    if not results:
-        print(f'No packages found matching: {args.query}')
-        return
-
-    widths = calculate_column_widths(results, ['name', '_section'])
-
-    for pkg in results:
-        name = pkg.get('name', '')
-        desc = pkg.get('description', '')
-        section = pkg.get('_section', '')
-        tags = pkg.get('tags', [])
-
-        status, path = check_installed(pkg)
-        status_str = format_status(status, path)
-        tags_str = f'[{", ".join(tags)}]' if tags else ''
-
-        print(f'{name:<{widths["name"]}} {section:<{widths["_section"]}} {tags_str}')
-        print(f'  {desc}')
-        if status_str:
-            print(f'  {status_str}')
-        print()
-
-
-def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List packages with optional filters."""
-    # Validate section filter
-    if args.section and args.section not in PACKAGE_SECTIONS:
-        print(f'Error: Unknown section: {args.section}', file=sys.stderr)
-        print('\nAvailable sections:', file=sys.stderr)
-        for s in PACKAGE_SECTIONS:
-            print(f'  {s}', file=sys.stderr)
-        sys.exit(1)
-
-    # Determine which sections to query
-    if args.section:
-        sections = [args.section]
-    elif args.platform == 'macos':
-        sections = [s for s in PACKAGE_SECTIONS if s != 'flatpak_apps']
-    elif args.platform == 'linux':
-        sections = [s for s in PACKAGE_SECTIONS if s not in ('macos_casks', 'mas_apps')]
-    else:
-        sections = list(PACKAGE_SECTIONS)
-
-    # Collect matching packages
-    results = []
-    for section in sections:
-        for pkg in iter_section_entries(data, section):
-            if not isinstance(pkg, dict) or 'name' not in pkg:
-                continue
-            if args.tag and args.tag not in pkg.get('tags', []):
-                continue
-            results.append(
-                {
-                    'name': pkg['name'],
-                    'description': pkg.get('description', ''),
-                    'section': section,
-                    'tags': pkg.get('tags', []),
-                }
-            )
-
-    if args.json:
-        print(json.dumps(results, indent=2))
-        return
-
-    if not results:
-        print('No packages found')
-        return
-
-    widths = calculate_column_widths(results, ['name', 'section'], max_widths={'name': 30})
-
-    if args.verbose:
-        print(f'{"Name":<{widths["name"]}} {"Section":<{widths["section"]}} {"Description":<35} Tags')
-        print('─' * (widths['name'] + widths['section'] + 50))
-        for pkg in results:
-            tags_str = ', '.join(pkg['tags'])
-            desc = pkg['description'][:35]
-            print(f'{pkg["name"]:<{widths["name"]}} {pkg["section"]:<{widths["section"]}} {desc:<35} {tags_str}')
-    else:
-        for pkg in results:
-            print(f'{pkg["name"]:<{widths["name"]}} {pkg["description"]}')
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Verify — drift detection between packages.yml, manifests, and installer scripts
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def resolve_repo_root(override: str | None = None) -> Path:
-    """Return the repo root — the --root override, or the ancestor of packages.yml."""
-    if override:
-        root = Path(override).resolve()
-        if not root.exists():
-            print(f'Error: --root path does not exist: {root}', file=sys.stderr)
-            sys.exit(1)
-        return root
-    return get_packages_file().parent.parent
-
-
-def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
-    """Load all manifests from <root>/install/manifests/*.yml, keyed by stem."""
-    manifests_dir = root / 'install' / 'manifests'
-    if not manifests_dir.exists():
-        return {}
-    manifests: dict[str, dict[str, Any]] = {}
-    for manifest_file in sorted(manifests_dir.glob('*.yml')):
-        with manifest_file.open() as f:
-            manifests[manifest_file.stem] = yaml.safe_load(f) or {}
-    return manifests
-
-
-def list_installer_scripts(root: Path, subdir: str) -> set[str]:
-    """Return the stem (filename without .sh) of every *.sh in install/common/<subdir>/."""
-    script_dir = root / 'install' / 'common' / subdir
-    if not script_dir.exists():
-        return set()
-    return {p.stem for p in script_dir.glob('*.sh')}
-
-
-def iter_section_entries(data: dict[str, Any], section: str):
-    """Yield each entry from a section. For dict-of-lists (npm_globals/uv_tools),
-    flatten subcategories. For dict-of-dicts (tmux_plugins), synthesize a 'name'
-    field from the outer key so downstream checks work uniformly."""
-    spec = SECTION_SPECS.get(section, {})
-    structure = spec.get('structure')
-    section_data = data.get(section)
-    if section_data is None:
-        return
-
-    if structure == 'list':
-        if isinstance(section_data, list):
-            yield from section_data
-    elif structure == 'dict_of_lists':
-        if isinstance(section_data, dict):
-            for category in section_data.values():
-                if isinstance(category, list):
-                    yield from category
-    elif structure == 'dict_of_dicts' and isinstance(section_data, dict):
-        for key, entry in section_data.items():
-            if isinstance(entry, dict):
-                yield {'name': key, **entry}
-
-
-def get_section_ids(data: dict[str, Any], section: str) -> set[str]:
-    """Return the set of id_field values for a section (e.g., names for most sections)."""
-    id_field = SECTION_SPECS[section]['id_field']
-    return {entry[id_field] for entry in iter_section_entries(data, section) if isinstance(entry, dict) and id_field in entry}
-
-
-VERSION_CONSTRAINTS = ('version', 'min_version', 'max_version')
-
-# Which constraint keys each section honours today. Enforcement arrives per
-# section because each one pins by a different mechanism, and a key declared
-# where nothing reads it is an error rather than a no-op: four such fields sat in
-# packages.yml unread until a URL audit found them, one of them eight versions
-# stale. .planning/version-constraints.md carries the vocabulary.
-HONOURED_CONSTRAINTS: dict[str, tuple[str, ...]] = {
-    'github_releases': ('version',),
-    # install/common/github-releases/tenv.sh:137 reads runtimes.terraform.version
-    # and installs exactly it.
-    'runtimes': ('version',),
-}
-
-# Floors that predate enforcement. All are satisfied, so they mislead nobody, and
-# naming them here keeps the information alive for the resolver instead of
-# deleting it to silence a check.
-GRANDFATHERED_CONSTRAINTS = {
-    ('github_releases', 'neovim', 'min_version'),
-    ('github_releases', 'fzf', 'min_version'),
-    # go.sh fetches whatever go.dev currently offers and never reads this floor.
-    # It was invisible until `runtimes` joined SECTION_SPECS, because the whole
-    # section sat outside the walk that applies this rule.
-    ('runtimes', 'go', 'min_version'),
-}
-
-
-def check_version_constraints(section: str, label: str, entry: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
-    declared = [key for key in VERSION_CONSTRAINTS if key in entry]
-    if not declared:
-        return
-
-    honoured = HONOURED_CONSTRAINTS.get(section, ())
-    for key in declared:
-        if key in honoured or (section, label, key) in GRANDFATHERED_CONSTRAINTS:
-            continue
-        issues.append(
-            (
-                section,
-                'error',
-                f"{label}: '{key}' is declared but nothing honours it for {section}. "
-                f'Remove it, or make it real and widen HONOURED_CONSTRAINTS in the same change.',
-            )
-        )
-
-    if 'version' in entry and ({'min_version', 'max_version'} & entry.keys()):
-        issues.append(
-            (
-                section,
-                'error',
-                f"{label}: 'version' pins exactly, so a floor or ceiling beside it "
-                f'describes a window nobody can predict. Declare one or the other.',
-            )
-        )
-
-    for key in declared:
-        value = str(entry[key])
-        if value.startswith('v') or '/' in value:
-            issues.append(
-                (
-                    section,
-                    'error',
-                    f"{label}: '{key}' is '{value}', which is a tag. Constraints are bare "
-                    f"versions — resolving one to this tool's tag spelling is the resolver's job.",
+        for key in declared:
+            if key not in self.honoured_constraints and (self.section, self.name, key) not in GRANDFATHERED_CONSTRAINTS:
+                found.append(
+                    f"declares '{key}', which nothing honours for {self.section}. Remove it, or make it real and "
+                    f'widen honoured_constraints on the same class in the same change.'
                 )
-            )
-
-
-def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[str, str, str]]) -> None:
-    """Tier 1 checks 1 and 2: required fields + no duplicate ids within a section."""
-    spec = SECTION_SPECS[section]
-    required = spec.get('required', [])
-    required_any_of = spec.get('required_any_of', [])
-    forbidden = spec.get('forbidden', {})
-    id_field = spec['id_field']
-
-    seen_ids: Counter[str] = Counter()
-    for idx, entry in enumerate(iter_section_entries(data, section)):
-        if not isinstance(entry, dict):
-            issues.append((section, 'error', f'entry #{idx} is not a mapping'))
-            continue
-        label = entry.get(id_field) or entry.get('name') or f'entry #{idx}'
-
-        for field in required:
-            if field not in entry:
-                issues.append((section, 'error', f"{label}: missing required field '{field}'"))
-
-        for any_of_group in required_any_of:
-            if not any(f in entry for f in any_of_group):
-                issues.append((section, 'error', f'{label}: must have at least one of {list(any_of_group)}'))
-
-        check_version_constraints(section, str(label), entry, issues)
-
-        for field, reason in forbidden.items():
-            if field in entry:
-                issues.append(
-                    (
-                        section,
-                        'error',
-                        f"{label}: field '{field}' is read by no code — {reason}. "
-                        f'Remove it; a field that only looks like config drifts unnoticed.',
-                    )
+            if getattr(self, key).startswith('v') or '/' in getattr(self, key):
+                found.append(
+                    f"declares '{key}' as {getattr(self, key)!r}, which is a tag. Constraints are bare versions — "
+                    f"resolving one to this tool's tag spelling is the resolver's job."
                 )
 
-        if id_field in entry:
-            seen_ids[entry[id_field]] += 1
+        if self.version and (self.min_version or self.max_version):
+            found.append("declares 'version', which pins exactly, beside a floor or ceiling describing a window nobody can predict")
 
-    # dict_of_dicts uses the YAML key as id, which is already unique
-    if spec['structure'] != 'dict_of_dicts':
-        for key, count in seen_ids.items():
-            if count > 1:
-                issues.append((section, 'error', f"duplicate {id_field}: '{key}' appears {count}x"))
+        return tuple(found)
 
 
-def check_manifest_name_resolution(
-    data: dict[str, Any],
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check 3: every name referenced from a manifest must resolve to a packages.yml entry.
-    Script existence is covered transitively by the parity check below, so no direct filesystem
-    check is needed here — a missing script will surface via parity as an additional error."""
-    section_ids = {section: get_section_ids(data, section) for section in NAME_SUBSCRIBED_SECTIONS}
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class SystemPackage(Entry):
+    """Installed by the OS package manager. The one section with a tier.
 
-    for manifest_name, manifest in manifests.items():
-        for section in NAME_SUBSCRIBED_SECTIONS:
-            value = manifest.get(section)
-            if not isinstance(value, list):
-                continue
-            for name in value:
-                if name not in section_ids[section]:
-                    issues.append(
-                        (section, 'error', f"manifest '{manifest_name}' names '{name}' but no packages.yml {section} entry exists")
-                    )
-
-
-def check_script_parity(
-    data: dict[str, Any],
-    scripts_by_section: dict[str, set[str]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check 4: bidirectional script ↔ packages.yml parity for every script-backed section."""
-    for section, subdir in SCRIPT_BACKED_SECTIONS.items():
-        section_ids = get_section_ids(data, section)
-        scripts = scripts_by_section.get(section, set())
-
-        for script_name in sorted(scripts - section_ids):
-            issues.append((section, 'error', f'install/common/{subdir}/{script_name}.sh exists but no packages.yml {section} entry'))
-
-        for entry_name in sorted(section_ids - scripts):
-            issues.append(
-                (section, 'error', f"packages.yml {section} entry '{entry_name}' has no install/common/{subdir}/{entry_name}.sh script")
-            )
-
-
-def check_deprecated_manifest_keys(
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check: manifests must not set removed runtime-gate booleans.
-    Phase 1.6 replaced them with name-list derivation (e.g. go_tools non-empty → Go)."""
-    for manifest_name, manifest in manifests.items():
-        for key in DEPRECATED_MANIFEST_KEYS:
-            if key in manifest:
-                issues.append(
-                    (
-                        'manifest',
-                        'error',
-                        f"manifest '{manifest_name}' uses removed key '{key}:' — install is now derived from the corresponding name-list",
-                    )
-                )
-
-
-def check_unreferenced_entries(
-    data: dict[str, Any],
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 2 check 5: packages.yml entries in name-subscribed sections that no manifest uses."""
-    for section in NAME_SUBSCRIBED_SECTIONS:
-        # If any manifest uses `true` for this section, every entry is implicitly referenced
-        if any(manifest.get(section) is True for manifest in manifests.values()):
-            continue
-        referenced: set[str] = set()
-        for manifest in manifests.values():
-            value = manifest.get(section)
-            if isinstance(value, list):
-                referenced.update(value)
-        pkg_ids = get_section_ids(data, section)
-        for name in sorted(pkg_ids - referenced):
-            issues.append((section, 'warning', f"'{name}' defined in packages.yml but not referenced by any manifest"))
-
-
-def iter_manifest_declared_entries(data: dict[str, Any], manifest: dict[str, Any]):
-    """Yield (section, entry) for every packages.yml entry this manifest names.
-
-    Only the name-subscribed sections: the rest are either installed wholesale by
-    a system package manager or gated by a boolean, and neither has a per-entry
-    name for the machine to be missing.
+    A `core` entry goes on every machine including a minimal LXC server;
+    untagged means workstation-only, so a heavy new package can never silently
+    bloat a server. One list rather than parallel per-tier lists, which would
+    drift.
     """
-    for section in NAME_SUBSCRIBED_SECTIONS:
-        declared = manifest.get(section)
-        if not isinstance(declared, list):
-            continue
-        wanted = set(declared)
-        for entry in iter_section_entries(data, section):
-            if isinstance(entry, dict) and entry.get('name') in wanted:
-                yield section, {**entry, '_section': section}
+
+    section: ClassVar[str] = 'system_packages'
+
+    tier: str = ''
+    apt: str = ''
+    pacman: str = ''
+    brew: str = ''
+    aur: str = ''
+
+    def package_for(self, manager: str) -> str:
+        """This package's name under one manager, or '' where it has none."""
+        return getattr(self, manager, '')
+
+    def problems(self) -> tuple[str, ...]:
+        # `Entry.problems(self)` rather than `super()`: dataclass(slots=True)
+        # rebuilds the class, leaving the zero-argument form's __class__ cell
+        # pointing at the original and raising TypeError on every call.
+        managers = ('apt', 'pacman', 'brew', 'aur')
+        if any(self.package_for(manager) for manager in managers):
+            return Entry.problems(self)
+        return (f'names no package under any of {", ".join(managers)}, so no machine can install it', *Entry.problems(self))
 
 
-def cmd_missing(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Report packages this machine's manifest declares that are not installed.
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class GithubRelease(Entry):
+    """A prebuilt binary from a GitHub release.
 
-    Deliberately separate from `verify`, which compares packages.yml against the
-    manifests and installer scripts and runs on every commit. Machine state has
-    no business failing a commit — a box part-way through a rollout is not a
-    repo defect. This is the check `update` leans on to report the tools it
-    declines to install, and the one `doctor` needs to earn its summary line.
+    The asset name is deliberately *not* here. It stays in code, because three of
+    the 23 defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
+    and a `.tar.xz`, trivy needs `ARM64`/`64bit`, and zk spells its architecture
+    per OS. Measured across all 23 and rejected twice; see
+    `docs/architecture/github-release-installer.md` § "Why Not More Abstraction?".
     """
-    root = resolve_repo_root(args.root)
-    machine = args.machine or os.environ.get('MACHINE')
-    if not machine:
-        print('Error: no machine given — pass --machine or set MACHINE', file=sys.stderr)
-        sys.exit(1)
 
-    manifests = load_manifests(root)
-    if machine not in manifests:
-        print(f'Error: manifest not found: {machine}', file=sys.stderr)
-        sys.exit(1)
+    section: ClassVar[str] = 'github_releases'
+    honoured_constraints: ClassVar[tuple[str, ...]] = ('version',)
 
-    missing: list[tuple[str, str]] = []
-    for section, entry in iter_manifest_declared_entries(data, manifests[machine]):
-        status, _ = check_installed(entry)
-        if status is InstallStatus.NOT_INSTALLED:
-            missing.append((section, entry['name']))
+    repo: str
+    binary_link: str = ''
+    release_tag_prefix: str = ''
+    requires_wsl_host: bool = False
+    requires_github_auth: bool = False
 
-    if args.json:
-        print(json.dumps([{'section': s, 'name': n} for s, n in missing], indent=2))
-        sys.exit(0)
+    @property
+    def executable(self) -> str:
+        """neovim declares the full symlink it creates, so the name comes off its end."""
+        if self.command:
+            return self.command
+        return Path(self.binary_link).name if self.binary_link else self.name
 
-    if not missing:
-        print(colorize(f'✓ every package {machine} declares is installed', Color.GREEN))
-        sys.exit(0)
-
-    print_section(f'Declared by {machine} but not installed', Color.YELLOW)
-    width = max(len(section) for section, _ in missing)
-    for section, name in missing:
-        print(f'  {colorize(section.ljust(width), Color.BRIGHT_BLACK)}  {name}')
-    print()
-    print(colorize(f'⚠ {len(missing)} not installed', Color.YELLOW))
-    print('Install them with: dotfiles apply')
-    sys.exit(1)
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
 
 
-def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Verify packages.yml against manifests and installer script directories."""
-    root = resolve_repo_root(args.root)
-    # Reload from the resolved root to guarantee data matches root when --root overrides default
-    data = load_packages(root=root)
-    manifests = load_manifests(root)
-    scripts_by_section = {section: list_installer_scripts(root, subdir) for section, subdir in SCRIPT_BACKED_SECTIONS.items()}
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class CustomInstaller(Entry):
+    """A tool with its own distribution mechanism, wrapped by one script."""
 
-    issues: list[tuple[str, str, str]] = []  # (section, severity, message)
+    section: ClassVar[str] = 'custom_installers'
 
-    for section in SECTION_SPECS:
-        if section in data:
-            check_section_shape(data, section, issues)
+    source_type: str
+    description: str
+    repo: str = ''
+    support_repo: str = ''
+    assert_repo: str = ''
+    url: str = ''
+    install_url: str = ''
+    installed_path: str = ''
+    bundle_install_script: bool = False
 
-    check_manifest_name_resolution(data, manifests, issues)
-    check_script_parity(data, scripts_by_section, issues)
-    check_deprecated_manifest_keys(manifests, issues)
-    check_unreferenced_entries(data, manifests, issues)
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo) if self.repo else None
 
-    errors = [i for i in issues if i[1] == 'error']
-    warnings = [i for i in issues if i[1] == 'warning']
 
-    by_section: dict[str, list[tuple[str, str]]] = {}
-    for section, severity, message in issues:
-        by_section.setdefault(section, []).append((severity, message))
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class CargoPackage(Entry):
+    """A Rust CLI, installed by `cargo binstall` from its own release binaries.
 
-    for section in sorted(by_section):
-        print(f'\n{colorize(section, Color.BRIGHT_CYAN)}', file=sys.stderr)
-        for severity, message in by_section[section]:
-            if severity == 'error':
-                marker = colorize('error', Color.RED)
-            else:
-                marker = colorize('warn ', Color.YELLOW)
-            print(f'  [{marker}] {message}', file=sys.stderr)
+    `linux_target` and `darwin_target` override the Rust target triple for tools
+    whose assets are not named after it — fnm ships `fnm-linux.zip`.
+    """
+
+    section: ClassVar[str] = 'cargo_packages'
+
+    github_repo: str = ''
+    binary_pattern: str = ''
+    linux_target: str = ''
+    darwin_target: str = ''
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.github_repo) if self.github_repo else None
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class GoTool(Entry):
+    section: ClassVar[str] = 'go_tools'
+
+    package: str
+    github_repo: str = ''
+    binary_pattern: str = ''
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.github_repo) if self.github_repo else owner_of(self.package)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class NpmGlobal(Entry):
+    section: ClassVar[str] = 'npm_globals'
+    structure: ClassVar[Structure] = Structure.GROUPED
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class UvTool(Entry):
+    """A PyPI tool installed with `uv tool install`.
+
+    `library_only` marks one pulled in for another tool's benefit — numpy for the
+    Jupyter stack — which installs a directory and no console script, so nothing
+    should look for it on PATH.
+    """
+
+    section: ClassVar[str] = 'uv_tools'
+    structure: ClassVar[Structure] = Structure.GROUPED
+
+    library_only: bool = False
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class GitUvTool(Entry):
+    """A Python tool installed with `uv tool install` from a git repo.
+
+    `tracks_branch` follows the default branch for a repo publishing no releases;
+    everything else pins to the newest release tag, because an unpinned git
+    install is the degraded state rather than the flexible one.
+    """
+
+    section: ClassVar[str] = 'git_uv_tools'
+
+    repo: str
+    tracks_branch: bool = False
+    requires_github_auth: bool = False
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class ShellPlugin(Entry):
+    section: ClassVar[str] = 'shell_plugins'
+
+    repo: str
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class TmuxPlugin(Entry):
+    section: ClassVar[str] = 'tmux_plugins'
+    structure: ClassVar[Structure] = Structure.KEYED
+
+    repo: str
+    install_dir: str
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class Runtime(Entry):
+    """A language runtime, installed by its own version manager."""
+
+    section: ClassVar[str] = 'runtimes'
+    structure: ClassVar[Structure] = Structure.KEYED
+    honoured_constraints: ClassVar[tuple[str, ...]] = ('version',)
+
+    install_method: str
+    repo: str = ''
+    url: str = ''
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class MasApp(Entry):
+    section: ClassVar[str] = 'mas_apps'
+
+    id: int
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class MacosCask(Entry):
+    section: ClassVar[str] = 'macos_casks'
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class FlatpakApp(Entry):
+    section: ClassVar[str] = 'flatpak_apps'
+
+    flatpak_id: str
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class ZenExtension(Entry):
+    section: ClassVar[str] = 'zen_extensions'
+
+    url: str
+
+
+SECTION_CLASSES: tuple[type[Entry], ...] = (
+    SystemPackage,
+    Runtime,
+    GithubRelease,
+    CustomInstaller,
+    CargoPackage,
+    GoTool,
+    NpmGlobal,
+    UvTool,
+    GitUvTool,
+    ShellPlugin,
+    TmuxPlugin,
+    MasApp,
+    MacosCask,
+    FlatpakApp,
+    ZenExtension,
+)
+"""In `packages.yml` order, which is what `packages list` and the run record render."""
+
+SECTIONS: dict[str, type[Entry]] = {cls.section: cls for cls in SECTION_CLASSES}
+
+BARE_SECTIONS = frozenset({'macos_taps'})
+"""Sections holding bare strings, so there is no row to carry a field or a
+constraint. `macos_taps` is the only one, and a dataclass for it would validate
+nothing."""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Catalog:
+    """`packages.yml`, parsed once and indexed.
+
+    Nothing downstream re-reads the file and no provider takes a path: the 28
+    bash call sites that each spawned an interpreter and re-parsed 258 entries
+    become attribute access on this object.
+    """
+
+    entries: Mapping[str, tuple[Entry, ...]]
+    macos_taps: tuple[str, ...]
+    source: Path
+
+    def section(self, name: str) -> tuple[Entry, ...]:
+        return self.entries[name]
+
+    def find(self, section: str, name: str) -> Entry:
+        """Fail rather than default: a manifest naming a package that does not
+        exist is the drift `packages verify` was written to catch, and it is
+        caught here now, on every command, instead of in a separate verb."""
+        for entry in self.entries[section]:
+            if entry.name == name:
+                return entry
+        raise CatalogError((Issue(section, f'no entry named {name!r} in {self.source}'),))
+
+    def runtime(self, name: str) -> Runtime:
+        found = self.find('runtimes', name)
+        assert isinstance(found, Runtime)
+        return found
+
+    def all_entries(self) -> Iterator[Entry]:
+        for section in SECTIONS:
+            yield from self.entries[section]
+
+
+def load(path: Path | None = None) -> Catalog:
+    """Parse and validate the whole declaration, or raise with every problem in it."""
+    source = path or paths.PACKAGES_FILE
+    raw = yaml.safe_load(source.read_text()) or {}
+
+    issues: list[Issue] = []
+    entries: dict[str, tuple[Entry, ...]] = {}
+
+    for section, cls in SECTIONS.items():
+        rows, section_issues = _build(raw.get(section), cls)
+        entries[section] = rows
+        issues.extend(section_issues)
+
+    for unknown in sorted(set(raw) - set(SECTIONS) - BARE_SECTIONS):
+        issues.append(Issue(unknown, 'is not a section any reader knows, so nothing installs it'))
 
     if issues:
-        print(file=sys.stderr)
+        raise CatalogError(tuple(issues))
 
-    summary = f'{len(errors)} errors, {len(warnings)} warnings'
-    if not errors and not warnings:
-        summary = colorize(f'✓ {summary}', Color.GREEN)
-    elif errors:
-        summary = colorize(f'✗ {summary}', Color.RED)
-    else:
-        summary = colorize(f'⚠ {summary}', Color.YELLOW)
-    print(summary)
-
-    sys.exit(1 if errors else 0)
+    return Catalog(entries=entries, macos_taps=tuple(raw.get('macos_taps') or ()), source=source)
 
 
-def main(argv: list[str] | None = None) -> None:
-    """Main entry point with argument parsing.
+def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[Issue]]:
+    """One section's rows, plus everything wrong with them."""
+    issues: list[Issue] = []
+    rows: list[Entry] = []
+    seen: set[str] = set()
 
-    `argv` defaults to `sys.argv[1:]` for the console script, and is passed
-    explicitly by the `dotfiles` CLI, which calls this in-process. The
-    alternative was shelling out to `uv run packages`, which needs a uv project
-    on disk — and the installed tool has none.
+    if declared is not None and not isinstance(declared, _CONTAINER[cls.structure]):
+        wanted = 'a list of entries' if cls.structure is Structure.LIST else 'a mapping'
+        return (), [Issue(cls.section, f'is a {type(declared).__name__} where every reader expects {wanted}')]
+
+    for label, raw in _raw_rows(declared, cls):
+        if not isinstance(raw, Mapping):
+            issues.append(Issue(cls.section, f'{label} is {type(raw).__name__}, not a mapping'))
+            continue
+        try:
+            entry = cls.from_mapping(raw)
+        except EntryError as problem:
+            # The name where there is one: a positional label is the fallback for
+            # the row that is broken *because* it has no name.
+            issues.append(Issue(cls.section, f'{raw.get("name") or label} {problem}'))
+            continue
+
+        issues.extend(Issue(cls.section, f'{entry.name} {problem}') for problem in entry.problems())
+        if entry.name in seen:
+            issues.append(Issue(cls.section, f'{entry.name} is declared more than once'))
+        seen.add(entry.name)
+        rows.append(entry)
+
+    return tuple(rows), issues
+
+
+_CONTAINER: dict[Structure, type] = {Structure.LIST: list, Structure.GROUPED: dict, Structure.KEYED: dict}
+
+
+def _raw_rows(declared: Any, cls: type[Entry]) -> Iterator[tuple[str, Any]]:
+    """Yield `(label, mapping)` for each row, flattening whichever shape the section uses.
+
+    The label is what an Issue names the row by before it is known to have a
+    name — an entry missing its `name` still has to be findable in the file.
     """
-    parser = argparse.ArgumentParser(
-        prog='packages',
-        description='Query packages.yml for browsing and discovery',
-    )
-    parser.add_argument('--version', '-V', action='store_true', help='Show version')
-
-    subparsers = parser.add_subparsers(dest='command')
-
-    # sections command
-    sections_parser = subparsers.add_parser('sections', help='List all sections')
-    sections_parser.set_defaults(func=cmd_sections)
-
-    # stats command
-    stats_parser = subparsers.add_parser('stats', help='Show package counts')
-    stats_parser.set_defaults(func=cmd_stats)
-
-    # tags command
-    tags_parser = subparsers.add_parser('tags', help='List all tags')
-    tags_parser.set_defaults(func=cmd_tags)
-
-    # show command
-    show_parser = subparsers.add_parser('show', help='Show package details')
-    show_parser.add_argument('name', help='Package name')
-    show_parser.set_defaults(func=cmd_show)
-
-    # search command
-    search_parser = subparsers.add_parser('search', aliases=['find'], help='Search packages')
-    search_parser.add_argument('query', help='Search query')
-    search_parser.set_defaults(func=cmd_search)
-
-    # list command
-    list_parser = subparsers.add_parser('list', aliases=['ls'], help='List packages')
-    list_parser.add_argument('--section', help='Filter by section')
-    list_parser.add_argument('--tag', help='Filter by tag')
-    list_parser.add_argument('--platform', choices=['macos', 'linux', 'all'], help='Filter by platform')
-    list_parser.add_argument('--verbose', '-v', action='store_true', help='Show details')
-    list_parser.add_argument('--json', action='store_true', help='Output as JSON')
-    list_parser.set_defaults(func=cmd_list)
-
-    # verify command
-    verify_parser = subparsers.add_parser('verify', help='Check packages.yml against manifests and installer scripts')
-    verify_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
-    verify_parser.set_defaults(func=cmd_verify)
-
-    # missing command
-    missing_parser = subparsers.add_parser('missing', help='Show packages this machine declares but has not installed')
-    missing_parser.add_argument('--machine', help='Manifest to check (default: $MACHINE)')
-    missing_parser.add_argument('--json', action='store_true', help='Output as JSON')
-    missing_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
-    missing_parser.set_defaults(func=cmd_missing)
-
-    args = parser.parse_args(argv)
-
-    if args.version:
-        # One distribution now, so one version — read from its metadata rather
-        # than a literal this file used to maintain separately.
-        print(f'packages {dotfiles.__version__}')
+    if declared is None:
         return
 
-    if not args.command:
-        parser.print_help()
-        return
+    if cls.structure is Structure.LIST:
+        for index, raw in enumerate(declared):
+            yield f'entry #{index}', raw
 
-    root_override = getattr(args, 'root', None)
-    root_path = Path(root_override).resolve() if root_override else None
-    data = load_packages(root=root_path)
-    args.func(args, data)
+    elif cls.structure is Structure.GROUPED:
+        for group, rows in declared.items():
+            for index, raw in enumerate(rows or ()):
+                yield f'{group} entry #{index}', raw
+
+    else:
+        for key, raw in declared.items():
+            yield key, {'name': key, **raw} if isinstance(raw, Mapping) else raw
 
 
-if __name__ == '__main__':
-    main()
+_HINTS: dict[type, dict[str, Any]] = {}
+
+
+def _hints(cls: type[Entry]) -> dict[str, Any]:
+    """Resolved annotations, cached — `from __future__ import annotations` makes
+    the raw ones strings, and every row of a section would otherwise re-resolve."""
+    if cls not in _HINTS:
+        _HINTS[cls] = typing.get_type_hints(cls)
+    return _HINTS[cls]
+
+
+def _is_required(field: dc.Field) -> bool:
+    return field.default is dc.MISSING and field.default_factory is dc.MISSING
+
+
+def _typed(key: str, annotation: Any, value: Any) -> Any:
+    """Check one value against its declared type, converting only lists to tuples.
+
+    Nothing is coerced. An unquoted `min_version: 0.11` is a float, and silently
+    stringifying it turns 0.10 into "0.1" — so it is rejected with the fix in the
+    message instead.
+    """
+    if annotation is str and not isinstance(value, str):
+        raise EntryError(f"declares '{key}' as the {type(value).__name__} {value!r}; quote it to make it a string")
+
+    if annotation is str:
+        return value
+    if annotation is bool and isinstance(value, bool):
+        return value
+    # bool is a subclass of int, so `requires_wsl_host: true` would otherwise
+    # pass as an id.
+    if annotation is int and isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if annotation is not bool and annotation is not int and isinstance(value, list) and all(isinstance(row, str) for row in value):
+        return tuple(value)
+
+    raise EntryError(f"declares '{key}' as {value!r}, which is not the {_spelled(annotation)} this section reads")
+
+
+def _spelled(annotation: Any) -> str:
+    return getattr(annotation, '__name__', None) or 'list of strings'

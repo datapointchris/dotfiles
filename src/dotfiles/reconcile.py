@@ -68,7 +68,7 @@ def _from_status(address: str, status: int, converged: str, drifted: str) -> Res
 
 def check_packages(machine: str | None = None) -> ResourceResult:
     arguments = ['missing', *(('--machine', machine) if machine else ())]
-    status = bridge.catalog(*arguments, output=Output.STREAM)
+    status = bridge.declaration(*arguments, output=Output.STREAM)
     return _from_status(
         'packages',
         status,
@@ -130,7 +130,7 @@ def check_declaration() -> ResourceResult:
     nothing. This is what `packages verify` does today, reached through
     `machines check` in the new grammar.
     """
-    status = bridge.catalog('verify', output=Output.STREAM)
+    status = bridge.declaration('verify', output=Output.STREAM)
     if status == 0:
         return ResourceResult('machines', Verdict.CONVERGED, 'packages.yml matches the manifests and installer scripts')
     return ResourceResult('machines', Verdict.ISSUE, "the declaration is invalid — 'dotfiles machines check' lists why")
