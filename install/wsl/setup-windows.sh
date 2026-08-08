@@ -31,7 +31,7 @@
 
 set -euo pipefail
 
-DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
 export TERM=${TERM:-xterm}
 
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"

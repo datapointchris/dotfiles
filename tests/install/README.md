@@ -2,53 +2,33 @@
 
 Tests for dotfiles installation and deployment infrastructure.
 
-## Directory Structure
+The pytest modules directly under this directory are the Python ones — the
+release resolver, the bundle builder, the run records. The `unit/` and
+`integration/` subdirectories are what remains of the bats suites, and both are
+emptying: each file leaves as its coverage lands in pytest, and the bats runner
+and its CI job go with the last one. Nothing new belongs there.
 
-```text
-tests/install/
-├── e2e/           End-to-end tests (full install.sh runs)
-├── integration/   Integration tests (multi-component)
-└── unit/          Unit tests (isolated functions)
-```
+`eza -1 tests/install/` lists what is here; `bats -c tests/install/unit/*.bats`
+counts what is left to port.
 
-## E2E Tests
+## Tiers
 
-The container installs are `tests/e2e/`, driven by pytest — one rig, with the
-environments as parameters. `uv run pytest tests/e2e --docker` runs them all,
-`-k <name>` picks one, `--keep` leaves the containers up and `--reuse` keeps a
-kept container's OS state while still refreshing the repo inside it.
-
-What remains here in `e2e/` are the ones that cannot be a container: a real macOS
-user account, the current machine, and the firewalled WSL case.
-
-## Integration Tests
-
-Test specific installation phases or components together. All use BATS framework.
-
-- `github-releases-pattern.bats` - GitHub release installer pattern validation
-- `github-releases-docker.bats` - GitHub releases in Docker
-- `github-releases-update.bats` - GitHub release update mechanism
-- `installation-orchestration.bats` - Full installation orchestration
-- `language-managers-pattern.bats` - Language manager installer patterns
-- `language-managers-update.bats` - Language manager updates
-- `bats-installer.bats` - BATS installer itself
-- `version-helpers.bats` - Version comparison helpers
-
-## Unit Tests
-
-Test isolated installer functions and components using BATS.
-
-- `dotfiles-dir.bats` - DOTFILES_DIR resolution
-
-## Running Tests
+`e2e/` holds the two runs that cannot be a container — a real macOS user account
+and the current machine. Every container install is `tests/e2e/`, driven by
+pytest as one rig with the environments as parameters:
 
 ```bash
-# Unit tests (fast, isolated)
-bats tests/install/unit/
+uv run pytest tests/e2e --docker                          # every environment
+uv run pytest tests/e2e --docker --environment archlinux  # one of them
+```
 
-# Integration tests
-bats tests/install/integration/
+`--keep` leaves the containers up afterwards and `--reuse` keeps a kept
+container's OS state while still refreshing the repo inside it.
 
-# E2E tests (slow, requires Docker)
-uv run pytest tests/e2e --docker
+`integration/` is the tier that reaches for Docker images and live release APIs,
+which is why no CI job runs it. `unit/` needs nothing but a checkout.
+
+```bash
+task test:unit          # the runner-safe bats tiers
+uv run pytest tests/    # everything Python, no Docker
 ```
