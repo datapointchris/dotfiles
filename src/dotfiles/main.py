@@ -12,9 +12,12 @@ subcommand name, so declaring `--machine` on the group turns
 
 from __future__ import annotations
 
+import datetime as dt
+
 import typer
 
 from dotfiles import reconcile
+from dotfiles import status
 from dotfiles.commands import machines
 from dotfiles.commands import manage
 from dotfiles.commands import report
@@ -22,6 +25,7 @@ from dotfiles.commands import resources
 from dotfiles.commands import staging
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
+from dotfiles.session import Session
 from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import parse_address
@@ -103,6 +107,14 @@ def check(
     a recompute, which is exactly why it is a cache.
     """
     results = reconcile.check_machine(_skipped(skip), machine, refresh=refresh)
+    # Written by every check, not only the scheduled one, so an interactive run
+    # also refreshes what the next shell reports — which is what stops a nudge
+    # outliving the problem it describes.
+    #
+    # Resolved rather than taken from the argument: under the scheduled timer
+    # neither `--machine` nor `$MACHINE` is set, and the document said the
+    # machine was `""` while the check itself had correctly read `~/.env`.
+    status.record(results, Session.resolve(machine).machine_name, dt.datetime.now(dt.UTC))
 
     if as_json:
         emit_json([result.as_dict() for result in results])

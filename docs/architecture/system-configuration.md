@@ -64,20 +64,53 @@ field the design sketched is not here.
 
 ## `steps` is the name for no shared mechanism
 
-Five rows with nothing in common: `~/Library`'s hidden flag and extended
-attribute, the screenshot directory, the Xcode licence, OrbStack's plugin
-directory in `~/.config/docker/config.json`, and fontconfig pointing at the
-Windows user font directory. Each is one pair of functions in
-`providers/steps.py`, the shape `custom_installers` settled on — the declaration
+Six rows with nothing in common: the scheduled check, `~/Library`'s hidden flag
+and extended attribute, the screenshot directory, the Xcode licence, OrbStack's
+plugin directory in `~/.config/docker/config.json`, and fontconfig pointing at
+the Windows user font directory. Each is one pair of functions under
+`providers/`, the shape `custom_installers` settled on — the declaration
 names *which*, the code says *how*, and a test asserts the two sets match in both
 directions so neither a row nothing implements nor a function nothing declares
 can sit there reading as maintained.
 
-A `check:`/`apply:` argv pair in the YAML was the alternative, and three of the
-five would not fit it: a JSON merge, a path discovered by asking Windows, and an
-observation that has to *decline* to escalate.
+A `check:`/`apply:` argv pair in the YAML was the alternative, and four of the
+six would not fit it: a JSON merge, a path discovered by asking Windows, a unit
+file compared against a serialised plist, and an observation that has to
+*decline* to escalate.
 
-Three of them are worth knowing about individually.
+Four of them are worth knowing about individually.
+
+**The scheduled check is a row rather than something set up by hand**, because a
+schedule nobody can check is a schedule that silently stops. It is a systemd
+*user* timer on Linux and a LaunchAgent on macOS — user-level on both, because
+the check reads `$HOME`, `~/.env` and the user's release cache, so running it as
+root would measure a machine nobody uses. Every `check` writes
+`$XDG_STATE_HOME/dotfiles/status.json` (the versioned document, which is also
+what a differential bundle will diff against) and, only when something is an
+Issue, a one-line `nudge` file. `dotfiles shell-init zsh` emits a *reader* for
+that file, cached by `.zshrc` and gated on `DOTFILES_NUDGE`.
+
+Three things there are deliberate. It **fires on Issues, not on drift** — drift
+is the normal state of a machine between applies and nudging about it would train
+the nudge away inside a week. The nudge is **a second file rather than a field in
+the JSON**, because the reader is zsh and parsing JSON there means `jq`, which
+means a subprocess at every prompt; a one-line file is `$(<file)` with no fork.
+And the shell **ignores a nudge older than a day**, because a timer that stopped
+running would otherwise leave a stale warning on screen with nothing to say it
+had stopped being true.
+
+Two bugs it took installing on a real machine to find, both now pinned by tests.
+The unit must name the **installed** binary: `shutil.which` picked up the dev
+venv's console script when the install ran through `uv run`, pinning the schedule
+to a virtualenv that is rebuilt on every dependency change. And the service
+declares `SuccessExitStatus=1`, because `check` exits 1 on drift and without it
+the unit sits in `systemctl --user --failed` forever — which is how a real
+failure comes to be ignored. Exit 3, an Issue, is still a failure there.
+
+The same run exposed a third: `Session.resolve` read `MACHINE` only from the
+environment, so a scheduled check on a machine whose `~/.env` named it exactly
+failed with "MACHINE is unset". It reads the file as well now, which fixes every
+non-login context — a timer, `docker exec`, cron.
 
 **The Xcode licence is the one observation in the repo that genuinely needs
 root.** `observe` is never handed a `Privilege`, so it reports `UNKNOWN` with the

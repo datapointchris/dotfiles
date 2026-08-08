@@ -508,6 +508,13 @@ macos_defaults:
 # The mechanics are one pair of functions each in src/dotfiles/providers/steps.py,
 # for the same reason custom_installers has no engine.
 steps:
+  # Its own row rather than something set up by hand on each box: a schedule
+  # nobody can check is a schedule that silently stops. It writes status.json,
+  # which the shell nudge reads, and keeps the release cache warm so an
+  # interactive check spends no API calls.
+  - name: check-schedule
+    description: The periodic dotfiles check — a systemd user timer, or a LaunchAgent
+
   - name: library-visible
     description: ~/Library visible in Finder, which needs both the flag and the xattr cleared
     os_family: darwin

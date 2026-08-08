@@ -50,16 +50,21 @@ def edit() -> None:
 
 
 def shell_init(shell: str = typer.Argument(..., help='Shell to emit a snippet for')) -> None:
-    """Print the shell snippet that surfaces drift at the prompt.
+    """Print the shell snippet that surfaces an Issue at the prompt.
 
     Hidden because it is `eval`'d from a shell rc file rather than typed, and a
     visible entry invites someone to run it and wonder at the output.
-    """
-    if shell not in ('zsh', 'bash'):
-        raise typer.BadParameter(f'no snippet for {shell!r}. Supported: zsh, bash')
 
-    error('the shell nudge is not built yet — it needs the run records a real check writes')
-    raise typer.Exit(ExitCode.ISSUE)
+    The snippet is a *reader*, not the message. `.zshrc` caches it against this
+    binary's mtime, so a snippet carrying the text would be as old as the last
+    upgrade — it reads the file a scheduled `check` writes instead, and reads it
+    with no subprocess so a converged machine pays nothing at every prompt.
+    """
+    from dotfiles import status
+
+    if shell not in status.SNIPPETS:
+        raise typer.BadParameter(f'no snippet for {shell!r}. Supported: {", ".join(status.SNIPPETS)}')
+    print(status.snippet(shell), end='')
 
 
 def update() -> None:

@@ -781,3 +781,11 @@ fi
 if flag_enabled SHELL_NUDGE; then
   cache_eval -b doit doit-nudge doit shell-init zsh
 fi
+
+# Fires on an Issue only — a checker that could not run, a declaration that will
+# not parse — never on drift, which is the normal state of a machine between
+# applies and would train the nudge away inside a week. The snippet reads a file
+# the scheduled check writes; nothing here runs a check at a prompt.
+if flag_enabled DOTFILES_NUDGE; then
+  cache_eval -b dotfiles dotfiles-nudge dotfiles shell-init zsh
+fi

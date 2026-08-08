@@ -4,12 +4,14 @@
 screenshot directory existing is a directory existing. The Xcode licence is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. The Windows font path is discovered
-by asking Windows.
+by asking Windows. The scheduled check is a systemd user timer or a LaunchAgent,
+and lives in `providers/schedule.py` because it is the only one long enough to
+crowd the others out.
 
 This is the shape `custom_installers` settled on and for the same reason: the
 declaration names *which*, this module says *how*, and a test asserts the two
 sets match in both directions. A `check:`/`apply:` argv pair in the YAML would be
-a command language invented for five rows, and three of them would not fit it.
+a command language invented for six rows, and four of them would not fit it.
 
 Every function here observes without escalating. `_xcode_licence` is the
 exception the design predicted — `xcodebuild -license status` needs root to read
@@ -30,6 +32,7 @@ from dotfiles.effects import run
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import schedule
 from dotfiles.providers.sysconfig import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
@@ -317,6 +320,7 @@ def _unprivileged(apply: Callable[[], Result]) -> Applier:
 
 
 STEPS: dict[str, tuple[Observer, Applier]] = {
+    'check-schedule': (schedule.observe, _unprivileged(schedule.apply)),
     'library-visible': (_library_visible, _unprivileged(_show_library)),
     'screenshot-directory': (_screenshots_exist, _unprivileged(_make_screenshots)),
     'xcode-licence': (_xcode_licence, _accept_xcode_licence),

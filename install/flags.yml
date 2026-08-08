@@ -81,6 +81,16 @@ flags:
     consumers:
       - configs/common/.config/zsh/.zshrc
 
+  # Separate from SHELL_NUDGE because they say different things and one is much
+  # rarer: doit's nudge is a due-item reminder, this fires only when a checker
+  # could not run or a declaration will not parse. Turning off the reminder is
+  # not a reason to stop hearing that the machine is broken.
+  - name: DOTFILES_NUDGE
+    description: Report a dotfiles Issue at shell startup, from the scheduled check
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
   - name: SHELL_VI_MODE
     description: zsh-vi-mode modal editing
     default: true

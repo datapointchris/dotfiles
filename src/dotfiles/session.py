@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 
 from dotfiles import catalog as catalogs
+from dotfiles import envfile
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve as resolver
@@ -61,16 +62,29 @@ class Session:
 
     @classmethod
     def resolve(cls, machine: str | None = None, **kwargs: object) -> Session:
-        """Name the machine from the argument, else from the environment.
+        """Name the machine from the argument, else the environment, else `~/.env`.
 
         `~/.env` is where `MACHINE` lives, and it is also the file the env
         resource manages — the bootstrap this design lives with. A fresh box has
         no such file and passes `--machine` instead.
+
+        Reading the *file* and not only the environment is what makes this work
+        outside a login shell. A systemd user timer, a launchd agent, `docker
+        exec` and cron all inherit no `~/.env`, so a scheduled `check` failed
+        with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
+        was. Found by installing the timer and reading its first failure.
         """
-        name = machine or os.environ.get('MACHINE') or ''
+        name = machine or os.environ.get('MACHINE') or cls._declared_machine()
         if not name:
             raise NoMachine(f'no machine named, and MACHINE is unset. Known: {", ".join(machines.names()) or "none"}')
         return cls(machine_name=name, **kwargs)  # type: ignore[arg-type]
+
+    @staticmethod
+    def _declared_machine() -> str:
+        try:
+            return envfile.read(Path.home() / '.env').get('MACHINE', '')
+        except OSError:
+            return ''
 
     @functools.cached_property
     def catalog(self) -> catalogs.Catalog:

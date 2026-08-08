@@ -61,6 +61,14 @@ RUNS_DIR = STATE_HOME / 'runs'
 LATEST_RUN = STATE_HOME / 'latest'
 STATUS_FILE = STATE_HOME / 'status.json'
 
+NUDGE_FILE = STATE_HOME / 'nudge'
+"""One line of human text, read by a shell snippet at every prompt.
+
+Beside `status.json` rather than derived from it, because the reader is zsh:
+parsing JSON there means `jq`, which means a subprocess per shell, and a file
+holding exactly the sentence to print is `$(<file)` with no fork at all.
+"""
+
 
 def cache_home() -> Path:
     """Where this tool's caches live, re-read on every call.
