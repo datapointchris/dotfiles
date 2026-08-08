@@ -17,7 +17,6 @@ cd "$DOTFILES_DIR" || exit 1
 # nullglob, because a directory emptying as its suites port to pytest must make
 # the tier smaller rather than making bats fail on a literal glob it cannot open.
 shopt -s nullglob
-LIBRARY_TESTS=(tests/libraries/*.bats)
 UNIT_TESTS=(tests/install/unit/*.bats tests/apps/*.bats)
 INTEGRATION_TESTS=(tests/install/integration/*.bats)
 shopt -u nullglob
@@ -40,8 +39,8 @@ usage() {
   help_usage "test.sh [all|unit|integration|watch]"
 
   help_section "Suites"
-  help_row "all" "" "Library, unit, and integration suites (default)"
-  help_row "unit" "" "Library and unit suites (no Docker)"
+  help_row "all" "" "Unit and integration suites (default)"
+  help_row "unit" "" "Unit suites (no Docker)"
   help_row "integration" "" "Integration suites (includes Docker tests if the image is built)"
   help_row "watch" "" "Re-run everything on file changes (requires entr)"
 
@@ -63,11 +62,11 @@ main() {
 
   case "$suite" in
     all)
-      run_bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      run_bats "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
       ;;
     unit)
       skip_on_wsl unit
-      run_bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}"
+      run_bats "${UNIT_TESTS[@]}"
       ;;
     integration)
       skip_on_wsl integration
@@ -79,7 +78,7 @@ main() {
         print_info "Install with: brew install entr (macOS) or pacman -S entr (Arch)"
         exit 1
       fi
-      find tests -name '*.bats' | entr -c bats "${BATS_ARGS[@]}" "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      find tests -name '*.bats' | entr -c bats "${BATS_ARGS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
       ;;
     *)
       log_error "Unknown suite: $suite"

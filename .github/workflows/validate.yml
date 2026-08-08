@@ -102,11 +102,11 @@ jobs:
       # stands.
       #
       # Discovery stays flat, and says so when it finds a nested layout it will
-      # not run. Recursing was tried: dotfiles keeps its 24 suites under
-      # tests/apps, tests/install and tests/libraries, so `tests/*.bats` matched
-      # nothing and the step reported green having run nothing. But `bats -r`
-      # then swept in that repo's integration tier, which wants Docker images
-      # and live network and fails on a bare runner.
+      # not run. Recursing was tried: dotfiles keeps every suite in a
+      # subdirectory of tests/, so `tests/*.bats` matched nothing and the step
+      # reported green having run nothing. But `bats -r` then swept in that
+      # repo's integration tier, which wants Docker images and live network and
+      # fails on a bare runner.
       #
       # A generic block cannot tell a unit suite from an integration one — only
       # the repo knows which of its tiers is runner-safe. So this runs the flat
@@ -218,18 +218,20 @@ jobs:
 # > custom:after:all - The bats tier the generic shell step cannot pick
   # The generated step runs tests/*.bats and this repo has none at that level,
   # so it prints the nested layout and exits. Only the repo knows which of its
-  # tiers is runner-safe: tests/libraries, tests/install/unit and tests/apps
-  # need nothing but a checkout, which is exactly what `task test:unit` runs.
+  # tiers is runner-safe: tests/install/unit and tests/apps need nothing but a
+  # checkout, which is exactly what `task test:unit` runs.
   # tests/install/integration is left out deliberately — it builds Docker
   # images and calls release APIs live.
   #
   # Its own job rather than a step inside `shell`: it shares no setup with
   # shellcheck or shfmt, and a separate job runs it in parallel with them.
   #
-  # uv is set up despite this being the shell tier, because tests/apps/dotfiles.bats
-  # asserts the bash front door and the Python one agree. That comparison is the
-  # only thing making the bash CLI safe to delete, so it has to run where the
-  # deletion would be reviewed rather than only on a developer's machine.
+  # uv is set up despite this being the shell tier: the update suites resolve
+  # tool versions through the Python side.
+  #
+  # This job is temporary and goes with the last bats file. Until then the
+  # empty-suite guard below prints why it ran nothing, so a tier that has
+  # finished porting says so in the log instead of passing in silence.
   bats-unit:
     runs-on: ubuntu-latest
     steps:
@@ -258,7 +260,7 @@ jobs:
             https://github.com/bats-core/bats-assert.git "$HOME/.local/lib/bats-assert"
 
           shopt -s nullglob
-          suites=(tests/libraries/*.bats tests/install/unit/*.bats tests/apps/*.bats)
+          suites=(tests/install/unit/*.bats tests/apps/*.bats)
           shopt -u nullglob
           if [ ${#suites[@]} -eq 0 ]; then
             echo "no bats suites left in the unit tiers"

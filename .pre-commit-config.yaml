@@ -224,5 +224,5 @@ repos:
         entry: task test:unit
         language: system
         pass_filenames: false
-        files: ^(install/|install\.sh$|update\.sh$|tests/install/|tests/libraries/)
+        files: ^(install/|install\.sh$|update\.sh$|tests/install/)
         stages: [pre-commit]

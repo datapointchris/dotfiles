@@ -24,7 +24,7 @@ tests/
 **Logic:**
 
 - `tests/apps/` = Tests for user-facing applications
-- `tests/libraries/` = Tests for shared shell libraries
+- `tests/shell/` = The shared shell libraries, driven from pytest through a real shell
 - `tests/install/` = Tests for installation system (unit → integration → e2e → utils)
 
 ## Running Tests
@@ -109,14 +109,16 @@ test_cmd "my-app help" "my-app --help"
 
 ### Library Tests
 
-Create or update tests in `tests/libraries/`:
+Create or update tests in `tests/shell/`. `shells.py` runs a snippet in a fresh
+shell with one library sourced and hands back stdout, stderr and the exit code
+kept apart:
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+```python
+from shells import source
 
-source "$DOTFILES_DIR/configs/common/.local/shell/my-library.sh"
-# Add tests...
+
+def test_a_library_does_the_thing() -> None:
+    assert source('my-library.sh', 'my_function arg').stdout == 'expected\n'
 ```
 
 ### Installation Tests

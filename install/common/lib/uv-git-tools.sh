@@ -35,11 +35,17 @@ source "$UV_GIT_TOOLS_LIB_DIR/version-helpers.sh"
 
 # Echoes "owner/name" for a GitHub clone URL, in either the https or ssh form.
 # Returns 1 for a URL on any other host, which has no releases API to ask.
+#
+# The shape is asserted rather than merely "contains a slash, contains no colon".
+# That weaker test passed a trailing slash straight through as part of the slug,
+# building `/repos/owner/name//releases/latest`, and accepted a three-segment
+# path as if it were a repo.
 github_slug_from_url() {
-  local url="${1%.git}"
+  local url="${1%/}"
+  url="${url%.git}"
   url="${url#https://github.com/}"
   url="${url#git@github.com:}"
-  [[ "$url" == */* && "$url" != *:* ]] || return 1
+  [[ "$url" =~ ^[^/:]+/[^/:]+$ ]] || return 1
   echo "$url"
 }
 

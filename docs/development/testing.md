@@ -32,7 +32,7 @@ task test:watch
 
 Tests are organized under `tests/`:
 
-- `tests/libraries/` — Tests for shared shell libraries
+- `tests/shell/` — The shared shell libraries, run through a real `bash` (and `zsh` where the property has to hold in both) from pytest
 - `tests/install/unit/` — Unit tests for installer functions (no Docker, no network). Run with `task test:unit`.
 - `tests/install/integration/` — Integration tests. Requires Docker + the prebuilt base image `dotfiles-test-base:ubuntu-24.04`. If the image is missing, `tests/install/docker/build-base.sh` is invoked automatically before tests run — if the build itself fails, the test run fails loudly rather than silently skipping.
 

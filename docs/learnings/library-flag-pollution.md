@@ -26,15 +26,16 @@ detect_platform() { ... }
 
 - Libraries are sourced into the caller's shell — any side effect persists
 - `set -e` is particularly dangerous because it causes silent exits
-- Test with BATS: capture `$-` before and after sourcing, assert no new flags
+- Capture `$-` before and after sourcing, and assert the flag set is unchanged
 - The fix in `error-handling.sh` is different: it provides `enable_error_traps` as an explicit opt-in function, so the caller chooses when to enable strict mode
 
 ## Testing
 
-`tests/install/unit/library-flag-pollution.bats` sources each library listed in it and asserts no
-new flag appears in `$-`. It also checks the file exists first: a missing library sources to an
-error, carries on, adds no flags and passes, which is how it spent months reporting coverage of a
-path that had never existed.
+`tests/shell/test_shell_libraries.py` sources each library in a fresh `bash -c` and asserts `$-` is
+unchanged across the source. It globs the library directories rather than naming files: the bats
+version it replaced carried a hardcoded list that named a path which had never existed, so a
+missing library sourced to an error, carried on, added no flags and passed — months of reported
+coverage over nothing.
 
 ## Related
 

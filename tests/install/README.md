@@ -38,7 +38,6 @@ Test specific installation phases or components together. All use BATS framework
 
 Test isolated installer functions and components using BATS.
 
-- `library-flag-pollution.bats` - Verify libraries don't set shell options
 - `dotfiles-dir.bats` - DOTFILES_DIR resolution
 
 ## Running Tests

@@ -17,7 +17,7 @@ conditional logic, and nothing else.
 
 `error-handling.sh` follows this by exposing `enable_error_traps` as an explicit
 opt-in rather than arming traps on load. Every library is checked for the
-violation by `tests/install/unit/library-flag-pollution.bats`; see
+violation by `tests/shell/test_shell_libraries.py`; see
 [Library Flag Pollution](../learnings/library-flag-pollution.md) for the
 incident that produced the test.
 
