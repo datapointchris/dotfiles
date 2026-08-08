@@ -302,11 +302,11 @@ identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identi
 
 
 @identity_app.command('check')
-def identity_check(as_json: bool = JsonOption) -> None:
+def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report whether this machine has a git identity.
 
     Check only, and deliberately: an identity is per-machine and personal, so
     there is nothing in the repo for `apply` to write. It lives in `~/.gitconfig`
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
-    _report(reconcile.check_identity(), as_json)
+    _report(reconcile.check_identity(_session(machine)), as_json)

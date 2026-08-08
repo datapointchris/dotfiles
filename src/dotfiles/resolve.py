@@ -39,6 +39,11 @@ class Stage(enum.IntEnum):
     """
 
     ENVIRONMENT = 10
+    IDENTITY = 15
+    """Its own stage rather than part of ENVIRONMENT: the git identity lives in
+    `~/.gitconfig`, has nothing to do with `~/.env`, and an address a caller
+    branches on must not lie about which file it is talking about."""
+
     SYSTEM = 20
     TOOLCHAIN = 30
     TOOLS = 40

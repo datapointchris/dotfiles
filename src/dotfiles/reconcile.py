@@ -20,7 +20,6 @@ from enum import StrEnum
 from dotfiles import bridge
 from dotfiles import vocabulary
 from dotfiles.effects import Output
-from dotfiles.effects import run
 from dotfiles.output import render_change
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
@@ -107,25 +106,13 @@ def check_env(session: Session) -> ResourceResult:
     return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
 
 
-def check_identity() -> ResourceResult:
-    """Ask now rather than at the first commit, mid-work.
+def check_identity(session: Session) -> ResourceResult:
+    """Ask now rather than at the first commit, mid-work."""
+    from dotfiles.resources import identity
 
-    The repo ships no identity and sets `user.useConfigOnly`, so a machine
-    without one discovers it when git refuses a commit. `--global` rather than a
-    plain `--get`, so a repo-local override cannot mask an unset machine.
-    """
-    name = run(['git', 'config', '--global', '--get', 'user.name'], output=Output.QUIET)
-    email = run(['git', 'config', '--global', '--get', 'user.email'], output=Output.QUIET)
-
-    if name.ok and email.ok:
-        who = f'{name.transcript.strip()} <{email.transcript.strip()}>'
-        return ResourceResult('identity', Verdict.CONVERGED, who)
-
-    return ResourceResult(
-        'identity',
-        Verdict.DRIFT,
-        "no git identity — commits will be refused; set one with 'git config --global user.email <address>'",
-    )
+    observed = identity.RESOURCE.observe(session, session.plan)
+    changes = identity.RESOURCE.diff(session.plan, observed)
+    return from_changes('identity', changes, observed.who)
 
 
 def check_declaration() -> ResourceResult:
@@ -184,7 +171,7 @@ CHECKERS: dict[str, Checker] = {
     'symlinks': lambda _session: check_symlinks(),
     'env': check_env,
     'system': _pending('system'),
-    'identity': lambda _session: check_identity(),
+    'identity': check_identity,
 }
 """Keyed by address and ordered as the machine converges — see `vocabulary.RESOURCES`."""
 
