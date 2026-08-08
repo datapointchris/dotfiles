@@ -54,16 +54,6 @@ def ops(script: str, *args: str, output: Output = Output.STREAM) -> Completed:
     )
 
 
-def update_script(*args: str) -> Completed:
-    """`update.sh`, the half of the phase registry that has not moved yet.
-
-    Its install counterpart is gone: `dotfiles apply` walks the phases itself, in
-    `apply.py`. This is what is left of the pair, and it goes the same way once
-    each resource can update as well as install.
-    """
-    return run(['bash', str(paths.REPO_ROOT / 'update.sh'), *args], cwd=paths.REPO_ROOT, env=_environment())
-
-
 def wsl_script(name: str, *args: str) -> Completed:
     return run(
         ['bash', str(paths.INSTALL_DIR / 'wsl' / name), *args],

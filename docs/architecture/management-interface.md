@@ -42,6 +42,34 @@ install uv, `uv tool install --editable`, then `exec dotfiles apply`. It validat
 manifest name itself — the only check in the system that does — because the CLI that
 would answer the question does not exist yet.
 
+## `dotfiles update` — the checkout is the installation
+
+`update` means here what it means for every other tool in the fleet: update this tool.
+The verb once pointed at the machine, which is what `apply` covers now, and the entry
+that sanctioned the divergence in `cli-design.md` was deleted when it stopped being one.
+
+It pulls `--ff-only` and then repairs the two things a pull can invalidate. Deployed
+files that moved leave the machine linked to paths that no longer exist, so the symlinks
+are rebuilt. A changed `pyproject.toml` or `uv.lock` leaves the tool venv resolved
+against the old dependency set, so it is reinstalled — and that is the exact bound on
+when an editable install goes stale, because uv points at the working tree, so code
+changes *are* the new code and never need a rebuild. The reinstall is last and the
+process ends with `os._exit`: `--reinstall` replaces the virtualenv the running
+interpreter lives in, so anything imported after it reads files that are gone.
+
+**`pyselfupdate` is deliberately not used, and its refusal is correct rather than a
+gap.** It declines to reinstall over a `directory`/`path`/`editable` requirement, and
+that is the right answer: this repo publishes no releases, its source of truth is the
+working tree, and installing a release over it would destroy the thing being updated.
+Nothing should be filed to add releases here on the strength of it.
+
+For the same reason there is no update *notice* — there is no published version to
+compare against. `dotfiles check` ends with the honest equivalent: where the checkout
+sits against the last-fetched `origin/main`, and how long ago that fetch was. It reads
+`.git` and never the network, so it is free at a prompt and correct offline, which is
+why it dates its own answer. `dotfiles update --check` is the same line after an
+explicit fetch, and exits 1 when there is something to pull.
+
 ## The machine environment (`~/.env`)
 
 `~/.env` is the first thing `.zshrc` sources and the first thing `install.sh` reads. It
@@ -152,11 +180,14 @@ A selector is a group name **or** a phase name; `--list` prints every phase unde
 group, and each one shown is selectable. Listing names that could not be given as
 arguments was the original discoverability bug.
 
+The selectors belong to the bash half, so they are typed through `task` until those
+phases convert; `dotfiles update` is self-update and takes none of them.
+
 ```bash
-dotfiles update                       # everything
-dotfiles update tools plugins         # named groups
-dotfiles update --no-system           # skip the sudo-gated, slowest group
-dotfiles update --mine                # only tools owned by datapointchris
+task update                           # everything
+task update -- tools plugins          # named groups
+task update -- --no-system            # skip the sudo-gated, slowest group
+task update -- --mine                 # only tools owned by datapointchris
 dotfiles apply --owner datapointchris # install those tools, no brew or casks
 dotfiles apply --skip system          # any resource address is skippable
 ```
@@ -183,11 +214,11 @@ the filter block and only `go-tools.sh` honoured the owner.
 
 ### Update never installs
 
-`update` reconciles what is on the machine; `apply` creates. That line used to be
+`update.sh` reconciles what is on the machine; `apply` creates. That line used to be
 drawn by accident rather than intent: `go install @latest`, `cargo binstall`, and the
 release installers all create as a side effect of upgrading, while `uv tool upgrade` and
-`<tool> update` cannot. Whether `dotfiles update` installed a newly declared tool came
-down to which section of `packages.yml` it had been added to.
+`<tool> update` cannot. Whether an update installed a newly declared tool came down to
+which section of `packages.yml` it had been added to.
 
 Every phase now skips a tool it finds missing, records it through
 `install/common/lib/missing-tools.sh`, and the run ends with what was declared but not
@@ -247,7 +278,9 @@ real type system, a test suite, and dependencies it can declare.
 | --- | --- |
 | Machine bootstrap | `install.sh` — POSIX sh, up to the point uv installs the CLI |
 | Installing | `src/dotfiles/apply.py` — the phase registry and the walk |
-| Updating | `update.sh` over `install/phases.sh`, not yet converted |
+| Updating the machine | `update.sh` over `install/phases.sh`, not yet converted |
+| Updating this installation | `src/dotfiles/commands/manage.py` — pull, relink, rebuild the venv |
+| Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
 | Composite operations | `install/ops/` — reached through `src/dotfiles/bridge.py` |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |

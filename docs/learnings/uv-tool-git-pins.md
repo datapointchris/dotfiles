@@ -2,7 +2,7 @@
 
 ## Problem
 
-`dotfiles update --mine` reported `syncer already at latest (4.3.0)` while syncer itself, run a
+`task update -- --mine` reported `syncer already at latest (4.3.0)` while syncer itself, run a
 minute later, announced v5.3.0 — eight releases newer. The update phase was not lying about what it
 observed. It ran `uv tool upgrade syncer`, which exits 0 having changed nothing, so the before/after
 version comparison correctly found no movement.

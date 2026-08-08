@@ -163,7 +163,7 @@ from `zvm_after_init`.
 **Management**:
 
 - Install: `dotfiles plugins apply` — the clone is `src/dotfiles/resources/plugins.py`
-- Update: `dotfiles update plugins`
+- Update: `task update -- plugins`
 
 ## Installation Location Strategy
 

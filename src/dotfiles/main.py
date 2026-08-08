@@ -121,6 +121,12 @@ def check(
     else:
         for result in results:
             render_result(result)
+        # Read from `.git`, never fetched: this is the honest stand-in for an
+        # update notice, and a notice that spends a network round trip at every
+        # prompt is one that gets turned off. It reports its own age instead.
+        # Its verdict is deliberately dropped — a checkout behind origin is a
+        # reason to run `update`, not drift in what this machine declares.
+        manage.report_position(fetch_first=False)
 
     raise typer.Exit(reconcile.exit_code(results))
 

@@ -124,10 +124,10 @@ theme list                              # List available themes
 theme apply rose-pine                   # Apply theme across terminal apps
 theme preview                           # Preview themes with fzf
 
-# Package updates
-dotfiles update                         # Update everything
-dotfiles update --mine                  # Only my own tools
-dotfiles update --no-system             # Skip the sudo-gated, slowest group
+# Updates
+dotfiles update                         # Pull the repo and repair what the pull invalidated
+task update                             # Update the machine's packages, tools and plugins
+task update -- --mine                   # Only my own tools
 
 # Symlinks
 dotfiles symlinks apply                 # Deploy configs (also: check, show, unlink)

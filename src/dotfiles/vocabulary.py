@@ -40,7 +40,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles put "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
-    'update': 'the machine, not this CLI — a sanctioned exception in cli-design.md',
+    'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
     'shell-init': 'hidden; the `starship init` / `zoxide init` convention for a shell snippet',
 }
 """Each exception carries the reason it is not one of the five, so the next reader
