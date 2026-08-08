@@ -1,0 +1,153 @@
+"""What a machine looks like after `install.sh` has run on it.
+
+Each test is one question about the finished machine, and they share a single
+install through the session-scoped `machine` fixture. That split is the point:
+the bash harnesses ran verification as sequential steps, so the first failure
+decided the exit code and everything after it was noise. Here a broken update
+path and a missing binary are two different red lines.
+
+`install.sh` is a bootstrap that installs the CLI and hands over, so the first
+tests below are about that handover specifically — a machine can fail to
+converge for a reason that has nothing to do with whether the bootstrap worked,
+and telling those apart is what the whole step is for.
+"""
+
+from __future__ import annotations
+
+import pytest
+from harness import Machine
+
+pytestmark = pytest.mark.docker
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The bootstrap
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_bootstrap_put_uv_on_the_machine(machine: Machine) -> None:
+    """Online it comes from astral.sh; offline from the bundle's `bin/uv`. Either
+    way nothing after this line can run without it."""
+    assert machine.succeeds('command -v uv'), machine.install_log[-3000:]
+
+
+def test_the_cli_is_installed_and_runs(machine: Machine) -> None:
+    """`uv tool install --editable` and then the console script, which is the
+    handover the whole bootstrap exists to reach."""
+    assert machine.succeeds('command -v dotfiles')
+    assert machine.read('dotfiles --version').startswith('dotfiles ')
+
+
+def test_the_cli_runs_from_outside_the_repo(machine: Machine) -> None:
+    """An installed tool, not a script found relative to the checkout — which is
+    the difference between this and the bash CLI it replaced."""
+    assert machine.read('cd / && dotfiles machines list') != ''
+
+
+def test_the_interpreter_the_installers_get_can_import_the_package(machine: Machine) -> None:
+    """`$DOTFILES_PYTHON` is what replaced the system-python bootstrap. An
+    installer handed one that cannot import `dotfiles` is the exact failure that
+    the PyYAML-into-Apple's-python step existed to prevent."""
+    assert machine.succeeds('"$(uv tool dir)/dotfiles/bin/python" -c "import dotfiles, yaml"')
+
+
+def test_no_phase_crashed(machine: Machine) -> None:
+    """A phase may fail; none may raise.
+
+    A traceback means the walk stopped, so every phase after it silently did not
+    run — which is how a symlink pass that had already deployed everything took
+    tmux, Neovim and the shell config down with it.
+    """
+    assert 'Traceback' not in machine.install_log
+    assert 'FileNotFoundError' not in machine.install_log
+
+
+def test_the_run_reports_its_own_outcome(machine: Machine) -> None:
+    """Exit 0 converged, 3 means a phase reported a failure. What must never
+    happen is the third case this replaced: failures, and exit 0."""
+    assert machine.install_status in {0, 3}
+    if machine.install_status == 3:
+        assert 'phases reported a failure' in machine.install_log
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The machine it produced
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_machine_converged(machine: Machine) -> None:
+    """The whole install, judged as the machine judges it.
+
+    Deliberately not softened to "converged or has known failures": a red line
+    here is the accurate state, and the phases it names are the work. The summary
+    carries them, so the assertion message is the diagnosis.
+    """
+    if machine.install_status == 0:
+        return
+    summary = [line for line in machine.install_log.splitlines() if 'phases reported a failure' in line]
+    pytest.fail(f'{machine.environment.name} did not converge: {summary or machine.install_log[-2000:]}')
+
+
+def test_every_declared_tool_is_installed(machine: Machine) -> None:
+    """The manifest is the checklist, so a tool added or removed changes what is
+    verified with no list here to update."""
+    home = machine.environment.home
+    result = machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
+    assert result.returncode == 0, result.stdout[-4000:]
+
+
+def test_nothing_is_installed_twice(machine: Machine) -> None:
+    """Two copies on PATH means the one that wins is decided by PATH order rather
+    than by the manifest — apt's `batcat` shadowing the cargo `bat`, and so on."""
+    home = machine.environment.home
+    result = machine.exec(f'cd {home}/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh')
+    assert result.returncode == 0, result.stdout[-4000:]
+
+
+def test_the_apps_work(machine: Machine) -> None:
+    home = machine.environment.home
+    result = machine.exec(f'bash {home}/dotfiles/tests/apps/all-apps.sh')
+    assert result.returncode == 0, result.stdout[-4000:]
+
+
+def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
+    """There is deliberately no `~/.zshenv`: `/etc/zshenv` (or `/etc/zsh/zshenv`
+    on Debian) is what points zsh at `~/.config/zsh`, and a missing one means the
+    install did not finish."""
+    assert machine.succeeds('grep -rq ZDOTDIR /etc/zshenv /etc/zsh/zshenv 2>/dev/null')
+
+
+def test_update_runs_against_the_installed_machine(machine: Machine) -> None:
+    """`update.sh` is the half of the phase registry still in bash, and it reads
+    the machine `apply` just produced."""
+    home = machine.environment.home
+    result = machine.exec(f'cd {home}/dotfiles && bash update.sh')
+    assert result.returncode == 0, result.stdout[-4000:]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The offline machine specifically
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize('tool', ['nvim', 'lazygit', 'fzf', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'glow', 'duf'])
+def test_the_bundle_installed_the_tools_the_network_could_not(machine: Machine, tool: str) -> None:
+    """Every one of these comes from a release asset, which is the thing the work
+    firewall blocks — so each is a tool that exists on the machine only because
+    the bundle carried it."""
+    if not machine.environment.offline:
+        pytest.skip('only the offline environment installs from a bundle')
+    assert machine.succeeds(f'command -v {tool}')
+
+
+def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> None:
+    """The version has to come from the bundle manifest, or the filename built
+    from it names a file the cache does not hold.
+
+    `tests/install/test_offline_versions.py` asserts the mechanism directly and
+    cheaply; this is the same property observed on a real install, where a path
+    that bypassed the short-circuit would show up as a resolution attempt.
+    """
+    if not machine.environment.offline:
+        pytest.skip('only the offline environment installs from a bundle')
+    assert 'Using cached' in machine.install_log

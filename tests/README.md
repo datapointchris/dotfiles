@@ -62,17 +62,31 @@ bash tests/install/verification/verify-installed-packages.sh
 bash tests/install/verification/detect-installed-duplicates.sh
 ```
 
-#### Full E2E Installation Test
+#### Container installs
 
-The scripts are `eza -1 tests/install/e2e/` — one per target environment, plus
-`offline-docker.sh` for the bundle path and `wsl-network-restricted.sh` for the
-firewalled case:
+`tests/e2e/` is one rig with the environments as parameters, and it comes in
+three tiers. **Reach for the cheapest one that can answer the question** — a full
+install takes half an hour and answers nothing about the harness that the first
+two tiers cannot answer in a second.
 
 ```bash
-bash tests/install/e2e/archlinux-docker.sh
+uv run pytest tests/e2e/test_harness.py             # 0.1s, no Docker
+uv run pytest tests/e2e/test_container.py --docker  # ~25s per environment
+uv run pytest tests/e2e --docker                    # the full installs
 ```
 
-**Speed:** Slow (5-15 minutes, requires Docker)
+`test_harness.py` is everything decidable without starting anything: the network
+derivation, the environment definitions, the exec script. `test_container.py`
+starts a container and copies the repo but installs nothing — the tier where the
+rig's own failures live, and where a wrong PATH or a firewall that does not match
+the measurement shows up. `test_machine.py` needs the install, so it is for
+changes to `install.sh`, `apply.py` or a phase script.
+
+Add `-k <environment>` for one, `--keep` to leave containers up, `--reuse` to
+keep a kept container's OS state while still refreshing the repo inside it.
+
+`eza -1 tests/install/e2e/` is what is left: the cases that cannot be a container
+at all, needing a real macOS account, the current machine, or a real firewall.
 
 ## Adding Tests
 

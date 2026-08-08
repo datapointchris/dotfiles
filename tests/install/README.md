@@ -13,19 +13,13 @@ tests/install/
 
 ## E2E Tests
 
-Full installation tests in clean Docker environments.
+The container installs are `tests/e2e/`, driven by pytest — one rig, with the
+environments as parameters. `uv run pytest tests/e2e --docker` runs them all,
+`-k <name>` picks one, `--keep` leaves the containers up and `--reuse` keeps a
+kept container's OS state while still refreshing the repo inside it.
 
-- `wsl-docker.sh` - WSL installation in Docker
-- `wsl-network-restricted.sh` - WSL installation with network restrictions
-- `offline-docker.sh` - Offline installation from cached bundles
-- `arch-docker.sh` - Arch Linux installation in Docker
-
-**Usage:**
-
-```bash
-bash tests/install/e2e/wsl-docker.sh
-bash tests/install/e2e/wsl-network-restricted.sh --keep  # Keep container for debugging
-```
+What remains here in `e2e/` are the ones that cannot be a container: a real macOS
+user account, the current machine, and the firewalled WSL case.
 
 ## Integration Tests
 
@@ -58,5 +52,5 @@ bats tests/install/unit/
 bats tests/install/integration/
 
 # E2E tests (slow, requires Docker)
-bash tests/install/e2e/wsl-docker.sh
+uv run pytest tests/e2e --docker
 ```

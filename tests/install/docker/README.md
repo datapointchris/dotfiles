@@ -23,13 +23,12 @@ with `./build-base.sh --ubuntu 24.04`, which tags it separately.
 
 ## Testing an Offline Bundle
 
-The offline lifecycle test lives in `tests/install/e2e/offline-docker.sh`, not
-here: it creates a bundle, starts a container with every GitHub host blackholed,
+The offline lifecycle test lives in `tests/e2e/`, not here: it creates a bundle,
+starts a container blackholed to the hosts the work box actually reports blocked,
 and runs the real `install.sh --offline` against it.
 
 ```bash
-./tests/install/e2e/offline-docker.sh          # create bundle, then test
-./tests/install/e2e/offline-docker.sh -s       # reuse the existing bundle
+uv run pytest tests/e2e --docker -k offline
 ```
 
 ## Usage

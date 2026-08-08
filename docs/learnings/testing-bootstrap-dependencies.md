@@ -66,7 +66,7 @@ phase runs only *after* the platform is known, so the bootstrap lives in `main()
 on `detect_os`, which uses `uname` and needs no Python dependency). Without it a fresh Mac
 parses an empty platform and dies with `Unsupported platform`.
 
-**3. Use Docker with WSL rootfs for testing** (`tests/install/e2e/wsl-docker.sh`):
+**3. Use Docker with WSL rootfs for testing** (`tests/e2e/` (the `wsl` environment)):
 
 ```bash
 # Download official WSL Ubuntu rootfs (one-time, cached)
@@ -76,7 +76,7 @@ curl -L https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64
 gunzip -c ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz | docker import - wsl-ubuntu:24.04
 
 # Run tests in authentic WSL environment
-./tests/install/e2e/wsl-docker.sh
+uv run pytest tests/e2e --docker -k wsl
 ```
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
@@ -120,7 +120,7 @@ These differences cause tests to pass when they shouldn't.
 ## The bootstrap goes away on Ubuntu 26.04
 
 Measured 2026-08-08 against `wsl-ubuntu:26.04`, imported from a real rootfs by
-`tests/install/e2e/wsl-docker.sh`: it ships `/usr/bin/python3` at **3.14.4** and **PyYAML 6.0.3**
+`tests/e2e/` (the `wsl` environment): it ships `/usr/bin/python3` at **3.14.4** and **PyYAML 6.0.3**
 already installed. The premise above — that a fresh WSL install has no PyYAML — no longer holds for
 that release, and the bootstrap step this learning exists to fix has nothing left to do there.
 
@@ -152,7 +152,7 @@ Best practice for testing system installations:
 
 ## Related
 
-- `tests/install/e2e/wsl-docker.sh` - Docker-based WSL testing (recommended)
+- `tests/e2e/` — the container installs, WSL among them
 - `install/wsl/docker-images.sh` - Manage WSL Docker images
 - `tests/install/README.md` - Full install-test suite (e2e, integration, unit)
 - `install/wsl/` - WSL installation scripts

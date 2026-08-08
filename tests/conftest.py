@@ -17,22 +17,46 @@ import pytest
 APPS_DIR = Path(__file__).resolve().parent.parent / 'apps'
 
 
+# Both opt-in tiers are declared here rather than beside the tests they gate.
+# pytest only calls `pytest_addoption` on an *initial* conftest — the rootdir's —
+# so the copy that lived in `tests/e2e/conftest.py` registered only when pytest
+# was pointed straight at that directory, and `pytest tests/ --docker` failed
+# with `unrecognized arguments`.
+TIERS = {
+    '--e2e': ('e2e', 'also run tests that reach the real network', 'reaches the real network; pass --e2e to run'),
+    '--docker': (
+        'docker',
+        'run the container installs (tens of minutes each)',
+        'installs a whole machine in a container; pass --docker to run',
+    ),
+}
+
+
 def pytest_addoption(parser):
-    parser.addoption('--e2e', action='store_true', default=False, help='also run tests that reach the real network')
+    for flag, (_, help_text, _reason) in TIERS.items():
+        parser.addoption(flag, action='store_true', default=False, help=help_text)
+    parser.addoption('--keep', action='store_true', default=False, help='leave e2e containers running afterwards')
+    parser.addoption('--reuse', action='store_true', default=False, help='reuse a kept container and any built bundle')
 
 
 def pytest_collection_modifyitems(config, items):
-    """Deselect the e2e tier unless it is asked for.
+    """Deselect an opt-in tier unless it is asked for.
 
     Here rather than in `addopts`, which forge owns: a deselection written there
     is erased by the next sync-pyproject run.
+
+    `get_closest_marker` rather than `in item.keywords`: keywords carry every
+    ancestor node's name as well as the markers, so the membership test also
+    matched every test under a *directory* named `e2e` — silently skipping the
+    whole container suite, which is marked `docker` and asked for with `--docker`.
     """
-    if config.getoption('--e2e'):
-        return
-    skip = pytest.mark.skip(reason='reaches the real network; pass --e2e to run')
-    for item in items:
-        if 'e2e' in item.keywords:
-            item.add_marker(skip)
+    for flag, (marker, _help, reason) in TIERS.items():
+        if config.getoption(flag):
+            continue
+        skip = pytest.mark.skip(reason=reason)
+        for item in items:
+            if item.get_closest_marker(marker):
+                item.add_marker(skip)
 
 
 def load_app(name: str, platform: str = 'common') -> ModuleType:

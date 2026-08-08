@@ -66,6 +66,13 @@ pretty = true
 ignore_missing_imports = true
 check_untyped_defs = false
 warn_return_any = false
+# `mypy .` sees two files named conftest.py and, with no __init__.py anywhere
+# under tests/, maps both to the module `conftest`. Deriving the name from the
+# path instead makes them tests.conftest and tests.e2e.conftest. Adding
+# __init__.py would fix mypy and break pytest, which resolves `harness` by
+# putting the first directory without one on sys.path.
+explicit_package_bases = true
+mypy_path = "tests/e2e"
 
 # `standard` replaces the per-rule opt-outs repos used to accumulate; basedpyright
 # defaults to `recommended`, which turns every one of them back on. Named
@@ -79,7 +86,13 @@ analyzeUnannotatedFunctions = true  # or pylance stops analyzing in vscode
 addopts = "-vv"
 minversion = "8.0"
 testpaths = ["tests"]
-markers = ["e2e: reaches the real network, a real HOME or a container; opt in with --e2e"]
+markers = [
+    "e2e: reaches the real network or a real HOME; opt in with --e2e",
+    "docker: installs a whole machine in a container; opt in with --docker",
+]
+# So `harness` imports the same way from tests/e2e and from the root conftest,
+# rather than relying on pytest inserting the test file's directory.
+pythonpath = ["tests/e2e"]
 
 
 [tool.refurb]
@@ -180,5 +193,9 @@ default-groups = ["dev", "docs"]
 module-name = "dotfiles"
 
 [build-system]
-requires = ["uv_build>=0.9.13,<0.10.0"]
+# Wider than a single minor series on purpose: the uv doing the build is the one
+# `install.sh` just installed, which is whatever astral publishes at bootstrap
+# time or whatever version the offline bundle happened to capture. A pin narrow
+# enough to name one series warns on every fresh machine.
+requires = ["uv_build>=0.9.13,<0.13.0"]
 build-backend = "uv_build"

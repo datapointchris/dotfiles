@@ -20,11 +20,19 @@ firewall rules change.
 
 ## Install without the network
 
-`./install.sh --create-offline-bundle` downloads every GitHub release binary,
-cargo binary and install script into a single tarball, on a machine that *has*
-the network. `--platform` targets the machine you are building for, not the one
-you are on — the default is `linux-x86_64`, so building on a Mac for WSL needs
-no flag, and building for Apple Silicon does.
+`dotfiles bundle create` downloads every GitHub release binary, cargo binary and
+install script into a single tarball, on a machine that *has* the network.
+`--platform` targets the machine you are building for, not the one you are on —
+the default is `linux-x86_64`, so building on a Mac for WSL needs no flag, and
+building for Apple Silicon does.
+
+It also carries what the bootstrap itself needs before any of that can run: the
+`uv` binary for the target platform, and a wheelhouse holding the CLI's whole
+dependency closure. Without those the restricted machine can unpack a bundle it
+has no way to install from, which is the one failure the bundle exists to
+prevent. The wheels cover every CPython at or above this package's
+`requires-python`, because which interpreter the target has is a fact only the
+target knows.
 
 The tarball is named after the date, the manifest and the target platform, so
 handing it to something else means retyping a name that changes every build.
@@ -32,31 +40,36 @@ handing it to something else means retyping a name that changes every build.
 substitution rather than a copy-paste:
 
 ```bash
-ifiles put "$(./install.sh --create-offline-bundle --print-path)"
+ifiles put "$(dotfiles bundle create --print-path)"
 ```
 
 The build log is unaffected — it goes to stderr either way, so it still reaches
 the terminal — and the path is printed only after the cache prune finishes, so
 nothing downstream sees a bundle that is still being written.
 
-The builder is `src/dotfiles/create_bundle.py`, run under the system
-`python3` for the same reason `parse_packages.py` is: that is the interpreter
-guaranteed to have PyYAML, and the builder imports `parse_packages` directly
-rather than shelling out to it. It was shell until the naming above proved the
-problem — a bash function has no return value, so "produce a tarball and tell
-the caller its name" has no direct expression there. Its logic — checksum
-parsing, cache keys, archive repackaging — is now covered by
-`tests/install/test_create_bundle.py`, which needs neither a network nor a
-container and runs in well under a second.
+The builder is `src/dotfiles/create_bundle.py`. It was shell until the naming
+above proved the problem — a bash function has no return value, so "produce a
+tarball and tell the caller its name" has no direct expression there. Its logic
+— checksum parsing, cache keys, wheel tag matching, archive repackaging — is
+covered by `tests/install/test_create_bundle.py`, which needs neither a network
+nor a container and runs in well under a second.
 
-Move the tarball across, then `./install.sh --offline` extracts it to
-`~/installers/` and installs from there. `install.sh --help` prints the full
-sequence including the `python3 -m http.server` route for when scp is also
-blocked.
+Move the tarball across, then `./install.sh --machine NAME --offline` finds it in
+`./` or `~/`, extracts it to `~/installers/`, installs uv and the CLI from the
+bundle with no index at all, and hands over to `dotfiles apply --offline`.
 
-This path is tested end to end: `tests/install/e2e/offline-docker.sh` builds a
-bundle, blocks GitHub inside a container, and asserts the install completes from
-cache. If you change the bundle format, that test is what catches it.
+This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
+it builds a bundle, starts a container blackholed to exactly the hosts this page's
+results file reports blocked, and asserts the install completes from cache. If you
+change the bundle format, that is what catches it.
+
+The container's network is derived from `connectivity-results.txt` rather than
+typed into the test, and it asserts both halves — that the blocked hosts really
+are unreachable, and that the reachable ones really are. Only the first was ever
+checked, and the test drifted stricter than the firewall: it blackholed
+`github.com` outright, so theme, font and bashselfupdate failed to clone in a test
+of a network where they clone fine, and the log read as though the bundle had a
+gap it does not have.
 
 ## Windows tools when winget is blocked
 
