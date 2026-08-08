@@ -22,6 +22,7 @@ from dataclasses import field
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from dotfiles import apply
 from dotfiles import paths
 
 CONNECTIVITY_RESULTS = paths.INSTALL_DIR / 'offline' / 'connectivity-results.txt'
@@ -38,22 +39,13 @@ ASSET_CDN_HOSTS = (
     'github-releases.githubusercontent.com',
 )
 
-# What a login shell would have put there. Every exec gets it, because a command
-# that cannot find `uv` reports the machine broken when only the harness was.
-CONTAINER_PATH_DIRS = (
-    '$HOME/.local/share/fnm/aliases/default/bin',
-    '$HOME/.local/share/npm/bin',
-    '$HOME/.local/bin',
-    '$HOME/.cargo/bin',
-    '$HOME/go/bin',
-    '/usr/local/go/bin',
-    '/usr/local/sbin',
-    '/usr/local/bin',
-    '/usr/sbin',
-    '/usr/bin',
-    '/sbin',
-    '/bin',
-)
+# On a real machine the tool directories are prepended to a PATH that already
+# exists; `docker exec` supplies almost nothing, so the system half has to be
+# named here. The tool half is imported rather than copied — a fourth list of the
+# same directories is how the npm prefix came to be on three of them and not the
+# fourth, which reported eleven installed tools as missing.
+SYSTEM_PATH_DIRS = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin')
+CONTAINER_PATH_DIRS = (*apply.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
