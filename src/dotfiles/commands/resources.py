@@ -222,23 +222,27 @@ def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> 
 
 
 @symlinks_app.command('apply')
-def symlinks_apply(machine: str = MachineOption) -> None:
-    """Rebuild every symlink, pruning the ones whose source is gone.
+def symlinks_apply(
+    machine: str = MachineOption,
+    force: bool = typer.Option(False, '--force', help='Replace targets this manager did not create'),
+) -> None:
+    """Deploy every declared symlink, pruning the ones whose source is gone.
 
-    `relink`, not `link`: reconciling means the machine ends up matching the
-    declaration, and a link whose source was deleted is drift the create-only
-    pass leaves behind. The old `link`/`relink` split asked the caller to know
-    which kind of change they had made.
+    Only what differs is written. `--force` is the deliberate answer to a
+    refusal, for adopting a machine that already had dotfiles of its own.
     """
-    _apply_phases('symlinks', machine, False, False, None)
+    from dotfiles import deploy
+
+    session = Session.resolve(machine, force=force)
+    raise typer.Exit(ExitCode.CONVERGED if deploy.deploy(session) else ExitCode.DRIFT)
 
 
 @symlinks_app.command('show')
-def symlinks_show() -> None:
-    """List every symlink this repo manages."""
+def symlinks_show(machine: str = MachineOption) -> None:
+    """List every symlink this repo declares, and where each one stands."""
     from dotfiles import deploy
 
-    deploy.show()
+    deploy.show(_session(machine))
 
 
 @symlinks_app.command('unlink')
@@ -252,10 +256,9 @@ def symlinks_unlink(
         hint('re-run with --force if that is what you want')
         raise typer.Exit(ExitCode.USAGE)
 
-    from dotfiles import apply
     from dotfiles import deploy
 
-    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(apply.Run.resolve(machine).platform) else ExitCode.ISSUE)
+    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(_session(machine).machine.platform_label) else ExitCode.ISSUE)
 
 
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')

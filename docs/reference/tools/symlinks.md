@@ -10,9 +10,13 @@ source is deleted. The old `link`/`relink` split asked the caller to know which
 kind of change they had just made, and got the answer wrong in exactly the case
 that mattered.
 
-The `symlinks` console script underneath it takes a layer per invocation
-(`symlinks link macos`) and is what `apply` composes. Reach for it only when
-operating on one layer deliberately; `-v` before the subcommand shows each file.
+`check` and `apply` decide **per link**: what the repo declares, against what is
+at each target. That is why `check` can report a declared link that was never
+deployed — the pass this replaced recreated all of them every run and could only
+say whether any were *broken*, so a file added to `configs/` and never deployed
+read as converged. It is also why nothing is unlinked before being rewritten: a
+deployed link produces no change at all, which closes the window a daemon
+watching its own config used to regenerate a default inside.
 
 ## Architecture
 
@@ -53,8 +57,8 @@ has to be the same either way.
 
 ## Directories that do not map to `$HOME`
 
-Most of `configs/` mirrors into `$HOME` directly. Two trees do not, and go
-through the same `create_symlinks` with a different `target_dir`:
+Most of `configs/` mirrors into `$HOME` directly. Two trees do not, and are
+declared as their own layers with a different destination:
 
 **`apps/`** → `~/.local/bin/`. An app whose job is to change the calling shell
 adds a function in `shell/common/functions.sh` instead; a symlinked command
@@ -65,8 +69,9 @@ than config, which is why it does not sit under `~/.config`. Only the resolved
 platform's overlay file is linked.
 
 `~/.local/shell/local.sh` is the exception to all of it: a real file, not a
-symlink, holding machine-local shell code that exists in no repo. `remove_symlinks`
-only unlinks what resolves into the source tree, so a deploy leaves it alone.
+symlink, holding machine-local shell code that exists in no repo. Nothing
+declares it, and only a link resolving into the source tree is ever unlinked, so
+a deploy leaves it alone.
 
 Go apps, and personal CLI tools like `theme` and `font`, are not symlinked at
 all — they have their own installers. See
@@ -100,19 +105,25 @@ a plugin problem.
 
 ## Development
 
-A subpackage of the repo's Python package at `src/dotfiles/symlinks/` — `cli.py`
-for the Typer interface, `core.py` for all logic. Tests are in `tests/symlinks/`
-and run on every commit.
+`src/dotfiles/resources/symlinks.py` decides — what the repo declares, what is at
+each target, and what to do about the difference. `src/dotfiles/symlinks/core.py`
+holds the primitives it decides with: the exclusion rules, relative-path
+calculation, ownership, and the `/etc/skel` comparison. `src/dotfiles/deploy.py`
+is the epilogue that runs after a deploy.
+
+Tests for the decisions are in `tests/resources/test_symlinks.py`, which builds a
+whole synthetic repo and home per test; the primitives are covered in
+`tests/symlinks/`. Both run on every commit.
 
 They sat in `symlinks/tests/` until 2026-08-08 and were collected by nothing —
 `testpaths` names `tests` only, so the whole file ran for no one. A test
 directory outside the collected root is worse than no tests, because the count
 reads as coverage.
 
-The version comes from the installed distribution's metadata rather than a
-literal, so it cannot drift from `pyproject.toml`. The floor this module itself
-needs is Python 3.12, for `Path.relative_to(walk_up=True)`; the package's own
-`requires-python` is higher.
+There was a second `symlinks` console script until 2026-08-08, taking a layer per
+invocation. It went with the pass it drove: it was a front door with different
+semantics from the one everything actually called, including a `check` whose
+`--auto-fix` defaulted to true — a read verb that deleted files.
 
 ## See Also
 

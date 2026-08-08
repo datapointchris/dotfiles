@@ -67,11 +67,14 @@ class Observed:
     """Where each existing link points, so a link to the wrong file is told apart
     from one that is simply there."""
 
-    skeleton: frozenset[Path]
-    """Targets byte-identical to their `/etc/skel` copy. `useradd` put them there
-    and nobody wrote them, so they are adopted without `--force` — otherwise every
-    first install on Debian reports this phase failed and advises the one answer
-    that is dangerous everywhere else."""
+    adoptable: frozenset[Path]
+    """Foreign targets this run is allowed to replace.
+
+    Always the ones byte-identical to their `/etc/skel` copy: `useradd` put those
+    there and nobody wrote them, so refusing them made every first install on
+    Debian report this phase failed and advise `--force`, which is the dangerous
+    answer everywhere else. Under `--force`, every foreign target — which is what
+    adopting a machine that already had dotfiles means."""
 
     orphans: tuple[Path, ...]
     """Links into the repo whose source is gone. Nothing declares them, so they
@@ -120,13 +123,13 @@ class SymlinksResource:
         links = declared(session, plan.machine.platform_label)
         ownership: dict[Path, str] = {}
         pointing_at: dict[Path, Path | None] = {}
-        skeleton: set[Path] = set()
+        adoptable: set[Path] = set()
 
         for link in links:
             ownership[link.target] = core.link_ownership(link.target, link.root)
             pointing_at[link.target] = _destination(link.target)
-            if ownership[link.target] == 'foreign' and core.is_untouched_skeleton(link.target):
-                skeleton.add(link.target)
+            if ownership[link.target] == 'foreign' and (session.force or core.is_untouched_skeleton(link.target)):
+                adoptable.add(link.target)
 
         wanted = {link.target for link in links}
         orphans = tuple(path for path in core.find_broken_symlinks(session.home.resolve(), session.repo) if path not in wanted)
@@ -134,7 +137,7 @@ class SymlinksResource:
             links=links,
             ownership=ownership,
             pointing_at=pointing_at,
-            skeleton=frozenset(skeleton),
+            adoptable=frozenset(adoptable),
             orphans=orphans,
         )
 
@@ -172,7 +175,7 @@ class SymlinksResource:
             return _prune(change, target)
 
         ownership = core.link_ownership(link.target, link.root)
-        if ownership == 'foreign' and not core.is_untouched_skeleton(link.target):
+        if ownership == 'foreign' and not (session.force or core.is_untouched_skeleton(link.target)):
             return Outcome(change, OutcomeStatus.REFUSED, 'a target this manager did not create; --force replaces it')
 
         try:
@@ -201,14 +204,8 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
         return Change(NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, detail=f'{link.target} does not exist')
 
     if ownership == 'foreign':
-        if link.target in observed.skeleton:
-            return Change(
-                NAME,
-                Stage.SYMLINKS,
-                link.address,
-                Verdict.STALE,
-                detail=f'{link.target} is an untouched /etc/skel copy, adopted on apply',
-            )
+        if link.target in observed.adoptable:
+            return Change(NAME, Stage.SYMLINKS, link.address, Verdict.STALE, detail=f'{link.target} exists and will be adopted')
         return Change(
             NAME,
             Stage.SYMLINKS,

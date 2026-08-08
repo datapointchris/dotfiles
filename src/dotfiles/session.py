@@ -42,6 +42,13 @@ class Session:
     as_json: bool = False
     offline: bool = False
     owner: str | None = None
+    force: bool = False
+    """Authorisation to replace what this repo did not create.
+
+    Not a switch between reading and writing — `check` never writes whatever this
+    says. It is the deliberate answer to a refusal, for adopting a machine that
+    already had dotfiles of its own.
+    """
 
     @classmethod
     def resolve(cls, machine: str | None = None, **kwargs: object) -> Session:

@@ -19,6 +19,7 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import symlinks
 from dotfiles.session import Session
+from dotfiles.symlinks import core
 
 
 @pytest.fixture
@@ -221,6 +222,8 @@ def test_applying_replaces_a_link_this_manager_owns(session: Session, repo: Path
 
 
 def test_applying_never_replaces_a_foreign_target(session: Session, repo: Path, home: Path) -> None:
+    """`uv tool install` writes an executable into the same ~/.local/bin the apps
+    layer links into, and the write here is an unlink."""
     declare(repo, 'apps/common/notes')
     (home / '.local' / 'bin').mkdir(parents=True)
     theirs = home / '.local' / 'bin' / 'notes'
@@ -229,3 +232,134 @@ def test_applying_never_replaces_a_foreign_target(session: Session, repo: Path, 
     apply(session)
 
     assert theirs.read_text() == '#!/bin/sh\n# somebody else wrote this\n'
+
+
+def test_applying_never_replaces_a_link_pointing_outside_the_repo(session: Session, repo: Path, home: Path, tmp_path: Path) -> None:
+    declare(repo, 'configs/common/.zshrc')
+    elsewhere = tmp_path / 'elsewhere'
+    elsewhere.mkdir()
+    (elsewhere / 'other.zshrc').write_text('someone else manages this')
+    (home / '.zshrc').symlink_to(elsewhere / 'other.zshrc')
+
+    apply(session)
+
+    assert (home / '.zshrc').resolve() == (elsewhere / 'other.zshrc').resolve()
+
+
+def test_force_adopts_a_target_this_manager_did_not_create(repo: Path, home: Path) -> None:
+    """The deliberate answer to a refusal, for adopting a machine that already
+    had dotfiles of its own."""
+    declare(repo, 'configs/common/.zshrc', 'the repo copy\n')
+    (home / '.zshrc').write_text('whatever was here before\n')
+    forcing = Session(machine_name='box', repo=repo, home=home, force=True)
+
+    apply(forcing)
+
+    assert (home / '.zshrc').is_symlink()
+    assert (home / '.zshrc').read_text() == 'the repo copy\n'
+
+
+def test_force_does_not_reach_a_name_project_scripts_declares(repo: Path, home: Path) -> None:
+    """There is no state of the machine in which replacing the console script
+    with an apps/ file is right, so --force must not reach this one."""
+    declare(repo, 'apps/common/dotfiles', 'the bash front door\n')
+    (home / '.local' / 'bin').mkdir(parents=True)
+    installed = home / '.local' / 'bin' / 'dotfiles'
+    installed.write_text('the installed console script\n')
+    forcing = Session(machine_name='box', repo=repo, home=home, force=True)
+
+    apply(forcing)
+
+    assert installed.read_text() == 'the installed console script\n'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /etc/skel: a distro default nobody wrote
+# ─────────────────────────────────────────────────────────────────────────────
+
+SKELETON = '# ~/.bashrc: executed by bash(1)\n'
+
+
+@pytest.fixture
+def skel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    directory = tmp_path / 'skel'
+    directory.mkdir()
+    (directory / '.bashrc').write_text(SKELETON)
+    monkeypatch.setattr(core, 'SKEL_DIR', directory)
+    return directory
+
+
+def test_an_untouched_skeleton_file_is_adopted_without_force(session: Session, repo: Path, home: Path, skel: Path) -> None:
+    """`useradd` copies /etc/skel into every new home, so a fresh Debian account
+    starts with a .bashrc nobody wrote. Refusing it made the very first apply on
+    every such machine report this phase failed, having deployed everything else
+    correctly — and the advice printed was --force, which on any other machine is
+    the dangerous answer."""
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    (home / '.bashrc').write_text(SKELETON)
+
+    apply(session)
+
+    assert (home / '.bashrc').is_symlink()
+    assert (home / '.bashrc').read_text() == 'the repo copy\n'
+
+
+def test_an_edited_skeleton_file_is_still_refused(session: Session, repo: Path, home: Path, skel: Path) -> None:
+    """One byte different and it is someone's work, which is why the comparison is
+    on content rather than on two filenames."""
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    edited = home / '.bashrc'
+    edited.write_text(SKELETON + 'export EDITOR=vim\n')
+
+    apply(session)
+
+    assert edited.read_text().endswith('export EDITOR=vim\n')
+    assert not edited.is_symlink()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The window that must not come back
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_deployed_config_is_never_touched_by_a_later_run(session: Session, repo: Path, home: Path) -> None:
+    """Hyprland reloads the moment its config changes and writes itself a default
+    when it finds none. The pass this replaced removed every link before
+    recreating them, handing the daemon exactly that window — and the create pass
+    then refused the default as a target it had not made, so the run failed and
+    the daemon kept running the stub.
+
+    Deciding per link closes it by construction rather than by ordering: a
+    deployed link produces no change at all, so nothing unlinks it, and the prune
+    set is only ever links whose source is gone.
+    """
+    declare(repo, 'configs/common/.config/hypr/hyprland.conf', 'source = conf/keybindings.conf\n')
+    apply(session)
+    deployed = home / '.config' / 'hypr' / 'hyprland.conf'
+
+    observed = symlinks.RESOURCE.observe(session, session.plan)
+
+    assert deployed not in observed.orphans
+    assert symlinks.RESOURCE.diff(session.plan, observed) == ()
+    assert deployed.read_text() == 'source = conf/keybindings.conf\n'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exclusions that were regressions
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize('name', ['.gitconfig', '.gitignore', '.gitattributes'])
+def test_a_dotgit_prefixed_file_is_not_caught_by_the_git_directory_pattern(session: Session, repo: Path, name: str) -> None:
+    """The `.git/` exclusion matches path components, not filename prefixes."""
+    declare(repo, f'configs/common/{name}')
+
+    assert [link.target.name for link in symlinks.RESOURCE.observe(session, session.plan).links] == [name]
+
+
+def test_a_whole_excluded_directory_is_skipped(session: Session, repo: Path) -> None:
+    declare(repo, 'configs/common/.config/nvim/init.lua')
+    declare(repo, 'configs/common/.git/config')
+    declare(repo, 'configs/common/node_modules/package/index.js')
+
+    assert [link.target.name for link in symlinks.RESOURCE.observe(session, session.plan).links] == ['init.lua']

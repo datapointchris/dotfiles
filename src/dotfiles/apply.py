@@ -44,6 +44,7 @@ from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 TOOL_PATH_DIRS = (
@@ -83,6 +84,17 @@ class Run:
     offline: bool = False
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
+
+    @property
+    def session(self) -> Session:
+        """The run as the converted resources see it.
+
+        Two objects describing one invocation while the conversion is in flight.
+        This one holds what the remaining bash phases need; `Session` holds the
+        typed declaration, and `Run` collapses into it when the last phase
+        converts.
+        """
+        return Session(machine_name=self.machine, offline=self.offline, owner=self.owner)
 
     @classmethod
     def resolve(
@@ -416,7 +428,7 @@ def _shell_plugins(context: Run) -> bool:
 
 def _symlinks(context: Run) -> bool:
     heading('Symlinking dotfiles')
-    return deploy.relink(context.platform)
+    return deploy.deploy(context.session)
 
 
 def _tmux_plugins(context: Run) -> bool:

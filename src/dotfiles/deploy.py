@@ -1,10 +1,10 @@
-"""Deploying the repo into $HOME, and the two things that go with it.
+"""Deploying the repo into $HOME, and the three jobs that follow it.
 
-Python rather than a shell script reaching `uv run symlinks`, because `uv run`
-resolves a project from the working directory: a machine that has just run
-`install.sh` has the CLI installed as a tool and no synced virtualenv in the
-checkout, so `uv run` there means "sync from the network" — exactly what the
-offline path cannot do, on the one machine that needs it most.
+The deciding is `resources/symlinks.py`. What lives here is the epilogue, which
+belongs with the deployment rather than at the end of a run: git needs somewhere
+to write that is not this repo, WSL needs the shell profile copied onto the
+Windows host beside it, and Hyprland has to reload the files the pass just
+deployed.
 
 There is one deployment verb, because reconciling always prunes. A create-only
 pass leaves a broken link behind whenever a source is deleted, and asks the
@@ -20,6 +20,10 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import hint
+from dotfiles.output import warn
+from dotfiles.resources import Repair
+from dotfiles.resources import symlinks
+from dotfiles.session import Session
 from dotfiles.symlinks import core
 
 IDENTITY_FILE = Path.home() / '.gitconfig'
@@ -63,19 +67,41 @@ def _sync_windows_shell(platform: str) -> None:
     run(['bash', str(paths.INSTALL_DIR / 'wsl' / 'sync-windows-shell.sh')], cwd=paths.REPO_ROOT)
 
 
-def relink(platform: str) -> bool:
-    """Remove every link and recreate it, which is what prunes the dangling ones.
+def deploy(session: Session) -> bool:
+    """Bring every declared link into line, then run the three jobs that follow it.
 
-    `link` is create-only, so a deleted source leaves a broken link behind in
-    `$HOME`. Reconciling means the machine ends up matching the declaration, so
-    this is what `symlinks apply` runs and `link` has no separate front door.
+    Only what differs is written: the resource decides per link, where the pass
+    this replaced recreated all of them and could not say which had been missing.
+
+    Nothing is unlinked first, and that must not be reinstated. A remove-everything
+    pass left the target tree unlinked for the length of the create pass, and a
+    daemon watching its own config in there reloads inside that window, finds
+    nothing, and writes itself a default — which the create pass then refuses as a
+    target it did not create. Hyprland does exactly this, every run, on an
+    established machine. Replacing each link in place has no such window.
     """
-    err_console.print('[bold blue]Relinking symlinks[/]')
-    failed = core.relink(platform)
+    err_console.print('[bold blue]Deploying symlinks[/]')
+
+    changes = symlinks.RESOURCE.diff(session.plan, symlinks.RESOURCE.observe(session, session.plan))
+    outcomes = [symlinks.RESOURCE.perform(session, change) for change in changes if change.actionable]
+
+    for outcome in outcomes:
+        if not outcome.ok:
+            warn(f'{outcome.change.item}: {outcome.message}')
+
+    refused = [change for change in changes if change.drifted and change.repair is Repair.BY_HAND]
+    if refused:
+        warn(f'refused {len(refused)} target(s) this manager did not create:')
+        for change in refused:
+            err_console.print(f'    {change.detail}')
+        hint('re-run with --force to replace them')
+
+    err_console.print(f'{sum(1 for outcome in outcomes if outcome.ok)} of {len(changes)} link(s) updated')
+
     _ensure_identity_file()
-    _sync_windows_shell(platform)
-    _reload_compositor(platform)
-    return not failed
+    _sync_windows_shell(session.machine.platform_label)
+    _reload_compositor(session.machine.platform_label)
+    return not refused and all(outcome.ok for outcome in outcomes)
 
 
 def unlink(platform: str) -> bool:
@@ -88,20 +114,26 @@ def unlink(platform: str) -> bool:
     return True
 
 
-def check() -> bool:
-    """Report broken links without removing any. Reads only — `apply` is what writes."""
-    broken = core.find_broken_symlinks()
-    if not broken:
-        err_console.print('[green]✓[/] No broken symlinks found')
-        return True
-    err_console.print(f'[yellow]Found {len(broken)} broken symlinks:[/]')
-    for symlink in broken:
-        err_console.print(f'  [red]✗[/] {symlink}')
-    return False
+def show(session: Session) -> None:
+    """Every declared link and where it currently stands.
 
+    Declared rather than discovered, so a link that was never deployed appears
+    here too — the previous version walked `$HOME` and could only list what
+    already existed.
+    """
+    observed = symlinks.RESOURCE.observe(session, session.plan)
+    verdicts = {change.item: change for change in symlinks.RESOURCE.diff(session.plan, observed)}
 
-def show() -> None:
-    core.show_symlinks(None, 'all dotfiles')
+    for link in observed.links:
+        change = verdicts.get(link.address)
+        mark = '[green]→[/]' if change is None else '[yellow]✗[/]'
+        note = '' if change is None else f'  ({change.verdict})'
+        err_console.print(f'  {mark} {link.address} → {link.target}{note}')
+
+    for path in observed.orphans:
+        err_console.print(f'  [red]✗[/] {path} (source gone)')
+
+    err_console.print(f'\n{len(observed.links)} declared, {len(verdicts)} not deployed as declared')
 
 
 def _reload_compositor(platform: str) -> None:
