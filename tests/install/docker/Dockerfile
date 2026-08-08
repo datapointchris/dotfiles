@@ -57,8 +57,13 @@ WORKDIR /home/testuser/dotfiles
 # Must be after setting HOME so git config writes to correct location
 RUN git config --global --add safe.directory /home/testuser/dotfiles
 
-# Run system packages installer
-RUN bash install/wsl/system-packages.sh
+# system-packages.sh reads packages.yml through the CLI's interpreter, and the
+# system-python fallback it used to have is gone, so this layer needs uv. It must
+# not survive the layer: the runtime install is what proves the bootstrap
+# installs uv itself, and a uv already on PATH makes that assertion vacuous.
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/opt/build-uv UV_NO_MODIFY_PATH=1 sh \
+    && PATH="/opt/build-uv:$PATH" bash install/wsl/system-packages.sh \
+    && rm -rf /opt/build-uv "$HOME/.local/share/uv" "$HOME/.cache/uv" "$HOME/dotfiles/.venv"
 
 # Remove baked-in dotfiles — tests provide fresh copy via bind mount at runtime.
 # Keeping an empty dir so bind mounts and internal copies have a target.

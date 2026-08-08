@@ -209,7 +209,10 @@ ARCHLINUX = Environment(
     # the state the other three images cannot reach — `plant_python_shadow` gives
     # every environment the hostile version of the same question.
     prepare=(
-        'pacman -Sy --noconfirm sudo git',
+        # -Syu, never -Sy: a partial upgrade is unsupported on Arch, and it broke
+        # here the moment gcc-libs split — the new libgcc conflicts on files the
+        # un-upgraded gcc-libs still owns.
+        'pacman -Syu --noconfirm sudo git',
         'useradd -m -G wheel -s /bin/bash archlinuxuser',
         "printf '%s\\n' 'archlinuxuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
     ),
