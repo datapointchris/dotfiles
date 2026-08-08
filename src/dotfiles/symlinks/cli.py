@@ -5,8 +5,8 @@ import contextlib
 import typer
 from rich.console import Console
 
-import symlinks.core as core
-from symlinks import __version__
+import dotfiles.symlinks.core as core
+from dotfiles import __version__
 
 app = typer.Typer(
     help='Dotfiles symlink manager with layered architecture',

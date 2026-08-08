@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-symlinks = "symlinks.cli:app"
+symlinks = "dotfiles.symlinks.cli:app"
 
 
 # ---------- Tool Configurations ---------- #
@@ -36,12 +36,12 @@ check-filenames = true
 [tool.coverage.run]
 parallel = true
 branch = true
-source = ["install", "symlinks"]
+source = ["install", "src/dotfiles"]
 omit = []
 
 [tool.coverage.paths]
 install = ["install"]
-symlinks = ["symlinks"]
+dotfiles = ["src/dotfiles"]
 
 [tool.coverage.report]
 fail_under = 70
@@ -194,8 +194,7 @@ default-groups = ["dev", "docs"]
 pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
 
 [tool.uv.build-backend]
-module-name = "symlinks"
-module-root = ""
+module-name = "dotfiles"
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]

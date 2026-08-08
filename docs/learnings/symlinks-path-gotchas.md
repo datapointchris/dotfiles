@@ -14,7 +14,7 @@ if pattern.endswith("/") and pattern.rstrip("/") in path_str:
     return True  # ".git" is a substring of ".gitconfig"
 ```
 
-A directory pattern has to match complete path components. `symlinks/core.py`
+A directory pattern has to match complete path components. `src/dotfiles/symlinks/core.py`
 now does:
 
 ```python

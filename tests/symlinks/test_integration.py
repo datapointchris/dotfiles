@@ -2,7 +2,7 @@
 
 import pytest
 
-import symlinks.core as core
+import dotfiles.symlinks.core as core
 
 
 @pytest.fixture

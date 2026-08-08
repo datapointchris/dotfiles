@@ -76,4 +76,4 @@ from the manifest rather than leaving to be typed by hand — see
 - `install/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
 - `install.sh` / `update.sh` — `linux` platform branch and tier gating
 - `install/linux/system-packages.sh`, `shell/linux/linux.sh` — linux overlays
-- `symlinks/cli.py`, `symlinks/core.py` — optional-overlay link/relink
+- `src/dotfiles/symlinks/cli.py`, `src/dotfiles/symlinks/core.py` — optional-overlay link/relink

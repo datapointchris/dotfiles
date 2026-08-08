@@ -12,7 +12,7 @@ and counts are the content rather than a liability.
 
 The audit was triggered by a small change (the since-removed `shell/` role
 overlay) forcing edits to four separate pages. Two of those edits added real reasoning; two were pure
-list-maintenance, restating file enumerations that `symlinks/core.py` and
+list-maintenance, restating file enumerations that `src/dotfiles/symlinks/core.py` and
 `.zshrc` already declare. The question was whether that ratio held across the
 whole of `docs/` — it did, and worse.
 

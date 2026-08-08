@@ -117,6 +117,6 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 ## Related Files
 
 - `install/packages.yml` - Go tools list
-- `symlinks/core.py` - Symlink management (apps linked via `create_symlinks` to `~/.local/bin/`)
+- `src/dotfiles/symlinks/core.py` - Symlink management (apps linked via `create_symlinks` to `~/.local/bin/`)
 - `install/common/custom-installers/theme.sh` - Personal tool installer
 - `configs/common/.config/zsh/.zshrc` - PATH configuration

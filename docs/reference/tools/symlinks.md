@@ -206,7 +206,7 @@ Tests cover:
 
 ## Configuration
 
-Exclusion patterns in `symlinks/core.py` (`EXCLUDE_PATTERNS` constant):
+Exclusion patterns in `src/dotfiles/symlinks/core.py` (`EXCLUDE_PATTERNS` constant):
 
 **Excluded by default**:
 
@@ -276,7 +276,15 @@ is not responsible for; `check` only touches links resolving into the repo.
 
 ## Development
 
-The package lives at `symlinks/` in the repo root as part of the main dotfiles project — `cli.py` for the Typer interface, `core.py` for all logic. Dependencies (`typer`, `rich`) and entry point are defined in the root `pyproject.toml`. Run from anywhere with `uv run symlinks`.
+The manager is a subpackage of the repo's Python package, at
+`src/dotfiles/symlinks/` — `cli.py` for the Typer interface, `core.py` for all
+logic. Dependencies and the entry point are declared in the root
+`pyproject.toml`. Run from anywhere with `uv run symlinks`.
+
+It sat at `symlinks/` in the repo root until 2026-08-08, when the repo adopted a
+single `src/dotfiles/` package. The version it reports now comes from the
+installed distribution's metadata rather than a literal, so it cannot drift from
+`pyproject.toml`.
 
 **Dependencies**: typer (CLI framework), rich (console output)
 

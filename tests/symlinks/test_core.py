@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-import symlinks.core as core
+import dotfiles.symlinks.core as core
 
 # ─── Utility Tests ────────────────────────────────────────────────────────────
 

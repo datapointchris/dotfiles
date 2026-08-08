@@ -138,9 +138,10 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
 - `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
+- `src/dotfiles/` - The Python package: one importable tree, one console script per
+  `[project.scripts]`. The symlinks manager lives here as `symlinks/`
 - `install/` - Repository management tools
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
-  - `symlinks/` - Symlinks manager (Python)
   - `offline/` - Offline installation support (connectivity testing, bundles)
   - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
   - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
