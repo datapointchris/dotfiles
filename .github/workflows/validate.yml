@@ -257,4 +257,11 @@ jobs:
           git clone --depth 1 --branch "v${bats_assert_version}" \
             https://github.com/bats-core/bats-assert.git "$HOME/.local/lib/bats-assert"
 
-          bats tests/libraries/*.bats tests/install/unit/*.bats tests/apps/*.bats
+          shopt -s nullglob
+          suites=(tests/libraries/*.bats tests/install/unit/*.bats tests/apps/*.bats)
+          shopt -u nullglob
+          if [ ${#suites[@]} -eq 0 ]; then
+            echo "no bats suites left in the unit tiers"
+            exit 0
+          fi
+          bats "${suites[@]}"

@@ -14,9 +14,13 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 # expanding them from an arbitrary caller's directory leaves the patterns literal.
 cd "$DOTFILES_DIR" || exit 1
 
+# nullglob, because a directory emptying as its suites port to pytest must make
+# the tier smaller rather than making bats fail on a literal glob it cannot open.
+shopt -s nullglob
 LIBRARY_TESTS=(tests/libraries/*.bats)
 UNIT_TESTS=(tests/install/unit/*.bats tests/apps/*.bats)
 INTEGRATION_TESTS=(tests/install/integration/*.bats)
+shopt -u nullglob
 
 # Each test is its own process, so the suite is dominated by process startup and
 # scales almost linearly across cores. bats needs GNU parallel for --jobs and

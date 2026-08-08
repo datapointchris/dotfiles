@@ -41,6 +41,12 @@ class TestCargoTarget:
         assert create_bundle.cargo_target('darwin', 'arm64') == 'aarch64-apple-darwin'
         assert create_bundle.cargo_target('darwin', 'x86_64') == 'x86_64-apple-darwin'
 
+    def test_linux_is_not_assumed_to_be_x86(self):
+        """It was, and a linux-arm64 bundle therefore carried x86_64 cargo binaries —
+        an archive that builds cleanly and installs a machine that cannot run them."""
+        assert create_bundle.cargo_target('linux', 'arm64') == 'aarch64-unknown-linux-gnu'
+        assert create_bundle.rust_triple('linux', 'arm64') == 'aarch64-unknown-linux-gnu'
+
     def test_an_override_applies_only_to_its_own_platform(self):
         # fnm ships fnm-linux.zip and fnm-macos.zip, named after neither triple.
         assert create_bundle.cargo_target('linux', 'x86_64', 'linux', 'macos') == 'linux'
@@ -69,28 +75,116 @@ class TestPatternExpansion:
         assert expanded == 'rg-v14.1.0-x86_64-unknown-linux-musl.tar.gz'
 
 
-class TestCachePath:
-    def test_the_url_path_is_mirrored_so_entries_are_inspectable(self):
-        path = create_bundle.cache_path_for_url('https://github.com/sharkdp/fd/releases/download/v10.2.0/fd.tar.gz')
-        assert path.parts[-4:] == ('sharkdp', 'fd', 'releases', 'download') or 'sharkdp' in str(path)
-        assert str(path).startswith(str(create_bundle.CACHE_ROOT))
-        assert path.name == 'fd.tar.gz'
+class TestAssetIdentity:
+    """The cache keys on what an asset *is*, not on the URL that reached it.
+
+    Keying on the URL is the same thing only while an asset has one URL. The
+    release API hands back a `browser_download_url` whose host varies, so the
+    moment anything resolves a download that way the key starts depending on
+    which server answered and every warm entry misses.
+    """
+
+    def test_a_release_asset_is_keyed_on_repo_tag_and_name(self):
+        asset = create_bundle.release_asset('https://github.com/sharkdp/fd/releases/download/v10.2.0/fd.tar.gz')
+        assert asset.key == ('github', 'sharkdp/fd', 'v10.2.0', 'fd.tar.gz')
+        assert asset.release == ('sharkdp/fd', 'v10.2.0')
+        assert asset.filename == 'fd.tar.gz'
+
+    def test_the_same_release_reached_by_two_hosts_is_one_cache_entry(self):
+        browser = create_bundle.release_asset('https://github.com/sharkdp/fd/releases/download/v10.2.0/fd.tar.gz')
+        direct = create_bundle.github_asset('sharkdp/fd', 'v10.2.0', 'fd.tar.gz')
+        assert create_bundle.cache_path_for(browser.key) == create_bundle.cache_path_for(direct.key)
+
+    def test_a_new_release_is_a_new_entry(self):
+        # The cache has no staleness check; the tag is what makes an entry miss.
+        old = create_bundle.github_asset('o/r', 'v1.0.0', 'tool.tar.gz')
+        new = create_bundle.github_asset('o/r', 'v1.1.0', 'tool.tar.gz')
+        assert create_bundle.cache_path_for(old.key) != create_bundle.cache_path_for(new.key)
+
+    def test_something_that_is_not_a_release_falls_back_to_its_url(self):
+        asset = create_bundle.release_asset('https://astral.sh/uv/install.sh')
+        assert asset.release is None
+        assert asset.key[0] == 'url'
 
     def test_a_traversal_cannot_escape_the_cache_root(self):
-        path = create_bundle.cache_path_for_url('https://evil.example/../../../etc/passwd')
+        path = create_bundle.cache_path_for(create_bundle.url_asset('https://evil.example/../../../etc/passwd').key)
         assert '..' not in path.parts
         assert str(path).startswith(str(create_bundle.CACHE_ROOT))
 
     def test_characters_outside_the_portable_set_become_underscores(self):
-        path = create_bundle.cache_path_for_url('https://example.com/a b;rm -rf/x.tar.gz')
+        path = create_bundle.cache_path_for(create_bundle.url_asset('https://example.com/a b;rm -rf/x.tar.gz').key)
         assert ' ' not in str(path)
         assert ';' not in str(path)
 
-    def test_the_version_in_the_url_is_what_makes_an_entry_miss(self):
-        # The cache has no staleness check; a new release changes the key.
-        old = create_bundle.cache_path_for_url('https://github.com/o/r/releases/download/v1.0.0/tool.tar.gz')
-        new = create_bundle.cache_path_for_url('https://github.com/o/r/releases/download/v1.1.0/tool.tar.gz')
-        assert old != new
+
+class TestWheelSelection:
+    """Which wheels a bundle carries, so `uv tool install` needs no index.
+
+    Getting this wrong is silent on the build machine and fatal on the target:
+    an over-broad match ships a wheel that cannot install, and a narrow one ships
+    nothing for the interpreter the machine actually has.
+    """
+
+    def test_a_pure_python_wheel_installs_on_every_target(self):
+        for os_name, arch in create_bundle.WHEEL_PLATFORMS:
+            assert create_bundle.wheel_matches('typer-0.19.1-py3-none-any.whl', os_name, arch)
+
+    def test_a_platform_wheel_matches_only_its_own_target(self):
+        wheel = 'PyYAML-6.0.3-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl'
+        assert create_bundle.wheel_matches(wheel, 'linux', 'x86_64')
+        assert not create_bundle.wheel_matches(wheel, 'linux', 'arm64')
+        assert not create_bundle.wheel_matches(wheel, 'darwin', 'x86_64')
+
+    def test_every_installable_cpython_version_is_taken(self):
+        """The machine's interpreter is whatever it is at or above the floor, and
+        picking one from the wrong side of a firewall is deciding a fact only the
+        target knows. Below the floor is different: uv would refuse the install, so
+        those wheels are weight — they were 7MB of an 8.7MB wheelhouse."""
+        floor = create_bundle.python_floor()
+        for minor in range(floor, floor + 3):
+            wheel = f'PyYAML-6.0.3-cp3{minor}-cp3{minor}-macosx_11_0_arm64.whl'
+            assert create_bundle.wheel_matches(wheel, 'darwin', 'arm64')
+        for minor in range(8, floor):
+            wheel = f'PyYAML-6.0.3-cp3{minor}-cp3{minor}-macosx_11_0_arm64.whl'
+            assert not create_bundle.wheel_matches(wheel, 'darwin', 'arm64')
+
+    def test_the_floor_is_read_from_requires_python(self):
+        """Written here, it would be true only until the floor moved — and the
+        symptom of a stale one is a bundle quietly carrying unusable wheels."""
+        import tomllib
+
+        from dotfiles import paths
+
+        declared = tomllib.loads(paths.PYPROJECT_FILE.read_text())['project']['requires-python']
+        assert f'3.{create_bundle.python_floor()}' in declared
+
+    def test_a_universal_macos_wheel_serves_both_architectures(self):
+        wheel = 'PyYAML-6.0.3-cp313-cp313-macosx_10_9_universal2.whl'
+        assert create_bundle.wheel_matches(wheel, 'darwin', 'arm64')
+        assert create_bundle.wheel_matches(wheel, 'darwin', 'x86_64')
+
+    def test_musl_and_pypy_are_refused(self):
+        """This fleet is glibc, and uv will not pick a pypy interpreter here."""
+        assert not create_bundle.wheel_matches('PyYAML-6.0.3-cp314-cp314-musllinux_1_2_x86_64.whl', 'linux', 'x86_64')
+        assert not create_bundle.wheel_matches('PyYAML-6.0.3-pp310-pypy310_pp73-manylinux_2_17_x86_64.whl', 'linux', 'x86_64')
+
+    def test_an_sdist_is_not_a_wheel(self):
+        assert not create_bundle.wheel_matches('PyYAML-6.0.3.tar.gz', 'linux', 'x86_64')
+
+
+class TestDeclaredClosure:
+    def test_the_closure_is_read_from_uvs_own_lockfile(self):
+        """Pinned versions, and never a hand-listed set — a list here would drift
+        from uv.lock the first time a dependency moved."""
+        closure = create_bundle.declared_closure()
+        assert closure, 'an empty closure would make every assertion below vacuous'
+        assert dict(closure).keys() >= {'typer', 'rich', 'pyyaml'}
+        assert all(version and not version.startswith('=') for _, version in closure)
+
+    def test_a_marker_does_not_stop_a_package_being_carried(self):
+        """colorama is win32-only. Carrying it costs 14KB and uv applies the
+        marker at install time; leaving it out cannot be undone on the target."""
+        assert 'colorama' in dict(create_bundle.declared_closure())
 
 
 class TestArchives:
