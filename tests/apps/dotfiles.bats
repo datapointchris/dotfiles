@@ -194,10 +194,18 @@ new_cli() {
 }
 
 @test "handover: check agrees with doctor on this machine" {
-  # Both read the same five checkers, so they must reach the same verdict.
+  # Both read the same five checkers, so they must agree on whether this machine
+  # is converged. Compared as converged-or-not rather than by exit code: doctor
+  # collapses everything into 1, while check reserves 3 for an Issue, so on a
+  # machine with no ~/.env -- a CI runner, a fresh box -- the numbers differ by
+  # design and only the verdict is comparable.
+  local doctor_converged check_converged
+
   run bash "$DOTFILES_DIR/install/ops/doctor.sh"
-  local doctor_status="$status"
+  doctor_converged=$([[ "$status" -eq 0 ]] && echo yes || echo no)
 
   run new_cli check
-  assert_equal "$status" "$doctor_status"
+  check_converged=$([[ "$status" -eq 0 ]] && echo yes || echo no)
+
+  assert_equal "$check_converged" "$doctor_converged"
 }

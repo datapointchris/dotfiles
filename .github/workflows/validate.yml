@@ -225,11 +225,22 @@ jobs:
   #
   # Its own job rather than a step inside `shell`: it shares no setup with
   # shellcheck or shfmt, and a separate job runs it in parallel with them.
+  #
+  # uv is set up despite this being the shell tier, because tests/apps/dotfiles.bats
+  # asserts the bash front door and the Python one agree. That comparison is the
+  # only thing making the bash CLI safe to delete, so it has to run where the
+  # deletion would be reviewed rather than only on a developer's machine.
   bats-unit:
     runs-on: ubuntu-latest
     steps:
 
       - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv sync --all-extras --dev
 
       - name: bats
         run: |
