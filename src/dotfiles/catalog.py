@@ -61,7 +61,12 @@ SECTION_SPECS: dict[str, dict[str, Any]] = {
     'mas_apps': {'structure': 'list', 'required': ['id', 'name'], 'id_field': 'name'},
     'flatpak_apps': {'structure': 'list', 'required': ['flatpak_id'], 'id_field': 'flatpak_id'},
     'macos_casks': {'structure': 'list', 'required': ['name'], 'id_field': 'name'},
+    'runtimes': {'structure': 'dict_of_dicts', 'required': ['install_method'], 'id_field': 'name'},
+    'zen_extensions': {'structure': 'list', 'required': ['name', 'url'], 'id_field': 'name'},
 }
+# `macos_taps` is deliberately absent and is the only section that stays out: it
+# holds bare strings, so there is no entry to carry a required field or a version
+# constraint, and a spec for it would validate nothing.
 
 PACKAGE_SECTIONS = tuple(SECTION_SPECS.keys())
 
@@ -601,14 +606,21 @@ VERSION_CONSTRAINTS = ('version', 'min_version', 'max_version')
 # stale. .planning/version-constraints.md carries the vocabulary.
 HONOURED_CONSTRAINTS: dict[str, tuple[str, ...]] = {
     'github_releases': ('version',),
+    # install/common/github-releases/tenv.sh:137 reads runtimes.terraform.version
+    # and installs exactly it.
+    'runtimes': ('version',),
 }
 
-# Floors that predate enforcement. Both are satisfied, so they mislead nobody,
-# and naming them here keeps the information alive for the resolver instead of
+# Floors that predate enforcement. All are satisfied, so they mislead nobody, and
+# naming them here keeps the information alive for the resolver instead of
 # deleting it to silence a check.
 GRANDFATHERED_CONSTRAINTS = {
     ('github_releases', 'neovim', 'min_version'),
     ('github_releases', 'fzf', 'min_version'),
+    # go.sh fetches whatever go.dev currently offers and never reads this floor.
+    # It was invisible until `runtimes` joined SECTION_SPECS, because the whole
+    # section sat outside the walk that applies this rule.
+    ('runtimes', 'go', 'min_version'),
 }
 
 

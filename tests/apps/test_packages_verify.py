@@ -191,6 +191,31 @@ def test_a_constraint_no_section_honours_flags_error(tmp_path: Path) -> None:
     assert_error(run_verify(tmp_path), 'nothing honours it for cargo_packages')
 
 
+def test_every_section_carrying_entries_is_validated() -> None:
+    """The check that catches a whole section sitting outside the walk.
+
+    Every per-entry rule — required fields, duplicates, dead version constraints —
+    runs by iterating SECTION_SPECS, so a section absent from it is not validated
+    leniently but not at all. `runtimes` was in exactly that state while declaring
+    a `version` and a `min_version`, which is what the constraint rule exists to
+    police, and no per-rule test could see it because each one names its section.
+
+    Reads the real packages.yml rather than a fixture: the drift being guarded
+    against is a section added there and nowhere else.
+    """
+    from dotfiles.catalog import SECTION_SPECS
+
+    declared = yaml.safe_load((REPO_ROOT / 'install' / 'packages.yml').read_text())
+    # macos_taps holds bare strings, so it has no entry to carry a field or a
+    # constraint and there is nothing for a spec to say about it.
+    unvalidated = set(declared) - set(SECTION_SPECS) - {'macos_taps'}
+
+    assert not unvalidated, (
+        f'sections in packages.yml with no SECTION_SPECS entry: {sorted(unvalidated)}. '
+        'Add a spec, or add to the exemption above with the reason.'
+    )
+
+
 def test_a_pin_beside_a_bound_flags_error(tmp_path: Path) -> None:
     build_tree(
         tmp_path,
