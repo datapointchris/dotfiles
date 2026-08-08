@@ -21,6 +21,7 @@ Run with: pytest tests/install/test_release_urls.py --e2e
 import json
 import os
 import subprocess
+import tempfile
 from collections.abc import Callable
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
@@ -209,3 +210,74 @@ def test_the_fzf_tmux_companion_resolves_at_the_same_tag(http):
     response = http.get(f'https://raw.githubusercontent.com/junegunn/fzf/{version}/bin/fzf-tmux')
     assert response.status_code == 200, f'fzf-tmux at {version} answered {response.status_code}'
     assert response.text.startswith('#!'), 'fzf-tmux did not come back as a script'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Which releases can be checksum-verified at all
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Step 5 defaults `checksum: required`, so the entries that cannot satisfy it
+# have to be known rather than discovered by a broken install. Measured here
+# rather than listed in a plan, because upstream changes it: a project that
+# starts publishing checksums should stop being an exception, and one that stops
+# should fail loudly. Both directions land as a failure below, naming the tool.
+#
+# The two states are genuinely different and the schema has to tell them apart.
+# UNPUBLISHED is benign — nothing to check against, so nothing to check.
+# Unparseable is not: a checksums file exists, `checksum_for_asset` returns None,
+# and `verify_release_checksum` then *deletes the download* and fails.
+
+PUBLISHES_NO_CHECKSUM = {'neovim', 'shellcheck', 'terraformer', 'tree-sitter', 'win32yank', 'yazi', 'zk'}
+"""Releases with no checksum file among their assets at all."""
+
+CHECKSUM_HAS_NO_ENTRY = {'yq'}
+"""Publishes a checksums file the asset cannot be found in.
+
+yq ships an rhash table with the name in column 0, which is not the
+`<digest>  <name>` shape every other publisher uses.
+"""
+
+
+def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, int]) -> str:
+    """What verification would find, without downloading the asset to hash it."""
+    checksum_asset = github_release.select_checksum_asset(sorted(assets), asset_name)
+    if checksum_asset is None:
+        return 'UNPUBLISHED'
+
+    destination = Path(tempfile.mkstemp(prefix='checksums-')[1])
+    try:
+        browser_url = f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}'
+        if not github_release.download_asset(browser_url, destination, repo, tag, checksum_asset):
+            return 'UNREACHABLE'
+        from_sidecar = checksum_asset.endswith(github_release.CHECKSUM_SIDECAR_SUFFIXES)
+        found = github_release.checksum_for_asset(destination.read_text(), asset_name, from_sidecar)
+    finally:
+        destination.unlink(missing_ok=True)
+
+    return 'VERIFIABLE' if found else 'NO-ENTRY'
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
+def test_a_release_is_verifiable_unless_it_is_a_known_exception(tool, os_name, arch, resolved_urls, published_assets):
+    repo, tag, url = asset_under_test((tool, os_name, arch), resolved_urls)
+    asset_name = url.rsplit('/', 1)[-1]
+
+    state = checksum_state(repo, tag, asset_name, published_assets(repo, tag))
+
+    if tool in PUBLISHES_NO_CHECKSUM:
+        assert state == 'UNPUBLISHED', (
+            f'{tool} is listed as publishing no checksum, but {repo} {tag} now answers {state} — drop it from PUBLISHES_NO_CHECKSUM'
+        )
+    elif tool in CHECKSUM_HAS_NO_ENTRY:
+        assert state == 'NO-ENTRY', f'{tool} is listed as publishing an unparseable checksums file, but {repo} {tag} now answers {state}'
+    else:
+        assert state == 'VERIFIABLE', f'{tool} was verifiable and {repo} {tag} now answers {state}'
+
+
+@pytest.mark.e2e
+def test_every_named_exception_is_a_tool_that_still_exists():
+    """An exception list outliving its tool silently excuses nothing, and reads
+    as covered. Cheap, and it does not need the network."""
+    named = PUBLISHES_NO_CHECKSUM | CHECKSUM_HAS_NO_ENTRY
+    assert named <= declared_releases(), f'named but no longer declared: {sorted(named - declared_releases())}'
