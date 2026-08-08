@@ -223,6 +223,33 @@ def inventories(items: tuple[DesiredItem, ...]) -> dict[str, frozenset[str]]:
     return {name: answer for name in wanted if name and (answer := query(name)) is not None}
 
 
+VERSION_PROBES = ('--version', 'version')
+"""How to ask a binary what it is, in the order worth trying.
+
+Two rather than one because `terrascan` takes the subcommand and rejects the
+flag, and two rather than a per-tool field because a field carrying one
+exception for 23 tools is a field nobody maintains. Both spellings are reads on
+every CLI that has either.
+"""
+
+
+def reported_version(executable: str) -> str | None:
+    """What a binary says its version is, or None when it will not say.
+
+    A non-zero exit is None rather than "whatever it printed": a tool that does
+    not recognise the probe prints its usage, and usage text is full of numbers
+    `versions.parse` would otherwise read as a version and report as behind.
+    """
+    found = shutil.which(executable)
+    if not found:
+        return None
+    for probe in VERSION_PROBES:
+        result = run([found, probe], output=Output.QUIET)
+        if result.ok and result.transcript.strip():
+            return result.transcript.strip()
+    return None
+
+
 def have_github_credentials() -> bool:
     """The same question `github_token` in `version-helpers.sh` asks, so a check
     and the installers it gates cannot disagree about whether to try."""

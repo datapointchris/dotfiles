@@ -61,7 +61,19 @@ RUNS_DIR = STATE_HOME / 'runs'
 LATEST_RUN = STATE_HOME / 'latest'
 STATUS_FILE = STATE_HOME / 'status.json'
 
-CACHE_HOME = _xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
+
+def cache_home() -> Path:
+    """Where this tool's caches live, re-read on every call.
+
+    A function as well as the constant below, because a cache is the one thing a
+    test legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob
+    that already means that — the same reasoning as `evidence.uv_tool_dir`. A
+    constant bound at import cannot be redirected without patching this module.
+    """
+    return _xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
+
+
+CACHE_HOME = cache_home()
 
 # Where install.sh untars an offline bundle, and where the release installers
 # already look for one. Still under $HOME rather than somewhere ephemeral because

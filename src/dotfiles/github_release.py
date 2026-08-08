@@ -194,12 +194,35 @@ def release_assets(repo: str, tag: str) -> dict[str, int]:
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
 
-def latest_version(repo: str) -> str | None:
+def latest_version(repo: str, tag_prefix: str = '') -> str | None:
+    """The newest release tag, or the newest one under `tag_prefix`.
+
+    A prefix is not a nicety: four of the declared releases are CLIs living in a
+    monorepo that also releases an API and a web app, so `releases/latest` there
+    answers with whichever component shipped most recently. Asking it for `icb`
+    would report the CLI outdated every time the API released, and current every
+    time the API released after it.
+
+    Mirrors `fetch_github_latest_version_prefixed` in `version-helpers.sh`,
+    including its two assumptions: releases come back newest-first, so the first
+    match is the latest, and a draft is not a release anyone can install.
+    """
+    if not tag_prefix:
+        try:
+            payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
+        except (urllib.error.URLError, json.JSONDecodeError):
+            return None
+        return payload.get('tag_name')
+
     try:
-        payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
+        releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
     except (urllib.error.URLError, json.JSONDecodeError):
         return None
-    return payload.get('tag_name')
+    for release in releases:
+        tag = release.get('tag_name') or ''
+        if not release.get('draft') and tag.startswith(tag_prefix):
+            return tag
+    return None
 
 
 def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> bool:

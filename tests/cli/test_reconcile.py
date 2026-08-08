@@ -13,6 +13,10 @@ from dotfiles import reconcile
 from dotfiles import vocabulary
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import Verdict
+from dotfiles.resolve import Stage
+from dotfiles.resources import Change
+from dotfiles.resources import Repair
+from dotfiles.resources import Verdict as Change_Verdict
 from dotfiles.vocabulary import ExitCode
 
 
@@ -67,3 +71,48 @@ def test_skipping_machines_skips_the_declaration_check(monkeypatch: pytest.Monke
     monkeypatch.setattr('dotfiles.vocabulary.RESOURCES', ())
 
     assert reconcile.check_machine(skip=frozenset({'machines'})) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Folding a resource's changes into one row
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def change(verdict: Change_Verdict, repair: Repair = Repair.AUTOMATIC, item: str = 'ghrelease/lazygit') -> Change:
+    return Change('packages', Stage.TOOLS, item, verdict, repair=repair)
+
+
+def test_an_item_nobody_could_measure_is_counted_not_rendered_as_drift() -> None:
+    """Nothing about it differs — that is the claim there is no evidence for — and
+    no checker crashed. On a cold release cache every declared release is
+    unmeasurable, and treating that as drift prints a screen of rows and exits
+    non-zero on a machine with nothing wrong with it."""
+    folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.NONE)], 'all installed')
+
+    assert folded.verdict is Verdict.CONVERGED
+    assert '1 unmeasurable' in folded.detail
+
+
+def test_an_unmeasurable_item_beside_real_drift_leaves_the_drift_reported() -> None:
+    changes = [change(Change_Verdict.UNKNOWN, Repair.NONE), change(Change_Verdict.MISSING, item='ghrelease/zk')]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed')
+
+    assert folded.verdict is Verdict.DRIFT
+    assert '1 item(s) differ' in folded.detail
+    assert '1 unmeasurable' in folded.detail
+
+
+def test_an_unknown_something_could_repair_is_still_drift() -> None:
+    """`Repair.NONE` is what marks a measurement gap. An UNKNOWN that `apply` has
+    an answer for is a difference, and must not be folded away with it."""
+    folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.BY_HAND)], 'all installed')
+
+    assert folded.verdict is Verdict.DRIFT
+
+
+def test_nothing_at_all_says_so_without_a_gap_clause() -> None:
+    folded = reconcile.from_changes('packages', [], 'all installed')
+
+    assert folded.verdict is Verdict.CONVERGED
+    assert folded.detail == 'all installed'

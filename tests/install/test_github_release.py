@@ -7,6 +7,8 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
+import urllib.error
+
 from dotfiles import github_release
 
 
@@ -163,3 +165,49 @@ class TestSidecarChecksums:
         for suffix in github_release.CHECKSUM_SIDECAR_SUFFIXES:
             names = ['tool.tar.gz', f'tool.tar.gz{suffix}']
             assert github_release.select_checksum_asset(names, 'tool.tar.gz').endswith(suffix)
+
+
+class TestLatestVersion:
+    """The prefixed form exists because four declared releases are CLIs living in
+    a repo that also releases an API and a web app. `releases/latest` there
+    answers with whichever component shipped most recently, so asking it about
+    `icb` reports the CLI outdated every time the API ships."""
+
+    def test_no_prefix_reads_the_latest_release_endpoint(self, monkeypatch):
+        seen = []
+
+        def fake(url, accept=None):
+            seen.append(url)
+            return b'{"tag_name": "v1.2.3"}'
+
+        monkeypatch.setattr(github_release, 'request', fake)
+
+        assert github_release.latest_version('owner/repo') == 'v1.2.3'
+        assert seen == ['https://api.github.com/repos/owner/repo/releases/latest']
+
+    def test_a_prefix_takes_the_newest_release_carrying_it(self, monkeypatch):
+        payload = b'[{"tag_name": "api/2.0.0", "draft": false}, {"tag_name": "cli/1.4.0", "draft": false}]'
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+        assert github_release.latest_version('owner/repo', 'cli/') == 'cli/1.4.0'
+
+    def test_a_draft_is_not_a_release_anyone_can_install(self, monkeypatch):
+        payload = b'[{"tag_name": "cli/2.0.0", "draft": true}, {"tag_name": "cli/1.4.0", "draft": false}]'
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+        assert github_release.latest_version('owner/repo', 'cli/') == 'cli/1.4.0'
+
+    def test_a_prefix_nothing_matches_answers_nothing(self, monkeypatch):
+        payload = b'[{"tag_name": "api/2.0.0", "draft": false}]'
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+        assert github_release.latest_version('owner/repo', 'cli/') is None
+
+    def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
+        def refuse(url, accept=None):
+            raise urllib.error.URLError('no route to host')
+
+        monkeypatch.setattr(github_release, 'request', refuse)
+
+        assert github_release.latest_version('owner/repo') is None
+        assert github_release.latest_version('owner/repo', 'cli/') is None

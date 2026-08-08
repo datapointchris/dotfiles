@@ -23,6 +23,7 @@ from dotfiles.effects import Output
 from dotfiles.output import render_change
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
+from dotfiles.resources import Verdict as ItemVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -172,19 +173,28 @@ def from_changes(address: str, changes: Sequence[Change], converged: str) -> Res
     then the summary of it. Drift rather than Issue whatever the mix: a machine
     differing from its declaration is what `apply` is for, and only a checker that
     could not answer is an Issue.
+
+    An item nobody could measure is neither. Nothing about it differs — that is
+    the claim there is no evidence for — and no checker crashed, so it is counted
+    and named rather than rendered as a row and rather than moving the exit code.
+    The alternative was measured on a cold release cache: every declared release
+    is unmeasurable until something refreshes it, which would print a screen of
+    rows and exit non-zero on a machine with nothing wrong with it.
     """
-    drifted = [change for change in changes if change.drifted]
+    unmeasured = [change for change in changes if change.verdict is ItemVerdict.UNKNOWN and change.repair is Repair.NONE]
+    drifted = [change for change in changes if change.drifted and change not in unmeasured]
     for change in drifted:
         render_change(change)
 
+    gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
     if not drifted:
-        return ResourceResult(address, Verdict.CONVERGED, converged)
+        return ResourceResult(address, Verdict.CONVERGED, converged + gap)
 
     by_hand = sum(1 for change in drifted if change.repair is Repair.BY_HAND)
     detail = f'{len(drifted)} item(s) differ from the declaration'
     if by_hand:
         detail += f', {by_hand} of them repairable only by hand'
-    return ResourceResult(address, Verdict.DRIFT, detail)
+    return ResourceResult(address, Verdict.DRIFT, detail + gap)
 
 
 Checker = Callable[[Session], ResourceResult]
@@ -204,14 +214,14 @@ CHECKERS: dict[str, Checker] = {
 """Keyed by address and ordered as the machine converges — see `vocabulary.RESOURCES`."""
 
 
-def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None) -> list[ResourceResult]:
+def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[ResourceResult]:
     """Validate the declaration, then walk every resource that was not skipped.
 
     A skipped address is absent from the results rather than present as a fourth
     verdict: it was not examined, so it has nothing to report, and inventing a
     row for it would put something in `--json` that no checker produced.
     """
-    session = Session.resolve(machine)
+    session = Session.resolve(machine, refresh=refresh)
     results = [] if 'machines' in skip else [check_declaration()]
     results.extend(CHECKERS[address](session) for address in vocabulary.RESOURCES if address not in skip)
     return results

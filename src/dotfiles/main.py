@@ -94,9 +94,15 @@ def check(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     as_json: bool = JsonOption,
+    refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
 ) -> None:
-    """Report how this machine differs from what it declares. Never writes."""
-    results = reconcile.check_machine(_skipped(skip), machine)
+    """Report how this machine differs from what it declares. Never writes.
+
+    Never writes *the machine*. `--refresh` updates the cache of upstream release
+    versions, which is the one file a check may leave changed — deleting it costs
+    a recompute, which is exactly why it is a cache.
+    """
+    results = reconcile.check_machine(_skipped(skip), machine, refresh=refresh)
 
     if as_json:
         emit_json([result.as_dict() for result in results])

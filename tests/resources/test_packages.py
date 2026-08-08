@@ -12,6 +12,8 @@ synthetic tree. The question is the same; the answer is now a function call.
 
 from __future__ import annotations
 
+import dataclasses as dc
+import datetime as dt
 import os
 import stat
 from pathlib import Path
@@ -21,6 +23,7 @@ import pytest
 import yaml
 
 from dotfiles import evidence as ev
+from dotfiles import releases
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import packages
@@ -200,3 +203,161 @@ def test_a_private_repo_with_a_token_is_repairable(tmp_path: Path, fake_bin: Pat
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'git_uv_tools': ['safekeep']})
 
     assert changes(live)[0].repair is Repair.AUTOMATIC
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Currency: a release that is installed but no longer the one declared
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def release_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`$XDG_CACHE_HOME` is the real knob, so pointing it here patches nothing."""
+    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'cache'))
+    return tmp_path / 'cache' / 'dotfiles' / 'releases.json'
+
+
+def cached(path: Path, entries: dict[str, str], age: dt.timedelta = dt.timedelta(0)) -> None:
+    checked = dt.datetime.now(dt.UTC) - age
+    releases.save({key: releases.Cached(version, checked) for key, version in entries.items()}, path)
+
+
+LAZYGIT = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit'}]}
+DECLARES_LAZYGIT = {'machine': 'box', 'platform': 'linux', 'github_releases': ['lazygit']}
+
+
+def reporting(directory: Path, name: str, version: str) -> Path:
+    return executable(directory, name, f'#!/bin/sh\nprintf "%s\\n" "{version}"\n')
+
+
+def test_a_release_behind_the_latest_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
+def test_a_release_at_the_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert changes(live) == ()
+
+
+def test_a_release_ahead_of_the_cache_is_not_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The cache is allowed to be behind reality. A tool newer than the last
+    answer is not out of date; it is the cache that is."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.46.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert changes(live) == ()
+
+
+def test_an_expired_cache_reports_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The rule the cache exists to keep: it may be out of date, it may not lie."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'}, age=releases.TTL + dt.timedelta(hours=1))
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict, change.repair) for change in found] == [('ghrelease/lazygit', Verdict.UNKNOWN, Repair.NONE)]
+
+
+def test_no_cache_at_all_reports_unknown(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert [change.verdict for change in changes(live)] == [Verdict.UNKNOWN]
+
+
+def test_a_tool_taking_the_version_subcommand_is_still_measured(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """terrascan rejects the flag and takes the subcommand. Probing only the flag
+    reported an installed, current tool as unmeasurable."""
+    executable(fake_bin, 'lazygit', '#!/bin/sh\n[ "$1" = version ] || exit 1\nprintf "version: v0.45.0\\n"\n')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert changes(live) == ()
+
+
+def test_a_binary_that_answers_neither_probe_is_unknown(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    executable(fake_bin, 'lazygit', '#!/bin/sh\nexit 1\n')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.UNKNOWN, Repair.NONE)]
+
+
+def test_an_unparseable_version_is_unknown_rather_than_behind(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """Reporting it behind would send `apply` to reinstall a tool nothing
+    established was wrong."""
+    reporting(fake_bin, 'lazygit', 'built from source')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert [change.verdict for change in changes(live)] == [Verdict.UNKNOWN]
+
+
+def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """A pin names the release, so the declaration is the whole answer. This is
+    what keeps a pinned tool checkable on a machine that never reaches GitHub."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'version': '0.45.0'}]}
+    live = session(tmp_path, declared, DECLARES_LAZYGIT)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
+def test_a_release_at_its_pin_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'version': '0.45.0'}]}
+    live = session(tmp_path, declared, DECLARES_LAZYGIT)
+
+    assert changes(live) == ()
+
+
+def test_a_missing_release_is_missing_rather_than_unmeasured(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """Presence is asked first. A tool that is not there has no currency to have."""
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert [change.verdict for change in changes(live)] == [Verdict.MISSING]
+
+
+def test_a_registry_installed_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """apt, npm and cargo upgrade on their own schedule. Asking whether they hold
+    the newest version is asking a question their own manager owns."""
+    executable(fake_bin, 'task')
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    assert changes(live) == ()
+
+
+def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """`check` runs at a prompt and in a pre-commit hook. The default must not
+    spend one API call per declared release."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    observed = packages.RESOURCE.observe(live, live.plan)
+
+    assert observed.consulted_network is False
+
+
+def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """`--refresh` means "spend the network on being current", and there is none."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
+
+    observed = packages.RESOURCE.observe(live, live.plan)
+
+    assert observed.consulted_network is False
