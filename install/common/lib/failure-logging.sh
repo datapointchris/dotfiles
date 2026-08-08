@@ -20,8 +20,9 @@
 #
 # Note: Libraries that are sourced should not set shell options.
 
-FAILURE_REPORT_ROOT="${DOTFILES_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
-FAILURE_REPORT_PY=(env "PYTHONPATH=$FAILURE_REPORT_ROOT/src" /usr/bin/python3 -m dotfiles.failure_report)
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/python.sh"
+
+FAILURE_REPORT_PY=(dotfiles_python -m dotfiles.failure_report)
 
 output_failure_data() {
   "${FAILURE_REPORT_PY[@]}" record "$1" "$2" "${3:-unknown}" "${4:-Installation failed}" "${5:-}"

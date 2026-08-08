@@ -14,6 +14,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # Counters
 TOTAL_CHECKS=0
@@ -157,8 +158,7 @@ verify_declared_packages() {
   fi
 
   local rows section kind value name last_section=""
-  if ! rows=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
-    --manifest="$manifest_name" --verify-commands 2>&1); then
+  if ! rows=$(dotfiles_python -m dotfiles.parse_packages --manifest="$manifest_name" --verify-commands 2>&1); then
     log_error "Could not read the manifest's declared commands: $rows"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     return 1
@@ -422,9 +422,10 @@ fi
 # ================================================================
 print_section "Package Management Scripts (Universal)"
 
-# Test parse_packages.py can run and import yaml
+# The catalog reader has to be reachable, or every declared-package check above
+# is silently vacuous rather than failing.
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if env PYTHONPATH="$HOME/dotfiles/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=apt >/dev/null 2>&1; then
+if dotfiles_python -m dotfiles.parse_packages --type=system --manager=apt >/dev/null 2>&1; then
   log_success "parse_packages.py: working (yaml module available)"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else

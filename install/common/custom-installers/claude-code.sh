@@ -2,8 +2,19 @@
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
-CLAUDE_CODE_INSTALL_URL=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+# Claude Code self-updates, no need to manually update
+if [[ "${1:-}" == "--update" ]]; then
+  if ! command -v claude >/dev/null 2>&1; then
+    skip_update_for_absent_tool "claude-code"
+  fi
+  CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
+  log_success "claude-code $CURRENT_VERSION (self-updates automatically)"
+  exit 0
+fi
+
+CLAUDE_CODE_INSTALL_URL=$(dotfiles_python -m dotfiles.parse_packages \
   --custom-installer claude-code --field url) \
   || {
     echo "Error: could not read claude-code.url from packages.yml" >&2
@@ -21,15 +32,6 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
-# Claude Code self-updates, no need to manually update
-if [[ "${1:-}" == "--update" ]]; then
-  if ! command -v claude >/dev/null 2>&1; then
-    skip_update_for_absent_tool "claude-code"
-  fi
-  CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
-  log_success "claude-code $CURRENT_VERSION (self-updates automatically)"
-  exit 0
-fi
 
 # Install mode: check if already installed
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&1; then

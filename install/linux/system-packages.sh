@@ -13,18 +13,15 @@ TIER="${SYSTEM_PACKAGE_TIER:-core}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 print_section "Installing Linux system packages (tier: $TIER)"
 
 log_info "Updating package lists..."
 sudo apt update
 
-# Bootstrap: python3-yaml is required for parse_packages.py to read packages.yml.
-log_info "Installing bootstrap packages..."
-sudo apt install -y python3-yaml
-
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=apt --tier="$TIER" | tr '\n' ' ')
+PACKAGES=$(dotfiles_python -m dotfiles.parse_packages --type=system --manager=apt --tier="$TIER" | tr '\n' ' ')
 
 # shellcheck disable=SC2086
 if sudo apt install -y $PACKAGES; then

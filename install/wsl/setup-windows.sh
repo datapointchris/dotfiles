@@ -35,6 +35,7 @@ DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-topleve
 export TERM=${TERM:-xterm}
 
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # tool | github_repo | windows_asset_pattern | exe_name
 # {tag} = raw release tag (e.g. v0.26.1, 15.2.0); {ver} = tag with any
@@ -81,7 +82,7 @@ resolve_windows_dest() {
 # Mode: --bundle (download Windows binaries on an unblocked machine)
 # ================================================================
 build_bundle() {
-  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.windows_bundle "$1"
+  dotfiles_python -m dotfiles.windows_bundle "$1"
 }
 
 # ================================================================

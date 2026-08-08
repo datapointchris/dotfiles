@@ -10,6 +10,7 @@ export TERM=${TERM:-xterm}
 
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # MACHINE lives in the very file being managed, which is the bootstrap this
 # whole design has to live with: ~/.env names the manifest, and the manifest
@@ -62,27 +63,17 @@ main() {
 
   cd "$DOTFILES_DIR" || exit 1
 
-  # System python, not `uv run`: install.sh syncs ~/.env before any phase, and uv
-  # is installed by a phase — so on a genuinely fresh machine `uv run` exited 127,
-  # the sync was skipped with a warning about "the existing file" that did not
-  # exist, and the install finished with no ~/.env at all. Every flag then read as
-  # its default and the role overlay never loaded. render_env.py needs only stdlib
-  # and yaml, which is a declared system package and ships in the Ubuntu rootfs;
-  # parse_packages.py is invoked the same way for the same reason.
-  local python=/usr/bin/python3
-  [[ -x "$python" ]] || python=python3
-
   case "$verb" in
     show)
-      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine"
+      dotfiles_python -m dotfiles.render_env --machine "$machine"
       ;;
     sync)
       print_section "Syncing ~/.env" "brightcyan"
-      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine" --sync
+      dotfiles_python -m dotfiles.render_env --machine "$machine" --sync
       ;;
     check)
       print_section "Checking ~/.env" "brightcyan"
-      PYTHONPATH="$DOTFILES_DIR/src" "$python" -m dotfiles.render_env --machine "$machine" --check
+      dotfiles_python -m dotfiles.render_env --machine "$machine" --check
       ;;
     *)
       log_error "Unknown verb: $verb"

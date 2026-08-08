@@ -5,8 +5,8 @@ touch nothing (usage errors, which fail before any work), read only (`repo path`
 `machines list`), or are pointed at a temp directory through `XDG_STATE_HOME` —
 a real knob, the same one a caller has.
 
-`apply` is covered through `phases_for`, which is the pure question "what work
-would this do" separated from doing it. That is why the function exists.
+What `apply` would do is covered in `test_phase_registry.py`, through `select`,
+which is the pure question "what work would this do" separated from doing it.
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from dotfiles import bridge
 from dotfiles.main import app
 from dotfiles.vocabulary import ExitCode
 
@@ -39,6 +38,8 @@ runner = CliRunner()
         ['bundle', 'create', '--platform', 'plan9-vax'],
         ['windows', 'apply', '--offline'],
         ['shell-init', 'fish'],
+        ['check', '--skip', 'sytem'],
+        ['apply', '--skip', 'no-such-resource'],
         ['nonsense-command'],
     ],
 )
@@ -136,27 +137,5 @@ def test_report_list_on_an_empty_history_is_empty_not_an_error(empty_state: Path
     assert result.output.strip() == ''
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# What apply would do, without doing it
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_apply_covers_every_phase_when_nothing_is_skipped() -> None:
-    assert bridge.phases_for() == [phase for phases in bridge.RESOURCE_PHASES.values() for phase in phases]
-
-
-def test_skipping_a_resource_drops_exactly_its_phases() -> None:
-    full = bridge.phases_for()
-    without = bridge.phases_for(frozenset({'plugins'}))
-    assert set(full) - set(without) == set(bridge.RESOURCE_PHASES['plugins'])
-
-
-def test_skipping_preserves_registry_order() -> None:
-    """Order is a real dependency chain: symlinks must land after the tools that
-    provide `task` and before tpm reads the tmux config it deploys."""
-    without = bridge.phases_for(frozenset({'toolchains'}))
-    assert without == [phase for phase in bridge.phases_for() if phase not in bridge.RESOURCE_PHASES['toolchains']]
-
-
-def test_skipping_everything_leaves_no_work() -> None:
-    assert bridge.phases_for(frozenset(bridge.RESOURCE_PHASES)) == []
+# What `apply` would do without doing it is `tests/cli/test_phase_registry.py`,
+# which is also where the Python registry is checked against the bash one.

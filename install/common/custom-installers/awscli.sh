@@ -12,13 +12,14 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 OS=$(detect_os)
 ARCH=$(detect_arch)
 
 awscli_zip_url() {
   local url_base
-  url_base=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+  url_base=$(dotfiles_python -m dotfiles.parse_packages \
     --custom-installer awscli --field url) || return 1
   case $ARCH in
     amd64) echo "${url_base}/awscli-exe-linux-x86_64.zip" ;;

@@ -18,24 +18,19 @@ tasks:
   # ================================================================
 
   install:
-    desc: "Bootstrap this machine (needs sudo): task install -- --machine NAME"
+    desc: "Reconcile this machine (needs sudo): task install -- --machine NAME"
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install.sh" {{.CLI_ARGS}}
+      - uv run dotfiles apply {{.CLI_ARGS}}
 
   update:
     desc: "Update everything, or a subset: task update -- tools --mine"
     cmds:
       - bash "{{.DOTFILES_DIR}}/update.sh" {{.CLI_ARGS}}
 
-  link:
-    desc: Create symlinks from dotfiles to home (alias for symlinks:link)
-    cmds:
-      - task: symlinks:link
-
   relink:
-    desc: Rebuild all symlinks idempotently (alias for symlinks:relink)
+    desc: Deploy every symlink, pruning the ones whose source is gone
     cmds:
-      - task: symlinks:relink
+      - task: symlinks:apply
 
   doctor:
     desc: Health check — verify symlinks, package and flag drift
@@ -69,35 +64,32 @@ tasks:
   # SYMLINKS MANAGEMENT
   # ================================================================
 
-  symlinks:link:
-    desc: Create symlinks from dotfiles to home directory
+  # `link` and `relink` were two spellings of one operation, and the create-only
+  # one left a broken link behind for every deleted source. Reconciling always
+  # prunes, so there is one verb.
+  symlinks:apply:
+    desc: Deploy every symlink, pruning the ones whose source is gone
     silent: true
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/symlinks.sh" link
-
-  symlinks:relink:
-    desc: Remove all symlinks and recreate them (idempotent)
-    silent: true
-    cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/symlinks.sh" relink
+      - uv run dotfiles symlinks apply
 
   symlinks:check:
     desc: Verify all symlinks are correct
     silent: true
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/symlinks.sh" check
+      - uv run dotfiles symlinks check
 
   symlinks:show:
     desc: Show all configured symlinks
     silent: true
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/symlinks.sh" show
+      - uv run dotfiles symlinks show
 
   symlinks:unlink:
     desc: Remove all symlinks
     silent: true
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/symlinks.sh" unlink
+      - uv run dotfiles symlinks unlink --force
 
   # ================================================================
   # TESTING

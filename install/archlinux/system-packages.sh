@@ -7,19 +7,15 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 print_section "Installing Arch Linux packages"
 
 log_info "Performing full system upgrade (Arch best practice)..."
 sudo pacman -Syu --noconfirm
 
-# Bootstrap: Install python-yaml first (needed for parse_packages.py)
-log_info "Installing bootstrap packages..."
-sudo pacman -S --needed --noconfirm python-yaml
-
-# Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=pacman --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
+PACKAGES=$(dotfiles_python -m dotfiles.parse_packages --type=system --manager=pacman --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
 # shellcheck disable=SC2086
 sudo pacman -S --needed --noconfirm $PACKAGES
 
@@ -57,7 +53,7 @@ else
   mkdir -p "$GNUPGHOME"
   chmod 700 "$GNUPGHOME"
 
-  AUR_PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=aur --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
+  AUR_PACKAGES=$(dotfiles_python -m dotfiles.parse_packages --type=system --manager=aur --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | tr '\n' ' ')
   if [[ -n "$AUR_PACKAGES" ]]; then
     # shellcheck disable=SC2086
     yay -S --needed --noconfirm $AUR_PACKAGES

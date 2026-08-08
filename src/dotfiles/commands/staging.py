@@ -33,8 +33,10 @@ def create(
     if platform not in PLATFORMS:
         raise typer.BadParameter(f'unknown platform {platform!r}. Valid: {", ".join(PLATFORMS)}')
 
-    arguments = ['--create-offline-bundle', '--platform', platform, *(('--print-path',) if print_path else ())]
-    raise typer.Exit(bridge.install_script(*arguments).returncode)
+    from dotfiles import create_bundle
+
+    arguments = ['--platform', platform, *(('--print-path',) if print_path else ())]
+    raise typer.Exit(create_bundle.main(arguments))
 
 
 @bundle_app.command('stage')

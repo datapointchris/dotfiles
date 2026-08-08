@@ -7,6 +7,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # Flatpak requires D-Bus which isn't available in Docker containers
 if [[ "${DOTFILES_DOCKER_TEST:-}" == "true" ]]; then
@@ -26,7 +27,7 @@ log_info "Adding Flathub repository..."
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 log_info "Installing GUI apps from packages.yml..."
-APPS=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=flatpak)
+APPS=$(dotfiles_python -m dotfiles.parse_packages --type=flatpak)
 
 for app in $APPS; do
   if flatpak list --app | grep -q "$app"; then

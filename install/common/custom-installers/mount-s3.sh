@@ -21,6 +21,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 BINARY_NAME="mount-s3"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
@@ -69,7 +70,7 @@ case $ARCH in
 esac
 
 # AWS publishes at latest/{arch}/ — no version lookup needed. url is the bucket root.
-URL_BASE=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+URL_BASE=$(dotfiles_python -m dotfiles.parse_packages \
   --custom-installer=mount-s3 --field=url) \
   || {
     log_error "Could not read mount-s3.url from packages.yml"

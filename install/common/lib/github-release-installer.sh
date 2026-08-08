@@ -8,13 +8,12 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/version-helpers.sh"
 source "$SCRIPT_DIR/missing-tools.sh"
+source "$SCRIPT_DIR/python.sh"
 
 # Checksum rules are shared with the offline bundler rather than reimplemented
 # here: two implementations could disagree silently, and a bundle would then
-# verify differently from a live install. /usr/bin/python3 for the same reason
-# parse_packages.py uses it.
-GITHUB_RELEASE_ROOT="${DOTFILES_DIR:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
-GITHUB_RELEASE_PY=(env "PYTHONPATH=$GITHUB_RELEASE_ROOT/src" /usr/bin/python3 -m dotfiles.github_release)
+# verify differently from a live install.
+GITHUB_RELEASE_PY=(dotfiles_python -m dotfiles.github_release)
 
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"

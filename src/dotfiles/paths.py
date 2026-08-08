@@ -62,3 +62,9 @@ LATEST_RUN = STATE_HOME / 'latest'
 STATUS_FILE = STATE_HOME / 'status.json'
 
 CACHE_HOME = _xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
+
+# Where install.sh untars an offline bundle, and where the release installers
+# already look for one. Still under $HOME rather than somewhere ephemeral because
+# `github-release-installer.sh` hardcodes it; moving it is step 5's job, with the
+# scripts that read it.
+BUNDLE_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or Path.home() / 'installers')

@@ -49,6 +49,12 @@ def render_result(result: ResourceResult) -> None:
     console.print(f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}')
 
 
+def heading(text: str) -> None:
+    """Announce a phase. On stderr, because a phase banner is progress, not data."""
+    err_console.print()
+    err_console.print(f'[bold blue]{text}[/]')
+
+
 def error(message: str) -> None:
     err_console.print(f'[red]✗[/] {message}')
 

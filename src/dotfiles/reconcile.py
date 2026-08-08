@@ -78,8 +78,16 @@ def check_packages(machine: str | None = None) -> ResourceResult:
 
 
 def check_symlinks() -> ResourceResult:
-    status = bridge.ops('symlinks', 'check').returncode
-    return _from_status('symlinks', status, 'symlinks are healthy', 'symlinks are broken or missing')
+    """In-process, and read-only.
+
+    The script this replaced ran `symlinks check`, whose `--auto-fix` defaults to
+    true — a read verb whose default was to delete files. Reading is what `check`
+    does; removing the broken ones is what `symlinks apply` does.
+    """
+    from dotfiles import deploy
+
+    healthy = deploy.check()
+    return _from_status('symlinks', 0 if healthy else 1, 'symlinks are healthy', 'symlinks are broken or missing')
 
 
 def check_env(machine: str | None = None) -> ResourceResult:

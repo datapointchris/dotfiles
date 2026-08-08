@@ -4,6 +4,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 print_section "Installing Mac App Store Apps"
 
@@ -39,7 +40,7 @@ while read -r app_id; do
     FAILED=$((FAILED + 1))
     log_error "Failed to install app $app_id"
   fi
-done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=mas)
+done < <(dotfiles_python -m dotfiles.parse_packages --type=mas)
 
 echo ""
 if [ $INSTALLED -gt 0 ]; then

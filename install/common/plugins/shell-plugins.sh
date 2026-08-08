@@ -7,6 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 PLUGINS_DIR="$HOME/.config/zsh/plugins"
 
@@ -20,7 +21,7 @@ fi
 mkdir -p "$PLUGINS_DIR"
 
 # Read plugins from install/packages.yml via Python parser
-PLUGINS=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=shell-plugins --format=name_repo)
+PLUGINS=$(dotfiles_python -m dotfiles.parse_packages --type=shell-plugins --format=name_repo)
 
 while IFS='|' read -r name repo; do
   PLUGIN_DIR="$PLUGINS_DIR/$name"

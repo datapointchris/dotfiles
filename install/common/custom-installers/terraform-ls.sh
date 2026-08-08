@@ -14,9 +14,10 @@ source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 BINARY_NAME="terraform-ls"
-REPO=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+REPO=$(dotfiles_python -m dotfiles.parse_packages \
   --custom-installer "$BINARY_NAME" --field repo) \
   || {
     log_error "Could not read $BINARY_NAME.repo from packages.yml"

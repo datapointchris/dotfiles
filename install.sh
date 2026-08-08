@@ -1,561 +1,144 @@
-#!/usr/bin/env bash
-set -uo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-DOTFILES_DIR="$SCRIPT_DIR"
-FAILURES_LOG="/tmp/dotfiles-install-failures-$(date +%Y%m%d-%H%M%S).txt"
-
-export DOTFILES_DIR
-export FAILURES_LOG
-export TERM=${TERM:-xterm}
-
-source "$DOTFILES_DIR/install/tool-path.sh"
-source "$DOTFILES_DIR/install/platform-detection.sh"
-source "$DOTFILES_DIR/install/run-installer.sh"
-source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/install/common/lib/package-query.sh"
-
-if [[ -f "$HOME/.env" ]]; then
-  set -a
-  source "$HOME/.env"
-  set +a
-fi
-
-PHASE_VERB="install"
-source "$DOTFILES_DIR/install/phases.sh"
-
-# Resolved from the manifest in main(), before any phase runs.
-PLATFORM=""
-
-if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
-  die "Do not run this script as root"
-fi
-
-# ================================================================
-# MANIFEST HELPERS
-# ================================================================
-
-# Read a manifest field via parse_packages.py
-manifest_field() {
-  local field="$1"
-  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
-    --manifest-field="$field" --manifest="$MACHINE"
-}
-
-# Check if a manifest boolean field is true
-manifest_enabled() {
-  local field="$1"
-  [[ "$(manifest_field "$field")" == "true" ]]
-}
-
-# System-package tier from the manifest: "core", "workstation", or "" (disabled).
-# `system_packages: false` (or absent) disables the phase entirely; a tier name
-# selects how much of packages.yml to install (see get_system_packages there).
-manifest_system_tier() {
-  local tier
-  tier=$(manifest_field "system_packages" 2>/dev/null) || tier=""
-  [[ "$tier" == "false" ]] && tier=""           # explicit disable
-  [[ "$tier" == "true" ]] && tier="workstation" # legacy boolean = full set
-  echo "$tier"
-}
-
-# ================================================================
-# PHASES
-# ================================================================
-# One function per registry entry in install/phases.sh, in the order that file
-# lists them. What each phase would act on is resolved by the items_<phase>
-# functions there, which --dry-run prints and update shares.
+#!/bin/sh
+# Bootstrap `dotfiles` onto a machine that has nothing.
 #
-# The tool lists come from parse_packages rather than the raw manifest key, so
-# --mine narrows them. Reading the manifest directly is also a second source of
-# truth for the same list: it is the manifest names alone, where parse_packages
-# returns the manifest intersected with packages.yml.
+# The one file in this repo that runs before anything is installed, which is why
+# it is POSIX sh, sources nothing, and is short enough to read in full before
+# running it. It stages an offline bundle if one is present, puts uv on the box,
+# installs this repo as a uv tool, and hands over. Everything past the last line
+# is Python.
+#
+#   ./install.sh --machine archlinux-personal-workstation
+#   ./install.sh --machine wsl-work-workstation --offline
+#
+# It validates the manifest name itself, unlike every other check in the system,
+# because the CLI that would answer the question does not exist yet.
+set -eu
 
-INSTALL_COMMON="$DOTFILES_DIR/install/common"
+MACHINE="${MACHINE:-}"
+OFFLINE=""
+BUNDLE="${DOTFILES_BUNDLE:-$HOME/installers}"
 
-install_system_packages() {
-  local sys_tier
-  sys_tier=$(manifest_system_tier)
-
-  case "$PLATFORM" in
-    macos)
-      local macos="$DOTFILES_DIR/install/macos"
-
-      print_header "System Tools (Homebrew)"
-      bash "$macos/homebrew.sh"
-      SYSTEM_PACKAGE_TIER="${sys_tier:-workstation}" bash "$macos/system-packages.sh"
-      bash "$macos/casks.sh"
-      bash "$macos/configure-docker.sh"
-      bash "$macos/mas-apps.sh"
-      bash "$macos/xcode.sh"
-
-      print_header "System Preferences"
-      bash "$macos/preferences.sh"
-      ;;
-    wsl)
-      if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
-        log_warning "Warning: This script is designed for WSL Ubuntu"
-        log_warning "Continuing anyway..."
-      fi
-
-      if [[ -n "$sys_tier" ]]; then
-        print_header "System Packages (apt)"
-        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
-      fi
-
-      print_section "WSL fontconfig setup"
-      bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
-      ;;
-    archlinux)
-      if [[ -n "$sys_tier" ]]; then
-        print_header "System Packages (pacman)"
-        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
-      fi
-      if manifest_enabled "flatpak"; then
-        bash "$DOTFILES_DIR/install/archlinux/flatpak.sh"
-      fi
-
-      print_header "System Configuration"
-      bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
-      ;;
-    linux)
-      # Generic Debian/Ubuntu Linux — the minimal LXC/small-box target. No GUI,
-      # flatpak, or OS-preference steps; the manifest's tier (typically "core")
-      # keeps the apt payload lean.
-      if [[ -n "$sys_tier" ]]; then
-        print_header "System Packages (apt)"
-        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/linux/system-packages.sh"
-      fi
-      ;;
-    *)
-      die "Unsupported platform: $PLATFORM"
-      ;;
-  esac
+die() {
+  echo "install.sh: $*" >&2
+  exit 1
 }
 
-install_go_toolchain() {
-  packages_present --type=go || return 0
-  print_header "Go Toolchain"
-  run_installer "$INSTALL_COMMON/language-managers/go.sh" "go"
+require() {
+  command -v "$1" >/dev/null || die "$1 is required — install it with the OS package manager, then re-run"
 }
 
-install_rust_toolchain() {
-  packages_present --type=cargo || return 0
-  print_header "Rust Toolchain"
-  run_installer "$INSTALL_COMMON/language-managers/rust.sh" "rust"
-  run_installer "$INSTALL_COMMON/language-tools/cargo-binstall.sh" "cargo-binstall"
+manifest_names() {
+  for path in "$DOTFILES_DIR"/install/manifests/*.yml; do
+    [ -f "$path" ] || continue
+    name="${path##*/}"
+    printf '  %s\n' "${name%.yml}"
+  done
 }
 
-# Ungated, unlike every other toolchain: the symlink phase runs `uv run
-# symlinks`, so a manifest with empty uv lists (linux-lxc-server) still needs uv
-# or symlinking dies with exit 127 and no dotfiles get linked.
-install_uv() {
-  print_header "uv"
-  run_installer "$INSTALL_COMMON/language-managers/uv.sh" "uv"
-}
-
-install_go_tools() {
-  packages_present --type=go || return 0
-  print_header "Go Tools"
-  run_installer "$INSTALL_COMMON/language-tools/go-tools.sh" "go-tools"
-}
-
-# The github-release and custom-installer phases are a directory of per-tool
-# scripts rather than one script over a list, so the loop lives here.
-run_script_backed_phase() {
-  local header="$1" script_dir="$2" kind="$3"
-  shift 3
-
-  local tools
-  tools=$(parse_packages "$@") || return 0
-  [[ -n "$tools" ]] || return 0
-
-  print_header "$header"
-  local tool script
-  while IFS= read -r tool; do
-    [[ -z "$tool" ]] && continue
-    script="$script_dir/${tool}.sh"
-    if [[ -f "$script" ]]; then
-      run_installer "$script" "$tool"
-    else
-      log_warning "No installer script for $kind: $tool (packages verify should have caught this)"
-    fi
-  done <<<"$tools"
-}
-
-install_github_releases() {
-  run_script_backed_phase "GitHub Release Tools" \
-    "$INSTALL_COMMON/github-releases" "github release" --type=github
-}
-
-install_custom_installers() {
-  run_script_backed_phase "Custom Distribution Tools" \
-    "$INSTALL_COMMON/custom-installers" "custom installer" --type=custom
-}
-
-install_cargo_packages() {
-  packages_present --type=cargo || return 0
-  print_header "Rust/Cargo Tools"
-  run_installer "$INSTALL_COMMON/language-tools/cargo-tools.sh" "cargo-tools"
-}
-
-# Runs after cargo packages, which is where fnm comes from, and before npm
-# globals, so those install against the fleet's Node rather than whatever the
-# system package happens to be.
-install_node_toolchain() {
-  packages_present --type=npm || return 0
-  print_header "Node Toolchain"
-  run_installer "$INSTALL_COMMON/language-managers/node.sh" "node"
-}
-
-install_npm_globals() {
-  packages_present --type=npm || return 0
-  print_header "npm Globals"
-  run_installer "$INSTALL_COMMON/language-tools/npm-install-globals.sh" "npm-globals"
-}
-
-install_uv_tools() {
-  packages_present --type=uv || packages_present --type=git_uv || return 0
-  print_header "Python Tools (uv)"
-  run_installer "$INSTALL_COMMON/language-tools/uv-tools.sh" "uv-tools"
-}
-
-install_shell_plugins() {
-  manifest_enabled "shell_plugins" || return 0
-  print_header "Shell Plugins"
-  run_installer "$INSTALL_COMMON/plugins/shell-plugins.sh" "shell-plugins"
-}
-
-install_symlinks() {
-  print_header "Symlinking Dotfiles"
-  cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
-
-  # Hyprland reads the config files this phase just deployed, so the reload
-  # belongs here rather than at the end of the run.
-  if [[ "$PLATFORM" == "archlinux" ]] && command -v hyprctl &>/dev/null; then
-    print_section "Reloading Hyprland configuration"
-    hyprctl reload
-    log_success "Hyprland configuration reloaded"
-  fi
-}
-
-install_tmux_plugins() {
-  manifest_enabled "tmux_plugins" || return 0
-  print_header "Tmux Plugins"
-  run_installer "$INSTALL_COMMON/plugins/tpm.sh" "tpm"
-  run_installer "$INSTALL_COMMON/plugins/tmux-plugins.sh" "tmux-plugins"
-}
-
-install_nvim_plugins() {
-  manifest_enabled "nvim_plugins" || return 0
-  print_header "Neovim Plugins"
-  run_installer "$INSTALL_COMMON/plugins/nvim-plugins.sh" "nvim-plugins"
-}
-
-# Runs on all platforms: setting ZDOTDIR in the system zshenv is what macOS
-# needs for its XDG zsh config to load, while the chsh self-skips where zsh is
-# already the default (i.e. macOS).
-install_zsh_config() {
-  manifest_enabled "configure_zsh" || return 0
-  print_header "Post-Installation Configuration"
-  print_section "Configuring ZSH"
-  ensure_zdotdir_in_system_zshenv
-  set_zsh_as_default_shell
-}
-
-# Point the system-wide zshenv at the XDG zsh config via ZDOTDIR. Required on
-# every platform (including macOS) for ~/.config/zsh/.zshrc to load at all.
-# All state checks are sudo-free reads; sudo is invoked only when the setting
-# is actually missing, so repeat installs never prompt for a password.
-ensure_zdotdir_in_system_zshenv() {
-  # Arch (and other distros shipping /etc/zsh) read /etc/zsh/zshenv; macOS/Ubuntu use /etc/zshenv
-  local zshenv_path="/etc/zshenv"
-  if [[ -d /etc/zsh ]] || command -v pacman &>/dev/null; then
-    zshenv_path="/etc/zsh/zshenv"
-  fi
-
-  if grep -q "ZDOTDIR" "$zshenv_path" 2>/dev/null; then
-    log_success "ZDOTDIR already configured in $zshenv_path"
-    return 0
-  fi
-
-  local zshenv_dir
-  zshenv_dir="$(dirname "$zshenv_path")"
-  [[ -d "$zshenv_dir" ]] || sudo mkdir -p "$zshenv_dir"
-  # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
-  echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a "$zshenv_path" >/dev/null
-  log_success "ZDOTDIR configured in $zshenv_path"
-}
-
-# Make zsh the default login shell. A no-op (and no sudo) when the shell is
-# already zsh — which is always the case on macOS (zsh default since Catalina),
-# so only bash-default platforms (Arch/Ubuntu/WSL) ever trigger the chsh.
-set_zsh_as_default_shell() {
-  if [[ "$SHELL" == *"zsh"* ]]; then
-    log_success "Default shell is already zsh"
-    return 0
-  fi
-
-  local zsh_path
-  zsh_path="$(command -v zsh)"
-  log_info "Changing default shell to zsh ($zsh_path)..."
-  sudo chsh -s "$zsh_path" "$(whoami)"
-  log_success "Default shell changed to zsh (effective after next login)"
+# Dated names sort as dates do, so the last match is the newest bundle for a
+# given manifest and platform.
+newest_bundle() {
+  found=""
+  for dir in . "$HOME"; do
+    for path in "$dir"/dotfiles-offline-*.tar.gz; do
+      if [ -f "$path" ]; then found="$path"; fi
+    done
+    if [ -n "$found" ]; then break; fi
+  done
+  printf '%s' "$found"
 }
 
 usage() {
-  help_header "install" "Install dotfiles and development tools"
-  help_text "With no SELECTOR, every group runs."
-  help_usage "$(basename "$0") --machine NAME [SELECTOR...] [OPTIONS]" \
-    "$(basename "$0") --create-offline-bundle [BUNDLE OPTIONS]"
+  cat <<'EOF'
+Usage: ./install.sh --machine NAME [--offline]
 
-  help_section "Groups"
-  help_row "system" "" "OS packages (brew/apt/pacman/flatpak/mas) — needs sudo, slowest"
-  help_row "languages" "" "Language toolchains and package managers (go, rustup, uv)"
-  help_row "tools" "" "Installed binaries (go, cargo, uv, npm, GitHub releases, custom)"
-  help_row "config" "" "Symlink deployment and the zsh setup"
-  help_row "plugins" "" "Shell, tmux, and Neovim plugins"
+Puts uv and the dotfiles CLI on this machine, then runs `dotfiles apply`.
+Selectors and every other flag belong to the CLI: `dotfiles apply --help`.
 
-  help_section "Options"
-  help_row "--machine" "NAME" "Machine manifest to use (required for installation)"
-  help_row "--force, -f" "" "Force reinstall of all tools even if already installed"
-  help_shared_options
-  help_row "--offline" "" "Use offline bundle (extracts ~/installers/ from tarball)"
-  help_row "--create-offline-bundle" "" "Download all installers into an offline bundle tarball"
-  help_row "--help, -h" "" "Show this help message"
-
-  help_section "Offline Bundle Options (with --create-offline-bundle)"
-  help_row "--platform" "PLATFORM" "Target platform (default: linux-x86_64)"
-  help_row "" "" "Supported: linux-x86_64, linux-arm64,"
-  help_row "" "" "           darwin-x86_64, darwin-arm64"
-  help_row "--print-path" "" "Print the finished tarball's path on stdout,"
-  help_row "" "" "for a pipeline"
-
-  help_section "Environment Variables"
-  help_row "MACHINE=name" "" "Same as --machine (flag takes precedence)"
-
-  help_section "Examples"
-  help_row "./install.sh --machine archlinux-personal-workstation"
-  help_row "./install.sh --machine linux-lxc-server" "" "# minimal headless LXC / small box"
-  help_row "MACHINE=archlinux-personal-workstation ./install.sh"
-  help_row "./install.sh --mine" "" "# only $OWNER tools, no brew or casks"
-  help_row "./install.sh go-tools" "" "# a single phase"
-  help_row "./install.sh --no-system" "" "# skip the sudo-gated, slowest group"
-
-  # Step 2 is a pick-one, which the 2a/2b numbering carries — spelling it out in
-  # prose between the rows would split the section into separately sized groups
-  # and stop the step comments lining up.
-  help_section "Offline Workflow"
-  help_row "./install.sh --create-offline-bundle" "" "# 1. Create bundle (internet machine)"
-  help_row "python3 -m http.server 8000" "" "# 2a. Serve from source machine, then:"
-  help_row "curl -O http://<source-ip>:8000/dotfiles-offline-*.tar.gz" "" "# 2a. Download on target (run from ~/)"
-  help_row "scp dotfiles-offline-*.tar.gz user@target-host:~/" "" "# 2b. Or use scp instead"
-  help_row "ifiles put \"\$(./install.sh --create-offline-bundle --print-path)\"" "" "# 2c. Or upload it"
-  help_row "./install.sh --machine wsl-work-workstation --offline" "" "# 3. Install on target machine"
-
-  help_end
-  print_info "Machine manifests: install/manifests/*.yml"
+  --machine NAME   Which manifest this machine is (or set MACHINE)
+  --offline        Stage the bundle from ./ or ~/ and install with no network
+EOF
   exit 0
 }
 
-extract_offline_bundle() {
-  local bundle_file=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --machine)
+      MACHINE="${2:-}"
+      [ -n "$MACHINE" ] || die "--machine needs a manifest name"
+      shift 2
+      ;;
+    --offline)
+      OFFLINE=1
+      shift
+      ;;
+    -h | --help) usage ;;
+    *) die "unknown argument: $1 — phases and their flags live on \`dotfiles apply\`" ;;
+  esac
+done
 
-  # Look for bundle in current directory first, then home
-  for search_dir in "." "$HOME"; do
-    local found
-    found=$(find "$search_dir" -maxdepth 1 -name "dotfiles-offline-*.tar.gz" -type f 2>/dev/null | head -1)
-    if [[ -n "$found" ]]; then
-      bundle_file="$found"
-      break
-    fi
-  done
-
-  if [[ -z "$bundle_file" ]]; then
-    log_error "No offline bundle found. Expected: dotfiles-offline-*.tar.gz in ./ or ~/"
-    log_info "Create a bundle first: ./install.sh --create-offline-bundle"
-    exit 1
-  fi
-
-  log_info "Found offline bundle: $bundle_file"
-  log_info "Extracting to ~/installers/..."
-
-  # Extract to home directory (tarball contains installers/ directory)
-  tar -xzf "$bundle_file" -C "$HOME"
-
-  if [[ -d "$HOME/installers" ]]; then
-    log_success "Offline cache ready: ~/installers/"
-    ls -la "$HOME/installers/"
-  else
-    log_error "Failed to extract bundle"
-    exit 1
-  fi
-}
-
-parse_args() {
-  FORCE_INSTALL=false
-  OFFLINE_MODE=false
-  # --machine flag overrides MACHINE env var
-  local machine_from_flag=""
-  while [[ $# -gt 0 ]]; do
-    consume_shared_arg "$@"
-    if [[ $SHARED_ARG_CONSUMED -gt 0 ]]; then
-      shift "$SHARED_ARG_CONSUMED"
-      continue
-    fi
-    case $1 in
-      --machine)
-        machine_from_flag="$2"
-        shift 2
-        ;;
-      --force | -f)
-        FORCE_INSTALL=true
-        shift
-        ;;
-      --offline)
-        OFFLINE_MODE=true
-        shift
-        ;;
-      --create-offline-bundle)
-        shift
-        # /usr/bin/python3 for the same reason parse_packages.py uses it: it is
-        # the interpreter guaranteed to have PyYAML, which create_bundle.py
-        # needs because it imports parse_packages rather than shelling out to it.
-        exec PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.create_bundle "$@"
-        ;;
-      --help | -h)
-        usage
-        ;;
-      *)
-        echo "Unknown option: $1"
-        echo "Run with --help for usage information"
-        exit 1
-        ;;
-    esac
-  done
-
-  # Priority: --machine flag > MACHINE env var > fail
-  if [[ -n "$machine_from_flag" ]]; then
-    MACHINE="$machine_from_flag"
-  elif [[ -z "${MACHINE:-}" ]]; then
-    echo ""
-    log_error "MACHINE is required but not set"
-    echo ""
-    echo "Set via flag:         ./install.sh --machine <name>"
-    echo "Set via environment:  export MACHINE=<name>"
-    echo ""
-    echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/install/manifests/*.yml; do
-      echo "  $(basename "$f" .yml)"
-    done
-    exit 1
-  fi
-
-  if [[ ! -f "$DOTFILES_DIR/install/manifests/${MACHINE}.yml" ]]; then
-    log_error "Machine manifest not found: install/manifests/${MACHINE}.yml"
-    echo ""
-    echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/install/manifests/*.yml; do
-      echo "  $(basename "$f" .yml)"
-    done
-    exit 1
-  fi
-
-  export FORCE_INSTALL
-  export OFFLINE_MODE
-  export MACHINE
-
-  export_selection_environment
-  init_package_filters
-
-  if [[ "$FORCE_INSTALL" == "true" ]]; then
-    log_warning "Force install mode enabled - will reinstall all tools"
-    echo ""
-  fi
-
-  if [[ "$OFFLINE_MODE" == "true" ]]; then
-    log_info "Offline mode enabled - using cached files from ~/installers/"
-    extract_offline_bundle
-    echo ""
-  fi
-}
-
-main() {
-  local start_time
-
-  export TITLE_COLOR="blue"
-  export HEADER_COLOR="brightblue"
-  export SECTION_COLOR="orange"
-
-  # Bootstrap the YAML parser before reading the manifest. manifest_field runs
-  # parse_packages.py, which imports yaml, but Apple's bundled /usr/bin/python3
-  # ships without PyYAML — and the macOS install step that installs it runs only
-  # AFTER the platform is known. On a fresh Mac that ordering leaves platform
-  # empty and the run dies with "Unsupported platform". detect_os uses uname, so
-  # it works before any Python dependency exists. The macOS phase re-checks and
-  # no-ops if this already ran.
-  if [[ "$(detect_os)" == "darwin" ]] && ! /usr/bin/python3 -c "import yaml" &>/dev/null; then
-    log_info "Bootstrapping PyYAML for system Python (required to read manifest)..."
-    /usr/bin/python3 -m pip install --user PyYAML
-  fi
-
-  # Exported, because every phase script resolves the platform through
-  # detect_platform, which honours $PLATFORM only if it is in the environment and
-  # otherwise greps /proc/version. Unexported, a fresh machine ran the phases on
-  # that guess instead of on the manifest — which is how a wsl manifest deployed
-  # the linux shell overlay. It worked on an established machine only because a
-  # pre-existing ~/.env happened to export it.
-  PLATFORM=$(manifest_field "platform")
-  export PLATFORM
-  start_time=$(date +%s)
-
-  print_title "Dotfiles Installation - $MACHINE ($PLATFORM)"
-  [[ "$MINE" == "true" ]] && log_info "Filtering to $OWNER tools"
-  [[ "$DRY_RUN" == "true" ]] && log_info "Dry run — nothing will be modified"
-
-  cd "$DOTFILES_DIR" || die "Could not change to dotfiles directory"
-
-  # Before the phases, so the rest of the run and every later shell agree on
-  # what this machine is. Hand-authoring ~/.env was the one piece of setup with
-  # no source of truth; the bootstrap paradox stays (this file was already read
-  # for MACHINE), but only MACHINE has to be typed by hand now. Overrides below
-  # the marker — including secrets — are preserved.
-  if [[ "$DRY_RUN" != "true" ]]; then
-    print_section "Machine environment" "brightcyan"
-    if bash "$DOTFILES_DIR/install/ops/env.sh" sync --machine "$MACHINE"; then
-      # Read back what was just written. The file is sourced at the top of this
-      # script too, but on a fresh machine there was nothing there to read, so
-      # without this the run continued on detect_platform's guess and the flags
-      # defaulted — the phases deployed the linux shell overlay to a machine
-      # whose manifest says wsl, and every manifest flag override was ignored for
-      # the whole install.
-      # shellcheck disable=SC1091
-      source "$HOME/.env"
-    else
-      log_warning "Could not sync ~/.env — continuing with the existing file"
-    fi
-  fi
-
-  run_selected_phases || exit 1
-
-  [[ "$DRY_RUN" != "true" ]] && show_failures_summary
-
-  local end_time
-  end_time=$(date +%s)
-  local total_duration=$((end_time - start_time))
-
-  print_title_success "Dotfiles Installation - $MACHINE COMPLETE (${total_duration}s)"
-}
-
-# Run only when executed, never when sourced — unit tests source this file to
-# call parse_args/selected_phase_names directly, exactly as update.sh allows.
-#
-# Deliberately not an opt-in env var: that puts the guard in the caller's hands,
-# so any copy of this file lacking the check runs a full install on `source`.
-# This condition needs no cooperation and cannot be defeated.
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  parse_args "$@"
-  main
+if [ "$(id -u)" -eq 0 ] && [ "${DOTFILES_DOCKER_TEST:-}" != "true" ]; then
+  die "do not run this as root"
 fi
+
+require git
+require tar
+DOTFILES_DIR=$(git -C "$(dirname -- "$0")" rev-parse --show-toplevel)
+
+if [ -z "$MACHINE" ]; then
+  echo "install.sh: --machine is required. Available manifests:" >&2
+  manifest_names >&2
+  exit 1
+fi
+if [ ! -f "$DOTFILES_DIR/install/manifests/$MACHINE.yml" ]; then
+  echo "install.sh: no manifest named '$MACHINE'. Available:" >&2
+  manifest_names >&2
+  exit 1
+fi
+
+# Unpacked here rather than by `dotfiles bundle stage`, because the CLI that
+# would run that verb is the thing the bundle exists to install.
+if [ -n "$OFFLINE" ]; then
+  archive=$(newest_bundle)
+  if [ -n "$archive" ]; then
+    echo "staging $archive"
+    tar -xzf "$archive" -C "$HOME"
+  fi
+  [ -d "$BUNDLE" ] || die "offline: no bundle in ./ or ~/, and nothing staged at $BUNDLE"
+fi
+
+PATH="$HOME/.local/bin:$PATH"
+export PATH
+
+if ! command -v uv >/dev/null; then
+  if [ -n "$OFFLINE" ]; then
+    [ -x "$BUNDLE/bin/uv" ] || die "offline: the staged bundle carries no bin/uv"
+    mkdir -p "$HOME/.local/bin"
+    cp "$BUNDLE/bin/uv" "$HOME/.local/bin/uv"
+  else
+    require curl
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+  fi
+fi
+
+if [ -n "$OFFLINE" ]; then
+  # Wheels from the bundle, and no interpreter download: uv resolves whichever
+  # python already on the box satisfies requires-python, and says so when none
+  # does. Nothing here second-guesses that — a wrong answer about the floor is
+  # worse than uv's own error.
+  set -- --offline --no-index --find-links "$BUNDLE/wheels" --no-python-downloads
+else
+  set --
+fi
+
+uv tool install "$@" --force --editable "$DOTFILES_DIR"
+
+# uv reports success having written the entry point somewhere this shell cannot
+# see it, when XDG_BIN_HOME points elsewhere. Catching it here names the cause;
+# the alternative is `dotfiles: not found` from the exec below.
+command -v dotfiles >/dev/null || die "installed, but 'dotfiles' is not on PATH — check \`uv tool dir --bin\`"
+
+if [ -n "$OFFLINE" ]; then
+  exec dotfiles apply --machine "$MACHINE" --offline
+fi
+exec dotfiles apply --machine "$MACHINE"

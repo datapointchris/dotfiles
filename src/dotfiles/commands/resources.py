@@ -71,22 +71,18 @@ def _apply_phases(resource: str, machine: str | None, reinstall: bool, offline: 
     """Run the install phases this resource owns.
 
     `--source` is accepted and refused rather than silently ignored: narrowing
-    below a phase is a real capability of the resolver in step 4 and `install.sh`
-    has no equivalent, so accepting it here would quietly install more than was
-    asked for.
+    below a phase is a real capability of the resolver in step 4 and the phase
+    registry has no equivalent, so honouring it would quietly install more than
+    was asked for.
     """
     if source:
         error(f'--source is not yet honoured by {resource} apply (it arrives with the resolver)')
         hint(f'run the whole resource with: dotfiles {resource} apply')
         raise typer.Exit(ExitCode.USAGE)
 
-    arguments = [
-        *bridge.RESOURCE_PHASES[resource],
-        *(('--machine', machine) if machine else ()),
-        *(('--force',) if reinstall else ()),
-        *(('--offline',) if offline else ()),
-    ]
-    raise typer.Exit(bridge.install_script(*arguments).returncode)
+    from dotfiles import apply
+
+    raise typer.Exit(apply.apply_machine(only=frozenset({resource}), machine=machine, reinstall=reinstall, offline=offline))
 
 
 packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
@@ -188,7 +184,7 @@ def symlinks_check(as_json: bool = JsonOption) -> None:
 
 
 @symlinks_app.command('apply')
-def symlinks_apply() -> None:
+def symlinks_apply(machine: str = MachineOption) -> None:
     """Rebuild every symlink, pruning the ones whose source is gone.
 
     `relink`, not `link`: reconciling means the machine ends up matching the
@@ -196,17 +192,20 @@ def symlinks_apply() -> None:
     pass leaves behind. The old `link`/`relink` split asked the caller to know
     which kind of change they had made.
     """
-    raise typer.Exit(bridge.ops('symlinks', 'relink').returncode)
+    _apply_phases('symlinks', machine, False, False, None)
 
 
 @symlinks_app.command('show')
 def symlinks_show() -> None:
     """List every symlink this repo manages."""
-    raise typer.Exit(bridge.ops('symlinks', 'show').returncode)
+    from dotfiles import deploy
+
+    deploy.show()
 
 
 @symlinks_app.command('unlink')
 def symlinks_unlink(
+    machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Required: this removes every deployed symlink'),
 ) -> None:
     """Remove every symlink this repo deployed."""
@@ -214,7 +213,11 @@ def symlinks_unlink(
         error('unlink removes every deployed symlink, leaving the machine unconfigured')
         hint('re-run with --force if that is what you want')
         raise typer.Exit(ExitCode.USAGE)
-    raise typer.Exit(bridge.ops('symlinks', 'unlink').returncode)
+
+    from dotfiles import apply
+    from dotfiles import deploy
+
+    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(apply.Run.resolve(machine).platform) else ExitCode.ISSUE)
 
 
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')

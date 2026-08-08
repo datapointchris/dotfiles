@@ -23,6 +23,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # ================================================================
 # CONFIGURATION
@@ -492,8 +493,7 @@ check_declared_tools() {
   fi
 
   local rows section kind value name
-  if ! rows=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
-    --manifest="$manifest_name" --verify-commands 2>&1); then
+  if ! rows=$(dotfiles_python -m dotfiles.parse_packages --manifest="$manifest_name" --verify-commands 2>&1); then
     log_error "Could not read the manifest's declared tools: $rows"
     return 1
   fi

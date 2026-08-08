@@ -12,6 +12,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # Installation configuration
 INSTALL_PREFIX="$HOME/.local"
@@ -19,7 +20,7 @@ BATS_LIB_DIR="$INSTALL_PREFIX/lib"
 
 # Repositories — read from packages.yml so they stay in sync with the SOT
 read_custom_field() {
-  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+  dotfiles_python -m dotfiles.parse_packages \
     --custom-installer bats --field "$1"
 }
 

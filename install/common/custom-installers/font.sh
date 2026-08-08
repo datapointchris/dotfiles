@@ -2,19 +2,7 @@
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
-
-FONT_INSTALL_URL=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
-  --custom-installer font --field install_url) \
-  || {
-    echo "Error: could not read font.install_url from packages.yml" >&2
-    exit 1
-  }
-
-# Support --print-url for offline bundle creator
-if [[ "${1:-}" == "--print-url" ]]; then
-  echo "font|latest|$FONT_INSTALL_URL"
-  exit 0
-fi
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 # `font update` already reports the outcome accurately and exits non-zero on
 # failure, so this delegates rather than re-deriving it. Capturing its output to
@@ -29,6 +17,20 @@ if [[ "${1:-}" == "--update" ]]; then
   font update
   exit $?
 fi
+
+FONT_INSTALL_URL=$(dotfiles_python -m dotfiles.parse_packages \
+  --custom-installer font --field install_url) \
+  || {
+    echo "Error: could not read font.install_url from packages.yml" >&2
+    exit 1
+  }
+
+# Support --print-url for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "font|latest|$FONT_INSTALL_URL"
+  exit 0
+fi
+
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"

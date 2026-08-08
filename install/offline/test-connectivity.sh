@@ -23,6 +23,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="wsl-work-workstation"
@@ -58,7 +59,7 @@ FAILED=0
 RESULTS=()
 
 packages_query() {
-  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages "$@"
+  dotfiles_python -m dotfiles.parse_packages "$@"
 }
 
 record() {

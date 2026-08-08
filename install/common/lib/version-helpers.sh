@@ -9,6 +9,8 @@
 #     echo "Already at latest version"
 #   fi
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/python.sh"
+
 version_compare() {
   local current="$1"
   local latest="$2"
@@ -84,8 +86,8 @@ pinned_release_tag() {
   # would quietly install latest over a pin — the failure this whole path exists
   # to prevent, reintroduced one level down.
   local pinned
-  if ! pinned=$(env PYTHONPATH="${DOTFILES_DIR}/src" /usr/bin/python3 -m dotfiles.parse_packages --github-release="$tool" --field=version --optional 2>/dev/null); then
-    echo "cannot read $DOTFILES_DIR/install/packages.yml with /usr/bin/python3, so whether $tool is pinned is unknown" >&2
+  if ! pinned=$(dotfiles_python -m dotfiles.parse_packages --github-release="$tool" --field=version --optional 2>/dev/null); then
+    echo "cannot read $DOTFILES_DIR/install/packages.yml, so whether $tool is pinned is unknown" >&2
     return 2
   fi
   [[ -n "$pinned" ]] || return 1

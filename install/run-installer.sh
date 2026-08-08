@@ -5,8 +5,9 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
-FAILURE_REPORT_PY=(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.failure_report)
+FAILURE_REPORT_PY=(dotfiles_python -m dotfiles.failure_report)
 
 # Verb used in failure output. update.sh sets this to "update" so a failed
 # `--update` run isn't reported as a failed installation.

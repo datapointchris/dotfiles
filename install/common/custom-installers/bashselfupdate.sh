@@ -2,8 +2,9 @@
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
-BASHSELFUPDATE_INSTALL_URL=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+BASHSELFUPDATE_INSTALL_URL=$(dotfiles_python -m dotfiles.parse_packages \
   --custom-installer bashselfupdate --field install_url) \
   || {
     echo "Error: could not read bashselfupdate.install_url from packages.yml" >&2
@@ -19,7 +20,7 @@ fi
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
-INSTALL_DIR=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages \
+INSTALL_DIR=$(dotfiles_python -m dotfiles.parse_packages \
   --custom-installer bashselfupdate --field installed_path) \
   || {
     log_error "Could not read bashselfupdate.installed_path from packages.yml"

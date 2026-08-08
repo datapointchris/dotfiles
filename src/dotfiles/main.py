@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import typer
 
-from dotfiles import bridge
 from dotfiles import reconcile
 from dotfiles.commands import machines
 from dotfiles.commands import manage
@@ -23,6 +22,7 @@ from dotfiles.commands import resources
 from dotfiles.commands import staging
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
+from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import parse_address
 
@@ -73,14 +73,20 @@ JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on
 
 
 def _skipped(addresses: list[str] | None) -> frozenset[str]:
-    """Take the resource half of each address.
+    """Take the resource half of each address, refusing one that names nothing.
 
     `--skip plugins/tmux` is accepted and skips all of `plugins` until the
     resolver can address a single source. Narrowing silently to nothing would be
     worse than skipping more than asked, because the caller believes they
-    excluded something and nothing says otherwise.
+    excluded something and nothing says otherwise — which is the same reason a
+    misspelled address is a usage error rather than an empty skip set. A run that
+    accepted `--skip sytem` would install the sudo-gated phase the caller was
+    trying to avoid and report success.
     """
-    return frozenset(parse_address(value)[0] for value in addresses or ())
+    resources = frozenset(parse_address(value)[0] for value in addresses or ())
+    if unknown := resources - frozenset(RESOURCES) - {'machines'}:
+        raise typer.BadParameter(f'unknown address {", ".join(sorted(unknown))}. Valid: {", ".join(RESOURCES)}')
+    return resources
 
 
 @app.command('check', rich_help_panel='Reconcile')
@@ -102,9 +108,10 @@ def check(
 
 
 @app.command('apply', rich_help_panel='Reconcile')
-def apply(
+def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
+    owner: str = typer.Option(None, '--owner', help='Only phases whose contents can be traced to this GitHub owner'),
     reinstall: bool = typer.Option(False, '--reinstall', help='Reinstall even when already present'),
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
 ) -> None:
@@ -113,16 +120,17 @@ def apply(
     `check` plus acting on what it found — the same walk with the last step run,
     which is why there is no `--dry-run` for this to be the opposite of.
     """
-    arguments = [
-        *bridge.phases_for(_skipped(skip)),
-        *(('--machine', machine) if machine else ()),
-        *(('--force',) if reinstall else ()),
-        *(('--offline',) if offline else ()),
-    ]
-    # ~/.env is not synced here: install.sh does it *before* the phases and then
-    # re-sources it, because on a fresh machine the platform and every flag would
-    # otherwise stay at the guess made when the file did not exist.
-    raise typer.Exit(bridge.install_script(*arguments).returncode)
+    from dotfiles import apply
+
+    raise typer.Exit(
+        apply.apply_machine(
+            _skipped(skip),
+            machine=machine,
+            reinstall=reinstall,
+            offline=offline,
+            owner=owner,
+        )
+    )
 
 
 # Registered after check and apply so that Reconcile is the first panel the help

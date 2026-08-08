@@ -5,6 +5,7 @@ set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 log_info "=== BREW AUDIT ==="
 echo ""
@@ -12,7 +13,7 @@ log_info "Getting installed formulae..."
 INSTALLED=$(brew list --formula | sort)
 
 log_info "Getting packages from packages.yml..."
-EXPECTED=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=brew | sort)
+EXPECTED=$(dotfiles_python -m dotfiles.parse_packages --type=system --manager=brew | sort)
 
 echo ""
 log_info "=== INSTALLED BUT NOT IN packages.yml ==="

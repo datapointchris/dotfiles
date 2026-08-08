@@ -23,44 +23,6 @@ from dotfiles.effects import run
 
 OPS_DIR = paths.INSTALL_DIR / 'ops'
 
-RESOURCE_PHASES: dict[str, tuple[str, ...]] = {
-    'packages': (
-        'system-packages',
-        'go-tools',
-        'github-releases',
-        'custom-installers',
-        'cargo',
-        'npm-globals',
-        'uv-tools',
-    ),
-    'toolchains': ('go-toolchain', 'rust-toolchain', 'uv', 'node-toolchain'),
-    'plugins': ('shell-plugins', 'tmux-plugins', 'nvim-plugins'),
-    'symlinks': ('symlinks',),
-    'system': ('zsh-config',),
-}
-"""Which `install/phases.sh` phases each resource owns.
-
-Hand-written here and machine-checked in `tests/cli/test_bridge_phases.py`, which
-sources `phases.sh` and asserts every registered phase is claimed by exactly one
-resource. Without that assertion this is a literal that drifts silently: a phase
-added to the registry would simply stop being reachable through the resource that
-should own it, and nothing would say so.
-
-Step 4 deletes both sides of that check by making the registry itself Python.
-"""
-
-
-def phases_for(skip: frozenset[str] = frozenset()) -> list[str]:
-    """Which install phases a run covers, in registry order.
-
-    Pure, and separate from the command that runs them, so "what would apply do"
-    is answerable without doing it. Registry order matters and is not incidental:
-    symlinks must land after the tools providing `task` and before tpm reads the
-    tmux config it deploys, so this preserves `RESOURCE_PHASES`' ordering rather
-    than sorting or de-duplicating into a set.
-    """
-    return [phase for resource, resource_phases in RESOURCE_PHASES.items() if resource not in skip for phase in resource_phases]
-
 
 def _environment() -> dict[str, str]:
     """What every one of these scripts assumes about its environment.
@@ -69,8 +31,17 @@ def _environment() -> dict[str, str]:
     which resolves to whatever repo the caller happens to be standing in — and
     aborts outright outside one. `TERM` because the formatting library calls
     `tput`, which fails noisily when it is unset, as it is under a systemd timer.
+
+    `DOTFILES_PYTHON` because those scripts still ask Python to read packages.yml
+    and need an interpreter that can import this package. This process is one, by
+    construction — it is running from it. `install/common/lib/python.sh` reads the
+    variable; both sides go when the last script stops shelling out to ask.
     """
-    return {'DOTFILES_DIR': str(paths.REPO_ROOT), 'TERM': 'xterm'}
+    return {
+        'DOTFILES_DIR': str(paths.REPO_ROOT),
+        'TERM': 'xterm',
+        'DOTFILES_PYTHON': sys.executable,
+    }
 
 
 def ops(script: str, *args: str, output: Output = Output.STREAM) -> Completed:
@@ -83,17 +54,14 @@ def ops(script: str, *args: str, output: Output = Output.STREAM) -> Completed:
     )
 
 
-def repo_script(name: str, *args: str) -> Completed:
-    """Run a top-level script — `install.sh` or `update.sh`."""
-    return run(['bash', str(paths.REPO_ROOT / name), *args], cwd=paths.REPO_ROOT, env=_environment())
-
-
-def install_script(*args: str) -> Completed:
-    return repo_script('install.sh', *args)
-
-
 def update_script(*args: str) -> Completed:
-    return repo_script('update.sh', *args)
+    """`update.sh`, the half of the phase registry that has not moved yet.
+
+    Its install counterpart is gone: `dotfiles apply` walks the phases itself, in
+    `apply.py`. This is what is left of the pair, and it goes the same way once
+    each resource can update as well as install.
+    """
+    return run(['bash', str(paths.REPO_ROOT / 'update.sh'), *args], cwd=paths.REPO_ROOT, env=_environment())
 
 
 def wsl_script(name: str, *args: str) -> Completed:

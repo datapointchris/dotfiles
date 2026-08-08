@@ -33,6 +33,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 print_section "tenv (Terraform Version Manager)"
 
@@ -134,7 +135,7 @@ if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then
 fi
 
 # Read Terraform version from packages.yml
-TERRAFORM_VERSION=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --get=runtimes.terraform.version)
+TERRAFORM_VERSION=$(dotfiles_python -m dotfiles.parse_packages --get=runtimes.terraform.version)
 
 print_section "Terraform"
 

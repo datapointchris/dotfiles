@@ -33,7 +33,6 @@ BLOCKED_HOSTS=(
   raw.githubusercontent.com
 )
 CONTAINER_NAME="dotfiles-offline-test-$(date '+%Y%m%d-%H%M%S')"
-BUNDLE_SCRIPT_DIR="$DOTFILES_DIR/install/offline"
 BUNDLE_OUTPUT_DIR="$DOTFILES_DIR"
 LOG_FILE="$DOTFILES_DIR/test-offline-docker.log"
 
@@ -164,7 +163,7 @@ BUNDLE_FILE=""
 #
 # The build log is teed from stderr, leaving stdout carrying the path alone.
 build_bundle() {
-  /usr/bin/python3 "$BUNDLE_SCRIPT_DIR/create_bundle.py" --platform linux-x86_64 --print-path \
+  uv run --project "$DOTFILES_DIR" dotfiles bundle create --platform linux-x86_64 --print-path \
     2> >(tee -a "$LOG_FILE" >&2)
 }
 

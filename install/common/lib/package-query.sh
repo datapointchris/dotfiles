@@ -11,6 +11,8 @@
 # plus update.sh, and they had drifted: only go-tools.sh read PACKAGE_OWNER, so
 # `--mine` ran cargo, uv, and npm in full while claiming to filter.
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/python.sh"
+
 PACKAGE_FILTER_FLAGS=()
 
 init_package_filters() {
@@ -30,7 +32,7 @@ init_package_filters() {
 }
 
 parse_packages() {
-  PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages "$@" "${PACKAGE_FILTER_FLAGS[@]}"
+  dotfiles_python -m dotfiles.parse_packages "$@" "${PACKAGE_FILTER_FLAGS[@]}"
 }
 
 # True when the current narrowing leaves at least one entry for this query.

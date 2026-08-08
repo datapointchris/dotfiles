@@ -6,19 +6,11 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/python.sh"
 
 print_section "Installing macOS packages"
 
-# Step 1: Install PyYAML for system Python (bootstrap dependency)
-if /usr/bin/python3 -c "import yaml" &>/dev/null; then
-  log_info "PyYAML already installed for system Python"
-else
-  log_info "Installing PyYAML for system Python..."
-  /usr/bin/python3 -m pip install --user PyYAML
-  log_success "PyYAML installed"
-fi
-
-# Step 2: Add third-party Homebrew taps before installing packages.
+# Add third-party Homebrew taps before installing packages.
 # Some formulae (e.g. borders/JankyBorders) live in taps, not homebrew-core, so
 # the tap must be registered before `brew install` can resolve them. brew tap is
 # idempotent — re-tapping an existing tap is a no-op.
@@ -30,7 +22,7 @@ while IFS= read -r tap; do
   else
     log_warning "Failed to tap $tap"
   fi
-done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --taps)
+done < <(dotfiles_python -m dotfiles.parse_packages --taps)
 
 # Step 3: Install system packages from packages.yml.
 # Try one batched install for speed, but a batched `brew install` aborts before
@@ -44,7 +36,7 @@ log_info "Installing system packages from packages.yml..."
 SYSTEM_PACKAGES=()
 while IFS= read -r pkg; do
   [[ -n "$pkg" ]] && SYSTEM_PACKAGES+=("$pkg")
-done < <(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=system --manager=brew --tier="${SYSTEM_PACKAGE_TIER:-workstation}")
+done < <(dotfiles_python -m dotfiles.parse_packages --type=system --manager=brew --tier="${SYSTEM_PACKAGE_TIER:-workstation}")
 
 if brew install --quiet "${SYSTEM_PACKAGES[@]}"; then
   log_success "System packages installed"

@@ -49,7 +49,7 @@ source "$HOME/.cargo/env"  # or other environment file
 print_banner "Installing Package Manager Tools"
 
 log_info "Reading packages from packages.yml..."
-PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=cargo | while read -r package; do
+dotfiles_python -m dotfiles.parse_packages --type=cargo | while read -r package; do
   log_info "Installing $package..."
   if cargo binstall -y "$package"; then
     log_success "$package installed"
@@ -188,7 +188,7 @@ source "$HOME/.cargo/env"
 
 print_banner "Installing Rust CLI Tools"
 
-PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=cargo | while read -r package; do
+dotfiles_python -m dotfiles.parse_packages --type=cargo | while read -r package; do
   log_info "Installing $package..."
   if cargo binstall -y "$package"; then
     log_success "$package installed"
@@ -210,7 +210,7 @@ done
 # Node.js is a system package, so npm is already on PATH (no manager to source).
 command -v npm >/dev/null || { log_error "npm not found on PATH"; exit 1; }
 
-NPM_PACKAGES=$(PYTHONPATH="$DOTFILES_DIR/src" /usr/bin/python3 -m dotfiles.parse_packages --type=npm)
+NPM_PACKAGES=$(dotfiles_python -m dotfiles.parse_packages --type=npm)
 
 for package in $NPM_PACKAGES; do
   if npm list -g "$package" --depth=0 &>/dev/null; then
