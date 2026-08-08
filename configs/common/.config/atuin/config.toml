@@ -8,9 +8,20 @@
 # The flat ~/.local/state/zsh/history keeps being written too, so nothing that
 # reads it (tool-usage, toolbox remind) changes.
 
-# Local-first only. Not logged into any sync server, and this makes that explicit
-# so no network call is attempted. Self-hosted encrypted sync can be enabled later.
-auto_sync = false
+# Fleet-wide history through the self-hosted server on atuin-lxc, reachable only
+# from the LAN. History is encrypted client-side, so the server holds ciphertext
+# and ~/.local/share/atuin/key never leaves the machine — a box without that key
+# syncs records it cannot read. The key belongs in Vaultwarden; losing it loses
+# the history.
+#
+# An IP rather than atuin.homelab: the hosts file is copied to each machine by
+# hand, so a name resolves only where that copy is current.
+auto_sync = true
+sync_address = "http://10.0.20.31:8888"
+
+# Only triggered when a command runs, so a quiet shell syncs no more often than
+# it has anything to say.
+sync_frequency = "5m"
 
 # We pin atuin's version through the dotfiles cargo_packages manifest, so its own
 # startup update check is just noise + a network round-trip.
