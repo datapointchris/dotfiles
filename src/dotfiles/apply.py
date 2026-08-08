@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import shutil
 import sys
 import tempfile
 from collections.abc import Callable
@@ -450,21 +451,33 @@ def _ensure_zdotdir() -> bool:
 
 
 def _ensure_login_shell() -> bool:
-    """A no-op, and no sudo, where zsh is already the login shell — always on macOS."""
+    """A no-op, and no sudo, where zsh is already the login shell — always on macOS.
+
+    Two shell idioms that do not survive translation into subprocess calls, and
+    both were here: `command -v` is a builtin no `exec` can find, and `$USER` is
+    unset in any context without a login shell — `docker exec`, a systemd timer,
+    cron — where `chsh -s zsh ""` then fails with `user "" does not exist`.
+    """
     if 'zsh' in os.environ.get('SHELL', ''):
         err_console.print('Default shell is already zsh')
         return True
 
-    located = run(['command', '-v', 'zsh'], output=Output.QUIET)
-    zsh = located.transcript.strip()
+    zsh = shutil.which('zsh')
     if not zsh:
         warn('zsh is not installed, so it cannot be made the login shell')
         return False
 
-    if not run(['sudo', 'chsh', '-s', zsh, os.environ.get('USER', '')]).ok:
+    if not run(['sudo', 'chsh', '-s', zsh, _current_user()]).ok:
         return False
     err_console.print('Default shell changed to zsh (effective at next login)')
     return True
+
+
+def _current_user() -> str:
+    """Whose login shell this is, from the uid rather than the environment."""
+    import pwd
+
+    return pwd.getpwuid(os.getuid()).pw_name
 
 
 # ─────────────────────────────────────────────────────────────────────────────

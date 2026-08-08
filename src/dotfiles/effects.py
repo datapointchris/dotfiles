@@ -49,6 +49,10 @@ class Output(StrEnum):
     """
 
 
+NOT_FOUND = 127
+"""A command that does not exist, as a shell reports it rather than as a crash."""
+
+
 @dataclass(frozen=True)
 class Completed:
     """What a subprocess did. `transcript` is empty when output was not captured."""
@@ -69,17 +73,35 @@ def run(
     env: dict[str, str] | None = None,
     output: Output = Output.STREAM,
 ) -> Completed:
-    """Run a command. See `Output` for where its output goes and why."""
+    """Run a command. See `Output` for where its output goes and why.
+
+    A missing binary is exit 127, not an exception. Every caller here already
+    branches on the exit code, and several run something a machine may legitimately
+    not have — `hyprctl` on an Arch box with no compositor is the one that proved
+    it, taking down a whole install with a FileNotFoundError traceback from inside
+    a symlink pass. Raising would mean each of those call sites needs its own
+    `shutil.which` guard, and the one that forgets is a crash rather than a
+    reported failure.
+    """
     argv = tuple(command)
     environment = {**os.environ, **(env or {})}
     directory = str(cwd) if cwd else None
 
+    def missing(problem: OSError) -> Completed:
+        return Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}')
+
     if output is Output.DATA:
-        completed = subprocess.run(argv, cwd=directory, env=environment, check=False)
+        try:
+            completed = subprocess.run(argv, cwd=directory, env=environment, check=False)
+        except (FileNotFoundError, PermissionError) as problem:
+            return missing(problem)
         return Completed(command=argv, returncode=completed.returncode, transcript='')
 
     if output is Output.QUIET:
-        captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True)
+        try:
+            captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True)
+        except (FileNotFoundError, PermissionError) as problem:
+            return missing(problem)
         return Completed(
             command=argv,
             returncode=captured.returncode,
@@ -87,20 +109,23 @@ def run(
         )
 
     lines: list[str] = []
-    with subprocess.Popen(
-        argv,
-        cwd=directory,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-    ) as process:
-        # `process.stdout` is not Optional in practice given stdout=PIPE, but the
-        # stub says otherwise and the walrus keeps mypy from needing an assert.
-        if stream := process.stdout:
-            for line in stream:
-                lines.append(line)
-                sys.stderr.write(line)
+    try:
+        with subprocess.Popen(
+            argv,
+            cwd=directory,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        ) as process:
+            # `process.stdout` is not Optional in practice given stdout=PIPE, but the
+            # stub says otherwise and the walrus keeps mypy from needing an assert.
+            if stream := process.stdout:
+                for line in stream:
+                    lines.append(line)
+                    sys.stderr.write(line)
+    except (FileNotFoundError, PermissionError) as problem:
+        return missing(problem)
 
     return Completed(command=argv, returncode=process.returncode, transcript=''.join(lines))
