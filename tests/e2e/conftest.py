@@ -36,9 +36,15 @@ rig's own failures live — a wrong PATH, a missing bootstrap tool, a firewall t
 does not match the measurement. `test_machine.py` is the only tier that needs the
 install, so run it when `install.sh`, `apply.py` or a phase script changes.
 
-    uv run pytest tests/e2e --docker -k archlinux     # one environment
+    uv run pytest tests/e2e --docker --environment archlinux   # one environment
     uv run pytest tests/e2e --docker --keep           # leave the containers up
     uv run pytest tests/e2e --docker --keep --reuse   # and reuse them next time
+
+Pick an environment with `--environment`, never `-k`. `-k` filters on test names
+as well as parameter ids, so `-k offline` also matches
+`test_the_offline_run_never_resolved_a_version_online[archlinux]` and quietly
+selects every environment — which starts a container whose name another running
+process is already using, and `docker rm -f` then kills that install.
 """
 
 from __future__ import annotations
@@ -60,6 +66,32 @@ from harness import stage_bundle
 from harness import start
 
 from dotfiles import paths
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Honour `--environment`, which is the only safe way to run one of these.
+
+    Only items carrying a `container` parameter are touched, so nothing outside
+    the container tiers is affected by asking for one environment.
+    """
+    wanted = str(config.getoption('--environment')).strip()
+    if not wanted:
+        return
+
+    names = {name.strip() for name in wanted.split(',') if name.strip()}
+    known = {environment.name for environment in ENVIRONMENTS}
+    if unknown := names - known:
+        raise pytest.UsageError(f'--environment: no such environment {sorted(unknown)}; known are {sorted(known)}')
+
+    keeping: list[pytest.Item] = []
+    dropping: list[pytest.Item] = []
+    for item in items:
+        environment = getattr(item, 'callspec', None) and item.callspec.params.get('container')
+        (dropping if environment is not None and environment.name not in names else keeping).append(item)
+
+    if dropping:
+        config.hook.pytest_deselected(items=dropping)
+        items[:] = keeping
 
 
 @pytest.fixture(scope='session', params=ENVIRONMENTS, ids=lambda environment: environment.name)

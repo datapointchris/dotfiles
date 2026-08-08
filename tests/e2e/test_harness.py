@@ -10,6 +10,8 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 
 from __future__ import annotations
 
+import subprocess
+
 import pytest
 from harness import ASSET_CDN_HOSTS
 from harness import CONNECTIVITY_RESULTS
@@ -130,6 +132,37 @@ def test_the_environments_are_distinct_machines() -> None:
     """Two sharing a container name would fight over one container."""
     names = [environment.name for environment in ENVIRONMENTS]
     assert len(names) == len(set(names))
+
+
+def test_asking_for_one_environment_collects_only_that_one() -> None:
+    """`-k` reads as environment selection and is not, which cost a running install.
+
+    `-k offline` matches `test_the_offline_run_never_resolved_a_version_online`
+    too, so it selected all four; the run then started a container over the name
+    the Arch install in another process was using, and `docker rm -f` killed it at
+    137 — indistinguishable from an OOM in the log. Collection is checked in a
+    subprocess because the option and the deselection are pytest's, not the rig's.
+    """
+    from dotfiles import paths
+
+    collected = subprocess.run(
+        # `-o addopts=` drops the repo's `-vv`, which makes `--collect-only` print
+        # a node tree rather than the ids this reads.
+        ['uv', 'run', 'pytest', 'tests/e2e', '--docker', '--environment', 'offline', '--collect-only', '-q', '-o', 'addopts='],
+        cwd=paths.REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    # This module's own parametrization is over environment *definitions*, which
+    # start nothing and are deliberately left alone; only what asks for a
+    # container is filtered.
+    selected = [line for line in collected.stdout.splitlines() if '::' in line and 'test_harness.py' not in line]
+
+    assert selected, collected.stdout[-2000:]
+    others = [name for name in ('archlinux', 'wsl', 'restricted') if any(f'[{name}]' in line for line in selected)]
+    assert not others, f'asking for offline also collected {others}'
+    assert any('[offline]' in line for line in selected)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

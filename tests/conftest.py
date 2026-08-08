@@ -37,6 +37,14 @@ def pytest_addoption(parser):
         parser.addoption(flag, action='store_true', default=False, help=help_text)
     parser.addoption('--keep', action='store_true', default=False, help='leave e2e containers running afterwards')
     parser.addoption('--reuse', action='store_true', default=False, help='reuse a kept container and any built bundle')
+    # Selection by environment cannot be `-k`, which matches test names too:
+    # `-k offline` also matched `test_the_offline_run_never_resolved_a_version_online`
+    # and so selected all four environments. The run started a second Arch
+    # container, `docker rm -f` took the name from the Arch install running in
+    # another process, and that install died at 137 looking like an OOM.
+    # `tests/e2e/conftest.py` does the deselecting; the option has to be declared
+    # here for the same reason the tiers above do.
+    parser.addoption('--environment', default='', help='e2e environments to run, comma-separated (default: all)')
 
 
 def pytest_collection_modifyitems(config, items):

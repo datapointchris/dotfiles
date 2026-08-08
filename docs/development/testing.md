@@ -143,8 +143,11 @@ macOS gets a user account rather than a VM because macOS VMs are slow and
 awkward enough that they stop being used, and a fresh account reproduces
 everything the install touches outside `/usr/local`.
 
-The scripts are `eza -1 tests/install/e2e/`, one per environment, each pointed
-at the matching machine manifest. Docker Desktop is the only prerequisite:
+The container environments are pytest — `uv run pytest tests/e2e --docker`, with
+`tests/e2e/harness.py` holding the environment definitions and each pointed at
+the matching machine manifest. `eza -1 tests/install/e2e/` is what a container
+cannot be: a real macOS account, or the current machine. Docker Desktop is the
+only prerequisite for the first:
 
 ```sh
 brew install --cask docker

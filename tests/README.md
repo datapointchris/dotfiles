@@ -82,7 +82,8 @@ rig's own failures live, and where a wrong PATH or a firewall that does not matc
 the measurement shows up. `test_machine.py` needs the install, so it is for
 changes to `install.sh`, `apply.py` or a phase script.
 
-Add `-k <environment>` for one, `--keep` to leave containers up, `--reuse` to
+Add `--environment <name>` for one — never `-k`, which matches test names too and
+quietly selects all four. `--keep` leaves containers up, `--reuse` will
 keep a kept container's OS state while still refreshing the repo inside it.
 
 `eza -1 tests/install/e2e/` is what is left: the cases that cannot be a container
@@ -114,7 +115,8 @@ source "$DOTFILES_DIR/configs/common/.local/shell/my-library.sh"
 
 - **Unit tests** (`tests/install/unit/`): Test individual functions
 - **Integration tests** (`tests/install/integration/`): Test wrapper behavior
-- **E2E tests** (`tests/install/e2e/`): Full installation in clean environment
+- **E2E tests** (`tests/e2e/`): Full installation in a container, per environment
+- **Host E2E** (`tests/install/e2e/`): the cases a container cannot be
 
 ### Best Practices
 
@@ -122,4 +124,4 @@ source "$DOTFILES_DIR/configs/common/.local/shell/my-library.sh"
 - Only test non-interactive commands
 - Test workflows, not implementation details
 - Focus on what matters, not what changes
-- Run `verify-file-references.sh` before expensive e2e tests
+- Run `refcheck` before expensive e2e tests
