@@ -23,6 +23,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.resources import escalations
 from dotfiles.resources import system
 from dotfiles.session import Session
 
@@ -256,3 +257,26 @@ def only_change(live: Session):
     changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
     assert len(changes) == 1, changes
     return changes[0]
+
+
+def test_a_macos_preference_does_not_ask_for_a_password(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Preferences are user-level. A Mac whose only drift is its Dock size must
+    converge without a prompt, which means `needs_root` has to reach the Change
+    rather than being assumed per resource."""
+    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
+    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
+    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'macos'}, declared)
+
+    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
+
+    assert [change.privileged for change in changes] == [False]
+    assert escalations(changes) == ()
+
+
+def test_macos_rows_are_absent_from_a_linux_plan(tmp_path: Path) -> None:
+    """A Linux box is not *declining* macOS preferences, it cannot have them —
+    the same rule that keeps casks out of an Arch plan."""
+    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
+    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'linux'}, declared)
+
+    assert live.plan.for_resource('system') == ()

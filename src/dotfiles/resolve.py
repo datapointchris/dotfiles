@@ -208,6 +208,8 @@ SYSTEM_PROVIDERS: dict[str, Provider] = {
     'systemd_units': Provider('systemd', Stage.SYSTEM_CONFIG, 'system'),
     'managed_files': Provider('file', Stage.SYSTEM_CONFIG, 'system'),
     'login_shell': Provider('login-shell', Stage.SYSTEM_CONFIG, 'system'),
+    'macos_defaults': Provider('macos-default', Stage.SYSTEM_CONFIG, 'system'),
+    'macos_steps': Provider('macos-step', Stage.SYSTEM_CONFIG, 'system'),
 }
 """`system.yml`'s sections, resolved in a second pass rather than beside the rest.
 
@@ -288,7 +290,7 @@ def _system_configuration(
     for section, provider in SYSTEM_PROVIDERS.items():
         for entry in declaration.section(section):
             assert isinstance(entry, catalog.SystemConfig)
-            if not configures(entry, machine, installed):
+            if not available(entry, machine.coordinates) or not configures(entry, machine, installed):
                 continue
             yield DesiredItem(
                 section=section,
@@ -337,7 +339,7 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
     """
     if isinstance(entry, catalog.SystemPackage):
         return any(entry.package_for(installer) for installer in coordinates.installers)
-    if isinstance(entry, catalog.MacosCask | catalog.MasApp):
+    if isinstance(entry, catalog.MacosCask | catalog.MasApp | catalog.MacosDefault | catalog.MacosStep):
         return coordinates.os_family is axes.OSFamily.DARWIN
     if isinstance(entry, catalog.FlatpakApp):
         return coordinates.os_family is axes.OSFamily.LINUX

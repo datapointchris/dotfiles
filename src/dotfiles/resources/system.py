@@ -23,9 +23,11 @@ from __future__ import annotations
 
 import dataclasses as dc
 
+from dotfiles import catalog
 from dotfiles import evidence as ev
 from dotfiles.catalog import SystemConfig
 from dotfiles.privilege import Privilege
+from dotfiles.providers import macdefaults
 from dotfiles.providers import sysconfig
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
@@ -62,7 +64,7 @@ class SystemResource:
         return Observed(
             evidence={item.address: ev.evidence_for(item, installed) for item in payload},
             asked=frozenset(installed),
-            config={item.address: sysconfig.observe(_configuration(item.entry)) for item in _config_items(plan)},
+            config=_observe_config(_config_items(plan)),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -88,7 +90,7 @@ class SystemResource:
                 detail=observed.config[item.address].detail,
                 repair=observed.config[item.address].repair,
                 desired=item,
-                privileged=True,
+                privileged=_configuration(item.entry).needs_root,
             )
             for item in _config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED
@@ -111,16 +113,51 @@ class SystemResource:
         # Re-read rather than trusting the diff: `observe` ran before the report
         # was printed, and an earlier change in this same batch — the docker
         # package, zsh itself — may have made this one unnecessary or possible.
-        if sysconfig.observe(entry).verdict is Verdict.MATCHED:
+        if _observe_one(entry).verdict is Verdict.MATCHED:
             return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
 
-        result = sysconfig.apply(entry, privilege)
+        result = _apply_one(entry, privilege)
         status = OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED
         return Outcome(change, status, result.detail)
 
 
 def _config_items(plan: Plan) -> list[DesiredItem]:
     return [item for item in plan.for_resource(NAME) if item.stage is Stage.SYSTEM_CONFIG]
+
+
+def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
+    """Every configuration row's state, batching what can be batched.
+
+    The dispatch is here rather than inside either provider, so neither has to
+    import the other. It is also the only place that knows a `defaults` read is
+    cheaper in bulk: seventy-three keys live in about fifteen domains, and one
+    `defaults export` per domain answers all of them.
+    """
+    stores = macdefaults.domains([_configuration(item.entry) for item in items if isinstance(item.entry, catalog.MacosDefault)])
+    return {item.address: _observe_row(_configuration(item.entry), stores) for item in items}
+
+
+def _observe_row(entry: SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+    if isinstance(entry, catalog.MacosDefault):
+        return macdefaults.observe_default(entry, stores)
+    if isinstance(entry, catalog.MacosStep):
+        return macdefaults.observe_step(entry)
+    return sysconfig.observe(entry)
+
+
+def _observe_one(entry: SystemConfig) -> sysconfig.State:
+    """One row, re-read on its own. The batch is an optimisation for the survey,
+    not a shape `perform` has to reproduce."""
+    stores = macdefaults.domains([entry]) if isinstance(entry, catalog.MacosDefault) else {}
+    return _observe_row(entry, stores)
+
+
+def _apply_one(entry: SystemConfig, privilege: Privilege) -> sysconfig.Result:
+    if isinstance(entry, catalog.MacosDefault):
+        return macdefaults.apply_default(entry)
+    if isinstance(entry, catalog.MacosStep):
+        return macdefaults.apply_step(entry)
+    return sysconfig.apply(entry, privilege)
 
 
 def _configuration(entry: object) -> SystemConfig:

@@ -70,3 +70,444 @@ login_shell:
   - name: zsh
     description: The login shell for this account
     feature: configure_zsh
+
+# ── macOS preferences ───────────────────────────────────────────
+# Every `defaults` key this repo owns. Unprivileged both ways — a Mac's
+# preferences are its user's — so nothing below asks for a password.
+#
+# `value` is always quoted, whatever `type` says. An unquoted 0.11 is a float
+# that stringifies to "0.1", and `defaults` takes a string on the command line
+# regardless. The comparison happens on parsed plist values, so the three
+# spellings `defaults read` uses for one bool cannot disagree.
+#
+# `name` is derived from domain/key (and dict_key where there is one), because a
+# row's identity IS its address and a slug beside it would be a second spelling.
+#
+# No app is restarted. `killall Finder` and friends were deliberately removed
+# from preferences.sh before this conversion — its note read "changes take
+# effect on next login/reboot" — so nothing here re-adds them.
+
+macos_defaults:
+  # Appearance
+  - domain: NSGlobalDomain
+    key: AppleInterfaceStyle
+    type: string
+    value: "Dark"
+    description: Dark mode
+  - domain: NSGlobalDomain
+    key: AppleReduceDesktopTinting
+    type: bool
+    value: "true"
+    description: Reduce wallpaper tinting in windows
+
+  # Finder
+  - domain: NSGlobalDomain
+    key: AppleShowAllExtensions
+    type: bool
+    value: "true"
+    description: Show all file extensions
+  - domain: com.apple.finder
+    key: AppleShowAllFiles
+    type: bool
+    value: "true"
+    description: Show hidden files
+  - domain: com.apple.finder
+    key: ShowPathbar
+    type: bool
+    value: "true"
+    description: Show path bar in Finder windows
+  - domain: com.apple.finder
+    key: _FXShowPosixPathInTitle
+    type: bool
+    value: "true"
+    description: Show POSIX path in the Finder title
+  - domain: com.apple.finder
+    key: QuitMenuItem
+    type: bool
+    value: "true"
+    description: Enable the Finder quit menu item
+  - domain: com.apple.finder
+    key: ShowStatusBar
+    type: bool
+    value: "true"
+    description: Show the status bar — item count and free space
+  # Nlsv=list, clmv=column, icnv=icon, Flwv=gallery
+  - domain: com.apple.finder
+    key: FXPreferredViewStyle
+    type: string
+    value: "Nlsv"
+    description: Default to list view
+  - domain: com.apple.finder
+    key: NewWindowTarget
+    type: string
+    value: "PfHm"
+    description: Open new windows in the home folder
+  - domain: com.apple.finder
+    key: ShowHardDrivesOnDesktop
+    type: bool
+    value: "true"
+    description: Show internal drives on the desktop
+  - domain: com.apple.finder
+    key: ShowMountedServersOnDesktop
+    type: bool
+    value: "true"
+    description: Show mounted servers on the desktop
+  - domain: com.apple.finder
+    key: FXDefaultSearchScope
+    type: string
+    value: "SCcf"
+    description: Search the current directory by default
+  - domain: com.apple.finder
+    key: _FXSortFoldersFirst
+    type: bool
+    value: "true"
+    description: Keep folders at the top of search results
+  - domain: com.apple.finder
+    key: FXEnableExtensionChangeWarning
+    type: bool
+    value: "false"
+    description: Do not warn when changing a file extension
+  - domain: com.apple.finder
+    key: WarnOnEmptyTrash
+    type: bool
+    value: "false"
+    description: Do not warn when emptying the trash
+  - domain: com.apple.desktopservices
+    key: DSDontWriteNetworkStores
+    type: bool
+    value: "true"
+    description: Do not create .DS_Store on network drives
+  - domain: com.apple.desktopservices
+    key: DSDontWriteUSBStores
+    type: bool
+    value: "true"
+    description: Do not create .DS_Store on USB drives
+
+  # Dock
+  - domain: com.apple.dock
+    key: orientation
+    type: string
+    value: "bottom"
+    description: Dock position
+  - domain: com.apple.dock
+    key: tilesize
+    type: int
+    value: "90"
+    description: Dock tile size
+  - domain: com.apple.dock
+    key: magnification
+    type: bool
+    value: "true"
+    description: Dock magnification
+  - domain: com.apple.dock
+    key: autohide
+    type: bool
+    value: "true"
+    description: Dock auto-hide
+  - domain: com.apple.dock
+    key: show-recents
+    type: bool
+    value: "false"
+    description: Do not show recent applications
+  - domain: com.apple.dock
+    key: show-process-indicators
+    type: bool
+    value: "true"
+    description: Show process indicators for running apps
+  - domain: com.apple.dock
+    key: minimize-to-application
+    type: bool
+    value: "true"
+    description: Minimize windows into the application icon
+  - domain: com.apple.dock
+    key: mru-spaces
+    type: bool
+    value: "false"
+    description: Do not rearrange spaces automatically
+
+  # Safari
+  - domain: com.apple.Safari
+    key: ShowFullURLInSmartSearchField
+    type: bool
+    value: "true"
+    description: Show the full URL in the address bar
+  - domain: com.apple.Safari
+    key: UniversalSearchEnabled
+    type: bool
+    value: "false"
+    description: Do not send search queries to Apple
+  - domain: com.apple.Safari
+    key: SuppressSearchSuggestions
+    type: bool
+    value: "true"
+    description: Suppress search suggestions
+  - domain: com.apple.Safari
+    key: SendDoNotTrackHTTPHeader
+    type: bool
+    value: "true"
+    description: Send the Do Not Track header
+  - domain: com.apple.Safari
+    key: WarnAboutFraudulentWebsites
+    type: bool
+    value: "true"
+    description: Warn about fraudulent websites
+  - domain: com.apple.Safari
+    key: AutoOpenSafeDownloads
+    type: bool
+    value: "false"
+    description: Do not auto-open safe downloads
+  - domain: com.apple.Safari
+    key: IncludeDevelopMenu
+    type: bool
+    value: "true"
+    description: Show the Develop menu
+  - domain: com.apple.Safari
+    key: WebKitDeveloperExtrasEnabledPreferenceKey
+    type: bool
+    value: "true"
+    description: Enable WebKit developer extras
+  - domain: com.apple.Safari
+    key: com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled
+    type: bool
+    value: "true"
+    description: Enable developer extras in web content
+  - domain: com.apple.Safari
+    key: InstallExtensionUpdatesAutomatically
+    type: bool
+    value: "true"
+    description: Auto-update Safari extensions
+
+  # Mail — the three -dict-add entries
+  - domain: com.apple.mail
+    key: DraftsViewerAttributes
+    dict_key: DisplayInThreadedMode
+    type: string
+    value: "yes"
+    description: Display messages in threaded mode
+  - domain: com.apple.mail
+    key: DraftsViewerAttributes
+    dict_key: SortOrder
+    type: string
+    value: "received-date"
+    description: Sort messages by date received
+  - domain: com.apple.mail
+    key: DraftsViewerAttributes
+    dict_key: SortedDescending
+    type: string
+    value: "yes"
+    description: Newest messages first
+
+  # Keyboard and text
+  - domain: NSGlobalDomain
+    key: NSAutomaticCapitalizationEnabled
+    type: bool
+    value: "false"
+    description: Disable automatic capitalization
+  - domain: NSGlobalDomain
+    key: NSAutomaticPeriodSubstitutionEnabled
+    type: bool
+    value: "false"
+    description: Disable automatic period substitution
+  - domain: NSGlobalDomain
+    key: NSAutomaticDashSubstitutionEnabled
+    type: bool
+    value: "false"
+    description: Disable automatic dash substitution
+  - domain: NSGlobalDomain
+    key: NSAutomaticQuoteSubstitutionEnabled
+    type: bool
+    value: "false"
+    description: Disable automatic quote substitution
+  - domain: NSGlobalDomain
+    key: NSAutomaticSpellingCorrectionEnabled
+    type: bool
+    value: "false"
+    description: Disable automatic spelling correction
+  - domain: NSGlobalDomain
+    key: NSAutomaticInlinePredictionEnabled
+    type: bool
+    value: "false"
+    description: Disable inline predictive text
+  - domain: NSGlobalDomain
+    key: ApplePressAndHoldEnabled
+    type: bool
+    value: "false"
+    description: Hold a key to repeat rather than showing the accent picker
+  # Tab reaches buttons and checkboxes, not only text fields.
+  - domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: "3"
+    description: Full keyboard access for all controls
+  # Default 6. Faster for vim motions, arrows and backspace.
+  - domain: NSGlobalDomain
+    key: KeyRepeat
+    type: int
+    value: "2"
+    description: Key repeat rate
+  # Default 25 (500ms). 15 is 300ms.
+  - domain: NSGlobalDomain
+    key: InitialKeyRepeat
+    type: int
+    value: "15"
+    description: Delay before key repeat starts
+
+  # Trackpad and mouse
+  - domain: NSGlobalDomain
+    key: com.apple.swipescrolldirection
+    type: bool
+    value: "false"
+    description: Traditional scroll direction, not natural
+  - domain: NSGlobalDomain
+    key: AppleEnableSwipeNavigateWithScrolls
+    type: bool
+    value: "false"
+    description: Disable two-finger swipe to navigate pages
+
+  # Screenshots — the directory is a macos_steps row, because a location
+  # pointing at a directory that does not exist fails silently.
+  - domain: com.apple.screencapture
+    key: location
+    type: string
+    value: "~/Desktop/screenshots"
+    description: Where screenshots are saved
+  - domain: com.apple.screencapture
+    key: type
+    type: string
+    value: "png"
+    description: Screenshot format
+  - domain: com.apple.screencapture
+    key: disable-shadow
+    type: bool
+    value: "true"
+    description: No window shadow on screenshots
+
+  # Software update and the App Store
+  - domain: com.apple.SoftwareUpdate
+    key: AutomaticCheckEnabled
+    type: bool
+    value: "true"
+    description: Check for updates automatically
+  - domain: com.apple.SoftwareUpdate
+    key: AutomaticDownload
+    type: bool
+    value: "true"
+    description: Download available updates in the background
+  - domain: com.apple.SoftwareUpdate
+    key: CriticalUpdateInstall
+    type: bool
+    value: "true"
+    description: Install critical security updates automatically
+  - domain: com.apple.appstore
+    key: ShowDebugMenu
+    type: bool
+    value: "true"
+    description: App Store debug menu
+  - domain: com.apple.appstore
+    key: WebKitDeveloperExtras
+    type: bool
+    value: "true"
+    description: App Store developer extras
+
+  # Photos — the one -currentHost entry, which is a separate store
+  - domain: com.apple.ImageCapture
+    key: disableHotPlug
+    current_host: true
+    type: bool
+    value: "true"
+    description: Do not open Photos when a device is connected
+
+  # Messages — the other two -dict-add entries
+  - domain: com.apple.messageshelper.MessageController
+    key: SOInputLineSettings
+    dict_key: automaticEmojiSubstitutionEnablediMessage
+    type: bool
+    value: "false"
+    description: Disable automatic emoji substitution
+  - domain: com.apple.messageshelper.MessageController
+    key: SOInputLineSettings
+    dict_key: automaticQuoteSubstitutionEnabled
+    type: bool
+    value: "false"
+    description: Disable smart quotes in Messages
+
+  # Spotlight
+  - domain: com.apple.lookup.shared
+    key: LookupSuggestionsDisabled
+    type: bool
+    value: "true"
+    description: Disable Siri suggestions in Spotlight
+
+  # TextEdit
+  - domain: com.apple.TextEdit
+    key: RichText
+    type: int
+    value: "0"
+    description: Plain text mode by default
+  - domain: com.apple.TextEdit
+    key: PlainTextEncoding
+    type: int
+    value: "4"
+    description: Open files as UTF-8
+  - domain: com.apple.TextEdit
+    key: PlainTextEncodingForWrite
+    type: int
+    value: "4"
+    description: Save files as UTF-8
+
+  # Desktop and menu bar
+  - domain: com.apple.WindowManager
+    key: EnableStandardClickToShowDesktop
+    type: bool
+    value: "false"
+    description: Do not hide windows when clicking the wallpaper
+  - domain: com.apple.controlcenter
+    key: BatteryShowPercentage
+    type: bool
+    value: "true"
+    description: Show battery percentage in the menu bar
+
+  # Save and print dialogs
+  - domain: NSGlobalDomain
+    key: NSNavPanelExpandedStateForSaveMode
+    type: bool
+    value: "true"
+    description: Expand the save panel by default
+  - domain: NSGlobalDomain
+    key: PMPrintingExpandedStateForPrint
+    type: bool
+    value: "true"
+    description: Expand the print panel by default
+  - domain: com.apple.print.PrintingPrefs
+    key: Quit When Finished
+    type: bool
+    value: "true"
+    description: Quit the printer app once jobs finish
+
+  # Security — trades a safety check for convenience, deliberately
+  - domain: com.apple.LaunchServices
+    key: LSQuarantine
+    type: bool
+    value: "false"
+    description: No "are you sure you want to open this application" prompt
+
+  # Accessibility — less GPU compositing on integrated graphics
+  - domain: com.apple.universalaccess
+    key: reduceTransparency
+    type: bool
+    value: "true"
+    description: Reduce transparency
+  - domain: com.apple.universalaccess
+    key: reduceMotion
+    type: bool
+    value: "true"
+    description: Reduce motion
+
+# macOS state that is not a preference key. The mechanics are one pair of
+# functions each in src/dotfiles/providers/macdefaults.py, for the same reason
+# custom_installers has no engine: two rows with nothing in common.
+macos_steps:
+  - name: library-visible
+    description: ~/Library visible in Finder, which needs both the flag and the xattr cleared
+  - name: screenshot-directory
+    description: The directory com.apple.screencapture location points at

@@ -303,7 +303,7 @@ def _run_scripts(context: Run, scripts: list[Path], *, tier: str = '') -> bool:
 COMMON = paths.INSTALL_DIR / 'common'
 
 SYSTEM_SCRIPTS = {
-    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'configure-docker.sh', 'mas-apps.sh', 'xcode.sh', 'preferences.sh'),
+    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'configure-docker.sh', 'mas-apps.sh', 'xcode.sh'),
     'wsl': ('system-packages.sh',),
     'archlinux': ('system-packages.sh',),
     'linux': ('system-packages.sh',),

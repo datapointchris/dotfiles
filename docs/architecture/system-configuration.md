@@ -2,9 +2,9 @@
 
 A machine is not converged when its packages are installed. It also has to be in
 the docker group, have `docker.socket` enabled, log itself in on TTY1, point
-`/etc/zshenv` at the XDG config, and run zsh as its login shell. None of that is
-a package, all of it needs root, and until this conversion none of it could be
-checked at all.
+`/etc/zshenv` at the XDG config, run zsh as its login shell, and — on a Mac — hold
+seventy-odd `defaults` keys at the values this repo picked. None of that is a
+package, and until this conversion none of it could be checked at all.
 
 The declaration is `install/system.yml`; the reads and writes are
 `src/dotfiles/providers/sysconfig.py`; the one authorization is
@@ -24,6 +24,46 @@ repaired — which is why these are catalog rows read by the same loader and not
 second mechanism bolted on beside it. A section's schema is still its dataclass,
 and an unknown key is still an error at load time.
 
+## macOS preferences are the same idea, one layer over
+
+Seventy-three `defaults write` calls that could never be asked anything. A
+setting changed by hand in System Settings, or reset by an OS upgrade, was
+invisible until someone noticed the behaviour — and `defaults` has had a native,
+unprivileged, exact read side the whole time.
+
+The rows are data because the variation between them genuinely is data: a domain,
+a key, a type and a value. The five `-dict-add` entries and the one
+`-currentHost` entry get explicit schema fields rather than a general mechanism,
+because six exceptions out of seventy-four do not justify one. A row's `name` is
+*derived* from its address rather than written beside it — seventy-three
+hand-written slugs would be a second spelling of a fact the row already carries,
+and the derived form is the string to paste after `defaults read`.
+
+**One export per domain, not one read per key.** `defaults export <domain> -`
+emits the whole domain as XML and `plistlib` turns it into real Python values, so
+a bool comes back a bool and the `-dict-add` entries are a dictionary lookup
+instead of a parse of human-readable output. Seventy-four keys across fifteen
+domains cost fifteen subprocesses, and the three spellings `defaults read` uses
+for one boolean stop being able to disagree.
+
+Two things there are not preference keys — `~/Library` being visible is a file
+flag plus an extended attribute, and the screenshot directory existing is a
+directory existing. They are the `custom_installers` shape: `macos_steps`
+declares which, `providers/macdefaults.py` says how, and a test asserts the two
+sets match in both directions.
+
+**Nothing on the Mac side escalates**, which is why `needs_root` is a property of
+the section rather than of the resource. A Mac whose only drift is its Dock size
+converges without a password.
+
+Two decisions worth not reversing by accident. `System Settings` is quit once
+before the first write of a process, because it holds its own copy of a domain
+and writes it back on quit — a preference set underneath it is reverted with
+nothing to say it happened. And **no app is restarted**: `killall Finder` and
+friends were deliberately removed from `preferences.sh` before this conversion,
+with a note reading "changes take effect on next login/reboot", so the `restart:`
+field the design sketched is not here.
+
 ## Every read is unprivileged, every write is not
 
 This is the property the whole subsystem is built around, and it is a constraint
@@ -35,6 +75,7 @@ the providers satisfy rather than a happy accident:
 | `systemctl enable` | `systemctl is-enabled` |
 | `tee` a file under `/etc` | read it — these are all mode 0644 |
 | `chsh` | the passwd entry's shell field |
+| `defaults write` | `defaults export` — and it needs no privilege either way |
 
 So `check` never escalates, which is what lets it run at a prompt, in a
 pre-commit hook, and inside a container with no passwordless sudo. A row that

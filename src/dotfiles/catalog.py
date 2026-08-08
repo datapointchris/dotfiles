@@ -474,6 +474,11 @@ class SystemConfig(Entry):
     """
 
     declared_in: ClassVar[str] = 'system.yml'
+    needs_root: ClassVar[bool] = True
+    """Whether repairing a row of this section escalates, which is a property of
+    the section rather than of the entry. macOS preferences are the exception —
+    they are user-level, and treating them as privileged would put a password
+    prompt in front of a Mac that needs none."""
 
     display_stack: str = ''
     """Only where the machine's compositor matches. Hyprland replacing gdm is a
@@ -558,6 +563,82 @@ class LoginShell(SystemConfig):
     section: ClassVar[str] = 'login_shell'
 
 
+DEFAULTS_TYPES = ('bool', 'int', 'string')
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class MacosDefault(SystemConfig):
+    """One `defaults` key, and the value this Mac should have for it.
+
+    The best conversion candidate in the repository, and the reason is specific:
+    `defaults` is the only subsystem here with a native, unprivileged, exact read
+    side. Seventy-three write-only `defaults write` calls could never answer
+    "does this Mac match?"; the same seventy-three rows as data can.
+
+    `value` is a string whatever `type` says, and always quoted in the YAML. An
+    unquoted `0.11` is a float that stringifies to `0.1`, which is the mistake
+    the version constraints already made once — and `defaults` takes a string on
+    the command line regardless.
+    """
+
+    section: ClassVar[str] = 'macos_defaults'
+    needs_root: ClassVar[bool] = False
+
+    domain: str
+    key: str
+    type: str
+    value: str
+    name: str = ''
+
+    dict_key: str = ''
+    """The key *inside* the value, for the five entries using `-dict-add`. Their
+    read is a plist lookup rather than a string compare, which is why the schema
+    says so rather than the provider guessing from the shape of the output."""
+
+    current_host: bool = False
+    """`defaults -currentHost`, which is a different store and not a flag on the
+    same one. One entry uses it, and reading it from the ordinary store answers
+    "absent" forever."""
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> Self:
+        """Derive `name` from the address rather than asking for it twice.
+
+        A row's identity *is* its domain, key and dict key; a hand-written slug
+        beside them would be a second spelling that can disagree, and 73 of them
+        would be invented rather than meant. The derived form is also what
+        `check` prints, which is the string to paste after `defaults read`.
+
+        `Entry.from_mapping.__func__` rather than `super()`: `dataclass(slots=True)`
+        rebuilds the class, leaving the zero-argument form's `__class__` cell
+        pointing at the original and raising TypeError on every call.
+        """
+        if 'name' not in raw and 'domain' in raw and 'key' in raw:
+            address = [str(raw['domain']), str(raw['key']), *([str(raw['dict_key'])] if raw.get('dict_key') else [])]
+            raw = {**raw, 'name': '/'.join(address)}
+        return Entry.from_mapping.__func__(cls, raw)  # type: ignore[attr-defined,no-any-return]
+
+    def problems(self) -> tuple[str, ...]:
+        if self.type in DEFAULTS_TYPES:
+            return SystemConfig.problems(self)
+        return (f'declares type {self.type!r}, which is not one of {", ".join(DEFAULTS_TYPES)}', *SystemConfig.problems(self))
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class MacosStep(SystemConfig):
+    """A piece of macOS state that is not a preference key.
+
+    Two of them, with nothing in common: `~/Library` being visible is a file
+    flag, and the screenshot directory existing is a directory existing. This
+    section is the `custom_installers` shape — the declaration says which, and
+    `providers/macdefaults.py` says how — because a `check:`/`apply:` argv pair
+    in YAML would be a command language invented for two rows.
+    """
+
+    section: ClassVar[str] = 'macos_steps'
+    needs_root: ClassVar[bool] = False
+
+
 SECTION_CLASSES: tuple[type[Entry], ...] = (
     SystemPackage,
     Runtime,
@@ -579,7 +660,14 @@ SECTION_CLASSES: tuple[type[Entry], ...] = (
 
 SECTIONS: dict[str, type[Entry]] = {cls.section: cls for cls in SECTION_CLASSES}
 
-SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (GroupMembership, SystemdUnit, ManagedFile, LoginShell)
+SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
+    GroupMembership,
+    SystemdUnit,
+    ManagedFile,
+    LoginShell,
+    MacosDefault,
+    MacosStep,
+)
 """`system.yml`, in its own map rather than merged into `SECTIONS`.
 
 `SECTIONS` is what a manifest subscribes to, what `packages list --section`
