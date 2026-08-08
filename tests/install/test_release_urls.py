@@ -31,6 +31,7 @@ import httpx2
 import pytest
 import yaml
 
+from dotfiles import catalog
 from dotfiles import github_release
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
@@ -220,26 +221,28 @@ def test_the_fzf_tmux_companion_resolves_at_the_same_tag(http):
 # Which releases can be checksum-verified at all
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Step 5 defaults `checksum: required`, so the entries that cannot satisfy it
-# have to be known rather than discovered by a broken install. Measured here
-# rather than listed in a plan, because upstream changes it: a project that
-# starts publishing checksums should stop being an exception, and one that stops
-# should fail loudly. Both directions land as a failure below, naming the tool.
+# `checksum: required` is the default, so the entries that cannot satisfy it say
+# so in `packages.yml` rather than being discovered by a broken install. This
+# compares each declaration against what the release actually publishes today,
+# and fails in *both* directions: a project that starts publishing checksums must
+# stop being an exception, and one that stops must be caught before an install
+# refuses it.
 #
-# The two states are genuinely different and the schema has to tell them apart.
-# UNPUBLISHED is benign — nothing to check against, so nothing to check.
-# Unparseable is not: a checksums file exists, `checksum_for_asset` returns None,
-# and `verify_release_checksum` then *deletes the download* and fails.
+# The lists live in the declaration and are read from it here rather than
+# restated. A second copy is a copy that rots, and it is the copy a reader trusts
+# — the version this replaced named hadolint and tenv, which both verify, and
+# missed shellcheck, win32yank and zk, which cannot.
 
-PUBLISHES_NO_CHECKSUM = {'neovim', 'shellcheck', 'terraformer', 'tree-sitter', 'win32yank', 'yazi', 'zk'}
-"""Releases with no checksum file among their assets at all."""
+STATE_FOR_DECLARATION = {
+    catalog.CHECKSUM_REQUIRED: 'VERIFIABLE',
+    catalog.CHECKSUM_UNPUBLISHED: 'UNPUBLISHED',
+    catalog.CHECKSUM_UNLISTED: 'NO-ENTRY',
+}
+"""What each declared value claims a live release will turn out to be."""
 
-CHECKSUM_HAS_NO_ENTRY = {'yq'}
-"""Publishes a checksums file the asset cannot be found in.
 
-yq ships an rhash table with the name in column 0, which is not the
-`<digest>  <name>` shape every other publisher uses.
-"""
+def declared_checksum_states() -> dict[str, str]:
+    return {entry.name: entry.checksum for entry in catalog.load(PACKAGES_YML).section('github_releases')}
 
 
 def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, int]) -> str:
@@ -263,28 +266,23 @@ def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, int])
 
 @pytest.mark.e2e
 @pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
-def test_a_release_is_verifiable_unless_it_is_a_known_exception(tool, os_name, arch, resolved_urls, published_assets):
+def test_a_release_verifies_exactly_as_its_entry_declares(tool, os_name, arch, resolved_urls, published_assets):
     repo, tag, url = asset_under_test((tool, os_name, arch), resolved_urls)
     asset_name = url.rsplit('/', 1)[-1]
 
+    declared = declared_checksum_states()[tool]
+    expected = STATE_FOR_DECLARATION[declared]
     state = checksum_state(repo, tag, asset_name, published_assets(repo, tag))
 
-    if tool in PUBLISHES_NO_CHECKSUM:
-        assert state == 'UNPUBLISHED', (
-            f'{tool} is listed as publishing no checksum, but {repo} {tag} now answers {state} — drop it from PUBLISHES_NO_CHECKSUM'
-        )
-    elif tool in CHECKSUM_HAS_NO_ENTRY:
-        assert state == 'NO-ENTRY', f'{tool} is listed as publishing an unparseable checksums file, but {repo} {tag} now answers {state}'
-    else:
-        assert state == 'VERIFIABLE', f'{tool} was verifiable and {repo} {tag} now answers {state}'
+    assert state == expected, (
+        f'{tool} declares checksum: {declared}, which claims {expected}, but {repo} {tag} answers {state} — change the declaration'
+    )
 
 
-@pytest.mark.e2e
-def test_every_named_exception_is_a_tool_that_still_exists():
-    """An exception list outliving its tool silently excuses nothing, and reads
-    as covered. Cheap, and it does not need the network."""
-    named = PUBLISHES_NO_CHECKSUM | CHECKSUM_HAS_NO_ENTRY
-    assert named <= declared_releases(), f'named but no longer declared: {sorted(named - declared_releases())}'
+def test_every_declared_checksum_state_is_one_the_engine_acts_on():
+    """No network. A value the catalog accepts and the install engine has no
+    branch for would install unverified while reading as declared."""
+    assert set(STATE_FOR_DECLARATION) == catalog.CHECKSUM_STATES
 
 
 # ─────────────────────────────────────────────────────────────────────────────

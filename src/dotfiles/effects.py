@@ -1,10 +1,14 @@
 """The only module that touches the world outside this process.
 
 Six doors are planned — `run`, `fetch`, `write`, `link`/`unlink`, `extract`,
-`chmod` — and one exists so far, because only `run` has a caller: every leaf of
-the CLI currently shells out to the bash it will eventually replace. The rest
-arrive as each resource moves, and the point of the module is that a stub of it
-covers every resource's I/O at once.
+`chmod` — and four exist, arriving as each resource moves. `write` and
+`link`/`unlink` wait on the resources that need them.
+
+The three added for the release engine are deliberately ignorant of what they are
+unpacking. `unpack` sniffs a container rather than reading a declared archive
+kind, so `providers.releases.Archive` stays a statement about what upstream
+publishes and never becomes a second thing that has to be right for extraction to
+work. That vocabulary belongs above this line, not on it.
 
 Everything here is a chokepoint on purpose. A resource that reaches the world
 some other way cannot be tested without the world.
@@ -12,12 +16,18 @@ some other way cannot be tested without the world.
 
 from __future__ import annotations
 
+import gzip
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
+import zipfile
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+
+from dotfiles import github_release
 
 
 class Output(StrEnum):
@@ -129,3 +139,57 @@ def run(
         return missing(problem)
 
     return Completed(command=argv, returncode=process.returncode, transcript=''.join(lines))
+
+
+def fetch(url: str, destination: Path, *, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
+    """Download one file. The release-asset arguments are how a private repo works.
+
+    Delegated rather than reimplemented: `github_release` already carries the
+    asset-id fallback, and that module is stdlib-only because the offline bundler
+    runs it under a system python3 this package cannot import into. One
+    implementation, reachable from both.
+    """
+    return github_release.download_asset(url, destination, repo, tag, asset_name)
+
+
+def unpack(archive: Path, into: Path) -> bool:
+    """Extract a tar or zip, whichever it turns out to be.
+
+    Sniffed rather than told, because the container is a property of the bytes and
+    a caller that has to say which one is a caller that can be wrong about it.
+    `tarfile` reads gzip, xz and bzip2 transparently, so the compression never
+    needs naming either.
+
+    Members are extracted under `filter='data'`, which refuses absolute paths,
+    `..` traversal and device nodes. The tar these unpack came off the internet;
+    the shell `tar -xf` this replaces applied no such filter.
+    """
+    into.mkdir(parents=True, exist_ok=True)
+    try:
+        if zipfile.is_zipfile(archive):
+            with zipfile.ZipFile(archive) as bundle:
+                bundle.extractall(into)
+            return True
+        if tarfile.is_tarfile(archive):
+            with tarfile.open(archive) as bundle:
+                bundle.extractall(into, filter='data')
+            return True
+    except (OSError, tarfile.TarError, zipfile.BadZipFile):
+        return False
+    return False
+
+
+def gunzip(source: Path, destination: Path) -> bool:
+    """Decompress a bare gzipped file — a compressed binary, not an archive."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with gzip.open(source, 'rb') as compressed, destination.open('wb') as plain:
+            shutil.copyfileobj(compressed, plain)
+    except (OSError, gzip.BadGzipFile):
+        return False
+    return True
+
+
+def make_executable(path: Path) -> None:
+    """chmod +x, preserving whatever else the mode says."""
+    path.chmod(path.stat().st_mode | 0o111)

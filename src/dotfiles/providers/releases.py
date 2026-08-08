@@ -45,6 +45,19 @@ class Archive(enum.StrEnum):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class Companion:
+    """A file fetched at the release's tag that the release does not publish.
+
+    Not new vocabulary: the offline bundler already has this concept as
+    `--print-extras`, because a companion has to be staged like any other
+    download for a restricted network to install the tool at all.
+    """
+
+    name: str
+    url: str
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Asset:
     """One release asset, and how to get a binary out of it."""
 
@@ -52,6 +65,27 @@ class Asset:
     archive: Archive
     path: str = ''
     """Where the binary sits inside the archive, when it is not at the root."""
+
+    extras: tuple[str, ...] = ()
+    """Other binaries in the same archive, placed beside the first under their own names.
+
+    Each is placed if present and passed over if not. That tolerance is tenv's:
+    its set of proxy shims has grown release by release — atmos and terramate
+    arrived after the others — so an install that demanded all of them would break
+    on the release *before* the one that added a name, and one that demanded a
+    fixed subset would silently stop installing whatever came next.
+    """
+
+    tree: bool = False
+    """The archive installs as a directory under `~/.local`, not as loose binaries.
+
+    neovim alone: `nvim` will not start without the runtime files packaged beside
+    it, so `path` is then relative to `~/.local` and what lands in `~/.local/bin`
+    is a symlink into the unpacked tree rather than a copy of one file out of it.
+    """
+
+    companions: tuple[Companion, ...] = ()
+    """Files to fetch alongside, from outside the release."""
 
 
 def _bare(tag: str) -> str:
@@ -81,9 +115,15 @@ def duf(tag: str, target: Target) -> Asset:
 
 
 def fzf(tag: str, target: Target) -> Asset:
-    """arm64 on darwin against amd64 on linux, in one name."""
+    """arm64 on darwin against amd64 on linux, in one name.
+
+    `fzf-tmux` is the tmux popup wrapper, and it is a shell script in the repo
+    tree rather than an asset in the release — so it is fetched from the tag
+    instead, which is what keeps the script and the binary a matched pair.
+    """
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
-    return Asset(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
+    companion = Companion('fzf-tmux', f'https://raw.githubusercontent.com/junegunn/fzf/{tag}/bin/fzf-tmux')
+    return Asset(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf', companions=(companion,))
 
 
 def glow(tag: str, target: Target) -> Asset:
@@ -123,7 +163,7 @@ def neovim(tag: str, target: Target) -> Asset:
         stem = 'nvim-macos-arm64' if target.is_arm else 'nvim-macos-x86_64'
     else:
         stem = 'nvim-linux-x86_64'
-    return Asset(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/nvim')
+    return Asset(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/nvim', tree=True)
 
 
 def shellcheck(tag: str, target: Target) -> Asset:
@@ -136,11 +176,19 @@ def shellcheck(tag: str, target: Target) -> Asset:
     return Asset(f'shellcheck-{tag}.{suffix}.tar.xz', Archive.TARBALL, path=f'shellcheck-{tag}/shellcheck')
 
 
+TENV_PROXIES = ('terraform', 'tofu', 'terragrunt', 'terramate', 'atmos', 'tf')
+"""The shims tenv ships beside itself, each dispatching to the version it manages.
+
+`terraform` on PATH being one of these is the whole point of installing tenv: it
+is what makes a `.terraform-version` file decide which binary runs.
+"""
+
+
 def tenv(tag: str, target: Target) -> Asset:
     """Keeps the `v` in the asset name, and capitalises the platform."""
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
     arch = 'arm64' if target.is_arm else 'x86_64'
-    return Asset(f'tenv_{tag}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='tenv')
+    return Asset(f'tenv_{tag}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='tenv', extras=TENV_PROXIES)
 
 
 def terraformer(tag: str, target: Target) -> Asset:
@@ -188,12 +236,17 @@ def win32yank(tag: str, target: Target) -> Asset:
 
 
 def yazi(tag: str, target: Target) -> Asset:
-    """GNU triples like `just`, but a zip, and gnu rather than musl on Linux."""
+    """GNU triples like `just`, but a zip, and gnu rather than musl on Linux.
+
+    `ya` is yazi's own package manager, and the plugins it installs are declared
+    nowhere in this repo — it reads them from yazi's config. So it ships here and
+    the plugin sync belongs to the plugins resource, not to this install.
+    """
     if target.is_darwin:
         triple = 'aarch64-apple-darwin' if target.is_arm else 'x86_64-apple-darwin'
     else:
         triple = 'x86_64-unknown-linux-gnu'
-    return Asset(f'yazi-{triple}.zip', Archive.ZIP, path=f'yazi-{triple}/yazi')
+    return Asset(f'yazi-{triple}.zip', Archive.ZIP, path=f'yazi-{triple}/yazi', extras=(f'yazi-{triple}/ya',))
 
 
 def yq(tag: str, target: Target) -> Asset:

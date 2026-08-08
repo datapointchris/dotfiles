@@ -742,12 +742,20 @@ runtimes:
 # by the personal CLIs. This is the one section where a pin is honoured today;
 # `packages verify` rejects one written anywhere it is not. Vocabulary and the
 # reasoning: .planning/version-constraints.md.
+#
+# A verified checksum is the default, so a release that cannot supply one says so
+# here — `checksum: unpublished` for a release with no checksums file at all, and
+# `checksum: unlisted` for one whose file does not name the asset. Both install
+# unverified and both are measured against live releases by
+# tests/install/test_release_urls.py, which fails when an exception stops being
+# true as well as when a verifiable release stops verifying.
 
 github_releases:
   - name: neovim
     repo: neovim/neovim
     min_version: "0.11"
     binary_link: "~/.local/bin/nvim"
+    checksum: unpublished
     description: Extensible text editor
     tags: [cli, editor]
 
@@ -758,6 +766,7 @@ github_releases:
 
   - name: yazi
     repo: sxyazi/yazi
+    checksum: unpublished
     description: Terminal file manager
     tags: [cli, tui, files]
 
@@ -788,6 +797,7 @@ github_releases:
 
   - name: terraformer
     repo: GoogleCloudPlatform/terraformer
+    checksum: unpublished
     description: Generate Terraform from existing infrastructure
 
   - name: terrascan
@@ -797,6 +807,7 @@ github_releases:
   # Development Tools
   - name: zk
     repo: zk-org/zk
+    checksum: unpublished
     description: Plain text note-taking assistant
 
   - name: trivy
@@ -805,6 +816,7 @@ github_releases:
 
   - name: shellcheck
     repo: koalaman/shellcheck
+    checksum: unpublished
     description: Shell script static analysis tool (consistent version across all platforms)
 
   - name: hadolint
@@ -820,6 +832,9 @@ github_releases:
   # and works behind the WSL work firewall (github release download, no Go module proxy).
   - name: yq
     repo: mikefarah/yq
+    # Publishes checksums, in an rhash table with the name in column 0 rather
+    # than the `<digest>  <name>` shape every other publisher uses.
+    checksum: unlisted
     description: YAML/JSON/XML processor (consistent version across all platforms)
     tags: [cli, yaml, json]
 
@@ -833,6 +848,7 @@ github_releases:
 
   - name: tree-sitter
     repo: tree-sitter/tree-sitter
+    checksum: unpublished
     description: Incremental parsing library CLI (used by Neovim treesitter; NOT installed via npm — see build_tools comment)
 
   # WSL-only
@@ -842,6 +858,7 @@ github_releases:
     # design in a container. Declared here so verification applies the same test
     # rather than reporting a machine that installed correctly as broken.
     requires_wsl_host: true
+    checksum: unpublished
     description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
     tags: [cli, wsl]
 

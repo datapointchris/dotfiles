@@ -100,6 +100,26 @@ GRANDFATHERED_CONSTRAINTS = frozenset(
 naming them keeps the information alive for the resolver instead of deleting it to
 silence a check."""
 
+CHECKSUM_REQUIRED = 'required'
+CHECKSUM_UNPUBLISHED = 'unpublished'
+CHECKSUM_UNLISTED = 'unlisted'
+
+CHECKSUM_STATES = frozenset({CHECKSUM_REQUIRED, CHECKSUM_UNPUBLISHED, CHECKSUM_UNLISTED})
+"""What a release can be verified against, declared rather than discovered.
+
+`required` is the default because the alternative default is silence: the shell
+library it replaces let each installer set `CHECKSUM_REQUIRED=false` for itself,
+and four of the eight that cannot verify never called the shared helper at all,
+so they skipped verification without ever saying so. Naming the exception in the
+declaration is what makes it countable, reviewable, and testable against what
+upstream actually publishes — which `tests/install/test_release_urls.py` does,
+failing in *both* directions so a project that starts publishing checksums stops
+being an exception.
+
+The two exceptions are separate values because they are separate upstream facts;
+`github_release.Verification` carries the same distinction and says why.
+"""
+
 
 def owner_of(value: str) -> str | None:
     """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
@@ -248,6 +268,7 @@ class GithubRelease(Entry):
     release_tag_prefix: str = ''
     requires_wsl_host: bool = False
     requires_github_auth: bool = False
+    checksum: str = CHECKSUM_REQUIRED
 
     @property
     def executable(self) -> str:
@@ -259,6 +280,12 @@ class GithubRelease(Entry):
     @property
     def owner(self) -> str | None:
         return owner_of(self.repo)
+
+    def problems(self) -> tuple[str, ...]:
+        if self.checksum in CHECKSUM_STATES:
+            return Entry.problems(self)
+        allowed = ', '.join(sorted(CHECKSUM_STATES))
+        return (f"declares 'checksum' as {self.checksum!r}, which is not one of {allowed}", *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

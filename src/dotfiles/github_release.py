@@ -8,7 +8,7 @@ installing. Those were separate implementations — an awk program and Python �
 of rules subtle enough that a divergence would have gone unnoticed until a
 bundle verified differently from a live install.
 
-    github_release.py verify <file> <asset> [repo] [tag]   0 ok, 1 failed, 2 none published
+    github_release.py verify <file> <asset> [repo] [tag]   see Verification for the exit codes
     github_release.py parse-url <url>                      prints repo|tag, empty if not a release
     github_release.py checksum-for <file> <asset>          prints the digest, empty if absent
     github_release.py sha256 <file>
@@ -56,6 +56,18 @@ class Verification(enum.IntEnum):
     VERIFIED = 0
     FAILED = 1
     UNPUBLISHED = 2
+    """No checksums file among the release's assets. Nothing to check against."""
+
+    UNLISTED = 3
+    """A checksums file exists and this asset is not named in it.
+
+    Distinct from both its neighbours, and the distinction is the point. It is
+    not FAILED — nothing was compared, so nothing was proven wrong, and deleting
+    the download on that basis is what made `yq` uninstallable through the shared
+    library. It is not UNPUBLISHED either: something *is* published, so a tool in
+    this state is one upstream fix away from being verifiable, and collapsing the
+    two would hide that fix when it lands.
+    """
 
 
 # The [LEVEL] prefixes are what logsift and the log aggregators match on, so
@@ -225,6 +237,32 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     return None
 
 
+def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None:
+    """The published tag a declared pin means, or None when nothing published it.
+
+    A pin in `packages.yml` is a bare version and never a tag, because the same
+    release is spelled `v0.56.0` by lazygit, `0.8.30` by terraformer and
+    `cli/v0.9.0` by the personal CLIs — so matching against what the repo
+    published is what lets one spelling work everywhere.
+
+    None is a refusal, not a fallback. Answering "latest" for a pin nothing
+    matches would defeat the only thing a pin does.
+    """
+    try:
+        releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return None
+
+    wanted = version.removeprefix('v')
+    for release in releases:
+        tag = release.get('tag_name') or ''
+        if release.get('draft') or not tag.startswith(tag_prefix):
+            continue
+        if tag.removeprefix(tag_prefix).removeprefix('v') == wanted:
+            return tag
+    return None
+
+
 def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
     """The browser URL 404s on a private repo whatever token is presented; only
     the REST asset endpoint serves those, and only with an octet-stream Accept.
@@ -316,9 +354,8 @@ def verify_release_checksum(
 
     expected = checksum_for_asset(checksums_text, asset_name, from_sidecar)
     if expected is None:
-        log_error(f'Checksums file has no entry for {asset_name}')
-        path.unlink(missing_ok=True)
-        return Verification.FAILED
+        log_warning(f'Checksums file has no entry for {asset_name}')
+        return Verification.UNLISTED
 
     actual = sha256_of(path)
     if not digests_match(expected, actual):
