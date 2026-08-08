@@ -203,7 +203,7 @@ main() {
   echo "Windows shell sync complete."
 }
 
-# Sourced by tests/install/unit/windows-shell-sync.bats, which calls the
+# Sourced by tests/shell/test_windows_shell_sync_sh.py, which calls the
 # generation functions directly rather than reimplementing the file list.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   main "$@"
