@@ -234,6 +234,31 @@ def link_ownership(target_path: Path, *roots: Path) -> str:
     return 'ours' if any(str(destination).startswith(str(root)) for root in owned) else 'foreign'
 
 
+SKEL_DIR = Path('/etc/skel')
+
+
+def is_untouched_skeleton(target_path: Path) -> bool:
+    """A distro default the user has never edited, and so not their content.
+
+    `useradd` copies `/etc/skel` into every new home, so a fresh Debian or Ubuntu
+    account starts with a `.bashrc` and `.bash_profile` nobody wrote. Refusing
+    them means the very first `apply` on every such machine reports the symlink
+    phase failed, having correctly deployed everything else — and the advice it
+    prints is `--force`, which on any other machine is the dangerous answer.
+
+    Byte equality is what makes this safe rather than a special case for two
+    filenames: the moment a file differs from the skeleton it is someone's work,
+    and refusing it is right again.
+    """
+    skeleton = SKEL_DIR / target_path.name
+    if target_path.is_symlink() or not target_path.is_file() or not skeleton.is_file():
+        return False
+    try:
+        return target_path.read_bytes() == skeleton.read_bytes()
+    except OSError:
+        return False
+
+
 def create_symlinks(
     source_dir: Path,
     layer: str,
@@ -251,6 +276,9 @@ def create_symlinks(
     and a link pass writing into the same directory means the second silently
     destroys the first. `force` is the deliberate override, for adopting a
     machine that already had dotfiles of its own.
+
+    An unmodified `/etc/skel` copy is not a target anyone created, so it is
+    adopted without `--force`. See `is_untouched_skeleton`.
 
     A name `[project.scripts]` declares is skipped outright, force or not. The
     two are competing for one path in ~/.local/bin and the declaration wins;
@@ -286,7 +314,7 @@ def create_symlinks(
             continue
 
         target_path = _target_dir / relative_path
-        if not force and link_ownership(target_path, source_dir) == 'foreign':
+        if not force and link_ownership(target_path, source_dir) == 'foreign' and not is_untouched_skeleton(target_path):
             refused.append(target_path)
             continue
 

@@ -340,3 +340,52 @@ def test_this_repo_declares_its_own_scripts(tmp_path):
     """The default path resolves, so the exclusion is live rather than a
     parameter nothing ever fills."""
     assert 'symlinks' in core.console_script_names()
+
+
+def test_an_untouched_skeleton_file_is_adopted_without_force(tmp_path, monkeypatch):
+    """`useradd` copies /etc/skel into every new home, so a fresh Debian or
+    Ubuntu account starts with a .bashrc nobody wrote. Refusing it made the very
+    first apply on every such machine report the symlink phase failed, having
+    deployed everything else correctly — and the advice printed was `--force`,
+    which on any other machine is the dangerous answer."""
+    skel = tmp_path / 'skel'
+    skel.mkdir()
+    (skel / '.bashrc').write_text('# ~/.bashrc: executed by bash(1)\n')
+    monkeypatch.setattr(core, 'SKEL_DIR', skel)
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / '.bashrc').write_text('the repo copy')
+
+    target = tmp_path / 'target'
+    target.mkdir()
+    (target / '.bashrc').write_text('# ~/.bashrc: executed by bash(1)\n')
+
+    result = core.create_symlinks(source, 'common', target_dir=target)
+
+    assert result.refused == ()
+    assert result.created == 1
+    assert (target / '.bashrc').is_symlink()
+
+
+def test_an_edited_skeleton_file_is_still_refused(tmp_path, monkeypatch):
+    """One byte different and it is someone's work, which is the whole reason
+    the comparison is on content rather than on two filenames."""
+    skel = tmp_path / 'skel'
+    skel.mkdir()
+    (skel / '.bashrc').write_text('# ~/.bashrc: executed by bash(1)\n')
+    monkeypatch.setattr(core, 'SKEL_DIR', skel)
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / '.bashrc').write_text('the repo copy')
+
+    target = tmp_path / 'target'
+    target.mkdir()
+    edited = target / '.bashrc'
+    edited.write_text('# ~/.bashrc: executed by bash(1)\nexport EDITOR=vim\n')
+
+    result = core.create_symlinks(source, 'common', target_dir=target)
+
+    assert result.refused == (edited,)
+    assert edited.read_text().endswith('export EDITOR=vim\n')
