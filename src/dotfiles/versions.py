@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-NUMBERS = re.compile(r'v?(\d+(?:\.\d+)*)')
+NUMBERS = re.compile(r'v?(\d+(?:\.\d+)+)')
 
 
 def parse(text: str) -> tuple[int, ...] | None:
@@ -24,6 +24,13 @@ def parse(text: str) -> tuple[int, ...] | None:
     `rustc 1.83.0 (90b35a623 2024-11-26)`, `v22.11.0` — so the first thing that
     looks like a version is what is taken, which is what every one of those puts
     first.
+
+    **At least two components**, which is the difference between reading a version
+    and reading any number that happens to come first. lazygit leads with
+    `commit=aee0e40ec1235476e9328678f0f3e2462576b9ae`, and a single-integer match
+    took the `0` out of that hash and reported an up-to-date tool as eight minor
+    versions behind. Nothing declared or reported anywhere here is a bare integer,
+    and one that was would answer `None` — unmeasurable, not wrong.
     """
     match = NUMBERS.search(text)
     if not match:

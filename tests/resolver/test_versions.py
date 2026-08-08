@@ -16,6 +16,15 @@ from dotfiles import versions
         ('v24.19.0', (24, 19, 0)),
         ('0.11', (0, 11)),
         ('1.10.5', (1, 10, 5)),
+        ('Haskell Dockerfile Linter 2.12.0', (2, 12, 0)),
+        ('tree-sitter 0.26.11', (0, 26, 11)),
+        # The one that earned the two-component rule: a single-integer match took
+        # the 0 out of the commit hash and reported a current lazygit as stale.
+        (
+            'commit=aee0e40ec1235476e9328678f0f3e2462576b9ae, build date=2026-08-04T07:26:19Z, '
+            'build source=binaryRelease, version=0.64.0, os=linux, arch=amd64, git version=2.55.0',
+            (0, 64, 0),
+        ),
     ],
 )
 def test_the_first_dotted_number_is_the_version(output: str, expected: tuple[int, ...]) -> None:
@@ -23,7 +32,7 @@ def test_the_first_dotted_number_is_the_version(output: str, expected: tuple[int
     assert versions.parse(output) == expected
 
 
-@pytest.mark.parametrize('output', ['', 'not a version', 'command not found'])
+@pytest.mark.parametrize('output', ['', 'not a version', 'command not found', 'version 7', 'abc123def'])
 def test_output_with_no_version_in_it_parses_to_nothing(output: str) -> None:
     assert versions.parse(output) is None
 
