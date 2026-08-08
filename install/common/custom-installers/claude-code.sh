@@ -32,7 +32,6 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
-
 # Install mode: check if already installed
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&1; then
   CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")

@@ -29,7 +29,6 @@ if [[ "${1:-}" == "--print-url" ]]; then
   exit 0
 fi
 
-
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
