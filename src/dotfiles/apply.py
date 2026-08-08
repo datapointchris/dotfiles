@@ -44,6 +44,8 @@ from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.resolve import Stage
+from dotfiles.resources import plugins
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -420,10 +422,8 @@ def _uv_tools(context: Run) -> bool:
 
 
 def _shell_plugins(context: Run) -> bool:
-    if not context.wants('shell_plugins'):
-        return True
     heading('Shell plugins')
-    return run_installer(context, COMMON / 'plugins' / 'shell-plugins.sh', 'shell-plugins')
+    return plugins.clone(context.session, Stage.SHELL_PLUGINS)
 
 
 def _symlinks(context: Run) -> bool:
@@ -432,15 +432,18 @@ def _symlinks(context: Run) -> bool:
 
 
 def _tmux_plugins(context: Run) -> bool:
+    """TPM is a declared clone; the plugins it installs are not.
+
+    Its list is `@plugin` lines in `tmux.conf`, which TPM reads itself, so the
+    second half stays a script: there is nothing in `packages.yml` for the
+    resolver to plan per plugin.
+    """
+    heading('tmux plugins')
+    if not plugins.clone(context.session, Stage.EDITOR_PLUGINS):
+        return False
     if not context.wants('tmux_plugins'):
         return True
-    heading('tmux plugins')
-    return all(
-        [
-            run_installer(context, COMMON / 'plugins' / 'tpm.sh', 'tpm'),
-            run_installer(context, COMMON / 'plugins' / 'tmux-plugins.sh', 'tmux-plugins'),
-        ]
-    )
+    return run_installer(context, COMMON / 'plugins' / 'tmux-plugins.sh', 'tmux-plugins')
 
 
 def _nvim_plugins(context: Run) -> bool:

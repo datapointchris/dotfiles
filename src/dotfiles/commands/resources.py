@@ -196,7 +196,7 @@ plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plu
 @plugins_app.command('check')
 def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report plugin drift."""
-    _report(reconcile.CHECKERS['plugins'](_session(machine)), as_json)
+    _report(reconcile.check_plugins(_session(machine)), as_json)
 
 
 @plugins_app.command('apply')

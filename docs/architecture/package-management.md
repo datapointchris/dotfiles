@@ -162,7 +162,7 @@ from `zvm_after_init`.
 
 **Management**:
 
-- Install: `install/common/plugins/shell-plugins.sh` (reads from packages.yml)
+- Install: `dotfiles plugins apply` — the clone is `src/dotfiles/resources/plugins.py`
 - Update: `dotfiles update plugins`
 
 ## Installation Location Strategy

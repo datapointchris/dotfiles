@@ -108,6 +108,20 @@ def check_env(session: Session) -> ResourceResult:
     return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
 
 
+def check_plugins(session: Session) -> ResourceResult:
+    """The cloned plugins only, and the detail line says so.
+
+    TPM and lazy.nvim each own a plugin list this repo does not declare — tmux's
+    is in `tmux.conf`, Neovim's is in lua — so there is nothing here to compare
+    them against. Claiming to have checked them would be worse than not checking.
+    """
+    from dotfiles.resources import plugins
+
+    observed = plugins.RESOURCE.observe(session, session.plan)
+    changes = plugins.RESOURCE.diff(session.plan, observed)
+    return from_changes('plugins', changes, f'all {len(observed.present)} cloned plugins are present (tmux and nvim sync on apply)')
+
+
 def check_identity(session: Session) -> ResourceResult:
     """Ask now rather than at the first commit, mid-work."""
     from dotfiles.resources import identity
@@ -169,7 +183,7 @@ def _pending(address: str) -> Checker:
 CHECKERS: dict[str, Checker] = {
     'packages': check_packages,
     'toolchains': _pending('toolchains'),
-    'plugins': _pending('plugins'),
+    'plugins': check_plugins,
     'symlinks': check_symlinks,
     'env': check_env,
     'system': _pending('system'),
