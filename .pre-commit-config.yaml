@@ -190,7 +190,7 @@ repos:
       # Drift check: packages.yml ↔ manifests ↔ installer scripts
       - id: packages-verify
         name: packages verify (drift check)
-        entry: apps/common/packages verify
+        entry: uv run packages verify
         language: system
         pass_filenames: false
         always_run: true

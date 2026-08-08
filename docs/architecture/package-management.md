@@ -307,7 +307,7 @@ already happened: four version fields sat in this file unread, one of them eight
 
 ### Drift Detection
 
-The `packages verify` subcommand (in `apps/common/packages`) enforces that packages.yml, the machine manifests, and the installer script directories stay in sync. It runs on every commit via pre-commit and surfaces four classes of drift:
+The `packages verify` subcommand (in `src/dotfiles/catalog.py`) enforces that packages.yml, the machine manifests, and the installer script directories stay in sync. It runs on every commit via pre-commit and surfaces four classes of drift:
 
 - **Shape errors** — an entry missing required fields (e.g., a `github_releases` entry with no `repo`), or duplicate names within a section.
 - **Unresolved manifest names** — a manifest lists a name that has no corresponding packages.yml entry (the no-op that shipped `todoui` and `forge` ghost-installed for weeks).
@@ -316,7 +316,7 @@ The `packages verify` subcommand (in `apps/common/packages`) enforces that packa
 
 A fifth, softer check warns when packages.yml defines an entry that no manifest subscribes to — useful for spotting orphans without failing the commit.
 
-Behavior is authoritative in `--help` and `apps/common/packages verify --help`. Tests live in `tests/apps/test_packages_verify.py` and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.
+Behavior is authoritative in `--help` and `packages verify --help`. Tests live in `tests/apps/test_packages_verify.py` and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.
 
 **`packages missing` is the machine-side counterpart** and is deliberately a separate command. `verify` compares the repo against itself and runs on every commit; `missing` compares *this machine* against what its manifest declares, and a box part-way through a rollout is not a repo defect that should fail a commit. It is what `dotfiles doctor` calls, and what `dotfiles update` leans on when it reports the tools it declined to install.
 

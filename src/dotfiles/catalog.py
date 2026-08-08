@@ -1,19 +1,14 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.12"
-# dependencies = ["pyyaml", "pytermstyle"]
-#
-# [tool.uv.sources]
-# # A commit, not the tag it carries. A tag is mutable, so uv re-checks the
-# # remote on EVERY run — a network round trip per invocation, and a hard failure
-# # with no network. A rev is immutable and resolves from cache. Repos with a
-# # uv.lock do not need this; a single-file script has no lockfile.
-# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }  # v0.1.1
-# ///
-"""Query packages.yml for browsing and discovery.
+"""The catalog: packages.yml, and every question asked of it.
 
-A CLI tool to browse, search, and query packages defined in packages.yml.
-Supports filtering by section, tag, and platform with colored output.
+Browsing and search, plus the two drift checks — `verify` compares the repo
+against itself and runs on every commit, `missing` compares *this machine*
+against what its manifest declares and is what `doctor` calls. They are separate
+because a box part-way through a rollout is not a repo defect.
+
+This owns the schema. It used to be a standalone script carrying its own second
+description of packages.yml — SECTION_SPECS beside parse_packages's own reading
+of the same file — which is exactly the drift `verify` exists to catch, in the
+one place nothing was checking.
 """
 
 import argparse
@@ -28,114 +23,111 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pytermstyle import help_end
-from pytermstyle import help_header
-from pytermstyle import help_row
-from pytermstyle import help_section
-from pytermstyle import help_text
-from pytermstyle import help_usage
+from rich.console import Console
+from rich.table import Table
 
-VERSION = "1.0.0"
+import dotfiles
+from dotfiles import paths
 
 SECTION_SPECS: dict[str, dict[str, Any]] = {
-    "system_packages": {
-        "structure": "list",
-        "required": ["name"],
-        "required_any_of": [("apt", "pacman", "brew", "aur")],
-        "id_field": "name",
+    'system_packages': {
+        'structure': 'list',
+        'required': ['name'],
+        'required_any_of': [('apt', 'pacman', 'brew', 'aur')],
+        'id_field': 'name',
     },
-    "github_releases": {
-        "structure": "list",
-        "required": ["name", "repo"],
+    'github_releases': {
+        'structure': 'list',
+        'required': ['name', 'repo'],
         # Both were carried on nearly every entry while every reader gated on
         # `github_repo`, which this section does not use — so they went unvalidated
         # and drifted into naming assets that no longer existed.
-        "forbidden": {
-            "binary_pattern": "the asset URL comes from the script's get_download_url",
-            "install_dir": "only tmux_plugins.install_dir is read; use binary_link",
+        'forbidden': {
+            'binary_pattern': "the asset URL comes from the script's get_download_url",
+            'install_dir': 'only tmux_plugins.install_dir is read; use binary_link',
         },
-        "id_field": "name",
+        'id_field': 'name',
     },
-    "custom_installers": {
-        "structure": "list",
-        "required": ["name", "source_type", "description"],
-        "id_field": "name",
+    'custom_installers': {
+        'structure': 'list',
+        'required': ['name', 'source_type', 'description'],
+        'id_field': 'name',
     },
-    "cargo_packages": {"structure": "list", "required": ["name"], "id_field": "name"},
-    "npm_globals": {"structure": "dict_of_lists", "required": ["name"], "id_field": "name"},
-    "uv_tools": {"structure": "dict_of_lists", "required": ["name"], "id_field": "name"},
-    "git_uv_tools": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
-    "go_tools": {"structure": "list", "required": ["name", "package"], "id_field": "name"},
-    "shell_plugins": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
-    "tmux_plugins": {"structure": "dict_of_dicts", "required": ["repo", "install_dir"], "id_field": "name"},
-    "mas_apps": {"structure": "list", "required": ["id", "name"], "id_field": "name"},
-    "flatpak_apps": {"structure": "list", "required": ["flatpak_id"], "id_field": "flatpak_id"},
-    "macos_casks": {"structure": "list", "required": ["name"], "id_field": "name"},
+    'cargo_packages': {'structure': 'list', 'required': ['name'], 'id_field': 'name'},
+    'npm_globals': {'structure': 'dict_of_lists', 'required': ['name'], 'id_field': 'name'},
+    'uv_tools': {'structure': 'dict_of_lists', 'required': ['name'], 'id_field': 'name'},
+    'git_uv_tools': {'structure': 'list', 'required': ['name', 'repo'], 'id_field': 'name'},
+    'go_tools': {'structure': 'list', 'required': ['name', 'package'], 'id_field': 'name'},
+    'shell_plugins': {'structure': 'list', 'required': ['name', 'repo'], 'id_field': 'name'},
+    'tmux_plugins': {'structure': 'dict_of_dicts', 'required': ['repo', 'install_dir'], 'id_field': 'name'},
+    'mas_apps': {'structure': 'list', 'required': ['id', 'name'], 'id_field': 'name'},
+    'flatpak_apps': {'structure': 'list', 'required': ['flatpak_id'], 'id_field': 'flatpak_id'},
+    'macos_casks': {'structure': 'list', 'required': ['name'], 'id_field': 'name'},
 }
 
 PACKAGE_SECTIONS = tuple(SECTION_SPECS.keys())
 
 # Sections whose manifest field is a list of names that must resolve to packages.yml entries.
 NAME_SUBSCRIBED_SECTIONS = (
-    "go_tools",
-    "cargo_packages",
-    "npm_globals",
-    "uv_tools",
-    "git_uv_tools",
-    "github_releases",
-    "custom_installers",
+    'go_tools',
+    'cargo_packages',
+    'npm_globals',
+    'uv_tools',
+    'git_uv_tools',
+    'github_releases',
+    'custom_installers',
 )
 
 # Manifest keys that used to gate runtimes but were removed in Phase 1.6.
 # Runtime installation is now derived from name-list presence (e.g. go_tools non-empty → Go).
-DEPRECATED_MANIFEST_KEYS = ("go", "rust", "nvm", "uv", "tenv")
+DEPRECATED_MANIFEST_KEYS = ('go', 'rust', 'nvm', 'uv', 'tenv')
 
 # Sections whose entries have a 1:1 script in a directory under install/common/.
 # Maps section name → subdir name.
 SCRIPT_BACKED_SECTIONS = {
-    "github_releases": "github-releases",
-    "custom_installers": "custom-installers",
+    'github_releases': 'github-releases',
+    'custom_installers': 'custom-installers',
 }
 
 
 class Color(Enum):
     """ANSI color codes."""
 
-    RESET = "\033[0m"
-    RED = "\033[0;31m"
-    CYAN = "\033[0;36m"
-    GREEN = "\033[0;32m"
-    YELLOW = "\033[0;33m"
-    MAGENTA = "\033[0;35m"
-    BRIGHT_CYAN = "\033[0;96m"
-    BRIGHT_MAGENTA = "\033[0;95m"
-    BRIGHT_YELLOW = "\033[0;93m"
-    BRIGHT_BLUE = "\033[0;94m"
-    BRIGHT_BLACK = "\033[0;90m"
-    ORANGE = "\033[38;5;208m"
+    RESET = '\033[0m'
+    RED = '\033[0;31m'
+    CYAN = '\033[0;36m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[0;33m'
+    MAGENTA = '\033[0;35m'
+    BRIGHT_CYAN = '\033[0;96m'
+    BRIGHT_MAGENTA = '\033[0;95m'
+    BRIGHT_YELLOW = '\033[0;93m'
+    BRIGHT_BLUE = '\033[0;94m'
+    BRIGHT_BLACK = '\033[0;90m'
+    ORANGE = '\033[38;5;208m'
 
 
 class InstallStatus(Enum):
     """Package installation status."""
 
-    INSTALLED = "installed"
-    APP_ONLY = "app-only"
-    NOT_INSTALLED = "not-installed"
-    NOT_AVAILABLE = "not-available"
+    INSTALLED = 'installed'
+    APP_ONLY = 'app-only'
+    NOT_INSTALLED = 'not-installed'
+    NOT_AVAILABLE = 'not-available'
 
 
 class Platform(Enum):
     """Supported platforms."""
 
-    MACOS = "macos"
-    ARCH = "archlinux"
-    LINUX = "linux"
-    UNKNOWN = "unknown"
+    MACOS = 'macos'
+    ARCH = 'archlinux'
+    LINUX = 'linux'
+    UNKNOWN = 'unknown'
 
 
 def use_color() -> bool:
     """Check if terminal supports color output."""
-    return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
+    return sys.stdout.isatty() and os.environ.get('TERM', '') != 'dumb'
 
 
 USE_COLOR = use_color()
@@ -144,56 +136,44 @@ USE_COLOR = use_color()
 def colorize(text: str, color: Color) -> str:
     """Apply color to text if terminal supports it."""
     if USE_COLOR:
-        return f"{color.value}{text}{Color.RESET.value}"
+        return f'{color.value}{text}{Color.RESET.value}'
     return text
 
 
 def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
     """Print a section header with underline."""
-    print(f"\n{title}")
-    line_char = "─" if USE_COLOR else "-"
+    print(f'\n{title}')
+    line_char = '─' if USE_COLOR else '-'
     line = line_char * (len(title) + 15)
     print(colorize(line, color) if USE_COLOR else line)
 
 
 def print_header(title: str) -> None:
     """Print a main header with box drawing."""
-    line = "━" * 50
+    line = '━' * 50
     if USE_COLOR:
         print(colorize(line, Color.BRIGHT_CYAN))
-        print(colorize(f" {title}", Color.BRIGHT_CYAN))
+        print(colorize(f' {title}', Color.BRIGHT_CYAN))
         print(colorize(line, Color.BRIGHT_CYAN))
     else:
         print(line)
-        print(f" {title}")
+        print(f' {title}')
         print(line)
 
 
 def get_packages_file(root: Path | None = None) -> Path:
     """Find packages.yml. If root is given, look under <root>/install/; else walk to git root."""
     if root is not None:
-        packages_file = root / "install" / "packages.yml"
+        packages_file = root / 'install' / 'packages.yml'
         if packages_file.exists():
             return packages_file
-        print(f"Error: packages.yml not found at {packages_file}", file=sys.stderr)
+        print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
         sys.exit(1)
 
-    script_path = Path(__file__).resolve()
+    if paths.PACKAGES_FILE.exists():
+        return paths.PACKAGES_FILE
 
-    # Walk up directory tree looking for git root
-    for parent in script_path.parents:
-        if (parent / ".git").exists():
-            packages_file = parent / "install" / "packages.yml"
-            if packages_file.exists():
-                return packages_file
-            break
-
-    # Fallback to home dotfiles
-    home_packages = Path.home() / "dotfiles" / "install" / "packages.yml"
-    if home_packages.exists():
-        return home_packages
-
-    print("Error: packages.yml not found", file=sys.stderr)
+    print('Error: packages.yml not found', file=sys.stderr)
     sys.exit(1)
 
 
@@ -229,9 +209,9 @@ def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
     all_packages = []
     for section in PACKAGE_SECTIONS:
         for pkg in flatten_packages(data, section):
-            if isinstance(pkg, dict) and "name" in pkg:
+            if isinstance(pkg, dict) and 'name' in pkg:
                 pkg_copy = dict(pkg)
-                pkg_copy["_section"] = section
+                pkg_copy['_section'] = section
                 all_packages.append(pkg_copy)
     return all_packages
 
@@ -239,10 +219,10 @@ def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
 def get_current_platform() -> Platform:
     """Detect the current operating system platform."""
     system = platform.system()
-    if system == "Darwin":
+    if system == 'Darwin':
         return Platform.MACOS
-    if system == "Linux":
-        if Path("/etc/arch-release").exists():
+    if system == 'Linux':
+        if Path('/etc/arch-release').exists():
             return Platform.ARCH
         return Platform.LINUX
     return Platform.UNKNOWN
@@ -250,12 +230,12 @@ def get_current_platform() -> Platform:
 
 def is_available_on_platform(pkg: dict[str, Any]) -> bool:
     """Check if package is available on the current platform."""
-    section = pkg.get("_section", "")
+    section = pkg.get('_section', '')
     current = get_current_platform()
 
     # Platform-exclusive sections
-    macos_only = ("macos_casks", "mas_apps")
-    linux_only = ("flatpak_apps",)
+    macos_only = ('macos_casks', 'mas_apps')
+    linux_only = ('flatpak_apps',)
 
     if section in macos_only and current != Platform.MACOS:
         return False
@@ -263,12 +243,12 @@ def is_available_on_platform(pkg: dict[str, Any]) -> bool:
         return False
 
     # System packages must have an entry for the current package manager
-    if section == "system_packages":
+    if section == 'system_packages':
         if current == Platform.MACOS:
-            return "brew" in pkg
+            return 'brew' in pkg
         if current == Platform.ARCH:
-            return "pacman" in pkg or "aur" in pkg
-        return "apt" in pkg  # Linux/Ubuntu default
+            return 'pacman' in pkg or 'aur' in pkg
+        return 'apt' in pkg  # Linux/Ubuntu default
 
     return True
 
@@ -278,12 +258,12 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     if not is_available_on_platform(pkg):
         return InstallStatus.NOT_AVAILABLE, None
 
-    name = pkg.get("name", "")
-    cmd_name = pkg.get("command", name)
-    section = pkg.get("_section", "")
+    name = pkg.get('name', '')
+    cmd_name = pkg.get('command', name)
+    section = pkg.get('_section', '')
 
     # Check binary_link field (used by github_releases)
-    binary_link = pkg.get("binary_link", "")
+    binary_link = pkg.get('binary_link', '')
     if binary_link:
         link_path = Path(binary_link).expanduser()
         if link_path.exists():
@@ -292,7 +272,7 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     # An explicit path, for the entries that install no binary at all — a sourced
     # bash library has nothing for `which` to find, and would read as missing
     # forever.
-    installed_path = pkg.get("installed_path", "")
+    installed_path = pkg.get('installed_path', '')
     if installed_path:
         target = Path(installed_path).expanduser()
         if target.exists():
@@ -307,13 +287,13 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     # uv installs a tool per directory, and some of them are libraries pulled in
     # for another tool's benefit (numpy for the Jupyter stack) with no console
     # script of their own.
-    if section in ("uv_tools", "git_uv_tools"):
-        uv_dir = Path(os.environ.get("UV_TOOL_DIR", Path.home() / ".local/share/uv/tools")) / name
+    if section in ('uv_tools', 'git_uv_tools'):
+        uv_dir = Path(os.environ.get('UV_TOOL_DIR', Path.home() / '.local/share/uv/tools')) / name
         if uv_dir.is_dir():
             return InstallStatus.INSTALLED, str(uv_dir)
 
     # Check macOS application bundles
-    if section in ("macos_casks", "mas_apps"):
+    if section in ('macos_casks', 'mas_apps'):
         app_path = find_macos_app(name)
         if app_path:
             return InstallStatus.APP_ONLY, str(app_path)
@@ -323,8 +303,8 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
 
 def find_macos_app(name: str) -> Path | None:
     """Find a macOS .app bundle by name (case-insensitive)."""
-    target = f"{name}.app".lower()
-    for base in (Path("/Applications"), Path.home() / "Applications"):
+    target = f'{name}.app'.lower()
+    for base in (Path('/Applications'), Path.home() / 'Applications'):
         if not base.exists():
             continue
         for entry in base.iterdir():
@@ -336,22 +316,20 @@ def find_macos_app(name: str) -> Path | None:
 def format_status(status: InstallStatus, path: str | None) -> str | None:
     """Format installation status for display."""
     if status == InstallStatus.INSTALLED:
-        return colorize(f"✓ {path}", Color.GREEN)
+        return colorize(f'✓ {path}', Color.GREEN)
     if status == InstallStatus.APP_ONLY:
-        return colorize(f"⚠ app exists but CLI not in PATH: {path}", Color.YELLOW)
+        return colorize(f'⚠ app exists but CLI not in PATH: {path}', Color.YELLOW)
     if status == InstallStatus.NOT_AVAILABLE:
         return None
-    return colorize("✗ not installed", Color.BRIGHT_BLACK)
+    return colorize('✗ not installed', Color.BRIGHT_BLACK)
 
 
-def calculate_column_widths(
-    items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None
-) -> dict[str, int]:
+def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
     """Calculate optimal column widths for a list of items."""
     max_widths = max_widths or {}
     widths = {}
     for field in fields:
-        width = max(len(str(item.get(field, ""))) for item in items) + 2
+        width = max(len(str(item.get(field, ''))) for item in items) + 2
         if field in max_widths:
             width = min(width, max_widths[field])
         widths[field] = width
@@ -365,66 +343,66 @@ def calculate_column_widths(
 
 def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List all package sections with counts."""
-    print_section("Package Sections")
+    print_section('Package Sections')
     print()
     for section in PACKAGE_SECTIONS:
         packages = flatten_packages(data, section)
         if packages:
-            print(f"  {section:<20} {len(packages):3d} packages")
+            print(f'  {section:<20} {len(packages):3d} packages')
 
 
 def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Show package statistics by section."""
-    print_section("Package Statistics")
+    print_section('Package Statistics')
     print()
 
-    print(f"{'Section':<24} {'Count':>5}")
-    print("─" * 32)
+    print(f'{"Section":<24} {"Count":>5}')
+    print('─' * 32)
 
     total = 0
     for section in PACKAGE_SECTIONS:
         count = len(flatten_packages(data, section))
         if count:
-            print(f"{section:<24} {count:5d}")
+            print(f'{section:<24} {count:5d}')
             total += count
 
-    print("─" * 32)
-    print(f"{'Total':<24} {total:5d}")
+    print('─' * 32)
+    print(f'{"Total":<24} {total:5d}')
 
 
 def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List all tags with package counts."""
-    print_section("Available Tags")
+    print_section('Available Tags')
     print()
 
     tag_counts: Counter[str] = Counter()
     for pkg in get_all_packages(data):
-        tag_counts.update(pkg.get("tags", []))
+        tag_counts.update(pkg.get('tags', []))
 
     if not tag_counts:
-        print("  No tags defined yet.")
+        print('  No tags defined yet.')
         print()
-        print("  Add tags to packages.yml entries:")
-        print("    - name: ghostty")
-        print("      description: GPU-accelerated terminal")
-        print("      tags: [gui, terminal]")
+        print('  Add tags to packages.yml entries:')
+        print('    - name: ghostty')
+        print('      description: GPU-accelerated terminal')
+        print('      tags: [gui, terminal]')
         return
 
     for tag, count in tag_counts.most_common():
-        print(f"  {tag:<16} {count:3d} packages")
+        print(f'  {tag:<16} {count:3d} packages')
 
 
 def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Show details for a specific package."""
     name_lower = args.name.lower()
-    matches = [p for p in get_all_packages(data) if p.get("name", "").lower() == name_lower]
+    matches = [p for p in get_all_packages(data) if p.get('name', '').lower() == name_lower]
 
     if not matches:
-        print(f"Error: Package not found: {args.name}", file=sys.stderr)
-        print("\nSimilar packages:", file=sys.stderr)
-        similar = [p for p in get_all_packages(data) if name_lower in p.get("name", "").lower()]
+        print(f'Error: Package not found: {args.name}', file=sys.stderr)
+        print('\nSimilar packages:', file=sys.stderr)
+        similar = [p for p in get_all_packages(data) if name_lower in p.get('name', '').lower()]
         for pkg in similar[:5]:
-            print(f"  {pkg['name']:<28} {pkg.get('description', '')}", file=sys.stderr)
+            print(f'  {pkg["name"]:<28} {pkg.get("description", "")}', file=sys.stderr)
         sys.exit(1)
 
     # Sort with available-on-this-platform first
@@ -432,33 +410,33 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
     for pkg in matches:
         print()
-        print(colorize(f"Package: {pkg['name']}", Color.CYAN))
-        print("━" * 40)
+        print(colorize(f'Package: {pkg["name"]}', Color.CYAN))
+        print('━' * 40)
         print()
 
-        print(f"Description: {pkg.get('description', 'N/A')}")
-        print(f"Section:     {pkg['_section']}")
-        print(f"Tags:        {', '.join(pkg.get('tags', [])) or 'none'}")
+        print(f'Description: {pkg.get("description", "N/A")}')
+        print(f'Section:     {pkg["_section"]}')
+        print(f'Tags:        {", ".join(pkg.get("tags", [])) or "none"}')
 
         # Platform package names
-        platform_fields = ("apt", "brew", "pacman", "aur")
+        platform_fields = ('apt', 'brew', 'pacman', 'aur')
         platforms = [(f, pkg[f]) for f in platform_fields if f in pkg]
         if platforms:
-            print("\nPlatform Packages:")
+            print('\nPlatform Packages:')
             for field, value in platforms:
-                print(f"  {field}:    {value}")
+                print(f'  {field}:    {value}')
 
         # Additional metadata fields
-        for field, label in (("package", "Package"), ("repo", "Repository"), ("github_repo", "GitHub")):
+        for field, label in (('package', 'Package'), ('repo', 'Repository'), ('github_repo', 'GitHub')):
             if field in pkg:
-                print(f"{label}:     {pkg[field]}")
+                print(f'{label}:     {pkg[field]}')
 
         # Installation status
         if is_available_on_platform(pkg):
             status, path = check_installed(pkg)
             status_str = format_status(status, path)
             if status_str:
-                print(f"\nStatus:      {status_str}")
+                print(f'\nStatus:      {status_str}')
 
         print()
 
@@ -466,28 +444,28 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
 def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Search packages by name."""
     query_lower = args.query.lower()
-    results = [p for p in get_all_packages(data) if query_lower in p.get("name", "").lower()]
+    results = [p for p in get_all_packages(data) if query_lower in p.get('name', '').lower()]
 
     if not results:
-        print(f"No packages found matching: {args.query}")
+        print(f'No packages found matching: {args.query}')
         return
 
-    widths = calculate_column_widths(results, ["name", "_section"])
+    widths = calculate_column_widths(results, ['name', '_section'])
 
     for pkg in results:
-        name = pkg.get("name", "")
-        desc = pkg.get("description", "")
-        section = pkg.get("_section", "")
-        tags = pkg.get("tags", [])
+        name = pkg.get('name', '')
+        desc = pkg.get('description', '')
+        section = pkg.get('_section', '')
+        tags = pkg.get('tags', [])
 
         status, path = check_installed(pkg)
         status_str = format_status(status, path)
-        tags_str = f"[{', '.join(tags)}]" if tags else ""
+        tags_str = f'[{", ".join(tags)}]' if tags else ''
 
-        print(f"{name:<{widths['name']}} {section:<{widths['_section']}} {tags_str}")
-        print(f"  {desc}")
+        print(f'{name:<{widths["name"]}} {section:<{widths["_section"]}} {tags_str}')
+        print(f'  {desc}')
         if status_str:
-            print(f"  {status_str}")
+            print(f'  {status_str}')
         print()
 
 
@@ -495,19 +473,19 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List packages with optional filters."""
     # Validate section filter
     if args.section and args.section not in PACKAGE_SECTIONS:
-        print(f"Error: Unknown section: {args.section}", file=sys.stderr)
-        print("\nAvailable sections:", file=sys.stderr)
+        print(f'Error: Unknown section: {args.section}', file=sys.stderr)
+        print('\nAvailable sections:', file=sys.stderr)
         for s in PACKAGE_SECTIONS:
-            print(f"  {s}", file=sys.stderr)
+            print(f'  {s}', file=sys.stderr)
         sys.exit(1)
 
     # Determine which sections to query
     if args.section:
         sections = [args.section]
-    elif args.platform == "macos":
-        sections = [s for s in PACKAGE_SECTIONS if s != "flatpak_apps"]
-    elif args.platform == "linux":
-        sections = [s for s in PACKAGE_SECTIONS if s not in ("macos_casks", "mas_apps")]
+    elif args.platform == 'macos':
+        sections = [s for s in PACKAGE_SECTIONS if s != 'flatpak_apps']
+    elif args.platform == 'linux':
+        sections = [s for s in PACKAGE_SECTIONS if s not in ('macos_casks', 'mas_apps')]
     else:
         sections = list(PACKAGE_SECTIONS)
 
@@ -515,37 +493,39 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     results = []
     for section in sections:
         for pkg in flatten_packages(data, section):
-            if not isinstance(pkg, dict) or "name" not in pkg:
+            if not isinstance(pkg, dict) or 'name' not in pkg:
                 continue
-            if args.tag and args.tag not in pkg.get("tags", []):
+            if args.tag and args.tag not in pkg.get('tags', []):
                 continue
-            results.append({
-                "name": pkg["name"],
-                "description": pkg.get("description", ""),
-                "section": section,
-                "tags": pkg.get("tags", []),
-            })
+            results.append(
+                {
+                    'name': pkg['name'],
+                    'description': pkg.get('description', ''),
+                    'section': section,
+                    'tags': pkg.get('tags', []),
+                }
+            )
 
     if args.json:
         print(json.dumps(results, indent=2))
         return
 
     if not results:
-        print("No packages found")
+        print('No packages found')
         return
 
-    widths = calculate_column_widths(results, ["name", "section"], max_widths={"name": 30})
+    widths = calculate_column_widths(results, ['name', 'section'], max_widths={'name': 30})
 
     if args.verbose:
-        print(f"{'Name':<{widths['name']}} {'Section':<{widths['section']}} {'Description':<35} Tags")
-        print("─" * (widths["name"] + widths["section"] + 50))
+        print(f'{"Name":<{widths["name"]}} {"Section":<{widths["section"]}} {"Description":<35} Tags')
+        print('─' * (widths['name'] + widths['section'] + 50))
         for pkg in results:
-            tags_str = ", ".join(pkg["tags"])
-            desc = pkg["description"][:35]
-            print(f"{pkg['name']:<{widths['name']}} {pkg['section']:<{widths['section']}} {desc:<35} {tags_str}")
+            tags_str = ', '.join(pkg['tags'])
+            desc = pkg['description'][:35]
+            print(f'{pkg["name"]:<{widths["name"]}} {pkg["section"]:<{widths["section"]}} {desc:<35} {tags_str}')
     else:
         for pkg in results:
-            print(f"{pkg['name']:<{widths['name']}} {pkg['description']}")
+            print(f'{pkg["name"]:<{widths["name"]}} {pkg["description"]}')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -558,7 +538,7 @@ def resolve_repo_root(override: str | None = None) -> Path:
     if override:
         root = Path(override).resolve()
         if not root.exists():
-            print(f"Error: --root path does not exist: {root}", file=sys.stderr)
+            print(f'Error: --root path does not exist: {root}', file=sys.stderr)
             sys.exit(1)
         return root
     return get_packages_file().parent.parent
@@ -566,11 +546,11 @@ def resolve_repo_root(override: str | None = None) -> Path:
 
 def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
     """Load all manifests from <root>/install/manifests/*.yml, keyed by stem."""
-    manifests_dir = root / "install" / "manifests"
+    manifests_dir = root / 'install' / 'manifests'
     if not manifests_dir.exists():
         return {}
     manifests: dict[str, dict[str, Any]] = {}
-    for manifest_file in sorted(manifests_dir.glob("*.yml")):
+    for manifest_file in sorted(manifests_dir.glob('*.yml')):
         with manifest_file.open() as f:
             manifests[manifest_file.stem] = yaml.safe_load(f) or {}
     return manifests
@@ -578,10 +558,10 @@ def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
 
 def list_installer_scripts(root: Path, subdir: str) -> set[str]:
     """Return the stem (filename without .sh) of every *.sh in install/common/<subdir>/."""
-    script_dir = root / "install" / "common" / subdir
+    script_dir = root / 'install' / 'common' / subdir
     if not script_dir.exists():
         return set()
-    return {p.stem for p in script_dir.glob("*.sh")}
+    return {p.stem for p in script_dir.glob('*.sh')}
 
 
 def iter_section_entries(data: dict[str, Any], section: str):
@@ -589,37 +569,32 @@ def iter_section_entries(data: dict[str, Any], section: str):
     flatten subcategories. For dict-of-dicts (tmux_plugins), synthesize a 'name'
     field from the outer key so downstream checks work uniformly."""
     spec = SECTION_SPECS.get(section, {})
-    structure = spec.get("structure")
+    structure = spec.get('structure')
     section_data = data.get(section)
     if section_data is None:
         return
 
-    if structure == "list":
+    if structure == 'list':
         if isinstance(section_data, list):
             yield from section_data
-    elif structure == "dict_of_lists":
+    elif structure == 'dict_of_lists':
         if isinstance(section_data, dict):
             for category in section_data.values():
                 if isinstance(category, list):
                     yield from category
-    elif structure == "dict_of_dicts":
-        if isinstance(section_data, dict):
-            for key, entry in section_data.items():
-                if isinstance(entry, dict):
-                    yield {"name": key, **entry}
+    elif structure == 'dict_of_dicts' and isinstance(section_data, dict):
+        for key, entry in section_data.items():
+            if isinstance(entry, dict):
+                yield {'name': key, **entry}
 
 
 def get_section_ids(data: dict[str, Any], section: str) -> set[str]:
     """Return the set of id_field values for a section (e.g., names for most sections)."""
-    id_field = SECTION_SPECS[section]["id_field"]
-    return {
-        entry[id_field]
-        for entry in iter_section_entries(data, section)
-        if isinstance(entry, dict) and id_field in entry
-    }
+    id_field = SECTION_SPECS[section]['id_field']
+    return {entry[id_field] for entry in iter_section_entries(data, section) if isinstance(entry, dict) and id_field in entry}
 
 
-VERSION_CONSTRAINTS = ("version", "min_version", "max_version")
+VERSION_CONSTRAINTS = ('version', 'min_version', 'max_version')
 
 # Which constraint keys each section honours today. Enforcement arrives per
 # section because each one pins by a different mechanism, and a key declared
@@ -627,15 +602,15 @@ VERSION_CONSTRAINTS = ("version", "min_version", "max_version")
 # packages.yml unread until a URL audit found them, one of them eight versions
 # stale. .planning/version-constraints.md carries the vocabulary.
 HONOURED_CONSTRAINTS: dict[str, tuple[str, ...]] = {
-    "github_releases": ("version",),
+    'github_releases': ('version',),
 }
 
 # Floors that predate enforcement. Both are satisfied, so they mislead nobody,
 # and naming them here keeps the information alive for the resolver instead of
 # deleting it to silence a check.
 GRANDFATHERED_CONSTRAINTS = {
-    ("github_releases", "neovim", "min_version"),
-    ("github_releases", "fzf", "min_version"),
+    ('github_releases', 'neovim', 'min_version'),
+    ('github_releases', 'fzf', 'min_version'),
 }
 
 
@@ -648,63 +623,82 @@ def check_version_constraints(section: str, label: str, entry: dict[str, Any], i
     for key in declared:
         if key in honoured or (section, label, key) in GRANDFATHERED_CONSTRAINTS:
             continue
-        issues.append((section, "error",
-                       f"{label}: '{key}' is declared but nothing honours it for {section}. "
-                       f"Remove it, or make it real and widen HONOURED_CONSTRAINTS in the same change."))
+        issues.append(
+            (
+                section,
+                'error',
+                f"{label}: '{key}' is declared but nothing honours it for {section}. "
+                f'Remove it, or make it real and widen HONOURED_CONSTRAINTS in the same change.',
+            )
+        )
 
-    if "version" in entry and ({"min_version", "max_version"} & entry.keys()):
-        issues.append((section, "error",
-                       f"{label}: 'version' pins exactly, so a floor or ceiling beside it "
-                       f"describes a window nobody can predict. Declare one or the other."))
+    if 'version' in entry and ({'min_version', 'max_version'} & entry.keys()):
+        issues.append(
+            (
+                section,
+                'error',
+                f"{label}: 'version' pins exactly, so a floor or ceiling beside it "
+                f'describes a window nobody can predict. Declare one or the other.',
+            )
+        )
 
     for key in declared:
         value = str(entry[key])
-        if value.startswith("v") or "/" in value:
-            issues.append((section, "error",
-                           f"{label}: '{key}' is '{value}', which is a tag. Constraints are bare "
-                           f"versions — resolving one to this tool's tag spelling is the resolver's job."))
+        if value.startswith('v') or '/' in value:
+            issues.append(
+                (
+                    section,
+                    'error',
+                    f"{label}: '{key}' is '{value}', which is a tag. Constraints are bare "
+                    f"versions — resolving one to this tool's tag spelling is the resolver's job.",
+                )
+            )
 
 
 def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[str, str, str]]) -> None:
     """Tier 1 checks 1 and 2: required fields + no duplicate ids within a section."""
     spec = SECTION_SPECS[section]
-    required = spec.get("required", [])
-    required_any_of = spec.get("required_any_of", [])
-    forbidden = spec.get("forbidden", {})
-    id_field = spec["id_field"]
+    required = spec.get('required', [])
+    required_any_of = spec.get('required_any_of', [])
+    forbidden = spec.get('forbidden', {})
+    id_field = spec['id_field']
 
     seen_ids: Counter[str] = Counter()
     for idx, entry in enumerate(iter_section_entries(data, section)):
         if not isinstance(entry, dict):
-            issues.append((section, "error", f"entry #{idx} is not a mapping"))
+            issues.append((section, 'error', f'entry #{idx} is not a mapping'))
             continue
-        label = entry.get(id_field) or entry.get("name") or f"entry #{idx}"
+        label = entry.get(id_field) or entry.get('name') or f'entry #{idx}'
 
         for field in required:
             if field not in entry:
-                issues.append((section, "error", f"{label}: missing required field '{field}'"))
+                issues.append((section, 'error', f"{label}: missing required field '{field}'"))
 
         for any_of_group in required_any_of:
             if not any(f in entry for f in any_of_group):
-                issues.append((section, "error",
-                               f"{label}: must have at least one of {list(any_of_group)}"))
+                issues.append((section, 'error', f'{label}: must have at least one of {list(any_of_group)}'))
 
         check_version_constraints(section, str(label), entry, issues)
 
         for field, reason in forbidden.items():
             if field in entry:
-                issues.append((section, "error",
-                               f"{label}: field '{field}' is read by no code — {reason}. "
-                               f"Remove it; a field that only looks like config drifts unnoticed."))
+                issues.append(
+                    (
+                        section,
+                        'error',
+                        f"{label}: field '{field}' is read by no code — {reason}. "
+                        f'Remove it; a field that only looks like config drifts unnoticed.',
+                    )
+                )
 
         if id_field in entry:
             seen_ids[entry[id_field]] += 1
 
     # dict_of_dicts uses the YAML key as id, which is already unique
-    if spec["structure"] != "dict_of_dicts":
+    if spec['structure'] != 'dict_of_dicts':
         for key, count in seen_ids.items():
             if count > 1:
-                issues.append((section, "error", f"duplicate {id_field}: '{key}' appears {count}x"))
+                issues.append((section, 'error', f"duplicate {id_field}: '{key}' appears {count}x"))
 
 
 def check_manifest_name_resolution(
@@ -724,8 +718,9 @@ def check_manifest_name_resolution(
                 continue
             for name in value:
                 if name not in section_ids[section]:
-                    issues.append((section, "error",
-                                   f"manifest '{manifest_name}' names '{name}' but no packages.yml {section} entry exists"))
+                    issues.append(
+                        (section, 'error', f"manifest '{manifest_name}' names '{name}' but no packages.yml {section} entry exists")
+                    )
 
 
 def check_script_parity(
@@ -739,12 +734,12 @@ def check_script_parity(
         scripts = scripts_by_section.get(section, set())
 
         for script_name in sorted(scripts - section_ids):
-            issues.append((section, "error",
-                           f"install/common/{subdir}/{script_name}.sh exists but no packages.yml {section} entry"))
+            issues.append((section, 'error', f'install/common/{subdir}/{script_name}.sh exists but no packages.yml {section} entry'))
 
         for entry_name in sorted(section_ids - scripts):
-            issues.append((section, "error",
-                           f"packages.yml {section} entry '{entry_name}' has no install/common/{subdir}/{entry_name}.sh script"))
+            issues.append(
+                (section, 'error', f"packages.yml {section} entry '{entry_name}' has no install/common/{subdir}/{entry_name}.sh script")
+            )
 
 
 def check_deprecated_manifest_keys(
@@ -756,9 +751,13 @@ def check_deprecated_manifest_keys(
     for manifest_name, manifest in manifests.items():
         for key in DEPRECATED_MANIFEST_KEYS:
             if key in manifest:
-                issues.append(("manifest", "error",
-                               f"manifest '{manifest_name}' uses removed key '{key}:' "
-                               f"— install is now derived from the corresponding name-list"))
+                issues.append(
+                    (
+                        'manifest',
+                        'error',
+                        f"manifest '{manifest_name}' uses removed key '{key}:' — install is now derived from the corresponding name-list",
+                    )
+                )
 
 
 def check_unreferenced_entries(
@@ -778,8 +777,7 @@ def check_unreferenced_entries(
                 referenced.update(value)
         pkg_ids = get_section_ids(data, section)
         for name in sorted(pkg_ids - referenced):
-            issues.append((section, "warning",
-                           f"'{name}' defined in packages.yml but not referenced by any manifest"))
+            issues.append((section, 'warning', f"'{name}' defined in packages.yml but not referenced by any manifest"))
 
 
 def iter_manifest_declared_entries(data: dict[str, Any], manifest: dict[str, Any]):
@@ -795,8 +793,8 @@ def iter_manifest_declared_entries(data: dict[str, Any], manifest: dict[str, Any
             continue
         wanted = set(declared)
         for entry in iter_section_entries(data, section):
-            if isinstance(entry, dict) and entry.get("name") in wanted:
-                yield section, {**entry, "_section": section}
+            if isinstance(entry, dict) and entry.get('name') in wanted:
+                yield section, {**entry, '_section': section}
 
 
 def cmd_missing(args: argparse.Namespace, data: dict[str, Any]) -> None:
@@ -809,37 +807,37 @@ def cmd_missing(args: argparse.Namespace, data: dict[str, Any]) -> None:
     declines to install, and the one `doctor` needs to earn its summary line.
     """
     root = resolve_repo_root(args.root)
-    machine = args.machine or os.environ.get("MACHINE")
+    machine = args.machine or os.environ.get('MACHINE')
     if not machine:
-        print("Error: no machine given — pass --machine or set MACHINE", file=sys.stderr)
+        print('Error: no machine given — pass --machine or set MACHINE', file=sys.stderr)
         sys.exit(1)
 
     manifests = load_manifests(root)
     if machine not in manifests:
-        print(f"Error: manifest not found: {machine}", file=sys.stderr)
+        print(f'Error: manifest not found: {machine}', file=sys.stderr)
         sys.exit(1)
 
     missing: list[tuple[str, str]] = []
     for section, entry in iter_manifest_declared_entries(data, manifests[machine]):
         status, _ = check_installed(entry)
         if status is InstallStatus.NOT_INSTALLED:
-            missing.append((section, entry["name"]))
+            missing.append((section, entry['name']))
 
     if args.json:
-        print(json.dumps([{"section": s, "name": n} for s, n in missing], indent=2))
+        print(json.dumps([{'section': s, 'name': n} for s, n in missing], indent=2))
         sys.exit(0)
 
     if not missing:
-        print(colorize(f"✓ every package {machine} declares is installed", Color.GREEN))
+        print(colorize(f'✓ every package {machine} declares is installed', Color.GREEN))
         sys.exit(0)
 
-    print_section(f"Declared by {machine} but not installed", Color.YELLOW)
+    print_section(f'Declared by {machine} but not installed', Color.YELLOW)
     width = max(len(section) for section, _ in missing)
     for section, name in missing:
-        print(f"  {colorize(section.ljust(width), Color.BRIGHT_BLACK)}  {name}")
+        print(f'  {colorize(section.ljust(width), Color.BRIGHT_BLACK)}  {name}')
     print()
-    print(colorize(f"⚠ {len(missing)} not installed", Color.YELLOW))
-    print("Install them with: dotfiles install")
+    print(colorize(f'⚠ {len(missing)} not installed', Color.YELLOW))
+    print('Install them with: dotfiles install')
     sys.exit(1)
 
 
@@ -849,10 +847,7 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     # Reload from the resolved root to guarantee data matches root when --root overrides default
     data = load_packages(root=root)
     manifests = load_manifests(root)
-    scripts_by_section = {
-        section: list_installer_scripts(root, subdir)
-        for section, subdir in SCRIPT_BACKED_SECTIONS.items()
-    }
+    scripts_by_section = {section: list_installer_scripts(root, subdir) for section, subdir in SCRIPT_BACKED_SECTIONS.items()}
 
     issues: list[tuple[str, str, str]] = []  # (section, severity, message)
 
@@ -865,152 +860,174 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     check_deprecated_manifest_keys(manifests, issues)
     check_unreferenced_entries(data, manifests, issues)
 
-    errors = [i for i in issues if i[1] == "error"]
-    warnings = [i for i in issues if i[1] == "warning"]
+    errors = [i for i in issues if i[1] == 'error']
+    warnings = [i for i in issues if i[1] == 'warning']
 
     by_section: dict[str, list[tuple[str, str]]] = {}
     for section, severity, message in issues:
         by_section.setdefault(section, []).append((severity, message))
 
     for section in sorted(by_section):
-        print(f"\n{colorize(section, Color.BRIGHT_CYAN)}", file=sys.stderr)
+        print(f'\n{colorize(section, Color.BRIGHT_CYAN)}', file=sys.stderr)
         for severity, message in by_section[section]:
-            if severity == "error":
-                marker = colorize("error", Color.RED)
+            if severity == 'error':
+                marker = colorize('error', Color.RED)
             else:
-                marker = colorize("warn ", Color.YELLOW)
-            print(f"  [{marker}] {message}", file=sys.stderr)
+                marker = colorize('warn ', Color.YELLOW)
+            print(f'  [{marker}] {message}', file=sys.stderr)
 
     if issues:
         print(file=sys.stderr)
 
-    summary = f"{len(errors)} errors, {len(warnings)} warnings"
+    summary = f'{len(errors)} errors, {len(warnings)} warnings'
     if not errors and not warnings:
-        summary = colorize(f"✓ {summary}", Color.GREEN)
+        summary = colorize(f'✓ {summary}', Color.GREEN)
     elif errors:
-        summary = colorize(f"✗ {summary}", Color.RED)
+        summary = colorize(f'✗ {summary}', Color.RED)
     else:
-        summary = colorize(f"⚠ {summary}", Color.YELLOW)
+        summary = colorize(f'⚠ {summary}', Color.YELLOW)
     print(summary)
 
     sys.exit(1 if errors else 0)
 
 
+HELP_SECTIONS = (
+    (
+        'Commands',
+        (
+            ('packages list', '', 'List all packages'),
+            ('packages show', '<name>', 'Show package details'),
+            ('packages search', '<query>', 'Search by name'),
+            ('packages sections', '', 'List all sections'),
+            ('packages stats', '', 'Show package counts'),
+            ('packages tags', '', 'List all tags with counts'),
+            ('packages verify', '', 'Check drift between packages.yml, manifests, and scripts'),
+            ('packages missing', '', 'Show what this machine declares but has not installed'),
+        ),
+    ),
+    (
+        'List filters',
+        (
+            ('--section', '<section>', 'Filter by section'),
+            ('--tag', '<tag>', 'Filter by tag (gui, cli, terminal, etc.)'),
+            ('--platform', '<plat>', 'Filter by platform (macos, linux, all)'),
+            ('--verbose', '', 'Show section, tags, platform'),
+            ('--json', '', 'Output as JSON'),
+        ),
+    ),
+    (
+        'Examples',
+        (
+            ('packages list --section=go_tools', '', 'Just Go tools'),
+            ('packages list --tag=terminal', '', 'Terminal emulators'),
+            ('packages list --platform=macos', '', 'macOS packages'),
+            ('packages show ghostty', '', 'Package details'),
+            ('packages search neovim', '', 'Find by name'),
+        ),
+    ),
+    (
+        'Tag vocabulary',
+        (
+            ('Interface', '', 'gui, cli, tui'),
+            ('Environment', '', 'terminal, browser, editor'),
+            ('Purpose', '', 'lsp, linter, formatter, build, search, monitoring'),
+            ('Type', '', 'font, plugin, runtime'),
+        ),
+    ),
+)
+
+
 def show_help() -> None:
-    """Show main help with examples."""
-    help_header("packages", "Browse and search packages across all sections and platforms.")
-    help_usage("packages <command> [FILTERS]")
+    """Render help through rich, whose tables compute their own column widths.
 
-    help_section("Commands")
-    help_row("packages", "", "Show this help")
-    help_row("packages list", "", "List all packages")
-    help_row("packages show", "<name>", "Show package details")
-    help_row("packages search", "<query>", "Search by name")
-    help_row("packages sections", "", "List all sections")
-    help_row("packages stats", "", "Show package counts")
-    help_row("packages tags", "", "List all tags with counts")
-    help_row("packages verify", "", "Check drift between packages.yml, manifests, and scripts")
-    help_row("packages missing", "", "Show what this machine declares but has not installed")
+    A typed width is a misalignment waiting for the first entry that outgrows it,
+    which is why the shell side computes one too.
+    """
+    console = Console()
+    console.print('[bold]packages[/] — browse and search packages across all sections and platforms')
+    console.print('\n[bold]Usage:[/] packages <command> [FILTERS]')
 
-    help_section("List Filters")
-    help_row("--section", "<section>", "Filter by section")
-    help_row("--tag", "<tag>", "Filter by tag (gui, cli, terminal, etc.)")
-    help_row("--platform", "<plat>", "Filter by platform (macos, linux, all)")
-    help_row("--verbose", "", "Show section, tags, platform")
-    help_row("--json", "", "Output as JSON")
+    for heading, rows in HELP_SECTIONS:
+        table = Table(show_header=False, box=None, padding=(0, 2, 0, 0), title=f'\n[bold]{heading}[/]', title_justify='left')
+        for name, argument, summary in rows:
+            table.add_row(f'[cyan]{name}[/]', argument, summary)
+        console.print(table)
 
-    help_section("Examples")
-    help_row("packages list", "", "# All packages")
-    help_row("packages list --section=go_tools", "", "# Just Go tools")
-    help_row("packages list --tag=terminal", "", "# Terminal emulators")
-    help_row("packages list --platform=macos", "", "# macOS packages")
-    help_row("packages show ghostty", "", "# Package details")
-    help_row("packages search neovim", "", "# Find by name")
-
-    help_section("Tag Vocabulary")
-    help_row("Interface", "", "gui, cli, tui")
-    help_row("Environment", "", "terminal, browser, editor")
-    help_row("Purpose", "", "lsp, linter, formatter, build, search, monitoring")
-    help_row("Type", "", "font, plugin, runtime")
-
-    help_section("Files")
-    help_text(f"  Config: {get_packages_file()}")
-
-    help_end()
+    console.print(f'\n[bold]Catalog:[/] {get_packages_file()}')
 
 
 def main() -> None:
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
-        prog="packages",
-        description="Query packages.yml for browsing and discovery",
+        prog='packages',
+        description='Query packages.yml for browsing and discovery',
         add_help=False,
     )
-    parser.add_argument("--help", "-h", action="store_true", help="Show help")
-    parser.add_argument("--version", "-V", action="store_true", help="Show version")
+    parser.add_argument('--help', '-h', action='store_true', help='Show help')
+    parser.add_argument('--version', '-V', action='store_true', help='Show version')
 
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest='command')
 
     # sections command
-    sections_parser = subparsers.add_parser("sections", help="List all sections")
+    sections_parser = subparsers.add_parser('sections', help='List all sections')
     sections_parser.set_defaults(func=cmd_sections)
 
     # stats command
-    stats_parser = subparsers.add_parser("stats", help="Show package counts")
+    stats_parser = subparsers.add_parser('stats', help='Show package counts')
     stats_parser.set_defaults(func=cmd_stats)
 
     # tags command
-    tags_parser = subparsers.add_parser("tags", help="List all tags")
+    tags_parser = subparsers.add_parser('tags', help='List all tags')
     tags_parser.set_defaults(func=cmd_tags)
 
     # show command
-    show_parser = subparsers.add_parser("show", help="Show package details")
-    show_parser.add_argument("name", help="Package name")
+    show_parser = subparsers.add_parser('show', help='Show package details')
+    show_parser.add_argument('name', help='Package name')
     show_parser.set_defaults(func=cmd_show)
 
     # search command
-    search_parser = subparsers.add_parser("search", aliases=["find"], help="Search packages")
-    search_parser.add_argument("query", help="Search query")
+    search_parser = subparsers.add_parser('search', aliases=['find'], help='Search packages')
+    search_parser.add_argument('query', help='Search query')
     search_parser.set_defaults(func=cmd_search)
 
     # list command
-    list_parser = subparsers.add_parser("list", aliases=["ls"], help="List packages")
-    list_parser.add_argument("--section", help="Filter by section")
-    list_parser.add_argument("--tag", help="Filter by tag")
-    list_parser.add_argument("--platform", choices=["macos", "linux", "all"], help="Filter by platform")
-    list_parser.add_argument("--verbose", "-v", action="store_true", help="Show details")
-    list_parser.add_argument("--json", action="store_true", help="Output as JSON")
+    list_parser = subparsers.add_parser('list', aliases=['ls'], help='List packages')
+    list_parser.add_argument('--section', help='Filter by section')
+    list_parser.add_argument('--tag', help='Filter by tag')
+    list_parser.add_argument('--platform', choices=['macos', 'linux', 'all'], help='Filter by platform')
+    list_parser.add_argument('--verbose', '-v', action='store_true', help='Show details')
+    list_parser.add_argument('--json', action='store_true', help='Output as JSON')
     list_parser.set_defaults(func=cmd_list)
 
     # verify command
-    verify_parser = subparsers.add_parser("verify",
-                                          help="Check packages.yml against manifests and installer scripts")
-    verify_parser.add_argument("--root", help="Override repo root (for testing with synthetic trees)")
+    verify_parser = subparsers.add_parser('verify', help='Check packages.yml against manifests and installer scripts')
+    verify_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
     verify_parser.set_defaults(func=cmd_verify)
 
     # missing command
-    missing_parser = subparsers.add_parser("missing",
-                                           help="Show packages this machine declares but has not installed")
-    missing_parser.add_argument("--machine", help="Manifest to check (default: $MACHINE)")
-    missing_parser.add_argument("--json", action="store_true", help="Output as JSON")
-    missing_parser.add_argument("--root", help="Override repo root (for testing with synthetic trees)")
+    missing_parser = subparsers.add_parser('missing', help='Show packages this machine declares but has not installed')
+    missing_parser.add_argument('--machine', help='Manifest to check (default: $MACHINE)')
+    missing_parser.add_argument('--json', action='store_true', help='Output as JSON')
+    missing_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
     missing_parser.set_defaults(func=cmd_missing)
 
     args = parser.parse_args()
 
     if args.version:
-        print(f"packages {VERSION}")
+        # One distribution now, so one version — read from its metadata rather
+        # than a literal this file used to maintain separately.
+        print(f'packages {dotfiles.__version__}')
         return
 
     if args.help or not args.command:
         show_help()
         return
 
-    root_override = getattr(args, "root", None)
+    root_override = getattr(args, 'root', None)
     root_path = Path(root_override).resolve() if root_override else None
     data = load_packages(root=root_path)
     args.func(args, data)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

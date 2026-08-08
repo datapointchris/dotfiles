@@ -1,4 +1,4 @@
-"""Synthetic-fixture tests for `apps/common/packages missing`.
+"""Synthetic-fixture tests for `packages missing`.
 
 Same shape as test_packages_verify.py: build a temp tree, drive the real script
 with --root, never read the real install/packages.yml.
@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PACKAGES_SCRIPT = REPO_ROOT / 'apps' / 'common' / 'packages'
+PACKAGES = [sys.executable, '-m', 'dotfiles.catalog']
 
 
 def build_tree(root: Path, *, packages: dict[str, Any], manifests: dict[str, dict[str, Any]]) -> None:
@@ -38,7 +39,7 @@ def build_tree(root: Path, *, packages: dict[str, Any], manifests: dict[str, dic
 def run_missing(root: Path, *, machine: str = 'testbox', **env_overrides: str) -> subprocess.CompletedProcess:
     env = {**os.environ, 'TERM': 'dumb', **env_overrides}
     return subprocess.run(
-        [str(PACKAGES_SCRIPT), 'missing', '--root', str(root), '--machine', machine],
+        [*PACKAGES, 'missing', '--root', str(root), '--machine', machine],
         capture_output=True,
         text=True,
         env=env,
@@ -192,7 +193,7 @@ def test_json_output_lists_each_missing_entry(tmp_path: Path, empty_path_dir: Pa
     )
     env = {**os.environ, 'TERM': 'dumb', 'PATH': str(empty_path_dir)}
     result = subprocess.run(
-        [str(PACKAGES_SCRIPT), 'missing', '--root', str(tmp_path), '--machine', 'testbox', '--json'],
+        [*PACKAGES, 'missing', '--root', str(tmp_path), '--machine', 'testbox', '--json'],
         capture_output=True,
         text=True,
         env=env,

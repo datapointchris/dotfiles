@@ -25,8 +25,8 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
-2. **Symlinked Script Apps** (notes, review-diff; also Python: packages): Symlinked from repo
-   - Located in `apps/{platform}/` as executable files (bash, or Python via a `uv run --script` / `python3` shebang)
+2. **Symlinked Script Apps** (notes, review-diff): Symlinked from repo
+   - Located in `apps/{platform}/` as executable files (bash, or Python via a `uv run --script` / `python3` shebang). A Python app that outgrows a single file becomes a module in `src/dotfiles/` with a `[project.scripts]` entry instead
    - Symlinked to `~/.local/bin/`
    - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
 

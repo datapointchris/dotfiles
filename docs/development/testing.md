@@ -46,7 +46,7 @@ file on disk".
 
 ## pytest (Python Tests)
 
-Python-side coverage for `src/dotfiles/parse_packages.py`, `apps/common/packages`
+Python-side coverage for `src/dotfiles/parse_packages.py`, `src/dotfiles/catalog.py`
 (including `packages verify`), and `src/dotfiles/create_bundle.py`:
 
 ```sh
@@ -97,10 +97,10 @@ specific test decides exist.
 
 ## packages verify
 
-`apps/common/packages verify` enforces drift-freeness across packages.yml, the machine manifests, and the installer script directories. See [Package Management — Drift Detection](../architecture/package-management.md#drift-detection) for the check catalog. Runs on every commit; also runnable manually:
+`packages verify` enforces drift-freeness across packages.yml, the machine manifests, and the installer script directories. See [Package Management — Drift Detection](../architecture/package-management.md#drift-detection) for the check catalog. Runs on every commit; also runnable manually:
 
 ```sh
-apps/common/packages verify
+uv run packages verify
 ```
 
 ### Writing Tests

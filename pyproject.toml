@@ -13,6 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
+packages = "dotfiles.catalog:main"
 symlinks = "dotfiles.symlinks.cli:app"
 
 
@@ -156,10 +157,6 @@ managed = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
-    # The apps declare pytermstyle in their own PEP 723 headers, which covers them
-    # at runtime but not under pytest: the test suite loads each script by path
-    # with importlib, so its imports resolve against THIS environment instead.
-    "pytermstyle",
 ]
 
 # mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this
@@ -177,12 +174,6 @@ docs = [
 # pre-commit's mkdocs-strict hook, deploy-docs.yml and install/ops/docs.sh all
 # run a bare `uv run mkdocs`, so the docs group has to be synced by default.
 default-groups = ["dev", "docs"]
-
-[tool.uv.sources]
-# Pinned to a tag rather than tracking main, so a push to pytermstyle cannot
-# change what this repo's tests run against. Bump deliberately, in step with the
-# tag in each app's PEP 723 header.
-pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
 
 [tool.uv.build-backend]
 module-name = "dotfiles"

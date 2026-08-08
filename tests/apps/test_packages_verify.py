@@ -1,4 +1,4 @@
-"""Synthetic-fixture tests for `apps/common/packages verify`.
+"""Synthetic-fixture tests for `packages verify`.
 
 Every test builds a temp tree with only the files needed to drive the specific
 check under test, then invokes `packages verify --root <tmp_path>` via subprocess.
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PACKAGES_SCRIPT = REPO_ROOT / 'apps' / 'common' / 'packages'
+PACKAGES = [sys.executable, '-m', 'dotfiles.catalog']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -67,13 +68,12 @@ def build_tree(
 def run_verify(root: Path) -> subprocess.CompletedProcess:
     """Invoke the real packages verify command against a synthetic tree.
 
-    The real environment (PATH, HOME) is inherited so the `uv run --script`
-    shebang on the packages script can find uv. Isolation from the real repo
-    is provided by --root, not by scrubbing the environment.
+    Isolation from the real repo comes from --root, not from scrubbing the
+    environment, so the real PATH and HOME are inherited.
     """
     env = {**os.environ, 'TERM': 'dumb'}
     return subprocess.run(
-        [str(PACKAGES_SCRIPT), 'verify', '--root', str(root)],
+        [*PACKAGES, 'verify', '--root', str(root)],
         capture_output=True,
         text=True,
         env=env,

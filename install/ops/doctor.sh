@@ -18,14 +18,14 @@ uv run symlinks check
 symlinks_status=$?
 
 print_section "Verifying package manifest" "brightcyan"
-packages verify
+uv run packages verify
 packages_status=$?
 
 # Two separate questions, and only the first can fail a commit: `verify` compares
 # packages.yml against the manifests and installer scripts, while `missing`
 # compares this machine against what its manifest declares.
 print_section "Checking installed packages" "brightcyan"
-packages missing
+uv run packages missing
 missing_status=$?
 
 # The third drift question, and the one nothing else asks: a flag added to the
