@@ -386,6 +386,61 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
     return tuple(calls)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# The install, kept
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+INSTALL_LOG = '.dotfiles-install-log'
+INSTALL_STATUS = '.dotfiles-install-status'
+
+
+def install_command(environment: Environment) -> str:
+    """`install.sh`, leaving its output and exit status behind in the container.
+
+    Persisted rather than only returned, because the install is the expensive
+    artifact and every question about it gets asked again the moment an assertion
+    changes — twice today, once because a container died and once because a test
+    was added after the run started. `PIPESTATUS[0]` because `tee` is whose exit
+    status the shell would otherwise report, and it always succeeds.
+    """
+    home = environment.home
+    flags = ' --offline' if environment.offline else ''
+    return (
+        f'cd {home}/dotfiles && ./install.sh --machine {environment.manifest}{flags} 2>&1 '
+        f'| tee {home}/{INSTALL_LOG}; echo ${{PIPESTATUS[0]}} > {home}/{INSTALL_STATUS}'
+    )
+
+
+def install_record(machine: Machine) -> tuple[int, str] | None:
+    """The status and log of the install in this container, or None if there is none."""
+    status = machine.read(f'cat {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null').strip()
+    if not status.isdigit():
+        return None
+    return int(status), machine.exec(f'cat {machine.environment.home}/{INSTALL_LOG} 2>/dev/null').stdout
+
+
+def install_age(machine: Machine) -> str:
+    """When that install ran, so a stale one cannot be mistaken for this run's."""
+    return machine.read(f'date -r {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null') or 'an unknown time'
+
+
+def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:
+    """A live network probe, retried before its answer is believed.
+
+    A dozen real requests run in the firewall check, and one transient timeout
+    reported the container as stricter than the firewall — a false red that took
+    a whole run to disbelieve, on an afternoon when four installs and a
+    half-gigabyte bundle download were sharing the connection.
+
+    Retrying does not soften either direction. A blackholed host is 127.0.0.1 and
+    refuses immediately every time, so "reachable if any attempt got through" is
+    the stricter reading of the blocked list as well as the fairer reading of the
+    reachable one.
+    """
+    return any(machine.succeeds(command) for _ in range(attempts))
+
+
 def blocked_host_args(environment: Environment) -> list[str]:
     if not environment.firewalled:
         return []

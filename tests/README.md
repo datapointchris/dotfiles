@@ -64,14 +64,15 @@ bash tests/install/verification/detect-installed-duplicates.sh
 
 #### Container installs
 
-`tests/e2e/` is one rig with the environments as parameters, and it comes in
-three tiers. **Reach for the cheapest one that can answer the question** — a full
-install takes half an hour and answers nothing about the harness that the first
-two tiers cannot answer in a second.
+`tests/e2e/` is one rig with the environments as parameters, and it comes in four
+tiers. **Reach for the cheapest one that can answer the question** — a full
+install takes half an hour and answers nothing about the harness, or about an
+assertion, that a cheaper tier cannot answer in seconds.
 
 ```bash
 uv run pytest tests/e2e/test_harness.py             # 0.1s, no Docker
 uv run pytest tests/e2e/test_container.py --docker  # ~25s per environment
+uv run pytest tests/e2e --docker --installed        # seconds: assert, do not install
 uv run pytest tests/e2e --docker                    # the full installs
 ```
 
@@ -79,12 +80,19 @@ uv run pytest tests/e2e --docker                    # the full installs
 derivation, the environment definitions, the exec script. `test_container.py`
 starts a container and copies the repo but installs nothing — the tier where the
 rig's own failures live, and where a wrong PATH or a firewall that does not match
-the measurement shows up. `test_machine.py` needs the install, so it is for
-changes to `install.sh`, `apply.py` or a phase script.
+the measurement shows up. `test_machine.py` needs an installed machine.
+
+`--installed` reads the exit status and log the last install left in the
+container instead of producing them again, so changing an assertion costs seconds
+rather than a second half hour. It re-copies the repo first, so the verification
+scripts and the editable CLI are current; what is stale is exactly the install
+log and its status. Install for real when `install.sh`, a phase script or a
+package list changes — use `--installed` for everything else.
 
 Add `--environment <name>` for one — never `-k`, which matches test names too and
-quietly selects all four. `--keep` leaves containers up, `--reuse` will
-keep a kept container's OS state while still refreshing the repo inside it.
+quietly selects all four. The environments are independent containers, so four
+shells running one `--environment` each finish in the time of the slowest rather
+than the sum. `--keep` leaves containers up; `--reuse` and `--installed` imply it.
 
 `eza -1 tests/install/e2e/` is what is left: the cases that cannot be a container
 at all, needing a real macOS account, the current machine, or a real firewall.

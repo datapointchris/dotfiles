@@ -20,25 +20,42 @@ The payload each test sends is still shell — the repo's own verification scrip
 and `docker exec … bash -c` around them — because that part genuinely is shell.
 What is Python is the lifecycle, the selection, and the assertions.
 
-**Three tiers, and reach for the cheapest one that can answer the question.**
+**Four tiers, and reach for the cheapest one that can answer the question.**
 Running a whole machine install to find out whether a fixture is right costs half
 an hour and answers nothing an install can uniquely answer; that mistake is what
-the first two tiers exist to stop.
+the first tiers exist to stop.
 
-    uv run pytest tests/e2e/test_harness.py           # 0.1s, no Docker at all
+    uv run pytest tests/e2e/test_harness.py             # 0.1s, no Docker at all
     uv run pytest tests/e2e/test_container.py --docker  # ~25s per environment
-    uv run pytest tests/e2e --docker                  # the full installs
+    uv run pytest tests/e2e --docker --installed        # seconds: assert, do not install
+    uv run pytest tests/e2e --docker                    # the full installs
 
 `test_harness.py` covers everything decidable without starting anything: the
 network derivation, the environment definitions, the exec script. `test_container.py`
 starts a container and copies the repo but installs nothing, which is where the
 rig's own failures live — a wrong PATH, a missing bootstrap tool, a firewall that
-does not match the measurement. `test_machine.py` is the only tier that needs the
-install, so run it when `install.sh`, `apply.py` or a phase script changes.
+does not match the measurement. `test_machine.py` needs an installed machine, and
+`--installed` is how to keep asking it questions without paying for one twice.
+
+**`--installed` is the tier that was missing**, and its absence is most of what
+today cost: a container died and thirty minutes went with it, then an assertion
+added after a run started needed another thirty to answer. The install writes its
+exit status and log into the container, so a later run reads them back instead of
+producing them again. It re-copies the repo first, so the verification scripts and
+the editable CLI are current even though the install is not — what is stale is
+exactly `install_status` and `install_log`, and the flag's name says so.
+
+Run it without the flag when `install.sh`, a phase script or a package list
+changes. Run it with the flag when a test, an assertion or a verification script
+changes, which is most of the time.
 
     uv run pytest tests/e2e --docker --environment archlinux   # one environment
     uv run pytest tests/e2e --docker --keep           # leave the containers up
-    uv run pytest tests/e2e --docker --keep --reuse   # and reuse them next time
+    uv run pytest tests/e2e --docker --reuse          # reuse the OS state, install again
+    uv run pytest tests/e2e --docker --installed      # reuse the install too
+
+The four environments are independent containers, so four shells running one
+`--environment` each finish in the time of the slowest rather than the sum.
 
 Pick an environment with `--environment`, never `-k`. `-k` filters on test names
 as well as parameter ids, so `-k offline` also matches
@@ -61,11 +78,26 @@ from harness import clear_shadow_calls
 from harness import copy_repo
 from harness import docker
 from harness import image_exists
+from harness import install_age
+from harness import install_command
+from harness import install_record
 from harness import plant_python_shadow
 from harness import stage_bundle
 from harness import start
 
 from dotfiles import paths
+
+
+def reusing_containers(config: pytest.Config) -> bool:
+    """`--keep` is deliberately not here: it says leave this one running, not
+    install into whatever is already there."""
+    return bool(config.getoption('--reuse') or config.getoption('--installed'))
+
+
+def keeping_containers(config: pytest.Config) -> bool:
+    """Asking to reuse a container implies keeping it, or the next run finds
+    nothing to reuse and silently pays for a whole install again."""
+    return bool(config.getoption('--keep') or reusing_containers(config))
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -119,7 +151,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
     # downloads — and never the repo inside it. Reusing both is how the Arch
     # harness came to test whatever code was mounted when the container was
     # created, so a fix made since reported as still broken.
-    reusing = request.config.getoption('--reuse') and docker('container', 'inspect', name).returncode == 0
+    reusing = reusing_containers(request.config) and docker('container', 'inspect', name).returncode == 0
     if reusing:
         docker('start', name)
     else:
@@ -141,7 +173,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
 
         yield subject
     finally:
-        if request.config.getoption('--keep'):
+        if keeping_containers(request.config):
             print(f'\nkept: docker exec -it --user {environment.user} {name} bash')
         else:
             docker('rm', '-f', name)
@@ -155,8 +187,21 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
     different question about the same finished machine. `install_status` is
     recorded rather than asserted here: `dotfiles apply` exits 3 when a phase
     fails, and the tests are what say whether that mattered.
+
+    `--installed` goes further and skips the install entirely, reading the record
+    the last one left in the container. Session scope only stops a question being
+    asked twice inside one run; changing an assertion still cost a fresh half
+    hour, which is what made two of today's runs pure waiting.
     """
     environment = container.environment
+
+    if request.config.getoption('--installed'):
+        kept = install_record(container)
+        if kept is None:
+            raise pytest.UsageError(f'--installed: {container.container} has no install record — run once without it first')
+        print(f'\n--installed: asserting against the install from {install_age(container)}, not running one')
+        container.install_status, container.install_log = kept
+        return container
 
     if environment.offline:
         # `--reuse` means "reuse the expensive artifacts", and the bundle is one:
@@ -169,8 +214,9 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
     # prove it works, and those probes are not the run under test.
     clear_shadow_calls(container)
 
-    flags = ' --offline' if environment.offline else ''
-    completed = container.exec(f'cd {environment.home}/dotfiles && ./install.sh --machine {environment.manifest}{flags}')
-    container.install_status = completed.returncode
-    container.install_log = completed.stdout + completed.stderr
+    container.exec(install_command(environment))
+    recorded = install_record(container)
+    if recorded is None:
+        raise AssertionError('the install left no exit status behind, so nothing here can say what it did')
+    container.install_status, container.install_log = recorded
     return container

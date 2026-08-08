@@ -20,6 +20,7 @@ from harness import SHADOW_REFUSAL
 from harness import Machine
 from harness import measured_network
 from harness import reachable_probes
+from harness import reaches
 from harness import shadow_calls
 
 pytestmark = pytest.mark.docker
@@ -120,7 +121,7 @@ def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> Non
         pytest.skip('only a firewalled environment models the work network')
 
     blocked, _ = measured_network()
-    still_reachable = [host for host in blocked if container.succeeds(f'curl -fsS --connect-timeout 5 https://{host}/')]
+    still_reachable = [host for host in blocked if reaches(container, f'curl -fsS --connect-timeout 5 https://{host}/')]
     assert not still_reachable, f'blocked at work but reachable here: {still_reachable}'
 
     # Each recorded probe re-run exactly as the measurement ran it — same method,
@@ -128,7 +129,7 @@ def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> Non
     # crates.io blocked, because it answers a default curl agent with 403; that is
     # the trap `test-connectivity.sh` documents and works around, and this test
     # walked into it on its first run.
-    unreachable = [probe.name for probe in reachable_probes() if not container.succeeds(probe.command())]
+    unreachable = [probe.name for probe in reachable_probes() if not reaches(container, probe.command())]
     assert not unreachable, f'reachable at work but not here — the container is stricter than the firewall: {unreachable}'
 
 

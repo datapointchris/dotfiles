@@ -37,6 +37,12 @@ def pytest_addoption(parser):
         parser.addoption(flag, action='store_true', default=False, help=help_text)
     parser.addoption('--keep', action='store_true', default=False, help='leave e2e containers running afterwards')
     parser.addoption('--reuse', action='store_true', default=False, help='reuse a kept container and any built bundle')
+    parser.addoption(
+        '--installed',
+        action='store_true',
+        default=False,
+        help='assert against the install already in the container instead of running one',
+    )
     # Selection by environment cannot be `-k`, which matches test names too:
     # `-k offline` also matched `test_the_offline_run_never_resolved_a_version_online`
     # and so selected all four environments. The run started a second Arch
