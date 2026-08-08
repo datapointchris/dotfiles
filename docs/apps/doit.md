@@ -19,7 +19,7 @@ three `sys.path.insert(parents[2])` hacks, a top-level `tests/menucore/`, five P
 re-pinning the same revision, and a bash dispatcher that `exec`'d five separately-symlinked binaries
 while pretending to be one tool. Around 5,800 lines, including the workflows browser that folded in.
 
-The cards and Labs left too, to [datapointchris/doit-content](https://github.com/datapointchris/doit-content).
+The cards and Labs left too, to [datapointchris/terminal-library](https://github.com/datapointchris/terminal-library).
 Content is authored far more often than code, and keeping it in the tool's repo would have meant a
 release every time a card changed.
 
@@ -49,7 +49,7 @@ Both moved to `doit`'s own XDG paths, and both are Syncthing folders declared in
 | --- | --- |
 | `pursuits.yml`, `register.yml`, `sources.yml` | `~/.config/doit/` |
 | review/labs state, draw history, nudge marker | `~/.local/state/doit/` |
-| cards and Labs | `~/.local/share/doit/`, cloned on first run |
+| cards and Labs | `~/.local/share/terminal-library/`, cloned on first run |
 
 `register.yml` used to live under `$XDG_DATA_HOME/menu-review/` as a symlink into this repo. It is
 hand-edited config that the tool only ever reads, it is personal, and both `doit` repos are public —
