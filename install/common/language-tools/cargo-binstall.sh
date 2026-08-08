@@ -68,6 +68,16 @@ if command -v cargo-binstall >/dev/null 2>&1; then
   exit 0
 fi
 
+# An offline run reaches neither path: the release download needs github and the
+# source build needs crates.io. cargo-tools.sh takes every declared package from
+# the bundle cache before it would ask binstall for one, so the only thing trying
+# anyway buys is the source build's ten minutes — measured in the offline e2e,
+# where all nine cargo tools then came from cache and binstall was never invoked.
+if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then
+  log_info "Offline — skipping cargo-binstall; cargo packages come from the bundle cache"
+  exit 0
+fi
+
 log_info "Installing cargo-binstall..."
 
 if install_from_release; then
