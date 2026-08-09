@@ -86,6 +86,12 @@ def deploy(session: Session) -> bool:
     target it did not create. Hyprland does exactly this, every run, on an
     established machine. Replacing each link in place has no such window.
     """
+    # Before the header, not after: this is the one command that writes the branch
+    # into $HOME, so which branch it read from belongs above the list of what it did.
+    from dotfiles.commands.manage import report_stray_branch
+
+    report_stray_branch()
+
     err_console.print('[bold blue]Deploying symlinks[/]')
 
     changes = symlinks.RESOURCE.diff(session.plan, symlinks.RESOURCE.observe(session, session.plan))

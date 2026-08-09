@@ -88,6 +88,29 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
     return Position(upstream.transcript.strip(), ahead, behind, _last_fetch(repo))
 
 
+DEPLOYMENT_BRANCH = 'main'
+"""The branch this machine is deployed from. Feature work belongs in a worktree."""
+
+
+def stray_branch(repo: Path = paths.REPO_ROOT) -> str | None:
+    """The checked-out branch, when it is not the one the machine deploys from.
+
+    Worth saying out loud before a write because in this repo the branch *is*
+    machine state, which is true of almost no other checkout: `configs/`, `shell/`
+    and `apps/` are symlinked live into `$HOME`, and the CLI is installed editable
+    against `src/`, so switching branches changes both the deployed config and the
+    tool that deploys it.
+
+    A detached HEAD answers `None` rather than its sha. Someone mid-bisect knows
+    where they are, and `read` already treats that state as deliberate.
+    """
+    branch = _git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')
+    if not branch.ok:
+        return None
+    name = branch.transcript.strip()
+    return None if name in {DEPLOYMENT_BRANCH, 'HEAD'} else name
+
+
 def fetch(repo: Path = paths.REPO_ROOT) -> bool:
     """Refresh what `read` measures against. The only function here that uses the network."""
     return _git(repo, 'fetch', '--quiet', output=Output.STREAM).ok

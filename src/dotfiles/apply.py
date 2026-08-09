@@ -751,6 +751,13 @@ def apply_machine(
     says which section was asked for and the other which owner's entries are
     wanted, and a run asking for both means the phases satisfying both.
     """
+    # Imported here rather than at module scope: `commands.manage` is a leaf of the
+    # CLI and importing it upward would tie this module to the command layer that
+    # calls it.
+    from dotfiles.commands.manage import report_stray_branch
+
+    report_stray_branch()
+
     try:
         context = Run.resolve(machine, reinstall=reinstall, offline=offline, owner=owner)
     except Declaration as problem:
