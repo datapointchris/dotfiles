@@ -17,6 +17,7 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -48,49 +49,74 @@ def run_pytest(*arguments: str, path: str | None = None) -> Run:
     return Run(completed.stdout, completed.stderr, completed.returncode)
 
 
-@pytest.fixture
-def only_bash(tmp_path: Path) -> str:
-    """A PATH carrying bash and nothing else, which is how a bare runner is simulated.
+COLLECTION_NEEDS = ('bash', 'git')
+"""What collecting this directory runs before any test does.
 
-    Emptying PATH outright does not work: `test_repo_root` and
-    `test_windows_shell_sync_sh` build their parameters by running bash at import
-    time, so collection would die on the wrong binary and the refusal below would
-    never be reached. Dropping the directory zsh lives in is no better — it is
-    /usr/bin, which takes bash with it.
+`test_repo_root` shells out to `git ls-files` and `test_windows_shell_sync_sh`
+builds its parameters from a bash run, both at import time. A PATH without these
+dies during collection for the wrong reason, and the refusal under test is never
+reached — so they are carried, and only the interpreters are taken away.
+"""
+
+
+@pytest.fixture
+def without_interpreters(tmp_path: Path) -> str:
+    """A bare runner: no zsh, no tmux, and nothing else missing to confuse the result.
+
+    Built up rather than cut down. Dropping the directory zsh lives in would take
+    /usr/bin, and with it bash and git.
     """
-    bash = shutil.which('bash')
-    assert bash, 'a machine with no bash cannot run this tier at all'
-    (tmp_path / 'bash').symlink_to(bash)
+    for tool in COLLECTION_NEEDS:
+        found = shutil.which(tool)
+        assert found, f'this tier cannot be collected on a machine without {tool}'
+        (tmp_path / tool).symlink_to(found)
     return str(tmp_path)
 
 
-def test_the_run_is_refused_when_a_required_interpreter_is_missing(only_bash: str):
+@pytest.fixture
+def with_interpreters(without_interpreters: str) -> str:
+    """The satisfied PATH, built rather than borrowed from the machine underneath.
+
+    Asserting that *this* machine satisfies the flag would be a test of the
+    machine: the generic CI job installs neither interpreter on purpose, so the
+    positive case has to supply its own. Stubs are enough because the gate calls
+    `shutil.which` and never runs them — what runs a real zsh is the rest of the
+    tier, in the job that installs one.
+    """
+    for interpreter in ('zsh', 'tmux'):
+        stub = Path(without_interpreters) / interpreter
+        stub.write_text('#!/bin/sh\nexit 0\n')
+        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+    return without_interpreters
+
+
+def test_the_run_is_refused_when_a_required_interpreter_is_missing(without_interpreters: str):
     """Both marker spellings reach the same enforcement.
 
     tmux is required by a module-wide `pytestmark` and zsh by a single parameter
     of one, so naming both in the refusal is what proves the set is read off the
     collected items rather than off a list someone maintains.
     """
-    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters', path=only_bash)
+    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters', path=without_interpreters)
 
     assert result.returncode != 0
     assert 'no tmux, zsh' in result.output
 
 
-def test_a_missing_interpreter_is_only_a_skip_without_the_flag(only_bash: str):
+def test_a_missing_interpreter_is_only_a_skip_without_the_flag(without_interpreters: str):
     """The workstation reading, asserted on the tier that needs the missing binary."""
-    result = run_pytest(TMUX_TIER, '-rs', path=only_bash)
+    result = run_pytest(TMUX_TIER, '-rs', path=without_interpreters)
 
     assert result.returncode == 0
     assert 'tmux is not installed' in result.output
 
 
-def test_the_flag_is_satisfied_by_this_machine():
+def test_the_flag_lets_a_satisfied_machine_through(with_interpreters: str):
     """The positive case, which is what CI actually runs.
 
     A gate asserted only by its refusal would pass on a machine where it refuses
     unconditionally, and every CI run would then fail for a reason no test names.
     """
-    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters')
+    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters', path=with_interpreters)
 
     assert result.returncode == 0, result.output
