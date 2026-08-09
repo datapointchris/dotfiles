@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# Every open PR you have, across the repos the registry names, as JSON.
+#
+# The one implementation. `fleet prs` calls it, doit's dashboard lane calls it,
+# and the `prs` picker calls it — three consumers that were on their way to
+# three copies of the same gh query, which would have disagreed the first time
+# one of them learned about a second forge.
+#
+# Lives in dotfiles rather than in fleet because fleet is not installed on every
+# machine and this has to be. The registry is: repos.json says which repos exist
+# and `provider` says who hosts them, so the same command answers on a box where
+# that is GitHub and one where it is Bitbucket.
+#
+# Grouped by provider, one bulk query per provider that has one. GitHub does, so
+# a 79-repo registry still costs a single API call rather than 79. A provider
+# without a bulk search falls back to per-repo, which is why bbkt is a loop.
+#
+# Output is a JSON array, one object per PR, sorted oldest first — the backlog is
+# a gauge and age is what it measures.
+
+set -euo pipefail
+
+REGISTRY="${REPOS_JSON:-${XDG_CONFIG_HOME:-$HOME/.config}/repos.json}"
+# The Syncthing machines keep the registry in ~/dev, which is not an XDG path.
+[ -f "$REGISTRY" ] || REGISTRY="$HOME/dev/repos.json"
+
+die() {
+  echo "pr-list: $1" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: pr-list [--registry PATH]
+
+Prints every open PR across the registry's repos as a JSON array, oldest first.
+
+Each object: repo, slug, number, title, url, draft, created_at, age_days, path.
+`path` is empty when the repo is not checked out on this machine.
+EOF
+}
+
+command -v jq >/dev/null 2>&1 || die "jq is required"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --help | -h)
+      usage
+      exit 0
+      ;;
+    --registry)
+      REGISTRY="${2:-}"
+      shift 2
+      ;;
+    *) die "unknown argument: $1" ;;
+  esac
+done
+
+[ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
+
+# An entry with no status counts as active, matching every other reader: the
+# file is hand-edited and the opposite default drops a repo out without a word.
+# Per-repo provider wins over the file's, for a registry that mixes hosts.
+repos_for() {
+  jq -r --arg want "$1" '
+    (.provider // "github") as $default
+    | .repos[]
+    | select((.status // "active") == "active")
+    | select((.provider // $default) == $want)
+    | [.name, .path] | @tsv
+  ' "$REGISTRY"
+}
+
+# name → expanded path, for every active repo, so a PR can be opened locally.
+paths_json() {
+  jq --arg home "$HOME" '
+    [ .repos[]
+      | select((.status // "active") == "active")
+      | {key: .name, value: (.path | sub("^~"; $home))}
+    ] | from_entries
+  ' "$REGISTRY"
+}
+
+# GitHub: one search for everything you authored, then keep what the registry
+# names. Searching by author rather than per repo is what makes this one call;
+# filtering afterwards is what keeps it honest about scope.
+from_github() {
+  local names
+  names=$(repos_for github | cut -f1)
+  [ -n "$names" ] || return 0
+
+  command -v gh >/dev/null 2>&1 || {
+    echo "pr-list: gh is not installed; skipping GitHub repos" >&2
+    return 0
+  }
+
+  local raw
+  if ! raw=$(gh search prs --author=@me --state=open --limit=100 \
+    --json=number,title,url,isDraft,createdAt,repository 2>&1); then
+    echo "pr-list: gh could not list PRs (check 'gh auth status'): ${raw%%$'\n'*}" >&2
+    return 0
+  fi
+
+  jq -n --argjson prs "$raw" --arg names "$names" '
+    ($names | split("\n") | map(select(length > 0))) as $wanted
+    | $prs[]
+    | select(.repository.name as $n | $wanted | index($n))
+    | {
+        repo: .repository.name,
+        slug: .repository.nameWithOwner,
+        number: .number,
+        title: .title,
+        url: .url,
+        draft: .isDraft,
+        created_at: .createdAt,
+      }
+  '
+}
+
+# Bitbucket: bbkt is repo-scoped, so this is a loop by necessity rather than by
+# choice. It runs in each checkout because that is how bbkt resolves the repo.
+from_bitbucket() {
+  command -v bbkt >/dev/null 2>&1 || {
+    if [ -n "$(repos_for bitbucket)" ]; then
+      echo "pr-list: bbkt is not installed; skipping Bitbucket repos" >&2
+    fi
+    return 0
+  }
+
+  local name path raw
+  while IFS=$'\t' read -r name path; do
+    [ -n "$name" ] || continue
+    path="${path/#\~/$HOME}"
+    [ -d "$path" ] || continue
+
+    if ! raw=$(cd "$path" && bbkt pr list --json 2>/dev/null); then
+      echo "pr-list: bbkt could not list PRs in $name" >&2
+      continue
+    fi
+
+    # bbkt's own field names, mapped once here so no consumer sees them.
+    jq -r --arg repo "$name" '
+      (if type == "array" then . else (.values // .pull_requests // []) end)[]
+      | {
+          repo: $repo,
+          slug: $repo,
+          number: (.id // .number),
+          title: .title,
+          url: (.links.self[0].href // .url // ""),
+          draft: (.draft // false),
+          created_at: (
+            if (.createdDate | type) == "number" then (.createdDate / 1000 | todate)
+            else (.created_at // .createdDate // "")
+            end
+          ),
+        }
+    ' <<<"$raw"
+  done < <(repos_for bitbucket)
+}
+
+{
+  from_github
+  from_bitbucket
+} | jq -s --argjson paths "$(paths_json)" '
+  map(
+    . + {
+      age_days: (
+        if (.created_at | length) > 0
+        then ((now - (.created_at | fromdateiso8601)) / 86400 | floor)
+        else 0
+        end
+      ),
+      path: ($paths[.repo] // ""),
+    }
+  )
+  | sort_by(.created_at)
+'

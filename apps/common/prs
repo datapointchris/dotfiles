@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Pick one of your open PRs, from anywhere, and open its diff to read.
+#
+# Shell rather than part of fleet because every machine has this and only some
+# have fleet. The data comes from `pr-list`, which is the one place that knows
+# how to ask a provider for PRs; this is the picker and the window.
+#
+# Fetches, never checks out. `gh pr checkout` switches branches, which aborts
+# outright when the repo has uncommitted work and disturbs it when it does not —
+# for reading, that is all cost. Check it out yourself to run the code.
+#
+# nvim listens on a socket so a Claude split into the window can be asked what is
+# under the cursor. That session did not write the code, which is exactly why it
+# is the right one to ask.
+
+set -euo pipefail
+
+die() {
+  echo "prs: $1" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: prs [--list]
+
+Pick an open PR and open its diff in a tmux window. --list prints them instead.
+EOF
+}
+
+case "${1:-}" in
+  --help | -h)
+    usage
+    exit 0
+    ;;
+  --list)
+    pr-list | jq -r '.[] | "\(.repo)\t#\(.number)\t\(.age_days)d\t\(.title)"' | column -t -s $'\t'
+    exit 0
+    ;;
+  "") ;;
+  *) die "unknown argument: $1" ;;
+esac
+
+[ -n "${TMUX:-}" ] || die "not inside tmux — this opens a review window"
+for tool in jq fzf nvim git; do
+  command -v "$tool" >/dev/null 2>&1 || die "$tool is required"
+done
+
+prs_json=$(pr-list)
+[ "$(jq 'length' <<<"$prs_json")" -gt 0 ] || die "no open PRs"
+
+# The index leads and is hidden (--with-nth=2..), so the choice survives a title
+# containing a tab or a leading number.
+chosen=$(jq -r 'to_entries[] | [.key, .value.repo, "#\(.value.number)", "\(.value.age_days)d", .value.title] | @tsv' <<<"$prs_json" \
+  | fzf --delimiter=$'\t' --with-nth='2..' --no-sort --prompt='pr > ' --height=40% --reverse) || exit 0
+[ -n "$chosen" ] || exit 0
+
+idx=${chosen%%$'\t'*}
+pr=$(jq --argjson i "$idx" '.[$i]' <<<"$prs_json")
+
+repo=$(jq -r '.repo' <<<"$pr")
+number=$(jq -r '.number' <<<"$pr")
+slug=$(jq -r '.slug' <<<"$pr")
+path=$(jq -r '.path' <<<"$pr")
+
+[ -n "$path" ] || die "$repo is not checked out on this machine"
+[ -d "$path" ] || die "$repo is registered at $path, which does not exist"
+
+# Ask for the base rather than assuming the default branch: a PR stacked on
+# another targets its parent, and diffing that against main shows both as one.
+base=""
+if command -v gh >/dev/null 2>&1 && [[ $slug == */* ]]; then
+  base=$(gh pr view "$number" --repo "$slug" --json baseRefName -q .baseRefName 2>/dev/null || true)
+fi
+[ -n "$base" ] || base=$(git -C "$path" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+[ -n "$base" ] || die "could not work out what PR #$number is based on"
+
+ref="refs/remotes/origin/pr/$number"
+git -C "$path" fetch --quiet --force origin "pull/$number/head:$ref" \
+  || die "could not fetch PR #$number in $repo"
+git -C "$path" fetch --quiet origin "$base" 2>/dev/null || true
+
+git -C "$path" rev-parse --verify --quiet "origin/$base" >/dev/null \
+  || die "$repo has no origin/$base to diff against"
+
+sock="${TMPDIR:-/tmp}/fleet-pr-${repo}-${number}.sock"
+rm -f "$sock"
+
+# Three-dot: from where the branch diverged to its tip, which is what the forge
+# shows. Two-dot would render commits the base gained since branching as changes
+# this PR reverted.
+tmux new-window -n "pr $repo #$number" -c "$path" \
+  "nvim --listen '$sock' -c 'DiffviewOpen origin/$base...$ref'"
