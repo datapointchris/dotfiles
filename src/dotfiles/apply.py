@@ -92,13 +92,29 @@ class Run:
     """
 
     machine: str
-    platform: str
+    coords: coordinates.Coordinates
     packages: dict
     manifest: dict
     reinstall: bool = False
     offline: bool = False
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
+
+    @property
+    def platform(self) -> str:
+        """The overlay whose package scripts this machine runs.
+
+        Derived from the coordinates rather than read from the manifest, because
+        a manifest may declare `coordinates:` *instead of* `platform:` and then
+        has no label to read — which is how Arch-on-WSL, the case the coordinate
+        split exists for, resolved and checked and then could not be applied.
+        """
+        return _overlay(self.coords)
+
+    @property
+    def target(self) -> coordinates.Target:
+        """What this machine's release assets are named for."""
+        return coordinates.target_for(self.coords)
 
     @functools.cached_property
     def declaration(self) -> catalog.Catalog:
@@ -134,9 +150,10 @@ class Run:
     ) -> Run:
         """Read the declaration for `machine`, or for whatever `~/.env` says this is.
 
-        The platform comes from the manifest and never from `uname`. A fresh
-        machine has no `~/.env` to read it from, and detecting it instead is how a
-        wsl manifest once deployed the linux shell overlay for a whole install.
+        The coordinates come from the manifest and never from `uname`. A fresh
+        machine has no `~/.env` to read them from, and detecting them instead is
+        how a wsl manifest once deployed the linux shell overlay for a whole
+        install.
         """
         name = machine or os.environ.get('MACHINE') or ''
         if not name:
@@ -147,17 +164,17 @@ class Run:
             available = ', '.join(sorted(path.stem for path in paths.MANIFESTS_DIR.glob('*.yml')))
             raise Declaration(f'no manifest named {name!r}. Available: {available}')
 
-        manifest = parse_packages.load_manifest(name)
-        platform = manifest.get('platform')
-        if not platform:
-            raise Declaration(f'{manifest_file} declares no platform')
+        try:
+            declared = machines.load(name)
+        except machines.MachineError as refused:
+            raise Declaration(str(refused)) from refused
 
         stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
         return cls(
             machine=name,
-            platform=platform,
+            coords=declared.coordinates,
             packages=parse_packages.load_packages(),
-            manifest=manifest,
+            manifest=parse_packages.load_manifest(name),
             reinstall=reinstall,
             offline=offline,
             owner=owner,
@@ -310,6 +327,25 @@ SYSTEM_SCRIPTS = {
 }
 
 
+def _overlay(coords: coordinates.Coordinates) -> str:
+    """Which `install/<overlay>/` directory these coordinates ask for.
+
+    Keyed on the package manager, with apt split by host — which is the whole of
+    what the four platform labels ever distinguished here. `install/wsl/` differs
+    from `install/linux/` only by filtering the docker-ce family out of an apt
+    list, because WSL uses Docker Desktop; that is a fact about the host.
+
+    So Arch-on-WSL lands on the pacman scripts, which is the answer a fused
+    `PLATFORM` string could not give: it has no row of its own, and every
+    coordinate it needs already exists. Dies with the scripts in step C.
+    """
+    if coords.package_manager is coordinates.PackageManager.BREW:
+        return 'macos'
+    if coords.package_manager is coordinates.PackageManager.PACMAN:
+        return 'archlinux'
+    return 'wsl' if coords.host is coordinates.Host.WSL else 'linux'
+
+
 def _system_packages(context: Run) -> bool:
     """The OS package manager, plus whatever else that platform configures.
 
@@ -323,20 +359,18 @@ def _system_packages(context: Run) -> bool:
     `system-config` phase at the end of the run rather than in the middle of this
     one. Nothing installed later depended on them.
     """
-    if context.platform not in SYSTEM_SCRIPTS:
-        raise Declaration(f'unsupported platform: {context.platform}')
+    overlay = context.platform
+    platform_dir = paths.INSTALL_DIR / overlay
+    heading(f'System packages ({overlay})')
 
-    platform_dir = paths.INSTALL_DIR / context.platform
-    heading(f'System packages ({context.platform})')
-
-    scripts = [platform_dir / name for name in SYSTEM_SCRIPTS[context.platform]] if context.system_tier else []
+    scripts = [platform_dir / name for name in SYSTEM_SCRIPTS[overlay]] if context.system_tier else []
     # macOS's list is the payload *and* the configuration, and only the first
     # entry of it is gated. Splitting it here rather than in the table keeps the
     # table readable as "what this platform runs".
-    if context.platform == 'macos' and not context.system_tier:
+    if overlay == 'macos' and not context.system_tier:
         scripts = [platform_dir / name for name in SYSTEM_SCRIPTS['macos'][1:]]
 
-    if context.platform == 'archlinux' and context.wants('flatpak'):
+    if overlay == 'archlinux' and context.wants('flatpak'):
         scripts.append(platform_dir / 'flatpak.sh')
 
     return _run_scripts(context, scripts, tier=context.system_tier or 'workstation')
@@ -422,7 +456,7 @@ def _github_releases(context: Run) -> bool:
         warn(f'cannot read the declaration, so no release can be installed: {refused}')
         return False
 
-    target = coordinates.target_for(coordinates.PLATFORM_BUNDLES[context.platform])
+    target = context.target
     return all([_install_release(context, declaration, tool, target) for tool in tools])
 
 
@@ -486,7 +520,7 @@ def _custom_installers(context: Run) -> bool:
         warn(f'cannot read the declaration, so no custom installer can run: {refused}')
         return False
 
-    target = coordinates.target_for(coordinates.PLATFORM_BUNDLES[context.platform])
+    target = context.target
     return all([_run_custom_installer(context, declaration, tool, target) for tool in tools])
 
 

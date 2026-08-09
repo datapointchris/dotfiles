@@ -19,6 +19,7 @@ import yaml
 
 from dotfiles import apply
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import paths
 from dotfiles.providers import ghrelease
 
@@ -84,7 +85,7 @@ def test_an_unreadable_catalog_stops_the_phase_rather_than_installing_latest(tmp
 
     context = apply.Run(
         machine='linux-lxc-server',
-        platform='linux',
+        coords=coordinates.PLATFORM_BUNDLES['linux'],
         packages={'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO}]},
         manifest={'github_releases': [PINNED_TOOL]},
     )

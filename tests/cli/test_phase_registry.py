@@ -20,6 +20,7 @@ apart a second time.
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 from collections.abc import Callable
 
@@ -27,9 +28,12 @@ import pytest
 
 from dotfiles import apply
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve
+
+LINUX = coordinates.PLATFORM_BUNDLES['linux']
 
 
 def sourced(*expressions: str) -> list[str]:
@@ -162,7 +166,8 @@ def test_an_owner_with_nothing_here_selects_no_phases() -> None:
 
 
 def context(**overrides: object) -> apply.Run:
-    return apply.Run(machine='linux-lxc-server', platform='linux', packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
+    coords = overrides.pop('coords', LINUX)
+    return apply.Run(machine='linux-lxc-server', coords=coords, packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
 
 
 def test_the_interpreter_handed_down_can_import_this_package() -> None:
@@ -194,8 +199,38 @@ def test_the_platform_handed_down_is_the_declared_one() -> None:
     Leaving it unset is how a wsl manifest once deployed the linux shell overlay
     for a whole install — it worked on an established machine only because a
     pre-existing ~/.env happened to export the right answer.
+
+    Derived from the coordinates rather than read from the manifest, so the four
+    labelled platforms must still come out with the names their script
+    directories have.
     """
     assert context().environment()['PLATFORM'] == 'linux'
+
+
+@pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
+def test_every_platform_bundle_round_trips_to_its_script_directory(label: str) -> None:
+    """The overlay is keyed on coordinates now, and the four labels are only a
+    convenience bundle over them — so each must still name the directory whose
+    scripts it always ran, or a machine installs another platform's packages."""
+    assert apply._overlay(coordinates.PLATFORM_BUNDLES[label]) == label
+    assert (paths.INSTALL_DIR / label).is_dir()
+
+
+def test_a_machine_declaring_coordinates_can_be_applied() -> None:
+    """Arch-on-WSL is the case the coordinate split exists for, and `apply` used
+    to refuse it: `machine.py` accepts `coordinates:` in place of `platform:`,
+    while `Run.resolve` read the manifest's `platform` key and raised without it.
+    It resolved, checked and showed, then could not be installed.
+
+    It takes the pacman scripts, because that is what its package manager is —
+    the answer a fused PLATFORM string had no row for.
+    """
+    arch_on_wsl = dataclasses.replace(coordinates.PLATFORM_BUNDLES['archlinux'], host=coordinates.Host.WSL)
+    run = context(coords=arch_on_wsl)
+
+    assert apply._overlay(arch_on_wsl) == 'archlinux'
+    assert run.environment()['PLATFORM'] == 'archlinux'
+    assert run.target == coordinates.target_for(arch_on_wsl)
 
 
 def test_the_tool_path_is_prepended_rather_than_replacing_the_caller_s() -> None:
@@ -209,9 +244,9 @@ def test_a_bare_true_system_packages_still_means_the_full_set() -> None:
     """Manifests predating the tier said `true`, and reading that as "off" would
     silently install no system packages on a machine asking for all of them."""
     assert context().system_tier == ''
-    assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': True}).system_tier == 'workstation'
-    assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': 'core'}).system_tier == 'core'
-    assert apply.Run(machine='m', platform='linux', packages={}, manifest={'system_packages': False}).system_tier == ''
+    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': True}).system_tier == 'workstation'
+    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': 'core'}).system_tier == 'core'
+    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': False}).system_tier == ''
 
 
 def test_every_directory_an_installer_writes_binaries_to_is_on_the_phase_path() -> None:
@@ -277,7 +312,7 @@ def test_a_private_repo_tool_is_skipped_where_there_are_no_credentials(monkeypat
         ]
     }
     manifest = {'github_releases': ['lazygit', 'learning']}
-    context = apply.Run(machine='linux-lxc-server', platform='linux', packages=packages, manifest=manifest)
+    context = apply.Run(machine='linux-lxc-server', coords=LINUX, packages=packages, manifest=manifest)
 
     attempted: list[str] = []
     monkeypatch.setattr(apply, '_have_github_credentials', lambda: False)
@@ -292,7 +327,7 @@ def test_a_private_repo_tool_is_installed_where_there_are_credentials(monkeypatc
     reads as converged while three tools are quietly absent."""
     packages = {'github_releases': [{'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True}]}
     manifest = {'github_releases': ['learning']}
-    context = apply.Run(machine='linux-lxc-server', platform='linux', packages=packages, manifest=manifest)
+    context = apply.Run(machine='linux-lxc-server', coords=LINUX, packages=packages, manifest=manifest)
 
     attempted: list[str] = []
     monkeypatch.setattr(apply, '_have_github_credentials', lambda: True)
