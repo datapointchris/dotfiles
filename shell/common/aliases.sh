@@ -108,4 +108,7 @@ alias gst='git status'
 alias gp='git push'
 alias gl='git pull'
 
+# Pick one of your open PRs, fleet-wide, and open its diff in a review window
+alias prs='fleet prs review'
+
 alias git-alias='cat ~/.gitconfig | grep --after-context=50 "\[alias\]"'

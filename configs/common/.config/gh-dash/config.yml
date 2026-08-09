@@ -1,19 +1,25 @@
+# Every PR here is your own, so sections split by STATE rather than by role.
+# The stock team layout filtered on -author:@me, review-requested:@me and
+# involves:@me -author:@me, none of which can ever match for a solo fleet — three
+# empty sections and one real one.
+#
+# Order is the triage order: what can land, what is broken, what has been sitting
+# too long, what is not ready yet. "Stale" is the gauge — a pile there means code
+# went out faster than it was read.
 prSections:
-    - title: All PRs (Others)
-      filters: is:open -author:@me user:@me
-    - title: My Pull Requests
-      filters: is:open author:@me
-    - title: Needs My Review
-      filters: is:open review-requested:@me
-    - title: Involved
-      filters: is:open involves:@me -author:@me
+    - title: Ready
+      filters: is:open author:@me draft:false status:success
+    - title: Failing
+      filters: is:open author:@me status:failure
+    - title: Stale
+      filters: is:open author:@me created:<@today-7d
+    - title: Draft
+      filters: is:open author:@me draft:true
 issuesSections:
     - title: My Issues
       filters: is:open author:@me
     - title: Assigned
       filters: is:open assignee:@me
-    - title: Involved
-      filters: is:open involves:@me -author:@me
 repo:
     branchesRefetchIntervalSeconds: 30
     prsRefetchIntervalSeconds: 60
@@ -61,7 +67,88 @@ defaults:
                 hidden: true
     refetchIntervalMinutes: 30
 keybindings: {}
-repoPaths: {}
+# Explicit because gh-dash allows one wildcard per owner and these repos sit
+# under ~/tools, ~/code, ~/webapps and ~/. Do not hand-maintain — regenerate:
+#   jq -r '.owner as $o | .repos[] | "    \($o)/\(.name): \(.path)"' ~/dev/repos.json | sort
+repoPaths:
+    datapointchris/ai: ~/code/python-projects/ai
+    datapointchris/bash-playground: ~/code/bash-playground
+    datapointchris/bashselfupdate: ~/tools/bashselfupdate
+    datapointchris/bbkt: ~/tools/bbkt
+    datapointchris/budget: ~/webapps/budget
+    datapointchris/chatter: ~/code/chatter
+    datapointchris/check-stock-price: ~/code/python-projects/check-stock-price
+    datapointchris/chris-birch: ~/webapps/chris-birch
+    datapointchris/claude-code-metrics: ~/code/claude-code-metrics
+    datapointchris/data-conversion: ~/code/python-projects/data-conversion
+    datapointchris/datapointchris: ~/code/datapointchris
+    datapointchris/dectl: ~/tools/dectl
+    datapointchris/dimensional-modeling: ~/code/sql/dimensional-modeling
+    datapointchris/docker-redis-cicd: ~/code/tutorials/docker-redis-cicd
+    datapointchris/docs: ~/docs
+    datapointchris/doit: ~/tools/doit
+    datapointchris/dotfiles: ~/dotfiles
+    datapointchris/flexoki-moon-nvim: ~/code/flexoki-moon-nvim
+    datapointchris/font: ~/tools/font
+    datapointchris/forge: ~/tools/forge
+    datapointchris/git-graph: ~/code/python-projects/git-graph
+    datapointchris/github-issues: ~/code/python-projects/github-issues
+    datapointchris/goselfupdate: ~/tools/goselfupdate
+    datapointchris/gotermstyle: ~/tools/gotermstyle
+    datapointchris/homelab: ~/homelab
+    datapointchris/iceberg-intro-lessons: ~/code/iceberg-intro-lessons
+    datapointchris/ichrisbirch-rust: ~/code/rust/ichrisbirch
+    datapointchris/ichrisbirch: ~/webapps/ichrisbirch
+    datapointchris/ifiles: ~/tools/ifiles
+    datapointchris/indy: ~/tools/indy
+    datapointchris/interview-questions: ~/code/python-projects/interview-questions
+    datapointchris/investor: ~/webapps/investor
+    datapointchris/keymap-align: ~/code/keymap-align
+    datapointchris/learning: ~/webapps/learning
+    datapointchris/logsift: ~/tools/logsift
+    datapointchris/markdown-toc.nvim: ~/code/markdown-toc.nvim
+    datapointchris/mask-rcnn-scooters: ~/code/python-projects/mask-rcnn-scooters
+    datapointchris/meso: ~/webapps/meso
+    datapointchris/mongorest: ~/code/python-projects/mongorest
+    datapointchris/mortgage-matrix: ~/code/python-projects/mortgage-matrix
+    datapointchris/new-python-project: ~/code/templates/new-python-project
+    datapointchris/nomad: ~/webapps/nomad
+    datapointchris/object-detection-keras-unet: ~/code/python-projects/object-detection-keras-unet
+    datapointchris/parquet: ~/code/python-projects/parquet
+    datapointchris/post-shift: ~/code/sql/post-shift
+    datapointchris/pyclisteno: ~/tools/pyclisteno
+    datapointchris/pyselfupdate: ~/tools/pyselfupdate
+    datapointchris/pytermstyle: ~/tools/pytermstyle
+    datapointchris/python-reference: ~/code/python-reference
+    datapointchris/reddit-nlp: ~/code/python-projects/reddit-nlp
+    datapointchris/reddit-scraper: ~/code/python-projects/reddit-scraper
+    datapointchris/redshift-connect: ~/code/python-projects/redshift-connect
+    datapointchris/refcheck: ~/tools/refcheck
+    datapointchris/reference: ~/code/reference
+    datapointchris/relate: ~/tools/relate
+    datapointchris/safekeep: ~/tools/safekeep
+    datapointchris/sess: ~/tools/sess
+    datapointchris/shadows: ~/code/shadows
+    datapointchris/sql-server: ~/code/sql/sql-server
+    datapointchris/stack_overflow_dev_survey_2018: ~/code/r-projects/stack_overflow_dev_survey_2018
+    datapointchris/standards: ~/code/standards
+    datapointchris/syncer: ~/tools/syncer
+    datapointchris/terminal-library: ~/tools/terminal-library
+    datapointchris/theme: ~/tools/theme
+    datapointchris/timeline: ~/webapps/timeline
+    datapointchris/todoui: ~/tools/todoui
+    datapointchris/tomato-blocks: ~/code/python-projects/tomato-blocks
+    datapointchris/toolbox: ~/tools/toolbox
+    datapointchris/typos: ~/code/typos
+    datapointchris/verbal-morality: ~/code/python-projects/verbal-morality
+    datapointchris/visualizer: ~/code/python-projects/visualizer
+    datapointchris/webviewrs: ~/tools/webviewrs
+    datapointchris/ypl: ~/tools/ypl
+    datapointchris/zmk-build: ~/tools/zmk-build
+    datapointchris/zmk-config-corne42: ~/code/zmk/corne42
+    datapointchris/zmk-config-glove80: ~/code/zmk/glove80
+    datapointchris/zmk-config-piantor-pro-bt: ~/code/zmk/piantor
+    datapointchris/zmk-shared: ~/code/zmk/shared
 theme:
     ui:
         sectionsShowCount: true
@@ -69,7 +156,7 @@ theme:
             showSeparator: true
             compact: false
 pager:
-    diff: ""
+    diff: delta
 confirmQuit: false
 showAuthorIcons: true
 smartFilteringAtLaunch: true
