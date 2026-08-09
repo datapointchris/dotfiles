@@ -55,7 +55,6 @@ from dotfiles.output import warn
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
-from dotfiles.resources import escalations
 from dotfiles.resources import plugins
 from dotfiles.resources import system
 from dotfiles.session import Session
@@ -622,15 +621,10 @@ def _system_config(context: Run) -> bool:
     is no second description of the work here: what this phase writes is exactly
     what `dotfiles system check` prints.
 
-    **The password is asked for here rather than at the front of the run**, which
-    is not where the design wants it and is where it has to be while the package
-    backends are still bash. What decides whether root is needed at all is the
-    observation, and the observation is not right until the packages are
-    installed: on a fresh machine zsh does not exist yet, so an up-front look
-    would find the login shell unrepairable, ask for nothing, and then refuse the
-    one write it turns out to need. Asking for a password that may not be needed
-    is the other wrong answer. It moves to the front when the package backends
-    convert and the whole privileged list is knowable before anything runs.
+    The password is asked for at the write that needs it, which is now the rule
+    everywhere rather than a concession here — keeping a sudo timestamp alive does
+    not work on macOS, so a front prompt bought nothing and cost a password on
+    machines needing none. `plan` states the count in advance.
     """
     session = context.session
     plan = dataclasses.replace(session.plan, items=tuple(item for item in session.plan.items if item.stage is Stage.SYSTEM_CONFIG))
@@ -644,11 +638,7 @@ def _system_config(context: Run) -> bool:
 
     heading('System configuration')
     privilege = privileges.Privilege()
-    privilege.authorize(escalations(changes))
-    try:
-        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
-    finally:
-        privilege.stop()
+    outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
 
     for outcome in outcomes:
         if outcome.ok:

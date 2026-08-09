@@ -18,12 +18,11 @@ import yaml
 
 from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-from dotfiles.resources import escalations
+from dotfiles.resources import privileged
 from dotfiles.resources import system
 from dotfiles.session import Session
 
@@ -246,7 +245,6 @@ def test_a_machine_with_no_root_reports_the_refusal_rather_than_crashing(tmp_pat
     live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
 
     privilege = Privilege()
-    privilege.authorize((Escalation('write the system zshenv'),))
     outcome = system.RESOURCE.perform(live, only_change(live), privilege)
 
     assert outcome.status is OutcomeStatus.FAILED
@@ -270,7 +268,7 @@ def test_a_macos_preference_does_not_ask_for_a_password(tmp_path: Path, monkeypa
     changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
 
     assert [change.privileged for change in changes] == [False]
-    assert escalations(changes) == ()
+    assert privileged(changes) == ()
 
 
 def test_macos_rows_are_absent_from_a_linux_plan(tmp_path: Path) -> None:
