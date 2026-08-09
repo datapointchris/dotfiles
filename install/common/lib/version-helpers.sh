@@ -112,10 +112,19 @@ pinned_release_tag() {
   echo "$tag"
 }
 
+# A repo that is not "owner/name" cannot name a release, so it is refused here
+# rather than turned into an api.github.com path and sent. Left to the network,
+# the answer is a 404 the caller reports as a curl failure — and on the machine
+# where this matters most, the one behind the work firewall, the request does not
+# even get that far and the diagnosis becomes the proxy instead.
+github_repo_slug() {
+  [[ "$1" =~ ^[^/[:space:]]+/[^/[:space:]]+$ ]]
+}
+
 fetch_github_latest_version() {
   local repo="$1"
 
-  [[ -z "$repo" ]] && return 1
+  github_repo_slug "$repo" || return 1
 
   # Every installer sets BINARY_NAME before resolving a version, and both fetch
   # paths short-circuit here rather than in get_latest_version, because neovim
@@ -162,7 +171,8 @@ fetch_github_latest_version_prefixed() {
   local repo="$1"
   local prefix="$2"
 
-  [[ -z "$repo" || -z "$prefix" ]] && return 1
+  github_repo_slug "$repo" || return 1
+  [[ -z "$prefix" ]] && return 1
 
   if [[ "${OFFLINE_MODE:-false}" == "true" ]] && offline_bundle_version "${BINARY_NAME:-}"; then
     return 0
@@ -190,22 +200,6 @@ fetch_github_latest_version_prefixed() {
     | jq -r --arg p "$prefix" 'map(select(.draft | not) | select(.tag_name | startswith($p))) | .[0].tag_name // empty')
 
   if [[ -z "$version" || "$version" == "null" ]]; then
-    return 1
-  fi
-
-  echo "$version"
-  return 0
-}
-
-parse_version() {
-  local output="$1"
-
-  [[ -z "$output" ]] && return 1
-
-  local version
-  version=$(echo "$output" | grep -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
-
-  if [[ -z "$version" ]]; then
     return 1
   fi
 

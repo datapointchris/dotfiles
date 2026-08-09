@@ -55,7 +55,6 @@ Version comparison and GitHub API lookups shared by the release installers.
 **Functions:**
 
 - `version_compare(current, latest)` - 0 when equal, 1 when current is older, 2 when newer
-- `parse_version(text)` - Extract a version string from arbitrary command output
 - `github_token()` - Resolve a token from `GITHUB_TOKEN` or `gh auth token`, if either is available
 - `fetch_github_latest_version(repo)` - Latest release tag from the GitHub API
 
