@@ -1,10 +1,9 @@
-#!/usr/bin/python3
 """Build the Windows tool bundle for a Git Bash machine behind a firewall.
 
 The WSL counterpart of src/dotfiles/create_bundle.py: run it where GitHub is
 reachable, move the tarball across, then `task windows:offline`.
 
-    windows_bundle.py <output.tar.gz> [--print-path]
+    python -m dotfiles.windows_bundle <output.tar.gz> [--print-path]
 
 The archive holds a flat set of .exe files plus versions.txt, which is what
 setup-windows.sh's --offline mode expects.
@@ -14,7 +13,11 @@ the machine this is built for cannot reach the release API, so it cannot learn
 which asset holds a checksum, and verification has to happen where it can. The
 shell version this replaced did not verify at all.
 
-Stdlib-only; see src/dotfiles/create_bundle.py.
+Reached from `install/wsl/setup-windows.sh` as `dotfiles_python -m`, which
+`install/common/lib/python.sh` defines as the CLI's own `sys.executable` and
+documents as never the system interpreter. It carried a stdlib-only rule for that
+system interpreter until 2026-08-08; see src/dotfiles/create_bundle.py for why
+that rule named nobody.
 """
 
 from __future__ import annotations

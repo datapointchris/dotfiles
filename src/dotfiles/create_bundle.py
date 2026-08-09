@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 """Build an offline installation bundle for dotfiles.
 
 Downloads every GitHub release binary, cargo binary, Go binary and install
@@ -18,12 +17,10 @@ Output:
 
 Runs under the interpreter the CLI runs under, which is the only way it is
 reached: `dotfiles bundle create` imports `main` in-process. It was written for
-the macOS system python3, still 3.9, back when bash invoked it — and it kept the
-stdlib-only rule after `dotfiles_python` stopped ever being that interpreter.
-The rule holds for third-party packages, which are still worth not depending on
-here; it no longer holds for this package's own modules, which is why the
-release assets are read from `providers/releases.py` rather than through a pipe
-from twenty-three bash scripts.
+the macOS system python3, still 3.9, back when bash invoked it, and kept a
+stdlib-only rule long after `dotfiles_python` stopped ever being that
+interpreter. The rule was dropped on 2026-08-08 — it named a constraint no
+caller imposes, and this file had long since been importing the package anyway.
 
 Streams: everything a person reads goes to stderr, and stdout carries the
 tarball path under --print-path and nothing else, so the build can be piped

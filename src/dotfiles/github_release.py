@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 """GitHub release asset resolution and checksum verification.
 
 Imported by src/dotfiles/create_bundle.py, which verifies assets while building
@@ -8,13 +7,16 @@ this — of rules subtle enough that a divergence would have gone unnoticed unti
 a bundle verified differently from a live install. The CLI below outlives the
 shell that needed it, because it is how the rules are exercised by hand.
 
-    github_release.py verify <file> <asset> [repo] [tag]   see Verification for the exit codes
-    github_release.py parse-url <url>                      prints repo|tag, empty if not a release
-    github_release.py checksum-for <file> <asset>          prints the digest, empty if absent
-    github_release.py sha256 <file>
+    python -m dotfiles.github_release verify <file> <asset> [repo] [tag]
+    python -m dotfiles.github_release parse-url <url>       prints repo|tag, empty if not a release
+    python -m dotfiles.github_release checksum-for <file> <asset>
+    python -m dotfiles.github_release sha256 <file>
 
-Stdlib-only, and annotations are deferred: this runs under the system python3,
-still 3.9 on macOS. See src/dotfiles/create_bundle.py.
+This module has no shell caller and never had one: every path in is an in-process
+import, so it runs under whichever interpreter is running the CLI. It carried a
+`#!/usr/bin/python3` shebang and a stdlib-only rule for the macOS system python
+until 2026-08-08 — an interpreter that could not have run it, since importing the
+package reaches PyYAML.
 """
 
 from __future__ import annotations

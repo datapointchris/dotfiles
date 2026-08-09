@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 """Installer failure records, and the report rendered from them.
 
 An installer that fails calls `record`, which appends one JSON object to the
@@ -6,8 +5,8 @@ file named by $FAILURE_RECORDS. When the installer exits, run-installer.sh calls
 `render`, which turns those records plus the installer's console output into the
 entries a person reads in $FAILURES_LOG.
 
-    failure_report.py record <tool> <url> [version] [reason] [detail]
-    failure_report.py render --records F --console F --script S --tool T --exit N
+    python -m dotfiles.failure_report record <tool> <url> [version] [reason] [detail]
+    python -m dotfiles.failure_report render --records F --console F --script S --tool T --exit N
 
 Records used to be FAILURE_TOOL='x' lines on stderr, parsed back out with grep,
 cut, sed and awk. Every part of that was a workaround for stderr carrying two
@@ -17,7 +16,11 @@ and splitting several failures apart needed an awk state machine. A file of JSON
 objects has none of those problems, and the path is in an environment variable
 rather than a file descriptor, so it can be printed and read.
 
-Stdlib-only; see src/dotfiles/create_bundle.py.
+Reached from bash as `dotfiles_python -m dotfiles.failure_report`, which
+`install/common/lib/python.sh` defines as the CLI's own `sys.executable` and
+documents as never the system interpreter. It carried a stdlib-only rule for that
+system interpreter until 2026-08-08, by which time nothing had invoked it that way
+for months. Both callers go with `run-installer.sh`.
 """
 
 from __future__ import annotations
