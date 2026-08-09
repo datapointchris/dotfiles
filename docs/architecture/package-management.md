@@ -301,24 +301,51 @@ declaration's.
 
 Enforcement arrives per section, because pinning means a different mechanism in each
 (`cargo install --version`, `go install pkg@v1.2.3`, `uv tool install pkg==1.2.3`). Exact pins are
-honoured for `github_releases` today. **`packages verify` rejects a constraint declared in a section
+honoured for `github_releases` today. **The catalog rejects a constraint declared in a section
 that does not yet honour one** — that rule is the whole design, because the failure it prevents
 already happened: four version fields sat in this file unread, one of them eight versions stale.
 
 ### Drift Detection
 
-The `packages verify` subcommand (in `src/dotfiles/catalog.py`) enforces that packages.yml, the machine manifests, and the installer script directories stay in sync. It runs on every commit via pre-commit and surfaces four classes of drift:
+`dotfiles machines check` enforces that `packages.yml`, the machine manifests, and what can install
+them stay in sync. It runs on every commit via pre-commit, and `src/dotfiles/validate.py` is where it
+lives.
 
-- **Shape errors** — an entry missing required fields (e.g., a `github_releases` entry with no `repo`), or duplicate names within a section.
-- **Unresolved manifest names** — a manifest lists a name that has no corresponding packages.yml entry (the no-op that shipped `todoui` and `forge` ghost-installed for weeks).
-- **Uninstallable entries** — a `github_releases` or `custom_installers` entry with no installer function in `src/dotfiles/providers/`. Both sections were a directory of one script per entry, and the check followed them into Python: the guarantee was never "a file exists with this name", it was "something knows how to install this".
-- **Deprecated manifest keys** — `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true`; these runtime gates were removed in Phase 1.6 in favor of name-list derivation.
+**Most of what it once checked, it no longer performs itself.** Every per-entry rule — required
+fields, unknown keys, duplicate names, declared types, the version constraints — is the section's
+dataclass in `catalog.py`, and a manifest naming a retired runtime gate is `machine.RETIRED_KEYS`.
+Validation loads both files through the typed loaders and reports what they refuse, so the shape a
+reader consumes and the shape the gate enforces cannot disagree. It used to re-parse the same YAML
+as raw dictionaries, with its own idea of how a section is spelled and its own copy of the retired
+keys, and nothing kept the two copies in step.
 
-A fifth, softer check warns when packages.yml defines an entry that no manifest subscribes to — useful for spotting orphans without failing the commit.
+What is left is the three questions no single file can answer about itself, because each is a
+relationship between two of them:
 
-Behavior is authoritative in `--help` and `packages verify --help`. Tests live in `tests/apps/test_packages_verify.py` and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.
+- **A manifest naming an entry that does not exist** — the no-op that shipped `todoui` and `forge`
+  ghost-installed for weeks. The resolver cannot catch it: subscription is a membership test, so a
+  name matching nothing is silently dropped rather than refused.
+- **An entry nothing can install** — a `github_releases` or `custom_installers` entry with no
+  function in `src/dotfiles/providers/`. Both were a directory of one script per entry, and the
+  check followed them into Python: the guarantee was never "a file exists with this name", it was
+  "something knows how to install this".
+- **An entry no manifest names** — a warning rather than an error, because an entry lands in
+  `packages.yml` before the manifest that wants it, and a tool being staged is not a broken
+  declaration.
 
-**`dotfiles plan` is the machine-side counterpart** and is deliberately a separate command. `verify` compares the repo against itself and runs on every commit; `plan` compares *this machine* against what its manifest declares, and a box part-way through a rollout is not a repo defect that should fail a commit. `dotfiles check` asks the third question — whether anything is actually wrong — and a machine merely behind on versions answers no.
+A catalog that will not load short-circuits the rest, for the same reason the machine walk puts this
+row first: everything downstream is measured *against* the catalog, so findings derived from a file
+nobody could parse would describe a declaration that does not exist.
+
+The findings are values rather than printed lines, which is what lets one function serve the command,
+the `machines` row of `dotfiles check`, and `apply`'s refusal to run against a declaration that will
+not hold together. Tests are `tests/resolver/test_validate.py`, in-process against synthetic trees.
+
+**`dotfiles plan` is the machine-side counterpart** and is deliberately a separate command. This one
+compares the repo against itself and runs on every commit; `plan` compares *this machine* against what
+its manifest declares, and a box part-way through a rollout is not a repo defect that should fail a
+commit. `dotfiles check` asks the third question — whether anything is actually wrong — and a machine
+merely behind on versions answers no.
 
 What counts as evidence is per provider, in `src/dotfiles/resources/packages.py`: a binary on PATH for a release or a go tool, the tool directory for a uv tool that ships no console script, an app bundle for a Mac App Store app, and the package manager's own inventory for anything apt, pacman, brew or flatpak installed — because a package name is not a binary name, and `p7zip-full` installs `7zz` while `build-essential` installs no executable at all.
 

@@ -44,6 +44,7 @@ from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import validate
 from dotfiles import versions
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
@@ -51,6 +52,7 @@ from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
+from dotfiles.output import render_finding
 from dotfiles.output import warn
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
@@ -762,6 +764,18 @@ def apply_machine(
     from dotfiles.commands.manage import report_stray_branch
 
     report_stray_branch()
+
+    # Before anything is resolved, because everything after this is measured
+    # against the declaration: a run against one that will not hold together
+    # installs whatever survived the parse and reports success. `check` has always
+    # put this first in its walk for the same reason; refusing to *act* on it is
+    # what the read-only verb could not do.
+    if broken := validate.errors(validate.declaration()):
+        warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
+        for finding in broken:
+            render_finding(finding.section, finding.message)
+        hint("'dotfiles machines check' lists them, warnings included")
+        return ExitCode.ISSUE
 
     try:
         context = Run.resolve(machine, reinstall=reinstall, offline=offline, owner=owner)

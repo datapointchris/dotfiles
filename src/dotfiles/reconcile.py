@@ -17,13 +17,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from dotfiles import bridge
 from dotfiles import engine
-from dotfiles.effects import Output
+from dotfiles import validate
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
 from dotfiles.output import render_change
+from dotfiles.output import render_finding
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict as ItemVerdict
@@ -99,17 +99,27 @@ class ResourceResult:
 
 
 def check_declaration() -> ResourceResult:
-    """Validate `packages.yml` against the manifests and the installer scripts.
+    """Validate `packages.yml` against the manifests and what can install them.
 
     An Issue rather than drift whatever it finds, and first in the walk: a
     machine checked against an invalid declaration produces a verdict that means
-    nothing. This is what `packages verify` does today, reached through
-    `machines check` in the new grammar.
+    nothing.
+
+    It used to run `packages verify` in-process and read its exit status, so all
+    this could say was that something was wrong and where to go and look. The
+    findings are values now, so the row names them and `--json` carries them —
+    and the whole `SystemExit`-catching, stdout-redirecting ceremony that made a
+    printing command answerable is gone with it.
     """
-    status = bridge.declaration('verify', output=Output.STREAM)
-    if status == 0:
-        return ResourceResult('machines', Verdict.CONVERGED, 'packages.yml matches the manifests and installer scripts')
-    return ResourceResult('machines', Verdict.ISSUE, "the declaration is invalid — 'dotfiles machines check' lists why")
+    findings = validate.declaration()
+    broken = validate.errors(findings)
+    if not broken:
+        warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
+        return ResourceResult('machines', Verdict.CONVERGED, f'the declaration is sound{warned}')
+
+    for finding in broken:
+        render_finding(finding.section, finding.message)
+    return ResourceResult('machines', Verdict.ISSUE, f'{len(broken)} problem(s) in the declaration', attention=len(broken))
 
 
 class Lens(StrEnum):

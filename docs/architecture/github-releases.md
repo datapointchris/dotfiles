@@ -67,14 +67,14 @@ complex; inline keeps it explicit and traceable", and it holds unchanged in
 Python. What changed is that the alternative to a template is now a small typed
 function rather than a whole script.
 
-This is enforced rather than restated. `packages verify` rejects `binary_pattern`
+This is enforced rather than restated. `dotfiles machines check` rejects `binary_pattern`
 and `install_dir` on a `github_releases` entry: both were carried on nearly every
 entry while every reader gated on a key this section does not use, so neither was
 read, neither was validated, and both drifted into naming assets that no longer
 existed. A field that only looks like configuration is worse than none, because
 it reads as authoritative to whoever edits the file next.
 
-The parity in the other direction is checked: `packages verify` fails an entry
+The parity in the other direction is checked: `dotfiles machines check` fails an entry
 with no asset function, and `tests/install/test_release_urls.py` fails a function
 naming a tool nothing declares.
 

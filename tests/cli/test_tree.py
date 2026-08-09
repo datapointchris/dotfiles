@@ -70,6 +70,41 @@ def test_bad_input_exits_two(argv: list[str], nameless: Path) -> None:
     assert runner.invoke(app, argv).exit_code == ExitCode.USAGE
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# A declaration that will not hold together stops the write verb, not only check
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_apply_refuses_a_declaration_with_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`check` has always put this first in its walk, because a machine measured
+    against an invalid declaration produces a verdict that means nothing. The same
+    reasoning is stronger for `apply`, which would install whatever survived the
+    parse and report success — and refusing to *act* is what the read-only verb
+    could not do."""
+    from dotfiles import apply
+    from dotfiles import validate
+
+    broken = (validate.Finding('go_tools', validate.Severity.ERROR, "manifest 'box' names 'ghost-tool'"),)
+    monkeypatch.setattr(validate, 'declaration', lambda repo=None: broken)
+
+    assert apply.apply_machine() is ExitCode.ISSUE
+
+
+def test_apply_is_not_stopped_by_warnings_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An entry lands in `packages.yml` before the manifest that wants it. A tool
+    being staged must not block every install on the fleet."""
+    from dotfiles import apply
+    from dotfiles import validate
+
+    staged = (validate.Finding('go_tools', validate.Severity.WARNING, "'unused' is declared but no manifest names it"),)
+    monkeypatch.setattr(validate, 'declaration', lambda repo=None: staged)
+    monkeypatch.setattr(apply, 'select', lambda *args, **kwargs: [])
+
+    # No phases selected, so nothing runs — the point is that it got past the gate
+    # to the "nothing selected" refusal rather than stopping at the declaration.
+    assert apply.apply_machine() is ExitCode.USAGE
+
+
 def test_a_bad_source_names_the_valid_ones() -> None:
     """An error that does not say what would have worked costs another round trip."""
     result = runner.invoke(app, ['packages', 'list', '--source', 'no_such_section'])

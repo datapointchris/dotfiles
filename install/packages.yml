@@ -732,7 +732,7 @@ runtimes:
 # Each has a dedicated install script that reads from this config
 #
 # The asset URL is built by each script's get_download_url, never from this file.
-# binary_pattern and install_dir are therefore rejected here by `packages verify` —
+# binary_pattern and install_dir are therefore rejected here by `dotfiles machines check` —
 # both were carried for 22 and 23 entries respectively while no code read either,
 # so they drifted into describing assets that no longer existed. Naming an asset
 # from data would mean the URL vocabulary living here too; that trade is the
@@ -741,7 +741,7 @@ runtimes:
 # Latest is the default. An entry pins itself with `version:` — a bare version,
 # never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0
 # by the personal CLIs. This is the one section where a pin is honoured today;
-# `packages verify` rejects one written anywhere it is not. Vocabulary and the
+# `dotfiles machines check` rejects one written anywhere it is not. Vocabulary and the
 # reasoning: .planning/version-constraints.md.
 #
 # A verified checksum is the default, so a release that cannot supply one says so
@@ -904,7 +904,7 @@ github_releases:
 # Tools with bespoke install logic that doesn't match other categories.
 # Each has a dedicated function in src/dotfiles/providers/custom.py, and this
 # section is the source of truth: every entry must have one, verified by
-# `packages verify`. See docs/architecture/custom-installers.md.
+# `dotfiles machines check`. See docs/architecture/custom-installers.md.
 #
 # bundle_install_script: true marks installers whose downloadable script should
 # be cached in offline bundles (see src/dotfiles/create_bundle.py).

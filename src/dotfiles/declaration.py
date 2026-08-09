@@ -1,14 +1,12 @@
-"""Everything asked of the declaration that is not "what should this machine have?".
+"""Browsing the declaration: `packages list`, `show`, `search`, `stats`, `tags`.
 
-Browsing and search, plus the two drift checks — `verify` compares the repo
-against itself and runs on every commit, `missing` compares *this machine*
-against what its manifest declares and is what `doctor` calls. They are separate
-because a box part-way through a rollout is not a repo defect.
+Reading, and nothing else. The schema left for `catalog.py`, where a section's
+shape is the section's dataclass, and `verify` left for `validate.py`, which asks
+the same questions of the loaded objects rather than of a second raw-YAML parse.
 
-The schema left here for `catalog.py`, where a section's shape is the section's
-dataclass. What stays is the half that is about more than one file: a manifest
-naming a package that does not exist, an installer script with no entry, an entry
-no manifest ever names.
+What remains is deliberately untyped: browsing wants the file *as written*, so a
+`packages.yml` that will not load is still listable while it is being fixed —
+which is exactly when a reader wants to look at it.
 """
 
 import argparse
@@ -33,36 +31,6 @@ SECTION_STRUCTURES = {section: cls.structure for section, cls in catalog.SECTION
 is the one description of that; nothing here restates it."""
 
 PACKAGE_SECTIONS = tuple(catalog.SECTIONS)
-
-ID_FIELDS = {'flatpak_apps': 'flatpak_id'}
-"""The one section identified by something other than `name`. Everything absent
-from this map is keyed by its name."""
-
-# Sections whose manifest field is a list of names that must resolve to packages.yml entries.
-NAME_SUBSCRIBED_SECTIONS = (
-    'go_tools',
-    'cargo_packages',
-    'npm_globals',
-    'uv_tools',
-    'git_uv_tools',
-    'github_releases',
-    'custom_installers',
-)
-
-# Manifest keys that used to gate runtimes but were removed in Phase 1.6.
-# Runtime installation is now derived from name-list presence (e.g. go_tools non-empty → Go).
-DEPRECATED_MANIFEST_KEYS = ('go', 'rust', 'nvm', 'uv', 'tenv')
-
-INSTALLED_BY_CODE = {
-    'github_releases': 'providers/releases.py',
-    'custom_installers': 'providers/custom.py',
-}
-"""Sections whose entries are installed by a function, checked by `check_installable`.
-
-Both of these were a directory of one script per entry, and `verify` asserted
-that the file existed. The guarantee was never "a file exists with this name" —
-it was "something knows how to install this entry" — so the check followed the
-installers into Python rather than being deleted with the scripts."""
 
 
 class Color(Enum):
@@ -482,38 +450,14 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
             print(f'{pkg["name"]:<{widths["name"]}} {pkg["description"]}')
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Verify — drift detection between packages.yml, manifests, and installer scripts
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def resolve_repo_root(override: str | None = None) -> Path:
-    """Return the repo root — the --root override, or the ancestor of packages.yml."""
-    if override:
-        root = Path(override).resolve()
-        if not root.exists():
-            print(f'Error: --root path does not exist: {root}', file=sys.stderr)
-            sys.exit(1)
-        return root
-    return get_packages_file().parent.parent
-
-
-def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
-    """Load all manifests from <root>/install/manifests/*.yml, keyed by stem."""
-    manifests_dir = root / 'install' / 'manifests'
-    if not manifests_dir.exists():
-        return {}
-    manifests: dict[str, dict[str, Any]] = {}
-    for manifest_file in sorted(manifests_dir.glob('*.yml')):
-        with manifest_file.open() as f:
-            manifests[manifest_file.stem] = yaml.safe_load(f) or {}
-    return manifests
-
-
 def iter_section_entries(data: dict[str, Any], section: str):
-    """Yield each entry from a section. For dict-of-lists (npm_globals/uv_tools),
-    flatten subcategories. For dict-of-dicts (tmux_plugins), synthesize a 'name'
-    field from the outer key so downstream checks work uniformly."""
+    """Yield each entry from a section, whatever shape the section is spelled in.
+
+    A raw-dict walk, and the last one in the package: everything that decides
+    anything reads `catalog.load`. What is left here is browsing — `packages
+    list`, `show`, `search` — which wants the file as written rather than as
+    validated, so a typo is still listable while it is being fixed.
+    """
     structure = SECTION_STRUCTURES.get(section)
     section_data = data.get(section)
     if section_data is None:
@@ -531,150 +475,6 @@ def iter_section_entries(data: dict[str, Any], section: str):
         for key, entry in section_data.items():
             if isinstance(entry, dict):
                 yield {'name': key, **entry}
-
-
-def get_section_ids(data: dict[str, Any], section: str) -> set[str]:
-    """Return the set of id_field values for a section (e.g., names for most sections)."""
-    id_field = ID_FIELDS.get(section, 'name')
-    return {entry[id_field] for entry in iter_section_entries(data, section) if isinstance(entry, dict) and id_field in entry}
-
-
-def check_entry_shapes(root: Path, issues: list[tuple[str, str, str]]) -> None:
-    """Every per-entry rule, by building the typed catalog and reporting what it refuses.
-
-    Required fields, unknown keys, duplicate names, declared types and the
-    version-constraint rules all live on the dataclasses now, so this is a
-    parse rather than a second description of the same file. That is the point:
-    the shape a reader consumes and the shape `verify` enforces cannot disagree
-    when they are the same object.
-    """
-    try:
-        catalog.load(root / 'install' / 'packages.yml')
-    except catalog.CatalogError as refused:
-        issues.extend((issue.section, 'error', issue.message) for issue in refused.issues)
-
-
-def check_manifest_name_resolution(
-    data: dict[str, Any],
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check 3: every name referenced from a manifest must resolve to a packages.yml entry.
-    Script existence is covered transitively by the parity check below, so no direct filesystem
-    check is needed here — a missing script will surface via parity as an additional error."""
-    section_ids = {section: get_section_ids(data, section) for section in NAME_SUBSCRIBED_SECTIONS}
-
-    for manifest_name, manifest in manifests.items():
-        for section in NAME_SUBSCRIBED_SECTIONS:
-            value = manifest.get(section)
-            if not isinstance(value, list):
-                continue
-            for name in value:
-                if name not in section_ids[section]:
-                    issues.append(
-                        (section, 'error', f"manifest '{manifest_name}' names '{name}' but no packages.yml {section} entry exists")
-                    )
-
-
-def check_installable(data: dict[str, Any], issues: list[tuple[str, str, str]]) -> None:
-    """Every entry in a code-installed section names a function that installs it.
-
-    One direction only, unlike the script parity this replaces. The other half —
-    a function naming a tool nothing declares — cannot be asked here, because
-    `--root` points this at a synthetic tree while the functions are code and are
-    always the real ones. It is asserted instead by the corpus tests in
-    `tests/install/`, which compare both sets against the real declaration.
-    """
-    from dotfiles.providers import custom
-    from dotfiles.providers import releases
-
-    known = {'github_releases': set(releases.ASSETS), 'custom_installers': set(custom.INSTALLERS)}
-    for section, module in INSTALLED_BY_CODE.items():
-        for name in sorted(get_section_ids(data, section) - known[section]):
-            issues.append((section, 'error', f"packages.yml entry '{name}' has no installer function in {module}"))
-
-
-def check_deprecated_manifest_keys(
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 1 check: manifests must not set removed runtime-gate booleans.
-    Phase 1.6 replaced them with name-list derivation (e.g. go_tools non-empty → Go)."""
-    for manifest_name, manifest in manifests.items():
-        for key in DEPRECATED_MANIFEST_KEYS:
-            if key in manifest:
-                issues.append(
-                    (
-                        'manifest',
-                        'error',
-                        f"manifest '{manifest_name}' uses removed key '{key}:' — install is now derived from the corresponding name-list",
-                    )
-                )
-
-
-def check_unreferenced_entries(
-    data: dict[str, Any],
-    manifests: dict[str, dict[str, Any]],
-    issues: list[tuple[str, str, str]],
-) -> None:
-    """Tier 2 check 5: packages.yml entries in name-subscribed sections that no manifest uses."""
-    for section in NAME_SUBSCRIBED_SECTIONS:
-        # If any manifest uses `true` for this section, every entry is implicitly referenced
-        if any(manifest.get(section) is True for manifest in manifests.values()):
-            continue
-        referenced: set[str] = set()
-        for manifest in manifests.values():
-            value = manifest.get(section)
-            if isinstance(value, list):
-                referenced.update(value)
-        pkg_ids = get_section_ids(data, section)
-        for name in sorted(pkg_ids - referenced):
-            issues.append((section, 'warning', f"'{name}' defined in packages.yml but not referenced by any manifest"))
-
-
-def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Verify packages.yml against manifests and installer script directories."""
-    root = resolve_repo_root(args.root)
-    # Reload from the resolved root to guarantee data matches root when --root overrides default
-    data = load_packages(root=root)
-    manifests = load_manifests(root)
-    issues: list[tuple[str, str, str]] = []  # (section, severity, message)
-
-    check_entry_shapes(root, issues)
-    check_manifest_name_resolution(data, manifests, issues)
-    check_installable(data, issues)
-    check_deprecated_manifest_keys(manifests, issues)
-    check_unreferenced_entries(data, manifests, issues)
-
-    errors = [i for i in issues if i[1] == 'error']
-    warnings = [i for i in issues if i[1] == 'warning']
-
-    by_section: dict[str, list[tuple[str, str]]] = {}
-    for section, severity, message in issues:
-        by_section.setdefault(section, []).append((severity, message))
-
-    for section in sorted(by_section):
-        print(f'\n{colorize(section, Color.BRIGHT_CYAN)}', file=sys.stderr)
-        for severity, message in by_section[section]:
-            if severity == 'error':
-                marker = colorize('error', Color.RED)
-            else:
-                marker = colorize('warn ', Color.YELLOW)
-            print(f'  [{marker}] {message}', file=sys.stderr)
-
-    if issues:
-        print(file=sys.stderr)
-
-    summary = f'{len(errors)} errors, {len(warnings)} warnings'
-    if not errors and not warnings:
-        summary = colorize(f'✓ {summary}', Color.GREEN)
-    elif errors:
-        summary = colorize(f'✗ {summary}', Color.RED)
-    else:
-        summary = colorize(f'⚠ {summary}', Color.YELLOW)
-    print(summary)
-
-    sys.exit(1 if errors else 0)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -723,11 +523,6 @@ def main(argv: list[str] | None = None) -> None:
     list_parser.add_argument('--verbose', '-v', action='store_true', help='Show details')
     list_parser.add_argument('--json', action='store_true', help='Output as JSON')
     list_parser.set_defaults(func=cmd_list)
-
-    # verify command
-    verify_parser = subparsers.add_parser('verify', help='Check packages.yml against manifests and installer scripts')
-    verify_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
-    verify_parser.set_defaults(func=cmd_verify)
 
     args = parser.parse_args(argv)
 

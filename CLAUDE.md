@@ -86,7 +86,7 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 
 - A new release tool is one function in `src/dotfiles/providers/releases.py` naming its
   asset, plus its `packages.yml` entry. There is no script to write, and
-  `packages verify` fails an entry that has neither
+  `dotfiles machines check` fails an entry that has neither
 - `src/dotfiles/providers/ghrelease.py` is the engine every one of them goes through
 - Verification is required by default; an entry that cannot satisfy it declares
   `checksum: unpublished` or `checksum: unlisted` and is measured against the live

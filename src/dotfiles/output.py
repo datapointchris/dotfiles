@@ -75,6 +75,16 @@ def render_change(change: Change) -> None:
     err_console.print(f'  [{colour}]{change.verdict:<11}[/] {change.item:<28} {change.detail}{observed}')
 
 
+def render_finding(section: str, message: str) -> None:
+    """One declaration finding, on stderr, in the same column as a change.
+
+    A finding is evidence for the `machines` row the way a Change is evidence for
+    a resource's, so it reads as one list rather than two — and it goes to stderr
+    for the reason every diagnostic here does: `--json` is what a caller parses.
+    """
+    err_console.print(f'  [red]{"invalid":<11}[/] {section:<28} {message}')
+
+
 def heading(text: str) -> None:
     """Announce a phase. On stderr, because a phase banner is progress, not data."""
     err_console.print()

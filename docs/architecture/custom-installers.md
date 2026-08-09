@@ -125,7 +125,7 @@ with the download path, which is exactly when a checksum matters.
 ## Adding one
 
 Write the function, add it to `INSTALLERS` and `SOURCES`, and add the entry to
-`packages.yml`. `packages verify` fails a declared entry with no function, and
+`packages.yml`. `dotfiles machines check` fails a declared entry with no function, and
 `tests/install/test_custom_installers.py` fails a function naming a tool nothing
 declares, plus a tool absent from `SOURCES` — which would probe nothing and be
 indistinguishable from a reachable host.

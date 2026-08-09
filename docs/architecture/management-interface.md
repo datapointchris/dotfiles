@@ -258,8 +258,8 @@ installed. Reported rather than silently fixed, so adding a tool on one machine 
 pulling on another still surfaces — which is the job the accidental behaviour was doing.
 
 `dotfiles packages check` answers the same question on demand. It is deliberately
-separate from `packages verify`, which runs on every commit: `verify` compares
-`packages.yml` against the manifests and installer scripts, and a machine part-way
+separate from `dotfiles machines check`, which runs on every commit: that one compares
+`packages.yml` against the manifests and what can install them, and a machine part-way
 through a rollout is not a repo defect that should fail a commit.
 
 ### What a phase is allowed to claim
@@ -316,7 +316,7 @@ real type system, a test suite, and dependencies it can declare.
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
-| Registry drift | `packages verify` — packages.yml vs manifests vs scripts |
+| Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |
 | Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
