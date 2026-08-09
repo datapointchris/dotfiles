@@ -8,13 +8,13 @@ the thing none of them can state, because each only knows its own end.
 
 ## Four artefacts, three readers
 
-A `dotfiles` run writes up to four things under `$XDG_STATE_HOME/dotfiles/`, and
-they are separate because their readers are:
+Four things live under `$XDG_STATE_HOME/dotfiles/`, and they are separate because
+their readers are:
 
 | Artefact | Written by | Read by |
 | --- | --- | --- |
-| `runs/<id>.json` | every run | `dotfiles report`, days later |
-| `runs/<id>.jsonl` | every run | a person debugging one failure |
+| `runs/<id>.json` | a run — **not yet wired**, see below | `dotfiles report`, days later |
+| `runs/<id>.jsonl` | the logging file sink | a person debugging one failure |
 | `status.json` | every `check` | another machine, and the bundle builder |
 | `nudge` | every `check` | zsh, at every prompt |
 
@@ -29,6 +29,12 @@ no fork at all.
 
 Two files per run: a JSON record of what happened, and the full debug event
 stream beside it.
+
+**The recorder is built and nothing drives it.** `runs.py` has the record, the
+stopwatch and the writer, all tested, and `dotfiles report` reads them — but no
+command calls `start`/`finish`/`write`, so `report latest` correctly answers "no
+runs recorded yet". The design below is what it will record; what is live today is
+the event stream, which the logging file sink writes on every run regardless.
 
 **Timing is a field, not something grepped back out of the log.** A statistic
 that has to parse a log stream is a statistic nobody computes, so every outcome
@@ -46,11 +52,15 @@ the only thing that variable moves.
 verbs. The one that shaped the format is `stats`: it totals time per address
 across every record, which is the question that made timing a field. `path` exists
 so a record can be piped somewhere else in one word — `ifiles put "$(dotfiles
-report path)"` is the whole fleet-analysis loop.
+report path)"` is the intended fleet-analysis loop, and it is waiting on the same
+wiring.
 
-Records are pruned to a bounded number, because the state directory is a Syncthing
-folder: the fleet shares one history, and the work box keeps its own by
-construction rather than by a rule, since it is not on Syncthing.
+**Records are kept indefinitely.** There is no retention bound and no prune verb:
+the value of the history is that it goes back, and "is this getting slower" cannot
+be answered by a window that has already dropped the comparison. A record is a few
+kilobytes of JSON. The state directory is its own Syncthing folder, so the fleet
+shares one history and the work box keeps its own by construction rather than by a
+rule, since it is not on Syncthing.
 
 ## The nudge fires on Issues, never on drift
 

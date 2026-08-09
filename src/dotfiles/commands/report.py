@@ -144,10 +144,3 @@ def stats(as_json: bool = JsonOption) -> None:
     for address, row in summary.items():
         table.add_row(address, *(str(row[key]) for key in ('runs', 'total', 'median', 'slowest')))
     console.print(table)
-
-
-@app.command('prune')
-def prune(keep: int = typer.Option(runs.RETENTION, '--keep', help='How many records to retain')) -> None:
-    """Drop all but the newest records, and their event streams."""
-    removed = runs.prune(keep=keep)
-    console.print(f'removed {len(removed)} record(s)')

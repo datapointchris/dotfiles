@@ -36,7 +36,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'create': 'bundle, windows: builds an artefact rather than reconciling a machine',
     'stage': 'bundle: unpacks a bundle without installing from it',
     'edit': 'machines, repo: opens $EDITOR, which is not a read or a write of state',
-    'prune': 'report, bundle: bounded retention, not drift',
+    'prune': 'bundle: removes a staged artefact, not drift. Run records are never pruned',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles put "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',

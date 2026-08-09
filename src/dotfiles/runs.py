@@ -12,7 +12,12 @@ The split matters because "the install was slow" and "the *downloads* were slow"
 are different findings, and only a per-phase number tells them apart.
 
 Reading a record needs no special tooling — it is JSON, and the fleet shares one
-directory over Syncthing, which is also why `prune` exists.
+directory over Syncthing.
+
+**Records are kept indefinitely.** There is no retention bound and no prune verb,
+because the value of the history is that it goes back: "is this getting slower"
+cannot be answered by a window that drops the comparison. A record is a few
+kilobytes of JSON, so the directory grows at a rate nothing needs to manage.
 """
 
 import dataclasses
@@ -31,8 +36,6 @@ SCHEMA = 1
 # The phases an item passes through. Named here so a report can total the same
 # set every resource reports, rather than whatever keys happened to be written.
 PHASES = ('observe', 'fetch', 'verify', 'extract', 'act')
-
-RETENTION = 100
 
 
 def _now() -> dt.datetime:
@@ -214,26 +217,3 @@ def list_runs(
 def latest(runs_dir: Path | None = None) -> Path | None:
     found = list_runs(runs_dir, limit=1)
     return found[0] if found else None
-
-
-def prune(runs_dir: Path | None = None, *, keep: int = RETENTION) -> list[Path]:
-    """Drop all but the newest `keep` records, and their event streams.
-
-    Idempotent, and never removes what `latest` points at — a synced directory
-    that grows without bound is the reason this exists, and a dangling `latest`
-    is a worse failure than a large one.
-    """
-    directory = runs_dir or paths.RUNS_DIR
-    keeping = set(list_runs(directory, limit=keep))
-    kept_latest = latest(directory)
-    if kept_latest:
-        keeping.add(kept_latest)
-
-    removed = []
-    for record in list_runs(directory):
-        if record in keeping:
-            continue
-        record.with_suffix('.jsonl').unlink(missing_ok=True)
-        record.unlink()
-        removed.append(record)
-    return removed
