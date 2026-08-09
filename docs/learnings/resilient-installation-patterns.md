@@ -18,9 +18,9 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 ```bash
 # Parent wrapper (install.sh)
-run_installer "install/common/language-tools/go-tools.sh" "go-tools" || true
+run_installer "install/common/language-tools/npm-install-globals.sh" "npm-globals" || true
 run_installer "install/common/plugins/tmux-plugins.sh" "tmux-plugins" || true
-# ... continues even if go-tools fails
+# ... continues even if npm-globals fails
 display_failure_summary  # Shows all failures at end
 ```
 

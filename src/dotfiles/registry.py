@@ -28,9 +28,9 @@ something the signatures enforce.
 observation behind them are not, so "the read-only verbs never escalate" is a
 property of the signatures rather than a promise about the bodies.
 
-The mechanisms are imported here rather than reached lazily: the five of them cost
-5ms on top of this module's own 85ms, measured, which is not worth five local
-imports and the five explanations they would each need.
+The mechanisms are imported here rather than reached lazily: together they cost a
+few ms on top of this module's own 85ms, measured, which is not worth a local
+import inside every method and the explanation each would need.
 """
 
 from __future__ import annotations
@@ -45,6 +45,7 @@ from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.privilege import Privilege
+from dotfiles.providers import cargo
 from dotfiles.providers import clone
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
@@ -234,6 +235,23 @@ class CustomProvider(VendoredProvider):
         if not isinstance(entry, catalogs.CustomInstaller):
             return providers.Result(False, f'{item.name} is not a custom_installers entry')
         return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class CargoProvider(CatalogProvider):
+    """A Rust CLI installed by `cargo binstall`, or restored from a bundle.
+
+    Not a `VendoredProvider` for the same reason `GoToolProvider` is not: nothing
+    here fetches an asset this package names. binstall resolves the crate, picks
+    the release its project published, and places the binary.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.CargoPackage):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a cargo_packages entry')
+        result = cargo.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -559,7 +577,7 @@ PROVIDERS: tuple[Provider, ...] = (
     RegistryProvider('flatpak', 'system', Stage.SYSTEM, 'flatpak_apps'),
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
-    CatalogProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
+    CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
     GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
     CatalogProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),

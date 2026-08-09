@@ -102,9 +102,9 @@ def install_rust(*, offline: bool) -> Result:
     a second writer on a file the symlink pass owns.
 
     Nothing stages rustup in the offline bundle, so an offline run is refused with
-    that reason rather than left to fail inside curl. That is not a new
-    limitation — `cargo-tools.sh` says the same thing in its own guard, and takes
-    every declared package from the bundle cache instead.
+    that reason rather than left to fail inside curl. That costs an offline machine
+    nothing it could have had: `providers/cargo.py` takes every declared package
+    from the bundle rather than from a compiler, so the tools arrive without it.
     """
     placed = script.run('rustup', RUSTUP_URL, offline=offline, args=['-y', '--no-modify-path'])
     if not placed.ok:

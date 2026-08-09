@@ -62,6 +62,9 @@ class Output(StrEnum):
 NOT_FOUND = 127
 """A command that does not exist, as a shell reports it rather than as a crash."""
 
+TIMED_OUT = 124
+"""What `timeout(1)` exits with, so a bounded probe reports what the shell would."""
+
 
 @dataclass(frozen=True)
 class Completed:
@@ -82,8 +85,17 @@ def run(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
     output: Output = Output.STREAM,
+    timeout: float | None = None,
 ) -> Completed:
     """Run a command. See `Output` for where its output goes and why.
+
+    `timeout` is for a caller that is *asking* rather than *installing*: a probe
+    that has not answered is not answering, and one that never returns takes the
+    whole run with it. `evidence.reported_version` is the case that proved it —
+    the binary it probes is whatever a declaration names, and a GUI blocks on its
+    event loop until a person closes a window, which on a scheduled check is
+    never. Refused for STREAM, where minutes are a normal install rather than a
+    hang, and where the reader loop would not observe a deadline anyway.
 
     A missing binary is exit 127, not an exception. Every caller here already
     branches on the exit code, and several run something a machine may legitimately
@@ -97,21 +109,36 @@ def run(
     environment = {**os.environ, **(env or {})}
     directory = str(cwd) if cwd else None
 
+    if timeout is not None and output is Output.STREAM:
+        raise ValueError('a streaming command has no deadline: its reader loop cannot observe one, and installs legitimately take minutes')
+
     def missing(problem: OSError) -> Completed:
         return Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}')
 
+    def expired(problem: subprocess.TimeoutExpired) -> Completed:
+        """A timeout is a non-answer, in the shape every caller already handles.
+
+        `subprocess.run` has already killed the child by the time this raises, so
+        nothing is left running behind the report.
+        """
+        return Completed(command=argv, returncode=TIMED_OUT, transcript=f'{argv[0]} did not answer within {problem.timeout:g}s')
+
     if output is Output.DATA:
         try:
-            completed = subprocess.run(argv, cwd=directory, env=environment, check=False)
+            completed = subprocess.run(argv, cwd=directory, env=environment, check=False, timeout=timeout)
         except (FileNotFoundError, PermissionError) as problem:
             return missing(problem)
+        except subprocess.TimeoutExpired as problem:
+            return expired(problem)
         return Completed(command=argv, returncode=completed.returncode, transcript='')
 
     if output is Output.QUIET:
         try:
-            captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True)
+            captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True, timeout=timeout)
         except (FileNotFoundError, PermissionError) as problem:
             return missing(problem)
+        except subprocess.TimeoutExpired as problem:
+            return expired(problem)
         return Completed(
             command=argv,
             returncode=captured.returncode,

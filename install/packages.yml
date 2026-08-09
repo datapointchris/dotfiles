@@ -1059,11 +1059,16 @@ cargo_packages:
     binary_pattern: "broot_{version_num}.zip"
     tags: [cli, tui, files, navigation]
 
+  # reports_version: its first positional argument is the URL to open, so asking
+  # it for a version opens a window titled "version" and blocks on the webview's
+  # event loop until someone closes it. Nothing can measure whether this one is
+  # current, so nothing tries.
   - name: webviewrs
     command: webviewrs
     description: Simple webview app that opens URLs in a minimal native window
     github_repo: datapointchris/webviewrs
     binary_pattern: "webviewrs-{version}-{target}.tar.gz"
+    reports_version: false
     tags: [cli, gui]
 
 

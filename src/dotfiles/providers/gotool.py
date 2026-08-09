@@ -20,7 +20,6 @@ that needs it.
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from dotfiles import catalog
@@ -28,6 +27,7 @@ from dotfiles import effects
 from dotfiles.effects import Output
 from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
+from dotfiles.providers import place
 
 BUNDLE_BINARIES = 'go-binaries'
 
@@ -102,21 +102,7 @@ def _from_bundle(entry: catalog.GoTool) -> Result | None:
 
     destination = gobin() / entry.executable
     try:
-        _place(cached, destination)
+        place(cached, destination)
     except OSError as refused:
         return Result(False, f'could not install {entry.executable} from {cached}: {refused}')
     return Result(True, f'{entry.executable} installed from the bundle at {cached}')
-
-
-def _place(cached: Path, destination: Path) -> None:
-    """Copy beside the target and rename over it.
-
-    A plain copy over a binary that is currently running fails with "text file
-    busy", and the binary currently running is routinely `task`, which is what
-    invoked the install.
-    """
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    staged = destination.with_name(f'{destination.name}.new')
-    shutil.copy2(cached, staged)
-    staged.chmod(0o755)
-    staged.replace(destination)

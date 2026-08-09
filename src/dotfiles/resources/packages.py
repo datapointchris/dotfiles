@@ -38,13 +38,13 @@ from dotfiles.session import Session
 
 NAME = 'packages'
 
-CURRENCY = (catalog.GithubRelease, catalog.GoTool)
+CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage)
 """The entries whose currency is a question with an upstream answer.
 
-Both are installed from a repo this declaration names, so "what should be
+All three install from a repo this declaration names, so "what should be
 installed" is decided by a tag rather than by anyone else's schedule. `go install
-@latest` is not an exception to that — it *is* the upgrade, because nothing sits
-underneath a Go tool deciding when it moves.
+@latest` and `cargo binstall` are not exceptions to that — they *are* the upgrade,
+because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
 
 Everything else here defers to a registry that upgrades on its own: asking apt or
 npm whether a package is the newest one is asking a question the machine's own
@@ -138,20 +138,22 @@ def repair_for(item: DesiredItem, evidence: ev.Evidence, credentials: bool) -> R
 
 
 def _has_currency(item: DesiredItem) -> bool:
-    """Whether there is an upstream to ask about this item at all.
+    """Whether this item can be compared against an upstream at all.
 
-    An entry of a currency-bearing kind that names no repo is not one: a Go tool
-    declared by module path alone has no releases API to consult, and reporting it
-    UNKNOWN forever would be noise rather than a finding.
+    Both halves have to hold, and an entry failing either is not a finding — it is
+    a question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
+    tool declared by module path alone names no repo to consult. A GUI names one
+    and still cannot be asked: probing `webviewrs` opened a window and blocked the
+    plan on its event loop, which is what `reports_version` exists to declare.
     """
-    return isinstance(item.entry, CURRENCY) and bool(_wanted(item).repo)
+    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(_wanted(item).repo)
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
     if isinstance(entry, catalog.GithubRelease):
         return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix)
-    if isinstance(entry, catalog.GoTool):
+    if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)
     return releases.Wanted(repo='')
 

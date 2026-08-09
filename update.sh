@@ -204,60 +204,11 @@ update_go_tools() {
 }
 
 update_cargo_packages() {
-  print_section "Updating Rust packages via $(print_green "cargo binstall")"
-  local cargo_failures=0 cargo_count=0
-  local package binary_name before after binstall_output binstall_status
-  while IFS='|' read -r package binary_name; do
-    [[ -z "$package" ]] && continue
-    cargo_count=$((cargo_count + 1))
-
-    before=$(cargo_installed_version "$package") || before=""
-
-    # `cargo binstall` installs whether or not the package is present, so an
-    # absent one has to be caught before the call rather than after it. The
-    # binary check covers the packages a platform installs from its own
-    # repository instead of cargo, which have no cargo-recorded version.
-    if [[ -z "$before" ]] && ! command -v "$binary_name" >/dev/null 2>&1; then
-      log_warning "$package not installed — skipping update"
-      record_missing_tool "$package" "cargo"
-      continue
-    fi
-
-    # Never through a pipe: piping to grep discarded binstall's exit status, so
-    # a failed download reported the package as updated.
-    binstall_status=0
-    binstall_output=$(cargo binstall -y "$package" 2>&1) || binstall_status=$?
-    [[ "${DEBUG:-}" == "true" ]] && echo "$binstall_output"
-
-    if [[ $binstall_status -ne 0 ]]; then
-      log_warning "$package update failed"
-      echo "$binstall_output" >&2
-      cargo_failures=$((cargo_failures + 1))
-      continue
-    fi
-
-    after=$(cargo_installed_version "$package") || after=""
-
-    if [[ -z "$after" ]]; then
-      if command -v "$binary_name" >/dev/null 2>&1; then
-        log_success "$package up to date (not cargo-managed on this platform)"
-      else
-        log_warning "$package update failed"
-        cargo_failures=$((cargo_failures + 1))
-      fi
-    elif [[ -z "$before" ]]; then
-      log_success "$package installed ($after)"
-    elif [[ "$before" == "$after" ]]; then
-      log_success "$package already at latest ($after)"
-    else
-      log_success "$package updated: $before → $after"
-    fi
-  done < <(parse_packages --type=cargo --format=name_command)
-
-  if [[ $cargo_count -eq 0 ]]; then
-    log_info "no Rust packages selected"
-  elif [[ $cargo_failures -gt 0 ]]; then
-    log_warning "$cargo_failures Rust package(s) failed to update"
+  print_section "Updating Rust packages via $(print_green "dotfiles packages apply --source cargo_packages")"
+  if converge_section cargo_packages; then
+    log_success "Rust packages update completed"
+  else
+    log_warning "Rust packages update failed"
   fi
 }
 

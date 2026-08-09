@@ -74,8 +74,11 @@ TOOL_PATH_DIRS = (
 """Where a phase finds what an earlier phase installed.
 
 Nothing here reads `.zshenv`, so a tool is invisible to the phase that consumes it
-unless it is named: go-tools needs the Go toolchain, node.sh needs fnm from the
-cargo phase, npm-globals needs the Node that node.sh links as fnm's default alias.
+unless it is named: the cargo provider needs `cargo` from rustup, the node
+toolchain needs the fnm that arrives as a cargo package, and npm-globals needs the
+Node that fnm links as its default alias. The converged providers put what they
+install on this process's PATH as well — see `providers/toolchain.put_on_path` —
+so this is what the phases that still shell out get, and the two agree.
 Order mirrors `.zshenv` so a phase resolves the same binary an interactive shell
 would. `install/tool-path.sh` says the same thing to `update.sh`, and
 `tests/cli/test_phase_registry.py` asserts the two agree.
@@ -250,8 +253,6 @@ class Declaration(Exception):
 
 
 _FILTERS: dict[str, Callable[[dict, dict], list]] = {
-    'go': parse_packages.filter_go_packages_by_manifest,
-    'cargo': parse_packages.filter_cargo_packages_by_manifest,
     'npm': parse_packages.filter_npm_packages_by_manifest,
     'uv': parse_packages.filter_uv_packages_by_manifest,
     'git_uv': parse_packages.filter_git_uv_packages_by_manifest,
@@ -388,18 +389,8 @@ def _go_toolchain(context: Run) -> bool:
 
 
 def _rust_toolchain(context: Run) -> bool:
-    """rustup, and then cargo-binstall, which is not part of the runtime.
-
-    `cargo binstall` is the mechanism the cargo *packages* provider installs
-    through, so it belongs to that provider as a precondition rather than to the
-    runtime — the same shape the brew bootstrap takes in step C. It stays a script
-    here until the cargo provider that needs it converts.
-    """
     heading('Rust toolchain')
-    installed = _converge(context, engine.Selection.of('toolchains/rust-toolchain'))
-    if not context.declared('cargo'):
-        return installed
-    return run_installer(context, COMMON / 'language-tools' / 'cargo-binstall.sh', 'cargo-binstall') and installed
+    return _converge(context, engine.Selection.of('toolchains/rust-toolchain'))
 
 
 def _uv_toolchain(context: Run) -> bool:
@@ -543,10 +534,11 @@ def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str,
 
 
 def _cargo_packages(context: Run) -> bool:
-    if not context.declared('cargo'):
-        return True
+    """cargo-binstall is not installed here. It is a precondition of the provider,
+    which is what makes `packages apply --source cargo_packages` — the door
+    `update.sh` uses — get it too."""
     heading('Rust/cargo tools')
-    return run_installer(context, COMMON / 'language-tools' / 'cargo-tools.sh', 'cargo-tools')
+    return _converge(context, engine.Selection.of('packages/cargo'))
 
 
 def _node_toolchain(context: Run) -> bool:

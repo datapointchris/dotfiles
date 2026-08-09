@@ -360,9 +360,12 @@ Located in `install/common/`:
 - `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
 - `plugins/` - Editor and terminal plugin installers
 
-The runtimes those tools install against are no longer here. uv, rustup, the Go
-tarball and fnm's default Node alias are `src/dotfiles/providers/toolchain.py`,
-converged through the same engine as everything else.
+The runtimes those tools install against are no longer here, and neither are the
+Go and Rust tools themselves. uv, rustup, the Go tarball and fnm's default Node
+alias are `src/dotfiles/providers/toolchain.py`; `go install` and `cargo binstall`
+are `providers/gotool.py` and `providers/cargo.py`, which is also where
+cargo-binstall is installed as a precondition of the tools that need it. All of
+them converge through the same engine as everything else.
 
 The specific tools in each category are defined in `install/packages.yml` (the single
 source of truth) — this list describes what each directory is *for*, not its contents.
@@ -389,11 +392,8 @@ The `Taskfile.yml` provides convenience tasks for common operations but delegate
 **Updating tools**:
 
 ```bash
-# Rust tools
-cargo binstall -y <package>
-
-# GitHub release tools — converge them all, or narrow to one section
-dotfiles packages apply --source github_releases
+# Converge one section — Rust tools, Go tools, GitHub releases, custom installers
+dotfiles packages apply --source cargo_packages
 
 # System packages
 sudo apt update && sudo apt upgrade

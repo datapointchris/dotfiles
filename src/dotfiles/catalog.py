@@ -160,6 +160,21 @@ class Entry:
     min_version: str = ''
     max_version: str = ''
 
+    reports_version: bool = True
+    """Whether asking this binary for its version is a read.
+
+    Almost always. A CLI answers `--version` or `version` and exits, which is what
+    makes currency measurable at all. A GUI does not: `webviewrs` takes a URL as
+    its first positional argument, so the probe opened a window titled `version`
+    and blocked on the event loop until someone closed it — on a scheduled
+    `dotfiles check`, forever.
+
+    On the base class rather than on `CargoPackage`, because it is a property of
+    the artifact and any section can declare a GUI. An entry that sets it false is
+    simply not currency-checked: there is nothing to measure, and an `UNKNOWN` row
+    on every plan is noise rather than a finding.
+    """
+
     section: ClassVar[str]
     structure: ClassVar[Structure] = Structure.LIST
     honoured_constraints: ClassVar[tuple[str, ...]] = ()

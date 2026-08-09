@@ -1,274 +1,43 @@
 # Language Tool Installers
 
-## Pattern
+Installers for tools distributed through a language's own package manager, driven by the tool lists
+in `packages.yml`. Two remain — npm globals and uv tools — and both are being replaced by providers
+under `src/dotfiles/providers/`, which is where the go and cargo installers went. The scripts here
+are what is left of the pattern, not a place to add to.
 
-This directory contains installers for tools distributed through language package managers (cargo, npm, go, uv). These scripts read package lists from `packages.yml` and install multiple tools via their respective package managers.
+## The pattern
 
-**Key characteristics**:
-
-- Install multiple packages from `packages.yml` in a single run
-- Use language-specific package managers (cargo binstall, npm install -g, go install, uv tool install)
-- Loop through package list, continue on individual failures
-- Report each failure via `output_failure_data()`
-
-## When to Use
-
-Add a new installer to this directory when:
-
-- You need to install multiple tools via a language package manager
-- Tools are distributed through package registries (crates.io, npmjs.com, pkg.go.dev, PyPI)
-- Package manager is already installed (the runtimes converge first, at `Stage.TOOLCHAIN`)
-- Packages are defined in `packages.yml`
-
-## Libraries Used
-
-All scripts in this directory source:
-
-```bash
-source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-# Plus language-specific environment (e.g., $HOME/.cargo/env)
-```
-
-## Standard Pattern
+Each script reads its section of `packages.yml` through `parse_packages`, loops, installs, and
+reports a failure per package via `output_failure_data` rather than stopping. Continuing is the
+point: one unreachable registry must not cost the machine the other twenty tools.
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
-export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
-# Source language environment
-source "$HOME/.cargo/env"  # or other environment file
-
-print_banner "Installing Package Manager Tools"
-
-log_info "Reading packages from packages.yml..."
-dotfiles_python -m dotfiles.parse_packages --type=cargo | while read -r package; do
-  log_info "Installing $package..."
-  if cargo binstall -y "$package"; then
-    log_success "$package installed"
-  else
-    manual_steps="Install manually with cargo:
-   cargo install $package
-
-Or try cargo-binstall directly:
-   cargo binstall -y $package"
-
-    output_failure_data "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
-    log_warning "$package installation failed (see summary)"
-  fi
-done
-
-log_success "Tools installation complete"
-```
-
-## Package Configuration
-
-Packages are defined in `install/packages.yml`:
-
-```yaml
-cargo_packages:
-  - name: bat
-    description: "A cat clone with syntax highlighting"
-  - name: fd-find
-    description: "A simple, fast alternative to find"
-
-npm_globals:
-  language_servers:
-    - name: typescript-language-server
-      description: "TypeScript language server"
-
-go_tools:
-  - package: github.com/go-task/task/v3/cmd/task@latest
-    description: "Task runner / build tool"
-
-uv_tools:
-  linters:
-    - name: ruff
-      description: "Fast Python linter"
-```
-
-## Adding a New Package
-
-1. **Add to packages.yml**:
-
-   ```yaml
-   # For cargo
-   cargo_packages:
-     - name: toolname
-       description: "Tool description"
-
-   # For npm
-   npm_globals:
-     category:
-       - name: toolname
-         description: "Tool description"
-
-   # For go
-   go_tools:
-     - package: github.com/user/repo/cmd/tool@latest
-       description: "Tool description"
-
-   # For uv
-   uv_tools:
-     category:
-       - name: toolname
-         description: "Tool description"
-   ```
-
-2. **Test package installation manually**:
-
-   ```bash
-   # Cargo
-   cargo binstall -y toolname
-
-   # npm
-   npm install -g toolname
-
-   # Go
-   go install github.com/user/repo/cmd/tool@latest
-
-   # uv
-   uv tool install toolname
-   ```
-
-3. **Run installer script**:
-
-   ```bash
-   bash install/common/language-tools/cargo-tools.sh
-   # or npm-install-globals.sh, uv-tools.sh
-   ```
-
-4. **Verify installation**:
-
-   ```bash
-   which toolname
-   toolname --version
-   ```
-
-## Adding a New Language Package Manager
-
-If you need to add a new language package manager (e.g., gem, pip, dotnet):
-
-1. **Create new script** named `{manager}-tools.sh`
-
-2. **Follow the standard pattern**:
-   - Source required libraries
-   - Source language environment
-   - Read packages from `packages.yml` via `parse-packages.py`
-   - Loop through packages
-   - Install with language package manager
-   - Report failures via `output_failure_data()`
-
-3. **Update parse-packages.py**:
-   - Add new package type to argument parser
-   - Add extraction function for new package type
-   - Add to packages.yml schema
-
-4. **Add packages to packages.yml**:
-
-   ```yaml
-   gem_packages:
-     - name: package1
-       description: "Description"
-   ```
-
-## Examples
-
-### Cargo packages (cargo-tools.sh)
-
-```bash
-source "$HOME/.cargo/env"
-
-print_banner "Installing Rust CLI Tools"
-
-dotfiles_python -m dotfiles.parse_packages --type=cargo | while read -r package; do
-  log_info "Installing $package..."
-  if cargo binstall -y "$package"; then
-    log_success "$package installed"
-  else
-    manual_steps="Install manually with cargo:
-   cargo install $package
-
-Or try cargo-binstall directly:
-   cargo binstall -y $package"
-    output_failure_data "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
-    log_warning "$package installation failed (see summary)"
-  fi
+dotfiles_python -m dotfiles.parse_packages --type=npm | while read -r package; do
+  npm install -g "$package" \
+    || output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" \
+      "npm install -g $package" "Failed to install via npm"
 done
 ```
 
-### npm packages (npm-install-globals.sh)
+The runtime each installs against is already present: `registry.ToolchainProvider` converges uv,
+rustup, Go and fnm's default Node at an earlier stage, derived from these tool lists rather than
+from a manifest boolean.
 
-```bash
-# Node.js is a system package, so npm is already on PATH (no manager to source).
-command -v npm >/dev/null || { log_error "npm not found on PATH"; exit 1; }
+## Why the others are gone
 
-NPM_PACKAGES=$(dotfiles_python -m dotfiles.parse_packages --type=npm)
+A script has two modes — install and update — and the mode decided things it had no business
+deciding: which source a tool came from, and whether a present-but-old tool was left alone. A
+provider has one verb and asks the question the modes were approximating, which is whether this run
+has a network. It also gets currency for free: `go install @latest` and `cargo binstall` *are* the
+upgrade, so being behind the upstream a declaration names is drift `plan` reports and `apply`
+repairs, rather than something only `update.sh` could see.
 
-for package in $NPM_PACKAGES; do
-  if npm list -g "$package" --depth=0 &>/dev/null; then
-    echo "  $package already installed (skipping)"
-  else
-    log_info "Installing $package..."
-    if npm install -g "$package"; then
-      log_success "$package installed"
-    else
-      manual_steps="Install manually with npm:
-   npm install -g $package
-
-View package on npm:
-   https://www.npmjs.com/package/$package"
-      output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "$manual_steps" "Failed to install via npm"
-      log_warning "$package installation failed (see summary)"
-    fi
-  fi
-done
-```
-
-## Error Handling
-
-Language tool installers handle errors by:
-
-- Continuing to next package on individual failures
-- Logging each failure via `output_failure_data()`
-- Providing manual installation instructions specific to package manager
-- Completing the loop to install as many packages as possible
-
-**Note**: Current implementation doesn't exit with error code if some packages fail. This allows maximum installation but loses error signal. Consider tracking failure count and exiting with error if any fail.
-
-## Important Notes
-
-1. **Environment sourcing**: Always source the language environment before installing (`.cargo/env`, etc.). Node.js is a system package, so `npm` is already on PATH — nothing to source.
-
-2. **Package manager availability**: Assumes the runtime is already installed — `providers/toolchain.py` converges it at an earlier stage
-
-3. **Idempotency**: npm checks if already installed, others rely on package manager's idempotency
-
-4. **Failure resilience**: Loop continues on individual package failures
-
-5. **Manual steps**: Provide both direct package manager command and package registry URL
-
-## Common Issues
-
-**Issue**: Package manager not found
-
-- **Solution**: Ensure language manager installer has run first
-
-**Issue**: Environment not sourced correctly
-
-- **Solution**: Check that source path matches language manager installation
-
-**Issue**: Some packages fail silently
-
-- **Solution**: Check package name in packages.yml matches registry name
-
-**Issue**: Network timeouts
-
-- **Solution**: Retry failed packages, check network connectivity
+See `docs/architecture/package-management.md` for where each section installs from, and
+`packages.yml`'s header comment for which section a new tool belongs in.
