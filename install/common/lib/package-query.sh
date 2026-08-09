@@ -9,9 +9,9 @@
 #
 # The manifest and owner narrowings used to be hand-rolled in four tool scripts
 # plus update.sh, and they had drifted: only the Go one read PACKAGE_OWNER, so
-# `--mine` ran cargo, uv, and npm in full while claiming to filter. Go converges
-# through the plan now, which is narrowed before a provider sees it; the three
-# scripts that remain still read this.
+# `--mine` ran cargo, uv, and npm in full while claiming to filter. Every one of
+# those scripts is a provider now, narrowed by the plan before it sees an item.
+# What still reads this is update.sh and the `--dry-run` listings in phases.sh.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/python.sh"
 
