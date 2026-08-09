@@ -12,3 +12,11 @@ export PATH="$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/npm/b
 # SSH sessions inherit no locale (no SendEnv/AcceptEnv), leaving LC_CTYPE=C,
 # where zsh's $'\uXXXX' escapes fail with "character not in range".
 export LANG="${LANG:-en_US.UTF-8}"
+
+# The checkout every script and the CLI deploy from. Here and not in ~/.env for
+# the same reason as fnm above: ~/.env is sourced from .zshrc, so it reaches
+# interactive shells only. `paths.py` prefers this over walking up from its own
+# file, and that walk is what makes it matter — run `dotfiles symlinks apply`
+# from inside a git worktree with this unset and it deploys the worktree's
+# config over the machine's.
+export DOTFILES_DIR="$HOME/dotfiles"
