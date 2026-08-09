@@ -44,7 +44,6 @@ from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
-from dotfiles import resolve as resolver
 from dotfiles import versions
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
@@ -128,7 +127,7 @@ class Run:
         """
         return catalog.load()
 
-    @property
+    @functools.cached_property
     def session(self) -> Session:
         """The run as the converted resources see it.
 
@@ -136,6 +135,12 @@ class Run:
         This one holds what the remaining bash phases need; `Session` holds the
         typed declaration, and `Run` collapses into it when the last phase
         converts.
+
+        Cached because the *Session* is what caches: its catalog, machine and plan
+        are `cached_property` on the instance, so a plain property handed every
+        reader a fresh one with cold caches. Five phases read this, and one
+        `apply --owner` was parsing packages.yml seven times — while the module
+        docstring above claimed the declaration is read once per run.
         """
         return Session(machine_name=self.machine, offline=self.offline, owner=self.owner)
 
@@ -730,19 +735,6 @@ def select(
     ]
 
 
-def _owned_providers(machine: str, owner: str) -> frozenset[str]:
-    """Which providers still have work once the plan is narrowed to `owner`.
-
-    Resolved rather than looked up, because ownership is a property of the
-    catalog entries and the manifest decides which of them this machine wants.
-    A boolean column could only ever answer the first half, which is why
-    `shell-plugins` was marked "no owner" when every one of its five plugins has
-    one — none of them Chris's.
-    """
-    plan = resolver.resolve(catalog.load(), machines.load(machine), owner=owner)
-    return plan.providers
-
-
 def apply_machine(
     skip: frozenset[str] = frozenset(),
     only: frozenset[str] | None = None,
@@ -765,8 +757,13 @@ def apply_machine(
         warn(str(problem))
         return ExitCode.USAGE
 
+    # The session already resolves owner-narrowed — `Run.session` hands it the
+    # owner — so asking it is the same answer as resolving a second plan, minus
+    # the second catalog parse. Ownership stays a property of the entries rather
+    # than a column: `shell-plugins` was hand-marked "no owner" when all five of
+    # its plugins have one, none of them Chris's.
     try:
-        owned = _owned_providers(context.machine, owner) if owner else None
+        owned = context.session.plan.providers if owner else None
     except (catalog.CatalogError, machines.MachineError) as refused:
         warn(f'cannot narrow to --owner {owner}: {refused}')
         return ExitCode.ISSUE

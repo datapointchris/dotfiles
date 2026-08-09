@@ -335,3 +335,30 @@ def test_a_private_repo_tool_is_installed_where_there_are_credentials(monkeypatc
 
     assert apply._github_releases(context)
     assert attempted == ['learning']
+
+
+def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The module docstring claims "the declaration is read once per run", and it
+    was not: `Run.session` was a plain property, so each of the five phases that
+    read it built a fresh Session with cold caches. One `apply --owner` parsed the
+    258-entry packages.yml seven times and resolved seven manifests.
+
+    Two rather than one is the honest floor while `Run` and `Session` both exist —
+    one read each — and it goes to one when Run collapses into Session.
+    """
+    reads = {'catalog': 0, 'machine': 0}
+    for module, name, key in ((catalog, 'load', 'catalog'), (machines, 'load', 'machine')):
+        original = getattr(module, name)
+
+        def counted(*args: object, _original=original, _key=key, **kwargs: object) -> object:
+            reads[_key] += 1
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(module, name, counted)
+
+    run = apply.Run.resolve('linux-lxc-server', owner=BASH_OWNER)
+    for _ in range(len(apply.REGISTRY)):
+        _ = run.session.plan
+    _ = run.declaration
+
+    assert reads == {'catalog': 2, 'machine': 2}
