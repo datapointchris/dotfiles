@@ -1,15 +1,16 @@
-"""The language runtimes, and which of them this machine needs.
+"""The language runtimes: whether each one this machine needs is there and current.
 
-A toolchain is never subscribed to directly. A machine gets Go because it
-declared `go_tools`, and Rust because it declared `cargo_packages` — which is why
-the manifest booleans that used to gate them (`go:`, `rust:`, `nvm:`, `tenv:`) were
-removed: they said nothing the tool lists did not, and a machine could set one
-without declaring a single tool for it.
+*Which* of them it needs is not decided here any more. A toolchain is a provider
+like every other mechanism, planned by `registry.ToolchainProvider` from what the
+tool providers resolved, so the table that used to sit in this file — name, probe,
+stage, the section that pulls it in — is the registry's. It was the fifth keying
+of the provider concept and the one the A3 collapse did not reach.
 
-uv is the exception and is ungated. A manifest with empty uv lists still needs
-it, because everything installed later resolves through it — before the CLI
-existed, the symlink phase itself shelled out to `uv run` and died with exit 127
-on `linux-lxc-server`.
+What is left is the resource: run the probes, compare what they said against the
+floors the plan carries, and say what differs. uv is ungated and always planned,
+because everything installed later resolves through it — before the CLI existed
+the symlink phase itself shelled out to `uv run` and died with exit 127 on
+`linux-lxc-server`.
 """
 
 from __future__ import annotations
@@ -17,12 +18,12 @@ from __future__ import annotations
 import dataclasses as dc
 import shutil
 
+from dotfiles import catalog
+from dotfiles import evidence as ev
 from dotfiles import versions
-from dotfiles.effects import Output
-from dotfiles.effects import run
 from dotfiles.privilege import Privilege
+from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
@@ -34,41 +35,24 @@ NAME = 'toolchains'
 
 
 @dc.dataclass(frozen=True, slots=True)
-class Toolchain:
-    """One runtime, what pulls it in, and how to ask its version."""
-
-    name: str
-    probe: tuple[str, ...]
-    stage: Stage
-    needed_by: str = ''
-    """The catalog section whose presence requires it. Empty means ungated."""
-
-    runtime: str = ''
-    """The `runtimes` entry carrying its version constraint, where one exists."""
-
-
-TOOLCHAINS = (
-    Toolchain('uv', ('uv', '--version'), Stage.TOOLCHAIN),
-    Toolchain('go', ('go', 'version'), Stage.TOOLCHAIN, needed_by='go_tools', runtime='go'),
-    Toolchain('rust', ('rustc', '--version'), Stage.TOOLCHAIN, needed_by='cargo_packages', runtime='rust'),
-    # After TOOLS, because fnm ships as a cargo package and node is whatever fnm
-    # pins as its default alias.
-    Toolchain('node', ('node', '--version'), Stage.NODE, needed_by='npm_globals'),
-)
-
-
-@dc.dataclass(frozen=True, slots=True)
 class Observed:
-    installed: dict[str, str]
-    """Toolchain name → the version string it reported, for those that answered."""
+    reported: dict[str, str]
+    """Runtime name → the version string it printed, for those that answered."""
 
-    absent: frozenset[str]
+    absent: dict[str, str]
+    """Runtime name → why it did not answer.
+
+    The reason rather than a bare set, because "no `go` on PATH" and "a `go` that
+    exits non-zero" are different findings and only the first is what a fresh
+    machine looks like. A half-extracted tarball leaves the binary in place and
+    `which` satisfied by it.
+    """
 
     @property
     def summary(self) -> str:
         """Names the runtimes rather than counting them: which ones a machine
         needs is derived from its tool lists, so the list itself is the finding."""
-        return ', '.join(sorted(self.installed)) or 'none needed'
+        return ', '.join(sorted(self.reported)) or 'none needed'
 
 
 class ToolchainsResource:
@@ -76,43 +60,42 @@ class ToolchainsResource:
     help = 'language runtimes and their version managers'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        installed: dict[str, str] = {}
-        absent: set[str] = set()
+        reported: dict[str, str] = {}
+        absent: dict[str, str] = {}
 
-        for toolchain in _needed(plan):
-            if not shutil.which(toolchain.probe[0]):
-                absent.add(toolchain.name)
-                continue
-            result = run(list(toolchain.probe), output=Output.QUIET)
-            if result.ok and result.transcript.strip():
-                installed[toolchain.name] = result.transcript.strip().splitlines()[0]
+        for item in plan.for_resource(NAME):
+            if not shutil.which(item.executable):
+                absent[item.name] = f'{item.executable} is not on PATH'
+            elif (version := ev.reported_version(item.executable)) is None:
+                absent[item.name] = f'{item.executable} is on PATH but would not report a version'
             else:
-                absent.add(toolchain.name)
+                reported[item.name] = version
 
-        return Observed(installed=installed, absent=frozenset(absent))
+        return Observed(reported=reported, absent=absent)
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         changes = []
-        for toolchain in _needed(plan):
-            if toolchain.name in observed.absent:
-                changes.append(
-                    Change(NAME, toolchain.stage, toolchain.name, Verdict.MISSING, detail=f'{toolchain.probe[0]} is not on PATH')
-                )
+        for item in plan.for_resource(NAME):
+            if item.name in observed.absent:
+                changes.append(Change(NAME, item.stage, item.name, Verdict.MISSING, detail=observed.absent[item.name], desired=item))
                 continue
-            reported = observed.installed[toolchain.name]
-            floor = _floor(plan, toolchain)
+
+            reported = observed.reported[item.name]
+            floor = _floor(item)
             if not floor:
                 continue
+
             meets = versions.at_least(reported, floor)
             if meets is None:
                 changes.append(
                     Change(
                         NAME,
-                        toolchain.stage,
-                        toolchain.name,
+                        item.stage,
+                        item.name,
                         Verdict.UNKNOWN,
                         detail=f'declares a floor of {floor} and reported {reported!r}, which has no version in it',
                         repair=Repair.NONE,
+                        desired=item,
                         observed=reported,
                     )
                 )
@@ -120,10 +103,11 @@ class ToolchainsResource:
                 changes.append(
                     Change(
                         NAME,
-                        toolchain.stage,
-                        toolchain.name,
+                        item.stage,
+                        item.name,
                         Verdict.STALE,
                         detail=f'below the declared floor of {floor}',
+                        desired=item,
                         observed=reported,
                     )
                 )
@@ -134,28 +118,23 @@ class ToolchainsResource:
 
         Each toolchain installs through its own version manager — rustup, fnm, the
         go tarball, uv's own installer — and those are genuine sequences of shell
-        commands that step 5 converts alongside the release installers.
+        commands that the next commit in step B converts.
         """
         return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles toolchains apply', which still drives the phase registry")
 
 
-def _needed(plan: Plan) -> tuple[Toolchain, ...]:
-    """Which toolchains this machine's declaration implies."""
-    return tuple(toolchain for toolchain in TOOLCHAINS if not toolchain.needed_by or plan.for_section(toolchain.needed_by))
+def _floor(item: DesiredItem) -> str:
+    """The declared minimum for a runtime, or '' where none is declared.
 
-
-def _floor(plan: Plan, toolchain: Toolchain) -> str:
-    """The declared minimum for a toolchain, or '' where none is declared.
-
-    Read off the catalog rather than carried here, because `min_version` is a fact
-    about what the tools need and belongs beside them.
+    Read off the entry the plan carries rather than looked up, because
+    `min_version` is a fact about what the tools need and belongs beside them —
+    and resolution finishing in the plan is what stops this reaching back into the
+    catalog for it.
     """
-    if not toolchain.runtime:
+    entry = item.entry
+    if not isinstance(entry, catalog.Runtime):
         return ''
-    for entry in plan.runtimes:
-        if entry.name == toolchain.runtime:
-            return entry.min_version or entry.version
-    return ''
+    return entry.min_version or entry.version
 
 
 RESOURCE = ToolchainsResource()

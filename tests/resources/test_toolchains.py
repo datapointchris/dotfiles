@@ -3,9 +3,13 @@
 The seam is `PATH`, holding nothing but a directory of stubs that print what a
 real toolchain prints. **Nothing else**, deliberately: the system directories were
 there at first, and `/usr/bin/go` then answered every test that was supposed to
-measure an absent toolchain. That works here because these probes are argv lists
-rather than shell strings, so no interpreter has to be findable — the stubs name
+measure an absent toolchain. That works here because a probe is an argv list
+rather than a shell string, so no interpreter has to be findable — the stubs name
 `/bin/sh` absolutely in their shebang.
+
+*Which* toolchains are planned is `tests/resolver/test_registry.py`'s, since the
+derivation moved onto the provider. What is asserted here is what the resource
+does with them.
 
 Two bug classes survive this boundary, a real tool differing from its stub and the
 bootstrap, and both are what e2e covers.
@@ -173,14 +177,22 @@ def test_an_unreadable_version_against_a_floor_is_unknown(tmp_path: Path, bin_di
 
 
 def test_a_toolchain_that_fails_to_answer_counts_as_absent(tmp_path: Path, bin_dir: Path) -> None:
-    """A binary on PATH that exits non-zero is not an installed toolchain."""
+    """A binary on PATH that exits non-zero is not an installed toolchain.
+
+    Reported as the second of the two ways to be missing rather than as "not on
+    PATH", because a half-extracted go tarball leaves the binary in place with
+    `which` satisfied by it, and that is not what a fresh machine looks like.
+    """
     broken = bin_dir / 'go'
     broken.write_text('#!/bin/sh\nexit 1\n')
     broken.chmod(broken.stat().st_mode | stat.S_IEXEC)
     stub(bin_dir, 'uv')
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
 
-    assert [change.verdict for change in changes(live)] == [Verdict.MISSING]
+    found = changes(live)
+
+    assert [change.verdict for change in found] == [Verdict.MISSING]
+    assert found[0].detail == 'go is on PATH but would not report a version'
 
 
 def test_the_floor_comes_from_the_plan_not_from_this_module(tmp_path: Path, bin_dir: Path) -> None:
@@ -193,7 +205,3 @@ def test_the_floor_comes_from_the_plan_not_from_this_module(tmp_path: Path, bin_
     live = session(tmp_path, {**BARE, 'go_tools': ['task']}, packages)
 
     assert changes(live)[0].detail == 'below the declared floor of 99.0'
-
-
-def test_every_toolchain_names_a_stage_that_exists() -> None:
-    assert all(toolchain.stage in Stage for toolchain in toolchains.TOOLCHAINS)

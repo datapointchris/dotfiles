@@ -88,7 +88,12 @@ class Provider:
     stage: Stage
 
     section: str = ''
-    """The declaration section it plans from."""
+    """The declaration section it plans from, or '' for one that subscribes to none.
+
+    A toolchain is the second kind: nothing declares Go, and a machine has it
+    because it declared `go_tools`. So the section is what a *subscription* names,
+    and `BY_SECTION` indexes only the providers that have one.
+    """
 
     ownable: bool = True
     """Whether an owner can be traced for this provider's items.
@@ -294,6 +299,82 @@ class CloneProvider(CatalogProvider):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class ToolchainProvider(Provider):
+    """A language runtime, in the plan because the tools that need it are.
+
+    Nothing subscribes to a toolchain. A machine gets Go because it declared
+    `go_tools` and Rust because it declared `cargo_packages`, which is why the
+    manifest booleans that used to gate them (`go:`, `rust:`, `nvm:`, `tenv:`) were
+    removed — they said nothing the tool lists did not, and a machine could set one
+    without declaring a single tool for it.
+
+    That derivation is what the two-pass signature exists for, so this is the
+    provider it was written for rather than a special case beside it: `planned`
+    carries what the tool providers resolved, and reading it is the whole of what
+    `resources/toolchains.py` kept as a table of its own — the fifth keying of the
+    provider concept, and the one the A3 collapse did not reach.
+    """
+
+    runtime: str = ''
+    """What the row is called: `rust`, where the provider is `rust-toolchain`.
+
+    The provider name has to be unique across the whole registry — `packages`
+    already has a `go` and a `uv` — while this is what a person reads, and
+    `dotfiles toolchains plan` has printed these four words since it existed. It
+    is also the `runtimes` key, so a floor declared for it starts being honoured
+    without anything here changing.
+    """
+
+    executable: str = ''
+    """The binary that answers for it, which is not always its name: Rust is
+    measured through `rustc`."""
+
+    needed_by: str = ''
+    """The catalog section whose presence requires it. Empty means ungated."""
+
+    ownable: bool = False
+    """A runtime belongs to nobody, so `--owner` skips these whole.
+
+    Filtering instead would drop every one of them for answering `owner is None`,
+    which is the wrong reason — and it reproduces what the phase registry already
+    did, where a toolchain phase declared no providers and so never survived the
+    intersection.
+    """
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        if self.needed_by and not any(item.section == self.needed_by for item in planned):
+            return ()
+        return (
+            DesiredItem(
+                section='runtimes',
+                provider=self.name,
+                resource=self.resource,
+                stage=self.stage,
+                name=self.runtime,
+                executable=self.executable,
+                evidence_path='',
+                precondition=resolve.Precondition.NONE,
+                entry=declared_runtime(declaration, self.runtime),
+                reason=Reason('runtimes', f'section:{self.needed_by}' if self.needed_by else 'every machine'),
+            ),
+        )
+
+
+def declared_runtime(declaration: catalogs.Catalog, name: str) -> catalogs.Runtime | None:
+    """The `runtimes` row carrying a toolchain's version floor, or None.
+
+    Tolerant rather than `Catalog.find`, which raises. Two of the four toolchains
+    have no row at all, and the two that do declare a floor optionally — rust names
+    an install method and no version, so any rustc satisfies it. An absent row
+    means "no floor", which is a legitimate state and not a broken plan.
+    """
+    for entry in declaration.section('runtimes'):
+        if entry.name == name and isinstance(entry, catalogs.Runtime):
+            return entry
+    return None
+
+
+@dc.dataclass(frozen=True, slots=True)
 class SystemConfigProvider(Provider):
     """A `system.yml` section, resolved against what the first pass planned.
 
@@ -413,6 +494,10 @@ PROVIDERS: tuple[Provider, ...] = (
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),
     CloneProvider('tpm', 'plugins', Stage.TMUX_PLUGINS, 'tmux_plugins'),
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),
+    ToolchainProvider('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
+    ToolchainProvider('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
+    ToolchainProvider('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
+    ToolchainProvider('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),
@@ -422,14 +507,16 @@ PROVIDERS: tuple[Provider, ...] = (
 )
 """The registry, in planning order — which is the two passes.
 
-Every `system.yml` provider sits after every `packages.yml` one because each is
-handed what the earlier providers resolved and some of them read it. Execution
-order is `Stage`, not this: the plan is sorted before it leaves the resolver, so
-a provider added in the wrong place here changes nothing about when it runs.
+Every provider that reads what an earlier one resolved sits after it: the
+toolchains after the tool sections that pull them in, and every `system.yml`
+provider after every `packages.yml` one. Execution order is `Stage`, not this: the
+plan is sorted before it leaves the resolver, so the Go runtime installs at
+TOOLCHAIN despite being planned after the tools that need it, and a provider put
+in the wrong place here changes nothing about when it runs.
 """
 
 UNPROVIDED: dict[str, str] = {
-    'runtimes': 'derived by the toolchain resource from the tool sections that need one, never subscribed to directly',
+    'runtimes': 'read by the toolchain providers for their floors; a machine gets a runtime from its tool lists, never by subscribing',
     'zen_extensions': 'declared and installed by nothing; the browser profile is not managed from here yet',
 }
 """Sections deliberately absent from the registry, each with the reason.
@@ -441,7 +528,12 @@ between them, so a new section has to answer this question to be committed.
 """
 
 BY_NAME: dict[str, Provider] = {provider.name: provider for provider in PROVIDERS}
-BY_SECTION: dict[str, Provider] = {provider.section: provider for provider in PROVIDERS}
+BY_SECTION: dict[str, Provider] = {provider.section: provider for provider in PROVIDERS if provider.section}
+"""Only the providers a manifest can subscribe to.
+
+A toolchain plans from no section, and indexing four of them under '' would make
+`--source runtimes` resolve to whichever was written last.
+"""
 
 
 def named(name: str) -> Provider | None:

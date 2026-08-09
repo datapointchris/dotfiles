@@ -684,8 +684,9 @@ class Phase:
     """Which CLI resource owns it, so `dotfiles packages apply` selects a subset."""
 
     providers: tuple[str, ...]
-    """Which of `registry.PROVIDERS` this phase installs, or () for one that installs
-    no catalogued item at all — a toolchain, the symlinks, the zsh setup.
+    """Which of `registry.PROVIDERS` this phase installs, or () for one `--owner`
+    can never select: the symlink pass, the Neovim plugins Lazy syncs from its own
+    lockfile, and the system configuration, whose rows belong to nobody on GitHub.
 
     This replaces a hand-maintained `owner_aware` boolean. Ownership is already a
     fact about the entries, so the question "can `--owner` narrow this phase" is
@@ -698,14 +699,14 @@ class Phase:
 
 REGISTRY = (
     Phase('system-packages', 'system', ('system', 'cask', 'mas', 'flatpak'), _system_packages),
-    Phase('go-toolchain', 'toolchains', (), _go_toolchain),
-    Phase('rust-toolchain', 'toolchains', (), _rust_toolchain),
-    Phase('uv', 'toolchains', (), _uv_toolchain),
+    Phase('go-toolchain', 'toolchains', ('go-toolchain',), _go_toolchain),
+    Phase('rust-toolchain', 'toolchains', ('rust-toolchain',), _rust_toolchain),
+    Phase('uv', 'toolchains', ('uv-toolchain',), _uv_toolchain),
     Phase('go-tools', 'packages', ('go',), _go_tools),
     Phase('github-releases', 'packages', ('ghrelease',), _github_releases),
     Phase('custom-installers', 'packages', ('custom',), _custom_installers),
     Phase('cargo', 'packages', ('cargo',), _cargo_packages),
-    Phase('node-toolchain', 'toolchains', (), _node_toolchain),
+    Phase('node-toolchain', 'toolchains', ('node-toolchain',), _node_toolchain),
     Phase('npm-globals', 'packages', ('npm',), _npm_globals),
     Phase('uv-tools', 'packages', ('uv', 'uv-git'), _uv_tools),
     Phase('shell-plugins', 'plugins', ('shell-plugin',), _shell_plugins),

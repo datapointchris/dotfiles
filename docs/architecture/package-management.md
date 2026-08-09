@@ -347,9 +347,9 @@ its manifest declares, and a box part-way through a rollout is not a repo defect
 commit. `dotfiles check` asks the third question — whether anything is actually wrong — and a machine
 merely behind on versions answers no.
 
-What counts as evidence is per provider, in `src/dotfiles/resources/packages.py`: a binary on PATH for a release or a go tool, the tool directory for a uv tool that ships no console script, an app bundle for a Mac App Store app, and the package manager's own inventory for anything apt, pacman, brew or flatpak installed — because a package name is not a binary name, and `p7zip-full` installs `7zz` while `build-essential` installs no executable at all.
+What counts as evidence is the provider's own, declared on its class in `src/dotfiles/registry.py` and implemented in `src/dotfiles/evidence.py`: a binary on PATH for a release or a go tool, the tool directory for a uv tool that ships no console script, an app bundle for a Mac App Store app, and the package manager's own inventory for anything apt, pacman, brew or flatpak installed — because a package name is not a binary name, and `p7zip-full` installs `7zz` while `build-essential` installs no executable at all. A runtime is the one measured by asking it: a `go` on PATH that will not report a version is not an installed toolchain.
 
-The registry carries `command` where the binary name differs from the entry name (`markdownlint-cli` → `markdownlint`, `awscli` → `aws`) and `installed_path` for entries that install no binary (`bashselfupdate` is a sourced library). Without those, an installed tool reads as missing forever — the failure mode that makes a checker get ignored.
+The declaration carries `command` where the binary name differs from the entry name (`markdownlint-cli` → `markdownlint`, `awscli` → `aws`) and `installed_path` for entries that install no binary (`bashselfupdate` is a sourced library). Without those, an installed tool reads as missing forever — the failure mode that makes a checker get ignored.
 
 ### Installation Scripts
 

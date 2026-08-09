@@ -90,7 +90,10 @@ def test_the_bash_owner_column_says_what_the_catalog_says() -> None:
 
 
 def _installs_something_owned_by(phase: apply.Phase, owner: str, declaration: catalog.Catalog) -> bool:
-    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers]
+    """A provider with no section subscribes to nothing, so it installs nothing
+    anyone owns — which is the honest answer for a runtime a machine gets because
+    of the tools that need it, and the same `no` the bash column carries."""
+    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers and provider.section]
     return any(entry.owner == owner for section in sections for entry in declaration.section(section))
 
 

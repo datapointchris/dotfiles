@@ -46,9 +46,17 @@ def item(provider: str, name: str, entry: catalog.Entry, *, executable: str = ''
 def test_no_two_providers_share_a_name_or_a_section() -> None:
     """`BY_NAME` and `BY_SECTION` are built by comprehension, so a duplicate is
     silently the last one written rather than an error — and the loser would plan
-    nothing while still appearing in `--skip`'s help."""
+    nothing while still appearing in `--skip`'s help.
+
+    A name has to be unique across the whole registry rather than within a
+    resource, because `registry.named` is what an item's provider is looked up
+    through and an item carries one name. That is why the runtimes are
+    `go-toolchain` and `uv-toolchain`: `packages` already has a `go` and a `uv`.
+    """
+    sectioned = [provider.section for provider in registry.PROVIDERS if provider.section]
+
     assert len(registry.BY_NAME) == len(registry.PROVIDERS)
-    assert len(registry.BY_SECTION) == len(registry.PROVIDERS)
+    assert len(registry.BY_SECTION) == len(sectioned)
 
 
 def test_every_provider_belongs_to_a_resource_the_cli_exposes() -> None:
@@ -57,11 +65,21 @@ def test_every_provider_belongs_to_a_resource_the_cli_exposes() -> None:
     assert {provider.resource for provider in registry.PROVIDERS} <= set(vocabulary.RESOURCES)
 
 
-def test_every_provider_plans_from_a_section_that_exists() -> None:
+def test_every_provider_plans_from_a_section_that_exists_or_from_none() -> None:
     """A typo here resolves an empty section into an empty plan, which reads as a
-    machine that declared nothing rather than as a broken registry."""
+    machine that declared nothing rather than as a broken registry.
+
+    An empty section is the deliberate case, not a typo: a toolchain subscribes to
+    nothing and is planned from what the tool providers resolved.
+    """
     declared = set(catalog.SECTIONS) | set(catalog.SYSTEM_SECTIONS)
-    assert {provider.section for provider in registry.PROVIDERS} <= declared
+    assert {provider.section for provider in registry.PROVIDERS if provider.section} <= declared
+
+
+def test_every_provider_names_a_stage_that_exists() -> None:
+    """Stage is what orders execution, so a provider whose stage is not in the
+    enum would sort into a position nothing declares."""
+    assert all(provider.stage in Stage for provider in registry.PROVIDERS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
