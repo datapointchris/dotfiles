@@ -64,6 +64,16 @@ class Observed:
 
     consulted_network: bool = False
 
+    @property
+    def summary(self) -> str:
+        """What the row says when nothing drifted.
+
+        Lives here rather than in the walk because it is a sentence about *this*
+        observation: the walk reaching into `evidence` to count it is the walk
+        knowing a field it has no other reason to know.
+        """
+        return f'all {len(self.evidence)} declared packages are installed'
+
 
 class PackagesResource:
     name = NAME

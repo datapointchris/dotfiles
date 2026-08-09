@@ -7,10 +7,16 @@ it is the part most easily broken by a well-meaning change to a checker.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 import pytest
 
+from dotfiles import engine
 from dotfiles import reconcile
 from dotfiles import vocabulary
+from dotfiles.event import Event
+from dotfiles.event import Refusal
+from dotfiles.event import Summary
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import Verdict
 from dotfiles.resolve import Stage
@@ -58,13 +64,19 @@ def test_every_resource_answers_for_itself() -> None:
     been written. All seven answer now, so nothing can report "no evidence either
     way" — and a gate built on `check` is no longer partly blind."""
     assert set(reconcile.Verdict) == {Verdict.CONVERGED, Verdict.DRIFT, Verdict.ISSUE}
-    assert set(reconcile.CHECKERS) == set(vocabulary.RESOURCES)
+    assert set(engine.resources()) == set(vocabulary.RESOURCES)
+
+
+def summaries(_session: object, addresses: Iterable[str] | None = None) -> list[Event]:
+    """What a converged walk of `addresses` looks like, without measuring anything."""
+    selected = vocabulary.RESOURCES if addresses is None else addresses
+    return [Event(address, Summary(f'{address} is fine')) for address in selected]
 
 
 def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
     """It was not examined, so it has nothing to report. Inventing a row would put
     something in --json that no checker produced."""
-    monkeypatch.setattr(reconcile, 'CHECKERS', {name: (lambda _m, n=name: result(Verdict.CONVERGED, n)) for name in reconcile.CHECKERS})
+    monkeypatch.setattr(engine, 'assess', summaries)
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
 
     walked = reconcile.check_machine(skip=frozenset({'packages', 'system'}), machine=MACHINE)
@@ -76,10 +88,29 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
 
 
 def test_skipping_machines_skips_the_declaration_check(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(reconcile, 'CHECKERS', {})
-    monkeypatch.setattr('dotfiles.vocabulary.RESOURCES', ())
+    monkeypatch.setattr(engine, 'assess', lambda *_: [])
 
     assert reconcile.check_machine(skip=frozenset({'machines'}), machine=MACHINE) == []
+
+
+def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The engine owns isolation, not the generator: one resource raising must not
+    end the stream for the rows after it, or a crashed checker would read as a
+    machine with nothing left to examine."""
+    monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
+    monkeypatch.setattr(
+        engine,
+        'assess',
+        lambda *_: [
+            Event('packages', Refusal('packages could not be examined: boom')),
+            Event('symlinks', Summary('all fine')),
+        ],
+    )
+
+    walked = {item.address: item.verdict for item in reconcile.check_machine(machine=MACHINE)}
+
+    assert walked['packages'] is Verdict.ISSUE
+    assert walked['symlinks'] is Verdict.CONVERGED
 
 
 # ─────────────────────────────────────────────────────────────────────────────

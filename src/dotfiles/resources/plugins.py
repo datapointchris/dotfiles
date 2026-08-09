@@ -59,6 +59,14 @@ class Observed:
     present: frozenset[str]
     """Addresses whose checkout is on disk."""
 
+    @property
+    def summary(self) -> str:
+        """Says *cloned* deliberately. TPM and lazy.nvim each own a plugin list
+        this repo does not declare — tmux's is in `tmux.conf`, Neovim's is in lua
+        — so there is nothing here to compare them against, and claiming to have
+        checked them would be worse than not checking."""
+        return f'all {len(self.present)} cloned plugins are present (tmux and nvim sync on apply)'
+
 
 def destination(item: DesiredItem, home: Path) -> Path:
     """Where this plugin's checkout belongs.

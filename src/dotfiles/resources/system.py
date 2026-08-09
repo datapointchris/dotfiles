@@ -53,6 +53,16 @@ class Observed:
     config: dict[str, sysconfig.State]
     """One state per `system.yml` row, keyed by address."""
 
+    @property
+    def summary(self) -> str:
+        """Names which managers answered, because a machine whose manager is
+        absent reports UNKNOWN rather than reporting every package missing — and
+        a row saying "all installed" without saying who was asked would read as a
+        measurement when it was a shrug."""
+        asked = ', '.join(sorted(self.asked)) or 'nothing'
+        line = f'all {len(self.evidence)} declared system packages installed (asked {asked})'
+        return f'{line}, and {len(self.config)} configuration item(s) match' if self.config else line
+
 
 class SystemResource:
     name = NAME

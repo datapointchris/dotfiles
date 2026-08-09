@@ -12,14 +12,18 @@ turning the set of them into the number a caller branches on.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Iterable
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
 from dotfiles import bridge
+from dotfiles import engine
 from dotfiles import vocabulary
 from dotfiles.effects import Output
+from dotfiles.event import Event
+from dotfiles.event import Refusal
+from dotfiles.event import Summary
 from dotfiles.output import render_change
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
@@ -55,106 +59,6 @@ class ResourceResult:
 
     def as_dict(self) -> dict[str, str]:
         return {'address': self.address, 'verdict': str(self.verdict), 'detail': self.detail}
-
-
-def check_packages(session: Session) -> ResourceResult:
-    """Every tool this machine declares, against the evidence for it.
-
-    One inventory query per package manager rather than one probe per package,
-    which is what `packages missing` did — and it asked PATH about apt and pacman
-    names, so it skipped those sections entirely rather than getting them wrong.
-    """
-    from dotfiles.resources import packages
-
-    observed = packages.RESOURCE.observe(session, session.plan)
-    changes = packages.RESOURCE.diff(session.plan, observed)
-    return from_changes('packages', changes, f'all {len(observed.evidence)} declared packages are installed')
-
-
-def check_symlinks(session: Session) -> ResourceResult:
-    """Read-only, and now per link rather than per broken link.
-
-    The previous check answered only "is anything broken", so a file added to
-    `configs/` and never deployed read as converged. The resource compares every
-    declared link against what is at its target, which is what makes a missing
-    one visible without running the write.
-    """
-    from dotfiles.resources import symlinks
-
-    observed = symlinks.RESOURCE.observe(session, session.plan)
-    changes = symlinks.RESOURCE.diff(session.plan, observed)
-    return from_changes('symlinks', changes, f'all {len(observed.links)} declared symlinks are deployed')
-
-
-def check_env(session: Session) -> ResourceResult:
-    """The first resource driven by the Resource protocol rather than by bash.
-
-    Its changes are rendered here rather than returned, because the composite
-    walk prints one row per resource: the detail line says how many and of what
-    kind, and the rows above it say which.
-    """
-    from dotfiles.resources import env
-
-    changes = env.RESOURCE.diff(session.plan, env.RESOURCE.observe(session, session.plan))
-    return from_changes('env', changes, '~/.env matches the manifest and the declared flags')
-
-
-def check_toolchains(session: Session) -> ResourceResult:
-    """The runtimes this machine's tool lists imply, and whether they meet their floors.
-
-    Never what a manifest asked for: a machine gets Go because it declared
-    `go_tools`, which is why the booleans that used to gate the toolchains were
-    removed.
-    """
-    from dotfiles.resources import toolchains
-
-    observed = toolchains.RESOURCE.observe(session, session.plan)
-    changes = toolchains.RESOURCE.diff(session.plan, observed)
-    named = ', '.join(sorted(observed.installed))
-    return from_changes('toolchains', changes, f'{named or "none needed"}')
-
-
-def check_system(session: Session) -> ResourceResult:
-    """What the OS package manager installed and how the OS is configured, without escalating.
-
-    Every row is read unprivileged — the package inventories, the group database,
-    `systemctl is-enabled`, a 0644 file under `/etc`, field 7 of the passwd entry
-    — so this answers at a prompt and in a container. The Xcode licence and the
-    macOS defaults are the half still missing, and they arrive with the rest of
-    step 6.
-    """
-    from dotfiles.resources import system
-
-    observed = system.RESOURCE.observe(session, session.plan)
-    changes = system.RESOURCE.diff(session.plan, observed)
-    asked = ', '.join(sorted(observed.asked)) or 'nothing'
-    converged = f'all {len(observed.evidence)} declared system packages installed (asked {asked})'
-    if observed.config:
-        converged += f', and {len(observed.config)} configuration item(s) match'
-    return from_changes('system', changes, converged)
-
-
-def check_plugins(session: Session) -> ResourceResult:
-    """The cloned plugins only, and the detail line says so.
-
-    TPM and lazy.nvim each own a plugin list this repo does not declare — tmux's
-    is in `tmux.conf`, Neovim's is in lua — so there is nothing here to compare
-    them against. Claiming to have checked them would be worse than not checking.
-    """
-    from dotfiles.resources import plugins
-
-    observed = plugins.RESOURCE.observe(session, session.plan)
-    changes = plugins.RESOURCE.diff(session.plan, observed)
-    return from_changes('plugins', changes, f'all {len(observed.present)} cloned plugins are present (tmux and nvim sync on apply)')
-
-
-def check_identity(session: Session) -> ResourceResult:
-    """Ask now rather than at the first commit, mid-work."""
-    from dotfiles.resources import identity
-
-    observed = identity.RESOURCE.observe(session, session.plan)
-    changes = identity.RESOURCE.diff(session.plan, observed)
-    return from_changes('identity', changes, observed.who)
 
 
 def check_declaration() -> ResourceResult:
@@ -202,21 +106,28 @@ def from_changes(address: str, changes: Sequence[Change], converged: str) -> Res
     return ResourceResult(address, Verdict.DRIFT, detail + gap)
 
 
-Checker = Callable[[Session], ResourceResult]
-"""Every checker takes the session, so the walk needs no special case for the ones
-that read the declaration."""
+def fold(events: Iterable[Event]) -> list[ResourceResult]:
+    """One row per resource, from the stream the engine yielded.
 
+    Seven near-identical `check_*` functions used to do this, each building its
+    own converged sentence by reaching into a field of another module's
+    observation. The sentence is the observation's own now, and this only has to
+    know the three payload kinds.
+    """
+    grouped: dict[str, list[Event]] = {}
+    for event in events:
+        grouped.setdefault(event.resource, []).append(event)
 
-CHECKERS: dict[str, Checker] = {
-    'packages': check_packages,
-    'toolchains': check_toolchains,
-    'plugins': check_plugins,
-    'symlinks': check_symlinks,
-    'env': check_env,
-    'system': check_system,
-    'identity': check_identity,
-}
-"""Keyed by address and ordered as the machine converges — see `vocabulary.RESOURCES`."""
+    results = []
+    for address, group in grouped.items():
+        refusal = next((event.payload for event in group if isinstance(event.payload, Refusal)), None)
+        if refusal is not None:
+            results.append(ResourceResult(address, Verdict.ISSUE, refusal.reason))
+            continue
+        changes = [event.payload for event in group if isinstance(event.payload, Change)]
+        summary = next((event.payload.detail for event in group if isinstance(event.payload, Summary)), '')
+        results.append(from_changes(address, changes, summary))
+    return results
 
 
 def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[ResourceResult]:
@@ -228,7 +139,7 @@ def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None
     """
     session = Session.resolve(machine, refresh=refresh)
     results = [] if 'machines' in skip else [check_declaration()]
-    results.extend(CHECKERS[address](session) for address in vocabulary.RESOURCES if address not in skip)
+    results.extend(fold(engine.assess(session, [address for address in vocabulary.RESOURCES if address not in skip])))
     return results
 
 

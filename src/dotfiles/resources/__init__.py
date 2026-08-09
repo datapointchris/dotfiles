@@ -143,7 +143,17 @@ class Outcome:
 
 
 class Observation(Protocol):
-    """Whatever a resource measured. Opaque to everything but its own `diff`."""
+    """Whatever a resource measured. Opaque to everything but its own `diff`.
+
+    Except for one sentence. `summary` is what a resource's row says when nothing
+    drifted, and it belongs to the observation because that is the only thing that
+    knows how much was examined — the walk used to build all seven of these
+    itself, reaching into `evidence`, `links`, `present` and `installed` from a
+    module that had no other reason to know those fields existed.
+    """
+
+    @property
+    def summary(self) -> str: ...
 
 
 @runtime_checkable
@@ -166,19 +176,6 @@ class Resource(Protocol):
         ...
 
 
-def survey(session: Session, plan: Plan, resources: tuple[Resource, ...]) -> list[Change]:
-    """The half both verbs share. Never writes."""
-    changes: list[Change] = []
-    for resource in resources:
-        changes.extend(resource.diff(plan, resource.observe(session, plan)))
-    return sorted(changes, key=lambda change: (change.stage, change.resource, change.item))
-
-
 def escalations(changes: Sequence[Change]) -> tuple[Escalation, ...]:
     """What a run will need root for, in the words the prompt should use."""
     return tuple(Escalation(f'{change.item}: {change.detail}') for change in changes if change.actionable and change.privileged)
-
-
-def reconcile(session: Session, changes: list[Change], resources: dict[str, Resource], privilege: Privilege) -> list[Outcome]:
-    """The half only `apply` reaches."""
-    return [resources[change.resource].perform(session, change, privilege) for change in changes if change.actionable]

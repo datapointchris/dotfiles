@@ -64,6 +64,12 @@ class Observed:
 
     absent: frozenset[str]
 
+    @property
+    def summary(self) -> str:
+        """Names the runtimes rather than counting them: which ones a machine
+        needs is derived from its tool lists, so the list itself is the finding."""
+        return ', '.join(sorted(self.installed)) or 'none needed'
+
 
 class ToolchainsResource:
     name = NAME

@@ -40,6 +40,10 @@ class Observed:
     def who(self) -> str:
         return f'{self.values["user.name"]} <{self.values["user.email"]}>'
 
+    @property
+    def summary(self) -> str:
+        return self.who
+
 
 class IdentityResource:
     name = NAME

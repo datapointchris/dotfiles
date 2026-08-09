@@ -84,6 +84,13 @@ class Observed:
     """Links into the repo whose source is gone. Nothing declares them, so they
     are pruned rather than repaired."""
 
+    @property
+    def summary(self) -> str:
+        """Counts *declared* links, not deployed ones. The previous pass answered
+        only "is anything broken", so a file added to `configs/` and never
+        deployed read as converged."""
+        return f'all {len(self.links)} declared symlinks are deployed'
+
 
 TREES: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ('configs', (), False),

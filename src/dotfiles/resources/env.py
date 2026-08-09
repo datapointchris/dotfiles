@@ -41,6 +41,10 @@ class Observed:
     values: dict[str, str]
     present_files: frozenset[str]
 
+    @property
+    def summary(self) -> str:
+        return '~/.env matches the manifest and the declared flags'
+
 
 class EnvResource:
     name = NAME
