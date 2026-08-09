@@ -253,7 +253,6 @@ class Declaration(Exception):
 
 
 _FILTERS: dict[str, Callable[[dict, dict], list]] = {
-    'npm': parse_packages.filter_npm_packages_by_manifest,
     'uv': parse_packages.filter_uv_packages_by_manifest,
     'git_uv': parse_packages.filter_git_uv_packages_by_manifest,
     'github': parse_packages.filter_github_releases_by_manifest,
@@ -547,10 +546,8 @@ def _node_toolchain(context: Run) -> bool:
 
 
 def _npm_globals(context: Run) -> bool:
-    if not context.declared('npm'):
-        return True
     heading('npm globals')
-    return run_installer(context, COMMON / 'language-tools' / 'npm-install-globals.sh', 'npm-globals')
+    return _converge(context, engine.Selection.of('packages/npm'))
 
 
 def _uv_tools(context: Run) -> bool:

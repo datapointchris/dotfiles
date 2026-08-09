@@ -28,6 +28,7 @@ from dotfiles.providers import cargo
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
+from dotfiles.providers import npm
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -417,6 +418,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     monkeypatch.setattr(custom, 'install', record)
     monkeypatch.setattr(gotool, 'install', record)
     monkeypatch.setattr(cargo, 'install', record)
+    monkeypatch.setattr(npm, 'install', record)
     return attempted
 
 
@@ -477,16 +479,30 @@ DECLARES_CARGO = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['unb
 NPM_GLOBAL = {'npm_globals': {'linters': [{'name': 'unpublished-linter'}]}}
 DECLARES_NPM = {'machine': 'box', 'platform': 'linux', 'npm_globals': ['unpublished-linter']}
 
+UV_TOOL = {'uv_tools': {'linters': [{'name': 'unreleased-linter'}]}}
+DECLARES_UV = {'machine': 'box', 'platform': 'linux', 'uv_tools': ['unreleased-linter']}
+
 
 def test_a_provider_that_has_not_converted_is_refused_not_ignored(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    live = session(tmp_path, UV_TOOL, DECLARES_UV)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.REFUSED
+    assert installs == []
+
+
+def test_a_missing_npm_global_is_installed_by_its_provider(
     tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
     live = session(tmp_path, NPM_GLOBAL, DECLARES_NPM)
 
     outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
-    assert outcome.status is OutcomeStatus.REFUSED
-    assert installs == []
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['unpublished-linter']
 
 
 def test_a_missing_cargo_package_is_installed_by_its_provider(

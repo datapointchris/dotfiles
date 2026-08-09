@@ -33,6 +33,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import resolve
+from dotfiles.providers import npm
 
 LINUX = coordinates.PLATFORM_BUNDLES['linux']
 
@@ -256,22 +257,17 @@ def test_a_bare_true_system_packages_still_means_the_full_set() -> None:
 
 def test_every_directory_an_installer_writes_binaries_to_is_on_the_phase_path() -> None:
     """A phase installing into a directory no later phase can see is a silent
-    failure, and it happened: npm-install-globals.sh sets its own
-    NPM_CONFIG_PREFIX, `.zshrc` adds that prefix's bin for interactive shells,
-    and nothing else did. All eleven language servers installed correctly and
-    every non-interactive check — including the install's own verification —
-    reported them missing.
+    failure, and it happened: the npm installer set its own NPM_CONFIG_PREFIX,
+    `.zshrc` added that prefix's bin for interactive shells, and nothing else
+    did. All eleven language servers installed correctly and every
+    non-interactive check — including the install's own verification — reported
+    them missing.
 
-    The prefix is read out of the installer rather than restated here, so moving
-    it fails this instead of going unnoticed until a container reports sixteen
-    missing tools.
+    The prefix is read from the provider that sets it rather than restated here,
+    so moving it fails this instead of going unnoticed until a container reports
+    sixteen missing tools.
     """
-    installer = (paths.INSTALL_DIR / 'common' / 'language-tools' / 'npm-install-globals.sh').read_text()
-    declared = [line for line in installer.splitlines() if 'NPM_CONFIG_PREFIX=' in line and 'export' in line]
-    assert declared, 'npm-install-globals.sh no longer sets a prefix; this test needs rewriting'
-
-    prefix = declared[0].split('=', 1)[1].strip().strip('"')
-    assert f'{prefix}/bin' in apply.TOOL_PATH_DIRS, f'{prefix}/bin is where npm globals land, and no phase can see it'
+    assert f'$HOME/{npm.PREFIX}/bin' in apply.TOOL_PATH_DIRS, f'{npm.PREFIX}/bin is where npm globals land, and no phase can see it'
 
 
 def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:

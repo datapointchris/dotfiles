@@ -112,7 +112,7 @@ eight syncer releases.
 These libraries provide utilities FOR installer scripts:
 
 ```yaml
-installer script (language-tools/npm-install-globals.sh)
+installer script (plugins/tmux-plugins.sh)
     ↓ sources
 common/lib/ utilities
     - failure-logging.sh (error reporting)

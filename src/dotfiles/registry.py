@@ -51,6 +51,7 @@ from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import macdefaults
+from dotfiles.providers import npm
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.providers import toolchain
@@ -268,6 +269,24 @@ class GoToolProvider(CatalogProvider):
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
         result = gotool.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class NpmProvider(CatalogProvider):
+    """A global package from the npm registry.
+
+    No currency, unlike the go and cargo providers beside it. `npm update -g`
+    upgrades every global in one call and the registry owns what latest means, so
+    asking per package whether it is behind is asking a question npm already
+    answers for itself — which is what `resources/packages.CURRENCY` says.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.NpmGlobal):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not an npm_globals entry')
+        result = npm.install(entry, offline=session.offline)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
@@ -579,7 +598,7 @@ PROVIDERS: tuple[Provider, ...] = (
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
     GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
-    CatalogProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
+    NpmProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),
     UvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),

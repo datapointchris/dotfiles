@@ -3,10 +3,10 @@
 # Puts the fleet's tool directories on PATH for install.sh and update.sh.
 #
 # Neither entry point reads .zshenv, so nothing a phase installs is visible to
-# the phase that consumes it unless it is named here: go-tools needs the Go
-# toolchain, node.sh needs fnm from the cargo phase, and npm-globals needs the
-# Node that node.sh links as fnm's default alias. Order mirrors .zshenv so a
-# phase resolves the same binary the shell would.
+# the phase that consumes it unless it is named here: the cargo provider needs
+# cargo from rustup, the node toolchain needs the fnm that arrives as a cargo
+# package, and npm-globals needs the Node that fnm links as its default alias.
+# Order mirrors .zshenv so a phase resolves the same binary the shell would.
 #
 # The fnm alias directory does not exist until the node phase creates it, which
 # is harmless: PATH entries are resolved per lookup, not when PATH is set.

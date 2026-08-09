@@ -1,9 +1,9 @@
 # Language Tool Installers
 
 Installers for tools distributed through a language's own package manager, driven by the tool lists
-in `packages.yml`. Two remain — npm globals and uv tools — and both are being replaced by providers
-under `src/dotfiles/providers/`, which is where the go and cargo installers went. The scripts here
-are what is left of the pattern, not a place to add to.
+in `packages.yml`. One remains — uv tools — and it is being replaced by a provider under
+`src/dotfiles/providers/`, which is where the go, cargo and npm installers went. What is here is the
+last of the pattern, not a place to add to.
 
 ## The pattern
 
@@ -19,10 +19,10 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
-dotfiles_python -m dotfiles.parse_packages --type=npm | while read -r package; do
-  npm install -g "$package" \
-    || output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" \
-      "npm install -g $package" "Failed to install via npm"
+dotfiles_python -m dotfiles.parse_packages --type=uv | while read -r tool; do
+  uv tool install "$tool" \
+    || output_failure_data "$tool" "https://pypi.org/project/$tool" "latest" \
+      "uv tool install $tool" "Failed to install via uv"
 done
 ```
 
