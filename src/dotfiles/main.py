@@ -88,6 +88,12 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     A misspelt address stays a usage error for the same reason: a run that
     accepted one would install the sudo-gated phase the caller was trying to avoid
     and report success.
+
+    **Called before the Session is resolved**, and every caller has to keep it
+    there. Ordering this after `Session.resolve` reports a typo as "MACHINE is
+    unset" and exits 1 on any machine that has not been named — which is a
+    developer's box never and every CI runner always, so it went unnoticed for two
+    commits until the runner said so.
     """
     from dotfiles import engine
 
@@ -134,10 +140,11 @@ def plan(
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
     """
+    skipped = _skipped(skip)
     named = Session.resolve(machine).machine_name
-    events = reconcile.survey(_skipped(skip), machine, refresh=refresh)
+    events = reconcile.survey(skipped, machine, refresh=refresh)
     results = reconcile.plan_machine(events)
-    _keep(events, named, 'plan', {'skip': sorted(_skipped(skip))})
+    _keep(events, named, 'plan', {'skip': sorted(skipped)})
 
     if as_json:
         emit_json(status.document(results, named, dt.datetime.now(dt.UTC), verb='plan'))
@@ -165,11 +172,12 @@ def check(
 
     Exits 3 when it finds something, and never 1.
     """
+    skipped = _skipped(skip)
     when = dt.datetime.now(dt.UTC)
     checked_machine = Session.resolve(machine).machine_name
-    events = reconcile.survey(_skipped(skip), machine, refresh=refresh)
-    results = reconcile.check_machine(events, skip=_skipped(skip))
-    _keep(events, checked_machine, 'check', {'skip': sorted(_skipped(skip))})
+    events = reconcile.survey(skipped, machine, refresh=refresh)
+    results = reconcile.check_machine(events, skip=skipped)
+    _keep(events, checked_machine, 'check', {'skip': sorted(skipped)})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge

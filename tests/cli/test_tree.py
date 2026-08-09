@@ -29,6 +29,21 @@ runner = CliRunner()
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+@pytest.fixture
+def nameless(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A machine that has not been named — every CI runner, and no developer's box.
+
+    `~/.env` carries `MACHINE` on a real machine, and `Session.resolve` reads the
+    file as well as the environment, so both have to go. Without this the usage
+    tests below pass locally whatever the ordering is, and only the runner
+    notices — which is exactly how `--skip`'s validation slipped behind
+    `Session.resolve` and stayed there for two commits.
+    """
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    return tmp_path
+
+
 @pytest.mark.parametrize(
     'argv',
     [
@@ -39,11 +54,19 @@ runner = CliRunner()
         ['windows', 'apply', '--offline'],
         ['shell-init', 'fish'],
         ['check', '--skip', 'sytem'],
+        ['plan', '--skip', 'plugins/tmux'],
+        ['plan', '--skip', 'plugins/'],
         ['apply', '--skip', 'no-such-resource'],
         ['nonsense-command'],
     ],
 )
-def test_bad_input_exits_two(argv: list[str]) -> None:
+def test_bad_input_exits_two(argv: list[str], nameless: Path) -> None:
+    """Argument validation comes before anything a machine is needed for.
+
+    A typo reported as "MACHINE is unset" is the wrong error and the wrong exit
+    code: the caller retries after naming a machine and gets the same silent
+    over-skip they were trying to avoid.
+    """
     assert runner.invoke(app, argv).exit_code == ExitCode.USAGE
 
 
