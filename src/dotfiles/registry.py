@@ -55,6 +55,7 @@ from dotfiles.providers import npm
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.providers import toolchain
+from dotfiles.providers import uvtool
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
@@ -325,6 +326,30 @@ class UvToolProvider(CatalogProvider):
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_uv_tool(item)
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.UvTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
+        result = uvtool.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GitUvToolProvider(UvToolProvider):
+    """The same mechanism, pointed at a git repo and pinned to its newest release.
+
+    A subclass rather than a flag, because only the requirement differs and the
+    evidence does not: uv puts a git-installed tool in the same per-tool directory
+    as a PyPI one.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.GitUvTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
+        result = uvtool.install_git(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -600,7 +625,7 @@ PROVIDERS: tuple[Provider, ...] = (
     GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
     NpmProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),
-    UvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
+    GitUvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),
     CloneProvider('tpm', 'plugins', Stage.TMUX_PLUGINS, 'tmux_plugins'),
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),

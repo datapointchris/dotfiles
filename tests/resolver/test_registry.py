@@ -177,6 +177,21 @@ def test_every_runtime_can_actually_install_itself() -> None:
         assert type(provider).converge is not registry.ToolchainProvider.converge, provider.name
 
 
+def test_every_packages_provider_can_install_what_it_plans() -> None:
+    """The whole `packages` resource has converted, so the base `Provider.install`
+    — which refuses, to stop a run reporting converged for work it never did — is
+    no longer a legitimate answer here.
+
+    Asserted on the registry rather than through the resource, because there is no
+    longer an unconverted provider to write that test against: the case is now
+    unrepresentable, and this is what keeps it that way when a mechanism is added.
+    The `system` half is a different story and `tests/resources/test_system.py`
+    still holds the refusal there.
+    """
+    for provider in registry.for_resource('packages'):
+        assert type(provider).install is not registry.Provider.install, provider.name
+
+
 def test_a_macos_preference_does_not_need_root_and_the_entry_is_what_says_so() -> None:
     """The other half of why `needs_root` is a method: for `system.yml` the answer
     is per row and already declared. A flat field here would be a second source

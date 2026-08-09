@@ -177,10 +177,12 @@ def test_a_capability_requirement_reaches_verification_as_its_own_kind(real_pack
     assert checked, 'no manifest declares a tool with a capability requirement'
 
 
-def test_the_git_uv_installer_is_told_which_clones_need_credentials(real_packages_data):
-    """`uv-tools.sh` reads the auth field to decide whether to try at all, so a
-    private repo missing it is an install that fails for a reason no change here
-    can fix, and a public one carrying it is a tool silently never installed."""
+def test_the_git_uv_query_says_which_clones_need_credentials(real_packages_data):
+    """A private repo missing the flag is an install that fails for a reason no
+    change here can fix, and a public one carrying it is a tool silently never
+    installed. The consumer moved — `resources/packages.repair_for` reads the
+    entry and answers `Repair.BY_HAND`, so the engine never offers the change —
+    but the field is what both spellings of the question resolve from."""
     private = parse_packages.names_requiring_github_auth(real_packages_data, 'git_uv_tools')
     assert private, 'no private git uv tool, so the credential-less path is untested'
 

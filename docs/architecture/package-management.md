@@ -353,22 +353,19 @@ The declaration carries `command` where the binary name differs from the entry n
 
 ### Installation Scripts
 
-Located in `install/common/`:
+What is left in `install/common/` is `plugins/` — the editor and terminal plugin
+installers — and `lib/`, the libraries `update.sh` still sources.
 
-**Directory Structure**:
+Every tool section installs through a provider now. uv, rustup, the Go tarball and
+fnm's default Node alias are `src/dotfiles/providers/toolchain.py`; `go install`,
+`cargo binstall`, `npm install -g` and `uv tool install` are `gotool.py`,
+`cargo.py`, `npm.py` and `uvtool.py` beside it. Two of those carry a precondition
+the section needs and the runtime does not — cargo-binstall, and npm's prefix —
+which is the reason a provider is a module rather than one line in the registry.
 
-- `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
-- `plugins/` - Editor and terminal plugin installers
-
-The runtimes those tools install against are no longer here, and neither are the
-Go and Rust tools themselves. uv, rustup, the Go tarball and fnm's default Node
-alias are `src/dotfiles/providers/toolchain.py`; `go install` and `cargo binstall`
-are `providers/gotool.py` and `providers/cargo.py`, which is also where
-cargo-binstall is installed as a precondition of the tools that need it. All of
-them converge through the same engine as everything else.
-
-The specific tools in each category are defined in `install/packages.yml` (the single
-source of truth) — this list describes what each directory is *for*, not its contents.
+The single source of truth for which tool is in which section is
+`install/packages.yml`; its header comment maps each section to its install
+method.
 
 **Core Library** (`install/common/lib/`):
 

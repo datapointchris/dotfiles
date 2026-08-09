@@ -253,11 +253,11 @@ class Declaration(Exception):
 
 
 _FILTERS: dict[str, Callable[[dict, dict], list]] = {
-    'uv': parse_packages.filter_uv_packages_by_manifest,
-    'git_uv': parse_packages.filter_git_uv_packages_by_manifest,
     'github': parse_packages.filter_github_releases_by_manifest,
     'custom': parse_packages.filter_custom_installers_by_manifest,
 }
+"""What is left of the manifest gates, which is the two phases that still resolve
+their own work rather than converging a selection of the plan."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -551,10 +551,8 @@ def _npm_globals(context: Run) -> bool:
 
 
 def _uv_tools(context: Run) -> bool:
-    if not context.declared('uv') and not context.declared('git_uv'):
-        return True
     heading('Python tools (uv)')
-    return run_installer(context, COMMON / 'language-tools' / 'uv-tools.sh', 'uv-tools')
+    return _converge(context, engine.Selection.of('packages/uv', 'packages/uv-git'))
 
 
 def _converge(context: Run, selection: engine.Selection) -> bool:

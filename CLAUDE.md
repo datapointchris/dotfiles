@@ -149,7 +149,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `offline/` - Offline installation support (connectivity testing, bundles)
   - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
-  - `common/` - Cross-platform installer scripts (language-tools/, plugins/) and `lib/` shared libraries
+  - `common/` - Cross-platform installer scripts (plugins/) and `lib/` shared libraries
   - `packages.yml` - Package definitions
   - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)
 - `docs/` - MkDocs-based documentation site

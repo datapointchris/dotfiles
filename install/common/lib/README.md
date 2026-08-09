@@ -89,7 +89,8 @@ and re-deriving a result they already state is duplicated logic that can only dr
 ### uv-git-tools.sh
 
 Installing the personal Python CLIs that ship from a git repo rather than PyPI (`git_uv_tools`).
-Sourced by `uv-tools.sh` and `update.sh`.
+Sourced by `update.sh`, which is the update half. The install half is
+`src/dotfiles/providers/uvtool.py`, which resolves the same pin from the same API.
 
 These installs are pinned to a release tag, because each tool's own `pyselfupdate`-based updater
 reads uv's receipt to decide what it may do: a git requirement with no `rev=` is a dev checkout, so
