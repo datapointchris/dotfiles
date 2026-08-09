@@ -28,8 +28,15 @@ class ExitCode(IntEnum):
     ISSUE = 3
 
 
-CORE_VERBS = ('check', 'apply', 'list', 'show', 'search')
-"""The vocabulary proper: what a resource does, spelled the same way everywhere."""
+CORE_VERBS = ('plan', 'check', 'apply', 'list', 'show', 'search')
+"""The vocabulary proper: what a resource does, spelled the same way everywhere.
+
+`plan` and `check` ask different questions of one measurement — *what would apply
+change* and *is anything wrong* — and one verb answering both is what made a
+scheduled unit sit permanently failed on a machine whose only fault was a package
+being a version behind. `apply` is `plan` and then execute, so the three are a
+Terraform-shaped trio rather than three unrelated words.
+"""
 
 EXCEPTION_VERBS: dict[str, str] = {
     'unlink': 'symlinks: the inverse of apply, and it has no other spelling',

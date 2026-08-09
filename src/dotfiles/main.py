@@ -93,6 +93,32 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     return resources
 
 
+@app.command('plan', rich_help_panel='Reconcile')
+def plan(
+    skip: list[str] = SkipOption,
+    machine: str = MachineOption,
+    as_json: bool = JsonOption,
+    refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
+) -> None:
+    """Show what `apply` would change. Never writes.
+
+    Never writes *the machine*. `--refresh` updates the cache of upstream release
+    versions, which is the one file this may leave changed — deleting it costs a
+    recompute, which is exactly why it is a cache.
+
+    Exits 1 when there are changes pending, which is `terraform plan
+    -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
+    """
+    results = reconcile.plan_machine(_skipped(skip), machine, refresh=refresh)
+    if as_json:
+        emit_json(status.document(results, Session.resolve(machine).machine_name, dt.datetime.now(dt.UTC), verb='plan'))
+    else:
+        for result in results:
+            render_result(result)
+        manage.report_position(fetch_first=False)
+    raise typer.Exit(reconcile.exit_code(results))
+
+
 @app.command('check', rich_help_panel='Reconcile')
 def check(
     skip: list[str] = SkipOption,
@@ -100,11 +126,15 @@ def check(
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
 ) -> None:
-    """Report how this machine differs from what it declares. Never writes.
+    """Report what is wrong with this machine. Never writes.
 
-    Never writes *the machine*. `--refresh` updates the cache of upstream release
-    versions, which is the one file a check may leave changed — deleting it costs
-    a recompute, which is exactly why it is a cache.
+    Not what *differs* — that is `plan`. A package a version behind is drift and
+    entirely normal between applies; a machine-local value nobody set, a file only
+    safekeep can restore, a declaration that will not validate or a checker that
+    could not run are things a person has to deal with. Folding the two together
+    is what left the scheduled unit permanently failed on a healthy box.
+
+    Exits 3 when it finds something, and never 1.
     """
     results = reconcile.check_machine(_skipped(skip), machine, refresh=refresh)
     # Written by every check, not only the scheduled one, so an interactive run

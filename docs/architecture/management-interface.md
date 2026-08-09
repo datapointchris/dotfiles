@@ -27,13 +27,27 @@ gets no wrapper.
 
 `src/dotfiles/`, installed by `uv tool install` and so on `PATH` from any directory.
 
-The grammar is **noun-verb with exactly two verbs**: `check` reports drift and never
-writes, `apply` fixes it. Both sit at the top level and again under each resource, so
-narrowing to one part of the machine is the same sentence with a noun in it.
-`dotfiles --help` lists the nouns.
+The grammar is **noun-verb with three reconcile verbs**, Terraform-shaped. `plan` reports
+what `apply` would change and never writes; `apply` makes it so; `check` reports what is
+*wrong*, which is a different question. All three sit at the top level and again under
+each resource, so narrowing to one part of the machine is the same sentence with a noun
+in it. `dotfiles --help` lists the nouns.
 
-`check` is `apply` minus the last step — structurally the same walk — which is why there
+`plan` is `apply` minus the last step — structurally the same walk — which is why there
 is no `--dry-run` for `apply` to be the opposite of.
+
+**Why `check` is not just `plan` with a different name.** A package a version behind is
+drift: expected, benign, and exactly what `apply` is for. A machine-local value nobody
+set, a file only safekeep can restore, a declaration that will not validate, a checker
+that crashed — those need a person. One verb answering both meant one exit code carrying
+both, and the scheduled unit sat permanently `failed` on a machine whose only fault was
+being a version behind. The distinction was already in the data: `Repair` says who can
+fix a change, and `plan` keeps what `apply` can while `check` keeps what it cannot.
+
+So `plan` exits 1 when changes are pending (`terraform plan -detailed-exitcode`) and
+`check` exits 3 when something is wrong and never 1. The periodic timer runs `check`,
+and the shell nudge — which has always fired on Issues only — is now reading the verb
+that means it.
 
 Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
 getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
@@ -63,7 +77,7 @@ working tree, and installing a release over it would destroy the thing being upd
 Nothing should be filed to add releases here on the strength of it.
 
 For the same reason there is no update *notice* — there is no published version to
-compare against. `dotfiles check` ends with the honest equivalent: where the checkout
+compare against. Both read-only verbs end with the honest equivalent: where the checkout
 sits against the last-fetched `origin/main`, and how long ago that fetch was. It reads
 `.git` and never the network, so it is free at a prompt and correct offline, which is
 why it dates its own answer. `dotfiles update --check` is the same line after an
@@ -294,7 +308,7 @@ real type system, a test suite, and dependencies it can declare.
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Registry drift | `packages verify` — packages.yml vs manifests vs scripts |
-| Machine drift | `dotfiles check` — this machine vs what its manifest declares |
+| Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 

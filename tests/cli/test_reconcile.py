@@ -130,7 +130,7 @@ def test_an_item_nobody_could_measure_is_counted_not_rendered_as_drift() -> None
     folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.NONE)], 'all installed')
 
     assert folded.verdict is Verdict.CONVERGED
-    assert '1 unmeasurable' in folded.detail
+    assert folded.unmeasured == 1
 
 
 def test_an_unmeasurable_item_beside_real_drift_leaves_the_drift_reported() -> None:
@@ -139,16 +139,47 @@ def test_an_unmeasurable_item_beside_real_drift_leaves_the_drift_reported() -> N
     folded = reconcile.from_changes('packages', changes, 'all installed')
 
     assert folded.verdict is Verdict.DRIFT
-    assert '1 item(s) differ' in folded.detail
-    assert '1 unmeasurable' in folded.detail
+    assert folded.pending == 1
+    assert folded.unmeasured == 1
 
 
-def test_an_unknown_something_could_repair_is_still_drift() -> None:
-    """`Repair.NONE` is what marks a measurement gap. An UNKNOWN that `apply` has
-    an answer for is a difference, and must not be folded away with it."""
-    folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.BY_HAND)], 'all installed')
+def test_an_unknown_someone_could_repair_is_reported_by_check_not_plan() -> None:
+    """`Repair.NONE` is what marks a measurement gap, and this is not one — someone
+    can fix it, just not `apply`. So it must not be folded away with the gaps, and
+    it belongs to the verb that asks what is wrong rather than what would change.
+    """
+    changes = [change(Change_Verdict.UNKNOWN, Repair.BY_HAND)]
 
-    assert folded.verdict is Verdict.DRIFT
+    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN).verdict is Verdict.CONVERGED
+    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK).verdict is Verdict.ISSUE
+
+
+def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
+    """The whole of the split, in one walk. `Repair` already carried the
+    distinction — its docstring describes exactly this — and one verb folding both
+    is what left the scheduled unit permanently failed on a healthy machine."""
+    changes = [
+        change(Change_Verdict.MISSING, Repair.AUTOMATIC, item='ghrelease/zk'),
+        change(Change_Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER'),
+    ]
+
+    planned = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN)
+    checked = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert planned.verdict is Verdict.DRIFT
+    assert planned.pending == 1
+    assert checked.verdict is Verdict.ISSUE
+    assert checked.attention == 1
+
+
+def test_a_package_a_version_behind_is_not_something_wrong() -> None:
+    """The case that made the split necessary. Drift is the normal state of a
+    machine between applies; reporting it as an Issue is what trained the nudge
+    away and left a systemd unit red on a box with nothing to fix."""
+    behind = [change(Change_Verdict.STALE, Repair.AUTOMATIC)]
+
+    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.PLAN).verdict is Verdict.DRIFT
+    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.CHECK).verdict is Verdict.CONVERGED
 
 
 def test_nothing_at_all_says_so_without_a_gap_clause() -> None:

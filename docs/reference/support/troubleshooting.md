@@ -3,7 +3,7 @@
 ## Start here
 
 ```sh
-dotfiles check       # symlink health and package-manifest drift
+dotfiles plan        # symlink health and package-manifest drift
 dotfiles packages check   # declared in packages.yml but not installed
 toolbox check        # registry vs PATH vs disk
 ```

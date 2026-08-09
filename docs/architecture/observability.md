@@ -15,7 +15,7 @@ their readers are:
 | --- | --- | --- |
 | `runs/<id>.json` | a run — **not yet wired**, see below | `dotfiles report`, days later |
 | `runs/<id>.jsonl` | the logging file sink | a person debugging one failure |
-| `status.json` | every `check` | another machine, and the bundle builder |
+| `status.json` | every `check` | another machine; the bundle builder reads `plan --json` |
 | `nudge` | every `check` | zsh, at every prompt |
 
 The split that matters most is the last one. `status.json` is the document a

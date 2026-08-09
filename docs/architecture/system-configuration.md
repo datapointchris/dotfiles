@@ -103,9 +103,14 @@ Two bugs it took installing on a real machine to find, both now pinned by tests.
 The unit must name the **installed** binary: `shutil.which` picked up the dev
 venv's console script when the install ran through `uv run`, pinning the schedule
 to a virtualenv that is rebuilt on every dependency change. And the service
-declares `SuccessExitStatus=1`, because `check` exits 1 on drift and without it
-the unit sits in `systemctl --user --failed` forever — which is how a real
-failure comes to be ignored. Exit 3, an Issue, is still a failure there.
+declared `SuccessExitStatus=1`, because `check` exited 1 on drift and without it
+the unit sat in `systemctl --user --failed` forever — which is how a real failure
+comes to be ignored.
+
+That workaround is gone, and it is worth saying why rather than just deleting it:
+it existed because one verb answered two questions. Drift is `plan`'s answer now
+and `check` exits 0 or 3, so a red unit means something is actually wrong and the
+unit needs no exception to say so.
 
 The same run exposed a third: `Session.resolve` read `MACHINE` only from the
 environment, so a scheduled check on a machine whose `~/.env` named it exactly

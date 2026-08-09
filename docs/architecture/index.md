@@ -170,7 +170,8 @@ The sidebar lists every architecture page; these are the three that answer the
 questions asked most often.
 
 [Management Interface](management-interface.md) is the one to read first — the
-two front doors, why there are exactly two verbs, and what `~/.env` decides.
+two front doors, why `plan` and `check` are different questions, and what
+`~/.env` decides.
 [Package Management](package-management.md) is which installer a tool gets and
 why. [Observability](observability.md) is what a run leaves behind and who reads
 it, which is where to start when something reported a machine wrongly.

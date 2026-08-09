@@ -73,19 +73,14 @@ def _systemd_dir() -> Path:
 
 
 def _service_content() -> str:
-    # `check` exits 1 on drift, which is the normal state of a machine between
-    # applies — without this the unit sits permanently `failed` and shows up in
-    # `systemctl --user --failed` forever, which is how a real failure comes to be
-    # ignored. Exit 3 (an Issue, or a checker that could not run) is still a
-    # failure, and that is the one worth seeing there.
-    return (
-        '[Unit]\n'
-        'Description=Report how this machine differs from what it declares\n\n'
-        '[Service]\n'
-        'Type=oneshot\n'
-        'SuccessExitStatus=1\n'
-        f'ExecStart={_executable()} check\n'
-    )
+    # No `SuccessExitStatus=1`. It was here because one verb answered two
+    # questions: `check` exited 1 on drift, which is the normal state of a machine
+    # between applies, so the unit sat permanently `failed` in
+    # `systemctl --user --failed` — which is how a real failure comes to be
+    # ignored. Splitting the verbs removed the reason rather than the symptom:
+    # drift is `plan`'s answer now, `check` exits 0 or 3, and a red unit means
+    # something is actually wrong.
+    return f'[Unit]\nDescription=Report anything wrong with this machine\n\n[Service]\nType=oneshot\nExecStart={_executable()} check\n'
 
 
 def _timer_content() -> str:

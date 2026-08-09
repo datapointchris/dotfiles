@@ -10,8 +10,8 @@ source is deleted. The old `link`/`relink` split asked the caller to know which
 kind of change they had just made, and got the answer wrong in exactly the case
 that mattered.
 
-`check` and `apply` decide **per link**: what the repo declares, against what is
-at each target. That is why `check` can report a declared link that was never
+`plan` and `apply` decide **per link**: what the repo declares, against what is
+at each target. That is why `plan` can report a declared link that was never
 deployed — the pass this replaced recreated all of them every run and could only
 say whether any were *broken*, so a file added to `configs/` and never deployed
 read as converged. It is also why nothing is unlinked before being rewritten: a
@@ -103,7 +103,8 @@ All three are worked through in
 
 ## Broken links
 
-`check` finds them and touches only links resolving into this repo. Do not sweep
+`plan` finds them — an orphan is drift `apply` repairs by pruning — and it
+touches only links resolving into this repo. Do not sweep
 them by hand with a `find -delete` across `$HOME` — that deletes every broken
 link on the machine, including ones this manager never created and is not
 responsible for.

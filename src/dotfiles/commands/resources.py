@@ -38,6 +38,19 @@ def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
     raise typer.Exit(reconcile.exit_code([result]))
 
 
+def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bool) -> None:
+    """One resource, through the same engine and the same fold the composite uses.
+
+    Narrowed by address rather than by a per-resource function, so a resource
+    cannot answer one way here and another way under `dotfiles plan` — which is
+    what seven parallel `check_*` functions made possible and eventually true.
+    """
+    from dotfiles import engine
+
+    results = reconcile.fold(engine.assess(_session(machine), [address]), lens)
+    _report(results[0], as_json)
+
+
 def _session(machine: str | None) -> Session:
     try:
         return Session.resolve(machine)
@@ -170,10 +183,16 @@ def _apply_phases(
 packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
 
 
+@packages_app.command('plan')
+def packages_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared packages `apply` would install or upgrade."""
+    _survey('packages', machine, reconcile.Lens.PLAN, as_json)
+
+
 @packages_app.command('check')
 def packages_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report packages this machine declares but has not installed."""
-    _report(reconcile.check_packages(_session(machine)), as_json)
+    _survey('packages', machine, reconcile.Lens.CHECK, as_json)
 
 
 @packages_app.command('apply')
@@ -210,10 +229,16 @@ def packages_search(query: str = typer.Argument(..., help='Substring to match'))
 toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and their version managers')
 
 
+@toolchains_app.command('plan')
+def toolchains_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which language runtimes `apply` would install or raise."""
+    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json)
+
+
 @toolchains_app.command('check')
 def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report toolchain drift."""
-    _report(reconcile.check_toolchains(_session(machine)), as_json)
+    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json)
 
 
 @toolchains_app.command('apply')
@@ -238,10 +263,16 @@ def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> N
 plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plugins')
 
 
+@plugins_app.command('plan')
+def plugins_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared plugins `apply` would clone."""
+    _survey('plugins', machine, reconcile.Lens.PLAN, as_json)
+
+
 @plugins_app.command('check')
 def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report plugin drift."""
-    _report(reconcile.check_plugins(_session(machine)), as_json)
+    _survey('plugins', machine, reconcile.Lens.CHECK, as_json)
 
 
 @plugins_app.command('apply')
@@ -260,10 +291,16 @@ def plugins_list(as_json: bool = JsonOption) -> None:
 symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the repo linked into $HOME')
 
 
+@symlinks_app.command('plan')
+def symlinks_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared links `apply` would deploy or prune."""
+    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json)
+
+
 @symlinks_app.command('check')
 def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report broken or missing symlinks without touching any."""
-    _report(reconcile.check_symlinks(_session(machine)), as_json)
+    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json)
 
 
 @symlinks_app.command('apply')
@@ -309,10 +346,16 @@ def symlinks_unlink(
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')
 
 
+@env_app.command('plan')
+def env_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show what `apply` would write to ~/.env."""
+    _survey('env', machine, reconcile.Lens.PLAN, as_json)
+
+
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report drift between the declared flags and this machine."""
-    _report(reconcile.check_env(_session(machine)), as_json)
+    _survey('env', machine, reconcile.Lens.CHECK, as_json)
 
 
 @env_app.command('apply')
@@ -334,10 +377,16 @@ def env_show(machine: str = MachineOption) -> None:
 system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
 
 
+@system_app.command('plan')
+def system_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which system packages and configuration rows `apply` would change."""
+    _survey('system', machine, reconcile.Lens.PLAN, as_json)
+
+
 @system_app.command('check')
 def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report system configuration drift."""
-    _report(reconcile.check_system(_session(machine)), as_json)
+    _survey('system', machine, reconcile.Lens.CHECK, as_json)
 
 
 @system_app.command('apply')
@@ -349,6 +398,12 @@ def system_apply(machine: str = MachineOption, offline: bool = OfflineOption) ->
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")
 
 
+@identity_app.command('plan')
+def identity_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show whether `apply` would set this machine’s git identity."""
+    _survey('identity', machine, reconcile.Lens.PLAN, as_json)
+
+
 @identity_app.command('check')
 def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report whether this machine has a git identity.
@@ -357,4 +412,4 @@ def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> 
     there is nothing in the repo for `apply` to write. It lives in `~/.gitconfig`
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
-    _report(reconcile.check_identity(_session(machine)), as_json)
+    _survey('identity', machine, reconcile.Lens.CHECK, as_json)
