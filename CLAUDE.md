@@ -177,6 +177,27 @@ After adding, removing or renaming any file under `configs/`, `apps/` or `shell/
 
 Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations, or broken symlinks pointing at deleted repo files.
 
+**The Checked-Out Branch Is Deployed Machine State** (⚠️ MANDATORY, unique to this repo):
+
+`configs/`, `shell/` and `apps/` are symlinked live into `$HOME`, and the `dotfiles` CLI is
+installed **editable** against `src/` (`~/.local/share/uv/tools/dotfiles/.../dotfiles.pth` points
+at `~/dotfiles/src`). Switching branches therefore changes both the config this machine runs and
+the tool that deploys it — a coupling almost no other repo has, and one nothing announces.
+
+- **`~/dotfiles` stays on `main`.** Feature work goes in a git worktree, so a branch cannot reach
+  the machine until it merges. `git worktree add ~/dotfiles-wt/<branch> <branch>`
+- **Always run `dotfiles` from `~/dotfiles`, never from inside a worktree.** `DOTFILES_DIR` is
+  exported in `.zshenv` to make the safe answer the default, but a shell that predates it, or one
+  that overrides it, would resolve the repo root by walking up from the CWD and deploy the
+  worktree's config over the machine's.
+- `dotfiles check` and both apply paths warn when the checkout is off `main`
+  (`checkout.stray_branch`). It is a warning, not a refusal — being on a branch here is a
+  legitimate deliberate act, and the failure being guarded against is not knowing.
+
+Measured 2026-08-09: four commits sat on `main` while a feature branch was checked out, so the
+machine ran older tmux and gh-dash config, kept a deleted app, lacked two new ones, and had a
+dangling wireplumber config — with nothing reporting any of it.
+
 ## Documentation Philosophy
 
 Documentation in this repository serves as a technical reference for future me (6+ months later) and follows these principles:
