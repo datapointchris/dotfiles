@@ -57,6 +57,7 @@ from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import ghrelease
 from dotfiles.providers import releases
+from dotfiles.providers import toolchain
 
 log = logging.getLogger('create-bundle')
 
@@ -283,33 +284,6 @@ def download(url: str, destination: Path) -> None:
             return
 
     raise BundleError(f'Failed to download: {url}\n  error: {last_error}')
-
-
-def run_installer_script(script: Path, *args: str) -> list[tuple[str, str, str]]:
-    """Ask an installer script for its download URLs, as `name|version|url` lines.
-
-    One caller left: `uv.sh`, which bootstraps the interpreter this package runs
-    on and so cannot be a function in it. Everything else that answered this
-    question is Python now, and reads the declaration or a provider directly.
-    """
-    result = subprocess.run(
-        ['bash', str(script), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise BundleError(f'Could not get URL from {script.name}:\n{tail_lines(result.stderr)}')
-
-    rows = []
-    for line in result.stdout.splitlines():
-        if not line.strip():
-            continue
-        fields = line.split('|')
-        if len(fields) < 3:
-            raise BundleError(f'{script.name} emitted an unreadable row: {line!r}')
-        rows.append((fields[0], fields[1], fields[2]))
-    return rows
 
 
 #
@@ -829,11 +803,14 @@ def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
 def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
     """Install scripts, from two sources.
 
-    Language managers are a hardcoded list because they are bootstrap
-    infrastructure, outside the custom_installers model in packages.yml. Custom
-    installers opt in with bundle_install_script: true, and their URL is read from
-    the declaration rather than asked of a script over a `name|version|url` pipe:
-    the script that answered that question is now a function, and the pipe was a
+    uv is named here rather than declared, because it is bootstrap infrastructure
+    and outside the custom_installers model in packages.yml. Custom installers opt
+    in with bundle_install_script: true, and their URL is read from the
+    declaration.
+
+    Neither is asked of a bash script over a `name|version|url` pipe any more.
+    That pipe was the last thing `install/common/language-managers/uv.sh` existed
+    for once the install itself became `providers/toolchain.py`, and it was a
     second place for the bundler and the installer to disagree about which file to
     stage.
 
@@ -851,10 +828,9 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
         download(entry.install_url, bundle.scripts / f'{tool}-install.sh')
         bundle.record('script', tool, 'latest', f'{tool}-install.sh')
 
-    name, version, url = run_installer_script(paths.INSTALL_DIR / 'common' / 'language-managers' / 'uv.sh', '--print-url')[0]
-    log.info('  %s...', name)
-    download(url, bundle.scripts / f'{name}-install.sh')
-    bundle.record('script', name, version, f'{name}-install.sh')
+    log.info('  uv...')
+    download(toolchain.UV_INSTALL_URL, bundle.scripts / 'uv-install.sh')
+    bundle.record('script', 'uv', 'latest', 'uv-install.sh')
 
 
 def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.date | None = None) -> Path:

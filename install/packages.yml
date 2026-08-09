@@ -1667,11 +1667,15 @@ macos_casks:
 #   - custom_installers: official vendor installers where required (e.g. AWS CLI)
 #
 # Runtime Versions:
-#   - Node.js: Managed by fnm, default pinned in language-managers/node.sh; the
+#   - Node.js: Managed by fnm, default pinned in providers/toolchain.py; the
 #              brew/pacman package is only the bootstrap npm
 #   - Python: Managed by uv
-#   - Go: Installed from GitHub releases (see runtimes.go.min_version)
+#   - Go: The go.dev tarball, unpacked over /usr/local/go (see runtimes.go.min_version)
 #   - Rust: Installed via rustup
+#
+#   None of the four is subscribed to. A machine gets Go because it declared
+#   go_tools and Rust because it declared cargo_packages, so a row here carries a
+#   version floor and nothing else. registry.ToolchainProvider does the deriving.
 #
 # Parsing examples:
 #   python parse_packages.py --type=system --manager=apt

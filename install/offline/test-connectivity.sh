@@ -188,7 +188,7 @@ done < <(packages_query --type=custom --manifest="$MANIFEST")
 # it, so a NO always names something this machine would really have failed to get.
 
 print_section "Language runtimes"
-uv_url=$(bash "$DOTFILES_DIR/install/common/language-managers/uv.sh" --print-url | cut -d'|' -f3)
+uv_url=$(dotfiles_python -c 'from dotfiles.providers import toolchain; print(toolchain.UV_INSTALL_URL)')
 probe_url language_manager "uv installer" "$uv_url"
 probe_url language_manager "go.dev" "https://go.dev/VERSION?m=text"
 probe_url language_manager "rustup" "https://sh.rustup.rs"

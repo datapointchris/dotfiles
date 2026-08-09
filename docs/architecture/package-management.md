@@ -357,9 +357,12 @@ Located in `install/common/`:
 
 **Directory Structure**:
 
-- `language-managers/` - Language runtime / version-manager bootstrappers (uv, rustup, go)
 - `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
 - `plugins/` - Editor and terminal plugin installers
+
+The runtimes those tools install against are no longer here. uv, rustup, the Go
+tarball and fnm's default Node alias are `src/dotfiles/providers/toolchain.py`,
+converged through the same engine as everything else.
 
 The specific tools in each category are defined in `install/packages.yml` (the single
 source of truth) — this list describes what each directory is *for*, not its contents.

@@ -87,7 +87,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       export PATH="/usr/local/go/bin:$PATH"
     else
       log_error "Go is not installed"
-      echo "Install Go first: bash $DOTFILES_DIR/install/common/language-managers/go.sh"
+      echo "Install Go first: dotfiles toolchains apply"
       exit 1
     fi
   fi

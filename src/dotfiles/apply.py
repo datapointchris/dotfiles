@@ -383,22 +383,23 @@ def _system_packages(context: Run) -> bool:
 
 
 def _go_toolchain(context: Run) -> bool:
-    if not context.declared('go'):
-        return True
     heading('Go toolchain')
-    return run_installer(context, COMMON / 'language-managers' / 'go.sh', 'go')
+    return _converge(context, engine.Selection.of('toolchains/go-toolchain'))
 
 
 def _rust_toolchain(context: Run) -> bool:
-    if not context.declared('cargo'):
-        return True
+    """rustup, and then cargo-binstall, which is not part of the runtime.
+
+    `cargo binstall` is the mechanism the cargo *packages* provider installs
+    through, so it belongs to that provider as a precondition rather than to the
+    runtime — the same shape the brew bootstrap takes in step C. It stays a script
+    here until the cargo provider that needs it converts.
+    """
     heading('Rust toolchain')
-    return all(
-        [
-            run_installer(context, COMMON / 'language-managers' / 'rust.sh', 'rust'),
-            run_installer(context, COMMON / 'language-tools' / 'cargo-binstall.sh', 'cargo-binstall'),
-        ]
-    )
+    installed = _converge(context, engine.Selection.of('toolchains/rust-toolchain'))
+    if not context.declared('cargo'):
+        return installed
+    return run_installer(context, COMMON / 'language-tools' / 'cargo-binstall.sh', 'cargo-binstall') and installed
 
 
 def _uv_toolchain(context: Run) -> bool:
@@ -409,7 +410,7 @@ def _uv_toolchain(context: Run) -> bool:
     itself shelled out to `uv run` and died with exit 127 on `linux-lxc-server`.
     """
     heading('uv')
-    return run_installer(context, COMMON / 'language-managers' / 'uv.sh', 'uv')
+    return _converge(context, engine.Selection.of('toolchains/uv-toolchain'))
 
 
 def _go_tools(context: Run) -> bool:
@@ -551,10 +552,8 @@ def _cargo_packages(context: Run) -> bool:
 
 
 def _node_toolchain(context: Run) -> bool:
-    if not context.declared('npm'):
-        return True
     heading('Node toolchain')
-    return run_installer(context, COMMON / 'language-managers' / 'node.sh', 'node')
+    return _converge(context, engine.Selection.of('toolchains/node-toolchain'))
 
 
 def _npm_globals(context: Run) -> bool:

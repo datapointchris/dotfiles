@@ -22,7 +22,7 @@ portfolio pin different versions in `.nvmrc` — several want 24, meso wants 26 
 running the wrong one is not a subtle failure: ichrisbirch's frontend suite dies
 outright on 26 with `localStorage is undefined`.
 
-`install/common/language-managers/node.sh` installs the fleet default and links it
+`src/dotfiles/providers/toolchain.py` installs the fleet default and links it
 as fnm's `default` alias. `.zshenv` puts `~/.local/share/fnm/aliases/default/bin`
 on PATH ahead of everything else, so scripts, editors, agents and pre-commit hooks
 resolve `node` to that version without any shell integration. `.zshrc` layers

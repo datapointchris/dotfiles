@@ -154,6 +154,29 @@ def test_installing_a_system_package_needs_root_whatever_the_entry_says() -> Non
     assert registry.needs_root(item('system', 'curl', entry))
 
 
+def test_the_go_runtime_is_the_only_one_that_needs_root() -> None:
+    """It unpacks over `/usr/local/go`; the other three install under `$HOME`.
+
+    Go could too, but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
+    all name `/usr/local/go/bin`, so moving it is a change to every one of them
+    and to every machine already built.
+    """
+    runtimes = {provider.name: provider for provider in registry.for_resource('toolchains')}
+    needs_root = {name: provider.needs_root(None) for name, provider in runtimes.items()}  # type: ignore[arg-type]
+
+    assert needs_root == {'go-toolchain': True, 'rust-toolchain': False, 'uv-toolchain': False, 'node-toolchain': False}
+
+
+def test_every_runtime_can_actually_install_itself() -> None:
+    """The base `Provider.install` is a faithful description of a mechanism this
+    package does not drive yet, and returns REFUSED to say so. That is the wrong
+    answer for a runtime — one with no mechanism is a missing subclass, not a
+    description — so `converge` is abstract and this is what catches the omission.
+    """
+    for provider in registry.for_resource('toolchains'):
+        assert type(provider).converge is not registry.ToolchainProvider.converge, provider.name
+
+
 def test_a_macos_preference_does_not_need_root_and_the_entry_is_what_says_so() -> None:
     """The other half of why `needs_root` is a method: for `system.yml` the answer
     is per row and already declared. A flat field here would be a second source

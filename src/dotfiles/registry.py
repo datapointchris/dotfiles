@@ -51,6 +51,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import macdefaults
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
+from dotfiles.providers import toolchain
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
@@ -359,6 +360,60 @@ class ToolchainProvider(Provider):
             ),
         )
 
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        result = self.converge(session, privilege)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        """Put this runtime on the machine, by whatever means it has.
+
+        Abstract, unlike the base `Provider.install`, because there is no honest
+        default: a runtime with no mechanism is not a faithful description of
+        anything, it is a missing subclass.
+        """
+        raise NotImplementedError
+
+
+@dc.dataclass(frozen=True, slots=True)
+class UvToolchain(ToolchainProvider):
+    """astral's install script, then the default interpreter it manages."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_uv(offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class RustToolchain(ToolchainProvider):
+    """rustup, which brings `rustc` and `cargo` together."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_rust(offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GoToolchain(ToolchainProvider):
+    """A tarball unpacked over `/usr/local/go`, which is why this one needs root.
+
+    The only runtime that does. The other three install under `$HOME`, and Go
+    could too — but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
+    all name `/usr/local/go/bin`, so moving it is a change to every one of them
+    and to every machine already built.
+    """
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=session.offline)
+
+    def needs_root(self, item: DesiredItem) -> bool:
+        return True
+
+
+@dc.dataclass(frozen=True, slots=True)
+class NodeToolchain(ToolchainProvider):
+    """fnm's default alias, which is what a bare `node` resolves to."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_node(session.home, offline=session.offline)
+
 
 def declared_runtime(declaration: catalogs.Catalog, name: str) -> catalogs.Runtime | None:
     """The `runtimes` row carrying a toolchain's version floor, or None.
@@ -494,10 +549,10 @@ PROVIDERS: tuple[Provider, ...] = (
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),
     CloneProvider('tpm', 'plugins', Stage.TMUX_PLUGINS, 'tmux_plugins'),
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),
-    ToolchainProvider('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
-    ToolchainProvider('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
-    ToolchainProvider('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
-    ToolchainProvider('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
+    UvToolchain('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
+    GoToolchain('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
+    RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
+    NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),

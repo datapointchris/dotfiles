@@ -24,7 +24,11 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles.privilege import Privilege
+from dotfiles.providers import Result
+from dotfiles.providers import toolchain as installers
 from dotfiles.resolve import Stage
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import toolchains
@@ -205,3 +209,40 @@ def test_the_floor_comes_from_the_plan_not_from_this_module(tmp_path: Path, bin_
     live = session(tmp_path, {**BARE, 'go_tools': ['task']}, packages)
 
     assert changes(live)[0].detail == 'below the declared floor of 99.0'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# What apply does with it
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_go_row_says_in_advance_that_it_will_ask_for_a_password(tmp_path: Path, bin_dir: Path) -> None:
+    """`privileged` is a static fact on the Change, which is what lets `plan` state
+    the count without asking for one — the half of the front-loaded design worth
+    keeping now that root is acquired at the write."""
+    stub(bin_dir, 'uv')
+    live = session(tmp_path, {**BARE, 'go_tools': ['task']})
+
+    assert [change.privileged for change in changes(live)] == [True]
+
+
+def test_uv_does_not(tmp_path: Path, bin_dir: Path) -> None:
+    live = session(tmp_path, BARE)
+
+    assert [change.privileged for change in changes(live)] == [False]
+
+
+def test_repairing_a_runtime_goes_through_the_provider_that_planned_it(
+    tmp_path: Path, bin_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not a table here saying which runtimes this resource can install. That table
+    is what `packages.PERFORMED` was, and it decided the same question the registry
+    already answers — so the route asserted is resource → registry → provider."""
+    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(True, 'uv, from the provider'))
+    live = session(tmp_path, BARE)
+    change = changes(live)[0]
+
+    outcome = toolchains.RESOURCE.perform(live, change, Privilege(offer=False))
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert outcome.message == 'uv, from the provider'

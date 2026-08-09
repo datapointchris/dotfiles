@@ -17,7 +17,7 @@ Add a new installer to this directory when:
 
 - You need to install multiple tools via a language package manager
 - Tools are distributed through package registries (crates.io, npmjs.com, pkg.go.dev, PyPI)
-- Package manager is already installed (via language-managers/)
+- Package manager is already installed (the runtimes converge first, at `Stage.TOOLCHAIN`)
 - Packages are defined in `packages.yml`
 
 ## Libraries Used
@@ -247,7 +247,7 @@ Language tool installers handle errors by:
 
 1. **Environment sourcing**: Always source the language environment before installing (`.cargo/env`, etc.). Node.js is a system package, so `npm` is already on PATH — nothing to source.
 
-2. **Package manager availability**: Assumes language manager is already installed (via language-managers/)
+2. **Package manager availability**: Assumes the runtime is already installed — `providers/toolchain.py` converges it at an earlier stage
 
 3. **Idempotency**: npm checks if already installed, others rely on package manager's idempotency
 

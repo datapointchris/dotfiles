@@ -20,13 +20,13 @@ import shutil
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import registry
 from dotfiles import versions
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
-from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
@@ -77,7 +77,17 @@ class ToolchainsResource:
         changes = []
         for item in plan.for_resource(NAME):
             if item.name in observed.absent:
-                changes.append(Change(NAME, item.stage, item.name, Verdict.MISSING, detail=observed.absent[item.name], desired=item))
+                changes.append(
+                    Change(
+                        NAME,
+                        item.stage,
+                        item.name,
+                        Verdict.MISSING,
+                        detail=observed.absent[item.name],
+                        desired=item,
+                        privileged=registry.needs_root(item),
+                    )
+                )
                 continue
 
             reported = observed.reported[item.name]
@@ -109,18 +119,14 @@ class ToolchainsResource:
                         detail=f'below the declared floor of {floor}',
                         desired=item,
                         observed=reported,
+                        privileged=registry.needs_root(item),
                     )
                 )
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
-        """Not yet this resource's to do.
-
-        Each toolchain installs through its own version manager — rustup, fnm, the
-        go tarball, uv's own installer — and those are genuine sequences of shell
-        commands that the next commit in step B converts.
-        """
-        return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles toolchains apply', which still drives the phase registry")
+        """Whichever version manager planned it installs it, or says why it cannot."""
+        return registry.install(session, change, privilege)
 
 
 def _floor(item: DesiredItem) -> str:

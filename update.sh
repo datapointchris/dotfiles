@@ -146,9 +146,21 @@ update_system_packages() {
   esac
 }
 
+# The CLI addresses the runtimes as one resource, so each of these converges all
+# of them and whichever runs second finds nothing to do. The rows here stay one
+# per runtime because `apply.REGISTRY` does, and both go in step C.
+#
+# What changed with them: a runtime is installed when it is missing or below the
+# floor its `runtimes` row declares, rather than on every update run. Go above its
+# floor is what `check` has always called converged, and the two answers agree now
+# instead of one upgrading what the other called fine.
+converge_toolchains() {
+  dotfiles_python -m dotfiles.main toolchains apply
+}
+
 update_go_toolchain() {
-  print_section "Updating Go toolchain via $(print_green "go.sh --update")"
-  if bash "$DOTFILES_DIR/install/common/language-managers/go.sh" --update; then
+  print_section "Updating Go toolchain via $(print_green "dotfiles toolchains apply")"
+  if converge_toolchains; then
     log_success "Go toolchain update completed"
   else
     log_warning "Go update failed"
@@ -156,8 +168,8 @@ update_go_toolchain() {
 }
 
 update_node_toolchain() {
-  print_section "Updating Node default via $(print_green "node.sh --update")"
-  if bash "$DOTFILES_DIR/install/common/language-managers/node.sh" --update; then
+  print_section "Updating Node default via $(print_green "dotfiles toolchains apply")"
+  if converge_toolchains; then
     log_success "Node toolchain update completed"
   else
     log_warning "Node update failed"
