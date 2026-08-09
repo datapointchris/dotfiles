@@ -222,10 +222,10 @@ jobs:
   # absent, which on a bare runner means the generic python job above reports
   # green having run a third of this directory.
   #
-  # So the tier gets its own job that installs them, and asserts they are there
-  # before running. `command -v` is the whole gate: the skip conditions name
-  # exactly these two binaries, so proving both are present proves nothing was
-  # skipped for want of one.
+  # So the tier gets its own job that installs them, and --require-interpreters
+  # turns the skips into a refusal to start. The suite is the gate: the flag
+  # enforces the set the collected tests actually ask for, so a test that starts
+  # driving a third interpreter is covered here without this file changing.
   #
   # Its own job rather than a step inside `python`: it needs apt packages that
   # job has no reason to carry, and a separate job runs it in parallel.
@@ -245,7 +245,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y tmux zsh
-          command -v tmux zsh
 
       - name: Test
-        run: uv run pytest tests/shell -rs
+        run: uv run pytest tests/shell --require-interpreters -rs

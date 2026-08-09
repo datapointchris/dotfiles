@@ -26,9 +26,10 @@ from pathlib import Path
 import pytest
 from shells import REPO
 from shells import Shell
+from shells import requires
 from shells import shell_out
 
-pytestmark = pytest.mark.skipif(shutil.which('tmux') is None, reason='tmux is not installed')
+pytestmark = requires('tmux')
 
 INSTALLER = str(REPO / 'install' / 'common' / 'plugins' / 'tmux-plugins.sh')
 WRAPPER = str(REPO / 'install' / 'run-installer.sh')

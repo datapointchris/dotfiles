@@ -22,7 +22,6 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -37,7 +36,24 @@ terminal cannot decide the answer."""
 
 ANSI = re.compile(r'\x1b\[[0-9;]*m')
 
-SHELLS = ('bash', pytest.param('zsh', marks=pytest.mark.skipif(shutil.which('zsh') is None, reason='zsh not installed')))
+
+def requires(interpreter: str) -> pytest.MarkDecorator:
+    """Declare that a test drives an interpreter no machine is guaranteed to have.
+
+    Deliberately not a `skipif` resolved here. Whether a missing interpreter is a
+    skip or a hard failure is the *runner's* question — a workstation without zsh
+    should report a skip, and CI must not report green having silently run a third
+    of this directory. `tests/conftest.py` decides, and the set it enforces is the
+    set these markers ask for, so a tier that starts driving a third interpreter
+    extends the CI gate by existing rather than by someone editing a workflow.
+
+    bash needs no marker: a missing one raises FileNotFoundError out of every
+    call, which is a failure already and cannot be mistaken for coverage.
+    """
+    return pytest.mark.interpreter(interpreter)
+
+
+SHELLS = ('bash', pytest.param('zsh', marks=requires('zsh')))
 """A parameter rather than an inline skip, so a machine without zsh reports the
 skip per case instead of silently covering half of one."""
 

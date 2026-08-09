@@ -35,8 +35,13 @@ list is on stdout, which no bats assertion could have distinguished.
 
 **A skipped interpreter is a case, not a silence.** zsh is a parameter, so a
 machine without it reports the skip per test instead of quietly covering half of
-one. CI installs `tmux` and `zsh` and asserts they are present before running the
-tier, because every one of those tests degrades to a skip rather than a failure.
+one. That is the right answer on a workstation and the wrong one on a runner,
+where a missing interpreter would leave the tier reporting green having run a
+third of itself — so `--require-interpreters` inverts it into a refusal to start,
+and CI passes the flag. The set it enforces is read back off the collected tests,
+so a test that starts driving a third interpreter is covered without the workflow
+changing. `tests/shell/test_interpreter_gate.py` asserts both readings by running
+pytest against a PATH with the interpreters taken off it.
 
 **Tables are tables.** bats spawns a process per `@test`, which pushed every file
 toward one `@test` holding fifteen assertions — so a failure named the group

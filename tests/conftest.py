@@ -10,6 +10,7 @@ rather than only exercised through a subprocess.
 import importlib.machinery
 import importlib.util
 import os
+import shutil
 import stat
 from pathlib import Path
 from types import ModuleType
@@ -40,6 +41,12 @@ TIERS = {
 def pytest_addoption(parser):
     for flag, (_, help_text, _reason) in TIERS.items():
         parser.addoption(flag, action='store_true', default=False, help=help_text)
+    parser.addoption(
+        '--require-interpreters',
+        action='store_true',
+        default=False,
+        help='refuse to run rather than skip when a test needs an interpreter this machine lacks',
+    )
     parser.addoption('--keep', action='store_true', default=False, help='leave e2e containers running afterwards')
     parser.addoption('--reuse', action='store_true', default=False, help='reuse a kept container and any built bundle')
     parser.addoption(
@@ -76,6 +83,37 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if item.get_closest_marker(marker):
                 item.add_marker(skip)
+
+    resolve_interpreters(config, items)
+
+
+def resolve_interpreters(config, items):
+    """Skip what needs a missing interpreter, or refuse the whole run.
+
+    `tests/shell` drives real bash, zsh and tmux. A machine without one should
+    skip those cases and still run the rest; CI must do the opposite, because a
+    runner image that has no zsh reports green having run a third of that
+    directory. Both readings are right for their runner, which is why the marker
+    only states the requirement and this decides what it means.
+
+    The enforced set is read back off the collected items rather than written
+    down anywhere, so it is exactly what the tests ask for. A workflow step
+    proving two named binaries exist is a different claim that only looks like
+    this one — it stays green after the last test needing them is deleted, and
+    stays green when a new test starts needing a third.
+    """
+    required = {marker.args[0] for item in items for marker in item.iter_markers('interpreter')}
+    missing = sorted(name for name in required if shutil.which(name) is None)
+
+    if config.getoption('--require-interpreters'):
+        if missing:
+            raise pytest.UsageError(f'--require-interpreters, but this machine has no {", ".join(missing)}')
+        return
+
+    for item in items:
+        for marker in item.iter_markers('interpreter'):
+            if shutil.which(marker.args[0]) is None:
+                item.add_marker(pytest.mark.skip(reason=f'{marker.args[0]} is not installed'))
 
 
 def load_app(name: str, platform: str = 'common') -> ModuleType:
