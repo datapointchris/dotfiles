@@ -98,20 +98,20 @@ Use fonttools to modify metadata:
 ```python
 from fontTools.ttLib import TTFont
 
-font = TTFont("FontName.ttf")
+font = TTFont('FontName.ttf')
 
 # Fix for Kitty (isFixedPitch)
-font["post"].isFixedPitch = 1
+font['post'].isFixedPitch = 1
 
 # Fix for Ghostty (PANOSE)
-font["OS/2"].panose.bFamilyType = 2
-font["OS/2"].panose.bProportion = 9
+font['OS/2'].panose.bFamilyType = 2
+font['OS/2'].panose.bProportion = 9
 
 # Fix Bold weight (if incorrectly set to 400)
-if "Bold" in filename and font["OS/2"].usWeightClass == 400:
-    font["OS/2"].usWeightClass = 700
+if 'Bold' in filename and font['OS/2'].usWeightClass == 400:
+    font['OS/2'].usWeightClass = 700
 
-font.save("FontName.ttf")
+font.save('FontName.ttf')
 ```
 
 ## Automated Fix
