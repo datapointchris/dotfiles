@@ -188,10 +188,11 @@ def test_the_interpreter_handed_down_can_import_this_package() -> None:
 def test_owner_reaches_the_installers_that_do_their_own_narrowing() -> None:
     """Selecting owner-aware phases is not enough on its own.
 
-    go-tools.sh and the other list-driven scripts build their own packages.yml
-    query and read `PACKAGE_OWNER` from the environment to narrow it. Before this
-    was shared, only go-tools.sh read it — so `--mine` ran cargo, uv and npm in
-    full while claiming to filter.
+    The list-driven scripts that are left build their own packages.yml query and
+    read `PACKAGE_OWNER` from the environment to narrow it. Before that was
+    shared, only the Go one read it — so `--mine` ran cargo, uv and npm in full
+    while claiming to filter. The Go one converges through the plan now, which is
+    narrowed before a provider sees it; the three that remain still need this.
     """
     assert context(owner='datapointchris').environment()['PACKAGE_OWNER'] == 'datapointchris'
     assert 'PACKAGE_OWNER' not in context().environment()

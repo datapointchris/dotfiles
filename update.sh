@@ -195,8 +195,8 @@ update_uv() {
 }
 
 update_go_tools() {
-  print_section "Updating Go tools via $(print_green "go-tools.sh --update")"
-  if bash "$DOTFILES_DIR/install/common/language-tools/go-tools.sh" --update; then
+  print_section "Updating Go tools via $(print_green "dotfiles packages apply --source go_tools")"
+  if converge_section go_tools; then
     log_success "Go tools update completed"
   else
     log_warning "Go tools update failed"

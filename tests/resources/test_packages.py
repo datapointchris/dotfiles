@@ -26,6 +26,7 @@ from dotfiles import releases
 from dotfiles.privilege import Privilege
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -362,15 +363,24 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
 
 @pytest.fixture
 def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Record what would be installed, instead of reaching GitHub or a vendor."""
+    """Record what would be installed, instead of reaching GitHub, a vendor or the
+    Go proxy.
+
+    Every converted provider is patched here, not only the ones a test names. One
+    that is missed does not fail — it *installs*, on the machine running the
+    suite: this fixture covered two providers when a third converted, and the
+    resulting run rebuilt a Go tool out of proxy.golang.org and wrote it into
+    `~/go/bin`.
+    """
     attempted: list[str] = []
 
-    def record(entry, target, *, offline=False):
+    def record(entry, target=None, *, offline=False):
         attempted.append(entry.name)
         return ghrelease.Result(True, f'{entry.name} installed')
 
     monkeypatch.setattr(ghrelease, 'install', record)
     monkeypatch.setattr(custom, 'install', record)
+    monkeypatch.setattr(gotool, 'install', record)
     return attempted
 
 
@@ -422,15 +432,35 @@ def test_a_release_that_arrived_since_the_report_is_skipped(
     assert installs == []
 
 
+# A name no machine can have, because `fake_bin` keeps /usr/bin behind it: a real
+# cargo package would read as installed on whichever box happens to have it, which
+# is the hazard that fixture's docstring names.
+CARGO_PACKAGE = {'cargo_packages': [{'name': 'unbuilt-crate', 'command': 'unbuilt-crate'}]}
+DECLARES_CARGO = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['unbuilt-crate']}
+
+
 def test_a_provider_that_has_not_converted_is_refused_not_ignored(
     tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
-    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+    live = session(tmp_path, CARGO_PACKAGE, DECLARES_CARGO)
 
     outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
     assert outcome.status is OutcomeStatus.REFUSED
     assert installs == []
+
+
+def test_a_missing_go_tool_is_installed_by_its_provider(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    """Through the same function the phase calls, so the two front doors cannot
+    install one tool differently."""
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['task']
 
 
 DECLARES_THEME = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['theme']}

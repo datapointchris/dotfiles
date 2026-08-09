@@ -21,7 +21,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 
 1. **Go Apps** (toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
-   - Installer: `install/common/language-tools/go-tools.sh`
+   - Installer: `src/dotfiles/providers/gotool.py`, through `dotfiles packages apply`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 

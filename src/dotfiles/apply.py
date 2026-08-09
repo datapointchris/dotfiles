@@ -414,10 +414,8 @@ def _uv_toolchain(context: Run) -> bool:
 
 
 def _go_tools(context: Run) -> bool:
-    if not context.declared('go'):
-        return True
     heading('Go tools')
-    return run_installer(context, COMMON / 'language-tools' / 'go-tools.sh', 'go-tools')
+    return _converge(context, engine.Selection.of('packages/go'))
 
 
 def _have_github_credentials() -> bool:

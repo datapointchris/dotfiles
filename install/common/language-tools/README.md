@@ -142,7 +142,7 @@ uv_tools:
 
    ```bash
    bash install/common/language-tools/cargo-tools.sh
-   # or npm-install-globals.sh, go-tools.sh, uv-tools.sh
+   # or npm-install-globals.sh, uv-tools.sh
    ```
 
 4. **Verify installation**:

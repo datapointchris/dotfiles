@@ -38,13 +38,17 @@ from dotfiles.session import Session
 
 NAME = 'packages'
 
-CURRENCY_PROVIDER = 'ghrelease'
-"""The one provider whose items are checked for currency.
+CURRENCY = (catalog.GithubRelease, catalog.GoTool)
+"""The entries whose currency is a question with an upstream answer.
 
-A release is pulled from a tag this repo names, so "what should be installed" is
-a question with an upstream answer. Everything else here defers to a registry
-that upgrades on its own schedule — asking apt or npm whether a package is the
-newest one is asking a question the machine's own manager already owns.
+Both are installed from a repo this declaration names, so "what should be
+installed" is decided by a tag rather than by anyone else's schedule. `go install
+@latest` is not an exception to that — it *is* the upgrade, because nothing sits
+underneath a Go tool deciding when it moves.
+
+Everything else here defers to a registry that upgrades on its own: asking apt or
+npm whether a package is the newest one is asking a question the machine's own
+manager already owns.
 """
 
 
@@ -134,13 +138,22 @@ def repair_for(item: DesiredItem, evidence: ev.Evidence, credentials: bool) -> R
 
 
 def _has_currency(item: DesiredItem) -> bool:
-    return item.provider == CURRENCY_PROVIDER
+    """Whether there is an upstream to ask about this item at all.
+
+    An entry of a currency-bearing kind that names no repo is not one: a Go tool
+    declared by module path alone has no releases API to consult, and reporting it
+    UNKNOWN forever would be noise rather than a finding.
+    """
+    return isinstance(item.entry, CURRENCY) and bool(_wanted(item).repo)
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
-    prefix = item.entry.release_tag_prefix if isinstance(item.entry, catalog.GithubRelease) else ''
-    repo = item.entry.repo if isinstance(item.entry, catalog.GithubRelease) else ''
-    return releases.Wanted(repo=repo, tag_prefix=prefix)
+    entry = item.entry
+    if isinstance(entry, catalog.GithubRelease):
+        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix)
+    if isinstance(entry, catalog.GoTool):
+        return releases.Wanted(repo=entry.github_repo)
+    return releases.Wanted(repo='')
 
 
 def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:

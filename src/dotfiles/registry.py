@@ -48,6 +48,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.providers import clone
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import macdefaults
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
@@ -233,6 +234,23 @@ class CustomProvider(VendoredProvider):
         if not isinstance(entry, catalogs.CustomInstaller):
             return providers.Result(False, f'{item.name} is not a custom_installers entry')
         return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GoToolProvider(CatalogProvider):
+    """A Go module installed by the toolchain that built it.
+
+    Not a `VendoredProvider`: nothing here fetches an asset this package names.
+    `go install` resolves the module, builds it and places the binary, and the
+    only alternative source is the prebuilt binary an offline bundle carries.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.GoTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
+        result = gotool.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -542,7 +560,7 @@ PROVIDERS: tuple[Provider, ...] = (
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CatalogProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
-    CatalogProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
+    GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
     CatalogProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),
     UvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
