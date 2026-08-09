@@ -97,6 +97,41 @@ def _bare(tag: str) -> str:
     return tag.removeprefix('v')
 
 
+def expand_pattern(pattern: str, version: str, target: Target, *, asset_target: str = '', arch: str = '') -> str:
+    """A declared `binary_pattern` filled in for one platform and version.
+
+    The vocabulary the file above rejects, kept for the two sections that can use
+    it. That is not a contradiction: the 23 release entries defeated a template
+    because each publisher invented its own spelling, while `go_tools` and
+    `cargo_packages` are named by GoReleaser and cargo-dist conventions that vary
+    within a small fixed set. Where an upstream steps outside it, the declaration
+    overrides the piece that differs rather than the whole name — which is what
+    `linux_target` and `darwin_target` are.
+
+    `arch` is a parameter because the two sections disagree about what `{arch}`
+    means: cargo tools name arm64 assets `aarch64` and Go tools do not. Passing
+    the spelling from the caller keeps that a fact about each section rather than
+    a branch in here that has to know who is asking.
+    """
+    replacements = {
+        '{version}': version,
+        '{version_num}': version.lstrip('v'),
+        '{target}': asset_target,
+        '{os}': str(target.os_family),
+        '{arch}': arch or str(target.arch),
+        '{go_arch}': 'arm64' if target.is_arm else 'amd64',
+        '{Os}': 'Darwin' if target.is_darwin else 'Linux',
+        '{Arch}': str(target.arch),
+        '{os_mac}': 'macOS' if target.is_darwin else 'linux',
+        '{Os_mac}': 'macOS' if target.is_darwin else 'Linux',
+        '{platform}': 'apple_darwin' if target.is_darwin else 'linux',
+    }
+    expanded = pattern
+    for placeholder, value in replacements.items():
+        expanded = expanded.replace(placeholder, value)
+    return expanded
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The tools
 # ─────────────────────────────────────────────────────────────────────────────

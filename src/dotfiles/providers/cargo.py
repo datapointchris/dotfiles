@@ -34,6 +34,7 @@ from dotfiles.providers import Result
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
+from dotfiles.providers import releases
 from dotfiles.providers import toolchain
 
 BUNDLE_BINARIES = 'binaries'
@@ -64,6 +65,38 @@ def triple(target: Target) -> str:
     """
     machine = 'aarch64' if target.is_arm else 'x86_64'
     return f'{machine}-apple-darwin' if target.is_darwin else f'{machine}-unknown-linux-gnu'
+
+
+def asset_target(entry: catalog.CargoPackage, target: Target) -> str:
+    """What `{target}` expands to in this entry's asset name.
+
+    The triple, unless the declaration overrides it — fnm ships `fnm-linux.zip`
+    and `fnm-macos.zip`, named after the OS word and not the platform it was
+    built for.
+    """
+    if target.is_darwin and entry.darwin_target:
+        return entry.darwin_target
+    if not target.is_darwin and entry.linux_target:
+        return entry.linux_target
+    return triple(target)
+
+
+def stage(entry: catalog.CargoPackage, version: str, target: Target) -> str:
+    """The release asset an offline bundle stages for this package, by name.
+
+    Here rather than in the bundler for the reason `gotool.stage` records: naming
+    the file is the same question this module answers when installing from one,
+    and two answers in two files off two shapes of the same data is how they came
+    to disagree. `{arch}` is spelled `aarch64` because that is what a Rust
+    project's release assets say.
+    """
+    return releases.expand_pattern(
+        entry.binary_pattern,
+        version,
+        target,
+        asset_target=asset_target(entry, target),
+        arch='aarch64' if target.is_arm else 'x86_64',
+    )
 
 
 def install(entry: catalog.CargoPackage, target: Target, *, offline: bool) -> Result:

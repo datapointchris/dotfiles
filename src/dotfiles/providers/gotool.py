@@ -24,10 +24,12 @@ from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import effects
+from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
+from dotfiles.providers import releases
 
 BUNDLE_BINARIES = 'go-binaries'
 
@@ -44,6 +46,22 @@ def gobin() -> Path:
 
 def bundled(entry: catalog.GoTool) -> Path:
     return bundle_file(BUNDLE_BINARIES) / entry.executable
+
+
+def stage(entry: catalog.GoTool, version: str, target: Target) -> str:
+    """The release asset an offline bundle stages for this tool, by name.
+
+    Here rather than in the bundler because it is the same question this module
+    answers when installing — which file *is* this tool for this platform — and
+    the two used to answer it in different files off different data. The bundler
+    read `binary_pattern` out of a pipe-joined `parse_packages` row while the
+    installer globbed for whatever came out, so a pattern change moved one and
+    not the other, silently, on the one machine that needs the bundle.
+
+    Only the name: which release, downloading it, verifying it and where it lands
+    in the bundle are the bundler's, and it is the only side with a network.
+    """
+    return releases.expand_pattern(entry.binary_pattern, version, target)
 
 
 def install(entry: catalog.GoTool, *, offline: bool) -> Result:

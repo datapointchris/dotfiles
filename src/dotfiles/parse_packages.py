@@ -162,12 +162,6 @@ def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
     filtered = [pkg for pkg in all_tools if pkg['name'] in manifest_tools]
     if output_format == 'name_package':
         return [f'{pkg["name"]}|{pkg["package"]}' for pkg in filtered]
-    elif output_format == 'binary_info':
-        return [
-            f'{pkg["name"]}|{pkg["github_repo"]}|{pkg["binary_pattern"]}'
-            for pkg in filtered
-            if 'github_repo' in pkg and 'binary_pattern' in pkg
-        ]
     return [pkg['package'] for pkg in filtered]
 
 
@@ -249,20 +243,6 @@ def filter_custom_installers_by_manifest(data, manifest, filter_field=None):
     return [i['name'] for i in candidates]
 
 
-def cargo_binary_info_rows(packages):
-    """Rows the offline bundler downloads from: command|repo|pattern|linux_target|darwin_target.
-
-    The two target fields override the Rust target triple {target} expands to, for tools
-    whose release assets are not named after it (fnm ships fnm-linux.zip, fnm-macos.zip).
-    """
-    rows = []
-    for pkg in packages:
-        if 'github_repo' in pkg and 'binary_pattern' in pkg:
-            cmd = pkg.get('command', pkg['name'])
-            rows.append(f'{cmd}|{pkg["github_repo"]}|{pkg["binary_pattern"]}|{pkg.get("linux_target", "")}|{pkg.get("darwin_target", "")}')
-    return rows
-
-
 def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     """Filter cargo packages to only those named in the manifest."""
     manifest_pkgs = manifest.get('cargo_packages', [])
@@ -276,8 +256,6 @@ def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
         return [f'{pkg["name"]}|{pkg.get("command", pkg["name"])}' for pkg in filtered]
     elif output_format == 'github_repos':
         return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in filtered if 'github_repo' in pkg]
-    elif output_format == 'binary_info':
-        return cargo_binary_info_rows(filtered)
     else:
         return [pkg['name'] for pkg in filtered]
 
@@ -328,8 +306,7 @@ def get_cargo_packages(data, output_format='names'):
     Args:
         output_format: 'names' returns just names,
                       'name_command' returns 'name|command' pairs,
-                      'github_repos' returns 'command|github_repo' for offline bundling,
-                      'binary_info' returns the offline bundling row (see cargo_binary_info_rows)
+                      'github_repos' returns 'command|github_repo' for offline bundling
     """
     if 'cargo_packages' not in data:
         return []
@@ -338,8 +315,6 @@ def get_cargo_packages(data, output_format='names'):
         return [f'{pkg["name"]}|{pkg.get("command", pkg["name"])}' for pkg in data['cargo_packages']]
     elif output_format == 'github_repos':
         return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in data['cargo_packages'] if 'github_repo' in pkg]
-    elif output_format == 'binary_info':
-        return cargo_binary_info_rows(data['cargo_packages'])
     else:
         return [pkg['name'] for pkg in data['cargo_packages']]
 
@@ -394,19 +369,12 @@ def get_go_packages(data, output_format='packages'):
 
     Args:
         output_format: 'packages' returns just package paths,
-                      'name_package' returns 'name|package' pairs,
-                      'binary_info' returns 'name|github_repo|binary_pattern' for offline bundling
+                      'name_package' returns 'name|package' pairs
     """
     if 'go_tools' not in data:
         return []
     if output_format == 'name_package':
         return [f'{pkg["name"]}|{pkg["package"]}' for pkg in data['go_tools']]
-    elif output_format == 'binary_info':
-        return [
-            f'{pkg["name"]}|{pkg["github_repo"]}|{pkg["binary_pattern"]}'
-            for pkg in data['go_tools']
-            if 'github_repo' in pkg and 'binary_pattern' in pkg
-        ]
     return [pkg['package'] for pkg in data['go_tools']]
 
 
@@ -598,7 +566,7 @@ def select_packages(data, manifest, args):
     if args.type == 'git_uv':
         return filter_git_uv_packages_by_manifest(data, manifest) if manifest else get_git_uv_packages(data)
     if args.type == 'go':
-        output_format = args.format if args.format in ('packages', 'name_package', 'binary_info') else 'packages'
+        output_format = args.format if args.format in ('packages', 'name_package') else 'packages'
         if manifest:
             return filter_go_packages_by_manifest(data, manifest, output_format)
         return get_go_packages(data, output_format)
@@ -624,7 +592,7 @@ def select_packages(data, manifest, args):
 PACKAGE_TYPES = ['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks']
 SYSTEM_TIERS = ['core', 'workstation']
 PACKAGE_MANAGERS = ['apt', 'pacman', 'brew', 'aur']
-OUTPUT_FORMATS = ['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info']
+OUTPUT_FORMATS = ['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos']
 
 
 def build_parser():
@@ -661,7 +629,7 @@ def build_parser():
         default='names',
         help=(
             'Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), '
-            'name|package pairs (go), github_repos/binary_info (cargo/go for offline)'
+            'name|package pairs (go), github_repos (cargo)'
         ),
     )
     parser.add_argument('--owner', help='Only include packages owned by this GitHub owner (e.g., datapointchris)')

@@ -432,24 +432,26 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
     [
         # WSL work: the manifest that triggered the bug. fnm is required on every
         # manifest with npm_globals — the node phase aborts without it.
-        ('wsl-work-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        ('wsl-work-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot'], ['webviewrs']),
         # macOS personal: same cargo set as WSL, also no webviewrs.
-        ('macos-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        ('macos-personal-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot'], ['webviewrs']),
         # Arch personal: the only machine that actually installs webviewrs.
         # Proves the filter is data-driven, not a hardcoded skip.
-        ('archlinux-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot', 'webviewrs'], []),
+        ('archlinux-personal-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot', 'webviewrs'], []),
         # Minimal LXC server: lean cargo set — no broot, no webviewrs, and no fnm
         # since it installs no npm globals. Catches mutations that hardcode-include
         # workstation cargo tools for all Linux.
-        ('linux-lxc-server', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker'], ['broot', 'webviewrs', 'fnm']),
+        ('linux-lxc-server', ['bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker'], ['broot', 'webviewrs', 'fnm']),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):
     """Each machine's cargo bundle must contain its manifest's packages and nothing else.
-    Names compared are commands (binary_info first column), since fd-find→fd, git-delta→delta."""
+
+    Crate names rather than commands — `fd-find`, not `fd` — because that is what
+    the bundler stages under and what `providers.cargo` reads the row back by. The
+    two disagreed while the bundler recorded a command it had derived itself."""
     manifest = parse_packages.load_manifest(manifest_name)
-    result = parse_packages.filter_cargo_packages_by_manifest(real_packages_data, manifest, output_format='binary_info')
-    names = {line.split('|', 1)[0] for line in result}
+    names = set(parse_packages.filter_cargo_packages_by_manifest(real_packages_data, manifest))
     missing = [n for n in must_include if n not in names]
     leaked = [n for n in must_exclude if n in names]
     assert not missing, f'{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}'
