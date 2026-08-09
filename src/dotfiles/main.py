@@ -1,7 +1,9 @@
 """The `dotfiles` command: reconcile a machine with what it declares.
 
-Two verbs do the work — `check` reports drift, `apply` fixes it — and every
-resource under them takes the same two, applied to one part of the machine.
+Three reconcile verbs do the work — `plan` reports what `apply` would change,
+`apply` makes it so, and `check` reports what is *wrong*, which a machine merely
+behind on versions is not. Every resource under them takes the same three,
+applied to one part of the machine.
 
 `--machine` and `--offline` bind on the leaf commands rather than on the root
 callback, and that is not a style choice: Click parses group options before the
@@ -93,6 +95,27 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     return resources
 
 
+def _keep(events: list, machine: str, verb: str, flags: dict) -> None:
+    """Write the run record, or write nothing and say nothing.
+
+    Every run records. `runs.py` was complete and tested for months with no caller
+    because the walk printed instead of returning — recording is a reader of the
+    stream now rather than a feature something has to remember to call.
+
+    Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
+    the fleet and absent on a fresh machine, and neither is a reason for a verb to
+    exit non-zero when it answered the question it was asked. Same rule as
+    `status.record`, which sits ten lines below for the same reason.
+    """
+    from dotfiles import runs
+    from dotfiles import sinks
+
+    try:
+        runs.write(sinks.record(events, machine, verb, flags))
+    except OSError:
+        return
+
+
 @app.command('plan', rich_help_panel='Reconcile')
 def plan(
     skip: list[str] = SkipOption,
@@ -109,9 +132,13 @@ def plan(
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
     """
-    results = reconcile.plan_machine(_skipped(skip), machine, refresh=refresh)
+    named = Session.resolve(machine).machine_name
+    events = reconcile.survey(_skipped(skip), machine, refresh=refresh)
+    results = reconcile.plan_machine(events)
+    _keep(events, named, 'plan', {'skip': sorted(_skipped(skip))})
+
     if as_json:
-        emit_json(status.document(results, Session.resolve(machine).machine_name, dt.datetime.now(dt.UTC), verb='plan'))
+        emit_json(status.document(results, named, dt.datetime.now(dt.UTC), verb='plan'))
     else:
         for result in results:
             render_result(result)
@@ -136,7 +163,12 @@ def check(
 
     Exits 3 when it finds something, and never 1.
     """
-    results = reconcile.check_machine(_skipped(skip), machine, refresh=refresh)
+    when = dt.datetime.now(dt.UTC)
+    checked_machine = Session.resolve(machine).machine_name
+    events = reconcile.survey(_skipped(skip), machine, refresh=refresh)
+    results = reconcile.check_machine(events, skip=_skipped(skip))
+    _keep(events, checked_machine, 'check', {'skip': sorted(_skipped(skip))})
+
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge
     # outliving the problem it describes.
@@ -144,8 +176,6 @@ def check(
     # Resolved rather than taken from the argument: under the scheduled timer
     # neither `--machine` nor `$MACHINE` is set, and the document said the
     # machine was `""` while the check itself had correctly read `~/.env`.
-    when = dt.datetime.now(dt.UTC)
-    checked_machine = Session.resolve(machine).machine_name
     status.record(results, checked_machine, when)
 
     if as_json:

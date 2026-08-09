@@ -76,21 +76,18 @@ def summaries(_session: object, addresses: Iterable[str] | None = None) -> list[
 def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
     """It was not examined, so it has nothing to report. Inventing a row would put
     something in --json that no checker produced."""
-    monkeypatch.setattr(engine, 'assess', summaries)
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
 
-    walked = reconcile.check_machine(skip=frozenset({'packages', 'system'}), machine=MACHINE)
-    addresses = [item.address for item in walked]
+    measured = summaries(None, [name for name in vocabulary.RESOURCES if name not in {'packages', 'system'}])
+    addresses = [item.address for item in reconcile.check_machine(measured)]
 
     assert 'packages' not in addresses
     assert 'system' not in addresses
     assert 'symlinks' in addresses
 
 
-def test_skipping_machines_skips_the_declaration_check(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(engine, 'assess', lambda *_: [])
-
-    assert reconcile.check_machine(skip=frozenset({'machines'}), machine=MACHINE) == []
+def test_skipping_machines_skips_the_declaration_check() -> None:
+    assert reconcile.check_machine([], skip=frozenset({'machines'})) == []
 
 
 def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -98,16 +95,12 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
     end the stream for the rows after it, or a crashed checker would read as a
     machine with nothing left to examine."""
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
-    monkeypatch.setattr(
-        engine,
-        'assess',
-        lambda *_: [
-            Event('packages', Refusal('packages could not be examined: boom')),
-            Event('symlinks', Summary('all fine')),
-        ],
-    )
+    measured = [
+        Event('packages', Refusal('packages could not be examined: boom')),
+        Event('symlinks', Summary('all fine')),
+    ]
 
-    walked = {item.address: item.verdict for item in reconcile.check_machine(machine=MACHINE)}
+    walked = {item.address: item.verdict for item in reconcile.check_machine(measured)}
 
     assert walked['packages'] is Verdict.ISSUE
     assert walked['symlinks'] is Verdict.CONVERGED

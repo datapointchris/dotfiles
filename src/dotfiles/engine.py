@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from collections.abc import Iterator
 
+from dotfiles import runs
 from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
@@ -94,20 +95,30 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
         change = event.payload
         if not isinstance(change, Change) or not change.actionable:
             continue
+        clock = runs.Stopwatch()
         try:
-            yield Event(event.resource, known[event.resource].perform(session, change, privilege), stage=change.stage)
+            with clock.phase('act'):
+                outcome = known[event.resource].perform(session, change, privilege)
         except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
             yield Event(event.resource, Refusal(f'{change.item}: {failed}'), stage=change.stage)
+        else:
+            yield Event(event.resource, outcome, stage=change.stage, timing=clock.finish())
 
 
 def _measure(session: Session, address: str, resource: Resource) -> Iterator[Event]:
+    clock = runs.Stopwatch()
     try:
-        observed = resource.observe(session, session.plan)
-        changes = resource.diff(session.plan, observed)
+        with clock.phase('observe'):
+            observed = resource.observe(session, session.plan)
+            changes = resource.diff(session.plan, observed)
     except Exception as failed:  # noqa: BLE001 — observe reaches the world, and the world is wide
         yield Event(address, Refusal(f'{address} could not be examined: {failed}', ExitCode.ISSUE))
         return
 
+    # One measurement covers the whole resource — the inventories are per manager,
+    # not per package — so the cost is attributed to the resource's summary and the
+    # per-item rows carry what deciding them cost, which is nothing.
+    timing = clock.finish()
     for change in changes:
         yield Event(address, change, stage=change.stage)
-    yield Event(address, Summary(observed.summary))
+    yield Event(address, Summary(observed.summary), timing=timing)

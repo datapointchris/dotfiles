@@ -187,18 +187,23 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
     return results
 
 
-def walk(skip: frozenset[str], machine: str | None, lens: Lens, *, refresh: bool = False) -> list[ResourceResult]:
-    """Measure the machine once, and keep what `lens` asks for.
+def survey(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[Event]:
+    """Measure the machine once. Both verbs and the run record read this list.
 
-    A skipped address is absent from the results rather than present as a fourth
-    verdict: it was not examined, so it has nothing to report, and inventing a
-    row for it would put something in `--json` that no checker produced.
+    Returned rather than folded here because there is more than one reader: the
+    console wants rows, `--json` wants a document and `runs.py` wants outcomes with
+    their timings. Walking it once per reader is how `check` used to be three
+    measurements pretending to be one.
+
+    A skipped address is absent rather than present as a fourth verdict: it was not
+    examined, so it has nothing to report, and inventing a row for it would put
+    something in `--json` that no checker produced.
     """
     session = Session.resolve(machine, refresh=refresh)
-    return fold(engine.assess(session, [address for address in vocabulary.RESOURCES if address not in skip]), lens)
+    return list(engine.assess(session, [address for address in vocabulary.RESOURCES if address not in skip]))
 
 
-def plan_machine(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[ResourceResult]:
+def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:
     """What `apply` would change. Reads only.
 
     The declaration check is `check`'s, not this one's: a semantically invalid
@@ -207,10 +212,10 @@ def plan_machine(skip: frozenset[str] = frozenset(), machine: str | None = None,
     A declaration too broken to load is a different thing, and shows up here as
     every resource refusing.
     """
-    return walk(skip, machine, Lens.PLAN, refresh=refresh)
+    return fold(events, Lens.PLAN)
 
 
-def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[ResourceResult]:
+def check_machine(events: Iterable[Event], *, skip: frozenset[str] = frozenset()) -> list[ResourceResult]:
     """What is wrong with this machine, which is not the same as what differs.
 
     Drift is the normal state of a machine between applies, and folding it in here
@@ -218,7 +223,7 @@ def check_machine(skip: frozenset[str] = frozenset(), machine: str | None = None
     wrong with it — and what would have trained the shell nudge away inside a week.
     """
     results = [] if 'machines' in skip else [check_declaration()]
-    results.extend(walk(skip, machine, Lens.CHECK, refresh=refresh))
+    results.extend(fold(events, Lens.CHECK))
     return results
 
 

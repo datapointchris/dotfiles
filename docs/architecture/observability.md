@@ -13,7 +13,7 @@ their readers are:
 
 | Artefact | Written by | Read by |
 | --- | --- | --- |
-| `runs/<id>.json` | a run — **not yet wired**, see below | `dotfiles report`, days later |
+| `runs/<id>.json` | every `plan` and `check` | `dotfiles report`, days later |
 | `runs/<id>.jsonl` | the logging file sink | a person debugging one failure |
 | `status.json` | every `check` | another machine; the bundle builder reads `plan --json` |
 | `nudge` | every `check` | zsh, at every prompt |
@@ -42,6 +42,14 @@ carries its own phase breakdown and the recorder will not accept one without it.
 The split earns its place because "the install was slow" and "the *downloads*
 were slow" are different findings, and only a per-phase number tells them apart.
 
+**What is measured today is `observe` per resource and `act` per item.** The
+engine holds the clock, because it is the only thing that knows when observing
+started and when a write finished. A resource's row carries the measuring cost —
+an inventory is one query per manager rather than one per package, so splitting it
+across the items would be inventing a number — and each item's row carries what
+acting on it cost. The finer `fetch`/`verify`/`extract` breakdown is a provider's
+to write and no consumer reads it yet.
+
 The event stream exists because the questions asked after a failed install —
 what did it actually download, which step was slow — are answerable only if the
 detail was recorded while nobody wanted it. So everything is emitted at debug and
@@ -52,8 +60,12 @@ the only thing that variable moves.
 verbs. The one that shaped the format is `stats`: it totals time per address
 across every record, which is the question that made timing a field. `path` exists
 so a record can be piped somewhere else in one word — `ifiles put "$(dotfiles
-report path)"` is the intended fleet-analysis loop, and it is waiting on the same
-wiring.
+report path)"` is the fleet-analysis loop.
+
+**`apply` does not record yet**, and the reason is the original diagnosis rather
+than an oversight: its phase layer returns booleans and prints, so there is no
+per-item value to record. The phases that go through the engine produce events;
+the ones still driving bash do not. It records when the phase registry goes.
 
 **Records are kept indefinitely.** There is no retention bound and no prune verb:
 the value of the history is that it goes back, and "is this getting slower" cannot
