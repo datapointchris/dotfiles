@@ -12,6 +12,7 @@ import importlib.util
 import os
 import shutil
 import stat
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -20,7 +21,54 @@ import pytest
 from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 
-APPS_DIR = Path(__file__).resolve().parent.parent / 'apps'
+REPO = Path(__file__).resolve().parent.parent
+
+# The suite reads the checkout it lives in, whatever the shell says.
+#
+# `paths.REPO_ROOT` lets `$DOTFILES_DIR` win unconditionally, which is right for
+# the CLI: `.zshenv` pins it to ~/dotfiles so a shell standing in a worktree
+# cannot deploy that worktree's config over the machine's. It is wrong here — a
+# run inside a worktree would exercise the worktree's code against ~/dotfiles's
+# packages.yml, manifests and configs, green against a declaration the branch
+# never touched. Proven the day the worktree workflow landed: the step-B branch
+# adds `reports_version` to packages.yml and a run from its worktree could not
+# see it.
+#
+# It has to happen before anything imports `dotfiles.paths`, which resolves the
+# root once at import — so the assert is the guard, not a formality. Nothing
+# above pulls that module in today, and this fails loudly on the day something
+# does rather than silently reading the wrong tree again.
+assert 'dotfiles.paths' not in sys.modules, 'something above imported dotfiles.paths, so DOTFILES_DIR is already resolved'
+os.environ['DOTFILES_DIR'] = str(REPO)
+
+GIT_LOCATION = (
+    'GIT_DIR',
+    'GIT_WORK_TREE',
+    'GIT_COMMON_DIR',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_PREFIX',
+    'GIT_NAMESPACE',
+)
+"""The variables that decide *which repository* a `git` command acts on.
+
+Dropped for the whole session, because a dozen fixtures build a throwaway repo in
+`tmp_path` and every one of them would otherwise operate on the caller's.
+
+git exports these when it runs a hook, so the caller is routinely `git commit`
+itself — and this held only by accident until worktrees. In a normal checkout
+`GIT_DIR` is the relative `.git`, which resolves harmlessly inside whatever
+directory a fixture had chdir'd to; in a worktree it is absolute, so `git init`
+made a repo in `tmp_path` and the `git commit` after it wrote to the real one and
+exited non-zero. Eighteen errors and three failures, under `pre-commit` only, on
+a suite that passes when run directly.
+"""
+
+for variable in GIT_LOCATION:
+    os.environ.pop(variable, None)
+
+APPS_DIR = REPO / 'apps'
 
 
 # Both opt-in tiers are declared here rather than beside the tests they gate.
