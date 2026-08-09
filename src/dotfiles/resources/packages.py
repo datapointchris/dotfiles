@@ -20,23 +20,18 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
-from collections.abc import Callable
 
 from dotfiles import catalog
-from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
-from dotfiles.providers import custom
-from dotfiles.providers import ghrelease
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Precondition
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
-from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
@@ -116,69 +111,8 @@ class PackagesResource:
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
-        """Two providers have moved; the rest still run through the phase registry.
-
-        Refused rather than silently skipped for the ones that have not, because a
-        resource that did nothing quietly would leave `apply` reporting a converged
-        machine.
-        """
-        item = change.desired
-        installer = PERFORMED.get(item.provider) if item else None
-        if item is None or installer is None:
-            return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles packages apply', which still drives the phase registry")
-        return installer(session, change, item)
-
-
-def _arrived(session: Session, change: Change, item: DesiredItem) -> Outcome | None:
-    """The item installed itself between `observe` and here, so leave it alone.
-
-    Not defensive padding. `observe` ran before the report was printed and before
-    anything upstream in the stage order installed a toolchain, so a MISSING item
-    may have arrived since — and installing over it would replace a binary nobody
-    asked about with whatever upstream calls latest now. A STALE one is
-    deliberately *not* re-checked this way: being behind is what this repairs.
-    """
-    if change.verdict is Verdict.MISSING and registry.evidence_for(item, {}).verdict is Verdict.MATCHED:
-        return Outcome(change, OutcomeStatus.SKIPPED, f'{item.executable} arrived before this ran')
-    return None
-
-
-def _install_custom(session: Session, change: Change, item: DesiredItem) -> Outcome:
-    """One vendor that ships itself, through the same function the phase calls."""
-    entry = item.entry
-    if not isinstance(entry, catalog.CustomInstaller):
-        return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a custom_installers entry')
-
-    if arrived := _arrived(session, change, item):
-        return arrived
-
-    result = custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
-    return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
-
-
-def _install_release(session: Session, change: Change, item: DesiredItem) -> Outcome:
-    """Install or upgrade one release, through the same engine the phase calls."""
-    entry = item.entry
-    if not isinstance(entry, catalog.GithubRelease):
-        return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a github_releases entry')
-
-    if arrived := _arrived(session, change, item):
-        return arrived
-
-    result = ghrelease.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
-    return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
-
-
-PERFORMED: dict[str, Callable[[Session, Change, DesiredItem], Outcome]] = {
-    CURRENCY_PROVIDER: _install_release,
-    'custom': _install_custom,
-}
-"""Which providers this resource can repair itself, rather than deferring to a phase.
-
-The list shrinks the phase registry as it grows: a provider here is one whose
-install is a function this package owns, and `apply` reaching it through a phase
-and `check --fix` reaching it through a Change end up in the same code.
-"""
+        """Whichever provider planned it repairs it, or says why it cannot."""
+        return registry.install(session, change, privilege)
 
 
 def repair_for(item: DesiredItem, evidence: ev.Evidence, credentials: bool) -> Repair:

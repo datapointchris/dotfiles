@@ -19,19 +19,141 @@ there: one resource failing must not stop the ones after it from being examined.
 
 from __future__ import annotations
 
+import dataclasses as dc
 from collections.abc import Iterable
 from collections.abc import Iterator
 
+from dotfiles import registry
 from dotfiles import runs
 from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
 from dotfiles.privilege import Privilege
+from dotfiles.resolve import Plan
+from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Resource
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
+
+
+class UnknownAddress(ValueError):
+    """An address naming no resource and no provider."""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Selection:
+    """What one walk covers, at provider granularity.
+
+    `plugins/tpm` and `plugins/shell-plugin` sit on opposite sides of the symlink
+    pass — TPM has to exist before the pass that deploys the tmux config it reads —
+    which is the reason `ADDRESS_SEPARATOR` was invented and then not used for
+    anything. `--skip plugins/tpm` over-skipped to all of `plugins`, and `main.py`
+    admitted so in a docstring.
+
+    **Narrowed per resource, never once for the whole walk.** `toolchains` decides
+    it needs the Go runtime because the plan contains `go_tools` items, so a plan
+    narrowed globally by `--skip packages/go` would silently stop planning Go — a
+    resource the caller never named. `plan_for` therefore touches only the items of
+    the resource being walked.
+    """
+
+    resources: tuple[str, ...]
+    providers: frozenset[str] | None = None
+    """Which providers are wanted, or None for all of them.
+
+    None rather than the full set, so a walk that narrows nothing hands each
+    resource the very same `Plan` object it was given.
+    """
+
+    @classmethod
+    def everything(cls) -> Selection:
+        return cls(vocabulary.RESOURCES)
+
+    @classmethod
+    def of(cls, *addresses: str) -> Selection:
+        """Exactly these addresses, each a resource or one provider inside one."""
+        named = frozenset(_valid(address) for address in addresses)
+        resources = tuple(name for name in vocabulary.RESOURCES if name in {address.split('/')[0] for address in named})
+        wanted = {address for address in named if '/' in address}
+        if not wanted:
+            return cls(resources)
+        return cls(resources, frozenset(address.split('/', 1)[1] for address in wanted) | _providers_of(named))
+
+    @classmethod
+    def excluding(cls, skip: Iterable[str]) -> Selection:
+        """Everything but these, which is what `--skip` means."""
+        dropped = frozenset(_valid(address) for address in skip)
+        resources = tuple(name for name in vocabulary.RESOURCES if name not in dropped)
+        narrowed = {address.split('/', 1)[1] for address in dropped if '/' in address}
+        if not narrowed:
+            return cls(resources)
+        return cls(resources, frozenset(provider.name for provider in registry.PROVIDERS) - narrowed)
+
+    @classmethod
+    def at(cls, stage: Stage) -> Selection:
+        """Every provider that runs at one stage, and the resources holding them.
+
+        Derived from the registry rather than listed, because a phase *is* a stage
+        and the six system-configuration providers are not a list anyone should
+        have to keep in step by hand.
+        """
+        wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage is stage)
+        owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
+        return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
+
+    def plan_for(self, resource: str, plan: Plan) -> Plan:
+        """The plan this resource should see, with its unselected providers gone.
+
+        Structural rather than a filter each resource has to remember: a resource
+        is handed a plan that does not contain what it was told to leave alone, so
+        it cannot observe it, diff it or act on it.
+        """
+        if self.providers is None:
+            return plan
+        kept = tuple(item for item in plan.items if item.resource != resource or item.provider in self.providers)
+        return plan if len(kept) == len(plan.items) else dc.replace(plan, items=kept)
+
+
+def validate(addresses: Iterable[str]) -> tuple[str, ...]:
+    """Every address, or `UnknownAddress` for the first that names nothing.
+
+    Exposed because the CLI validates before it selects: `--skip` is checked once
+    and the set is then read by the walk, the fold and the run record's flags.
+    """
+    return tuple(_valid(address) for address in addresses)
+
+
+def _valid(address: str) -> str:
+    """One address, or a refusal naming what was expected.
+
+    Refusing an unknown address is the important half. A run that accepted a
+    misspelt `--skip` would install the sudo-gated phase the caller was trying to
+    avoid and report success.
+    """
+    # `partition` on the separator rather than a split, so a trailing `plugins/`
+    # is a separator with nothing after it — not a bare resource. Reading it as
+    # one is how it would silently skip all of `plugins`, which is the over-skip
+    # this grammar exists to end.
+    resource, separator, provider = address.partition(vocabulary.ADDRESS_SEPARATOR)
+    if not separator:
+        if resource in vocabulary.RESOURCES or resource == 'machines':
+            return address
+        raise UnknownAddress(f'unknown address {address}. Valid: {", ".join(vocabulary.RESOURCES)}')
+
+    known = registry.named(provider)
+    if known is None or known.resource != resource:
+        valid = ', '.join(sorted(f'{one.resource}/{one.name}' for one in registry.PROVIDERS))
+        raise UnknownAddress(f'unknown address {address}. Valid: {valid}')
+    return address
+
+
+def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
+    """Every provider of a resource named without one, so `packages` and
+    `packages/go` in the same selection do not narrow each other away."""
+    whole = {address for address in addresses if '/' not in address}
+    return frozenset(provider.name for provider in registry.PROVIDERS if provider.resource in whole)
 
 
 def resources() -> dict[str, Resource]:
@@ -61,7 +183,7 @@ def resources() -> dict[str, Resource]:
     return {address: known[address] for address in vocabulary.RESOURCES}
 
 
-def assess(session: Session, addresses: Iterable[str] | None = None) -> Iterator[Event]:
+def assess(session: Session, selection: Selection | None = None) -> Iterator[Event]:
     """Measure the machine and decide what differs. Reads only; never writes.
 
     The whole of `plan`, and the first half of `apply`. A resource that cannot
@@ -69,10 +191,15 @@ def assess(session: Session, addresses: Iterable[str] | None = None) -> Iterator
     crashed" and "nothing to do" must not look the same to whatever folds this.
     """
     known = resources()
-    selected = known if addresses is None else {address: known[address] for address in known if address in addresses}
+    covered = Selection.everything() if selection is None else selection
 
-    for address, resource in selected.items():
-        yield from _measure(session, address, resource)
+    # Driven by `resources()` rather than by the selection, so the walk order is
+    # the convergence order whatever order a caller named its addresses in. That
+    # order is a dependency chain — symlinks after the tools that provide `task`,
+    # before tpm reads the tmux config it deploys — not a preference.
+    for address, resource in known.items():
+        if address in covered.resources:
+            yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
 
 
 def execute(session: Session, planned: Iterable[Event], privilege: Privilege) -> Iterator[Event]:
@@ -105,12 +232,12 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
             yield Event(event.resource, outcome, stage=change.stage, timing=clock.finish())
 
 
-def _measure(session: Session, address: str, resource: Resource) -> Iterator[Event]:
+def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> Iterator[Event]:
     clock = runs.Stopwatch()
     try:
         with clock.phase('observe'):
-            observed = resource.observe(session, session.plan)
-            changes = resource.diff(session.plan, observed)
+            observed = resource.observe(session, plan)
+            changes = resource.diff(plan, observed)
     except Exception as failed:  # noqa: BLE001 — observe reaches the world, and the world is wide
         yield Event(address, Refusal(f'{address} could not be examined: {failed}', ExitCode.ISSUE))
         return

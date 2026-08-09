@@ -36,6 +36,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import coordinates
 from dotfiles import deploy
+from dotfiles import engine
 from dotfiles import envfile
 from dotfiles import evidence as ev
 from dotfiles import failure_report
@@ -568,26 +569,22 @@ def _uv_tools(context: Run) -> bool:
     return run_installer(context, COMMON / 'language-tools' / 'uv-tools.sh', 'uv-tools')
 
 
-def _converge(context: Run, address: str, stage: Stage | None = None) -> bool:
-    """One resource's work — or one stage of it — through the engine both verbs share.
+def _converge(context: Run, selection: engine.Selection) -> bool:
+    """One phase's work, through the engine both verbs share.
 
     Every phase that reached into a resource had grown its own observe/diff/perform
     loop with its own rendering: three of the thirteen copies of the walk, each with
     a different idea of what a refusal looks like. This is the one walk, and what it
     still returns is a bool only because `Phase.run` does.
 
-    `stage` is for the plugins, which live on opposite sides of the symlink pass:
-    TPM has to exist before the pass that deploys the tmux config it reads, and the
-    yazi plugins go after it so nothing writes into `~/.config/yazi` first.
+    Selected rather than observed-then-filtered. The plugins live on opposite sides
+    of the symlink pass — TPM has to exist before the pass that deploys the tmux
+    config it reads, and the yazi plugins go after it so nothing writes into
+    `~/.config/yazi` first — and each is now an address rather than a stage sieve
+    over a walk that measured all three.
     """
-    from dotfiles import engine
-
     session = context.session
-    planned = [
-        event
-        for event in engine.assess(session, [address])
-        if isinstance(event.payload, Change) and (stage is None or event.payload.stage is stage)
-    ]
+    planned = [event for event in engine.assess(session, selection) if isinstance(event.payload, Change)]
 
     outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
     for outcome in outcomes:
@@ -607,12 +604,12 @@ def _converge(context: Run, address: str, stage: Stage | None = None) -> bool:
 
 def _shell_plugins(context: Run) -> bool:
     heading('Shell plugins')
-    return _converge(context, 'plugins', Stage.SHELL_PLUGINS)
+    return _converge(context, engine.Selection.of('plugins/shell-plugin'))
 
 
 def _symlinks(context: Run) -> bool:
     heading('Symlinking dotfiles')
-    deployed = _converge(context, 'symlinks')
+    deployed = _converge(context, engine.Selection.of('symlinks'))
     deploy.epilogue(context.session)
     return deployed
 
@@ -625,7 +622,7 @@ def _tmux_plugins(context: Run) -> bool:
     resolver to plan per plugin.
     """
     heading('tmux plugins')
-    if not _converge(context, 'plugins', Stage.TMUX_PLUGINS):
+    if not _converge(context, engine.Selection.of('plugins/tpm')):
         return False
     if not context.wants('tmux_plugins'):
         return True
@@ -641,7 +638,7 @@ def _yazi_plugins(context: Run) -> bool:
     running six stages *earlier* is what put two writers on one path.
     """
     heading('yazi plugins')
-    return _converge(context, 'plugins', Stage.YAZI_PLUGINS)
+    return _converge(context, engine.Selection.of('plugins/yazi-plugin'))
 
 
 def _nvim_plugins(context: Run) -> bool:
@@ -655,18 +652,20 @@ def _system_config(context: Run) -> bool:
     """Group memberships, unit enablement, files under `/etc`, and the login shell.
 
     Through the one engine, like every other converted phase, so what this writes
-    is exactly what `dotfiles system plan` prints. It used to narrow the plan to
-    this stage before observing, which skipped the package half of the system
-    resource; going through the engine observes both and filters after. That costs
-    one package-inventory query per run and buys the last of the hand-written
-    walks — and the query goes when the inventory becomes a Session cache.
+    is exactly what `dotfiles system plan` prints.
+
+    Selected by stage off the registry, which repays the debt A2 took here. This
+    briefly observed the whole `system` resource and filtered afterwards, spending
+    one package-inventory query per run on rows it was about to discard; the
+    providers at this stage are now a selection, so the package half is not in the
+    plan this walk is handed and there is nothing to query.
 
     The password is asked for at the write that needs it, which is now the rule
     everywhere rather than a concession here: keeping a sudo timestamp alive does
     not work on macOS, so a front prompt bought nothing and cost a password on
     machines needing none. `plan` states the count in advance.
     """
-    return _converge(context, 'system', Stage.SYSTEM_CONFIG)
+    return _converge(context, engine.Selection.at(Stage.SYSTEM_CONFIG))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

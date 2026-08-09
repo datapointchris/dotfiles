@@ -88,26 +88,25 @@ topological input; until then it is what `check` walks and what the help lists.
 """
 
 ADDRESS_SEPARATOR = '/'
-"""`plugins/tmux`, not `plugins:tmux` or `plugins.tmux`.
+"""`plugins/tpm`, not `plugins:tpm` or `plugins.tpm`.
 
-A plan node is `(resource, source)` rather than `resource`, because `plugins/shell`
-and `plugins/tmux` sit on opposite sides of `symlinks` in the ordering. The
-separator has to survive being a shell word, a JSON string and a `--skip`
-argument, and `/` is the one that reads as a path to everyone already.
+An address is `(resource, provider)` rather than `resource`, because
+`plugins/shell-plugin` and `plugins/tpm` sit on opposite sides of `symlinks` in
+the ordering. The separator has to survive being a shell word, a JSON string and
+a `--skip` argument, and `/` is the one that reads as a path to everyone already.
+
+Validating one is `engine.validate`, not here: the provider half is the registry's
+to know, and this module is what the registry's resource names are checked
+*against*.
 """
 
 
 def address(resource: str, source: str | None = None) -> str:
-    """Build the one string that `check` prints, `--skip` takes, and the run record stores."""
+    """Build the one string that `plan` prints, `--skip` takes, and the run record stores."""
     return f'{resource}{ADDRESS_SEPARATOR}{source}' if source else resource
 
 
 def parse_address(value: str) -> tuple[str, str | None]:
-    """Split an address into its resource and optional source.
-
-    Deliberately does not validate the resource: `--skip` on a machine whose
-    manifest never declares that resource is a no-op, not an error, and the
-    sources come from `packages.yml` at runtime rather than from a literal here.
-    """
+    """Split an address into its resource and optional provider."""
     resource, separator, source = value.partition(ADDRESS_SEPARATOR)
     return resource, source if separator else None

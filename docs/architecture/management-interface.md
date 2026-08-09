@@ -212,7 +212,8 @@ task update -- tools plugins          # named groups
 task update -- --no-system            # skip the sudo-gated, slowest group
 task update -- --mine                 # only tools owned by datapointchris
 dotfiles apply --owner datapointchris # install those tools, no brew or casks
-dotfiles apply --skip system          # any resource address is skippable
+dotfiles apply --skip system          # a whole resource
+dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
 ```
 
 Owner narrowing takes only the phases whose contents can be traced to a GitHub owner,
@@ -226,9 +227,17 @@ personal tool has to be installed before any self-updater can maintain it, and t
 tools span four sections (`go_tools`, `github_releases`, `custom_installers`,
 `git_uv_tools`), so owner is the only selector that reaches all of them at once.
 
-An address that names no resource is a usage error, not an empty selection. A run that
-accepted a misspelt `--skip` would install the sudo-gated phase the caller was avoiding and
-report success.
+An address is `resource` or `resource/provider`, and one naming neither is a usage error
+rather than an empty selection. A run that accepted a misspelt `--skip` would install the
+sudo-gated phase the caller was avoiding and report success — which is also why a trailing
+`plugins/` is refused instead of read as the bare resource.
+
+Skipping a provider leaves its resource in the walk with that provider removed, and the
+narrowing is structural: the resource is handed a plan that does not contain what it was
+told to leave alone, so it cannot observe it, diff it or act on it. It is applied per
+resource rather than once for the whole walk, because `toolchains` decides it needs the Go
+runtime by finding `go_tools` items in the plan — narrowing globally by `--skip packages/go`
+would silently stop planning a runtime the caller never named.
 
 Both commands are manifest-aware when `MACHINE` is set in `~/.env`. The narrowing is
 built once in `install/common/lib/package-query.sh` and read by every tool script, which

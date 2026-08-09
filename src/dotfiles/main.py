@@ -28,9 +28,7 @@ from dotfiles.commands import staging
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
 from dotfiles.session import Session
-from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
-from dotfiles.vocabulary import parse_address
 
 app = typer.Typer(
     name='dotfiles',
@@ -73,26 +71,30 @@ def root(
     """Nothing but `--version` belongs here — see the module docstring."""
 
 
-SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tmux)')
+SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 
 def _skipped(addresses: list[str] | None) -> frozenset[str]:
-    """Take the resource half of each address, refusing one that names nothing.
+    """Every address to leave alone, validated against the grammar.
 
-    `--skip plugins/tmux` is accepted and skips all of `plugins` until the
-    resolver can address a single source. Narrowing silently to nothing would be
-    worse than skipping more than asked, because the caller believes they
-    excluded something and nothing says otherwise — which is the same reason a
-    misspelled address is a usage error rather than an empty skip set. A run that
-    accepted a misspelt `--skip` would install the sudo-gated phase the caller was
-    trying to avoid and report success.
+    `--skip plugins/tpm` now leaves exactly TPM alone rather than all of
+    `plugins`. It over-skipped for as long as the engine's unit was the resource,
+    and skipping more than asked was the deliberate lesser evil — narrowing
+    silently to nothing is worse, because the caller believes they excluded
+    something and nothing says otherwise.
+
+    A misspelt address stays a usage error for the same reason: a run that
+    accepted one would install the sudo-gated phase the caller was trying to avoid
+    and report success.
     """
-    resources = frozenset(parse_address(value)[0] for value in addresses or ())
-    if unknown := resources - frozenset(RESOURCES) - {'machines'}:
-        raise typer.BadParameter(f'unknown address {", ".join(sorted(unknown))}. Valid: {", ".join(RESOURCES)}')
-    return resources
+    from dotfiles import engine
+
+    try:
+        return frozenset(engine.validate(addresses or ()))
+    except engine.UnknownAddress as wrong:
+        raise typer.BadParameter(str(wrong)) from wrong
 
 
 def _keep(events: list, machine: str, verb: str, flags: dict) -> None:

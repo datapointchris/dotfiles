@@ -48,7 +48,7 @@ def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bo
     """
     from dotfiles import engine
 
-    results = reconcile.fold(engine.assess(_session(machine), [address]), lens)
+    results = reconcile.fold(engine.assess(_session(machine), engine.Selection.of(address)), lens)
     _report(results[0], as_json)
 
 
@@ -70,7 +70,7 @@ def _reconcile_one(address: str, session: Session) -> ExitCode:
     from dotfiles import engine
     from dotfiles import privilege as privileges
 
-    planned = list(engine.assess(session, [address]))
+    planned = list(engine.assess(session, engine.Selection.of(address)))
     outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
 
     for outcome in outcomes:

@@ -19,7 +19,6 @@ from enum import StrEnum
 
 from dotfiles import bridge
 from dotfiles import engine
-from dotfiles import vocabulary
 from dotfiles.effects import Output
 from dotfiles.event import Event
 from dotfiles.event import Refusal
@@ -217,10 +216,12 @@ def survey(skip: frozenset[str] = frozenset(), machine: str | None = None, *, re
 
     A skipped address is absent rather than present as a fourth verdict: it was not
     examined, so it has nothing to report, and inventing a row for it would put
-    something in `--json` that no checker produced.
+    something in `--json` that no checker produced. A skip naming one provider
+    leaves the resource in the walk with that provider gone, so the row is still
+    there and is honest about the narrower thing it measured.
     """
     session = Session.resolve(machine, refresh=refresh)
-    return list(engine.assess(session, [address for address in vocabulary.RESOURCES if address not in skip]))
+    return list(engine.assess(session, engine.Selection.excluding(skip)))
 
 
 def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:

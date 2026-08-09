@@ -19,24 +19,46 @@ not knowable until the packages have resolved. That ordering used to be an
 argument threaded into one private function in `resolve.py`; it is the protocol
 now, and a third pass needs no new plumbing.
 
-**Only `plan` is handed the Catalog.** `evidence` takes a resolved `DesiredItem`
-and cannot reach back for a fact the item does not carry, which turns
-`resolve.py`'s "resolution finishes here" from a prose invariant into something
-the signatures enforce.
+**Only `plan` is handed the Catalog.** `evidence` and `install` take a resolved
+`DesiredItem` and cannot reach back for a fact the item does not carry, which
+turns `resolve.py`'s "resolution finishes here" from a prose invariant into
+something the signatures enforce.
+
+**`install` is the only method handed a `Privilege`.** `plan`, `evidence` and the
+observation behind them are not, so "the read-only verbs never escalate" is a
+property of the signatures rather than a promise about the bodies.
+
+The mechanisms are imported here rather than reached lazily: the five of them cost
+5ms on top of this module's own 85ms, measured, which is not worth five local
+imports and the five explanations they would each need.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
+from collections.abc import Sequence
 
 from dotfiles import catalog as catalogs
+from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import machine as machines
+from dotfiles import providers
 from dotfiles import resolve
+from dotfiles.privilege import Privilege
+from dotfiles.providers import clone
+from dotfiles.providers import custom
+from dotfiles.providers import ghrelease
+from dotfiles.providers import macdefaults
+from dotfiles.providers import steps
+from dotfiles.providers import sysconfig
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
+from dotfiles.resources import Change
+from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
+from dotfiles.session import Session
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -44,11 +66,11 @@ class Provider:
     """One way of installing things, and everything that is true of all of them.
 
     The base is not abstract on purpose. A provider whose mechanism this package
-    does not drive yet — the four that still install through a phase — is a
+    does not drive yet — the ones that still install through a phase — is a
     faithful description of what the machine has: it plans, its items are
-    observable, and only the write is elsewhere. Forcing it to declare an
-    `install` it does not have would be a stub, and a stub is what `PERFORMED`
-    was avoiding by being a partial map in the first place.
+    observable, and only the write is elsewhere. `install` says so in words a run
+    can print, which is what the partial `PERFORMED` map used to leave to whichever
+    resource happened to look the provider up and find nothing.
     """
 
     name: str
@@ -112,6 +134,15 @@ class Provider:
         """
         return False
 
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        """Repair one item, re-checking live that it is still the right thing to do.
+
+        Refused rather than silently skipped by the providers that still install
+        through a phase, because a provider that did nothing quietly would leave
+        `apply` reporting a converged machine.
+        """
+        return Outcome(change, OutcomeStatus.REFUSED, f"run 'dotfiles {self.resource} apply', which still drives the phase registry")
+
 
 @dc.dataclass(frozen=True, slots=True)
 class CatalogProvider(Provider):
@@ -140,6 +171,62 @@ class CatalogProvider(Provider):
             for entry in declaration.section(self.section)
             if subscription.wants(entry) and resolve.available(entry, machine.coordinates)
         )
+
+
+@dc.dataclass(frozen=True, slots=True)
+class VendoredProvider(CatalogProvider):
+    """A tool this package fetches and unpacks itself: a release, or a vendor's
+    own installer driven through `providers/`.
+
+    These are the two that have converted, and the two whose `install` the phase
+    registry also calls — so the two front doors cannot install one tool
+    differently.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        if arrived := self._arrived(change, item):
+            return arrived
+        result = self.fetch(session, item)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+        raise NotImplementedError
+
+    def _arrived(self, change: Change, item: DesiredItem) -> Outcome | None:
+        """The item installed itself between `observe` and here, so leave it alone.
+
+        Not defensive padding. `observe` ran before the report was printed and
+        before anything upstream in the stage order installed a toolchain, so a
+        MISSING item may have arrived since — and installing over it would replace
+        a binary nobody asked about with whatever upstream calls latest now. A
+        STALE one is deliberately *not* re-checked this way: being behind is what
+        this repairs.
+        """
+        if change.verdict is Verdict.MISSING and self.evidence(item, {}).verdict is Verdict.MATCHED:
+            return Outcome(change, OutcomeStatus.SKIPPED, f'{item.executable} arrived before this ran')
+        return None
+
+
+@dc.dataclass(frozen=True, slots=True)
+class ReleaseProvider(VendoredProvider):
+    """A binary published as a GitHub release asset."""
+
+    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+        entry = item.entry
+        if not isinstance(entry, catalogs.GithubRelease):
+            return providers.Result(False, f'{item.name} is not a github_releases entry')
+        return ghrelease.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class CustomProvider(VendoredProvider):
+    """A vendor that ships its own installer."""
+
+    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+        entry = item.entry
+        if not isinstance(entry, catalogs.CustomInstaller):
+            return providers.Result(False, f'{item.name} is not a custom_installers entry')
+        return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -199,6 +286,12 @@ class CloneProvider(CatalogProvider):
     providers; guessing here in the meantime would be worse than not answering.
     """
 
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        if clone.destination(item, session.home).is_dir():
+            return Outcome(change, OutcomeStatus.SKIPPED, f'{clone.destination(item, session.home)} appeared since the check')
+        result = clone.clone(item, session.home)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
 
 @dc.dataclass(frozen=True, slots=True)
 class SystemConfigProvider(Provider):
@@ -236,14 +329,82 @@ class SystemConfigProvider(Provider):
     def needs_root(self, item: DesiredItem) -> bool:
         return isinstance(item.entry, catalogs.SystemConfig) and item.entry.needs_root
 
+    def states(self, items: Sequence[DesiredItem]) -> dict[str, sysconfig.State]:
+        """Every row's state, batching what this provider knows how to batch.
+
+        A dict per provider rather than one function branching on the entry class,
+        which is what `system.py` did — the batch hook below is the whole reason
+        that dispatch existed, and it belongs to the one provider that needs it.
+        """
+        stores = self.stores([entry for item in items if isinstance(entry := item.entry, catalogs.SystemConfig)])
+        return {item.address: self.state(_configuration(item.entry), stores) for item in items}
+
+    def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
+        """A bulk read this provider can do once for all its rows. Usually none."""
+        return {}
+
+    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+        return sysconfig.observe(entry)
+
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+        return sysconfig.apply(entry, privilege)
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = _configuration(item.entry)
+
+        # Re-read rather than trusting the diff: `observe` ran before the report
+        # was printed, and an earlier change in this same batch — the docker
+        # package, zsh itself — may have made this one unnecessary or possible.
+        if self.state(entry, self.stores([entry])).verdict is Verdict.MATCHED:
+            return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
+
+        result = self.repair(entry, privilege)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class MacDefaultProvider(SystemConfigProvider):
+    """macOS preferences, which are the one section with a batched read.
+
+    Seventy-four keys live in about fifteen domains, and `defaults export <domain>`
+    answers a whole domain at once — so this is the provider `stores` exists for.
+    """
+
+    def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
+        return macdefaults.domains([entry for entry in entries if isinstance(entry, catalogs.MacosDefault)])
+
+    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+        assert isinstance(entry, catalogs.MacosDefault)
+        return macdefaults.observe_default(entry, stores)
+
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+        assert isinstance(entry, catalogs.MacosDefault)
+        return macdefaults.apply_default(entry)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class StepProvider(SystemConfigProvider):
+    """The rows with no shared mechanism, each a pair of functions in `steps.py`."""
+
+    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+        return steps.observe(entry.name)
+
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+        return steps.apply(entry.name, privilege)
+
+
+def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
+    assert isinstance(entry, catalogs.SystemConfig)
+    return entry
+
 
 PROVIDERS: tuple[Provider, ...] = (
     SystemPackageProvider('system', 'system', Stage.SYSTEM, 'system_packages'),
     RegistryProvider('cask', 'system', Stage.SYSTEM, 'macos_casks'),
     AppStoreProvider('mas', 'system', Stage.SYSTEM, 'mas_apps'),
     RegistryProvider('flatpak', 'system', Stage.SYSTEM, 'flatpak_apps'),
-    CatalogProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
-    CatalogProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
+    ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
+    CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CatalogProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
     CatalogProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
     CatalogProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
@@ -256,8 +417,8 @@ PROVIDERS: tuple[Provider, ...] = (
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),
     SystemConfigProvider('login-shell', 'system', Stage.SYSTEM_CONFIG, 'login_shell'),
-    SystemConfigProvider('macos-default', 'system', Stage.SYSTEM_CONFIG, 'macos_defaults'),
-    SystemConfigProvider('step', 'system', Stage.SYSTEM_CONFIG, 'steps'),
+    MacDefaultProvider('macos-default', 'system', Stage.SYSTEM_CONFIG, 'macos_defaults'),
+    StepProvider('step', 'system', Stage.SYSTEM_CONFIG, 'steps'),
 )
 """The registry, in planning order — which is the two passes.
 
@@ -311,6 +472,23 @@ def evidence_for(item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
 def needs_root(item: DesiredItem) -> bool:
     provider = named(item.provider)
     return provider is not None and provider.needs_root(item)
+
+
+def install(session: Session, change: Change, privilege: Privilege) -> Outcome:
+    """Repair one change through whichever provider planned it.
+
+    The three resources that group providers share this rather than each keeping a
+    table of which of their providers it can repair. `packages.PERFORMED` was one
+    such table and `system.py`'s entry-class dispatch was another, and between them
+    they decided the same question two different ways.
+    """
+    item = change.desired
+    if item is None:
+        return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more')
+    provider = named(item.provider)
+    if provider is None:
+        return Outcome(change, OutcomeStatus.REFUSED, f'nothing in this checkout provides {item.provider}')
+    return provider.install(session, change, item, privilege)
 
 
 def executable_of(entry: catalogs.Entry) -> str:
