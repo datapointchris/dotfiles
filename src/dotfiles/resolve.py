@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
-from collections.abc import Iterator
 
 from dotfiles import catalog
 from dotfiles import coordinates as axes
@@ -171,145 +170,40 @@ class Plan:
         return tuple(item for item in self.items if item.section == section)
 
 
-@dc.dataclass(frozen=True, slots=True)
-class Provider:
-    """Who installs a section, when, and which resource owns the answer.
-
-    The `resource` column is what `install/phases.sh`'s registry hand-maintained.
-    It lives here because it is a property of the section rather than of the
-    resource: a resource asking the plan for its own items cannot then disagree
-    with the phase that installs them.
-    """
-
-    name: str
-    stage: Stage
-    resource: str
-
-
-PROVIDERS: dict[str, Provider] = {
-    'system_packages': Provider('system', Stage.SYSTEM, 'system'),
-    'macos_casks': Provider('cask', Stage.SYSTEM, 'system'),
-    'mas_apps': Provider('mas', Stage.SYSTEM, 'system'),
-    'flatpak_apps': Provider('flatpak', Stage.SYSTEM, 'system'),
-    'github_releases': Provider('ghrelease', Stage.TOOLS, 'packages'),
-    'custom_installers': Provider('custom', Stage.TOOLS, 'packages'),
-    'cargo_packages': Provider('cargo', Stage.TOOLS, 'packages'),
-    'go_tools': Provider('go', Stage.TOOLS, 'packages'),
-    'npm_globals': Provider('npm', Stage.NODE_TOOLS, 'packages'),
-    'uv_tools': Provider('uv', Stage.PYTHON_TOOLS, 'packages'),
-    'git_uv_tools': Provider('uv-git', Stage.PYTHON_TOOLS, 'packages'),
-    'shell_plugins': Provider('shell-plugin', Stage.SHELL_PLUGINS, 'plugins'),
-    'tmux_plugins': Provider('tpm', Stage.TMUX_PLUGINS, 'plugins'),
-    'yazi_plugins': Provider('yazi-plugin', Stage.YAZI_PLUGINS, 'plugins'),
-}
-"""Which provider installs a section, when, and for which resource.
-
-`system_packages` resolves to one provider whatever the manager is, because the
-manager is a coordinate the provider reads — a provider per manager would be
-three copies of one apply loop.
-"""
-
-SYSTEM_PROVIDERS: dict[str, Provider] = {
-    'group_memberships': Provider('group', Stage.SYSTEM_CONFIG, 'system'),
-    'systemd_units': Provider('systemd', Stage.SYSTEM_CONFIG, 'system'),
-    'managed_files': Provider('file', Stage.SYSTEM_CONFIG, 'system'),
-    'login_shell': Provider('login-shell', Stage.SYSTEM_CONFIG, 'system'),
-    'macos_defaults': Provider('macos-default', Stage.SYSTEM_CONFIG, 'system'),
-    'steps': Provider('step', Stage.SYSTEM_CONFIG, 'system'),
-}
-"""`system.yml`'s sections, resolved in a second pass rather than beside the rest.
-
-They cannot be in `PROVIDERS`: that loop asks the manifest what it subscribes to,
-and no manifest subscribes to a group membership. What decides a system-config
-row instead is a coordinate, a feature, or *the result of the first pass* — the
-docker group applies where this machine's plan installs docker, which is not
-knowable until the packages have resolved.
-"""
-
-UNPROVIDED: dict[str, str] = {
-    'runtimes': 'derived by the toolchain resource from the tool sections that need one, never subscribed to directly',
-    'zen_extensions': 'declared and installed by nothing; the browser profile is not managed from here yet',
-}
-"""Sections deliberately absent from the plan, each with the reason.
-
-A section in neither map is a section silently installing nothing, which is the
-failure `runtimes` sat in for months — declared, validated by nothing, resolved
-by nothing.
-"""
-
-
 def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: str | None = None) -> Plan:
     """Everything `machine` should have, in the order it has to be installed.
 
-    `owner` is the whole of `--mine`. The `owner_aware` column in
-    `install/phases.sh` was a hand-maintained restatement of a fact already in the
-    data; a provider whose entries all belong to someone else resolves to zero
-    items and is skipped because it is empty, not because a column said so.
+    One loop over the registry, and the registry's order *is* the two passes: a
+    provider is handed what every earlier provider resolved, so the system-config
+    rows that read the package plan get it as an argument rather than through a
+    hand-placed second call.
+
+    `owner` is the whole of `--mine`, and it narrows the plan rather than feeding
+    it. The `owner_aware` column in `install/phases.sh` was a hand-maintained
+    restatement of a fact already in the data; a provider whose entries all belong
+    to someone else resolves to zero items and is skipped because it is empty, not
+    because a column said so.
+
+    The registry is imported here rather than at module scope because its
+    providers build the item types defined in this file — asking for it at import
+    time closes the loop.
     """
+    from dotfiles import registry
+
     items: list[DesiredItem] = []
-
-    for section, provider in PROVIDERS.items():
-        subscription = machine.subscription(section)
-        for entry in declaration.section(section):
-            if not subscription.wants(entry) or not available(entry, machine.coordinates):
-                continue
-            if owner is not None and entry.owner != owner:
-                continue
-            items.append(
-                DesiredItem(
-                    section=section,
-                    provider=provider.name,
-                    resource=provider.resource,
-                    stage=provider.stage,
-                    name=entry.name,
-                    executable=_executable(entry),
-                    evidence_path=getattr(entry, 'installed_path', ''),
-                    precondition=_precondition(entry),
-                    entry=entry,
-                    reason=Reason(section, _selector(section, subscription)),
-                )
-            )
-
-    if owner is None:
-        items.extend(_system_configuration(declaration, machine, {item.name for item in items if item.section == 'system_packages'}))
+    for provider in registry.PROVIDERS:
+        if owner is not None and not provider.ownable:
+            continue
+        planned = provider.plan(machine, declaration, tuple(items))
+        if owner is not None:
+            planned = tuple(item for item in planned if item.entry.owner == owner)
+        items.extend(planned)
 
     return Plan(
         machine=machine,
         items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))),
         runtimes=tuple(entry for entry in declaration.section('runtimes') if isinstance(entry, catalog.Runtime)),
     )
-
-
-def _system_configuration(
-    declaration: catalog.Catalog,
-    machine: machines.Machine,
-    installed: set[str],
-) -> Iterator[DesiredItem]:
-    """The `system.yml` rows this machine wants, given what it already resolved.
-
-    Absent entirely from an owner-narrowed plan, rather than filtered by it: a
-    group membership belongs to nobody on GitHub, so every row would answer
-    `owner is None` and be dropped for the wrong reason. `--mine` means "just my
-    tools" — usually right after releasing one — and it must not turn into a
-    password prompt for a system reconfiguration nobody asked for.
-    """
-    for section, provider in SYSTEM_PROVIDERS.items():
-        for entry in declaration.section(section):
-            assert isinstance(entry, catalog.SystemConfig)
-            if not available(entry, machine.coordinates) or not configures(entry, machine, installed):
-                continue
-            yield DesiredItem(
-                section=section,
-                provider=provider.name,
-                resource=provider.resource,
-                stage=provider.stage,
-                name=entry.name,
-                executable='',
-                evidence_path='',
-                precondition=Precondition.NONE,
-                entry=entry,
-                reason=Reason(section, _decided_by(entry)),
-            )
 
 
 def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed: set[str]) -> bool:
@@ -323,13 +217,6 @@ def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed
     if entry.requires_package and entry.requires_package not in installed:
         return False
     return not (entry.feature and not machine.wants(entry.feature))
-
-
-def _decided_by(entry: catalog.SystemConfig) -> str:
-    """What put this row in the plan, for `machines show` to print."""
-    narrowings = {'package': entry.requires_package, **entry.narrowing, 'feature': entry.feature}
-    named = ', '.join(f'{key}:{value}' for key, value in narrowings.items() if value)
-    return named or 'every machine'
 
 
 def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
@@ -348,29 +235,3 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
     if isinstance(entry, catalog.GithubRelease) and entry.requires_wsl_host:
         return coordinates.host is axes.Host.WSL
     return True
-
-
-def _executable(entry: catalog.Entry) -> str:
-    """The binary to look for, or '' where the entry installs none.
-
-    A sourced bash library and a Python package pulled in for another tool's
-    benefit both put nothing on PATH, and would read as permanently missing.
-    """
-    if isinstance(entry, catalog.UvTool) and entry.library_only:
-        return ''
-    if isinstance(entry, catalog.CustomInstaller) and entry.installed_path and not entry.command:
-        return ''
-    return entry.executable
-
-
-def _precondition(entry: catalog.Entry) -> Precondition:
-    needs_auth = getattr(entry, 'requires_github_auth', False)
-    return Precondition.GITHUB_AUTH if needs_auth else Precondition.NONE
-
-
-def _selector(section: str, subscription: machines.Subscription) -> str:
-    if subscription.tier:
-        return f'tier:{subscription.tier}'
-    if subscription.declared:
-        return f'manifest:{section}'
-    return f'catalog:{section}'

@@ -31,6 +31,7 @@ from dotfiles import catalog
 from dotfiles import coordinates
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import registry
 from dotfiles import resolve
 
 LINUX = coordinates.PLATFORM_BUNDLES['linux']
@@ -89,7 +90,7 @@ def test_the_bash_owner_column_says_what_the_catalog_says() -> None:
 
 
 def _installs_something_owned_by(phase: apply.Phase, owner: str, declaration: catalog.Catalog) -> bool:
-    sections = [section for section, provider in resolve.PROVIDERS.items() if provider.name in phase.providers]
+    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers]
     return any(entry.owner == owner for section in sections for entry in declaration.section(section))
 
 
@@ -143,7 +144,7 @@ def test_every_phase_names_providers_the_resolver_knows() -> None:
     """A typo here would silently make a phase unselectable under `--owner`, which
     reads as "this machine owns none of that" rather than as a broken registry."""
     named = {provider for phase in apply.REGISTRY for provider in phase.providers}
-    assert named <= {provider.name for provider in resolve.PROVIDERS.values()}
+    assert named <= {provider.name for provider in registry.PROVIDERS}
 
 
 @pytest.mark.parametrize('name', machines.names())

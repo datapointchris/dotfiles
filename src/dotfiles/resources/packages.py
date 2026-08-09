@@ -25,6 +25,7 @@ from collections.abc import Callable
 from dotfiles import catalog
 from dotfiles import coordinates
 from dotfiles import evidence as ev
+from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
@@ -81,8 +82,7 @@ class PackagesResource:
 
     def observe(self, session: Session, plan: Plan) -> Observed:
         mine = plan.for_resource(NAME)
-        installed = ev.inventories(mine)
-        evidence = {item.address: ev.evidence_for(item, installed) for item in mine}
+        evidence = {item.address: registry.evidence_for(item, session.inventories) for item in mine}
 
         present = tuple(item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and _has_currency(item))
         latest, consulted = _upstream(session, present)
@@ -138,7 +138,7 @@ def _arrived(session: Session, change: Change, item: DesiredItem) -> Outcome | N
     asked about with whatever upstream calls latest now. A STALE one is
     deliberately *not* re-checked this way: being behind is what this repairs.
     """
-    if change.verdict is Verdict.MISSING and ev.evidence_for(item, {}).verdict is Verdict.MATCHED:
+    if change.verdict is Verdict.MISSING and registry.evidence_for(item, {}).verdict is Verdict.MATCHED:
         return Outcome(change, OutcomeStatus.SKIPPED, f'{item.executable} arrived before this ran')
     return None
 

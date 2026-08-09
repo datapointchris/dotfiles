@@ -683,7 +683,7 @@ class Phase:
     """Which CLI resource owns it, so `dotfiles packages apply` selects a subset."""
 
     providers: tuple[str, ...]
-    """Which of `resolve.PROVIDERS` this phase installs, or () for one that installs
+    """Which of `registry.PROVIDERS` this phase installs, or () for one that installs
     no catalogued item at all — a toolchain, the symlinks, the zsh setup.
 
     This replaces a hand-maintained `owner_aware` boolean. Ownership is already a

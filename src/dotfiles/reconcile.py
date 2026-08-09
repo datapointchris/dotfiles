@@ -28,6 +28,7 @@ from dotfiles.output import render_change
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict as ItemVerdict
+from dotfiles.resources import privileged
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -69,6 +70,16 @@ class ResourceResult:
     exit code: a cold release cache makes every declared release unmeasurable at
     once, and calling that drift exits non-zero on a healthy machine."""
 
+    privileged: int = 0
+    """How many pending items will ask for a password.
+
+    The half of the front-loaded design worth keeping. Root is acquired at the
+    write now, because holding a sudo timestamp does not work on macOS — but a
+    plan that is complete before anything runs can still say how many of its
+    findings need one, so nobody is surprised mid-run. Counted rather than
+    prompted for.
+    """
+
     def as_dict(self) -> dict[str, str | int]:
         """Counts beside the sentence, not only inside it.
 
@@ -84,6 +95,7 @@ class ResourceResult:
             'pending': self.pending,
             'attention': self.attention,
             'unmeasured': self.unmeasured,
+            'privileged': self.privileged,
         }
 
 
@@ -149,13 +161,21 @@ def from_changes(address: str, changes: Sequence[Change], converged: str, lens: 
     for change in kept:
         render_change(change)
 
-    counts = {'pending': len(pending), 'attention': len(attention), 'unmeasured': len(unmeasured)}
+    counts = {
+        'pending': len(pending),
+        'attention': len(attention),
+        'unmeasured': len(unmeasured),
+        'privileged': len(privileged(pending)),
+    }
     gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
     if not kept:
         return ResourceResult(address, Verdict.CONVERGED, converged + gap, **counts)
 
     if lens is Lens.PLAN:
-        return ResourceResult(address, Verdict.DRIFT, f'{len(kept)} item(s) differ from the declaration' + gap, **counts)
+        # Said here rather than at a prompt: root is acquired when a write needs
+        # it, so the only warning anyone gets is the one the plan prints.
+        root = f', {counts["privileged"]} needing root' if counts['privileged'] else ''
+        return ResourceResult(address, Verdict.DRIFT, f'{len(kept)} item(s) differ from the declaration{root}{gap}', **counts)
     return ResourceResult(address, Verdict.ISSUE, f'{len(kept)} item(s) need attention that apply cannot give' + gap, **counts)
 
 

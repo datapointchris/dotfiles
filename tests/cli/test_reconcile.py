@@ -7,6 +7,7 @@ it is the part most easily broken by a well-meaning change to a checker.
 
 from __future__ import annotations
 
+import dataclasses as dc
 from collections.abc import Iterable
 
 import pytest
@@ -173,6 +174,22 @@ def test_a_package_a_version_behind_is_not_something_wrong() -> None:
 
     assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.PLAN).verdict is Verdict.DRIFT
     assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.CHECK).verdict is Verdict.CONVERGED
+
+
+def test_a_plan_counts_what_will_ask_for_a_password() -> None:
+    """The half of the front-loaded design worth keeping. Root is acquired at the
+    write now, so the plan's count is the only warning anyone gets — and it must
+    count only what `apply` would actually reach, not every privileged row."""
+    changes = [
+        dc.replace(change(Change_Verdict.MISSING, item='system/curl'), privileged=True),
+        dc.replace(change(Change_Verdict.MISSING, Repair.BY_HAND, item='file/zshenv'), privileged=True),
+        change(Change_Verdict.MISSING, item='ghrelease/zk'),
+    ]
+
+    folded = reconcile.from_changes('system', changes, 'all installed', reconcile.Lens.PLAN)
+
+    assert folded.pending == 2
+    assert folded.privileged == 1
 
 
 def test_nothing_at_all_says_so_without_a_gap_clause() -> None:

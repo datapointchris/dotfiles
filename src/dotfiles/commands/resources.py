@@ -153,13 +153,13 @@ def _apply_phases(
     asked for narrows nothing and updates the lot.
     """
     from dotfiles import apply
-    from dotfiles import resolve
+    from dotfiles import registry
 
     providers = None
     if source:
-        provider = resolve.PROVIDERS.get(source)
+        provider = registry.for_section(source)
         if provider is None:
-            error(f'nothing installs {source}: {resolve.UNPROVIDED.get(source, "no provider claims that section")}')
+            error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
             raise typer.Exit(ExitCode.USAGE)
         providers = frozenset({provider.name})
 

@@ -25,6 +25,7 @@ import dataclasses as dc
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import registry
 from dotfiles.catalog import SystemConfig
 from dotfiles.privilege import Privilege
 from dotfiles.providers import macdefaults
@@ -71,10 +72,10 @@ class SystemResource:
     def observe(self, session: Session, plan: Plan) -> Observed:
         mine = plan.for_resource(NAME)
         payload = tuple(item for item in mine if item.stage is not Stage.SYSTEM_CONFIG)
-        installed = ev.inventories(payload)
+        inventories = session.inventories
         return Observed(
-            evidence={item.address: ev.evidence_for(item, installed) for item in payload},
-            asked=frozenset(installed),
+            evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
+            asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
         )
 
@@ -88,6 +89,7 @@ class SystemResource:
                 detail=observed.evidence[item.address].detail,
                 repair=Repair.NONE if observed.evidence[item.address].verdict is Verdict.UNKNOWN else Repair.AUTOMATIC,
                 desired=item,
+                privileged=registry.needs_root(item),
             )
             for item in plan.for_resource(NAME)
             if item.stage is not Stage.SYSTEM_CONFIG and observed.evidence[item.address].verdict is not Verdict.MATCHED
@@ -101,7 +103,7 @@ class SystemResource:
                 detail=observed.config[item.address].detail,
                 repair=observed.config[item.address].repair,
                 desired=item,
-                privileged=_configuration(item.entry).needs_root,
+                privileged=registry.needs_root(item),
             )
             for item in _config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED

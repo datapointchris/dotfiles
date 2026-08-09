@@ -7,9 +7,9 @@ seventy-odd `defaults` keys at the values this repo picked. None of that is a
 package, and until this conversion none of it could be checked at all.
 
 The declaration is `install/system.yml`; the reads and writes are
-`src/dotfiles/providers/sysconfig.py`; the one authorization is
-`src/dotfiles/privilege.py`. `dotfiles system check` prints where the machine
-stands and `dotfiles apply` repairs it.
+`src/dotfiles/providers/sysconfig.py`; the door to root is
+`src/dotfiles/privilege.py`. `dotfiles system plan` prints what would change,
+`dotfiles system check` prints what is wrong, and `dotfiles apply` repairs it.
 
 ## Why it is a second file
 
@@ -52,7 +52,10 @@ directory existing. Both are `steps` rows, described below.
 
 **No preference escalates**, which is why `needs_root` is a field with a
 per-section default rather than a resource-wide assumption. A Mac whose only
-drift is its Dock size converges without a password.
+drift is its Dock size converges without a password. It is also why the provider
+registry asks `needs_root(item)` rather than carrying a flat `privileged` field:
+for `system.yml` the answer is per row and already declared, and a field on the
+provider beside a field on the entry would be two sources for one fact.
 
 Two decisions worth not reversing by accident. `System Settings` is quit once
 before the first write of a process, because it holds its own copy of a domain
@@ -188,33 +191,41 @@ silently ignored key.
 `requires_package` is the interesting one, because it is the only narrowing that
 depends on the rest of the plan. It is why system configuration resolves in a
 second pass: what a machine installs has to be known before what a machine
-configures can be.
+configures can be. The ordering is the provider registry's — each provider is
+handed what the providers before it resolved, so the two passes are one loop and
+`registry.PROVIDERS` puts every `system.yml` provider after every `packages.yml`
+one.
 
-## One prompt
+## Root is acquired at the write
 
 `privilege.py` is the only module in the package that contains the string
 `sudo`, and a test asserts it over the parsed source so the prose explaining why
 a module does not escalate is not itself a violation.
 
-Three rules follow from that. Privilege is **declared on the change**, so the
-whole list is known before any of it runs. Authorization happens **once**, with
-that list, and every command after it passes `sudo -n` — so a provider cannot
-open a second password prompt in the middle of a twenty-minute install. And a
-refusal is **not fatal**: with no sudo, or with the password declined, the
-privileged rows are reported and everything else still converges. That is what
-makes the container harnesses work without a passwordless-sudo carve-out.
+A privileged `perform` calls for root when it reaches the write, which is what
+brew and every other installer does. Two properties matter, and the second is
+what the front-loaded design existed for:
 
-A keepalive refreshes the timestamp while the run continues, because `pacman
--Syu` outlives sudo's default five minutes.
+**A refusal is not fatal.** With no sudo, or with the password declined,
+privilege is marked unavailable for the rest of the run: the privileged rows are
+reported and everything else still converges. That is what makes the container
+harnesses work without a passwordless-sudo carve-out.
 
-**The prompt is at the end of `apply` rather than the front, and that is
-temporary.** What decides whether root is needed at all is the observation, and
-the observation is not right until the packages are installed: on a fresh
-machine zsh does not exist yet, so an up-front look would find the login shell
-unrepairable, ask for nothing, and then refuse the one write it turns out to
-need. Asking for a password that may not be needed is the other wrong answer. It
-moves to the front when the package backends convert and the whole privileged
-list is knowable before anything runs.
+**The plan says in advance how many changes will ask.** Privilege is declared on
+the change and known at plan time, so `dotfiles plan` prints the count and
+`--json` carries it. Nobody is surprised mid-run — they are told up front and
+asked at the moment.
+
+`observe` is never handed a `Privilege`, so "the read-only verbs do not escalate"
+is structural rather than promised, and it covers `plan` and `check` alike.
+
+**This reverses the design that stood here.** One authorization at the front,
+held open by a keepalive timer, was the rule until it was measured: keeping a
+sudo timestamp alive **does not work on macOS**, repeatedly. So the front prompt
+bought a property the platform will not give, and paid for it with a password
+prompt on machines that turn out to need nothing. `authorize()`, `Escalation`,
+`stop()` and the self-re-arming `threading.Timer` are gone, and with them the
+generator-finalization hazard of a background thread outliving a run.
 
 ## Two things worth not rediscovering
 

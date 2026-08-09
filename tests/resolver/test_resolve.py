@@ -19,6 +19,7 @@ from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import parse_packages
+from dotfiles import registry
 from dotfiles import resolve
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -95,9 +96,15 @@ def test_the_resolver_selects_the_system_packages_the_old_filter_selected(declar
 
 
 def test_every_section_is_either_provided_or_explained() -> None:
-    """A section in neither map installs nothing and says nothing about it —
-    which is the state `runtimes` sat in for months."""
-    unaccounted = set(catalog.SECTIONS) - set(resolve.PROVIDERS) - set(resolve.UNPROVIDED)
+    """A section in neither installs nothing and says nothing about it — which is
+    the state `runtimes` sat in for months.
+
+    Both declarations at once. `packages.yml` and `system.yml` used to be asked
+    this separately because two maps answered it; one registry holds both, so a
+    new section in either file has to answer the same question.
+    """
+    declared = set(catalog.SECTIONS) | set(catalog.SYSTEM_SECTIONS)
+    unaccounted = declared - set(registry.BY_SECTION) - set(registry.UNPROVIDED)
 
     assert not unaccounted, f'sections with no provider and no stated reason: {sorted(unaccounted)}'
 
@@ -278,10 +285,19 @@ def system_plan(tmp_path: Path, system_config: dict[str, Any], manifest: dict[st
     return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), **kwargs)
 
 
-def test_every_system_section_has_a_provider() -> None:
-    """The same rule as the packages side: a section nothing resolves is a
-    declaration that can be edited with no effect."""
-    assert set(catalog.SYSTEM_SECTIONS) == set(resolve.SYSTEM_PROVIDERS)
+def test_the_system_sections_resolve_after_the_packages_they_read() -> None:
+    """The registry's order *is* the two passes, and this is what pins it.
+
+    A system-config row can be decided by what the first pass planned — the docker
+    group applies to a machine whose plan installs docker — so a provider reading
+    `planned` must come after the one that fills it. Moving one up the tuple would
+    silently drop the group membership on every machine.
+    """
+    order = [provider.section for provider in registry.PROVIDERS]
+    first_system_section = min(order.index(section) for section in catalog.SYSTEM_SECTIONS)
+    last_package_section = max(order.index(section) for section in catalog.SECTIONS if section in order)
+
+    assert last_package_section < first_system_section
 
 
 @pytest.mark.parametrize(
