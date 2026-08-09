@@ -11,7 +11,6 @@ Two front doors sit over the same implementation, so neither can drift from the 
 dotfiles <noun> <verb>       task <verb>
              \                  /
               src/dotfiles/            the package: phase walk, symlinks, catalog
-              install/ops/*.sh         composite operations not yet converted
               update.sh                the half of the phase registry still in bash
               install/common/*         the per-tool installer scripts
 ```
@@ -20,9 +19,9 @@ dotfiles <noun> <verb>       task <verb>
 moved yet, which makes the remaining conversion work countable: when a resource gains a
 real implementation, its entry disappears, and the module goes with the last one.
 
-`install/ops/` holds what is left of the composite operations — the doctor sweep, the
-`~/.env` render, the test-suite guard, mkdocs through `uv`. Anything that is already a
-single command is invoked directly with no wrapper.
+`task` keeps what belongs to working *in* the repo rather than on the machine — the test
+suite and the docs site — and calls them directly. Anything that is already one command
+gets no wrapper.
 
 ## The `dotfiles` CLI
 
@@ -173,17 +172,22 @@ on names, order and which phases have an owner — order included, because regis
 is a real dependency chain and a registry that agreed on the set but not the sequence
 would install a machine wrongly and report success.
 
-| Group | Contents | Notes |
-| --- | --- | --- |
-| `system` | brew/mas, apt, pacman/yay/flatpak | Needs sudo, dominates the runtime |
-| `languages` | Go toolchain, rustup, uv | The managers themselves |
-| `tools` | go, cargo, uv, npm, GitHub releases, custom installers | The installed binaries |
-| `config` | symlink deployment, zsh setup | Install only — nothing to update |
-| `plugins` | shell, tmux, Neovim | |
+There are four groups a selector can name, and what distinguishes them is what they cost
+rather than what they contain — `task update -- --list` prints the contents:
 
-A selector is a group name **or** a phase name; `--list` prints every phase under its
-group, and each one shown is selectable. Listing names that could not be given as
-arguments was the original discoverability bug.
+| Group | Why it is its own group |
+| --- | --- |
+| `system` | Needs sudo, and dominates the runtime |
+| `languages` | The version managers themselves, which everything below depends on |
+| `tools` | The installed binaries, and the only group `--mine` narrows |
+| `plugins` | Cheap, and the one group worth running alone after a config change |
+
+`config` exists as a group at install time and has nothing to update, which is why naming
+it is a usage error rather than a no-op.
+
+A selector is a group name **or** a phase name, and every name `--list` prints is
+selectable. Listing names that could not be given as arguments was the original
+discoverability bug.
 
 The selectors belong to the bash half, so they are typed through `task` until those
 phases convert; `dotfiles update` is self-update and takes none of them.
@@ -287,7 +291,6 @@ real type system, a test suite, and dependencies it can declare.
 | Updating this installation | `src/dotfiles/commands/manage.py` — pull, relink, rebuild the venv |
 | Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
-| Composite operations | `install/ops/` — reached through `src/dotfiles/bridge.py` |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Registry drift | `packages verify` — packages.yml vs manifests vs scripts |

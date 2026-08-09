@@ -128,6 +128,7 @@ nav:
       - GitHub Releases: architecture/github-releases.md
       - Custom Installers: architecture/custom-installers.md
       - System Configuration: architecture/system-configuration.md
+      - Observability: architecture/observability.md
   - Configuration:
       - Docker Setup: configuration/docker.md
       - Hyprland: configuration/hyprland.md

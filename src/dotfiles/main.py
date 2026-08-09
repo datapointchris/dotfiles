@@ -114,10 +114,16 @@ def check(
     # Resolved rather than taken from the argument: under the scheduled timer
     # neither `--machine` nor `$MACHINE` is set, and the document said the
     # machine was `""` while the check itself had correctly read `~/.env`.
-    status.record(results, Session.resolve(machine).machine_name, dt.datetime.now(dt.UTC))
+    when = dt.datetime.now(dt.UTC)
+    checked_machine = Session.resolve(machine).machine_name
+    status.record(results, checked_machine, when)
 
     if as_json:
-        emit_json([result.as_dict() for result in results])
+        # The same document `status.json` holds, not a bare array of the same
+        # rows. Both cross machines — the work box's check output is what decides
+        # what the fleet builds it — and a reader cannot tell two shapes apart
+        # without a version to test.
+        emit_json(status.document(results, checked_machine, when))
     else:
         for result in results:
             render_result(result)

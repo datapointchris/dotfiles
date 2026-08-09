@@ -160,16 +160,13 @@ remote; a Homebrew path does not, because it is meaningless elsewhere rather
 than merely unused. See
 [Platform Differences](../reference/platforms/differences.md).
 
-## Deep Dives
+## Where to go next
 
-<div class="grid cards" markdown>
+The sidebar lists every architecture page; these are the three that answer the
+questions asked most often.
 
-- :material-package-variant: **[Package Management](package-management.md)**
-
-    System vs language version managers
-
-- :material-tools: **[Tool Composition](tool-composition.md)**
-
-    How tools work together
-
-</div>
+[Management Interface](management-interface.md) is the one to read first — the
+two front doors, why there are exactly two verbs, and what `~/.env` decides.
+[Package Management](package-management.md) is which installer a tool gets and
+why. [Observability](observability.md) is what a run leaves behind and who reads
+it, which is where to start when something reported a machine wrongly.

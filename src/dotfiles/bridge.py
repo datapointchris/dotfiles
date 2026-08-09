@@ -21,8 +21,6 @@ from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
 
-OPS_DIR = paths.INSTALL_DIR / 'ops'
-
 
 def _environment() -> dict[str, str]:
     """What every one of these scripts assumes about its environment.
@@ -42,16 +40,6 @@ def _environment() -> dict[str, str]:
         'TERM': 'xterm',
         'DOTFILES_PYTHON': sys.executable,
     }
-
-
-def ops(script: str, *args: str, output: Output = Output.STREAM) -> Completed:
-    """Run one of `install/ops/*.sh`, the scripts both front doors already shared."""
-    return run(
-        ['bash', str(OPS_DIR / f'{script}.sh'), *args],
-        cwd=paths.REPO_ROOT,
-        env=_environment(),
-        output=output,
-    )
 
 
 def wsl_script(name: str, *args: str) -> Completed:
