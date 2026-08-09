@@ -385,3 +385,43 @@ def test_a_whole_excluded_directory_is_skipped(session: Session, repo: Path) -> 
     declare(repo, 'configs/common/node_modules/package/index.js')
 
     assert [link.target.name for link in symlinks.RESOURCE.observe(session, session.plan).links] == ['init.lua']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cost
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_source_trees_are_walked_once_however_many_links_are_missing(
+    session: Session, repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`perform` is handed a Change and not the observation that produced it, so
+    it has to find the link again — and `declared()` is an rglob of three source
+    trees per overlay plus a pyproject parse. Deriving it per change ran that
+    walk once *per link*, which on a fresh machine is every link walking every
+    tree.
+
+    Asserted as a count rather than a duration: the cost is quadratic in links,
+    so a timing threshold would pass on a small fixture and fail on a real repo.
+    """
+    for index in range(12):
+        declare(repo, f'configs/common/.config/app/file{index}.conf')
+
+    symlinks._index.cache_clear()
+    walks = 0
+    original = symlinks.declared
+
+    def counted(*args: object, **kwargs: object) -> tuple:
+        nonlocal walks
+        walks += 1
+        return original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(symlinks, 'declared', counted)
+
+    pending = changes(session)
+    assert len(pending) == 12
+    for change in pending:
+        symlinks.RESOURCE.perform(session, change, Privilege())
+
+    assert walks == 2, 'one walk for observe, one for the index every perform shares'
+    symlinks._index.cache_clear()

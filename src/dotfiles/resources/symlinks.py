@@ -21,7 +21,9 @@ wins, and linking over it would replace the executable currently running.
 from __future__ import annotations
 
 import dataclasses as dc
+import functools
 from collections.abc import Iterator
+from collections.abc import Mapping
 from pathlib import Path
 
 from dotfiles import coordinates as axes
@@ -252,8 +254,25 @@ def _destination(target: Path) -> Path | None:
     return target.resolve() if target.exists() else core.resolve_broken_symlink(target)
 
 
+@functools.lru_cache(maxsize=1)
+def _index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]:
+    """Declared links by address, derived once for the run.
+
+    `perform` is handed a `Change` and not the `Observation` that produced it, so
+    the link has to be found again — and `declared()` is an `rglob` of three
+    source trees per overlay plus a `pyproject.toml` parse. Re-deriving it per
+    change meant that walk ran once *per link*, which on a fresh machine is every
+    link walking every tree.
+
+    Safe to hold for the run because `declared()` reads the repo and never `$HOME`:
+    the links `perform` creates cannot change its answer. Bounded to one entry, so
+    a second session evicts the first rather than accumulating.
+    """
+    return {link.address: link for link in declared(session, coordinates)}
+
+
 def _link_for(session: Session, change: Change) -> Link | None:
-    return next((link for link in declared(session, session.machine.coordinates) if link.address == change.item), None)
+    return _index(session, session.machine.coordinates).get(change.item)
 
 
 RESOURCE = SymlinksResource()
