@@ -1,31 +1,14 @@
 # Dotfiles Testing
 
-Organized test structure covering apps, libraries, and installation system.
+One runner. `eza -1 tests/` lists the directories; each is named for what it
+covers, and the two that are not obvious:
 
-## Structure
+- `tests/shell/` — the shell code, driven from pytest through a real `bash`,
+  `zsh` or `tmux`. The runner is Python; the subject is not.
+- `tests/e2e/` — one rig that installs whole machines in containers, with the
+  environments as parameters.
 
-```text
-tests/
-├── apps/
-│   └── all-apps.sh                      # Quick test of all user-facing apps
-├── libraries/
-│   ├── logging.sh                       # Test logging.sh library
-│   ├── formatting.sh                    # Test formatting.sh library
-│   └── error-handling.sh                # Test error-handling.sh library
-└── install/
-    ├── unit/                            # Unit tests for installer functions
-    ├── integration/                     # Integration tests for components
-    ├── e2e/                             # End-to-end installation tests
-    ├── docker/                          # Docker-based tests
-    ├── utils/                           # Validation and utility scripts
-    └── helpers.sh                       # Shared test utilities
-```
-
-**Logic:**
-
-- `tests/apps/` = Tests for user-facing applications
-- `tests/shell/` = The shared shell libraries, driven from pytest through a real shell
-- `tests/install/` = Tests for installation system (unit → integration → e2e → utils)
+`docs/development/testing.md` is why it is arranged this way.
 
 ## Running Tests
 
@@ -35,11 +18,10 @@ tests/
 bash tests/apps/all-apps.sh
 ```
 
-Tests all user-facing tools can be invoked:
-
-- apps: notes, toolbox, theme-sync, menu
-- shell libraries: logging.sh, formatting.sh, error-handling.sh
-- platform-specific: ghostty-theme, _aws-profiles
+Asserts every user-facing tool can be invoked on *this* machine, against the
+deployed tree rather than the repo — `rg test_cmd tests/apps/all-apps.sh` is the
+list. That is what makes it different from everything else here: it is the only
+check that reads what `dotfiles apply` actually put on disk.
 
 **Speed:** Fast (~5 seconds)
 
@@ -123,9 +105,9 @@ def test_a_library_does_the_thing() -> None:
 
 ### Installation Tests
 
-- **Unit tests** (`tests/install/unit/`): Test individual functions
-- **Integration tests** (`tests/install/integration/`): Test wrapper behavior
-- **E2E tests** (`tests/e2e/`): Full installation in a container, per environment
+- **Python** (`tests/install/`): the resolver, the bundler, the run records
+- **Shell** (`tests/shell/`): the install scripts that are still shell
+- **E2E** (`tests/e2e/`): a full installation in a container, per environment
 - **Host E2E** (`tests/install/e2e/`): the cases a container cannot be
 
 ### Best Practices

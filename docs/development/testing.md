@@ -1,157 +1,108 @@
 # Testing
 
-The dotfiles repository has three layers of testing:
+Everything is pytest. There is one runner, and the tiers are defined by **what a
+test may touch** rather than by how long it takes:
 
-1. **BATS unit + integration tests** — shell library and installer coverage
-2. **pytest** — the Python side: the packages CLI, the manifest parser, the offline bundler
-3. **Installation e2e tests** — Docker-based platform walkthroughs of `install.sh`
+- **pure and host-tool** — runs on every commit. Reads `tmp_path`, runs real
+  binaries, reaches no network.
+- **`e2e`** — reaches the real network or the real `HOME`. Deselected unless
+  `--e2e`.
+- **`docker`** — installs a whole machine in a container. Deselected unless
+  `--docker`.
 
-Fast tests run on every commit via pre-commit hooks: pytest, and BATS **unit** tests (gated to install-layer changes). The slower Docker-backed layers — BATS **integration** and the installation e2e tests — are run on demand (`task test:integration`, `task test`) rather than on every commit, to keep commits fast. See `.pre-commit-config.yaml` for the full wiring.
+`task --list-all` names the entry points; `tests/conftest.py` is where the two
+opt-in tiers are declared, and `.pre-commit-config.yaml` is the full hook wiring.
 
-## BATS (Bash Tests)
+The deselection lives in `tests/conftest.py` rather than as `-m 'not e2e'` in
+`addopts`, because forge owns `addopts` — a deselection written there is erased
+by the next `sync-pyproject` run.
 
-Shell library and installer tests using [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core).
+## The shell is still the subject
 
-### Running Tests
+`tests/shell/` drives real `bash`, real `zsh` and a real `tmux` from pytest. The
+runner changed; the thing under test did not. bats was that runner until the
+Python conversion, and it was a second test framework — installed from its own
+custom installer, with its own assertion library, its own CI job and its own
+`task` verbs — to run assertions pytest can express directly.
 
-```sh
-# All BATS tests (unit + integration)
-task test
+Three things got better in the move, and they are the reasons to keep the shape:
 
-# Unit tests only — libraries + installer functions, no Docker, no network
-task test:unit
+**stdout and stderr stay apart.** bats merged them into one `$output`, so an
+assertion passed whichever stream the code chose. That is how logging.sh's stderr
+routing regressed unnoticed, and porting the update suite immediately found the
+same class of thing — the dry-run announcement is on stderr and the resolved item
+list is on stdout, which no bats assertion could have distinguished.
 
-# Integration tests — Docker-backed, will auto-build the base image on first run
-task test:integration
+**A skipped interpreter is a case, not a silence.** zsh is a parameter, so a
+machine without it reports the skip per test instead of quietly covering half of
+one. CI installs `tmux` and `zsh` and asserts they are present before running the
+tier, because every one of those tests degrades to a skip rather than a failure.
 
-# Watch mode (requires entr)
-task test:watch
-```
+**Tables are tables.** bats spawns a process per `@test`, which pushed every file
+toward one `@test` holding fifteen assertions — so a failure named the group
+rather than the property. Parametrized cases cost nothing and name themselves.
 
-### Test Location
+`tests/shell/shells.py` is the whole harness: it runs a snippet in a fresh shell
+with one library sourced and hands back stdout, stderr and the exit code, kept
+apart. Fresh every time, because these libraries resolve things at *source* time
+— the colour gate most obviously — so a reused interpreter would answer with
+whatever the first test decided.
 
-Tests are organized under `tests/`:
+## Logic belongs in Python, and moving it is the cheaper fix
 
-- `tests/shell/` — The shared shell libraries, run through a real `bash` (and `zsh` where the property has to hold in both) from pytest
-- `tests/install/unit/` — Unit tests for installer functions (no Docker, no network). Run with `task test:unit`.
-- `tests/install/integration/` — Integration tests. Requires Docker + the prebuilt base image `dotfiles-test-base:ubuntu-24.04`. If the image is missing, `tests/install/docker/build-base.sh` is invoked automatically before tests run — if the build itself fails, the test run fails loudly rather than silently skipping.
-
-### Counting files in an assertion
-
-Never compare a count from `fd` against a count from anything else. `fd`
-respects `.gitignore` and `tar` does not, so a backup test asserting the archive
-held as many files as the source directory compared 409 against 2929 and read as
-a broken backup. Pass `--no-ignore --hidden` when the count has to mean "every
-file on disk".
-
-## pytest (Python Tests)
-
-Python-side coverage for `src/dotfiles/parse_packages.py`, `src/dotfiles/catalog.py`
-(including `packages verify`), and `src/dotfiles/create_bundle.py`:
-
-```sh
-uv run pytest tests/
-```
-
-### The `e2e` marker
-
-A test that reaches the real network is marked `@pytest.mark.e2e` and is **deselected unless
-`--e2e` is passed**, so a commit never depends on GitHub being reachable or on a rate limit:
-
-```sh
-uv run pytest --e2e
-```
-
-Two suites live behind it. `tests/install/test_release_urls.py` asks every release installer what it
-would download, for every platform whose manifest declares it, and asserts both that the URL serves
-the asset and that the filename is exactly the one the release published — the second catching what
-the first cannot, since GitHub resolves asset paths case-insensitively.
-`tests/install/test_version_pinning.py` proves a declared pin is what installs.
-
-The deselection is implemented in `tests/conftest.py` rather than as `-m 'not e2e'` in `addopts`,
-because forge owns `addopts` — a deselection written there is erased by the next
-`sync-pyproject` run.
-
-**Logic belongs here rather than in BATS, and moving it is the cheaper fix.**
 The offline bundler was shell until the cost showed: verifying a checksum parser
 written in awk meant a fixture tree and a subprocess per case, while the same
-parser as a function is called directly with a string and returns a value. The
-conversion traded seventeen BATS tests needing a shell for thirty-one pytest
-ones needing nothing, and they finish in under a second. When a shell script
-grows a parser, a cache, or a return value, that is the signal — see
-[app installation patterns](../learnings/app-installation-patterns.md) for
-where each language belongs.
+parser as a function is called directly with a string and returns a value. That
+conversion traded seventeen shell tests needing a subprocess for thirty-one
+Python ones needing nothing.
 
-**Every test builds its own synthetic tree and never reads the real repo.** A
-`packages verify` test writes a `packages.yml` and manifest set into `tmp_path`,
-runs `packages verify --root <tmp_path>` as a subprocess, and asserts on
-stdout/stderr and exit code — one test per check. Reading the actual repo would
-make each test a description of today's package list, failing on the next
-unrelated addition and passing for reasons that have nothing to do with the
-check.
+When a shell script grows a parser, a cache, or a return value, that is the
+signal — see
+[app installation patterns](../learnings/app-installation-patterns.md) for where
+each language belongs. What stays shell is what is genuinely shell: an installer
+that drives a package manager, a library sourced into an interactive shell.
+
+## Every test builds its own tree
+
+A `packages verify` test writes a `packages.yml` and manifest set into
+`tmp_path`, runs the command against it, and asserts on stdout, stderr and the
+exit code — one test per check. Reading the actual repo would make each test a
+description of today's package list: failing on the next unrelated addition, and
+passing for reasons that have nothing to do with the check.
 
 The package resource needs the same isolation for *installed-ness*, which is
-ambient. `tests/resources/test_packages.py` injects it through the knobs the code
-already honours — `PATH` and `UV_TOOL_DIR` — with `/usr/bin:/bin` kept behind the
-fake bin dir so the fixture's own helpers still resolve.
+ambient rather than on disk. `tests/resources/test_packages.py` injects it
+through the knobs the code already honours — `PATH` and `UV_TOOL_DIR` — with
+`/usr/bin:/bin` kept behind the fake bin dir so the fixture's own helpers still
+resolve.
 
-## packages verify
+**Nothing in `src/dotfiles/` is monkeypatched.** The injection points are real
+knobs: `HOME`, `PATH`, `XDG_STATE_HOME`, `UV_TOOL_DIR`. Exactly two bug classes
+survive that boundary — a real tool differing from its stub, and the bootstrap —
+and those are what the container tier is for.
 
-`packages verify` enforces drift-freeness across packages.yml, the machine manifests, and the installer script directories. See [Package Management — Drift Detection](../architecture/package-management.md#drift-detection) for the check catalog. Runs on every commit; also runnable manually:
+## Counting files in an assertion
 
-```sh
-uv run packages verify
-```
+Never compare a count from `fd` against a count from anything else. `fd` respects
+`.gitignore` and `tar` does not, so a backup test asserting the archive held as
+many files as the source directory compared 409 against 2929 and read as a broken
+backup. Pass `--no-ignore --hidden` when the count has to mean "every file on
+disk".
 
-### Writing Tests
-
-Tests use BATS with assertion helpers, loaded through `tests/helpers/bats-libs`:
-
-```bash
-#!/usr/bin/env bats
-
-load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
-
-@test "installer checks for dependencies" {
-  run bash "$INSTALLER_SCRIPT"
-  assert_output --partial "Checking dependencies"
-}
-```
-
-Load the helper, never bats-support and bats-assert directly. Their own loaders
-resolve each of their fifteen source paths with a `$(dirname)` subprocess, and
-bats runs every `@test` in a fresh process, so that cost is paid per test — it
-was more than half the suite's wall time. The helper sources the same files
-using parameter expansion, and exports `DOTFILES_DIR` from the same expansion.
-
-The expansion is depth-independent, so the line is identical in every test file
-regardless of where it sits under `tests/`.
-
-Each test being its own process also means the suite scales across cores:
-`install/ops/test.sh` passes `--jobs` when GNU parallel is available, which is
-what `task test:*` runs.
-
-See [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing-frameworks/) for detailed BATS usage.
-
-## Installation Testing
+## Installation testing
 
 Docker for Linux, a fresh user account for macOS. Both give a clean environment
-that can be destroyed and rebuilt, which is the only way to know an install
-works from nothing rather than from a machine that already had half of it.
+that can be destroyed and rebuilt, which is the only way to know an install works
+from nothing rather than from a machine that already had half of it.
 
-macOS gets a user account rather than a VM because macOS VMs are slow and
-awkward enough that they stop being used, and a fresh account reproduces
-everything the install touches outside `/usr/local`.
+macOS gets a user account rather than a VM because macOS VMs are slow and awkward
+enough that they stop being used, and a fresh account reproduces everything the
+install touches outside `/usr/local`.
 
-The container environments are pytest — `uv run pytest tests/e2e --docker`, with
-`tests/e2e/harness.py` holding the environment definitions and each pointed at
-the matching machine manifest. `eza -1 tests/install/e2e/` is what a container
-cannot be: a real macOS account, or the current machine. Docker Desktop is the
-only prerequisite for the first:
-
-```sh
-brew install --cask docker
-```
+The container environments are one pytest rig with the environments as
+parameters: `tests/e2e/harness.py` holds the definitions, each pointed at the
+matching machine manifest. `eza -1 tests/install/e2e/` is what a container cannot
+be — a real macOS account, or the current machine.
 
 ## Verification
 
@@ -162,9 +113,8 @@ bash tests/install/verification/detect-installed-duplicates.sh
 
 The first checks that everything the manifest declared is present *and in the
 expected prefix*; the second catches the same tool installed twice by different
-methods, which is the failure that PATH order hides — a stale copy in
-`/usr/bin` shadowed by a current one in `~/.local/bin` works fine until the
-order changes.
+methods, which is the failure PATH order hides — a stale copy in `/usr/bin`
+shadowed by a current one in `~/.local/bin` works fine until the order changes.
 
-The e2e scripts run both automatically. Document platform quirks found this way
-in [Platform Differences](../reference/platforms/differences.md).
+The e2e runs do both automatically. Document platform quirks found this way in
+[Platform Differences](../reference/platforms/differences.md).

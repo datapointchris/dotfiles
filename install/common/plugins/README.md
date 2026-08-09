@@ -37,5 +37,5 @@ naming the one thing that is usually fine.
 ## Where the pieces are
 
 Run `rg -l 'plugins' install/common/plugins/` for the scripts, and read
-`src/dotfiles/resources/plugins.py` for the clones. `tests/install/integration/plugin-installers.bats`
-covers the TPM run against a stub.
+`src/dotfiles/resources/plugins.py` for the clones. `tests/shell/test_tmux_plugins_sh.py`
+covers the TPM run against a stub, driving the real script through the real wrapper.

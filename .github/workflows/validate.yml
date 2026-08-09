@@ -215,24 +215,21 @@ jobs:
           if [ "$code" -eq 0 ] || [ "$code" -eq 5 ]; then exit 0; fi
           exit 1
 
-# > custom:after:all - The bats tier the generic shell step cannot pick
-  # The generated step runs tests/*.bats and this repo has none at that level,
-  # so it prints the nested layout and exits. Only the repo knows which of its
-  # tiers is runner-safe: tests/install/unit and tests/apps need nothing but a
-  # checkout, which is exactly what `task test:unit` runs.
-  # tests/install/integration is left out deliberately — it builds Docker
-  # images and calls release APIs live.
+# > custom:after:all - The shell tier, with the interpreters it needs
+
+  # tests/shell drives real bash and zsh, and the tmux plugin installer against a
+  # real tmux. Every one of those degrades to a *skip* when the interpreter is
+  # absent, which on a bare runner means the generic python job above reports
+  # green having run a third of this directory.
   #
-  # Its own job rather than a step inside `shell`: it shares no setup with
-  # shellcheck or shfmt, and a separate job runs it in parallel with them.
+  # So the tier gets its own job that installs them, and asserts they are there
+  # before running. `command -v` is the whole gate: the skip conditions name
+  # exactly these two binaries, so proving both are present proves nothing was
+  # skipped for want of one.
   #
-  # uv is set up despite this being the shell tier: the update suites resolve
-  # tool versions through the Python side.
-  #
-  # This job is temporary and goes with the last bats file. Until then the
-  # empty-suite guard below prints why it ran nothing, so a tier that has
-  # finished porting says so in the log instead of passing in silence.
-  bats-unit:
+  # Its own job rather than a step inside `python`: it needs apt packages that
+  # job has no reason to carry, and a separate job runs it in parallel.
+  shell-suite:
     runs-on: ubuntu-latest
     steps:
 
@@ -244,26 +241,11 @@ jobs:
 
       - run: uv sync --all-extras --dev
 
-      - name: bats
+      - name: Install the interpreters under test
         run: |
-          bats_version="1.14.0"
-          bats_support_version="0.3.0"
-          bats_assert_version="2.2.4"
+          sudo apt-get update
+          sudo apt-get install -y tmux zsh
+          command -v tmux zsh
 
-          git clone --depth 1 --branch "v${bats_version}" \
-            https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats"
-          sudo "$RUNNER_TEMP/bats/install.sh" /usr/local
-
-          git clone --depth 1 --branch "v${bats_support_version}" \
-            https://github.com/bats-core/bats-support.git "$HOME/.local/lib/bats-support"
-          git clone --depth 1 --branch "v${bats_assert_version}" \
-            https://github.com/bats-core/bats-assert.git "$HOME/.local/lib/bats-assert"
-
-          shopt -s nullglob
-          suites=(tests/install/unit/*.bats tests/apps/*.bats)
-          shopt -u nullglob
-          if [ ${#suites[@]} -eq 0 ]; then
-            echo "no bats suites left in the unit tiers"
-            exit 0
-          fi
-          bats "${suites[@]}"
+      - name: Test
+        run: uv run pytest tests/shell -rs

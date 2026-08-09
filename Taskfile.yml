@@ -96,24 +96,19 @@ tasks:
   # ================================================================
 
   test:
-    desc: Run all BATS tests (library + unit + integration)
+    desc: Run the test suite (no Docker, no network)
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/test.sh" all
+      - uv run pytest
 
-  test:unit:
-    desc: Run unit tests (libraries + apps + installer functions, no Docker)
+  test:e2e:
+    desc: Install whole machines in containers (tens of minutes each)
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/test.sh" unit
-
-  test:integration:
-    desc: Run integration tests (includes Docker tests if image is built)
-    cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/test.sh" integration
+      - uv run pytest tests/e2e --docker {{.CLI_ARGS}}
 
   test:watch:
-    desc: Run tests on file changes (requires entr)
+    desc: Re-run the suite on file changes (requires entr)
     cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/test.sh" watch
+      - fd -e py -e sh -e bash . src tests install configs apps shell | entr -c uv run pytest
 
   # ================================================================
   # DOCUMENTATION

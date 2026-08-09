@@ -11,8 +11,8 @@ command — wrapping `brew upgrade` in `task brew-upgrade` adds a name to
 remember and nothing else.
 
 **Logic lives in shell, not YAML.** Installation logic sits in `install/`, where
-it can be tested with bats and read without counting indentation. The Taskfile
-calls those scripts. This is why the Taskfile stays short as the install grows.
+it can be tested and read without counting indentation. The Taskfile calls those
+scripts. This is why the Taskfile stays short as the install grows.
 
 **Platform detection is not reimplemented per task.** It lives in
 `install/platform-detection.sh` and the `install/ops/` scripts use it.

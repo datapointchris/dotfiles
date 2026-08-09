@@ -196,9 +196,10 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Python unit tests — covers parse_packages + packages verify logic
+      # The whole suite, which since the bats tiers ported is every test the repo
+      # has that does not want Docker or a network. `addopts` deselects those.
       - id: pytest
-        name: pytest (unit)
+        name: pytest
         entry: uv run pytest tests/
         language: system
         pass_filenames: false
@@ -213,16 +214,4 @@ repos:
         language: system
         pass_filenames: false
         files: ^(docs/|mkdocs\.yml$)
-        stages: [pre-commit]
-
-      # Bash/library unit tests via bats
-      # Gated to install-layer changes — the tests only cover installer scripts
-      # and shared libraries, so unrelated edits (shell/, configs/, docs/, apps/)
-      # should not pay the bats startup cost.
-      - id: bats-unit
-        name: bats unit tests
-        entry: task test:unit
-        language: system
-        pass_filenames: false
-        files: ^(install/|install\.sh$|update\.sh$|tests/install/)
         stages: [pre-commit]

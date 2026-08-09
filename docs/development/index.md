@@ -6,7 +6,7 @@ icon: material/code-braces
 
 Contributing to and testing dotfiles.
 
-- **[Testing](testing.md)** — bats, pytest, and the Docker-backed installation tests
+- **[Testing](testing.md)** — the tiers, how the shell is tested from pytest, and the Docker-backed installation runs
 - **[Publishing Docs](publishing-docs.md)** — how this site deploys, and the one rule about `gh-pages`
 
 Go applications here (`toolbox`, `sesh`) install through `go_tools` in
