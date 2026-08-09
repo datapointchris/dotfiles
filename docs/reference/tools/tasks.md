@@ -15,15 +15,20 @@ it can be tested and read without counting indentation. The Taskfile calls those
 scripts. This is why the Taskfile stays short as the install grows.
 
 **Platform detection is not reimplemented per task.** It lives in
-`install/platform-detection.sh` and the `install/ops/` scripts use it.
+`install/platform-detection.sh`, which the Taskfile and the remaining bash
+installers source.
 
 ## Two front doors, one implementation
 
 `task <verb>` works from inside the repo; `dotfiles <verb>` works from anywhere.
-Both call the same scripts in `install/ops/`, so neither is the "real" one and
-they cannot drift. Use whichever is closer to hand — `dotfiles` when you are in
-another project, `task` when you are already here. See
+Both reach `src/dotfiles/`, so neither is the "real" one and they cannot drift.
+Use whichever is closer to hand — `dotfiles` when you are in another project,
+`task` when you are already here. See
 [Management Interface](../../architecture/management-interface.md).
+
+What `task` keeps for itself is the work that is about the repo rather than the
+machine: the test suite and the docs site. Those have no place in a CLI whose job
+is managing an installed machine.
 
 ## Windows setup (from WSL)
 

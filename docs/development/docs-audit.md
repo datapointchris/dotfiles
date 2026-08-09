@@ -191,3 +191,93 @@ mattered — one agent reported `borders` as absent from `packages.yml`, and it 
 present at line 538 with its tap declared. **Spot-check agent findings before
 acting on them**; roughly one claim in twenty was wrong, always in the direction
 of over-reporting.
+
+---
+
+## Second pass: 2026-08-08
+
+Not a full audit. This was the docs half of step 9 of the Python conversion, so
+its scope was narrower and its trigger different: two structural changes had
+landed since the first audit — `PLATFORM` split into six machine coordinates, and
+bats was deleted — and the question was which pages had been left describing the
+old shape.
+
+### Baseline
+
+| Measure | 2026-08-06 (after) | 2026-08-08 |
+| --- | --- | --- |
+| Lines in `docs/` | 5,656 | 5,617 |
+| Files | 54 | 56 |
+| `docs/learnings/` files | 22 | 22 |
+
+Two pages added (`system-configuration.md`, `observability.md`) against a small
+net reduction in lines, which is the ratio to want.
+
+### What the first audit's test said
+
+**Staleness at the next audit is direct evidence of non-use.** Applied to the
+three pages the first audit named as highest-churn-but-surviving:
+
+- `architecture/index.md` — **stale**, and its commits since were mostly dragging
+  it behind code changes. Its shell-source section still described
+  `source "$SHELL_DIR/$PLATFORM.sh"`, two structural revisions out of date. Kept
+  rather than deleted, because the sections around it carry real reasoning and
+  the page is the entry point the sidebar puts first — but it is now the page to
+  watch, not `package-management.md`.
+- `architecture/package-management.md` — **not stale**. Highest churn of any
+  surviving page and correct throughout; the churn is the subject moving, which
+  is the healthy case.
+- `apps/menu.md` — gone with the menu suite, as the first audit predicted.
+
+### What was found
+
+Every one is the same failure mode: **a page describing a shape the code no
+longer has**, none of them caught by `refcheck` or `mkdocs --strict` because the
+paths and links were all valid.
+
+| Page | The claim | Reality |
+| --- | --- | --- |
+| `architecture/index.md` | `.zshrc` sources `$SHELL_DIR/$PLATFORM.sh` | It loops over six `DOTFILES_*` overlay directories |
+| `architecture/index.md` | `shell/{platform}/{platform}.sh` (macos, arch, wsl, linux, windows) | `shell/<axis>/<value>/`, and most axes have no directory at all |
+| `architecture/index.md` | "Deep Dives" card grid | Named 2 of 9 architecture pages; wrong since the third was added |
+| `index.md` | "platform-specific overrides", "Platform is the only axis" | Six axes since the split |
+| `learnings/app-installation-patterns.md` | `apps/{platform}/`, with a `create_symlinks` call | Neither the layout nor the function exists |
+| `reference/tools/tasks.md` | Both front doors call `install/ops/` | They reach `src/dotfiles/`; `ops/` holds one script |
+| `reference/tools/symlinks.md` | "Only the resolved platform's overlay file is linked" | The coordinate overlays, keeping their axis path |
+| `architecture/management-interface.md` | Group→Contents table | `--list` prints it, and it had drifted |
+| `index.md` | `menu <term>` | Left with the menu suite; it is `doit find` |
+| `development/testing.md` | Three test layers, two of them bats | One runner |
+
+Two were code rather than docs, found by writing the page that would have had to
+describe them: `bridge.ops()` had no callers, and `check --json` emitted a bare
+array where `status.json` held a versioned document — two shapes for one answer,
+both crossing machines.
+
+### What did not need correcting
+
+Verified rather than assumed this time, since the first audit's finding was that
+roughly one agent claim in twenty was wrong:
+
+- **Every app verb the docs name exists.** `theme change/apply/update/list`,
+  `font apply/update/install`, `toolbox list/show/remind/check`, `notes journal`
+  — all checked against `--help`. `notes journal` was wrong at the first audit
+  and has since been fixed.
+- **Every `dotfiles` verb the docs name exists**, checked the same way.
+- `reference/platforms/tools.md`, `configuration/docker.md`,
+  `architecture/tmux-sessions.md` — untouched and still correct. All three spend
+  their lines on decisions.
+
+### The lesson this pass adds
+
+The first audit's rule was *do not enumerate what a command prints*. This pass
+found the harder case: **a page that describes a mechanism rather than a list,
+and the mechanism changes.** No enumeration rule catches
+`source "$SHELL_DIR/$PLATFORM.sh"` — it is prose about how something works, which
+is exactly what a doc is supposed to contain.
+
+What catches it is treating a structural change as a docs change. `refcheck`
+finds a moved file and `mkdocs --strict` finds a broken link, but nothing
+mechanical finds a page still describing the design you just replaced. The
+practical version: after landing a change that alters a *shape* — a layout, a
+lookup, a dispatch — grep `docs/` for the old vocabulary before the commit, not
+at the next audit. `PLATFORM` was one grep away for two days.

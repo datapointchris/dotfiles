@@ -63,18 +63,22 @@ Run installation with: `bash install.sh --machine archlinux-personal-workstation
 
 ## Shell Source Files
 
-Shell functions and aliases live in `shell/` organized by platform, deployed via symlinks — no build step required.
+Shell functions and aliases live in `shell/`, deployed via symlinks — no build step required.
 
-- **Cross-platform**: `shell/common/functions.sh` and `shell/common/aliases.sh` → `~/.local/shell/`
-- **Platform-specific**: `shell/{platform}/{platform}.sh` (macos, arch, wsl, linux, windows) → `~/.local/shell/{platform}.sh`
+- **Shared**: `shell/common/` → `~/.local/shell/`
+- **Per coordinate**: `shell/<axis>/<value>/` → `~/.local/shell/<axis>/<value>/`, keeping the path so a sourced file says which coordinate asked for it
 - **Machine-local**: `~/.local/shell/local.sh` — a real file that exists in no repo, described below
-- **`.zshrc` sources them explicitly** using the `$PLATFORM` env var: `source "$SHELL_DIR/$PLATFORM.sh"`, then `local.sh` if it exists
 
-`shell/` is keyed by platform and nothing else. A `MACHINE_ROLE` axis (work, personal, server) sat alongside it and was removed: it was rendered from the same manifest as `PLATFORM`, so it carried no information `MACHINE` did not already carry, and it declared three values while shipping a single file that served a single machine. Its one file was employer infrastructure, which is now handled by the machine-local overlay instead — a better fit, because that code was never shareable in the first place.
+`.zshrc` sources `common/` and then loops over the six `DOTFILES_*` variables in
+`~/.env`, sourcing every `.sh` in each overlay it finds and `local.sh` last. An
+overlay directory that does not exist is skipped, which is most of them: an axis
+earns a directory only where something actually differs along it.
+
+The axes replaced a single fused `PLATFORM` string, which could not say that the apt helpers belong to Ubuntu-on-WSL *and* to the Debian LXC, or that the Wayland config belongs to any Linux running it rather than to Arch. A `MACHINE_ROLE` axis (work, personal, server) was tried alongside `PLATFORM` and removed before the split: it was rendered from the same manifest, so it carried no information `MACHINE` did not, and it declared three values while shipping a single file that served a single machine. That file was employer infrastructure, which the machine-local overlay handles instead — a better fit, because that code was never shareable in the first place.
 
 ### The machine-local overlay
 
-`~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the platform overlay exported.
+`~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the coordinate overlays exported.
 
 The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env apply` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles check` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
 

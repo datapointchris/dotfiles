@@ -73,8 +73,9 @@ adds a function in `shell/common/functions.sh` instead; a symlinked command
 cannot export into the shell that ran it.
 
 **`shell/`** → `~/.local/shell/`. Shell *code* — functions and aliases — rather
-than config, which is why it does not sit under `~/.config`. Only the resolved
-platform's overlay file is linked.
+than config, which is why it does not sit under `~/.config`. Only the overlays
+this machine's coordinates select are linked, and each keeps its `<axis>/<value>`
+path so a sourced file says which coordinate asked for it.
 
 `~/.local/shell/local.sh` is the exception to all of it: a real file, not a
 symlink, holding machine-local shell code that exists in no repo. Nothing

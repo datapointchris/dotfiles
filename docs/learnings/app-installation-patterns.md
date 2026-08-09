@@ -24,18 +24,15 @@ go_tools:
 
 ### 2. Shell Script Apps (Symlink Pattern)
 
-**Examples**: `menu`, `notes`, `aws-profiles`
+**Examples**: `notes`, `packup`, `aws-profiles`
 
-**Location**: `apps/{platform}/` (executable files)
+**Location**: `apps/common/`, plus `apps/<axis>/<value>/` for one that only makes
+sense at a coordinate — the rofi menus are under `apps/display/wayland/`.
 
-**Installation**: Symlinked from repo → `~/.local/bin/` by symlinks manager:
-
-```python
-create_symlinks(apps_dir / "common", "apps-common", target_dir=Path.home() / ".local/bin")
-create_symlinks(apps_dir / platform, f"apps-{platform}", target_dir=Path.home() / ".local/bin")
-```
-
-`create_symlinks()` skips directories (via `rglob` + `is_file()`), so only executable files are linked.
+**Installation**: every layer the machine's coordinates select is symlinked into
+`~/.local/bin/` by `dotfiles symlinks apply`. Directories are skipped, so only
+executable files are linked, and the layers flatten onto one destination because
+a command has to be on `PATH` rather than under a directory naming why it exists.
 
 **An app that has to change the calling shell is two pieces: a command and a function.** A
 subprocess cannot export a variable into the shell that ran it, so anything setting `AWS_PROFILE`,
@@ -89,7 +86,7 @@ The pin is not optional. Each of these tools carries `pyselfupdate`, which reads
 | Category | Development | Installed | Binary/Symlink |
 | --- | --- | --- | --- |
 | Go apps | ~/tools/{app}/ | GitHub | ~/go/bin/{app} |
-| Shell scripts | apps/{platform}/ | (same) | ~/.local/bin/{app} → repo |
+| Shell scripts | apps/common/ or apps/{axis}/{value}/ | (same) | ~/.local/bin/{app} → repo |
 | Personal tools | ~/tools/{app}/ | ~/.local/share/{app}/ | ~/.local/bin/{app} → .local/share |
 | Python tools | ~/tools/{app}/ | GitHub | ~/.local/bin/{app} (uv-managed) |
 
