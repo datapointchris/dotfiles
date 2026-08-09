@@ -21,6 +21,7 @@
 set -euo pipefail
 
 REGISTRY="${REPOS_JSON:-${XDG_CONFIG_HOME:-$HOME/.config}/repos.json}"
+LANE=""
 # The Syncthing machines keep the registry in ~/dev, which is not an XDG path.
 [ -f "$REGISTRY" ] || REGISTRY="$HOME/dev/repos.json"
 
@@ -31,12 +32,15 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: pr-list [--registry PATH]
+Usage: pr-list [--registry PATH] [--lane]
 
 Prints every open PR across the registry's repos as a JSON array, oldest first.
 
 Each object: repo, slug, number, title, url, draft, created_at, age_days, path.
 `path` is empty when the repo is not checked out on this machine.
+
+--lane emits doit's lane document instead, so `doit dashboard` can read this
+directly and no consumer has to carry a copy of the shape.
 EOF
 }
 
@@ -51,6 +55,10 @@ while [ $# -gt 0 ]; do
     --registry)
       REGISTRY="${2:-}"
       shift 2
+      ;;
+    --lane)
+      LANE=1
+      shift
       ;;
     *) die "unknown argument: $1" ;;
   esac
@@ -174,4 +182,30 @@ from_bitbucket() {
     }
   )
   | sort_by(.created_at)
-'
+' | if [ -n "$LANE" ]; then
+  # doit's contract, emitted here so the dashboard needs no adapter and no copy
+  # of this shape. Thresholds are short on purpose: a PR is meant to be read the
+  # day it lands, not eventually.
+  jq '{
+    schema_version: 1,
+    generated_at: (now | todate),
+    lanes: [{
+      name: "prs",
+      title: "PRS",
+      meta: (if length == 0 then "none open"
+             else "\(length) open · oldest \(map(.age_days) | max)d" end),
+      rows: (sort_by(-.age_days) | .[:5] | map({
+        label: .repo,
+        text: (if .draft then "\(.title) (draft)" else .title end),
+        note: "\(.age_days)d",
+        urgency: (if .age_days >= 7 then "overdue" elif .age_days >= 3 then "due" else "none" end),
+        handle: "prs",
+      })),
+      grid: [],
+      total: length,
+      hints: ["prs --list"],
+    }]
+  }'
+else
+  cat
+fi
