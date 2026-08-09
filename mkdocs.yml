@@ -168,3 +168,4 @@ nav:
       - Pyright Config File Precedence: learnings/pyright-config-file-precedence.md
       - Ghostty Shader Reload: learnings/ghostty-shader-reload.md
       - Man Page Overstrike in Pagers: learnings/man-page-overstrike-in-pagers.md
+      - A USB DAC That Lies About Its Volume Range: learnings/usb-dac-lies-about-its-volume-range.md
