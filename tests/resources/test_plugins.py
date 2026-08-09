@@ -14,8 +14,10 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import engine
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Stage
+from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
 from dotfiles.resources import plugins
@@ -209,7 +211,12 @@ def test_cloning_is_selected_by_stage(tmp_path: Path, upstream: Path) -> None:
         },
     )
 
-    assert plugins.clone(live, Stage.SHELL_PLUGINS)
+    planned = [
+        event
+        for event in engine.assess(live, ['plugins'])
+        if isinstance(event.payload, Change) and event.payload.stage is Stage.SHELL_PLUGINS
+    ]
+    assert all(event.payload.ok for event in engine.execute(live, planned, Privilege(offer=False)))
 
     assert (live.home / '.config' / 'zsh' / 'plugins' / 'forgit').is_dir()
     assert not (live.home / '.config' / 'tmux' / 'plugins' / 'tpm').is_dir()

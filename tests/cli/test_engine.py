@@ -15,9 +15,13 @@ from dotfiles import engine
 from dotfiles import vocabulary
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
@@ -41,7 +45,7 @@ class Fake:
     def diff(self, plan: Plan, observed: object) -> tuple[Change, ...]:
         return self._changes
 
-    def perform(self, *args: object) -> object:  # pragma: no cover - assess never reaches it
+    def perform(self, session: Session, change: Change, privilege: object) -> Outcome:  # pragma: no cover
         raise AssertionError('assess must not write')
 
 
@@ -126,3 +130,60 @@ def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, mon
 
     assert events[0].stage is Stage.TOOLS
     assert events[1].stage is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Acting on what was decided
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class Writer(Fake):
+    """A resource whose perform records what it was handed, or raises."""
+
+    def __init__(self, name: str, *, changes: tuple[Change, ...] = (), explodes_on: str = '') -> None:
+        super().__init__(name, changes=changes)
+        self.performed: list[str] = []
+        self._explodes_on = explodes_on
+
+    def perform(self, session: Session, change: Change, privilege: object) -> Outcome:
+        if change.item == self._explodes_on:
+            raise RuntimeError('the disk went away')
+        self.performed.append(change.item)
+        return Outcome(change, OutcomeStatus.DONE, f'did {change.item}')
+
+
+def test_execute_acts_on_the_changes_that_were_planned(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The whole of "apply is plan then execute": what is acted on is what was
+    decided and printed, not a second measurement that may disagree."""
+    writer = Writer('packages', changes=(change('a'), change('b')))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    planned = list(engine.assess(session))
+    outcomes = [event.payload for event in engine.execute(session, planned, Privilege(offer=False))]
+
+    assert writer.performed == ['a', 'b']
+    assert all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
+
+
+def test_execute_skips_what_apply_cannot_repair(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A required machine-local value is real drift and not apply's to fix. It must
+    reach `check`, never `perform`."""
+    by_hand = Change('packages', Stage.TOOLS, 'WINDOWS_USER', Verdict.MISSING, repair=Repair.BY_HAND)
+    writer = Writer('packages', changes=(change('a'), by_hand))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    list(engine.execute(session, list(engine.assess(session)), Privilege(offer=False)))
+
+    assert writer.performed == ['a']
+
+
+def test_one_item_failing_does_not_abandon_the_rest(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolation belongs to the engine here too. Without it a run stops silently
+    part-way and the record says nothing about the half that never ran."""
+    writer = Writer('packages', changes=(change('a'), change('boom'), change('c')), explodes_on='boom')
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    payloads = [event.payload for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
+
+    assert writer.performed == ['a', 'c']
+    assert isinstance(payloads[1], Refusal)

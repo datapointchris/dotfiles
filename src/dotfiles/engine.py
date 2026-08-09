@@ -26,6 +26,8 @@ from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.privilege import Privilege
+from dotfiles.resources import Change
 from dotfiles.resources import Resource
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -70,6 +72,32 @@ def assess(session: Session, addresses: Iterable[str] | None = None) -> Iterator
 
     for address, resource in selected.items():
         yield from _measure(session, address, resource)
+
+
+def execute(session: Session, planned: Iterable[Event], privilege: Privilege) -> Iterator[Event]:
+    """Act on what `assess` decided, in the order the machine converges.
+
+    Takes the stream rather than a fresh measurement, which is the whole of "apply
+    is plan then execute": the changes acted on are the ones that were printed, not
+    a second look that may have found something different.
+
+    `perform` re-verifies live and returns `REFUSED` rather than forcing, so a plan
+    that has gone stale between the two halves is a reported outcome and not a bad
+    write. That re-check is what makes measuring once safe.
+
+    Isolation is the same as `assess`'s and for the same reason: one item failing
+    must not abandon the rest, or a run stops silently part-way through and the
+    record says nothing about the half that never ran.
+    """
+    known = resources()
+    for event in planned:
+        change = event.payload
+        if not isinstance(change, Change) or not change.actionable:
+            continue
+        try:
+            yield Event(event.resource, known[event.resource].perform(session, change, privilege), stage=change.stage)
+        except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
+            yield Event(event.resource, Refusal(f'{change.item}: {failed}'), stage=change.stage)
 
 
 def _measure(session: Session, address: str, resource: Resource) -> Iterator[Event]:

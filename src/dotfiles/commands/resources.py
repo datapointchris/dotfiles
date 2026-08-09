@@ -23,7 +23,8 @@ from dotfiles.output import hint
 from dotfiles.output import render_change
 from dotfiles.output import render_result
 from dotfiles.output import success
-from dotfiles.resources import Resource
+from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -58,43 +59,37 @@ def _session(machine: str | None) -> Session:
         raise typer.BadParameter(str(unresolved)) from unresolved
 
 
-def _reconcile_one(resource: Resource, session: Session) -> ExitCode:
-    """`check` plus acting on what it found, for one resource.
+def _reconcile_one(address: str, session: Session) -> ExitCode:
+    """`plan` plus acting on what it found, for one resource.
 
-    The same walk with the last step run, which is the whole of the check/apply
-    symmetry: nothing here decides whether to write, it decides whether to call
-    the only thing that does.
-
-    Authorization happens once, between the two, with the list of what needs it —
-    which is only possible because the changes are decided before any of them
-    runs. A resource with nothing privileged never prompts.
+    The same stream with the second half run, which is the whole of the plan/apply
+    symmetry: nothing here decides whether to write, it decides whether to call the
+    only thing that does. Measured once — the changes acted on are the ones that
+    were decided, not a second look that may disagree.
     """
+    from dotfiles import engine
     from dotfiles import privilege as privileges
-    from dotfiles.resources import escalations
 
-    changes = resource.diff(session.plan, resource.observe(session, session.plan))
-
-    privilege = privileges.Privilege()
-    privilege.authorize(escalations(changes))
-    try:
-        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
-    finally:
-        privilege.stop()
+    planned = list(engine.assess(session, [address]))
+    outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
 
     for outcome in outcomes:
-        if outcome.ok:
-            success(f'{outcome.change.item}: {outcome.message or outcome.status}')
+        if isinstance(outcome, Outcome):
+            (success if outcome.ok else error)(f'{outcome.change.item}: {outcome.message or outcome.status}')
         else:
-            error(f'{outcome.change.item}: {outcome.message or outcome.status}')
+            error(str(outcome.reason))
 
-    if any(not outcome.ok for outcome in outcomes):
+    if any(not isinstance(outcome, Outcome) or not outcome.ok for outcome in outcomes):
         return ExitCode.ISSUE
-    # What `apply` could not repair is still drift, and saying so is what keeps a
-    # machine awaiting a safekeep restore from reading as converged.
-    remaining = [change for change in changes if change.drifted and not change.actionable]
-    for change in remaining:
+
+    # What `apply` could not repair is still a finding, and saying so is what keeps
+    # a machine awaiting a safekeep restore from reading as converged. It is
+    # `check`'s answer rather than `plan`'s, which is why it is reported and not
+    # counted as drift left behind.
+    _, attention, _ = reconcile.sift([event.payload for event in planned if isinstance(event.payload, Change)])
+    for change in attention:
         render_change(change)
-    return ExitCode.DRIFT if remaining else ExitCode.CONVERGED
+    return ExitCode.ISSUE if attention else ExitCode.CONVERGED
 
 
 def available_sources() -> list[str]:
@@ -314,9 +309,17 @@ def symlinks_apply(
     refusal, for adopting a machine that already had dotfiles of its own.
     """
     from dotfiles import deploy
+    from dotfiles.commands.manage import report_stray_branch
+
+    # Before the walk, not in the epilogue: this is the command that writes the
+    # checked-out branch into $HOME, so which branch it read from belongs above
+    # what it did rather than after it.
+    report_stray_branch()
 
     session = Session.resolve(machine, force=force)
-    raise typer.Exit(ExitCode.CONVERGED if deploy.deploy(session) else ExitCode.DRIFT)
+    outcome = _reconcile_one('symlinks', session)
+    deploy.epilogue(session)
+    raise typer.Exit(outcome)
 
 
 @symlinks_app.command('show')
@@ -361,9 +364,7 @@ def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
 @env_app.command('apply')
 def env_apply(machine: str = MachineOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
-    from dotfiles.resources import env as env_resource
-
-    raise typer.Exit(_reconcile_one(env_resource.RESOURCE, _session(machine)))
+    raise typer.Exit(_reconcile_one('env', _session(machine)))
 
 
 @env_app.command('show')

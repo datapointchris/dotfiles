@@ -30,12 +30,9 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
-from dotfiles.output import success
-from dotfiles.output import warn
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
@@ -176,33 +173,6 @@ def _clone_subdirectory(change: Change, repo: str, inner: str, target: Path) -> 
     finally:
         shutil.rmtree(staging, ignore_errors=True)
     return Outcome(change, OutcomeStatus.DONE, f'cloned {inner} from {repo} into {target}')
-
-
-def clone(session: Session, stage: Stage) -> bool:
-    """Clone every missing plugin at one stage, reporting whether all succeeded.
-
-    By stage, because they live on opposite sides of the symlink deployment: the
-    zsh plugins can land any time, while TPM has to be there before the pass that
-    reads the tmux config it was deployed alongside, and the yazi plugins go
-    after that pass so nothing writes into `~/.config/yazi` before the repo's own
-    files are there.
-    """
-    changes = [
-        change
-        for change in RESOURCE.diff(session.plan, RESOURCE.observe(session, session.plan))
-        if change.actionable and change.stage is stage
-    ]
-    # Nothing here escalates — a plugin is a clone into $HOME — so the privilege
-    # is constructed and never authorized, which is the state that refuses.
-    outcomes = [RESOURCE.perform(session, change, Privilege()) for change in changes]
-
-    for outcome in outcomes:
-        if outcome.ok:
-            success(f'{outcome.change.item}: {outcome.message}')
-        else:
-            warn(f'{outcome.change.item}: {outcome.message}')
-
-    return all(outcome.ok for outcome in outcomes)
 
 
 def _planned(plan: Plan) -> tuple[DesiredItem, ...]:

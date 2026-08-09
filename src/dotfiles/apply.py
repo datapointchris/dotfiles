@@ -24,7 +24,6 @@ thing that keeps the halves from drifting while both exist.
 
 from __future__ import annotations
 
-import dataclasses
 import datetime as dt
 import functools
 import os
@@ -55,8 +54,8 @@ from dotfiles.output import warn
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
-from dotfiles.resources import plugins
-from dotfiles.resources import system
+from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -569,14 +568,53 @@ def _uv_tools(context: Run) -> bool:
     return run_installer(context, COMMON / 'language-tools' / 'uv-tools.sh', 'uv-tools')
 
 
+def _converge(context: Run, address: str, stage: Stage | None = None) -> bool:
+    """One resource's work — or one stage of it — through the engine both verbs share.
+
+    Every phase that reached into a resource had grown its own observe/diff/perform
+    loop with its own rendering: three of the thirteen copies of the walk, each with
+    a different idea of what a refusal looks like. This is the one walk, and what it
+    still returns is a bool only because `Phase.run` does.
+
+    `stage` is for the plugins, which live on opposite sides of the symlink pass:
+    TPM has to exist before the pass that deploys the tmux config it reads, and the
+    yazi plugins go after it so nothing writes into `~/.config/yazi` first.
+    """
+    from dotfiles import engine
+
+    session = context.session
+    planned = [
+        event
+        for event in engine.assess(session, [address])
+        if isinstance(event.payload, Change) and (stage is None or event.payload.stage is stage)
+    ]
+
+    outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
+    for outcome in outcomes:
+        if isinstance(outcome, Outcome) and outcome.ok:
+            err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
+        elif isinstance(outcome, Outcome):
+            _install_failed(context, outcome.change.item, outcome.message)
+        else:
+            warn(outcome.reason)
+
+    for change in (event.payload for event in planned if isinstance(event.payload, Change)):
+        if not change.actionable and change.drifted:
+            warn(f'{change.item}: {change.detail}')
+
+    return all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
+
+
 def _shell_plugins(context: Run) -> bool:
     heading('Shell plugins')
-    return plugins.clone(context.session, Stage.SHELL_PLUGINS)
+    return _converge(context, 'plugins', Stage.SHELL_PLUGINS)
 
 
 def _symlinks(context: Run) -> bool:
     heading('Symlinking dotfiles')
-    return deploy.deploy(context.session)
+    deployed = _converge(context, 'symlinks')
+    deploy.epilogue(context.session)
+    return deployed
 
 
 def _tmux_plugins(context: Run) -> bool:
@@ -587,7 +625,7 @@ def _tmux_plugins(context: Run) -> bool:
     resolver to plan per plugin.
     """
     heading('tmux plugins')
-    if not plugins.clone(context.session, Stage.TMUX_PLUGINS):
+    if not _converge(context, 'plugins', Stage.TMUX_PLUGINS):
         return False
     if not context.wants('tmux_plugins'):
         return True
@@ -603,7 +641,7 @@ def _yazi_plugins(context: Run) -> bool:
     running six stages *earlier* is what put two writers on one path.
     """
     heading('yazi plugins')
-    return plugins.clone(context.session, Stage.YAZI_PLUGINS)
+    return _converge(context, 'plugins', Stage.YAZI_PLUGINS)
 
 
 def _nvim_plugins(context: Run) -> bool:
@@ -616,41 +654,19 @@ def _nvim_plugins(context: Run) -> bool:
 def _system_config(context: Run) -> bool:
     """Group memberships, unit enablement, files under `/etc`, and the login shell.
 
-    The system resource's own apply walk — observe, diff, perform — reached from
-    the phase registry, because that is still what `dotfiles apply` drives. There
-    is no second description of the work here: what this phase writes is exactly
-    what `dotfiles system check` prints.
+    Through the one engine, like every other converted phase, so what this writes
+    is exactly what `dotfiles system plan` prints. It used to narrow the plan to
+    this stage before observing, which skipped the package half of the system
+    resource; going through the engine observes both and filters after. That costs
+    one package-inventory query per run and buys the last of the hand-written
+    walks — and the query goes when the inventory becomes a Session cache.
 
     The password is asked for at the write that needs it, which is now the rule
-    everywhere rather than a concession here — keeping a sudo timestamp alive does
+    everywhere rather than a concession here: keeping a sudo timestamp alive does
     not work on macOS, so a front prompt bought nothing and cost a password on
     machines needing none. `plan` states the count in advance.
     """
-    session = context.session
-    plan = dataclasses.replace(session.plan, items=tuple(item for item in session.plan.items if item.stage is Stage.SYSTEM_CONFIG))
-    if not plan.items:
-        return True
-
-    resource = system.RESOURCE
-    changes = resource.diff(plan, resource.observe(session, plan))
-    if not changes:
-        return True
-
-    heading('System configuration')
-    privilege = privileges.Privilege()
-    outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
-
-    for outcome in outcomes:
-        if outcome.ok:
-            err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
-        else:
-            _install_failed(context, outcome.change.item, outcome.message)
-
-    for change in changes:
-        if not change.actionable:
-            warn(f'{change.item}: {change.detail}')
-
-    return all(outcome.ok for outcome in outcomes)
+    return _converge(context, 'system', Stage.SYSTEM_CONFIG)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
