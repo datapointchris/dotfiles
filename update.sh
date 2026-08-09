@@ -36,7 +36,6 @@ if [[ -f "$HOME/.env" ]]; then
   set +a
 fi
 
-PHASE_VERB="update"
 source "$DOTFILES_DIR/install/phases.sh"
 
 # ================================================================

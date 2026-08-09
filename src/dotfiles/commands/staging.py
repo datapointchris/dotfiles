@@ -50,21 +50,23 @@ def stage(archive: str = typer.Argument(..., help='Path to a bundle archive')) -
 @bundle_app.command('check')
 def check() -> None:
     """Report whether a usable bundle is staged."""
-    error('bundle check arrives with the resolver, which is what knows the plan a bundle must satisfy')
+    error('bundle check is not built: it diffs a staged bundle against the plan the resolver produces')
+    hint('the resolver it was waiting on has landed; what it reads is the document `dotfiles check --json` emits')
     raise typer.Exit(ExitCode.ISSUE)
 
 
 @bundle_app.command('show')
 def show() -> None:
     """List what a staged bundle contains."""
-    error('bundle show arrives with the resolver')
+    error('bundle show is not built: it lists a staged bundle, and staging is not wired up either')
     raise typer.Exit(ExitCode.ISSUE)
 
 
 @bundle_app.command('prune')
 def prune() -> None:
     """Remove staged bundles."""
-    error('bundle prune arrives with the resolver')
+    error('bundle prune is not built, and may never need to be: staging moves to $XDG_RUNTIME_DIR, which empties on reboot')
+    hint('a staged bundle today is under ~/installers and is removed by hand')
     raise typer.Exit(ExitCode.ISSUE)
 
 

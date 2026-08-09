@@ -34,7 +34,7 @@ from dotfiles import resolve
 
 def sourced(*expressions: str) -> list[str]:
     """Ask bash to print something after sourcing phases.sh, never parse the file."""
-    script = f'PHASE_VERB=install; source "{paths.INSTALL_DIR}/phases.sh"; ' + '; '.join(expressions)
+    script = f'source "{paths.INSTALL_DIR}/phases.sh"; ' + '; '.join(expressions)
     result = subprocess.run(
         ['bash', '-c', script],
         capture_output=True,

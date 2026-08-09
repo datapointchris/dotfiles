@@ -1,24 +1,23 @@
 #!/usr/bin/env bash
 
-# Phase registry, selection, and shared argument handling for install.sh and update.sh.
+# Phase registry, selection, and shared argument handling for update.sh.
 #
-# Both commands walk the same registry in the same order and accept the same
-# selectors; only the function a phase dispatches to differs. One registry is
-# what stops the two surfaces drifting — before this, update took group names
-# and install took nothing at all, and the phase names update printed under
-# --list could not be selected on either.
+# It served install.sh too until that became a bootstrap stub for `dotfiles
+# apply`, and carried an install_fn column naming functions no bash defines any
+# more. What remains is the update half, which `apply.REGISTRY` in Python has to
+# keep naming the same phases in the same order until update converts —
+# `tests/cli/test_phase_registry.py` is what asserts that.
 #
-# Set PHASE_VERB to "install" or "update" before sourcing.
-#
-# Format: name|group|owner_aware|install_fn|update_fn
+# Format: name|group|owner_aware|update_fn
 #
 # owner_aware marks a phase whose contents can be traced to a GitHub owner, and
 # so can be narrowed by --mine. Phases driven by a registry instead (apt, npm,
 # PyPI) have no owner, and are skipped under --mine rather than silently running
 # in full.
 #
-# `-` for either function means the phase does not exist for that verb:
-# symlinking and the zsh setup are deployment steps with nothing to update.
+# `-` means the phase has nothing to update: symlinking and the zsh setup are
+# deployment steps, and yazi's plugins are declared clones the Python resource
+# owns outright.
 #
 # Registry order is execution order, which is why the two config phases sit
 # among the plugin phases: symlinks must land after the tools that provide
@@ -29,28 +28,28 @@ OWNER="datapointchris"
 PHASE_GROUPS=(system languages tools config plugins)
 
 PHASE_REGISTRY=(
-  "system-packages|system|no|install_system_packages|update_system_packages"
-  "go-toolchain|languages|no|install_go_toolchain|update_go_toolchain"
-  "rust-toolchain|languages|no|install_rust_toolchain|update_rust_toolchain"
-  "uv|languages|no|install_uv|update_uv"
-  "go-tools|tools|yes|install_go_tools|update_go_tools"
-  "github-releases|tools|yes|install_github_releases|update_github_releases"
-  "custom-installers|tools|yes|install_custom_installers|update_custom_installers"
-  "cargo|tools|yes|install_cargo_packages|update_cargo_packages"
+  "system-packages|system|no|update_system_packages"
+  "go-toolchain|languages|no|update_go_toolchain"
+  "rust-toolchain|languages|no|update_rust_toolchain"
+  "uv|languages|no|update_uv"
+  "go-tools|tools|yes|update_go_tools"
+  "github-releases|tools|yes|update_github_releases"
+  "custom-installers|tools|yes|update_custom_installers"
+  "cargo|tools|yes|update_cargo_packages"
   # Between cargo and npm-globals, not in the languages group: fnm ships as a
   # cargo package, and the globals must install against the Node this pins.
-  "node-toolchain|tools|no|install_node_toolchain|update_node_toolchain"
-  "npm-globals|tools|no|install_npm_globals|update_npm_globals"
-  "uv-tools|tools|yes|install_uv_tools|update_uv_tools"
-  "shell-plugins|plugins|no|install_shell_plugins|update_shell_plugins"
-  "symlinks|config|no|install_symlinks|-"
-  "tmux-plugins|plugins|no|install_tmux_plugins|update_tmux_plugins"
+  "node-toolchain|tools|no|update_node_toolchain"
+  "npm-globals|tools|no|update_npm_globals"
+  "uv-tools|tools|yes|update_uv_tools"
+  "shell-plugins|plugins|no|update_shell_plugins"
+  "symlinks|config|no|-"
+  "tmux-plugins|plugins|no|update_tmux_plugins"
   # No update half, and no bash half at all: yazi plugins are declared clones the
   # Python resource owns. The row exists so the two registries keep naming the
   # same phases in the same order, which is what stops them drifting.
-  "yazi-plugins|plugins|no|install_yazi_plugins|-"
-  "nvim-plugins|plugins|no|install_nvim_plugins|update_nvim_plugins"
-  "system-config|config|no|install_system_config|-"
+  "yazi-plugins|plugins|no|-"
+  "nvim-plugins|plugins|no|update_nvim_plugins"
+  "system-config|config|no|-"
 )
 
 GROUPS_SELECTED=()
@@ -64,16 +63,11 @@ DRY_RUN=false
 # REGISTRY ACCESS
 # ================================================================
 
-# The function this phase dispatches to under the current verb, or "-" when the
-# phase does not apply.
+# The function this phase dispatches to, or "-" when it has nothing to update.
 phase_function() {
-  local entry="$1" install_fn update_fn
-  IFS='|' read -r _ _ _ install_fn update_fn <<<"$entry"
-  if [[ "$PHASE_VERB" == "install" ]]; then
-    echo "$install_fn"
-  else
-    echo "$update_fn"
-  fi
+  local entry="$1" update_fn
+  IFS='|' read -r _ _ _ update_fn <<<"$entry"
+  echo "$update_fn"
 }
 
 phase_applies() {
@@ -255,7 +249,7 @@ run_selected_phases() {
 
 list_phases() {
   local group entry name phase_group owner_aware shown
-  help_header "$PHASE_VERB groups and phases"
+  help_header "update groups and phases"
   help_text "Any group or phase name below can be given as a positional selector."
   for group in "${PHASE_GROUPS[@]}"; do
     shown=false
