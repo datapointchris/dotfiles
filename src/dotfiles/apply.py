@@ -26,6 +26,7 @@ registry's order alone.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import datetime as dt
 import functools
 import tempfile
@@ -94,6 +95,15 @@ class Run:
     machine: str
     coords: coordinates.Coordinates
     offline: bool = False
+    through: Stage | None = None
+    """How far the machine converges, or None for all the way.
+
+    Applied to every phase's own `Selection` rather than by dropping phases, so a
+    phase whose providers straddle the ceiling runs the half below it. Dropping
+    whole phases would make the ceiling mean something different depending on how
+    the registry happens to group providers, which is exactly the coupling a stage
+    exists to avoid.
+    """
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
 
@@ -144,6 +154,7 @@ class Run:
         *,
         offline: bool = False,
         owner: str | None = None,
+        through: Stage | None = None,
     ) -> Run:
         """Read the declaration for `machine`, or for whatever `~/.env` says this is.
 
@@ -172,6 +183,7 @@ class Run:
             machine=name,
             coords=declared.coordinates,
             offline=offline,
+            through=through,
             owner=owner,
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
         )
@@ -331,6 +343,8 @@ def _converge(context: Run, selection: engine.Selection) -> bool:
     over a walk that measured all three.
     """
     session = context.session
+    if context.through is not None:
+        selection = dc.replace(selection, through=context.through)
     planned = [event for event in engine.assess(session, selection) if isinstance(event.payload, Change)]
 
     outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
@@ -503,6 +517,7 @@ def apply_machine(
     offline: bool = False,
     owner: str | None = None,
     providers: frozenset[str] | None = None,
+    through: Stage | None = None,
 ) -> ExitCode:
     """Run the selected phases and report whether the machine converged.
 
@@ -530,7 +545,7 @@ def apply_machine(
         return ExitCode.ISSUE
 
     try:
-        context = Run.resolve(machine, offline=offline, owner=owner)
+        context = Run.resolve(machine, offline=offline, owner=owner, through=through)
     except Declaration as problem:
         warn(str(problem))
         return ExitCode.USAGE
