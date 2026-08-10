@@ -6,16 +6,15 @@ reachable, move the tarball across, then `task windows:offline`.
     python -m dotfiles.windows_bundle <output.tar.gz> [--print-path]
 
 The archive holds a flat set of .exe files plus versions.txt, which is what
-setup-windows.sh's --offline mode expects.
+`dotfiles windows apply --offline` expects.
 
 Checksums are verified here for the same reason they are in the Linux bundler:
 the machine this is built for cannot reach the release API, so it cannot learn
 which asset holds a checksum, and verification has to happen where it can. The
 shell version this replaced did not verify at all.
 
-Reached from `install/wsl/setup-windows.sh` as `dotfiles_python -m`, which
-`install/common/lib/python.sh` defines as the CLI's own `sys.executable` and
-documents as never the system interpreter. It carried a stdlib-only rule for that
+Reached as `dotfiles windows create`, and still runnable as `python -m` for a
+build on a machine with no installed CLI. It carried a stdlib-only rule for a
 system interpreter until 2026-08-08; see src/dotfiles/create_bundle.py for why
 that rule named nobody.
 """
@@ -33,25 +32,10 @@ import zipfile
 from pathlib import Path
 
 from dotfiles import github_release
+from dotfiles.windows import TOOLS
+from dotfiles.windows import Tool
 
 log = logging.getLogger('windows-bundle')
-
-# The Windows build of each tool, which packages.yml does not describe: its
-# sections carry the Linux and macOS asset patterns, and these repos name their
-# Windows assets differently enough that neither can be derived from the other.
-#
-# Placeholders are packages.yml's, not a second vocabulary — {version} is the
-# tag, {version_num} the tag without its leading v.
-WINDOWS_TOOLS = [
-    {'name': 'zoxide', 'repo': 'ajeetdsouza/zoxide', 'asset': 'zoxide-{version_num}-x86_64-pc-windows-msvc.zip', 'exe': 'zoxide.exe'},
-    {'name': 'eza', 'repo': 'eza-community/eza', 'asset': 'eza.exe_x86_64-pc-windows-gnu.zip', 'exe': 'eza.exe'},
-    {'name': 'fzf', 'repo': 'junegunn/fzf', 'asset': 'fzf-{version_num}-windows_amd64.zip', 'exe': 'fzf.exe'},
-    {'name': 'jq', 'repo': 'jqlang/jq', 'asset': 'jq-windows-amd64.exe', 'exe': 'jq.exe'},
-    {'name': 'bat', 'repo': 'sharkdp/bat', 'asset': 'bat-{version}-x86_64-pc-windows-msvc.zip', 'exe': 'bat.exe'},
-    {'name': 'rg', 'repo': 'BurntSushi/ripgrep', 'asset': 'ripgrep-{version}-x86_64-pc-windows-msvc.zip', 'exe': 'rg.exe'},
-    {'name': 'fd', 'repo': 'sharkdp/fd', 'asset': 'fd-{version}-x86_64-pc-windows-msvc.zip', 'exe': 'fd.exe'},
-    {'name': 'delta', 'repo': 'dandavison/delta', 'asset': 'delta-{version}-x86_64-pc-windows-msvc.zip', 'exe': 'delta.exe'},
-]
 
 
 class BundleError(Exception):
@@ -85,31 +69,31 @@ def extract_exe(archive: Path, exe_name: str, destination: Path) -> None:
         shutil.move(str(found), destination)
 
 
-def fetch_tool(tool: dict, staging: Path) -> str:
+def fetch_tool(tool: Tool, staging: Path) -> str:
     """Download one tool into the staging directory and return its tag."""
-    tag = github_release.latest_version(tool['repo'])
+    tag = github_release.latest_version(tool.repo)
     if not tag:
-        raise BundleError(f'Could not fetch latest release tag for {tool["repo"]}')
+        raise BundleError(f'Could not fetch latest release tag for {tool.repo}')
 
-    asset = expand_asset(tool['asset'], tag)
-    url = f'https://github.com/{tool["repo"]}/releases/download/{tag}/{asset}'
-    log.info('  %s (%s)', tool['name'], tag)
+    asset = expand_asset(tool.asset, tag)
+    url = f'https://github.com/{tool.repo}/releases/download/{tag}/{asset}'
+    log.info('  %s (%s)', tool.name, tag)
 
     with tempfile.TemporaryDirectory() as workspace:
         download = Path(workspace) / asset
-        if not github_release.download_asset(url, download, tool['repo'], tag, asset):
+        if not github_release.download_asset(url, download, tool.repo, tag, asset):
             raise BundleError(f'Failed to download {url}')
 
-        outcome = github_release.verify_release_checksum(download, asset, tool['repo'], tag)
+        outcome = github_release.verify_release_checksum(download, asset, tool.repo, tag)
         if outcome is github_release.Verification.FAILED:
-            raise BundleError(f'Checksum verification failed for {tool["name"]}')
+            raise BundleError(f'Checksum verification failed for {tool.name}')
         if outcome is github_release.Verification.UNPUBLISHED:
-            log.warning('    %s publishes no checksum for %s', tool['repo'], asset)
+            log.warning('    %s publishes no checksum for %s', tool.repo, asset)
 
         if asset.endswith('.exe'):
-            shutil.move(str(download), staging / tool['exe'])
+            shutil.move(str(download), staging / tool.exe)
         else:
-            extract_exe(download, tool['exe'], staging / tool['exe'])
+            extract_exe(download, tool.exe, staging / tool.exe)
 
     return tag
 
@@ -124,14 +108,14 @@ def build(output: Path) -> Path:
 
     with tempfile.TemporaryDirectory() as workspace:
         staging = Path(workspace)
-        versions = [f'{tool["name"]} {fetch_tool(tool, staging)}' for tool in WINDOWS_TOOLS]
+        versions = [f'{tool.name} {fetch_tool(tool, staging)}' for tool in TOOLS]
         (staging / 'versions.txt').write_text('\n'.join(versions) + '\n')
 
         with tarfile.open(output, 'w:gz') as tar:
             for path in sorted(staging.iterdir()):
                 tar.add(path, arcname=path.name)
 
-    log.info('Bundle complete: %d binaries', len(WINDOWS_TOOLS))
+    log.info('Bundle complete: %d binaries', len(TOOLS))
     log.info('  Archive: %s', output)
     log.info('  Move it to the target machine, then run:')
     log.info('    task windows:offline -- %s', output)

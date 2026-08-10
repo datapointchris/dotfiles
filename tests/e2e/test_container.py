@@ -130,7 +130,7 @@ def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> Non
     # Each recorded probe re-run exactly as the measurement ran it — same method,
     # same URL, same agent. Synthesizing `https://<host>/` instead reported
     # crates.io blocked, because it answers a default curl agent with 403; that is
-    # the trap `test-connectivity.sh` documents and works around, and this test
+    # the trap `dotfiles.network` documents and works around, and this test
     # walked into it on its first run.
     unreachable = [probe.name for probe in reachable_probes() if not reaches(container, probe.command())]
     assert not unreachable, f'reachable at work but not here — the container is stricter than the firewall: {unreachable}'

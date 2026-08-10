@@ -22,34 +22,6 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 
 
-def _environment() -> dict[str, str]:
-    """What every one of these scripts assumes about its environment.
-
-    `DOTFILES_DIR` because the scripts fall back to `git rev-parse --show-toplevel`,
-    which resolves to whatever repo the caller happens to be standing in — and
-    aborts outright outside one. `TERM` because the formatting library calls
-    `tput`, which fails noisily when it is unset, as it is under a systemd timer.
-
-    `DOTFILES_PYTHON` because those scripts still ask Python to read packages.yml
-    and need an interpreter that can import this package. This process is one, by
-    construction — it is running from it. `install/common/lib/python.sh` reads the
-    variable; both sides go when the last script stops shelling out to ask.
-    """
-    return {
-        'DOTFILES_DIR': str(paths.REPO_ROOT),
-        'TERM': 'xterm',
-        'DOTFILES_PYTHON': sys.executable,
-    }
-
-
-def wsl_script(name: str, *args: str) -> Completed:
-    return run(
-        ['bash', str(paths.INSTALL_DIR / 'wsl' / name), *args],
-        cwd=paths.REPO_ROOT,
-        env=_environment(),
-    )
-
-
 def git(*args: str, output: Output = Output.QUIET) -> Completed:
     """Run git against this repo.
 

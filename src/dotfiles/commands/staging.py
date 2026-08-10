@@ -11,12 +11,16 @@ staging would imply the machine is left untouched, and it is not.
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 
 import typer
 
-from dotfiles import bridge
 from dotfiles import offline_bundle
+from dotfiles import paths
+from dotfiles import windows
+from dotfiles import windows_bundle
+from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import success
@@ -24,6 +28,8 @@ from dotfiles.vocabulary import ExitCode
 
 bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
 windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL install')
+
+JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 PLATFORMS = ('linux-x86_64', 'linux-arm64', 'darwin-x86_64', 'darwin-arm64')
 
@@ -91,10 +97,25 @@ def prune() -> None:
 
 
 @windows_app.command('check')
-def windows_check() -> None:
-    """Report which Windows tools are missing from this WSL machine's PATH."""
-    error('windows check has no checker yet — windows apply is idempotent in the meantime')
-    raise typer.Exit(ExitCode.ISSUE)
+def windows_check(as_json: bool = JsonOption) -> None:
+    """Report which Windows tools are missing from this WSL machine's PATH.
+
+    A real checker as of the conversion, and cheap enough to be one: the question
+    is which declared filenames exist in a single directory, so it needs neither
+    winget nor a network — which is what stopped it existing while the answer lived
+    inside a shell script that could only install.
+    """
+    try:
+        into = windows.destination()
+    except windows.WindowsSideError as unreachable:
+        error(str(unreachable))
+        raise typer.Exit(ExitCode.ISSUE) from unreachable
+
+    absent = windows.missing(into)
+    for name in absent:
+        console.print(f'[red]missing[/red]  {name}')
+    console.print(f'{len(windows.TOOLS) - len(absent)} of {len(windows.TOOLS)} Windows tools in {into}')
+    raise typer.Exit(ExitCode.DRIFT if absent else ExitCode.CONVERGED)
 
 
 @windows_app.command('apply')
@@ -102,12 +123,27 @@ def windows_apply(
     source: str = typer.Option(None, '--source', help='Bundle archive or directory to install from'),
     offline: bool = typer.Option(False, '--offline', help='Install from --source rather than winget'),
 ) -> None:
-    """Install the Windows tools WSL copies onto its PATH."""
+    """Install the Windows tools WSL copies onto its PATH.
+
+    The shell tree is deliberately not synced here any more. `setup-windows.sh`
+    ended by running `sync-windows-shell.sh`, which is now the `windows-shell`
+    step — so `dotfiles apply` converges it, and doing it again here would be one
+    act with two owners and no way to tell which had run.
+    """
     if offline and not source:
         raise typer.BadParameter('--offline needs --source naming the bundle to install from')
 
-    completed = bridge.wsl_script('setup-windows.sh', *(('--offline', source) if offline else ()))
-    raise typer.Exit(completed.returncode)
+    try:
+        into = windows.destination()
+        unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
+    except windows.WindowsSideError as unreachable:
+        error(str(unreachable))
+        raise typer.Exit(ExitCode.ISSUE) from unreachable
+
+    for name in unresolved:
+        error(f'{name} did not land in {into}')
+    console.print(f'{len(windows.TOOLS) - len(unresolved)} of {len(windows.TOOLS)} Windows tools in {into}')
+    raise typer.Exit(ExitCode.ISSUE if unresolved else ExitCode.CONVERGED)
 
 
 @windows_app.command('create')
@@ -119,9 +155,19 @@ def windows_create(archive: str = typer.Argument(None, help='Output archive (def
     a Linux or macOS machine, and this packs Windows executables that WSL copies
     onto its PATH. Collapsing them would make `--platform` mean two things.
 
-    There is deliberately no `windows sync`: deploying on WSL already runs
-    `sync-windows-shell.sh`, so a separate verb would be the same act with one
-    more way to forget it.
+    There is deliberately no `windows sync`: the `windows-shell` step converges
+    the Git Bash tree under `dotfiles apply`, so a separate verb would be the same
+    act with one more way to forget it.
+
+    Runs anywhere, unlike its siblings — it only downloads, so the machine
+    building the bundle is deliberately not the machine that will install it.
     """
-    completed = bridge.wsl_script('setup-windows.sh', '--bundle', *((archive,) if archive else ()))
-    raise typer.Exit(completed.returncode)
+    default = paths.REPO_ROOT / f'dotfiles-windows-tools-v{dt.date.today():%Y%m%d}.tar.gz'
+    try:
+        built = windows_bundle.build(Path(archive) if archive else default)
+    except windows_bundle.BundleError as unbuilt:
+        error(str(unbuilt))
+        raise typer.Exit(ExitCode.ISSUE) from unbuilt
+
+    success(f'{built}')
+    raise typer.Exit(ExitCode.CONVERGED)

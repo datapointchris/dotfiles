@@ -43,7 +43,7 @@ def install(entry: catalog.NpmGlobal, *, offline: bool) -> Result:
     stages nothing for npm and never has — and the one machine that installs
     offline declares eight npm globals, so refusing would install none of them on
     the box the whole offline path exists for. `registry.npmjs.org` is probed
-    per machine by `install/offline/test-connectivity.sh`; where it answers, this
+    per machine by `dotfiles network check`; where it answers, this
     works, and where it does not, the failure says which host was unreachable.
     """
     destination = prefix()

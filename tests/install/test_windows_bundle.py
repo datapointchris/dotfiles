@@ -30,29 +30,6 @@ class TestAssetNames:
         assert windows_bundle.expand_asset('jq-windows-amd64.exe', 'jq-1.8.2') == 'jq-windows-amd64.exe'
 
 
-class TestToolSpecs:
-    """The specs are data, and a typo in one is a broken bundle rather than an
-    error, because a missing .exe is only noticed on the target machine.
-    """
-
-    def test_every_tool_declares_what_the_build_needs(self):
-        for tool in windows_bundle.WINDOWS_TOOLS:
-            assert set(tool) == {'name', 'repo', 'asset', 'exe'}
-            assert '/' in tool['repo']
-            assert tool['exe'].endswith('.exe')
-
-    def test_no_tool_is_declared_twice(self):
-        names = [tool['name'] for tool in windows_bundle.WINDOWS_TOOLS]
-        assert len(names) == len(set(names))
-
-    def test_placeholders_are_the_ones_expand_asset_knows(self):
-        # A stray {tag} or {ver} — the vocabulary this file used to have — would
-        # survive expansion and 404 at download time.
-        for tool in windows_bundle.WINDOWS_TOOLS:
-            expanded = windows_bundle.expand_asset(tool['asset'], 'v1.2.3')
-            assert '{' not in expanded, tool['name']
-
-
 class TestExtraction:
     def test_a_binary_at_the_archive_root_is_found(self, tmp_path):
         archive = tmp_path / 'tool.zip'

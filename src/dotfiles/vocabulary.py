@@ -68,6 +68,7 @@ NOUNS = frozenset(
         'identity',
         'machines',
         'report',
+        'network',
         'bundle',
         'windows',
         'repo',

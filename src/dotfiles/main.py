@@ -24,6 +24,7 @@ from dotfiles import sinks
 from dotfiles import status
 from dotfiles.commands import machines
 from dotfiles.commands import manage
+from dotfiles.commands import network
 from dotfiles.commands import report
 from dotfiles.commands import resources
 from dotfiles.commands import staging
@@ -49,6 +50,7 @@ app.add_typer(resources.identity_app, name='identity', rich_help_panel='Resource
 
 app.add_typer(machines.app, name='machines', rich_help_panel='Declaration')
 app.add_typer(report.app, name='report', rich_help_panel='History')
+app.add_typer(network.app, name='network', rich_help_panel='Staging')
 app.add_typer(staging.bundle_app, name='bundle', rich_help_panel='Staging')
 app.add_typer(staging.windows_app, name='windows', rich_help_panel='Staging')
 app.add_typer(manage.repo_app, name='repo', rich_help_panel='Manage')

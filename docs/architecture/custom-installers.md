@@ -80,7 +80,7 @@ from (`repo`, `support_repo`, `assert_repo`), the install script's URL
 
 `source_type` used to sit alongside them — one of `github_clone`,
 `hashicorp_release`, `official_installer`, `aws_release` — and it existed for
-exactly one reader: `test-connectivity.sh` switching on it to decide what to
+exactly one reader: the connectivity probe switching on it to decide what to
 probe. Once the probe could ask the installer directly, nothing read it, which is
 the drift `catalog.py`'s `UNREAD_KEYS` exists to prevent. It is in that map now,
 with the reason attached.
@@ -89,7 +89,8 @@ with the reason attached.
 
 `sources(entry, target)` returns every host installing a tool depends on, as
 `Source(url, reach)` where reach is a download or a clone. It replaced the
-`case "$source_type"` in `install/offline/test-connectivity.sh`, which could say
+`case "$source_type"` in the shell probe `dotfiles network check` replaced,
+which could say
 "a github_clone needs github.com" and nothing beyond it — not that `theme` also
 fetches its install script from `raw.githubusercontent.com`, not that `bats`
 needs three separate repos, not that `awscli` names a different zip per
