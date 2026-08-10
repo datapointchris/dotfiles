@@ -214,12 +214,21 @@ def unpack(archive: Path, into: Path) -> bool:
     Members are extracted under `filter='data'`, which refuses absolute paths,
     `..` traversal and device nodes. The tar these unpack came off the internet;
     the shell `tar -xf` this replaces applied no such filter.
+
+    **A zip's permissions are restored by hand**, because `zipfile` discards them:
+    `extractall` writes every member 0644 whatever the archive recorded. Every
+    zip-distributed tool is therefore extracted non-executable, and the symptom is
+    not an obvious one — `awscli` installed, symlinked, and answered `Permission
+    denied`, which `shutil.which` reports as *not on PATH* because it tests for the
+    execute bit. `tar -xf` and `unzip` both preserve the mode, so this is a
+    regression the shell never had.
     """
     into.mkdir(parents=True, exist_ok=True)
     try:
         if zipfile.is_zipfile(archive):
             with zipfile.ZipFile(archive) as bundle:
                 bundle.extractall(into)
+                _restore_zip_modes(bundle, into)
             return True
         if tarfile.is_tarfile(archive):
             with tarfile.open(archive) as bundle:
@@ -228,6 +237,26 @@ def unpack(archive: Path, into: Path) -> bool:
     except (OSError, tarfile.TarError, zipfile.BadZipFile):
         return False
     return False
+
+
+def _restore_zip_modes(bundle: zipfile.ZipFile, into: Path) -> None:
+    """Put back the permission bits `extractall` dropped.
+
+    A zip records the creating system's mode in the high half of `external_attr`,
+    and only when that system was unix — a zip written on Windows records nothing
+    to restore, so a zero there is left alone rather than turned into 0000.
+
+    Only the permission bits are taken. The file type bits in the same field would
+    reintroduce exactly what `tarfile`'s `data` filter exists to refuse, and
+    nothing here needs a zip to describe anything but a regular file or directory.
+    """
+    for member in bundle.infolist():
+        mode = (member.external_attr >> 16) & 0o7777
+        if not mode:
+            continue
+        landed = into / member.filename
+        if landed.exists():
+            landed.chmod(mode)
 
 
 def gunzip(source: Path, destination: Path) -> bool:

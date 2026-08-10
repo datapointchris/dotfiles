@@ -26,6 +26,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
+from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles.coordinates import Arch
@@ -407,3 +408,56 @@ def test_the_engine_reads_home_at_call_time(tmp_path, monkeypatch):
     monkeypatch.setenv('HOME', str(tmp_path))
     assert ghrelease.bin_dir() == tmp_path / '.local' / 'bin'
     assert os.fspath(ghrelease.local_dir()) == os.fspath(tmp_path / '.local')
+
+
+class TestZipPermissions:
+    """`zipfile.extractall` writes every member 0644 whatever the archive recorded.
+
+    `tar -xf` and `unzip` both preserve the mode, so this is a regression the shell
+    never had, and its symptom is not an obvious one: awscli installed, symlinked
+    into `~/.local/bin`, and answered `Permission denied` — which `shutil.which`
+    reports as *not on PATH*, because it tests for the execute bit.
+    """
+
+    @staticmethod
+    def zip_with_modes(path: Path, members: dict[str, int]) -> None:
+        with zipfile.ZipFile(path, 'w') as archive:
+            for name, mode in members.items():
+                info = zipfile.ZipInfo(name)
+                info.external_attr = mode << 16
+                archive.writestr(info, '#!/bin/sh\nexit 0\n')
+
+    def test_an_executable_member_comes_out_executable(self, tmp_path):
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'aws/install': 0o755})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert (tmp_path / 'out' / 'aws' / 'install').stat().st_mode & stat.S_IXUSR
+
+    def test_a_plain_member_stays_plain(self, tmp_path):
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'README.md': 0o644})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert not (tmp_path / 'out' / 'README.md').stat().st_mode & stat.S_IXUSR
+
+    def test_a_zip_recording_no_mode_is_left_alone(self, tmp_path):
+        """A zip written on Windows records nothing to restore, and a zero there is
+        an absent answer rather than a demand for 0000."""
+        archive = tmp_path / 'tool.zip'
+        with zipfile.ZipFile(archive, 'w') as bundle:
+            bundle.writestr(zipfile.ZipInfo('plain.txt'), 'hello')
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert (tmp_path / 'out' / 'plain.txt').read_text() == 'hello'
+
+    def test_the_file_type_bits_are_never_restored(self, tmp_path):
+        """Only the permission bits are taken. The type bits in the same field are
+        what `tarfile`'s `data` filter exists to refuse."""
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'thing': 0o100755})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        landed = (tmp_path / 'out' / 'thing').stat().st_mode
+        assert stat.S_ISREG(landed)
+        assert landed & 0o777 == 0o755
