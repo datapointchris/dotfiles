@@ -13,6 +13,14 @@ test may touch** rather than by how long it takes:
 `task --list-all` names the entry points; `tests/conftest.py` is where the two
 opt-in tiers are declared, and `.pre-commit-config.yaml` is the full hook wiring.
 
+**Levels are a second axis, and not a competing one.** A tier says what a test is
+*allowed* to touch and is a marker; a level says how much machine has to *exist*
+before it can run, and is read off the fixture the test asks for. So the whole
+container tier divides into levels — an empty container, one section over a base,
+a machine already installed, a machine installed now — and `--level` is how to
+reach one without also paying for the rest. `tests/e2e/levels.py` holds what each
+costs and what it can answer.
+
 The deselection lives in `tests/conftest.py` rather than as `-m 'not e2e'` in
 `addopts`, because forge owns `addopts` — a deselection written there is erased
 by the next `sync-pyproject` run.
