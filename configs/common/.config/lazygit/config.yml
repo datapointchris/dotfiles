@@ -1,12 +1,13 @@
 git:
   diffRenderers:
     - colorArg: always
-      # Without an explicit width delta renders at a fixed 80 columns, because a
-      # piped stdout hides the real terminal size from it.
-      command: delta --paging=never --width={{columnWidth}}
-      useConfig: false
+      # No --width: lazygit runs the renderer in a pty sized to the view, so delta
+      # detects the real width. {{columnWidth}} is half the panel (width/2 - 6),
+      # meant for renderers told the width of one column, and halves delta instead.
+      command: delta --paging=never
 gui:
   nerdFontsVersion: "3"
+  sidePanelWidth: 0.2
   showCommandLog: false
 os:
   editPreset: nvim
