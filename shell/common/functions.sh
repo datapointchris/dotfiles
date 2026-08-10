@@ -791,6 +791,105 @@ function doshell() {
   fi
 }
 
+# One TSV row per *live* session: pid, name, status, waitingFor, cwd, tmux.
+# The registry keeps one file per process, written at startup and removed on a
+# clean exit, so a killed session leaves a file behind with a stale `status` —
+# hence the liveness check on the pid rather than trusting that field.
+#
+# `claude agents --json` is the supported interface for this and was measured
+# against it: ~356ms per call versus ~12ms here, because it boots a full node
+# process, and it omits the tmux pane that makes a row worth jumping to. Too
+# slow for something typed this often, so this reads the registry directly and
+# accepts that the file layout is not a public contract.
+_cc_sessions() {
+  local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
+  [[ -d $dir ]] || return 1
+  fd -HI -e json . "$dir" -X jq -r '[.pid, .name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv' 2>/dev/null \
+    | while IFS=$'\t' read -r pid rest; do
+      kill -0 "$pid" 2>/dev/null && printf '%s\t%s\n' "$pid" "$rest"
+    done
+}
+
+# One short word, no hyphens, chosen from the words no live session is using.
+# The name is an address you type to message a session, so it is optimised for
+# typing and saying rather than for describing — `cc` is meant to be run bare.
+# Slice syntax `${a[@]:i:1}` is the one indexing form that means the same thing
+# in bash and zsh, whose arrays disagree about whether the first element is 0.
+_cc_pick_name() {
+  local -a pool=(ash bolt cedar clay dune ember flint fox grove hazel iris jade
+    kite lark moss nova oak onyx pike quill reed sage slate teal vale wren
+    yarrow zephyr)
+  local taken word
+  taken=$(_cc_sessions | cut -f2)
+  local -a free=()
+  for word in "${pool[@]}"; do
+    [[ $'\n'$taken$'\n' == *$'\n'$word$'\n'* ]] || free+=("$word")
+  done
+  ((${#free[@]})) || {
+    printf 'cc%s\n' "$$"
+    return
+  }
+  # Not $RANDOM: zsh reseeds it identically in every command-substitution
+  # subshell, so `$(_cc_pick_name)` would hand back the same word every call.
+  local rand
+  rand=$(od -An -N2 -tu2 </dev/urandom | tr -d ' ')
+  printf '%s\n' "${free[@]:$((rand % ${#free[@]})):1}"
+}
+
+# Bypass is the permission mode for every session, set once as
+# permissions.defaultMode in ~/.claude/settings.json rather than repeated as a
+# flag here — a session started any other way (an editor, a resume, a scheduled
+# run) then lands in the same permission class, which is what lets cross-session
+# messages deliver instead of being held.
+#
+# A bare first argument is taken as the session name rather than passed through,
+# so `cc planner` reads naturally. Anything starting with `-` is a real flag and
+# falls through untouched, which keeps `cc -p '...'` working. The array form is
+# deliberate: zsh does not word-split an unquoted `${x:+--name $x}`, so the flag
+# and its value would arrive as one argument.
+#@cc
+#--> cc [name] — start claude; names itself from a short word pool when you don't
+cc() {
+  local -a name=()
+  if [[ -n $1 && $1 != -* ]]; then
+    name=(--name "$1")
+    shift
+  elif [[ " $* " != *" --name "* && " $* " != *" -n "* ]]; then
+    name=(--name "$(_cc_pick_name)")
+  fi
+  claude "${name[@]}" "$@"
+}
+
+# Resume derives a fresh name from the directory no matter what the session was
+# called before, so the name has to be passed again every time or peers lose the
+# address they were messaging.
+#@ccr
+#--> ccr [name] — resume a claude session by picker; re-applies the name, which resume always drops
+ccr() {
+  local -a name=()
+  if [[ -n $1 && $1 != -* ]]; then
+    name=(--name "$1")
+    shift
+  elif [[ " $* " != *" --name "* && " $* " != *" -n "* ]]; then
+    name=(--name "$(_cc_pick_name)")
+  fi
+  claude --resume "${name[@]}" "$@"
+}
+
+# NAME is the address other sessions message — the same list `/list-agents`
+# shows from inside Claude.
+#@cca
+#--> cca — list the claude sessions running on this machine, by the name peers address them with
+cca() {
+  local rows
+  rows=$(_cc_sessions | cut -f2- | sort)
+  [[ -n $rows ]] || {
+    echo "no claude sessions running"
+    return 0
+  }
+  printf 'NAME\tSTATUS\tWAITING\tDIR\tPANE\n%s\n' "$rows" | column -t -s$'\t'
+}
+
 #@find-commit
 #--> find-commit [-d DIR] [--msg|--code] <query> — search commits across every repo in a dir, newest first; Enter opens the diff in nvim
 function find-commit() {

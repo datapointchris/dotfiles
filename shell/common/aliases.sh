@@ -7,12 +7,6 @@
 # Enable aliases to be sudo'ed
 alias sudo='sudo '
 
-# Run claude with open permissions
-alias risky="claude --dangerously-skip-permissions"
-
-# Resume the last claude session with open permissions
-alias rr="claude --dangerously-skip-permissions --resume"
-
 # Move all files and folders including hidden to parent directory
 alias move_all_to_parent='find . -maxdepth 1 -exec mv {} .. \;'
 
