@@ -155,16 +155,21 @@ def _apply_phases(
     from dotfiles import registry
 
     providers = None
+    covered = frozenset({resource})
     if source:
-        provider = registry.for_section(source)
-        if provider is None:
+        serving = registry.serving(source)
+        if not serving:
             error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
             raise typer.Exit(ExitCode.USAGE)
-        providers = frozenset({provider.name})
+        # The toolchain a section needs comes with it. `needed_by` says a runtime
+        # is wanted *because* this section resolved, so narrowing to the section
+        # and dropping the runtime asks for something that cannot install.
+        providers = frozenset(provider.name for provider in serving)
+        covered |= {provider.resource for provider in serving}
 
     raise typer.Exit(
         apply.apply_machine(
-            only=frozenset({resource}),
+            only=covered,
             machine=machine,
             offline=offline,
             owner=owner,

@@ -6,12 +6,18 @@ question about *one installer* cost a whole machine. Three of today's four
 failures lived in two sections, and finding them took two ten-minute runs whose
 containers were then thrown away.
 
-**A set does not declare its prerequisites, because the resolver already carries
-them.** `registry.ToolchainProvider.needed_by` says the Rust toolchain is wanted
-when `cargo_packages` resolve, so `--source cargo_packages` over a bare base
-installs rustup and then the tools. The only thing a set needs supplied is the
-part no section declares: an OS with a package manager, curl, git and unzip on
-it, which is what the base image is.
+**A set does not declare its prerequisites, because the declaration already
+carries them.** `registry.ToolchainProvider.needed_by` says the Rust toolchain is
+wanted when `cargo_packages` resolve, and `registry.serving` is what turns that
+into a selection — so `--source cargo_packages` over a bare base installs rustup
+and then the tools. The only thing a set needs supplied is the part no section
+declares: an OS with a package manager, curl, git and unzip on it, which is what
+the base image is.
+
+That was not true when this file was written, and the first run of it said so:
+`--source` narrowed to one provider, the toolchain was planned and then excluded
+from the run, and every cargo tool failed with `cargo: No such file or directory`.
+The declaration was right and the selection was not.
 
 What this tier cannot answer is anything about *order* — whether the symlink pass
 ran before tpm read the config it deploys is a question about a whole machine, and

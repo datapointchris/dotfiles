@@ -1094,6 +1094,27 @@ def for_section(section: str) -> Provider | None:
     return BY_SECTION.get(section)
 
 
+def serving(section: str) -> tuple[Provider, ...]:
+    """Every provider a run narrowed to one section needs, not only the one that installs it.
+
+    `needed_by` already declares that a toolchain is wanted *because* a section
+    resolved, and `resolve` honours it — the plan for a machine with
+    `cargo_packages` carries `rust-toolchain` too. A selection that dropped it
+    honoured the declaration in the plan and ignored it in the run, so
+    `packages apply --source cargo_packages` on a machine without rustup failed
+    with `cargo binstall bat exited 127: cargo: No such file or directory` rather
+    than installing what it needed.
+
+    Derived from the registry rather than listed, so a section that grows a
+    prerequisite gets it here the moment `needed_by` says so.
+    """
+    provider = BY_SECTION.get(section)
+    if provider is None:
+        return ()
+    required = tuple(other for other in PROVIDERS if isinstance(other, ToolchainProvider) and other.needed_by == section)
+    return (*required, provider)
+
+
 def for_resource(resource: str) -> tuple[Provider, ...]:
     return tuple(provider for provider in PROVIDERS if provider.resource == resource)
 

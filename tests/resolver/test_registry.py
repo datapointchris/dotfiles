@@ -371,3 +371,36 @@ def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch)
 
     assert planned[0].evidence_path == ''
     assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
+
+
+def test_a_section_carries_the_toolchain_it_needs() -> None:
+    """`needed_by` says a runtime is wanted *because* a section resolved, and
+    `resolve` honours it — so a selection that dropped it honoured the declaration
+    in the plan and ignored it in the run.
+
+    `packages apply --source cargo_packages` on a machine without rustup failed
+    with `cargo binstall bat exited 127: cargo: No such file or directory`, which
+    is a selection asking for something that cannot install.
+    """
+    assert [provider.name for provider in registry.serving('cargo_packages')] == ['rust-toolchain', 'cargo']
+    assert [provider.name for provider in registry.serving('go_tools')] == ['go-toolchain', 'go']
+    assert [provider.name for provider in registry.serving('npm_globals')] == ['node-toolchain', 'npm']
+
+
+def test_a_section_needing_no_toolchain_carries_only_its_own_provider() -> None:
+    assert [provider.name for provider in registry.serving('github_releases')] == ['ghrelease']
+
+
+def test_the_toolchain_comes_first_because_that_is_the_order_it_installs_in() -> None:
+    """Ordering is `Stage`'s and the phase registry's, not this function's — but a
+    caller reading the tuple should not have to know that to see the dependency."""
+    names = [provider.name for provider in registry.serving('cargo_packages')]
+    stages = [registry.named(name).stage for name in names]  # type: ignore[union-attr]
+
+    assert stages == sorted(stages)
+
+
+def test_a_section_nothing_installs_serves_nothing() -> None:
+    """`runtimes` is in `UNPROVIDED`, and the caller turns an empty answer into the
+    usage error naming why."""
+    assert registry.serving('runtimes') == ()
