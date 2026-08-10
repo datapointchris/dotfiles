@@ -374,6 +374,19 @@ def _shell_plugins(context: Run) -> bool:
 
 
 def _symlinks(context: Run) -> bool:
+    """The deploy pass, and the three jobs that only make sense after it.
+
+    `deploy.epilogue` is gated on the ceiling rather than run unconditionally,
+    because every one of its jobs is justified by "the pass above just deployed
+    these files": git needs somewhere to write that is not this repo, Hyprland has
+    to reload the config that landed, and WSL copies the shell profile onto the
+    Windows host. Under a ceiling below this stage the pass deploys nothing, and
+    reloading a compositor over files nobody wrote is the shape `cli-design.md`
+    names — a narrowing applied to the data and not to the work.
+    """
+    if context.through is not None and context.through < Stage.SYMLINKS:
+        return True
+
     heading('Symlinking dotfiles')
     deployed = _converge(context, engine.Selection.of('symlinks'))
     deploy.epilogue(context.session)

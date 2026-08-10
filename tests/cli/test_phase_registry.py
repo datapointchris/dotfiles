@@ -319,3 +319,34 @@ def test_both_front_doors_give_the_same_diagnosis_for_an_unnamed_machine(tmp_pat
 
     assert str(through_apply.value) == str(through_session.value)
     assert 'linux-lxc-server' in str(through_apply.value), 'the message has to name what it would accept'
+
+
+def test_a_ceiling_below_the_symlink_stage_runs_no_deploy_epilogue(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--through` has to reach the work, not only the plan.
+
+    Every job in `deploy.epilogue` is justified by "the pass above just deployed
+    these files" — git needing somewhere to write, Hyprland reloading, WSL copying
+    the profile onto the Windows host. Run under a ceiling that deploys nothing,
+    they act on files that were never written, which is a narrowing applied to the
+    data and not to the work.
+    """
+    ran: list[str] = []
+    monkeypatch.setattr(deploy, 'epilogue', lambda session: ran.append('epilogue'))
+    monkeypatch.setattr(apply, '_converge', lambda context, selection: True)
+
+    apply._symlinks(context(through=Stage.SYSTEM_UPGRADE))
+
+    assert ran == []
+
+
+def test_a_ceiling_at_or_above_the_symlink_stage_still_runs_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The inverse mistake: a ceiling that includes the pass must not silently drop
+    the three jobs that finish it."""
+    ran: list[str] = []
+    monkeypatch.setattr(deploy, 'epilogue', lambda session: ran.append('epilogue'))
+    monkeypatch.setattr(apply, '_converge', lambda context, selection: True)
+
+    apply._symlinks(context(through=Stage.SYMLINKS))
+    apply._symlinks(context())
+
+    assert ran == ['epilogue', 'epilogue']
