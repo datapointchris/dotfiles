@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from dotfiles import evidence as ev
+from dotfiles import paths
 from dotfiles import releases
 from dotfiles.privilege import Privilege
 from dotfiles.providers import cargo
@@ -189,6 +190,29 @@ def test_a_private_repo_without_credentials_is_not_apply_s_to_fix(tmp_path: Path
     assert found[0].repair is expected
 
 
+def test_a_public_tool_beside_a_blocked_private_one_is_still_offered(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The half that is easy to lose. The install phase this replaced dropped the
+    private names out of its list and warned, which worked; skipping the section
+    wholesale would trade one wrong answer for a worse one, and a per-row `repair`
+    cannot make that mistake at all.
+    """
+    monkeypatch.setattr(ev, 'have_github_credentials', lambda: False)
+    declared = {
+        'github_releases': [
+            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
+            {'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True},
+        ]
+    }
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'github_releases': ['lazygit', 'learning']})
+
+    assert {change.item: change.repair for change in changes(live)} == {
+        'ghrelease/lazygit': Repair.AUTOMATIC,
+        'ghrelease/learning': Repair.BY_HAND,
+    }
+
+
 def test_a_private_repo_with_a_token_is_repairable(tmp_path: Path, fake_bin: Path, uv_tools: Path, monkeypatch) -> None:
     monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
     declared = {'git_uv_tools': [{'name': 'safekeep', 'repo': 'https://github.com/datapointchris/safekeep', 'requires_github_auth': True}]}
@@ -298,6 +322,86 @@ def test_an_unparseable_version_is_unknown_rather_than_behind(tmp_path: Path, fa
     assert [change.verdict for change in changes(live)] == [Verdict.UNKNOWN]
 
 
+MOUNT_S3 = {
+    'custom_installers': [
+        {
+            'name': 'mount-s3',
+            'description': 'mountpoint for S3',
+            'repo': 'awslabs/mountpoint-s3',
+            'release_tag_prefix': 'mountpoint-s3-',
+        }
+    ]
+}
+DECLARES_MOUNT_S3 = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['mount-s3']}
+
+AWSCLI = {
+    'custom_installers': [
+        {
+            'name': 'awscli',
+            'command': 'aws',
+            'description': "AWS's CLI",
+            'repo': 'aws/aws-cli',
+            'version_source': 'tags',
+        }
+    ]
+}
+DECLARES_AWSCLI = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['awscli']}
+
+NO_REPO = {'custom_installers': [{'name': 'claude-code', 'command': 'claude', 'description': 'self-updating'}]}
+DECLARES_NO_REPO = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['claude-code']}
+
+
+def test_a_custom_installer_behind_its_repo_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """A version behind is a verdict rather than something a vendor script decides
+    privately, which is what lets the engine act on it — and the tag prefix comes
+    off the declaration, so the repo name is written once."""
+    reporting(fake_bin, 'mount-s3', 'mount-s3 1.22.0')
+    cached(release_cache, {'awslabs/mountpoint-s3#mountpoint-s3-': 'mountpoint-s3-1.23.0'})
+    live = session(tmp_path, MOUNT_S3, DECLARES_MOUNT_S3)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('custom/mount-s3', Verdict.STALE)]
+
+
+def test_a_custom_installer_at_its_repos_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'mount-s3', 'mount-s3 1.23.0')
+    cached(release_cache, {'awslabs/mountpoint-s3#mountpoint-s3-': 'mountpoint-s3-1.23.0'})
+    live = session(tmp_path, MOUNT_S3, DECLARES_MOUNT_S3)
+
+    assert changes(live) == ()
+
+
+def test_a_custom_installer_naming_no_repo_is_not_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """claude-code updates itself in the background and names no repo, so there is
+    nothing to compare against. Silence is the honest answer — an UNKNOWN row on
+    every plan for a question nobody can answer is noise, not a finding."""
+    reporting(fake_bin, 'claude', '2.1.226 (Claude Code)')
+    live = session(tmp_path, NO_REPO, DECLARES_NO_REPO)
+
+    assert changes(live) == ()
+
+
+def test_an_entry_measured_against_tags_is_compared_like_any_other(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """aws/aws-cli tags every build and publishes no release, so `version_source:
+    tags` decides which endpoint fills the cache. Everything downstream of the
+    cache is unchanged, which is the point — a tag is a version like any other."""
+    reporting(fake_bin, 'aws', 'aws-cli/2.36.18 Python/3.14.6')
+    cached(release_cache, {'aws/aws-cli': '2.36.19'})
+    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('custom/awscli', Verdict.STALE)]
+
+
+def test_the_declared_source_decides_which_endpoint_is_asked(tmp_path: Path, fake_bin: Path) -> None:
+    """Declared rather than discovered. Falling back to tags when a release lookup
+    fails would read a rate-limited minute as "this project tags instead"."""
+    reporting(fake_bin, 'aws', 'aws-cli/2.36.18')
+    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+
+    item = next(item for item in live.plan.for_resource('packages') if item.name == 'awscli')
+
+    assert packages._wanted(item) == releases.Wanted(repo='aws/aws-cli', from_tags=True)
+
+
 def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """A pin names the release, so the declaration is the whole answer. This is
     what keeps a pinned tool checkable on a machine that never reaches GitHub."""
@@ -366,6 +470,67 @@ def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin:
 
     assert changes(live) == ()
     assert not ran.exists()
+
+
+def staged_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rows: dict[str, str], category: str = 'binary') -> Path:
+    """A bundle manifest, written the way `create_bundle.Bundle.record` writes it."""
+    installers = tmp_path / 'installers'
+    installers.mkdir(parents=True, exist_ok=True)
+    lines = [f'{category}|{name}|{version}|{name}' for name, version in rows.items()]
+    (installers / 'manifest.txt').write_text('# Format: category|name|version|filename\n' + '\n'.join(lines) + '\n')
+    monkeypatch.setattr(paths, 'BUNDLE_DIR', installers)
+    return installers
+
+
+def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    """The machine a bundle exists for cannot reach GitHub, so the release cache is
+    empty and answers UNKNOWN for everything installed. Offline the bundle is the
+    upstream instead, which is what makes extracting a newer one onto a built
+    machine upgrade anything at all."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
+def test_offline_a_tool_at_its_bundles_version_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert changes(live) == ()
+
+
+def test_offline_a_tool_the_bundle_does_not_carry_says_so_rather_than_reporting_current(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch
+) -> None:
+    """The rule the cache exists to keep, applied to the other upstream: it may be
+    out of date, it may not lie. A bundle with no row for a tool is a different
+    finding from a cache nobody has filled, and the detail says which."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'something-else': '1.0.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.UNKNOWN, Repair.NONE)]
+    assert 'bundle' in found[0].detail
+
+
+def test_offline_never_writes_what_the_bundle_holds_into_the_release_cache(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch
+) -> None:
+    """A bundle's versions are what one tarball happens to hold, not what upstream
+    published. Persisting them would have the next online run read a bundle's
+    contents as the release cache."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
+
+    packages.RESOURCE.observe(live, live.plan)
+
+    assert not release_cache.exists()
 
 
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:

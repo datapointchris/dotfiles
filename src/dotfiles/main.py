@@ -212,7 +212,6 @@ def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = typer.Option(None, '--owner', help='Only phases whose contents can be traced to this GitHub owner'),
-    reinstall: bool = typer.Option(False, '--reinstall', help='Reinstall even when already present'),
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
 ) -> None:
     """Make this machine match what it declares.
@@ -226,7 +225,6 @@ def apply_command(
         apply.apply_machine(
             _skipped(skip),
             machine=machine,
-            reinstall=reinstall,
             offline=offline,
             owner=owner,
         )

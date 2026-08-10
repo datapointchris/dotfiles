@@ -17,11 +17,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dotfiles import apply
 from dotfiles import catalog
-from dotfiles import coordinates
-from dotfiles import paths
 from dotfiles.providers import ghrelease
+from dotfiles.session import Session
 
 PINNED_TOOL = 'lazygit'
 PINNED_REPO = 'jesseduffield/lazygit'
@@ -79,16 +77,16 @@ def test_an_unreadable_catalog_stops_the_phase_rather_than_installing_latest(tmp
     lookup and a declared-nothing lookup both exited 1 there, so swallowing the
     difference installed latest over a pin nobody could see. A raise cannot be
     confused with an empty answer."""
-    broken = tmp_path / 'packages.yml'
-    broken.write_text('github_releases: [unclosed\n')
-    monkeypatch.setattr(paths, 'PACKAGES_FILE', broken)
+    repo = tmp_path / 'repo'
+    (repo / 'install' / 'manifests').mkdir(parents=True)
+    (repo / 'install' / 'packages.yml').write_text('github_releases: [unclosed\n')
+    (repo / 'install' / 'flags.yml').write_text('{}')
+    (repo / 'install' / 'manifests' / 'box.yml').write_text('machine: box\nplatform: linux\n')
 
-    context = apply.Run(
-        machine='linux-lxc-server',
-        coords=coordinates.PLATFORM_BUNDLES['linux'],
-        packages={'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO}]},
-        manifest={'github_releases': [PINNED_TOOL]},
-    )
+    # Asked of `Session.catalog`, which is the one reading of packages.yml a run
+    # has — so this is the parse every phase depends on, not a second one that
+    # could raise while the real one did not.
+    live = Session(machine_name='box', repo=repo, home=tmp_path / 'home')
 
     with pytest.raises(Exception, match='unclosed|expected|while parsing'):
-        _ = context.declaration
+        _ = live.catalog

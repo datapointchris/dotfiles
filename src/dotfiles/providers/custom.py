@@ -12,15 +12,19 @@ offline bundle or the network, and running it.
 The install/update split goes the way it went for releases. Each script had two
 modes, and which one ran decided whether a tool already present was upgraded;
 `apply` means "make this machine match what it declares", so every function here
-converges. What differs between them is only what *asking* costs, and that is the
-one thing each function has to state:
+converges.
+
+**Whether a tool is behind is not asked here.** `resources/packages.CURRENCY`
+measures it, off the `repo:` each entry declares, so an installer that is called
+is one the machine needs and every function below can simply converge. What
+differs between them is only what converging means:
 
     theme, font, zmk-build   the tool has its own `update`, so delegate to it
     bashselfupdate           the install script is the update, so always run it
-    bats, terraform-ls       upstream publishes releases, so compare, then skip
-    mount-s3                 the same, from `awslabs/mountpoint-s3`
+    bats, terraform-ls       clone or download at the tag upstream reports
+    mount-s3                 the bucket serves `latest/`, so just fetch it
     claude-code              self-updates in the background; presence is enough
-    awscli                   nothing cheap to ask, so presence is enough
+    awscli                   no release to compare against; presence is enough
 
 Every failure is returned, never raised: one broken vendor must not stop the
 eight after it, and the phase reports all of them together.
@@ -40,7 +44,6 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import evidence
 from dotfiles import github_release
-from dotfiles import versions
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.output import err_console
@@ -53,27 +56,45 @@ from dotfiles.providers import script
 
 @dc.dataclass(frozen=True, slots=True)
 class Request:
-    """One tool to converge, and the two flags that change how.
+    """One tool to converge, and the one flag that changes how.
 
-    `reinstall` is `--reinstall`, and it is the only way to move the three tools
-    below that have no cheap way to tell whether they are current.
+    There is no force flag and nowhere for one to attach: currency is measured
+    before an installer is called, so reaching a function below means the machine
+    needs it. A flag overriding that could only mean "write despite the
+    measurement", which `cli-design.md` § "A flag never decides whether the command
+    writes" rules out.
     """
 
     entry: catalog.CustomInstaller
     target: Target
     offline: bool = False
-    reinstall: bool = False
 
 
 Installer = Callable[[Request], Result]
 
 
-def install(entry: catalog.CustomInstaller, target: Target, *, offline: bool = False, reinstall: bool = False) -> Result:
+def install(entry: catalog.CustomInstaller, target: Target, *, offline: bool = False) -> Result:
     """Converge one custom installer, whatever converging means for it."""
     installer = INSTALLERS.get(entry.name)
     if installer is None:
         return Result(False, f'nothing in providers.custom installs {entry.name}')
-    return installer(Request(entry, target, offline=offline, reinstall=reinstall))
+    return installer(Request(entry, target, offline=offline))
+
+
+def missing_parts(entry: catalog.CustomInstaller) -> tuple[str, ...]:
+    """What this tool installs besides its own binary, and is not there. A read.
+
+    The custom-installer twin of `ghrelease.missing_companions`, and it exists for
+    the same reason: `bats` is on PATH and current while `~/.local/lib/bats-assert`
+    is gone, which surfaces as a failing `load` line in a suite rather than in any
+    verdict.
+
+    Empty for eight of the nine — most of these install one binary and nothing
+    else — so this is a lookup and not a protocol for each of them to implement.
+    """
+    if entry.name != 'bats':
+        return ()
+    return tuple(f'bats-{helper}' for helper in BATS_HELPERS if not (local_dir() / 'lib' / f'bats-{helper}').is_dir())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -191,7 +212,7 @@ def _present_and_offline(request: Request, installed: bool) -> Result | None:
     fetch. Reporting the tool present is the honest answer; failing the phase
     would report a machine as broken for being exactly what its bundle made it.
     """
-    if request.offline and installed and not request.reinstall:
+    if request.offline and installed:
         return Result(True, f'{request.entry.name} is installed; offline, so it is not updated')
     return None
 
@@ -215,7 +236,7 @@ def _checkout_tool(request: Request) -> Result:
 
     if offline := _present_and_offline(request, installed):
         return offline
-    if installed and not request.reinstall:
+    if installed:
         return _delegate_update(name, checkout)
     return _run_vendor_script(request, request.entry.install_url)
 
@@ -252,7 +273,7 @@ def _claude_code(request: Request) -> Result:
     binary already there keeps working, and the next run installs.
     """
     installed = evidence.reported_version(request.entry.executable)
-    if installed and not request.reinstall:
+    if installed:
         return Result(True, f'claude-code {installed.splitlines()[0]} (self-updating)')
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
@@ -286,20 +307,23 @@ def _awscli_zip(entry: catalog.CustomInstaller, target: Target) -> str:
 
 
 def _awscli(request: Request) -> Result:
-    """AWS's own installer, which is already idempotent — but not free to ask.
+    """AWS's own installer, which is idempotent and expensive — so it is measured first.
 
-    `aws/install --update` converges by itself, so the ideal here is to run it
-    every time. It is 73MB every time (measured 2026-08-08), and `aws/aws-cli`
-    publishes no GitHub release, so there is nothing cheap to compare an installed
-    version against — the only way to learn whether it is current is to download
-    the thing. So presence is enough, and `--reinstall` is the update.
+    `aws/install --update` converges by itself, so the ideal is to run it every
+    time — and it is 73MB every time (measured 2026-08-08), which is why nothing
+    runs it without a reason.
+
+    `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404,
+    rechecked 2026-08-10 — but it tags every build, and the entry declares
+    `version_source: tags` so `_has_currency` can compare against them. Reaching
+    here therefore means the machine is missing it or behind, and the 73MB is
+    being spent on a difference someone measured.
     """
     if request.target.is_darwin:
         return Result(True, 'awscli is a Homebrew package on macOS, installed with the system packages')
 
-    installed = evidence.reported_version(request.entry.executable)
-    if installed and not request.reinstall:
-        return Result(True, f'{installed.split()[0]} (run with --reinstall to fetch the current one)')
+    if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
+        return offline
     if request.offline:
         return Result(False, f'awscli installs from {request.entry.url}, which the offline bundle does not stage')
 
@@ -338,9 +362,6 @@ bucket is self-consistent. The first is valid until 2029-03-18, the second
 expired 2026-07-31 and stays for signatures made before then.
 """
 
-MOUNT_S3_REPO = 'awslabs/mountpoint-s3'
-MOUNT_S3_TAG_PREFIX = 'mountpoint-s3-'
-
 
 def _mount_s3_tarball(entry: catalog.CustomInstaller, target: Target) -> str:
     """'' where there is no build: AWS ships mountpoint-s3 for Linux only."""
@@ -365,10 +386,6 @@ def _mount_s3(request: Request) -> Result:
     installed = evidence.reported_version(request.entry.executable)
     if offline := _present_and_offline(request, installed is not None):
         return offline
-    if installed and not request.reinstall:
-        latest = github_release.latest_version(MOUNT_S3_REPO, MOUNT_S3_TAG_PREFIX)
-        if latest and versions.at_least(installed, latest) is True:
-            return Result(True, f'mount-s3 {latest}')
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-mount-s3-') as scratch:
         staging = Path(scratch)
@@ -451,12 +468,9 @@ def _terraform_ls(request: Request) -> Result:
     if request.offline:
         return Result(True, f'terraform-ls is not bundled (it is served from {HASHICORP}), so it is skipped offline')
 
-    installed = evidence.reported_version(entry.executable)
     latest = github_release.latest_version(entry.repo, '')
     if latest is None:
         return Result(False, f'{entry.repo} did not answer with a release')
-    if installed and not request.reinstall and versions.at_least(installed, latest) is True:
-        return Result(True, f'terraform-ls {latest}')
 
     version = latest.lstrip('v')
     os_word = 'darwin' if request.target.is_darwin else 'linux'
@@ -535,9 +549,6 @@ def _bats(request: Request) -> Result:
     latest = github_release.latest_version(entry.repo, '')
     if latest is None:
         return Result(False, f'{entry.repo} did not answer with a release')
-    if installed and not request.reinstall and versions.at_least(installed, latest) is True:
-        _install_bats_helpers(entry, only_missing=True)
-        return Result(True, f'bats {latest}')
 
     core = _bats_repos(entry)[0]
     with tempfile.TemporaryDirectory(prefix='dotfiles-bats-') as scratch:
@@ -551,26 +562,25 @@ def _bats(request: Request) -> Result:
         if not completed.ok:
             return Result(False, f"bats-core's own install.sh exited {completed.returncode}")
 
-    _install_bats_helpers(entry, only_missing=False)
+    _install_bats_helpers(entry)
     return _confirm(f'bats {latest}', entry.executable)
 
 
-def _install_bats_helpers(entry: catalog.CustomInstaller, *, only_missing: bool) -> None:
-    """The two assertion libraries, refreshed with the runner or restored without it.
+def _install_bats_helpers(entry: catalog.CustomInstaller) -> None:
+    """The two assertion libraries, refreshed alongside the runner.
 
-    The same reason `ghrelease.ensure_companions` exists: nothing about `bats`
-    being current says `~/.local/lib/bats-assert` is still there, and its absence
-    surfaces as a failing `load` line in a test suite rather than here.
+    Always both, never only the absent ones: reaching here means the runner is
+    being installed, and the three pieces are meant to be one set. Whether a helper
+    is *missing* is `missing_parts`, and it is a question for the observation rather
+    than for this.
     """
     _, support, assertions = _bats_repos(entry)
     for url, helper in zip((support, assertions), BATS_HELPERS, strict=True):
-        _clone_bats_helper(url, helper, replace=not only_missing)
+        _clone_bats_helper(url, helper)
 
 
-def _clone_bats_helper(url: str, helper: str, *, replace: bool) -> None:
+def _clone_bats_helper(url: str, helper: str) -> None:
     destination = local_dir() / 'lib' / f'bats-{helper}'
-    if destination.is_dir() and not replace:
-        return
 
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-bats-{helper}-') as scratch:
         checkout = Path(scratch) / helper

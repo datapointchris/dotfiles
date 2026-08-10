@@ -235,7 +235,29 @@ class VendoredProvider(CatalogProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class ReleaseProvider(VendoredProvider):
-    """A binary published as a GitHub release asset."""
+    """A binary published as a GitHub release asset, and the files that ship beside it."""
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """The binary, and then whatever the release does not publish.
+
+        A companion is a separate file under `~/.local/bin`, so a present and
+        current binary says nothing about whether it is still there — and a
+        machine missing one is not converged, however current the binary is.
+
+        Reported as `MISSING` because that is what it is and what makes it
+        actionable — the detail carries which file, so a row naming the tool never
+        reads as the tool itself being absent.
+        """
+        # Named explicitly, not `super()`: `@dc.dataclass(slots=True)` rebuilds the
+        # class, so the `__class__` cell a zero-argument `super()` closes over
+        # points at the class that was replaced and it raises at the first call.
+        found = Provider.evidence(self, item, installed)
+        if found.verdict is not Verdict.MATCHED:
+            return found
+        absent = ghrelease.missing_companions(item.name)
+        if not absent:
+            return found
+        return ev.Evidence(Verdict.MISSING, f'{item.executable} is installed, but {", ".join(absent)} is not beside it')
 
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry
@@ -246,7 +268,23 @@ class ReleaseProvider(VendoredProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class CustomProvider(VendoredProvider):
-    """A vendor that ships its own installer."""
+    """A vendor that ships its own installer, and whatever else that installer places."""
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """The binary, and then the pieces beside it that are not binaries.
+
+        `bats` is the case: it is on PATH and current while `~/.local/lib/bats-assert`
+        is gone, which shows up as a failing `load` line in a suite rather than in
+        any verdict. Same shape as `ReleaseProvider` above, and named explicitly
+        rather than through `super()` for the same slotted-dataclass reason.
+        """
+        found = Provider.evidence(self, item, installed)
+        if found.verdict is not Verdict.MATCHED or not isinstance(item.entry, catalogs.CustomInstaller):
+            return found
+        absent = custom.missing_parts(item.entry)
+        if not absent:
+            return found
+        return ev.Evidence(Verdict.MISSING, f'{item.name} is installed, but {", ".join(absent)} is not')
 
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry

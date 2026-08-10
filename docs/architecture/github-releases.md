@@ -111,6 +111,22 @@ lookup to releases carrying it. Without that, asking for `icb` reports the CLI
 outdated every time the API releases, and current every time the API releases
 after it.
 
+## Projects that tag without releasing
+
+`aws/aws-cli` tags every build and publishes no GitHub release at all —
+`releases/latest` answers 404. That is not a `github_releases` entry (its bytes
+come from AWS's own CDN) but it is measured the same way, so `version_source:
+tags` on the entry sends the lookup to `/tags` instead. Declared rather than
+discovered: falling back to tags when the release lookup fails would read a
+rate-limited minute as "this project tags instead", and start answering a
+different question with no way to tell.
+
+`latest_tag` takes the **greatest tag by version**, not the first one on the
+page. GitHub documents no ordering for that endpoint — it answers newest-first in
+practice — and comparing costs one pass over a list already in memory. One page
+of 100 is the whole of what it reads: a project that published a hundred tags
+since its latest is not one this repo is a version behind.
+
 ## Private repositories
 
 The browser URL (`github.com/…/releases/download/…`) **404s on a private repo

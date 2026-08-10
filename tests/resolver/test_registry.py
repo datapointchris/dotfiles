@@ -14,6 +14,8 @@ from dotfiles import catalog
 from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles import vocabulary
+from dotfiles.providers import ghrelease
+from dotfiles.providers import releases
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Precondition
 from dotfiles.resolve import Reason
@@ -104,6 +106,43 @@ def test_a_release_is_answered_by_path() -> None:
     found = registry.evidence_for(item('ghrelease', 'lazygit', entry, executable='definitely-not-on-path'), {})
 
     assert found.verdict is Verdict.MISSING
+
+
+def test_a_release_missing_a_companion_is_not_converged(tmp_path, monkeypatch) -> None:
+    """The gap that made companions unmeasurable. fzf's binary being current says
+    nothing about `fzf-tmux` beside it, so a machine that lost the script reported
+    a converged fzf and the tmux popup binding silently did nothing — repaired only
+    because the install phase re-fetched companions blind on every current tool.
+    """
+    on_path(tmp_path, 'demo')
+    monkeypatch.setenv('PATH', str(tmp_path))
+    monkeypatch.setattr(ghrelease, 'bin_dir', lambda: tmp_path)
+    monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': (releases.Companion('demo-tmux', 'https://example.invalid/x'),)})
+
+    entry = catalog.GithubRelease.from_mapping({'name': 'demo', 'repo': 'someone/demo'})
+    found = registry.evidence_for(item('ghrelease', 'demo', entry, executable='demo'), {})
+
+    assert found.verdict is Verdict.MISSING
+    assert 'demo-tmux' in found.detail
+
+
+def test_a_release_whose_companions_are_all_present_is_matched(tmp_path, monkeypatch) -> None:
+    on_path(tmp_path, 'demo')
+    on_path(tmp_path, 'demo-tmux')
+    monkeypatch.setenv('PATH', str(tmp_path))
+    monkeypatch.setattr(ghrelease, 'bin_dir', lambda: tmp_path)
+    monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': (releases.Companion('demo-tmux', 'https://example.invalid/x'),)})
+
+    entry = catalog.GithubRelease.from_mapping({'name': 'demo', 'repo': 'someone/demo'})
+    found = registry.evidence_for(item('ghrelease', 'demo', entry, executable='demo'), {})
+
+    assert found.verdict is Verdict.MATCHED
+
+
+def on_path(directory, name: str) -> None:
+    placed = directory / name
+    placed.write_text('#!/bin/sh\n')
+    placed.chmod(0o755)
 
 
 def test_a_declared_install_path_beats_the_providers_own_rule(tmp_path) -> None:

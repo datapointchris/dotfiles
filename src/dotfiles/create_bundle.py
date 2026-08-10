@@ -50,8 +50,9 @@ from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import github_release
-from dotfiles import parse_packages
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -60,6 +61,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import toolchain
+from dotfiles.resolve import DesiredItem
 
 log = logging.getLogger('create-bundle')
 
@@ -120,9 +122,14 @@ reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
 On a machine that is already built, extracting a newer bundle refreshes
-~/installers, but apply skips every tool already present. Move them with:
+~/installers. Offline, this manifest is what "latest" means -- a tool older
+than the version recorded here reads as out of date, and apply moves it onto
+the bundled one:
 
-  dotfiles packages apply --reinstall
+  dotfiles packages apply --offline
+
+Which also means the reverse: a tool this bundle does not carry cannot be
+measured offline at all, and says so rather than reporting itself current.
 
 Go tools take the bundled binary when proxy.golang.org is unreachable, so
 that is how a firewalled machine moves off the version it was built with.
@@ -524,7 +531,7 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
         archive_path.unlink()
 
 
-def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
     """Stage every declared release, named by the same functions that install it.
 
     The bundler used to ask each installer script what it would download, over a
@@ -538,13 +545,12 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, ma
     full `cli/v0.9.0` would have the install rebuild it as `cli/cli/v0.9.0`.
     """
     log.info('Downloading GitHub releases...')
-    declaration = catalog.load()
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
 
-    for tool in parse_packages.filter_github_releases_by_manifest(packages, manifest):
-        entry = declaration.find('github_releases', tool)
-        if not isinstance(entry, catalog.GithubRelease):
-            raise BundleError(f"packages.yml github_releases entry '{tool}' is not a release entry")
+    for item in items:
+        entry = item.entry
+        assert isinstance(entry, catalog.GithubRelease)
+        tool = entry.name
 
         build = releases.ASSETS.get(tool)
         if build is None:
@@ -562,34 +568,39 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, ma
         verify_against_upstream(bundle, cache, destination, asset)
         bundle.record('binary', tool, version, asset.filename)
 
-        for companion in published.companions:
-            extra = url_asset(companion.url)
+        for companion in releases.COMPANIONS.get(tool, ()):
+            extra = url_asset(companion.url(tag))
             extra_destination = bundle.binaries / companion.name
             cache.fetch(extra, extra_destination, f'    extra: {companion.name} ({version})')
             verify_against_upstream(bundle, cache, extra_destination, extra)
             bundle.record('extra', companion.name, version, companion.name)
 
 
-def bundleable(bundle: Bundle, section: str, names: list[str]) -> list[catalog.Entry]:
+def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.CargoPackage]:
     """The declared entries a bundle can stage, with the rest said out loud.
 
     An entry with no repo or no `binary_pattern` cannot be staged — there is no
     asset to name — and the machine that installs from this bundle then has no
     source for it at all. The row filter this replaces dropped those silently,
     which is the same information a log line carries and none of the evidence.
+
+    The two sections are named rather than reached through `getattr` defaults,
+    which is the same call `precondition_of` was corrected to: a default standing
+    in for "this subclass has no such field" answers *unbundleable* for an entry
+    whose field was merely renamed, and the symptom is a bundle silently one tool
+    short on the machine that cannot fetch it.
     """
-    declaration = catalog.load()
     staged = []
-    for name in names:
-        entry = declaration.find(section, name)
-        if getattr(entry, 'github_repo', '') and getattr(entry, 'binary_pattern', ''):
+    for item in items:
+        entry = item.entry
+        if isinstance(entry, catalog.GoTool | catalog.CargoPackage) and entry.github_repo and entry.binary_pattern:
             staged.append(entry)
         else:
-            log.warning('  %s declares no github_repo/binary_pattern, so nothing is staged for it', name)
+            log.warning('  %s declares no github_repo/binary_pattern, so nothing is staged for it', item.name)
     return staged
 
 
-def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
     """Stage every declared Go tool's prebuilt binary.
 
     The asset is named by `providers.gotool.stage`, which is the same module that
@@ -600,9 +611,8 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manife
     """
     log.info('Downloading Go tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
-    declared = [row.split('|')[0] for row in parse_packages.filter_go_packages_by_manifest(packages, manifest, 'name_package')]
 
-    for entry in bundleable(bundle, 'go_tools', declared):
+    for entry in bundleable(items):
         assert isinstance(entry, catalog.GoTool)
         version = fetch_latest_version(entry.github_repo)
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
@@ -613,7 +623,7 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manife
         bundle.record('go-binary', entry.executable, version, entry.executable)
 
 
-def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
     """Stage every declared Rust CLI's release binary, named by its own provider.
 
     Recorded under the *crate* name rather than the binary's, because that is what
@@ -622,9 +632,8 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, man
     """
     log.info('Downloading Cargo tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
-    declared = parse_packages.filter_cargo_packages_by_manifest(packages, manifest)
 
-    for entry in bundleable(bundle, 'cargo_packages', declared):
+    for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
         version = fetch_latest_version(entry.github_repo)
         filename = cargo.stage(entry, version, target)
@@ -791,7 +800,7 @@ def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
             bundle.record('wheel', name, version, file['filename'])
 
 
-def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
+def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
     """Install scripts, from two sources.
 
     uv is named here rather than declared, because it is bootstrap infrastructure
@@ -810,14 +819,16 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
     """
     log.info('Downloading install scripts...')
 
-    declaration = catalog.load()
-    for tool in parse_packages.filter_custom_installers_by_manifest(packages, manifest, filter_field='bundle_install_script'):
-        entry = declaration.find('custom_installers', tool)
-        if not isinstance(entry, catalog.CustomInstaller) or not entry.install_url:
-            raise BundleError(f"packages.yml custom_installers entry '{tool}' opts into bundling but declares no install_url")
-        log.info('  %s...', tool)
-        download(entry.install_url, bundle.scripts / f'{tool}-install.sh')
-        bundle.record('script', tool, 'latest', f'{tool}-install.sh')
+    for item in items:
+        entry = item.entry
+        assert isinstance(entry, catalog.CustomInstaller)
+        if not entry.bundle_install_script:
+            continue
+        if not entry.install_url:
+            raise BundleError(f"packages.yml custom_installers entry '{entry.name}' opts into bundling but declares no install_url")
+        log.info('  %s...', entry.name)
+        download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
+        bundle.record('script', entry.name, 'latest', f'{entry.name}-install.sh')
 
     log.info('  uv...')
     download(toolchain.UV_INSTALL_URL, bundle.scripts / 'uv-install.sh')
@@ -832,13 +843,16 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
     """
     os_name, arch = parse_platform(target_platform)
 
-    manifest_file = paths.MANIFESTS_DIR / f'{manifest_name}.yml'
-    if not manifest_file.is_file():
-        available = '\n'.join(f'  {path.stem}' for path in sorted((paths.MANIFESTS_DIR).glob('*.yml')))
-        raise BundleError(f'Manifest not found: {manifest_file}\nAvailable manifests:\n{available}')
-
-    packages = parse_packages.load_packages()
-    manifest = parse_packages.load_manifest(manifest_name)
+    # The same resolution the install performs, for a machine that is not this one
+    # and a target that need not be its own. Asking the resolver rather than
+    # re-reading the manifest is what stops the bundle staging one set of tools
+    # while `dotfiles apply` on the target goes looking for another — and it is
+    # what makes a coordinate the manifest declares (`requires_wsl_host`) narrow
+    # the bundle, which the name-list filters this replaces could not see.
+    try:
+        plan = resolve.resolve(catalog.load(), machines.load(manifest_name))
+    except (catalog.CatalogError, machines.MachineError) as refused:
+        raise BundleError(str(refused)) from refused
 
     name = bundle_name(manifest_name, os_name, arch, today or dt.date.today())
     log.info('Creating offline bundle: %s', name)
@@ -853,10 +867,10 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
 
         add_uv(bundle, cache)
         add_wheels(bundle, cache)
-        add_github_releases(bundle, cache, packages, manifest)
-        add_go_binaries(bundle, cache, packages, manifest)
-        add_cargo_binaries(bundle, cache, packages, manifest)
-        add_install_scripts(bundle, packages, manifest)
+        add_github_releases(bundle, cache, plan.for_section('github_releases'))
+        add_go_binaries(bundle, cache, plan.for_section('go_tools'))
+        add_cargo_binaries(bundle, cache, plan.for_section('cargo_packages'))
+        add_install_scripts(bundle, plan.for_section('custom_installers'))
         bundle.write_metadata()
 
         log.info('Creating tarball...')

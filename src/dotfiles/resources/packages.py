@@ -27,6 +27,7 @@ from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
+from dotfiles.providers import ghrelease
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
@@ -39,10 +40,10 @@ from dotfiles.session import Session
 
 NAME = 'packages'
 
-CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage)
+CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller)
 """The entries whose currency is a question with an upstream answer.
 
-All three install from a repo this declaration names, so "what should be
+All four install from a repo this declaration names, so "what should be
 installed" is decided by a tag rather than by anyone else's schedule. `go install
 @latest` and `cargo binstall` are not exceptions to that — they *are* the upgrade,
 because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
@@ -50,6 +51,16 @@ because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
 Everything else here defers to a registry that upgrades on its own: asking apt or
 npm whether a package is the newest one is asking a question the machine's own
 manager already owns.
+
+`CustomInstaller` belongs with them because a vendor that ships its own installer
+still publishes releases somewhere, and the entry names where: the repo is a
+declarative fact even when the bytes come from an S3 bucket or a HashiCorp mirror.
+The engine acts on verdicts, so a section with no verdict for "behind" is a section
+that silently never upgrades.
+
+Which entries cannot be asked is `_has_currency`'s answer rather than a list here —
+an entry naming no repo, reporting no version, or installing no binary drops out
+there, and `dotfiles machines show --json` is what enumerates them.
 """
 
 
@@ -66,6 +77,15 @@ class Observed:
     """Cache key → the newest upstream release, for entries still inside the TTL."""
 
     consulted_network: bool = False
+
+    from_bundle: bool = False
+    """Whether `latest` came from a staged bundle rather than the release cache.
+
+    Carried so an unanswerable row can say which upstream had nothing to say. The
+    two are different findings on a machine that cannot reach GitHub: a cache with
+    no entry means nobody has asked, while a bundle with no row for a tool means
+    the bundle does not carry it and never will until a newer one is built.
+    """
 
     @property
     def summary(self) -> str:
@@ -95,6 +115,7 @@ class PackagesResource:
             reported={item.address: found for item in present if (found := ev.reported_version(item.executable))},
             latest=latest,
             consulted_network=consulted,
+            from_bundle=session.offline,
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -125,40 +146,72 @@ class PackagesResource:
 def _has_currency(item: DesiredItem) -> bool:
     """Whether this item can be compared against an upstream at all.
 
-    Both halves have to hold, and an entry failing either is not a finding — it is
-    a question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
+    Every clause has to hold, and an entry failing one is not a finding — it is a
+    question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
     tool declared by module path alone names no repo to consult. A GUI names one
     and still cannot be asked: probing `webviewrs` opened a window and blocked the
-    plan on its event loop, which is what `reports_version` exists to declare.
+    plan on its event loop, which is what `reports_version` exists to declare. And
+    something that installs no binary has nothing to ask — `bashselfupdate` is a
+    sourced library found by its `installed_path`, so it names a repo and still has
+    no version to report.
     """
-    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(_wanted(item).repo)
+    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
-    if isinstance(entry, catalog.GithubRelease):
-        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix)
+    if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
+        from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
+        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags)
     if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)
     return releases.Wanted(repo='')
 
 
 def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:
-    """The cached upstream versions, refreshed only when this run is allowed to.
+    """What each present tool should be at, from whichever upstream this run has.
 
-    Offline never asks, whatever `--refresh` says: the flag means "spend the
-    network on being current", and there is no network to spend. It reports
-    `UNKNOWN` from the cache it has, which is the honest answer rather than a
-    failure.
+    Offline never asks GitHub, whatever `--refresh` says: the flag means "spend the
+    network on being current", and there is no network to spend.
+
+    **Offline, the bundle is the upstream.** It has to be: the release cache is
+    empty on a machine that has never reached GitHub, so reading it there answers
+    `UNKNOWN` for every installed tool and leaves nothing repairable — a newer
+    bundle extracted onto a built machine would upgrade nothing at all. The bundle
+    records a version per staged file, which is the same fact `resolve_tag` reads to
+    name a tag with no network.
     """
+    if session.offline:
+        return _staged(present), False
+
     entries = releases.load()
-    if not session.refresh or session.offline or not present:
+    if not session.refresh or not present:
         return entries, False
 
     now = dt.datetime.now(dt.UTC)
     entries = releases.refresh(tuple({_wanted(item) for item in present}), entries, now)
     releases.save(entries)
     return entries, True
+
+
+def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
+    """What a staged bundle holds for each present tool, keyed as the cache is.
+
+    Stamped now rather than with the bundle's build date, because the TTL is about
+    how stale an *answer* is and this answer cannot go stale: what the bundle
+    carries is what the bundle carries until a newer one is extracted.
+
+    Deliberately not written back through `releases.save`. These versions are what
+    one tarball happens to hold, not what upstream published, and persisting them
+    would have the next online run read a bundle's contents as the release cache.
+    """
+    now = dt.datetime.now(dt.UTC)
+    found = {}
+    for item in present:
+        version = ghrelease.bundle_version(item.name)
+        if version:
+            found[_wanted(item).key] = releases.Cached(version=version, checked=now)
+    return found
 
 
 def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -194,14 +247,13 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
 
     cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
     if cached is None:
-        reason = 'offline, so upstream could not be asked' if observed.consulted_network is False else 'upstream did not answer'
         return (
             Change(
                 NAME,
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
-                detail=f'no cached release for {_wanted(item).repo} within the TTL ({reason}); check --refresh to measure',
+                detail=_unmeasurable(item, observed),
                 repair=Repair.NONE,
                 desired=item,
                 observed=reported,
@@ -209,6 +261,16 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     return _compared(item, reported, cached.version, versions.at_least(reported, cached.version), f'{cached.version} is the latest release')
+
+
+def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
+    """Why nothing can say whether this one is current, in the terms of the upstream
+    that was asked. A bundle carrying no row for a tool and a cache nobody has
+    filled are different problems with different fixes."""
+    if observed.from_bundle:
+        return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
+    reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
+    return f'no cached release for {_wanted(item).repo} within the TTL ({reason}); check --refresh to measure'
 
 
 def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str) -> tuple[Change, ...]:

@@ -32,6 +32,7 @@ from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import ghrelease
+from dotfiles.providers import releases
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Asset
 from dotfiles.providers.releases import Companion
@@ -39,6 +40,12 @@ from dotfiles.providers.releases import Companion
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 
 PAYLOAD = b'#!/bin/sh\necho installed\n'
+
+UNREACHABLE = 'https://example.invalid/demo-tmux'
+"""A companion URL no test may reach. Every one of these runs offline, so a test
+that started downloading would be a test that stopped testing the bundle."""
+
+COMPANION = (Companion('demo-tmux', UNREACHABLE),)
 
 
 def entry(name: str = 'demo', **fields) -> catalog.GithubRelease:
@@ -198,53 +205,46 @@ class TestTreeInstall:
 
 
 class TestCompanions:
-    """fzf-tmux: fetched at the tag, and not optional."""
+    """fzf-tmux: fetched at the tag, not optional, and now measurable."""
 
     def test_a_companion_in_the_bundle_is_installed_beside_the_binary(self, home, bundle):
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
         (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
 
-        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
-        result = install_one(asset, entry(), offline=True)
+        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert result.ok, result.detail
         placed = home / '.local' / 'bin' / 'demo-tmux'
         assert placed.read_bytes() == b'companion'
         assert placed.stat().st_mode & stat.S_IXUSR
 
-    def test_a_missing_companion_is_restored_without_reinstalling_the_binary(self, home, bundle):
-        """The self-heal the bash had by re-running its companion install every
-        time. A current binary says nothing about whether the separate file beside
-        it is still there."""
-        (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
-        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
-
-        result = ensure_one(asset, entry(), offline=True)
-
-        assert result.ok, result.detail
-        assert (home / '.local' / 'bin' / 'demo-tmux').read_bytes() == b'companion'
-
-    def test_a_companion_already_there_is_left_alone(self, home, bundle):
-        """Unlike an install, which refreshes them: a companion is fetched at the
-        binary's tag and the two are a matched pair."""
-        placed = home / '.local' / 'bin' / 'demo-tmux'
-        placed.write_bytes(b'whatever is already installed')
-        (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
-        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
-
-        assert ensure_one(asset, entry(), offline=True).ok
-        assert placed.read_bytes() == b'whatever is already installed'
-
     def test_a_companion_that_cannot_be_had_fails_the_install(self, home, bundle):
         """Silently skipping it installs a tool whose tmux binding does nothing,
         which surfaces days later at a keystroke rather than here."""
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
 
-        asset = Asset('demo', Archive.RAW, companions=(Companion('demo-tmux', 'https://example.invalid/demo-tmux'),))
-        result = install_one(asset, entry(), offline=True)
+        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert not result.ok
         assert 'demo-tmux' in result.detail
+
+    def test_an_absent_companion_is_named_without_resolving_a_release(self, home, monkeypatch):
+        """The whole point of splitting the name off the URL. Nothing here has a
+        tag, a network or a release to consult, and the answer still comes back."""
+        monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': COMPANION})
+
+        assert ghrelease.missing_companions('demo') == ('demo-tmux',)
+
+    def test_a_companion_on_disk_is_not_reported_missing(self, home, monkeypatch):
+        monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': COMPANION})
+        placed = home / '.local' / 'bin' / 'demo-tmux'
+        placed.parent.mkdir(parents=True, exist_ok=True)
+        placed.write_bytes(b'companion')
+
+        assert ghrelease.missing_companions('demo') == ()
+
+    def test_a_tool_declaring_no_companions_owes_nothing(self):
+        assert ghrelease.missing_companions('demo') == ()
 
 
 class TestChecksumPolicy:
@@ -368,36 +368,37 @@ class TestPreconditions:
         assert 'not on PATH' in result.detail
 
 
-def install_one(asset: Asset, declared: catalog.GithubRelease, *, offline: bool) -> ghrelease.Result:
+def install_one(
+    asset: Asset,
+    declared: catalog.GithubRelease,
+    *,
+    offline: bool,
+    companions: tuple[Companion, ...] = (),
+) -> ghrelease.Result:
     """Run the engine against one synthetic asset."""
-    with registered(asset, declared):
+    with registered(asset, declared, companions):
         return ghrelease.install(declared, LINUX, offline=offline)
 
 
-def ensure_one(asset: Asset, declared: catalog.GithubRelease, *, offline: bool) -> ghrelease.Result:
-    """Run the companion self-heal against one synthetic asset."""
-    with registered(asset, declared):
-        return ghrelease.ensure_companions(declared, LINUX, 'v1.2.3', offline=offline)
-
-
 @contextlib.contextmanager
-def registered(asset: Asset, declared: catalog.GithubRelease):
-    """Put one synthetic asset in the table for the length of a test.
+def registered(asset: Asset, declared: catalog.GithubRelease, companions: tuple[Companion, ...] = ()):
+    """Put one synthetic asset and its companions in the tables for one test.
 
-    The table is keyed by `packages.yml` name and every real entry in it is
+    The tables are keyed by `packages.yml` name and every real entry in them is
     covered against live releases, so a test wanting a controlled archive shape
     would otherwise have to pick a real tool and inherit its spelling. Registering
     one for the duration is the smaller lie.
     """
-    from dotfiles.providers import releases
-
-    original = dict(releases.ASSETS)
+    assets, companion_table = dict(releases.ASSETS), dict(releases.COMPANIONS)
     releases.ASSETS[declared.name] = lambda tag, target: asset
+    releases.COMPANIONS[declared.name] = companions
     try:
         yield
     finally:
         releases.ASSETS.clear()
-        releases.ASSETS.update(original)
+        releases.ASSETS.update(assets)
+        releases.COMPANIONS.clear()
+        releases.COMPANIONS.update(companion_table)
 
 
 def test_the_engine_reads_home_at_call_time(tmp_path, monkeypatch):

@@ -272,16 +272,6 @@ class TestCheckoutTools:
         assert not result.ok
         assert 'not on PATH' in result.detail
 
-    def test_reinstall_reaches_past_a_live_checkout(self, declared, home, bundle, effected):
-        (home / '.local' / 'share' / 'theme' / '.git').mkdir(parents=True)
-        stub_binary(home, 'theme')
-        runs, fetches = effected()
-
-        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, reinstall=True)
-
-        assert result.ok, result.detail
-        assert fetches.urls and runs.ran('install.sh')
-
     def test_offline_leaves_an_installed_tool_alone(self, declared, home, bundle, effected):
         """Every one of these updates over the network, so offline has nothing to
         compare against and nothing to fetch. Failing the phase would report a
@@ -390,20 +380,12 @@ class TestAwscli:
         assert 'Homebrew' in result.detail
         assert fetches.urls == []
 
-    def test_an_installed_aws_is_left_alone_and_says_how_to_move_it(self, declared, home, bundle, effected, monkeypatch):
-        """AWS publishes no release to compare against and the installer is 73MB,
-        so the only way to ask is to download it."""
-        reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
-        _, fetches = effected()
-
-        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
-
-        assert result.ok
-        assert '--reinstall' in result.detail
-        assert fetches.urls == []
-
-    def test_reinstall_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
-        reports(monkeypatch, aws='aws-cli/2.36.19')
+    def test_an_installed_aws_is_still_converged_because_presence_is_not_currency(self, declared, home, bundle, effected, monkeypatch):
+        """Currency for awscli is the resource's, against `aws/aws-cli`'s tags, so
+        reaching this function means the machine is behind it. Ending here on
+        presence would make the entry unupgradable: the vendor's 73MB zip is the
+        only other thing that knows what version it holds."""
+        reports(monkeypatch, aws='aws-cli/2.36.18 Python/3.14.6')
         stub_binary(home, 'aws')
         zipped = io.BytesIO()
         with zipfile.ZipFile(zipped, 'w') as archive:
@@ -411,7 +393,32 @@ class TestAwscli:
         url = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
         runs, _ = effected(fetches=Fetches({url: zipped.getvalue()}))
 
-        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, reinstall=True)
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
+
+        assert result.ok, result.detail
+        assert any('aws/install' in argv[0] for argv in runs.calls)
+
+    def test_an_installed_aws_is_left_alone_offline(self, declared, home, bundle, effected, monkeypatch):
+        """The one case that ends without asking: nothing staged to install from,
+        and no network to fetch the vendor's zip."""
+        reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
+        runs, fetches = effected()
+
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
+
+        assert result.ok
+        assert fetches.urls == [] and runs.calls == []
+
+    def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
+        reports(monkeypatch, aws=None)
+        stub_binary(home, 'aws')
+        zipped = io.BytesIO()
+        with zipfile.ZipFile(zipped, 'w') as archive:
+            archive.writestr('aws/install', '#!/bin/sh\n')
+        url = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
+        runs, _ = effected(fetches=Fetches({url: zipped.getvalue()}))
+
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
 
         assert result.ok, result.detail
         installed = next(argv for argv in runs.calls if 'aws/install' in argv[0])
@@ -428,19 +435,6 @@ class TestMountS3:
 
         assert result.ok
         assert 'no macOS build' in result.detail
-        assert fetches.urls == []
-
-    def test_a_current_binary_is_measured_against_the_release_not_the_tarball(self, declared, home, bundle, effected, monkeypatch):
-        """The bucket serves only `latest/`, but awslabs publishes the same builds
-        as releases — which is what makes skipping cost one request instead of a
-        whole tarball."""
-        reports(monkeypatch, **{'mount-s3': 'mount-s3 1.23.0'})
-        latest(monkeypatch, 'mountpoint-s3-1.23.0')
-        _, fetches = effected()
-
-        result = custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
-
-        assert result.ok
         assert fetches.urls == []
 
     def test_an_unpinned_signing_key_refuses_the_install(self, declared, home, bundle, effected, monkeypatch):
@@ -501,16 +495,6 @@ class TestTerraformLs:
         assert 'not bundled' in result.detail
         assert fetches.urls == []
 
-    def test_a_current_binary_costs_one_release_lookup(self, declared, home, bundle, effected, monkeypatch):
-        reports(monkeypatch, **{'terraform-ls': '0.39.0'})
-        latest(monkeypatch, 'v0.39.0')
-        _, fetches = effected()
-
-        result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX)
-
-        assert result.ok
-        assert fetches.urls == []
-
     def test_a_behind_binary_is_downloaded_verified_and_placed(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, **{'terraform-ls': '0.38.0'})
         latest(monkeypatch, 'v0.39.0')
@@ -561,21 +545,26 @@ class TestTerraformLs:
 
 
 class TestBats:
-    def test_a_current_runner_still_restores_a_missing_helper(self, declared, home, bundle, effected, monkeypatch):
-        """The same reason release companions are re-checked: nothing about `bats`
-        being current says `~/.local/lib/bats-assert` is still there, and its
-        absence surfaces as a failing `load` line in a suite, not here."""
-        reports(monkeypatch, bats='Bats 1.14.0')
-        latest(monkeypatch, 'v1.14.0')
+    def test_a_missing_helper_is_named_rather_than_restored_blind(self, declared, home, bundle, effected):
+        """The same reason release companions became measurable: nothing about
+        `bats` being current says `~/.local/lib/bats-assert` is still there, and its
+        absence surfaces as a failing `load` line in a suite, not here.
+
+        Measured rather than restored blind, which is what lets `check` mention it
+        at all — a repair nothing observes is a repair nobody can be told about.
+        """
         (home / '.local' / 'lib' / 'bats-support').mkdir(parents=True)
-        runs, _ = effected()
 
-        result = custom.install(declared.find('custom_installers', 'bats'), LINUX)
+        assert custom.missing_parts(declared.find('custom_installers', 'bats')) == ('bats-assert',)
 
-        assert result.ok, result.detail
-        cloned = [argv for argv in runs.calls if argv[0] == 'git']
-        assert len(cloned) == 1
-        assert 'bats-assert' in cloned[0][-2]
+    def test_both_helpers_present_owes_nothing(self, declared, home, bundle, effected):
+        for helper in ('support', 'assert'):
+            (home / '.local' / 'lib' / f'bats-{helper}').mkdir(parents=True)
+
+        assert custom.missing_parts(declared.find('custom_installers', 'bats')) == ()
+
+    def test_an_installer_with_no_side_artifacts_owes_nothing(self, declared, home, bundle, effected):
+        assert custom.missing_parts(declared.find('custom_installers', 'awscli')) == ()
 
     def test_an_absent_runner_clones_at_the_tag_and_runs_its_own_installer(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, bats=None)

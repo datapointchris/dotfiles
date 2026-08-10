@@ -212,14 +212,20 @@ def test_the_release_publishes_the_asset_asked_for(tool, os_name, arch, resolved
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize('tool', sorted(tool for tool in providers.ASSETS if providers.ASSETS[tool]('v0', LINUX).companions))
+@pytest.mark.parametrize('tool', sorted(providers.COMPANIONS))
 def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
     """A companion is fetched from the repo tree rather than the release, so it is
-    the one download the asset-list check above cannot see."""
+    the one download the asset-list check above cannot see.
+
+    Parametrized off `COMPANIONS` directly, which is only possible because a
+    companion's name is static and its URL is the half carrying the tag. Reading it
+    off an asset function would mean inventing a tag to ask with, and inventing one
+    is guessing at what the answer depends on.
+    """
     _, tag, _ = asset_under_test((tool, 'linux', 'x86_64'), resolved_urls)
 
-    for companion in providers.ASSETS[tool](tag, LINUX).companions:
-        response = http.get(companion.url)
+    for companion in providers.COMPANIONS[tool]:
+        response = http.get(companion.url(tag))
         assert response.status_code == 200, f'{companion.name} at {tag} answered {response.status_code}'
         assert response.text.startswith('#!'), f'{companion.name} did not come back as a script'
 

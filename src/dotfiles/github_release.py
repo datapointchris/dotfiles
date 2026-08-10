@@ -35,6 +35,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from dotfiles import versions
+
 # Some hosts answer urllib's default identification with a 403 where they serve
 # curl fine.
 USER_AGENT = 'curl/8.0 (dotfiles-installer)'
@@ -237,6 +239,46 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
         if not release.get('draft') and tag.startswith(tag_prefix):
             return tag
     return None
+
+
+TAG_PAGE = 100
+"""How many tags one page holds, which is the whole of what `latest_tag` reads.
+
+The newest hundred, and a project that published a hundred tags since its latest
+is not one this repo is behind on by a version. Paging further would spend
+requests against a rate limit `check` shares with every declared release.
+"""
+
+
+def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
+    """The newest *tag*, for a project that tags without publishing releases.
+
+    `aws/aws-cli` is the case and the only one: `releases/latest` answers 404
+    while `tags` lists `2.36.19`. Without this its entry could name no repo, and
+    an entry naming none is one nothing can say is behind — which for awscli means
+    a machine that never moves off whatever it first installed.
+
+    **The greatest by version, never the first.** GitHub documents no ordering for
+    this endpoint — it answers newest-first in practice, and has for every
+    observation — so comparing rather than trusting the position costs one pass
+    over a list already in memory and cannot be wrong if that changes. A tag whose
+    name holds no version is skipped rather than guessed at, which is the same rule
+    `versions.parse` states.
+    """
+    try:
+        payload = json.loads(request(f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'))
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return None
+
+    best, highest = None, ()
+    for entry in payload:
+        name = entry.get('name') or ''
+        if not name.startswith(tag_prefix):
+            continue
+        parsed = versions.parse(name)
+        if parsed is not None and parsed > highest:
+            best, highest = name, parsed
+    return best
 
 
 def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None:

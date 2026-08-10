@@ -122,6 +122,18 @@ The two exceptions are separate values because they are separate upstream facts;
 `github_release.Verification` carries the same distinction and says why.
 """
 
+VERSION_FROM_RELEASES = 'releases'
+VERSION_FROM_TAGS = 'tags'
+
+VERSION_SOURCES = frozenset({VERSION_FROM_RELEASES, VERSION_FROM_TAGS})
+"""Which of a repo's two answers names its newest version.
+
+Same shape as `CHECKSUM_STATES` and for the same reason: an upstream fact the
+declaration states, so the exception is countable rather than discovered by a
+lookup quietly returning nothing. One entry declares `tags` — `aws/aws-cli`,
+which tags every build and publishes no release.
+"""
+
 
 def owner_of(value: str) -> str | None:
     """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
@@ -201,6 +213,30 @@ class Entry:
     on every plan is noise rather than a finding.
     """
 
+    release_tag_prefix: str = ''
+    """Which tags in `repo` are this entry's, for a repo that releases more than one thing.
+
+    On the base for the same reason as the two above: it describes the *repo the
+    entry is measured against*, and both `github_releases` and `custom_installers`
+    name one. `mount-s3` is the case that moved it — its releases are tagged
+    `mountpoint-s3-1.23.0` in a repo that tags other things too, and that prefix
+    lived as a constant in `providers/custom.py` beside a second copy of the repo
+    name the declaration already carried.
+    """
+
+    version_source: str = VERSION_FROM_RELEASES
+    """Which of a repo's two answers says what the newest version is.
+
+    Almost always its releases. `aws/aws-cli` is the exception and the reason this
+    field exists: it tags every build and publishes no release at all, so
+    `releases/latest` answers 404 and the entry would have to declare no `repo`,
+    leaving `check` unable to say whether awscli is behind.
+
+    Declared rather than discovered. Falling back to tags when the release lookup
+    fails would read a *network* failure as "this project tags instead", so a
+    rate-limited minute would silently change which question is being asked.
+    """
+
     section: ClassVar[str]
     structure: ClassVar[Structure] = Structure.LIST
     honoured_constraints: ClassVar[tuple[str, ...]] = ()
@@ -259,6 +295,9 @@ class Entry:
 
         if self.version and (self.min_version or self.max_version):
             found.append("declares 'version', which pins exactly, beside a floor or ceiling describing a window nobody can predict")
+
+        if self.version_source not in VERSION_SOURCES:
+            found.append(f"declares 'version_source' as {self.version_source!r}, which is not one of {', '.join(sorted(VERSION_SOURCES))}")
 
         return tuple(found)
 
@@ -330,7 +369,6 @@ class GithubRelease(Entry):
 
     repo: str
     binary_link: str = ''
-    release_tag_prefix: str = ''
     requires_wsl_host: bool = False
     checksum: str = CHECKSUM_REQUIRED
 
