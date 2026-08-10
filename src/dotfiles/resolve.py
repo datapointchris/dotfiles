@@ -235,6 +235,8 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
     broken — `win32yank` exists for exactly that reason and says so in the file.
     """
     if isinstance(entry, catalog.SystemPackage):
+        if entry.excludes_host and str(coordinates.host) == entry.excludes_host:
+            return False
         return any(entry.package_for(installer) for installer in coordinates.installers)
     if isinstance(entry, catalog.MacosCask | catalog.MasApp | catalog.MacosDefault):
         return coordinates.os_family is axes.OSFamily.DARWIN
