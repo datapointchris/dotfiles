@@ -17,8 +17,9 @@ holds, which is why the capture step comes first.
 3. Install `git` with the system package manager — the one bootstrap dependency.
 4. Clone this repo over HTTPS. No SSH key exists yet on a fresh machine.
 5. Restore the captured state.
-6. `./install.sh --machine NAME`.
-7. Verify, then do the manual steps.
+6. `./install.sh --machine NAME`, which installs the CLI and stops.
+7. `dotfiles apply --machine NAME`, which is the install proper.
+8. Verify, then do the manual steps.
 
 ## Capture what no git repo holds
 
@@ -64,7 +65,7 @@ Settings*. Have the Apple ID password ready; the reset clears Activation Lock as
 part of the flow.
 
 Xcode Command Line Tools is the bootstrap dependency, being where `git` comes
-from. `install.sh` self-bootstraps Homebrew and everything after it.
+from. The apply self-bootstraps Homebrew and everything after it.
 
 ```bash
 xcode-select --install
@@ -72,8 +73,9 @@ xcode-select --install
 
 ## Arch Linux
 
-Do a base install, ensure `git` and `sudo` are present, and run `install.sh`.
-The installer owns everything above the base system, including the AUR helper.
+Do a base install, ensure `git` and `sudo` are present, then run `install.sh`
+and the `apply` it prints. The installer owns everything above the base system,
+including the AUR helper.
 
 ## WSL — the work machine
 
@@ -90,7 +92,15 @@ unpacking by hand.
 
 ```bash
 ./install.sh --machine wsl-work-workstation --offline
+dotfiles plan  --machine wsl-work-workstation
+dotfiles apply --machine wsl-work-workstation --offline
 ```
+
+`--offline` belongs on both: it tells the bootstrap where uv and the wheels come
+from, and it tells the apply to install from the staged bundle rather than the
+network. The `plan` in between matters most on this box, where a run started
+without one has sat on a blocked cargo download having never said what it meant
+to fetch.
 
 This box has no Syncthing, so anything the fleet replicates that way — `~/dev`,
 `~/notes`, the `indy` index — is simply absent. Tools depending on those paths
@@ -105,8 +115,9 @@ dotfiles packages check   # declared but not installed
 syncer check         # repos the registry expects, against what is on disk
 ```
 
-Open the editor and confirm plugins loaded without errors. `install.sh` is
-idempotent, so anything that failed can be fixed and the whole thing re-run.
+Open the editor and confirm plugins loaded without errors. `dotfiles apply` is
+idempotent, so anything that failed can be fixed and the whole thing re-run
+without going near the bootstrap again.
 
 ## After the install
 

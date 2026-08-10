@@ -11,8 +11,8 @@
 # — pass an explicit default of 0 for anything that should start life off.
 #
 # Declared flags and their per-machine defaults live in install/flags.yml;
-# install.sh renders them into ~/.env. This library only answers the question,
-# it does not own the list.
+# `dotfiles env apply` renders them into ~/.env. This library only answers the
+# question, it does not own the list.
 #
 # Usage:
 #   source "$HOME/.local/shell/flags.sh"

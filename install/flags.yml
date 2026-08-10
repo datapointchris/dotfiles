@@ -1,8 +1,8 @@
 # ================================================================
 # Feature Flags
 # ================================================================
-# The declared list of every on/off switch in the fleet. install.sh renders
-# these into ~/.env, and shell code tests them with flag_enabled() from
+# The declared list of every on/off switch in the fleet. `dotfiles env apply`
+# renders these into ~/.env, and shell code tests them with flag_enabled() from
 # configs/common/.local/shell/flags.sh.
 #
 # The model is load-everywhere, flag-decides: code ships to every machine and

@@ -1,4 +1,4 @@
-"""What a machine looks like after `install.sh` has run on it.
+"""What a machine looks like after `install.sh` and the `apply` it hands to.
 
 Each test is one question about the finished machine, and they share a single
 install through the session-scoped `machine` fixture. That split is the point:
@@ -6,10 +6,11 @@ the bash harnesses ran verification as sequential steps, so the first failure
 decided the exit code and everything after it was noise. Here a broken update
 path and a missing binary are two different red lines.
 
-`install.sh` is a bootstrap that installs the CLI and hands over, so the first
-tests below are about that handover specifically — a machine can fail to
-converge for a reason that has nothing to do with whether the bootstrap worked,
-and telling those apart is what the whole step is for.
+`install.sh` is a bootstrap that installs the CLI and stops, and `dotfiles apply`
+is what converges the machine — so the first tests below are about that seam
+specifically. A machine can fail to converge for a reason that has nothing to do
+with whether the bootstrap worked, and telling those apart is what the whole step
+is for.
 """
 
 from __future__ import annotations

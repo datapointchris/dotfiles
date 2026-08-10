@@ -56,7 +56,10 @@ nor a container and runs in well under a second.
 
 Move the tarball across, then `./install.sh --machine NAME --offline` finds it in
 `./` or `~/`, extracts it to `~/installers/`, installs uv and the CLI from the
-bundle with no index at all, and hands over to `dotfiles apply --offline`.
+bundle with no index at all, and prints the `dotfiles apply --machine NAME
+--offline` that installs the machine from it. The flag is needed on both, and for
+different reasons: it says where the bootstrap gets uv and the wheels, and it
+says the apply installs from `~/installers/` rather than from the network.
 
 This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
 it builds a bundle, starts a container blackholed to exactly the hosts this page's

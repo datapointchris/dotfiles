@@ -101,9 +101,11 @@ bootstrap in offline mode — it finds and unpacks the tarball itself:
 
   git clone https://github.com/datapointchris/dotfiles.git
   cd dotfiles && ./install.sh --machine <name> --offline
+  dotfiles apply --machine <name> --offline
 
+The bootstrap installs the CLI and stops, printing that second line back.
 Everything comes out of ~/installers. bin/uv and wheels/ are what let the
-bootstrap install the CLI with no network at all; the rest is what the CLI
+bootstrap install the CLI with no network at all; the rest is what the apply
 then installs onto the machine.
 
 Directory Structure:
@@ -886,7 +888,8 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
         log.info('  From cache: %d (%s)', cache.hits, CACHE_ROOT)
     log.info('To use this bundle:')
     log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
-    log.info('  2. Run: ./install.sh --machine <name> --offline')
+    log.info('  2. Bootstrap: ./install.sh --machine <name> --offline')
+    log.info('  3. Install:   dotfiles apply --machine <name> --offline')
 
     # After the tarball, so a build is never delayed or failed by housekeeping.
     if use_cache:

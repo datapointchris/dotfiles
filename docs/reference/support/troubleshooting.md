@@ -42,16 +42,19 @@ eza -l ~/.config/zsh/.zshrc   # should point into ~/dotfiles
 dotfiles symlinks apply       # prunes dangling links and recreates all of them
 ```
 
-`apply` removes every link and recreates it, which is what prunes the ones left
-pointing at a deleted source. It is idempotent, and it is the only deployment
-verb — there is no create-only pass to pick between.
+`apply` prunes the links a deletion left dangling and then recreates every
+declared one. It never unlinks everything first: that gave a daemon watching its
+own config a window to find the file gone and write itself a default. It is
+idempotent, and it is the only deployment verb — there is no create-only pass to
+pick between.
 
 ## ZDOTDIR
 
 The system file differs by distro, which is the part that catches people:
 `/etc/zshenv` on macOS and Arch, `/etc/zsh/zshenv` on Ubuntu and WSL. Either
-way it should contain `export ZDOTDIR="$HOME/.config/zsh"`. `install.sh` writes
-this on every platform, so a missing one means the install did not finish.
+way it should contain `export ZDOTDIR="$HOME/.config/zsh"`. `dotfiles apply`
+writes it on every platform, so a missing one means the apply did not finish —
+or was never run, the bootstrap having only installed the CLI.
 
 There is deliberately no `~/.zshenv` or `~/.zprofile`; see
 [Architecture](../../architecture/index.md).

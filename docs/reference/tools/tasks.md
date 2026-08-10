@@ -44,11 +44,12 @@ a symlink across the WSL boundary — see
 
 ## Installation is not a task
 
-Full installation runs through `install.sh` with a machine manifest, not through
-Task, because it needs sudo and a `--machine` argument:
+Full installation runs through `install.sh` and the `dotfiles apply` it prints,
+not through Task, because it needs sudo and a `--machine` argument:
 
 ```sh
 ./install.sh --machine macos-personal-workstation
+dotfiles apply --machine macos-personal-workstation
 ```
 
 See [Rebuilding a Machine](../rebuilding-a-machine.md).

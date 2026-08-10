@@ -1,9 +1,9 @@
 """Real installs, in real containers.
 
-The most accurate tier there is: a fresh OS image, the actual `install.sh`, and
-whatever the machine looks like afterwards. Docker stays — what moved is the
-harness around it, from three ~490-line bash scripts into one rig the
-environments parameterize.
+The most accurate tier there is: a fresh OS image, the actual `install.sh` and
+the `apply` it hands to, and whatever the machine looks like afterwards. Docker
+stays — what moved is the harness around it, from three ~490-line bash scripts
+into one rig the environments parameterize.
 
 They were three copies of one shape, and the copies drifted. Every difference
 below was a bug found by running them on 2026-08-08:
@@ -276,7 +276,11 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
 
 @pytest.fixture(scope='session')
 def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
-    """The same container, with `install.sh` run against it.
+    """The same container, with `install.sh` and then `dotfiles apply` run against it.
+
+    Both, because the bootstrap no longer converges anything by itself and a
+    machine is what this fixture is for — `install_command` is where that chain
+    is spelled.
 
     Session-scoped because the install is the expensive part and every test is a
     different question about the same finished machine. `install_status` is

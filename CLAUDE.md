@@ -103,9 +103,9 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 
 **Installation Script Testing**:
 
-- `install.sh` requires `--machine NAME` and sudo — Claude Code cannot provide interactive sudo
-- Test individual phase scripts directly, or use Docker containers with passwordless sudo
-- Do NOT run `./install.sh` directly in Claude Code sessions
+- `install.sh` bootstraps the CLI and stops, printing the `dotfiles apply` that converges the machine. It is the apply that needs sudo, and Claude Code cannot provide interactive sudo
+- Test individual providers directly, or use Docker containers with passwordless sudo
+- Do NOT run `./install.sh` or `dotfiles apply` directly in Claude Code sessions
 
 ## Package Management Philosophy
 

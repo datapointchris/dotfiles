@@ -4,11 +4,17 @@
 # The one file in this repo that runs before anything is installed, which is why
 # it is POSIX sh, sources nothing, and is short enough to read in full before
 # running it. It stages an offline bundle if one is present, puts uv on the box,
-# installs this repo as a uv tool, and hands over. Everything past the last line
-# is Python.
+# installs this repo as a uv tool, and stops — printing the `dotfiles` commands
+# that converge the machine rather than running one.
 #
 #   ./install.sh --machine archlinux-personal-workstation
 #   ./install.sh --machine wsl-work-workstation --offline
+#
+# It ended in `exec dotfiles apply` until a bare `./install.sh` on a WSL box whose
+# `~/.env` already named it went straight into a half-hour networked run nobody
+# had asked to start, and hung mid-download behind the work firewall with no plan
+# ever having been shown. Getting the CLI onto a machine and converging that
+# machine are separate decisions, so they are separate commands.
 #
 # It validates the manifest name itself, unlike every other check in the system,
 # because the CLI that would answer the question does not exist yet.
@@ -50,14 +56,14 @@ newest_bundle() {
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh --machine NAME [--offline] [--through STAGE]
+Usage: ./install.sh --machine NAME [--offline]
 
-Puts uv and the dotfiles CLI on this machine, then runs `dotfiles apply`.
-Selectors and every other flag belong to the CLI: `dotfiles apply --help`.
+Puts uv and the dotfiles CLI on this machine and stops. Converging the machine
+is `dotfiles apply`, which this prints and never runs; selectors and every other
+flag belong to the CLI: `dotfiles apply --help`.
 
   --machine NAME   Which manifest this machine is (or set MACHINE)
   --offline        Stage the bundle from ./ or ~/ and install with no network
-  --through STAGE  Converge only as far as this stage, and stop
 EOF
   exit 0
 }
@@ -69,22 +75,16 @@ while [ $# -gt 0 ]; do
       [ -n "$MACHINE" ] || die "--machine needs a manifest name"
       shift 2
       ;;
+    # The one flag that is genuinely the bootstrap's: it decides where uv and the
+    # wheels come from, which is decided before any CLI exists to be told. Every
+    # other flag names something about converging the machine, and that command
+    # is now typed separately.
     --offline)
       OFFLINE=1
       shift
       ;;
-    # Passed through for the same reason --offline is: the bootstrap has to reach
-    # the CLI before any selector can be given, so a run that wants to stop part
-    # way has no earlier place to say so. Both are about *this invocation* rather
-    # than about which parts of the machine are wanted, which is the line the
-    # message below draws.
-    --through)
-      THROUGH="${2:-}"
-      [ -n "$THROUGH" ] || die "--through needs a stage name (dotfiles machines show names them)"
-      shift 2
-      ;;
     -h | --help) usage ;;
-    *) die "unknown argument: $1 — phases and their flags live on \`dotfiles apply\`" ;;
+    *) die "unknown argument: $1 — phases and their flags live on \`dotfiles apply\`, which this prints" ;;
   esac
 done
 
@@ -118,6 +118,10 @@ if [ -n "$OFFLINE" ]; then
   [ -d "$BUNDLE" ] || die "offline: no bundle in ./ or ~/, and nothing staged at $BUNDLE"
 fi
 
+# Kept, because the hand-off at the bottom has to say whether the *next* shell
+# will find the CLI. This script prepending a directory to its own PATH says
+# nothing about the shell the person types the printed command into.
+INHERITED_PATH="$PATH"
 PATH="$HOME/.local/bin:$PATH"
 export PATH
 
@@ -146,17 +150,30 @@ uv tool install "$@" --force --editable "$DOTFILES_DIR"
 
 # uv reports success having written the entry point somewhere this shell cannot
 # see it, when XDG_BIN_HOME points elsewhere. Catching it here names the cause;
-# the alternative is `dotfiles: not found` from the exec below.
-command -v dotfiles >/dev/null || die "installed, but 'dotfiles' is not on PATH — check \`uv tool dir --bin\`"
+# the alternative is `dotfiles: not found` from a shell the person reaches later,
+# with nothing left to say which run put it there.
+ENTRY_POINT=$(command -v dotfiles) || die "installed, but 'dotfiles' is not on PATH — check \`uv tool dir --bin\`"
+BIN_DIR=$(dirname -- "$ENTRY_POINT")
 
-# Built up rather than branched over, so a third flag is one more `if` instead of
-# another exec line. `if` and not `[ … ] &&`, because a false test there is a
-# non-zero status and `set -e` above would take the script with it.
-set -- apply --machine "$MACHINE"
+APPLY="--machine $MACHINE"
 if [ -n "$OFFLINE" ]; then
-  set -- "$@" --offline
+  APPLY="$APPLY --offline"
 fi
-if [ -n "${THROUGH:-}" ]; then
-  set -- "$@" --through "$THROUGH"
-fi
-exec dotfiles "$@"
+
+echo
+echo "dotfiles is installed. Nothing else on this machine has changed yet."
+echo
+echo "Converge it with:"
+echo
+# Only where it is needed, and first, because it is the line without which the
+# two below say `command not found` — uv writes the entry point to a directory a
+# machine this fresh has no reason to have on PATH yet.
+case ":$INHERITED_PATH:" in
+  *":$BIN_DIR:"*) ;;
+  *) echo "  export PATH=\"$BIN_DIR:\$PATH\"" ;;
+esac
+echo "  dotfiles plan  --machine $MACHINE"
+echo "  dotfiles apply $APPLY"
+echo
+echo "plan says what apply would change, and neither needs this script again."
+echo "Stop part way with --through STAGE; dotfiles machines show $MACHINE names them."

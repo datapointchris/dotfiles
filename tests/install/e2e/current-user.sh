@@ -54,11 +54,15 @@ OVERALL_START=$(date +%s)
 # ================================================================
 STEP_START=$(date +%s)
 print_header "STEP 1/4: Running Installation" "cyan"
-echo "Running: bash install.sh"
+echo "Running: bash install.sh, then dotfiles apply"
 echo ""
 
+# Two commands because install.sh bootstraps the CLI and stops; converging the
+# machine is the apply, and this script is about the converged machine.
+export PATH="$HOME/.local/bin:$PATH"
+
 # shellcheck disable=SC2086  # MACHINE_FLAG intentionally unquoted (empty or flag pair)
-if bash "$DOTFILES_DIR/install.sh" $MACHINE_FLAG; then
+if bash "$DOTFILES_DIR/install.sh" $MACHINE_FLAG && dotfiles apply $MACHINE_FLAG; then
   log_success "Installation completed"
 else
   EXIT_CODE=$?

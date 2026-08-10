@@ -10,13 +10,18 @@ Shared zsh/tmux/neovim configs, automated theme switching, and a discovery syste
 
 ## Quick Start
 
-Clone and run the setup script with a machine manifest:
+Clone, bootstrap the CLI with a machine manifest, then converge the machine:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 bash install.sh --machine archlinux-personal-workstation
+dotfiles apply --machine archlinux-personal-workstation
 ```
+
+`install.sh` only puts uv and the `dotfiles` CLI on the box and prints those two
+commands back; `dotfiles plan` says what `apply` would change before it changes
+anything.
 
 Available manifests are in `install/manifests/`: full workstation profiles for
 Arch Linux, macOS, and WSL, plus `linux-lxc-server` — a minimal profile for

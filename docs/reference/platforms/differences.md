@@ -17,7 +17,8 @@ strategy](../../architecture/package-management.md), not an accident.
 
 A headless LXC or small Linux box uses the separate `linux-lxc-server` manifest
 (platform `linux`), a minimal profile installed with
-`install.sh --machine linux-lxc-server`. It installs the `core` system-package
+`install.sh --machine linux-lxc-server` and the `dotfiles apply` it prints. It
+installs the `core` system-package
 tier — the lean base tagged in `packages.yml`, without the docker/media/GUI
 packages the workstation manifests pull in. Do not point a small box at a
 workstation manifest; see

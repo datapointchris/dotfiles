@@ -297,8 +297,8 @@ release asset, a missing dependency — so retrying the *script* spends minutes
 re-running work that will fail the same way, and buries the error under repeated
 output. A single download is the one case where the failure is plausibly
 transient and the retry is cheap. Everything coarser fails fast and gets re-run
-by hand, which the idempotent design makes safe. `install.sh` isolates failures
-between installers rather than retrying them; see
+by hand, which the idempotent design makes safe. `dotfiles apply` isolates
+failures between installers rather than retrying them; see
 [Resilient Installation Patterns](../learnings/resilient-installation-patterns.md).
 
 ## See Also

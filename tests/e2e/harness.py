@@ -492,7 +492,13 @@ INSTALL_STATUS = '.dotfiles-install-status'
 
 
 def install_command(environment: Environment, through: str = '') -> str:
-    """`install.sh`, leaving its output and exit status behind in the container.
+    """`install.sh` and the `dotfiles apply` it hands to, as one recorded run.
+
+    Two commands rather than one since the bootstrap stopped converging the
+    machine itself, and the pair is what an install *is* here — a container the
+    bootstrap alone touched would answer no question this tier asks. Chained with
+    `&&`, so an apply never runs against a machine whose CLI failed to install and
+    the recorded status is whichever half ended the run.
 
     Persisted rather than only returned, because the install is the expensive
     artifact and every question about it gets asked again the moment an assertion
@@ -501,11 +507,11 @@ def install_command(environment: Environment, through: str = '') -> str:
     status the shell would otherwise report, and it always succeeds.
     """
     home = environment.home
-    flags = ' --offline' if environment.offline else ''
-    if through:
-        flags += f' --through {through}'
+    offline = ' --offline' if environment.offline else ''
+    ceiling = f' --through {through}' if through else ''
     return (
-        f'cd {home}/dotfiles && ./install.sh --machine {environment.manifest}{flags} 2>&1 '
+        f'cd {home}/dotfiles && {{ ./install.sh --machine {environment.manifest}{offline} '
+        f'&& dotfiles apply --machine {environment.manifest}{offline}{ceiling}; }} 2>&1 '
         f'| tee {home}/{INSTALL_LOG}; echo ${{PIPESTATUS[0]}} > {home}/{INSTALL_STATUS}'
     )
 

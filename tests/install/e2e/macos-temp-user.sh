@@ -167,6 +167,10 @@ STEP_START=$(date +%s)
   echo ""
 
   sudo -u "$TEST_USER" bash "/Users/${TEST_USER}/dotfiles/install.sh" --machine macos-personal-workstation
+  # install.sh bootstraps the CLI and stops, so converging is a second command.
+  # By absolute path: the test user's login shell is not the one that just had
+  # ~/.local/bin prepended to its PATH.
+  sudo -u "$TEST_USER" "/Users/${TEST_USER}/.local/bin/dotfiles" apply --machine macos-personal-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

@@ -50,9 +50,20 @@ that means it.
 
 Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
 getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
-install uv, `uv tool install --editable`, then `exec dotfiles apply`. It validates the
-manifest name itself — the only check in the system that does — because the CLI that
-would answer the question does not exist yet.
+install uv, `uv tool install --editable`, and print the `plan` and `apply` that converge
+the machine. It validates the manifest name itself — the only check in the system that
+does — because the CLI that would answer the question does not exist yet.
+
+**It prints those two rather than running one, and that is deliberate.** It ended in
+`exec dotfiles apply` until a bare `./install.sh` on a WSL box whose `~/.env` already
+named it went straight into a half-hour networked run nobody had asked to start, and sat
+on a blocked cargo download behind the work firewall. Getting the CLI onto a machine
+answers "can this box run any of this at all", and converging it answers "what should
+this box become" — one is cheap and always right, the other is long and worth planning
+first. Fusing them meant the cheap question could not be asked on its own, and the
+expensive one could not be declined. `--offline` stays on the bootstrap because it
+decides where uv and the wheels come from, which is settled before any CLI exists to be
+told; `--through` left with the `exec`, since the run it capped is now typed directly.
 
 ## `dotfiles update` — the checkout is the installation
 
@@ -84,8 +95,8 @@ explicit fetch, and exits 1 when there is something to pull.
 
 ## The machine environment (`~/.env`)
 
-`~/.env` is the first thing `.zshrc` sources and the first thing `install.sh` reads. It
-answers three questions — which machine this is (`MACHINE`), where it sits on each of
+`~/.env` is the first thing `.zshrc` sources, and where every command that is not given
+`--machine` learns which machine it is on. It answers three questions — which machine this is (`MACHINE`), where it sits on each of
 the six coordinate axes (the `DOTFILES_*` block, plus `PLATFORM` where the tuple has a
 bundle name), and which features it wants running (the flags from `install/flags.yml`) —
 and it also carries secrets and machine-local values that must never be checked in.
@@ -94,16 +105,17 @@ and it also carries secrets and machine-local values that must never be checked 
 everything else is derived from that manifest by the resolver. The coordinates are what
 select the overlay directories under `configs/`, `shell/` and `apps/`, so a shell reads
 them directly — `.zshrc` builds its source list from exactly those six variables. Placing this file by
-hand is therefore the whole of the pre-install bootstrap — `install.sh` sources it with
-`set -a` before any stage, so a rebuild that copies `~/.env` into place first never needs
-`--machine`.
+hand is therefore the whole of the pre-install bootstrap: `session.resolve_machine` reads
+the file itself when `$MACHINE` is unset, so a rebuild that restores `~/.env` first never
+needs `--machine` on anything. Reading the file rather than only the environment is what
+makes that work outside a login shell — a scheduled `check` inherits no `~/.env` at all.
 
 It used to be hand-authored, which made it the one piece of setup with no source of
 truth: a flag added to the repo reached no existing machine, and nothing could say which
 machines had drifted. `NVIM_AI_ENABLED` survived that way for a long time — set
 everywhere, read by nothing.
 
-Now `install.sh` generates it and `dotfiles env` maintains it.
+Now `dotfiles env` generates and maintains it, at the first stage of every apply.
 
 Everything above the `# OVERRIDES` marker comes from the manifest and `flags.yml` and is
 rewritten on every apply. Everything below it is preserved verbatim, which is what makes
@@ -114,7 +126,7 @@ because a half-written `~/.env` would take a machine's secrets with it.
 
 The bootstrap is genuinely circular — `~/.env` names the manifest, and the manifest
 generates `~/.env` — so a bare machine still has one line to type by hand. Only
-`MACHINE=` though; `install.sh --machine NAME` fills in the rest on first run.
+`MACHINE=` though; the first `dotfiles apply --machine NAME` fills in the rest.
 
 Every generated line is written as `export NAME="${NAME:-value}"`, so the ambient
 environment still wins for a single shell — `ZSHRC_DEBUG=1 zsh` and
