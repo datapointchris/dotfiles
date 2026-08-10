@@ -30,6 +30,7 @@ from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
 from dotfiles.providers import releases
+from dotfiles.providers import toolchain
 
 BUNDLE_BINARIES = 'go-binaries'
 
@@ -97,6 +98,13 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     prints there names the cause — and a caller that discarded it left a failure
     report saying only that the command exited non-zero.
     """
+    # `/usr/local/go/bin` reaches PATH as a side effect of *installing* Go, so a
+    # machine whose toolchain is already current never places it and every tool
+    # here fails with "go: command not found" — invisibly, because an interactive
+    # shell has it from `.zshenv` and only the non-interactive callers (the timer,
+    # cron, `docker exec`, ssh) do not. cargo does this unconditionally for the
+    # same reason; this provider never got the same treatment.
+    toolchain.put_on_path(toolchain.GO_ROOT / 'bin')
     completed = effects.run(['go', 'install', f'{entry.package}@latest'], output=Output.QUIET)
     if completed.ok:
         return Result(True, f'{entry.executable} installed from {entry.package}')

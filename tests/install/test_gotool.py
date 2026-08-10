@@ -8,6 +8,7 @@ question and stubbing it would assert nothing.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from dotfiles import effects
 from dotfiles import paths
 from dotfiles.effects import Completed
 from dotfiles.providers import gotool
+from dotfiles.providers import toolchain
 
 TASK = catalog.GoTool.from_mapping({'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'})
 
@@ -85,6 +87,24 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
 
     assert result.ok
     assert reached.calls == [('go', 'install', f'{TASK.package}@latest')]
+
+
+def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_it(home, bundle, proxy, monkeypatch) -> None:
+    """`/usr/local/go/bin` used to reach PATH only as a side effect of *installing*
+    Go, so a machine whose toolchain was already current never placed it and every
+    tool here failed with `go: command not found`.
+
+    Invisible interactively, because `.zshenv` names the directory — so it bit only
+    the non-interactive callers, which is the scheduled check, cron, `docker exec`
+    and ssh. Measured on the mbp 2026-08-10: eight Go tools failed in one apply
+    while the same run reported the toolchain converged.
+    """
+    monkeypatch.setenv('PATH', os.pathsep.join(('/usr/bin', '/bin')))
+    stage(bundle)
+    proxy()
+
+    assert gotool.install(TASK, offline=False).ok
+    assert str(toolchain.GO_ROOT / 'bin') in os.environ['PATH'].split(os.pathsep)
 
 
 def test_an_offline_run_takes_the_bundle_without_trying_the_proxy(home, bundle, proxy) -> None:
