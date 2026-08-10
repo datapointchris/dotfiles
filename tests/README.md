@@ -46,20 +46,45 @@ bash tests/install/verification/detect-installed-duplicates.sh
 
 #### Container installs
 
-`tests/e2e/` is one rig with the environments as parameters, and it comes in four
-tiers. **Reach for the cheapest one that can answer the question** — a full
+`tests/e2e/` is one rig with the environments as parameters, arranged as a ladder
+of levels. **Reach for the cheapest rung that can answer the question** — a full
 install takes half an hour and answers nothing about the harness, or about an
-assertion, that a cheaper tier cannot answer in seconds.
+assertion, that a cheaper rung cannot answer in seconds.
+
+A level is named for how much machine has to exist, so picking one needs no
+lookup. `tests/e2e/levels.py` is what each costs and what it can answer, and
+`task --list-all | rg test:` is the roster — neither is restated here, because a
+copy of either is the thing that goes stale.
 
 ```bash
-uv run pytest tests/e2e/test_harness.py             # 0.1s, no Docker
-uv run pytest tests/e2e/test_container.py --docker  # ~25s per environment
-uv run pytest tests/e2e/test_set.py --docker        # one section over a base
-uv run pytest tests/e2e --docker --installed        # seconds: assert, do not install
-uv run pytest tests/e2e --docker                    # the full installs
+task test:matrix              # every level over every environment, and it costs an hour
+task test:matrix:quick        # the same without the rung measured in hours
+task test:<level>             # one rung, all environments
+task test:level -- --level <level> --environment wsl   # one cell
 ```
 
-`test_set.py` is the tier between "nothing installed" and "everything installed",
+`--level` also works on `pytest` directly, and carries the modes it implies:
+`--docker`, and `--installed` for the rung that asserts against an install rather
+than performing one. Those two rungs run the same tests, and that flag is the
+whole difference between twenty seconds and twenty-four minutes.
+
+**The matrix runs one pytest process per cell**, each to its own log under
+`$XDG_STATE_HOME/dotfiles/test-runs/` beside a record of what every cell cost. It
+stops at the first level that fails, because the rung above costs more to say the
+same thing, and it builds any missing image once before fanning out — two
+environments share one image, and the fixture that builds a missing image itself
+raced two `docker build` processes into a single tag the first time this fanned
+out. `task test:report` reads those records; `--stats` is the one worth having,
+because a cell that is usually thirty seconds and took nine minutes is the
+interesting kind of green. The history is Syncthing-shared, so each record names
+its machine and checkout and `--stats --machine <name>` narrows it.
+
+`task test:logs -- <cell>` follows a cell that is running now, and
+`task test:containers` says what exists and what each container is for: a name
+carries its purpose (`machine`, `empty`, `section`, `base-build`) and, in a
+worktree, that worktree — so two checkouts cannot claim one container.
+
+The section-over-base level is the rung between "nothing installed" and "everything installed",
 and it exists because there was no way to ask about *one installer* without
 building a whole machine. It starts a throwaway container from a **base image** —
 the environment installed `--through system_upgrade`, so packages and app stores
@@ -82,9 +107,13 @@ makes the tags explicable and prunable.
 
 `test_harness.py` is everything decidable without starting anything: the network
 derivation, the environment definitions, the exec script. `test_container.py`
-starts a container and copies the repo but installs nothing — the tier where the
+starts a container and copies the repo but installs nothing — the rung where the
 rig's own failures live, and where a wrong PATH or a firewall that does not match
 the measurement shows up. `test_machine.py` needs an installed machine.
+
+Which rung a test sits at is read off the fixture it asks for — `over_base`,
+`machine`, `container` — never a list of module names, so a test moved between
+files lands where its fixtures put it and a new file needs nothing declared.
 
 `--installed` reads the exit status and log the last install left in the
 container instead of producing them again, so changing an assertion costs seconds
@@ -109,11 +138,13 @@ Add `--environment <name>` for one — never `-k`, which matches test names too 
 quietly selects all four. `--keep` leaves containers up; `--reuse` and
 `--installed` imply it.
 
-**One full install at a time.** A second checkout can no longer collide with the
-first — `harness.container_name` suffixes a linked worktree's — but that buys the
-cheap rungs in parallel, not four installs at once. An install is twenty to thirty
-minutes of one box's CPU and disk, and running them concurrently makes the box
-unusable for the duration.
+**Two full installs at a time is free on this box; four is not.** Measured
+2026-08-10 on the Arch workstation: archlinux and wsl installed concurrently in
+962s wall clock against 1604s serial — exactly the slower of the pair, so no
+contention penalty, and no movement on disk. Each level declares its own width in
+`levels.py` and `--concurrency` overrides it. The reason the width is a property
+of the rung rather than of the box is that four containers merely existing is
+free and four installing a machine each is not.
 
 `eza -1 tests/install/e2e/` is what is left: the cases that cannot be a container
 at all, needing a real macOS account, the current machine, or a real firewall.
