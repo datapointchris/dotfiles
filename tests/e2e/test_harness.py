@@ -239,6 +239,53 @@ def test_a_home_with_a_space_survives_the_shell() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Which flags an environment installs under
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_only_the_bundled_environment_installs_offline() -> None:
+    """`offline` is what decides it, not `firewalled` — `restricted` is firewalled
+    and carries no bundle, so passing it `--offline` would point every installer at
+    a bundle that is not there and stop the downloads from failing, which is the
+    only thing that environment is for."""
+    assert harness.OFFLINE.offline_flag == ' --offline'
+    assert [environment.offline_flag for environment in (harness.ARCHLINUX, harness.WSL, harness.RESTRICTED)] == ['', '', '']
+
+
+def test_both_halves_of_an_offline_install_are_told_it() -> None:
+    """`install.sh` decides where uv and the wheels come from and the apply decides
+    where every tool does, so a flag on one half only produces a machine that is
+    half bundled — and the bootstrap's own `--offline` is settled before a CLI
+    exists to be told anything."""
+    command = harness.install_command(harness.OFFLINE)
+
+    assert command.count('--offline') == 2
+    assert './install.sh' in command.split('&&')[1]
+    assert '--offline' in command.split('&&')[1]
+    assert '--offline' in command.split('&&')[2]
+
+
+def test_an_online_environment_is_told_nothing_about_bundles() -> None:
+    assert '--offline' not in harness.install_command(harness.ARCHLINUX)
+
+
+def test_an_install_pins_its_own_record_alongside_its_log_and_status() -> None:
+    """Three artifacts, or the rung that reuses an install answers about two runs.
+
+    `dotfiles/latest` moves under the next apply and the next apply is a test in
+    `test_machine.py`, so a record read from there describes the second apply while
+    the status beside it still describes the install."""
+    command = harness.install_command(harness.WSL)
+
+    assert harness.INSTALL_LOG in command
+    assert harness.INSTALL_STATUS in command
+    assert f'cp {harness.LATEST_RECORD} ' in command
+    assert command.index(harness.INSTALL_STATUS) < command.index(harness.INSTALL_RECORD), (
+        'the status is read off PIPESTATUS, so anything between it and the pipeline overwrites it'
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The hostile system python
 # ─────────────────────────────────────────────────────────────────────────────
 

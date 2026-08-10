@@ -18,6 +18,7 @@ from __future__ import annotations
 import pytest
 from harness import Machine
 from harness import failed_outcomes
+from harness import refused_outcomes
 from harness import run_record
 from harness import shadow_calls
 
@@ -121,10 +122,35 @@ def test_the_machine_converged(converged_machine: Machine) -> None:
 
 def test_every_declared_tool_is_installed(converged_machine: Machine) -> None:
     """The manifest is the checklist, so a tool added or removed changes what is
-    verified with no list here to update."""
+    verified with no list here to update.
+
+    An absence the run *refused* is not a finding here: the script reads this
+    machine's own newest apply and reports those separately, so a bundle that was
+    never built to carry awscli does not read as a broken install. Exit 0 therefore
+    means every tool whose install path could have delivered it did.
+    """
     home = converged_machine.environment.home
     result = converged_machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
     assert result.returncode == 0, result.stdout[-4000:]
+
+
+def test_verification_excuses_an_absence_only_where_the_run_refused_one(converged_machine: Machine) -> None:
+    """The two sources have to agree, and this is the direction exit 0 cannot check.
+
+    A refusal suppresses a red line, so a mechanism that over-matched — a substring
+    where a whole name was meant, a stale record from another machine — would buy
+    a green verification by excusing tools nothing refused. Asserting the counts
+    against each other catches that: an environment whose run refused nothing must
+    report nothing refused, and `offline` must report some, or the machinery is
+    silently inert everywhere it is not needed.
+    """
+    home = converged_machine.environment.home
+    result = converged_machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
+    excused = 'Refused:' in result.stdout
+
+    assert excused == bool(refused_outcomes(converged_machine)), (
+        f'the run refused {refused_outcomes(converged_machine)} and verification {"excused something" if excused else "excused nothing"}'
+    )
 
 
 def test_nothing_is_installed_twice(machine: Machine) -> None:
@@ -154,9 +180,18 @@ def test_a_second_apply_over_a_converged_machine_changes_nothing(converged_machi
     This ran `update.sh` until reconcile collapsed to one verb. `apply` is that
     verb — it installs what is missing and upgrades what is behind — so running it
     twice is both the update path and the assertion that the first run converged.
+
+    **The same flags as the install, or it is not a second apply of the same
+    thing.** Without `--offline` this reached the network the offline environment
+    exists to do without, installed the Go and Rust toolchains that run had
+    deliberately refused, and passed — so a test named for changing nothing was the
+    only thing on the machine that changed anything. It also left every later
+    `--installed` check reading a container in a state no install produces, which
+    is how the offline diagnosis went wrong twice before this was spotted.
     """
     home = converged_machine.environment.home
-    result = converged_machine.exec(f'cd {home}/dotfiles && uv run dotfiles apply')
+    flags = converged_machine.environment.offline_flag
+    result = converged_machine.exec(f'cd {home}/dotfiles && uv run dotfiles apply{flags}')
     assert result.returncode == 0, result.stdout[-4000:]
 
 

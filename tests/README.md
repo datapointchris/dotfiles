@@ -115,12 +115,17 @@ Which rung a test sits at is read off the fixture it asks for — `over_base`,
 `machine`, `container` — never a list of module names, so a test moved between
 files lands where its fixtures put it and a new file needs nothing declared.
 
-`--installed` reads the exit status and log the last install left in the
-container instead of producing them again, so changing an assertion costs seconds
-rather than a second half hour. It re-copies the repo first, so the verification
-scripts and the editable CLI are current; what is stale is exactly the install
-log and its status. Install for real when `install.sh`, a provider or a
-package list changes — use `--installed` for everything else.
+`--installed` reads the exit status, log and run record the last install pinned in
+the container instead of producing them again, so changing an assertion costs
+seconds rather than a second half hour. It re-copies the repo first, so the
+verification scripts and the editable CLI are current; what is stale is exactly
+those three artifacts. Install for real when `install.sh`, a provider or a package
+list changes — use `--installed` for everything else.
+
+The record is pinned rather than read from `dotfiles/latest` because *something
+always applies afterwards* — the next test in the file is the second-apply
+idempotence check — so `latest` describes that run while the status beside it still
+describes the install, and comparing the two was comparing two different runs.
 
 **A container install borrows the host's `gh` credential.** GitHub allows 60
 anonymous API calls an hour *per public IP*, the container shares the host's, and

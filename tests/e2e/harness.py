@@ -290,6 +290,18 @@ class Environment:
     build_image: tuple[str, ...] = field(default_factory=tuple)
     """How to produce the image when it is absent, rather than failing."""
 
+    @property
+    def offline_flag(self) -> str:
+        """`--offline` where this environment installs from a bundle, else ''.
+
+        A property rather than the conditional written out at each caller, because
+        the callers are the install and every later `dotfiles apply` against the
+        machine it produced, and those have to agree. They did not: the
+        second-apply test omitted it, reached the network this environment exists
+        to do without, and installed the two toolchains the install had refused.
+        """
+        return ' --offline' if self.offline else ''
+
 
 ARCHLINUX = Environment(
     name='archlinux',
@@ -487,8 +499,23 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
+"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container."""
+
 INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
+INSTALL_RECORD = '.dotfiles-install-record'
+"""The run record *this* install wrote, kept beside its log and status.
+
+`dotfiles/latest` is whatever ran most recently, which stops being this install
+the moment anything else applies — and something always does, because
+`test_a_second_apply_over_a_converged_machine_changes_nothing` is the next thing
+in the file. At the `existing-install` rung that made `run_record` answer with the
+second apply while `install_status` and `install_log` still answered with the
+install, so `test_the_run_reports_its_own_outcome` compared one run's exit code
+against another run's outcomes: a clean second apply hides the install's failures,
+and a failing one invents failures for an install that had none.
+"""
 
 
 def install_command(environment: Environment, through: str = '') -> str:
@@ -505,21 +532,34 @@ def install_command(environment: Environment, through: str = '') -> str:
     changes — twice today, once because a container died and once because a test
     was added after the run started. `PIPESTATUS[0]` because `tee` is whose exit
     status the shell would otherwise report, and it always succeeds.
+
+    All three artifacts are copied out, not two. The record is pinned for the same
+    reason as the log: `dotfiles/latest` moves under the next apply, and the next
+    apply is a test in the same file.
     """
     home = environment.home
-    offline = ' --offline' if environment.offline else ''
+    offline = environment.offline_flag
     ceiling = f' --through {through}' if through else ''
     return (
         f'cd {home}/dotfiles && {{ ./install.sh --machine {environment.manifest}{offline} '
         f'&& dotfiles apply --machine {environment.manifest}{offline}{ceiling}; }} 2>&1 '
-        f'| tee {home}/{INSTALL_LOG}; echo ${{PIPESTATUS[0]}} > {home}/{INSTALL_STATUS}'
+        f'| tee {home}/{INSTALL_LOG}; echo ${{PIPESTATUS[0]}} > {home}/{INSTALL_STATUS}; '
+        f'cp {LATEST_RECORD} {home}/{INSTALL_RECORD} 2>/dev/null || true'
     )
 
 
 def install_record(machine: Machine) -> tuple[int, str] | None:
-    """The status and log of the install in this container, or None if there is none."""
+    """The status and log of the install in this container, or None if there is none.
+
+    All three artifacts are required to call one present. A container carrying a log
+    and a status but no pinned record predates `INSTALL_RECORD`, and reusing it
+    would pass `--installed` and then fail every assertion that reads the record —
+    a rebuild reported as thirty broken tests.
+    """
     status = machine.read(f'cat {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null').strip()
     if not status.isdigit():
+        return None
+    if not machine.succeeds(f'test -s {machine.environment.home}/{INSTALL_RECORD}'):
         return None
     return int(status), machine.exec(f'cat {machine.environment.home}/{INSTALL_LOG} 2>/dev/null').stdout
 
@@ -529,25 +569,44 @@ def install_age(machine: Machine) -> str:
     return machine.read(f'date -r {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null') or 'an unknown time'
 
 
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
-"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container."""
-
-
 def run_record(machine: Machine) -> dict:
-    """What the install recorded about itself, as values rather than as console text.
+    """What *this install* recorded about itself, as values rather than console text.
 
     The alternative is grepping `install_log` for a sentence the run printed,
     which pins an English fragment: reword it and the test fails with nothing
     wrong. Every count these assertions want is a field here.
+
+    Read from the copy the install pinned rather than from `dotfiles/latest`, so it
+    describes the same run as `install_status` and `install_log` beside it. See
+    `INSTALL_RECORD`. A container installed before that copy existed has none, and
+    says so rather than answering with whatever ran last.
     """
-    written = machine.read(f'cat {LATEST_RECORD}')
-    assert written.strip(), f'the install wrote no run record at {LATEST_RECORD}'
+    pinned = f'{machine.environment.home}/{INSTALL_RECORD}'
+    written = machine.read(f'cat {pinned} 2>/dev/null')
+    assert written.strip(), (
+        f'no run record pinned at {pinned}. An install writes one; a container '
+        f'from before it did needs rebuilding without --installed/--reuse.'
+    )
     return json.loads(written)
 
 
 def failed_outcomes(machine: Machine) -> list[str]:
     """Every address the run tried to repair and could not."""
     return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'failed']
+
+
+def refused_outcomes(machine: Machine) -> list[str]:
+    """Every address the run reached, wrote nothing for, and explained.
+
+    Not a failure and not a success: an offline machine has no go.dev to fetch a
+    toolchain from, so its run converges with the Go and Rust runtimes refused and
+    the tools they would have built taken from the bundle instead.
+
+    Separate from `failed_outcomes` because the exit code separates them, and
+    because the verification script has to agree with this list — the tools it
+    finds absent are supposed to be exactly the ones named here.
+    """
+    return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'refused']
 
 
 def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:
