@@ -30,14 +30,14 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from pathlib import Path
+
+import httpx2
 
 from dotfiles import versions
 
-# Some hosts answer urllib's default identification with a 403 where they serve
+# Some hosts answer a default client identification with a 403 where they serve
 # curl fine.
 USER_AGENT = 'curl/8.0 (dotfiles-installer)'
 
@@ -200,25 +200,13 @@ that is the *polite* failure. The impolite one is that the token was sent at all
 
 
 def authorized_host(url: str) -> bool:
-    """Whether this URL is one of ours to authenticate to."""
-    return urllib.parse.urlsplit(url).hostname in GITHUB_HOSTS
+    """Whether this URL is one of ours to authenticate to.
 
-
-class _StripAuthorizationAcrossHosts(urllib.request.HTTPRedirectHandler):
-    """Drop the credential when a redirect leaves GitHub.
-
-    urllib re-sends every header to a redirect target, and a GitHub asset download
-    redirects to a CDN by design — so the default behaviour hands the token to a
-    third party on the request path that runs most often. Stripping it here rather
-    than declining to follow the redirect, because following it is how the download
-    works and the pre-signed URL needs nothing from us.
+    Equality against a closed set, never a suffix test: `endswith('github.com')`
+    is true of `github.com.example.invalid`, so a suffix would hand the token to
+    anyone who can register a domain.
     """
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001, ANN201 — urllib's signature
-        following = super().redirect_request(req, fp, code, msg, headers, newurl)
-        if following is not None and not authorized_host(newurl):
-            following.remove_header('Authorization')
-        return following
+    return urllib.parse.urlsplit(url).hostname in GITHUB_HOSTS
 
 
 def request(url: str, accept: str | None = None) -> bytes:
@@ -227,8 +215,17 @@ def request(url: str, accept: str | None = None) -> bytes:
     The token used to go on every request this module made, whatever the host —
     so `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
     `pypi.org` all received a GitHub PAT, and S3 rejected the download outright
-    because of it. Scoping it is a fix for both halves: the tools install again,
-    and a credential stops leaving the estate it belongs to.
+    because of it.
+
+    **Redirects are the other half, and httpx2 already handles it**: it pops
+    `Authorization` whenever the redirect target is not the same origin, which is
+    the behaviour a GitHub asset download needs by design — that URL redirects to a
+    CDN, and a client that carried the header through would leak the credential on
+    the request path that runs most often.
+
+    Both of httpx's sharp edges are stated here rather than inherited, per
+    `python.md`: redirects are *not* followed by default, and the default timeout
+    is 5s — which a 200MB neovim tarball would meet as a failure.
     """
     headers = {'User-Agent': USER_AGENT}
     if accept:
@@ -236,10 +233,10 @@ def request(url: str, accept: str | None = None) -> bytes:
     token = github_token()
     if token and authorized_host(url):
         headers['Authorization'] = f'Bearer {token}'
-    req = urllib.request.Request(url, headers=headers)
-    opener = urllib.request.build_opener(_StripAuthorizationAcrossHosts())
-    with opener.open(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        return response.read()
+
+    response = httpx2.get(url, headers=headers, follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.content
 
 
 def release_assets(repo: str, tag: str) -> dict[str, int]:
@@ -247,7 +244,7 @@ def release_assets(repo: str, tag: str) -> dict[str, int]:
     encoded = urllib.parse.quote(tag, safe='')
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return {}
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
@@ -268,13 +265,13 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     if not tag_prefix:
         try:
             payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
-        except (urllib.error.URLError, json.JSONDecodeError):
+        except (httpx2.HTTPError, json.JSONDecodeError):
             return None
         return payload.get('tag_name')
 
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
     for release in releases:
         tag = release.get('tag_name') or ''
@@ -309,7 +306,7 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     """
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
 
     best, highest = None, ()
@@ -336,7 +333,7 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
     """
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
 
     wanted = version.removeprefix('v')
@@ -362,14 +359,14 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
                 destination.write_bytes(
                     request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
                 )
-            except (urllib.error.URLError, OSError):
+            except (httpx2.HTTPError, OSError):
                 log_warning(f'Asset API download failed for {asset_name}, falling back to the public URL')
             else:
                 return True
 
     try:
         destination.write_bytes(request(url))
-    except (urllib.error.URLError, OSError):
+    except (httpx2.HTTPError, OSError):
         return False
     return True
 
@@ -418,7 +415,7 @@ def verify_release_checksum(
     if checksum_url:
         try:
             checksums_text = request(checksum_url).decode()
-        except (urllib.error.URLError, UnicodeDecodeError):
+        except (httpx2.HTTPError, UnicodeDecodeError):
             log_error(f'Failed to download checksums from {checksum_url}')
             return Verification.FAILED
     else:

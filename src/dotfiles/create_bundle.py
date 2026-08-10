@@ -42,11 +42,11 @@ import sys
 import tarfile
 import tempfile
 import tomllib
-import urllib.error
-import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+
+import httpx2
 
 from dotfiles import catalog
 from dotfiles import github_release
@@ -240,7 +240,7 @@ def download(url: str, destination: Path) -> None:
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
             destination.write_bytes(github_release.request(url))
-        except (urllib.error.URLError, OSError) as error:
+        except (httpx2.HTTPError, OSError) as error:
             last_error = error
             if attempt < DOWNLOAD_ATTEMPTS:
                 log.warning('Retry %d/%d for %s (%s)', attempt, DOWNLOAD_ATTEMPTS, url, error)
@@ -433,7 +433,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
 
     try:
         checksums_text = github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
-    except (urllib.error.URLError, UnicodeDecodeError) as error:
+    except (httpx2.HTTPError, UnicodeDecodeError) as error:
         raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
 
     expected = github_release.checksum_for_asset(

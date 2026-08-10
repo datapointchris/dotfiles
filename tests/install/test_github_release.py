@@ -7,8 +7,7 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
-import urllib.error
-import urllib.request
+import httpx2
 
 from dotfiles import github_release
 
@@ -206,7 +205,7 @@ class TestLatestVersion:
 
     def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
         def refuse(url, accept=None):
-            raise urllib.error.URLError('no route to host')
+            raise httpx2.ConnectError('no route to host')
 
         monkeypatch.setattr(github_release, 'request', refuse)
 
@@ -258,7 +257,7 @@ class TestLatestTag:
 
     def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
         def refuse(url, accept=None):
-            raise urllib.error.URLError('no route to host')
+            raise httpx2.ConnectError('no route to host')
 
         monkeypatch.setattr(github_release, 'request', refuse)
 
@@ -300,25 +299,30 @@ class TestCredentialScope:
         for url in ('https://api.github.com.evil.test/x', 'https://notgithub.com/x', 'https://github.com.evil.test/x'):
             assert not github_release.authorized_host(url), url
 
-    def test_the_header_is_dropped_when_a_redirect_leaves_github(self, monkeypatch):
-        """urllib re-sends every header to a redirect target, so following one off
-        GitHub is what hands the credential to a third party."""
-        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
-        handler = github_release._StripAuthorizationAcrossHosts()
-        original = urllib.request.Request('https://github.com/owner/repo/releases/download/v1/a.tar.gz')
-        original.add_header('Authorization', 'Bearer ghp_pretend')
+    def test_the_client_strips_the_credential_across_a_redirect(self):
+        """httpx2 pops `Authorization` when a redirect leaves the origin, which is
+        the behaviour a release download needs by design: that URL redirects to a
+        CDN, and a client carrying the header through leaks the credential on the
+        request path that runs most often.
 
-        followed = handler.redirect_request(original, None, 302, 'Found', {}, 'https://objects.githubusercontent.com/x')
+        Asserted against the client rather than reimplemented, because the
+        reimplementation is what this replaced.
+        """
+        client = httpx2.Client()
+        original = client.build_request('GET', 'https://github.com/owner/repo/releases/download/v1/a.tar.gz')
+        original.headers['Authorization'] = 'Bearer ghp_pretend'
+        redirected = httpx2.Response(302, headers={'Location': 'https://objects.githubusercontent.com/x'}, request=original)
 
-        assert followed is not None
-        assert followed.get_header('Authorization') is None
+        following = client._build_redirect_request(original, redirected)
 
-    def test_the_header_survives_a_redirect_that_stays_on_github(self):
-        handler = github_release._StripAuthorizationAcrossHosts()
-        original = urllib.request.Request('https://github.com/owner/repo/releases/latest')
-        original.add_header('Authorization', 'Bearer ghp_pretend')
+        assert 'authorization' not in following.headers
 
-        followed = handler.redirect_request(original, None, 302, 'Found', {}, 'https://api.github.com/repos/owner/repo')
+    def test_the_client_keeps_it_on_a_same_origin_redirect(self):
+        client = httpx2.Client()
+        original = client.build_request('GET', 'https://api.github.com/repos/owner/repo/releases/assets/1')
+        original.headers['Authorization'] = 'Bearer ghp_pretend'
+        redirected = httpx2.Response(302, headers={'Location': 'https://api.github.com/elsewhere'}, request=original)
 
-        assert followed is not None
-        assert followed.get_header('Authorization') == 'Bearer ghp_pretend'
+        following = client._build_redirect_request(original, redirected)
+
+        assert following.headers['Authorization'] == 'Bearer ghp_pretend'
