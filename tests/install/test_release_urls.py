@@ -296,3 +296,61 @@ def test_every_declared_checksum_state_is_one_the_engine_acts_on():
     """No network. A value the catalog accepts and the install engine has no
     branch for would install unverified while reading as declared."""
     assert set(STATE_FOR_DECLARATION) == catalog.CHECKSUM_STATES
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The bundled sections: cargo and go name their assets from data, not code
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def bundled_entries() -> list[tuple[str, str]]:
+    """Every `cargo_packages`/`go_tools` entry a bundle can stage, by section.
+
+    These are the sections whose asset naming is `binary_pattern` in
+    `packages.yml` rather than a function in `providers/releases.py`, which is
+    why the corpus above never covered them — and why `watchexec-cli` spelled
+    `{version}` where cargo-dist publishes the bare number, 404ing every bundle
+    build for as long as nothing asked.
+    """
+    declared = catalog.load()
+    found = []
+    for section in ('cargo_packages', 'go_tools'):
+        for entry in declared.section(section):
+            if getattr(entry, 'github_repo', '') and getattr(entry, 'binary_pattern', ''):
+                found.append((section, entry.name))
+    return sorted(found)
+
+
+BUNDLED = bundled_entries()
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize(('section', 'name'), BUNDLED, ids=lambda value: value if isinstance(value, str) else str(value))
+def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, published_assets, http):
+    """Asked of the same function that installs from the bundle.
+
+    `cargo.stage`/`gotool.stage` are what name the file on both sides, so this
+    covers the expansion rather than re-deriving it — the mistake the release
+    corpus above records as its own reason for existing.
+
+    Linux x86_64 only: unlike the release entries, a bundle is built for the one
+    machine that needs it, and the offline manifest is `wsl-work-workstation`.
+    """
+    from dotfiles.providers import cargo
+    from dotfiles.providers import gotool
+
+    entry = catalog.load().find(section, name)
+    # `latest_version`, which is what the bundler calls — not `latest_tag`. A
+    # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
+    # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
+    tag = github_release.latest_version(entry.github_repo)
+    if not tag:
+        pytest.skip(f'{entry.github_repo} answered with no release')
+
+    target = Target(OSFamily('linux'), Arch('x86_64'))
+    staged = (cargo.stage if section == 'cargo_packages' else gotool.stage)(entry, tag, target)
+
+    assert staged in published_assets(entry.github_repo, tag), (
+        f'{name} asks for {staged!r}, which {entry.github_repo} {tag} does not publish — '
+        f'check {{version}} against {{version_num}} in its binary_pattern'
+    )

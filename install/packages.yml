@@ -1091,7 +1091,9 @@ cargo_packages:
     command: watchexec
     description: Run a command when files change
     github_repo: watchexec/watchexec
-    binary_pattern: "watchexec-{version}-{target}.tar.xz"
+    # `{version_num}`, not `{version}`: cargo-dist tags this `v2.5.1` and names
+    # the asset `watchexec-2.5.1-...`, so the bare tag 404s on every bundle build.
+    binary_pattern: "watchexec-{version_num}-{target}.tar.xz"
     tags: [cli, development]
 
   # reports_version: its first positional argument is the URL to open, so asking
@@ -1102,7 +1104,7 @@ cargo_packages:
     command: webviewrs
     description: Simple webview app that opens URLs in a minimal native window
     github_repo: datapointchris/webviewrs
-    binary_pattern: "webviewrs-{version}-{target}.tar.gz"
+    binary_pattern: "webviewrs-{version_num}-{target}.tar.gz"
     reports_version: false
     tags: [cli, gui]
 
