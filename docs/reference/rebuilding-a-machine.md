@@ -102,6 +102,11 @@ network. The `plan` in between matters most on this box, where a run started
 without one has sat on a blocked cargo download having never said what it meant
 to fetch.
 
+Neither of the last two lines needs the bootstrap again. A bundle that arrives
+later — a newer one carried over to a machine already built — is unpacked by
+`dotfiles bundle stage`, and an apply that finds nothing staged unpacks the
+newest archive in `./` or `~/` itself.
+
 This box has no Syncthing, so anything the fleet replicates that way — `~/dev`,
 `~/notes`, the `indy` index — is simply absent. Tools depending on those paths
 are either off the manifest or configured differently, which is a property of

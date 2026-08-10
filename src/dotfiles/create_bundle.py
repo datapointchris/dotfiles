@@ -123,10 +123,12 @@ checksums.txt is what lets the installer verify a cached binary without
 reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
-On a machine that is already built, extracting a newer bundle refreshes
-~/installers. Offline, this manifest is what "latest" means -- a tool older
-than the version recorded here reads as out of date, and apply moves it onto
-the bundled one:
+On a machine that is already built, `dotfiles bundle stage` unpacks a newer
+tarball over this one -- refreshing what it carries, leaving alone what it
+does not, and needing none of the bootstrap.
+
+Offline, this manifest is what "latest" means -- a tool older than the version
+recorded here reads as out of date, and apply moves it onto the bundled one:
 
   dotfiles packages apply --offline
 

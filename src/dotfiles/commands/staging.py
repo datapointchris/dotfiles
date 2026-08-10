@@ -11,11 +11,15 @@ staging would imply the machine is left untouched, and it is not.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
 from dotfiles import bridge
+from dotfiles import offline_bundle
 from dotfiles.output import error
 from dotfiles.output import hint
+from dotfiles.output import success
 from dotfiles.vocabulary import ExitCode
 
 bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
@@ -40,11 +44,27 @@ def create(
 
 
 @bundle_app.command('stage')
-def stage(archive: str = typer.Argument(..., help='Path to a bundle archive')) -> None:
-    """Unpack a bundle so an install can read it, without installing anything."""
-    error('staging a bundle separately is not wired up yet')
-    hint(f"today's equivalent installs in the same step: dotfiles apply --offline (finds {archive} itself)")
-    raise typer.Exit(ExitCode.ISSUE)
+def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (default: the newest in ./ or ~/)')) -> None:
+    """Unpack a bundle so an install can read it, without installing anything.
+
+    Named only where the default is wrong. A machine has one bundle on it, its
+    name carries a date nobody types, and the two directories searched are the
+    two a tarball is ever copied to — which is the same discovery the bootstrap
+    does, for the same reason.
+    """
+    found = Path(archive) if archive else offline_bundle.newest()
+    if found is None:
+        error(f'no bundle archive in {Path.cwd()} or {Path.home()}, and none named')
+        hint('build one on a networked machine with: dotfiles bundle create')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    try:
+        staged = offline_bundle.stage(found)
+    except offline_bundle.StagingError as unreadable:
+        error(str(unreadable))
+        raise typer.Exit(ExitCode.ISSUE) from unreadable
+
+    success(f'staged {found.name} at {staged}')
 
 
 @bundle_app.command('check')
@@ -58,7 +78,7 @@ def check() -> None:
 @bundle_app.command('show')
 def show() -> None:
     """List what a staged bundle contains."""
-    error('bundle show is not built: it lists a staged bundle, and staging is not wired up either')
+    error('bundle show is not built: it renders the rows `providers.bundle` already reads')
     raise typer.Exit(ExitCode.ISSUE)
 
 

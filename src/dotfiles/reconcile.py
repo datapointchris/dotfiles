@@ -19,6 +19,7 @@ from collections.abc import Iterable
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import checkout
@@ -26,6 +27,7 @@ from dotfiles import coordinates as axes
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
+from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles import registry
@@ -40,6 +42,7 @@ from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
+from dotfiles.output import success
 from dotfiles.output import warn
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -300,6 +303,40 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _stage_bundle() -> ExitCode | None:
+    """Put a bundle where the providers read one, or say why the run cannot go on.
+
+    Staged rather than refused, because unpacking a tarball that is sitting right
+    there is what `--offline` already promised: the bootstrap has always done it
+    unasked, and this is that same act on a machine that no longer needs
+    bootstrapping. It is not what removing install.sh's `exec` was about — that
+    was a half-hour networked convergence nobody had asked to start, whereas this
+    is local, cheap, and precisely what the flag was given in order to install
+    from.
+
+    Nothing is staged over an existing bundle: a machine part way through an
+    offline install has one, and re-reading the archive each run would be work
+    for an answer that is already on disk.
+    """
+    if paths.BUNDLE_DIR.is_dir():
+        return None
+
+    archive = offline_bundle.newest()
+    if archive is None:
+        warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
+        hint(f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH')
+        return ExitCode.ISSUE
+
+    try:
+        staged = offline_bundle.stage(archive)
+    except offline_bundle.StagingError as unreadable:
+        warn(str(unreadable))
+        return ExitCode.ISSUE
+
+    success(f'staged {archive.name} at {staged}')
+    return None
+
+
 def apply_machine(
     selection: engine.Selection,
     machine: str | None = None,
@@ -363,10 +400,8 @@ def apply_machine(
             warn(f'nothing selected for owner {owner}')
             return ExitCode.USAGE
 
-    if offline and not paths.BUNDLE_DIR.is_dir():
-        warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
-        hint('stage one with: ./install.sh --machine <name> --offline')
-        return ExitCode.ISSUE
+    if offline and (unstaged := _stage_bundle()):
+        return unstaged
 
     label = axes.platform_label(session.machine.coordinates)
     err_console.rule(f'[bold]dotfiles apply[/]  {session.machine_name} ({label})', align='left')

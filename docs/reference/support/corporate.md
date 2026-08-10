@@ -61,6 +61,10 @@ bundle with no index at all, and prints the `dotfiles apply --machine NAME
 different reasons: it says where the bootstrap gets uv and the wheels, and it
 says the apply installs from `~/installers/` rather than from the network.
 
+On a machine that already has the CLI, the bootstrap is not the way to unpack a
+newer bundle — `dotfiles bundle stage` does that alone, and the apply does it
+unasked when it finds nothing staged.
+
 This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
 it builds a bundle, starts a container blackholed to exactly the hosts this page's
 results file reports blocked, and asserts the install completes from cache. If you
