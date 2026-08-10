@@ -13,8 +13,8 @@ their readers are:
 
 | Artefact | Written by | Read by |
 | --- | --- | --- |
-| `runs/<id>.json` | every `plan` and `check` | `dotfiles report`, days later |
-| `runs/<id>.jsonl` | the logging file sink | a person debugging one failure |
+| `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
+| `runs/<id>.jsonl` | nobody yet — see below | a person debugging one failure |
 | `status.json` | every `check` | another machine; the bundle builder reads `plan --json` |
 | `nudge` | every `check` | zsh, at every prompt |
 
@@ -27,14 +27,28 @@ no fork at all.
 
 ## The run record
 
-Two files per run: a JSON record of what happened, and the full debug event
-stream beside it.
+One file per run today: a JSON record of what happened. The full debug event
+stream is meant to sit beside it and does not, which is the section after this.
 
-**The recorder is built and nothing drives it.** `runs.py` has the record, the
-stopwatch and the writer, all tested, and `dotfiles report` reads them — but no
-command calls `start`/`finish`/`write`, so `report latest` correctly answers "no
-runs recorded yet". The design below is what it will record; what is live today is
-the event stream, which the logging file sink writes on every run regardless.
+**`sinks.keep` is the only thing that drives it**, and every verb calls it, because
+recording is a reader of the event stream rather than a step each verb has to
+remember. It swallows an `OSError` on purpose — `$XDG_STATE_HOME` is a Syncthing
+folder on the fleet and absent on a fresh machine, and neither is a reason for a
+verb to fail a question it answered.
+
+**The verb hands over when the run began.** A record assembled from an event
+stream is assembled once the last event is in, so a timestamp taken there measures
+the walk over an already-collected list rather than the run: a WSL apply that
+installed 112 things recorded 0.0003 seconds and named its file after the moment
+it finished. Everything finer than the run is measured by the engine, which is the
+only thing that knows when observing started and when a write finished.
+
+**`keep` returns the path, and a failed `apply` prints it.** What a person does
+with a record of a failed offline install is send it to the fleet, and the line
+that used to name `dotfiles report latest` sent them hunting `$XDG_STATE_HOME` for
+a file the caller was already holding. For the same reason the rendered record
+carries its own path — it answered every other question about a run except where
+it was.
 
 **Timing is a field, not something grepped back out of the log.** A statistic
 that has to parse a log stream is a statistic nobody computes, so every outcome
@@ -50,11 +64,15 @@ across the items would be inventing a number — and each item's row carries wha
 acting on it cost. The finer `fetch`/`verify`/`extract` breakdown is a provider's
 to write and no consumer reads it yet.
 
-The event stream exists because the questions asked after a failed install —
-what did it actually download, which step was slow — are answerable only if the
-detail was recorded while nobody wanted it. So everything is emitted at debug and
-the file sink keeps all of it, whatever `LOG_LEVEL` says; the console threshold is
-the only thing that variable moves.
+**The event stream is built and nothing opens it.** `logging.configure` takes an
+`event_log` and `runs.event_log_path` names one, but the only caller of either is
+`tests/install/test_logging.py`, so no machine has ever written a `.jsonl`. The
+design stands: the questions asked after a failed install — what did it actually
+download, which step was slow — are answerable only if the detail was recorded
+while nobody wanted it, which is why everything is emitted at debug and the file
+sink keeps all of it whatever `LOG_LEVEL` says, moving only the console threshold.
+Until a verb passes the path in, a failed item's reason reaches the record and
+nowhere else, which is why `Outcome.message` is on the record at all.
 
 `dotfiles report` is how the records are asked about, and `--help` lists the
 verbs. The one that shaped the format is `stats`: it totals time per address
