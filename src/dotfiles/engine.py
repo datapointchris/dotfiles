@@ -97,14 +97,19 @@ class Selection:
         return cls(resources, frozenset(provider.name for provider in registry.PROVIDERS) - narrowed)
 
     @classmethod
-    def at(cls, stage: Stage) -> Selection:
-        """Every provider that runs at one stage, and the resources holding them.
+    def at(cls, *stages: Stage) -> Selection:
+        """Every provider that runs at these stages, and the resources holding them.
 
         Derived from the registry rather than listed, because a phase *is* a stage
-        and the six system-configuration providers are not a list anyone should
-        have to keep in step by hand.
+        and the system-configuration providers are not a list anyone should have to
+        keep in step by hand.
+
+        Several stages because a phase is not always one: the package managers and
+        the app stores installing through them are two stages so that ordering
+        holds, and one phase, because a caller asking for system packages is asking
+        for both.
         """
-        wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage is stage)
+        wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage in stages)
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 

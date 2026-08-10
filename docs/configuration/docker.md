@@ -40,7 +40,7 @@ The `docker-compose-plugin` equivalent comes from the package manager with the p
 
 ### WSL (Docker Desktop integration)
 
-WSL does **not** run its own Docker Engine. The distro borrows the CLI and daemon from Docker Desktop on the Windows side, which is why `install/wsl/system-packages.sh` filters the Docker packages out of the apt install and `install/wsl/docker-repo.sh` exits early when it detects WSL. Two engines competing for one distro is the thing being avoided; Docker Desktop already runs one in its own utility VM and shares it across every enabled distro.
+WSL does **not** run its own Docker Engine. The distro borrows the CLI and daemon from Docker Desktop on the Windows side, which is why every Docker entry in `packages.yml` declares `excludes_host: wsl` and `install/wsl/docker-repo.sh` exits early when it detects WSL. Two engines competing for one distro is the thing being avoided; Docker Desktop already runs one in its own utility VM and shares it across every enabled distro. The exclusion used to be a `grep -v` in the WSL package script, which kept them out of the install and left `check` reporting all five missing forever.
 
 Enable it in **Docker Desktop → Settings → Resources → WSL Integration**, toggle the Ubuntu distro, then Apply & Restart. The CLI appears at `/mnt/wsl/docker-desktop/cli-tools/usr/bin/` and is put on `PATH` for the distro.
 

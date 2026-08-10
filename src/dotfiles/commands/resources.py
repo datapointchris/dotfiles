@@ -391,9 +391,15 @@ def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> No
 
 
 @system_app.command('apply')
-def system_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
-    """Apply the system configuration this repo declares."""
-    _apply_phases('system', machine, False, offline, None)
+def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, source: str = SourceOption) -> None:
+    """Install the declared system packages and apply the system configuration.
+
+    `--source` is worth having here now that this resource installs four package
+    sections beside its configuration rows. `--source system_packages` is the
+    payload without the configuration — which is what a container image wants
+    baked in, and what a machine wants after adding one package to the list.
+    """
+    _apply_phases('system', machine, False, offline, source)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

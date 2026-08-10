@@ -29,11 +29,13 @@ import pytest
 from dotfiles import apply
 from dotfiles import catalog
 from dotfiles import coordinates
+from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import resolve
 from dotfiles.providers import npm
+from dotfiles.resolve import Stage
 
 LINUX = coordinates.PLATFORM_BUNDLES['linux']
 
@@ -214,12 +216,16 @@ def test_the_platform_handed_down_is_the_declared_one() -> None:
 
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
-def test_every_platform_bundle_round_trips_to_its_script_directory(label: str) -> None:
+def test_every_platform_bundle_round_trips_to_its_platform_label(label: str) -> None:
     """The overlay is keyed on coordinates now, and the four labels are only a
-    convenience bundle over them — so each must still name the directory whose
-    scripts it always ran, or a machine installs another platform's packages."""
+    convenience bundle over them — so each must still come out with the name the
+    scripts and the shell overlays know it by.
+
+    It used to assert a matching `install/<label>/` too. Three of the four have no
+    directory any more: the package scripts converged into providers, and what is
+    left of the overlay is the `PLATFORM` handed to the scripts that remain.
+    """
     assert apply._overlay(coordinates.PLATFORM_BUNDLES[label]) == label
-    assert (paths.INSTALL_DIR / label).is_dir()
 
 
 def test_a_machine_declaring_coordinates_can_be_applied() -> None:
@@ -246,13 +252,20 @@ def test_the_tool_path_is_prepended_rather_than_replacing_the_caller_s() -> None
     assert '/usr/bin' in path or '/bin' in path
 
 
-def test_a_bare_true_system_packages_still_means_the_full_set() -> None:
-    """Manifests predating the tier said `true`, and reading that as "off" would
-    silently install no system packages on a machine asking for all of them."""
-    assert context().system_tier == ''
-    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': True}).system_tier == 'workstation'
-    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': 'core'}).system_tier == 'core'
-    assert apply.Run(machine='m', coords=LINUX, packages={}, manifest={'system_packages': False}).system_tier == ''
+def test_the_system_packages_phase_converges_a_selection_rather_than_running_scripts() -> None:
+    """Two stages in one phase, so `pacman -S` runs before the flatpak apps that
+    need the flatpak binary and `brew install` before the casks and App Store
+    apps that need brew and `mas`.
+
+    It read the tier itself before this and gated a *script list* on it, which is
+    how a manifest with no tier came to run `brew install` without the bootstrap
+    that provides brew. The tier is a subscription the resolver applies; nothing
+    in the phase reads it any more, and there is no `Run.system_tier` left to.
+    """
+    selection = engine.Selection.at(Stage.SYSTEM, Stage.SYSTEM_APPS)
+
+    assert selection.providers == {'system', 'cask', 'mas', 'flatpak'}
+    assert not hasattr(context(), 'system_tier')
 
 
 def test_every_directory_an_installer_writes_binaries_to_is_on_the_phase_path() -> None:

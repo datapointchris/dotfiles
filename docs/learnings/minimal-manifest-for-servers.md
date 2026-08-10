@@ -40,8 +40,11 @@ A first-class `linux` platform plus a tiered system-package model:
   via `system_packages: core|workstation`.
 
 - **Platform wiring.** `install.sh` and `update.sh` gained a `linux` branch
-  (apt, no GUI/flatpak/preferences steps), the Taskfile resolves a generic Linux
-  host to `linux`, and `install/linux/system-packages.sh` installs the core tier.
+  (apt, no GUI/flatpak/preferences steps) and the Taskfile resolves a generic
+  Linux host to `linux`. The per-platform package script that installed the core
+  tier is gone: the tier is a subscription the resolver reads, so a manifest
+  saying `system_packages: core` plans only the core entries and one provider
+  installs them whatever the platform is.
 
 - **Optional overlays.** The server ships only a shell overlay and no configs of
   its own, and the symlinks manager treats every overlay as optional. Those

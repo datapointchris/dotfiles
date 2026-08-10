@@ -190,21 +190,6 @@ class Run:
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
         )
 
-    @property
-    def system_tier(self) -> str:
-        """ "core", "workstation", or "" when the phase is off for this machine.
-
-        A bare `true` still means the full set: manifests predating the tier said
-        so that way, and reading it as "" would silently install no system
-        packages on a machine whose declaration asks for all of them.
-        """
-        declared = self.manifest.get('system_packages')
-        if declared is None or declared is False:
-            return ''
-        if declared is True:
-            return 'workstation'
-        return str(declared)
-
     def wants(self, feature: str) -> bool:
         return self.manifest.get(feature) is True
 
@@ -308,42 +293,28 @@ def _record_failure(context: Run, completed: Completed, records: Path, script: P
         log.write(report)
 
 
-def _run_scripts(context: Run, scripts: list[Path], *, tier: str = '') -> bool:
-    """Run several scripts in order, reporting whether all of them succeeded.
-
-    Every one runs even after a failure: a broken cask must not stop the Xcode
-    licence or the Docker configuration that follow it, and the report at the end
-    is what names all of them at once.
-    """
-    environment = {'SYSTEM_PACKAGE_TIER': tier} if tier else None
-    return all([run_installer(context, script, script.stem, env=environment) for script in scripts])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The phases
 # ─────────────────────────────────────────────────────────────────────────────
 
 COMMON = paths.INSTALL_DIR / 'common'
 
-SYSTEM_SCRIPTS = {
-    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'mas-apps.sh'),
-    'wsl': ('system-packages.sh',),
-    'archlinux': ('system-packages.sh',),
-    'linux': ('system-packages.sh',),
-}
-
 
 def _overlay(coords: coordinates.Coordinates) -> str:
     """Which `install/<overlay>/` directory these coordinates ask for.
 
     Keyed on the package manager, with apt split by host — which is the whole of
-    what the four platform labels ever distinguished here. `install/wsl/` differs
-    from `install/linux/` only by filtering the docker-ce family out of an apt
-    list, because WSL uses Docker Desktop; that is a fact about the host.
+    what the four platform labels ever distinguished here.
 
-    So Arch-on-WSL lands on the pacman scripts, which is the answer a fused
-    `PLATFORM` string could not give: it has no row of its own, and every
-    coordinate it needs already exists. Dies with the scripts in step C.
+    What is left of it is the `PLATFORM` in `environment()`, which the remaining
+    installer scripts read so `detect_platform` does not have to grep
+    `/proc/version` and guess. The package scripts it used to select are gone, and
+    with them `install/{archlinux,macos,linux}/` — the difference between the
+    apt overlays, the docker-ce family, is `excludes_host` in the declaration now.
+
+    So Arch-on-WSL lands on the pacman answer, which is the one a fused `PLATFORM`
+    string could not give: it has no row of its own, and every coordinate it needs
+    already exists.
     """
     if coords.package_manager is coordinates.PackageManager.BREW:
         return 'macos'
@@ -353,33 +324,23 @@ def _overlay(coords: coordinates.Coordinates) -> str:
 
 
 def _system_packages(context: Run) -> bool:
-    """The OS package manager, plus whatever else that platform configures.
+    """Everything an OS package manager installs, and the app stores built on them.
 
-    The tier gates only the package payload. Everything beside it — fontconfig on
-    WSL, preferences and the Xcode licence on macOS — runs whether or not this
-    machine wants packages, because it is configuration rather than payload.
+    One phase over two stages, so `pacman -S` runs before the flatpak apps that
+    need the flatpak binary and `brew install` before the casks and the App Store
+    apps that need brew and `mas`.
 
-    What is left here is the configuration that has not converted yet. Arch's
-    `system-config.sh` was the first of it to go: its docker group, its two units
-    and its TTY auto-login are `system.yml` rows now, applied by the
-    `system-config` phase at the end of the run rather than in the middle of this
-    one. Nothing installed later depended on them.
+    Nothing here reads the tier or the flatpak flag any more. Both are
+    subscriptions, so the resolver has already applied them and a machine that
+    declares `system_packages: false` plans no packages to converge — which is
+    also what retires the inverted branch this function carried. It gated the
+    *bootstrap* on the payload switch, so a manifest with no tier ran `brew
+    install` with no brew; the bootstrap belongs to the provider that needs it,
+    and casks and App Store apps subscribe to nothing and so cannot be gated by a
+    tier at all.
     """
-    overlay = context.platform
-    platform_dir = paths.INSTALL_DIR / overlay
-    heading(f'System packages ({overlay})')
-
-    scripts = [platform_dir / name for name in SYSTEM_SCRIPTS[overlay]] if context.system_tier else []
-    # macOS's list is the payload *and* the configuration, and only the first
-    # entry of it is gated. Splitting it here rather than in the table keeps the
-    # table readable as "what this platform runs".
-    if overlay == 'macos' and not context.system_tier:
-        scripts = [platform_dir / name for name in SYSTEM_SCRIPTS['macos'][1:]]
-
-    if overlay == 'archlinux' and context.wants('flatpak'):
-        scripts.append(platform_dir / 'flatpak.sh')
-
-    return _run_scripts(context, scripts, tier=context.system_tier or 'workstation')
+    heading('System packages')
+    return _converge(context, engine.Selection.at(Stage.SYSTEM, Stage.SYSTEM_APPS))
 
 
 def _go_toolchain(context: Run) -> bool:
