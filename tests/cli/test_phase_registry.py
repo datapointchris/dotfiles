@@ -18,7 +18,6 @@ success.
 from __future__ import annotations
 
 import dataclasses
-import subprocess
 from collections import Counter
 from collections.abc import Callable
 
@@ -113,42 +112,16 @@ def context(**overrides: object) -> apply.Run:
     return apply.Run(machine='linux-lxc-server', coords=coords, packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
 
 
-def test_the_interpreter_handed_down_can_import_this_package() -> None:
-    """The installer scripts read packages.yml through `$DOTFILES_PYTHON`.
+def test_no_phase_runs_a_script() -> None:
+    """The property the whole conversion is for, asserted where it can regress.
 
-    Handing them one that cannot import `dotfiles` is the failure the whole
-    system-python bootstrap existed to prevent, so this asserts the interpreter
-    rather than the variable being set.
+    Every phase converges a selection of the plan; none shells out to an installer,
+    and there is no environment built for one to read. TPM and lazy.nvim were the
+    last two, and a new phase reintroducing the shape would pass every other test
+    in this file.
     """
-    interpreter = context().environment()['DOTFILES_PYTHON']
-    subprocess.run([interpreter, '-c', 'import dotfiles, yaml'], check=True)
-
-
-def test_owner_reaches_the_installers_that_do_their_own_narrowing() -> None:
-    """Selecting owner-aware phases is not enough on its own.
-
-    The list-driven scripts that are left build their own packages.yml query and
-    read `PACKAGE_OWNER` from the environment to narrow it. Before that was
-    shared, only the Go one read it — so `--mine` ran cargo, uv and npm in full
-    while claiming to filter. The Go one converges through the plan now, which is
-    narrowed before a provider sees it; the three that remain still need this.
-    """
-    assert context(owner='datapointchris').environment()['PACKAGE_OWNER'] == 'datapointchris'
-    assert 'PACKAGE_OWNER' not in context().environment()
-
-
-def test_the_platform_handed_down_is_the_declared_one() -> None:
-    """`detect_platform` honours $PLATFORM and otherwise greps /proc/version.
-
-    Leaving it unset is how a wsl manifest once deployed the linux shell overlay
-    for a whole install — it worked on an established machine only because a
-    pre-existing ~/.env happened to export the right answer.
-
-    Derived from the coordinates rather than read from the manifest, so the four
-    labelled platforms must still come out with the names their script
-    directories have.
-    """
-    assert context().environment()['PLATFORM'] == 'linux'
+    assert not hasattr(apply, 'run_installer')
+    assert not hasattr(apply.Run, 'environment')
 
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
@@ -177,15 +150,8 @@ def test_a_machine_declaring_coordinates_can_be_applied() -> None:
     run = context(coords=arch_on_wsl)
 
     assert apply._overlay(arch_on_wsl) == 'archlinux'
-    assert run.environment()['PLATFORM'] == 'archlinux'
+    assert run.platform == 'archlinux'
     assert run.target == coordinates.target_for(arch_on_wsl)
-
-
-def test_the_tool_path_is_prepended_rather_than_replacing_the_caller_s() -> None:
-    """A phase still needs `bash`, `git` and `tar`, which live in neither."""
-    path = context().environment()['PATH'].split(':')
-    assert path[: len(apply.TOOL_PATH_DIRS)] != path
-    assert '/usr/bin' in path or '/bin' in path
 
 
 def test_the_system_packages_phase_converges_a_selection_rather_than_running_scripts() -> None:

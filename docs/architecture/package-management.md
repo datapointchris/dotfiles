@@ -367,11 +367,14 @@ The single source of truth for which tool is in which section is
 `install/packages.yml`; its header comment maps each section to its install
 method.
 
-**Core Library** (`install/common/lib/`):
+**Core Library** (`install/common/lib/`): what the bash that is left still shares.
+Its README says why each file exists and what went with the installers that no
+longer need it.
 
-- `failure-logging.sh` - Structured failure reporting
-
-The scripts that remain support `--update` for the update system and use structured error reporting. The `github_releases` and `custom_installers` sections do not: they are `src/dotfiles/providers/`, where one verb converges and there is no second mode to select. See `docs/architecture/github-releases.md` and `docs/architecture/custom-installers.md`.
+No section installs through a script. Every one of them is a provider under
+`src/dotfiles/providers/`, where one verb converges and there is no second mode to
+select. See `docs/architecture/github-releases.md` and
+`docs/architecture/custom-installers.md`.
 
 ### Main Installation Flow
 

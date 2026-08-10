@@ -11,23 +11,17 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 "Fail-fast children, resilient wrapper" pattern:
 
-- **Child scripts** keep `set -euo pipefail` and exit on failure — they are simple, testable, and predictable
-- **Parent wrapper** (`install.sh`) catches failures via `run_installer()` and continues to the next tool
-- Failures are logged to a centralized `FAILURES_LOG` file (exported to all children)
+- **Children** fail loudly and locally — simple, testable, predictable
+- **The parent** catches the failure and continues to the next tool
+- Failures are logged to one centralized `FAILURES_LOG` rather than one file per installer
 - A summary is displayed at the end with manual remediation steps for each failure
 
-```bash
-# Parent wrapper (install.sh)
-run_installer "install/common/plugins/nvim-plugins.sh" "nvim-plugins" || true
-run_installer "install/common/plugins/tmux-plugins.sh" "tmux-plugins" || true
-# ... continues even if nvim-plugins fails
-display_failure_summary  # Shows all failures at end
-```
-
-The release and custom installers this was first written against are Python now
-(`src/dotfiles/providers/`), and the pattern survived the move unchanged: each
-install returns a `Result` rather than raising, and the phase runs the whole list
-before reporting.
+Every installer this was written against is Python now (`src/dotfiles/providers/`),
+and the pattern survived the move unchanged — it just stopped needing a wrapper.
+A provider returns a `Result` rather than raising, the engine walks the whole plan
+and turns any provider that *does* raise into a `Refusal`, and the run reports at
+the end. The isolation is in `engine._act` and `engine._measure`, one place rather
+than one call site per script.
 
 ## Key Learnings
 

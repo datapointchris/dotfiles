@@ -87,8 +87,8 @@ if docker "${BUILD_ARGS[@]}"; then
   log_info "Build time: ${DURATION}s"
 
   echo ""
-  log_info "Image ready for testing. Run:"
-  echo "  ./run-installer-test.sh <installer-script-path>"
+  log_info "Image ready. It is what tests/e2e/ builds its containers from:"
+  echo "  uv run pytest tests/e2e -m docker"
 else
   log_error "Failed to build base image"
   exit 1

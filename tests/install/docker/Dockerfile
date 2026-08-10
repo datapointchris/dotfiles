@@ -3,7 +3,6 @@
 # ================================================================
 # Stage 1: base - OS + user setup
 # Stage 2: system-packages - System packages installed (reusable base)
-# Stage 3: test-runner - Run installer tests
 # ================================================================
 
 # ================================================================
@@ -80,14 +79,3 @@ RUN rm -rf /home/testuser/dotfiles \
 # Switch back to testuser for subsequent stages
 USER testuser
 WORKDIR /home/testuser
-
-# ================================================================
-# Stage 3: Test runner (for running individual installers)
-# ================================================================
-FROM system-packages AS test-runner
-
-# Dotfiles already copied in system-packages stage
-WORKDIR /home/testuser/dotfiles
-
-# Default command runs bash (can be overridden)
-CMD ["/bin/bash"]

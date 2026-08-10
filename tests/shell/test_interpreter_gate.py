@@ -26,7 +26,17 @@ import pytest
 from shells import REPO
 
 PYTEST = (sys.executable, '-m', 'pytest', '-q', '-p', 'no:cacheprovider')
-TMUX_TIER = 'tests/shell/test_tmux_plugins_sh.py'
+TMUX_TIER = 'tests/install/test_pluginsync.py'
+"""The tmux half of the gate lives outside this directory.
+
+TPM's isolation is asserted against a real tmux and the subject is now Python, so
+the tier moved to `tests/install` when `tmux-plugins.sh` converted. The marker did
+not, which is the property being relied on: the gate reads the collected items, so
+a test needing an interpreter is covered wherever it lives.
+"""
+
+GATED = ('tests/shell', TMUX_TIER)
+"""Everything the enforced set is read off, which is both marker spellings."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -91,13 +101,14 @@ def with_interpreters(without_interpreters: str) -> str:
 
 
 def test_the_run_is_refused_when_a_required_interpreter_is_missing(without_interpreters: str):
-    """Both marker spellings reach the same enforcement.
+    """Both marker spellings reach the same enforcement, from two directories.
 
-    tmux is required by a module-wide `pytestmark` and zsh by a single parameter
-    of one, so naming both in the refusal is what proves the set is read off the
-    collected items rather than off a list someone maintains.
+    zsh is required by a single parameter of one test and tmux by a decorator on
+    several in another tier entirely, so naming both in one refusal is what proves
+    the set is read off the collected items rather than off a list someone
+    maintains.
     """
-    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters', path=without_interpreters)
+    result = run_pytest(*GATED, '--collect-only', '--require-interpreters', path=without_interpreters)
 
     assert result.returncode != 0
     assert 'no tmux, zsh' in result.output
@@ -117,6 +128,6 @@ def test_the_flag_lets_a_satisfied_machine_through(with_interpreters: str):
     A gate asserted only by its refusal would pass on a machine where it refuses
     unconditionally, and every CI run would then fail for a reason no test names.
     """
-    result = run_pytest('tests/shell', '--collect-only', '--require-interpreters', path=with_interpreters)
+    result = run_pytest(*GATED, '--collect-only', '--require-interpreters', path=with_interpreters)
 
     assert result.returncode == 0, result.output

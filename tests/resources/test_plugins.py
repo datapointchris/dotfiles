@@ -16,8 +16,10 @@ import pytest
 import yaml
 
 from dotfiles import engine
+from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import clone
+from dotfiles.providers import pluginsync
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
@@ -37,6 +39,9 @@ MANIFEST: dict[str, Any] = {
     'tmux_plugins': True,
     'yazi_plugins': True,
 }
+
+CLONES_ONLY: dict[str, Any] = {'machine': 'box', 'platform': 'linux', 'shell_plugins': True, 'yazi_plugins': True}
+"""No `tmux_plugins`, so no TPM — and therefore no TPM sync to plan either."""
 
 
 @pytest.fixture
@@ -92,11 +97,14 @@ def changes(live: Session) -> tuple:
 
 
 def test_an_uncloned_plugin_is_missing(tmp_path: Path) -> None:
+    """The TPM sync is missing here too, and for a reason worth reading: on a fresh
+    machine every precondition it has is supplied by a stage that has not run."""
     live = session(tmp_path)
 
     assert {change.item: change.verdict for change in changes(live)} == {
         'shell-plugin/forgit': Verdict.MISSING,
         'tpm/tpm': Verdict.MISSING,
+        'tmux-sync/tpm': Verdict.MISSING,
         'yazi-plugin/git': Verdict.MISSING,
     }
 
@@ -229,7 +237,12 @@ def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, ups
 
 def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path, upstream: Path) -> None:
     """The user-visible half of provider addressing, and the inverse of the test
-    above: `--skip plugins/tpm` leaves the shell plugins alone."""
+    above: `--skip plugins/tpm` leaves the shell plugins alone.
+
+    The sync is left alone too, and reports that TPM is not there — which is the
+    right answer to skipping the clone and asking for the sync anyway, rather than
+    the walk quietly deciding what the caller meant.
+    """
     live = session(
         tmp_path,
         packages={
@@ -239,15 +252,121 @@ def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path,
     )
 
     planned = engine.assess(live, engine.Selection.excluding(['plugins/tpm']))
-    cloned = [event.payload.item for event in planned if event.resource == 'plugins' and isinstance(event.payload, Change)]
+    reported = [event.payload.item for event in planned if event.resource == 'plugins' and isinstance(event.payload, Change)]
 
-    assert cloned == ['shell-plugin/forgit']
+    assert reported == ['shell-plugin/forgit', 'tmux-sync/tpm']
 
 
 def test_a_machine_declining_plugins_plans_none(tmp_path: Path) -> None:
     live = session(tmp_path, manifest={'machine': 'box', 'platform': 'linux', 'shell_plugins': False, 'tmux_plugins': False})
 
     assert changes(live) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The managers that own their own lists
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_tpm_sync_is_planned_only_where_tpm_is(tmp_path: Path) -> None:
+    """The manifest gate on the clone gates the sync, rather than the sync reading
+    the same boolean a second time: TPM installs the plugins, so a machine without
+    TPM has nothing to sync."""
+    with_tpm = session(tmp_path / 'with')
+    without = session(tmp_path / 'without', manifest=CLONES_ONLY)
+
+    assert [item.address for item in with_tpm.plan.for_provider('tmux-sync')] == ['tmux-sync/tpm']
+    assert without.plan.for_provider('tmux-sync') == ()
+
+
+def test_the_sync_is_planned_after_the_clone_that_provides_the_manager(tmp_path: Path) -> None:
+    """A stage rather than a name. The plan sorts on `(stage, provider, name)`, so
+    `tmux-sync` would otherwise sort *before* `tpm` on the provider name alone and
+    the sync would run against a TPM that was not there yet."""
+    live = session(tmp_path)
+    ordered = [item.address for item in live.plan.for_resource('plugins')]
+
+    assert ordered.index('tpm/tpm') < ordered.index('tmux-sync/tpm')
+
+
+def test_the_lazy_sync_follows_the_manifest_feature(tmp_path: Path) -> None:
+    """`nvim_plugins` is a feature rather than a subscription because lazy
+    bootstraps itself and there is no catalog section to subscribe to."""
+    wanted = session(tmp_path / 'wanted', manifest={**MANIFEST, 'nvim_plugins': True})
+    declined = session(tmp_path / 'declined')
+
+    assert [item.address for item in wanted.plan.for_provider('nvim-sync')] == ['nvim-sync/lazy']
+    assert declined.plan.for_provider('nvim-sync') == ()
+
+
+def test_a_machine_lazy_has_never_run_on_is_a_change(tmp_path: Path) -> None:
+    """The case the sync exists for. Without it the first `nvim` clones fifty
+    repositories before drawing a window."""
+    live = session(tmp_path, manifest={**MANIFEST, 'nvim_plugins': True})
+
+    reported = {change.item: change.detail for change in changes(live)}
+
+    assert 'lazy has not synced on this machine' in reported['nvim-sync/lazy']
+
+
+def test_a_lazy_that_has_installed_its_record_reports_nothing(tmp_path: Path) -> None:
+    live = session(tmp_path, manifest={**MANIFEST, 'nvim_plugins': True})
+    lock = live.home / pluginsync.LAZY_LOCK
+    lock.parent.mkdir(parents=True)
+    lock.write_text('{"gitsigns.nvim": {"commit": "a"}}')
+    (live.home / pluginsync.LAZY_STATE / 'gitsigns.nvim').mkdir(parents=True)
+
+    assert [change.item for change in changes(live)] == ['shell-plugin/forgit', 'tpm/tpm', 'tmux-sync/tpm', 'yazi-plugin/git']
+
+
+def install_tpm(live: Session) -> Path:
+    """TPM cloned and nothing else, which is the state the symlink pass runs into."""
+    plugins = live.home / '.config' / 'tmux' / 'plugins'
+    (plugins / 'tpm' / 'bin').mkdir(parents=True)
+    (plugins / 'tpm' / 'bin' / 'install_plugins').write_text('')
+    return plugins
+
+
+def test_an_undeployed_tmux_conf_is_a_change_rather_than_an_empty_plugin_list(tmp_path: Path) -> None:
+    """The bug this ordering exists to stop. `apply` measures once, up front — so a
+    fresh machine is observed *before* the symlink pass deploys `tmux.conf`, and
+    reading its absence as "declares no plugins" would plan nothing, install
+    nothing, and report a converged machine whose plugins arrive one apply later.
+    """
+    live = session(tmp_path)
+    install_tpm(live)
+
+    reported = {change.item: change.detail for change in changes(live)}
+
+    assert 'no plugin list to read' in reported['tmux-sync/tpm']
+
+
+def test_a_tmux_with_every_declared_plugin_cloned_reports_nothing(tmp_path: Path) -> None:
+    live = session(tmp_path)
+    plugins = install_tpm(live)
+    (live.home / '.config' / 'tmux' / 'tmux.conf').write_text("set -g @plugin 'tmux-plugins/tmux-yank'\n")
+    (plugins / 'tmux-yank' / '.git').mkdir(parents=True)
+
+    assert 'tmux-sync/tpm' not in [change.item for change in changes(live)]
+
+
+def test_the_managers_are_skipped_whole_under_an_owner(tmp_path: Path) -> None:
+    """A plugin manager's list belongs to nobody here, so `--mine` must not turn
+    into a tmux server starting up — filtering instead would drop these for
+    answering `owner is None`, which is the wrong reason."""
+    assert not registry.named('tmux-sync').ownable
+    assert not registry.named('nvim-sync').ownable
+
+
+def test_skipping_a_sync_leaves_the_clone_that_feeds_it(tmp_path: Path) -> None:
+    """The pair is two addresses, so `--skip plugins/tmux-sync` still clones TPM."""
+    live = session(tmp_path)
+
+    planned = engine.assess(live, engine.Selection.excluding(['plugins/tmux-sync']))
+    reported = [event.payload.item for event in planned if event.resource == 'plugins' and isinstance(event.payload, Change)]
+
+    assert 'tpm/tpm' in reported
+    assert 'tmux-sync/tpm' not in reported
 
 
 # ─────────────────────────────────────────────────────────────────────────────

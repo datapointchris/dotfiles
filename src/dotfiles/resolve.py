@@ -74,12 +74,19 @@ class Stage(enum.IntEnum):
     SHELL_PLUGINS = 80
     SYMLINKS = 90
     TMUX_PLUGINS = 100
+    TMUX_PLUGIN_SYNC = 102
     YAZI_PLUGINS = 105
-    """Both after SYMLINKS, because each program reads the config that pass just
-    deployed. Two stages rather than one so each is a phase a caller can select,
-    and because only one of them still shells out at all: TPM owns a plugin list
-    this repo does not declare, and nothing has ever installed a yazi plugin that
-    way."""
+    NVIM_PLUGIN_SYNC = 107
+    """All four after SYMLINKS, because each program reads the config that pass
+    just deployed.
+
+    The two syncs are stages of their own rather than riding the clone beside
+    them, and the ordering is a real dependency both times: TPM installs the
+    plugins `tmux.conf` names and TPM itself is the clone at TMUX_PLUGINS, so the
+    sync cannot precede it. The plan sorts on `(stage, provider, name)`, which
+    would have put `tmux-sync` before `tpm` on the provider name alone — a
+    dependency held by alphabetical accident is one a rename breaks silently.
+    """
 
     SYSTEM_CONFIG = 110
     """Last, where `install.sh` put the two halves of it that existed.

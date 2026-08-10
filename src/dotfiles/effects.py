@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -84,10 +85,26 @@ def run(
     *,
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
+    unset: tuple[str, ...] = (),
     output: Output = Output.STREAM,
+    show: Callable[[str], str | None] | None = None,
     timeout: float | None = None,
 ) -> Completed:
     """Run a command. See `Output` for where its output goes and why.
+
+    `unset` removes variables, which `env` cannot: it merges over this process's
+    environment, so the most it can do is blank one. TPM is the case that needs
+    the difference — `$TMUX` names the live server's socket and outranks the
+    `TMUX_TMPDIR` a caller sets, so a plugin install started from inside a session
+    drives the user's real tmux however carefully the rest is arranged, and an
+    empty `$TMUX` is set rather than absent.
+
+    `show` filters what reaches the terminal without touching what is kept:
+    returning None swallows a line, and the transcript is whole either way. Both
+    plugin managers need it, and both had a filter in the shell they came from for
+    one measured reason — lazy.nvim's headless output is fifty plugins' raw git
+    spew, and sending that to a file instead left a fresh install with nothing on
+    screen for minutes.
 
     `timeout` is for a caller that is *asking* rather than *installing*: a probe
     that has not answered is not answering, and one that never returns takes the
@@ -107,10 +124,14 @@ def run(
     """
     argv = tuple(command)
     environment = {**os.environ, **(env or {})}
+    for name in unset:
+        environment.pop(name, None)
     directory = str(cwd) if cwd else None
 
     if timeout is not None and output is Output.STREAM:
         raise ValueError('a streaming command has no deadline: its reader loop cannot observe one, and installs legitimately take minutes')
+    if show is not None and output is not Output.STREAM:
+        raise ValueError('only a streaming command echoes anything, so there is nothing for `show` to filter')
 
     def missing(problem: OSError) -> Completed:
         return Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}')
@@ -161,7 +182,10 @@ def run(
             if stream := process.stdout:
                 for line in stream:
                     lines.append(line)
-                    sys.stderr.write(line)
+                    if show is None:
+                        sys.stderr.write(line)
+                    elif (visible := show(line)) is not None:
+                        sys.stderr.write(visible)
     except (FileNotFoundError, PermissionError) as problem:
         return missing(problem)
 
