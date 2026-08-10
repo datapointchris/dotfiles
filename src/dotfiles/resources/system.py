@@ -22,6 +22,7 @@ through `providers.sysconfig`, behind the one authorization in `privilege.py`.
 from __future__ import annotations
 
 import dataclasses as dc
+from collections.abc import Sequence
 
 from dotfiles import evidence as ev
 from dotfiles import registry
@@ -106,14 +107,19 @@ class SystemResource:
         return packages + configuration
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
-        """Whichever provider planned it repairs it, or says why it cannot.
-
-        The package half's providers still answer `REFUSED` from the base class,
-        which is the same split the resolver already made: `SYSTEM_CONFIG` is what
-        `system.yml` declares, and everything else here is a package a backend
-        installs.
-        """
+        """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
+
+    def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """The `Batched` half of the protocol, which this resource exists to use.
+
+        Every change in a group shares a provider — the engine grouped them that
+        way — so this hands the whole run to one provider and lets it decide
+        whether company is worth anything. For the package managers it is one
+        transaction instead of ninety-four; for the six `system.yml` providers
+        beside them the base implementation loops, unchanged.
+        """
+        return registry.install_all(session, changes, privilege)
 
 
 def _config_items(plan: Plan) -> list[DesiredItem]:

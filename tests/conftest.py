@@ -120,6 +120,16 @@ INSTALLING = {
     ('uv', 'tool'),
     ('uv', 'python'),
     ('fnm', 'install'),
+    ('pacman', '-S'),
+    ('pacman', '-Syu'),
+    ('yay', '-S'),
+    ('apt-get', 'install'),
+    ('apt-get', 'update'),
+    ('apt', 'install'),
+    ('brew', 'install'),
+    ('brew', 'tap'),
+    ('mas', 'install'),
+    ('flatpak', 'install'),
 }
 """Commands that would install something on the machine running the suite.
 

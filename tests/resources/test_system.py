@@ -9,6 +9,7 @@ each manager.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import stat
 from pathlib import Path
 from typing import Any
@@ -16,14 +17,17 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
+from dotfiles import providers
 from dotfiles import registry
 from dotfiles.privilege import Privilege
+from dotfiles.providers import syspkg
+from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-from dotfiles.resources import privileged
 from dotfiles.resources import system
 from dotfiles.session import Session
 
@@ -232,55 +236,148 @@ def test_a_row_that_became_true_since_the_report_is_skipped(tmp_path: Path, gran
     assert system.RESOURCE.perform(live, change, granted).status is OutcomeStatus.SKIPPED
 
 
-def test_a_package_row_is_still_refused_rather_than_silently_skipped(tmp_path: Path, fake_bin: Path) -> None:
-    """Installing an apt package means the package backends, which convert with
-    their own step. Saying so is what stops a run reporting converged for work it
-    never did."""
+class Manager:
+    """The package manager, recording what it was asked to do rather than doing it.
+
+    The seam is `syspkg`, not `effects.run`: what these assert is which manager was
+    chosen, what it was handed and in how many calls — the decisions this provider
+    makes. Whether `pacman -S` is spelled right is `INSTALL`'s business, and a test
+    that let it run would install packages on the machine running the suite.
+    """
+
+    def __init__(self, *, fails: frozenset[str] = frozenset(), refuses: bool = False) -> None:
+        self.calls: list[tuple[str, tuple[str, ...]]] = []
+        self.refreshed: list[str] = []
+        self._fails = fails
+        self._refuses = refuses
+
+    def install(self, manager: str, names, privilege) -> providers.Result:
+        self.calls.append((manager, tuple(names)))
+        broken = sorted(self._fails.intersection(names))
+        if broken:
+            return providers.Result(False, f'{manager} could not install {broken[0]}')
+        return providers.Result(True, f'{manager}: {" ".join(names)}')
+
+    def refresh(self, manager: str, privilege) -> providers.Result:
+        self.refreshed.append(manager)
+        return providers.Result(False, 'no root') if self._refuses else providers.Result(True, '')
+
+
+@pytest.fixture
+def manager(monkeypatch: pytest.MonkeyPatch):
+    def install(**kwargs) -> Manager:
+        recorder = Manager(**kwargs)
+        monkeypatch.setattr(syspkg, 'install', recorder.install)
+        monkeypatch.setattr(syspkg, 'refresh', recorder.refresh)
+        return recorder
+
+    return install
+
+
+DECLARED = {
+    'system_packages': [
+        {'name': 'curl', 'apt': 'curl'},
+        {'name': '7zip', 'apt': 'p7zip-full'},
+        {'name': 'ripgrep', 'apt': 'ripgrep'},
+    ]
+}
+"""apt names only, deliberately. `fake_bin` keeps the real `/usr/bin` behind it —
+see its docstring — so a `pacman:` key here is answered by whatever the box running
+the suite has installed, and all three read as MATCHED on an Arch machine."""
+
+
+def missing(tmp_path: Path, fake_bin: Path) -> Session:
+    """A machine whose manager answers, with none of the three installed."""
     executable(fake_bin, 'dpkg-query', '#!/bin/sh\nprintf "" \n')
-    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
-
-    outcome = system.RESOURCE.perform(live, only_change(live), Privilege())
-
-    assert outcome.status is OutcomeStatus.REFUSED
+    return session(tmp_path, DECLARED, WORKSTATION)
 
 
-def test_a_machine_with_no_root_reports_the_refusal_rather_than_crashing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The LXC container and the Docker harnesses. Everything unprivileged still
-    lands; this row is reported and the run continues."""
-    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
-    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
+def test_the_whole_batch_is_one_transaction(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """One `apt-get install` over three packages rather than three over one: one
+    dependency resolution, one authorization, one cache read."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
 
-    privilege = Privilege()
-    outcome = system.RESOURCE.perform(live, only_change(live), privilege)
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
 
-    assert outcome.status is OutcomeStatus.FAILED
-    assert 'no sudo' in outcome.message
-
-
-def only_change(live: Session):
-    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
-    assert len(changes) == 1, changes
-    return changes[0]
+    assert recorder.calls == [('apt', ('p7zip-full', 'curl', 'ripgrep'))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE] * 3
 
 
-def test_a_macos_preference_does_not_ask_for_a_password(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Preferences are user-level. A Mac whose only drift is its Dock size must
-    converge without a prompt, which means `needs_root` has to reach the Change
-    rather than being assumed per resource."""
-    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
-    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
-    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'macos'}, declared)
+def test_the_declared_name_is_used_rather_than_the_entry_name(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """The entry is `7zip` and the package is `p7zip-full` on apt. Installing the
+    entry name is installing something that does not exist."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
 
-    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
+    system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
 
-    assert [change.privileged for change in changes] == [False]
-    assert privileged(changes) == ()
+    assert 'p7zip-full' in recorder.calls[0][1]
+    assert '7zip' not in recorder.calls[0][1]
 
 
-def test_macos_rows_are_absent_from_a_linux_plan(tmp_path: Path) -> None:
-    """A Linux box is not *declining* macOS preferences, it cannot have them —
-    the same rule that keeps casks out of an Arch plan."""
-    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
-    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'linux'}, declared)
+def test_the_manager_is_refreshed_once_before_the_batch(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """apt resolves against its cached lists, so a stale cache 404s on files that
+    exist. Once per manager, not once per package."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
 
-    assert live.plan.for_resource('system') == ()
+    system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.refreshed == ['apt']
+
+
+def test_a_refresh_that_cannot_run_fails_the_batch_rather_than_installing_anyway(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """Installing against a database that could not be refreshed is the
+    partial-upgrade case on Arch, and both fail later naming the wrong cause."""
+    recorder = manager(refuses=True)
+    live = missing(tmp_path, fake_bin)
+
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.FAILED] * 3
+    assert 'could not be refreshed' in outcomes[0].message
+
+
+def test_a_failed_batch_is_retried_one_package_at_a_time(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """`apt-get install a b c` exiting 1 says nothing about which of the three is
+    broken, and the machine still wants the other two."""
+    recorder = manager(fails=frozenset({'p7zip-full'}))
+    live = missing(tmp_path, fake_bin)
+
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls[0] == ('apt', ('p7zip-full', 'curl', 'ripgrep'))
+    assert recorder.calls[1:] == [('apt', ('p7zip-full',)), ('apt', ('curl',)), ('apt', ('ripgrep',))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.FAILED, OutcomeStatus.DONE, OutcomeStatus.DONE]
+
+
+def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """Reporting it installed would leave a run claiming a converged machine it
+    never touched.
+
+    Built by hand rather than planned, because `resolve.available` filters a
+    brew-only entry off an apt machine before it can reach a provider — so this
+    asserts what the guard does, at the only level it is reachable from.
+    """
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
+    item = live.plan.for_resource('system')[0]
+    unusable = dc.replace(item, entry=catalog.SystemPackage.from_mapping({'name': 'mas', 'brew': 'mas'}))
+    change = Change('system', unusable.stage, unusable.address, Verdict.MISSING, desired=unusable)
+
+    outcomes = registry.BY_NAME['system'].install_all(live, [change], Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.REFUSED]
+
+
+def changes(live: Session):
+    return list(system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan)))
+
+
+def only_change(live: Session) -> Change:
+    found = changes(live)
+    assert len(found) == 1, found
+    return found[0]

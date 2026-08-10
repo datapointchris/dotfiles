@@ -54,6 +54,7 @@ from dotfiles.providers import macdefaults
 from dotfiles.providers import npm
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
+from dotfiles.providers import syspkg
 from dotfiles.providers import toolchain
 from dotfiles.providers import uvtool
 from dotfiles.resolve import DesiredItem
@@ -152,6 +153,15 @@ class Provider:
         `apply` reporting a converged machine.
         """
         return Outcome(change, OutcomeStatus.REFUSED, f"run 'dotfiles {self.resource} apply', which still drives the phase registry")
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """Repair several of this provider's items, one Outcome each in order.
+
+        One at a time by default, which is what every provider but the package
+        managers wants: a release download, a clone and a `defaults write` cost
+        the same alone as in company.
+        """
+        return [install_one(self, session, change, privilege) for change in changes]
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -318,6 +328,23 @@ class SystemPackageProvider(RegistryProvider):
 
     def needs_root(self, item: DesiredItem) -> bool:
         return True
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """One transaction per manager, and one refresh before each.
+
+        Grouped by manager rather than done in the order given, because the order
+        given is the plan's and the transaction is the manager's. A machine has one
+        of apt/pacman/brew, so this is usually one group — plus the AUR's, which is
+        genuinely a second manager and a second transaction.
+        """
+        outcomes: dict[str, Outcome] = {}
+        for manager, wanted in _by_manager(session, changes).items():
+            outcomes.update(_transact(manager, wanted, privilege))
+        unreachable = 'no package manager on this machine installs it'
+        return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, unreachable)) for change in changes]
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -699,6 +726,75 @@ def evidence_for(item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
 def needs_root(item: DesiredItem) -> bool:
     provider = named(item.provider)
     return provider is not None and provider.needs_root(item)
+
+
+def _by_manager(session: Session, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
+    """Which manager installs each change, and under what name.
+
+    A machine's `installers` is the family its package manager selects — pacman
+    brings the AUR with it, brew brings casks and the App Store — so an entry
+    declaring names under three managers is narrowed to the one or two this
+    machine can actually use. `PREFERENCE` breaks the remaining tie, which is only
+    ever pacman against the AUR.
+
+    A change no manager on this machine can install is absent from the result and
+    answered separately, rather than silently dropped.
+    """
+    usable = session.machine.coordinates.installers
+    grouped: dict[str, list[tuple[Change, str]]] = {}
+    for change in changes:
+        names = ev.declared_names(change.desired) if change.desired else {}
+        chosen = next((manager for manager in syspkg.PREFERENCE if manager in usable and manager in names), '')
+        if chosen:
+            grouped.setdefault(chosen, []).append((change, names[chosen][0]))
+    return grouped
+
+
+def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privilege) -> dict[str, Outcome]:
+    """One manager's whole batch, falling back to one call per package on failure.
+
+    The fallback is what lets the report name the package that broke: `brew
+    install a b c` exiting 1 says nothing about which of the three is at fault, and
+    the machine still wants the other two. Paid only when something is already
+    wrong.
+    """
+    refreshed = syspkg.refresh(manager, privilege)
+    if not refreshed.ok:
+        reason = f'{manager} could not be refreshed: {refreshed.detail}'
+        return {change.item: Outcome(change, OutcomeStatus.FAILED, reason) for change, _ in wanted}
+
+    together = syspkg.install(manager, [name for _, name in wanted], privilege)
+    if together.ok:
+        return {change.item: Outcome(change, OutcomeStatus.DONE, f'{manager}: {name}') for change, name in wanted}
+
+    isolated: dict[str, Outcome] = {}
+    for change, name in wanted:
+        alone = syspkg.install(manager, [name], privilege)
+        status = OutcomeStatus.DONE if alone.ok else OutcomeStatus.FAILED
+        isolated[change.item] = Outcome(change, status, f'{manager}: {name}' if alone.ok else alone.detail)
+    return isolated
+
+
+def install_one(provider: Provider, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    """One change through its provider, or a refusal naming what is missing."""
+    item = change.desired
+    if item is None:
+        return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more')
+    return provider.install(session, change, item, privilege)
+
+
+def install_all(session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    """A group of changes through the one provider that planned them.
+
+    The engine groups by provider before it gets here, so the group is homogeneous
+    and the first change names the provider for all of them. A group that somehow
+    is not answers per change, which is the same result the loop would give.
+    """
+    first = changes[0].desired if changes else None
+    provider = named(first.provider) if first else None
+    if provider is None:
+        return [install(session, change, privilege) for change in changes]
+    return provider.install_all(session, changes, privilege)
 
 
 def install(session: Session, change: Change, privilege: Privilege) -> Outcome:
