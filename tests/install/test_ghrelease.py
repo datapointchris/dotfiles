@@ -421,6 +421,12 @@ class TestZipPermissions:
 
     @staticmethod
     def zip_with_modes(path: Path, members: dict[str, int]) -> None:
+        """A zip carrying whatever names it was given, including hostile ones.
+
+        `zipfile.writestr` records the name verbatim, which is what makes an
+        archive able to lie about where its members belong — and why the shapes
+        below are the ones worth enumerating.
+        """
         with zipfile.ZipFile(path, 'w') as archive:
             for name, mode in members.items():
                 info = zipfile.ZipInfo(name)
@@ -461,3 +467,49 @@ class TestZipPermissions:
         landed = (tmp_path / 'out' / 'thing').stat().st_mode
         assert stat.S_ISREG(landed)
         assert landed & 0o777 == 0o755
+
+    @pytest.mark.parametrize(
+        ('recorded', 'lands_at'),
+        [
+            ('../escaped', 'escaped'),
+            ('/absolute', 'absolute'),
+            ('./relative', 'relative'),
+            # `..` components are dropped and the rest of the path is kept, so this
+            # lands beside its sibling rather than at the root of the extraction.
+            ('a/../../climbed', 'a/climbed'),
+        ],
+    )
+    def test_a_member_lying_about_where_it_belongs_is_chmodded_where_it_landed(self, tmp_path, recorded, lands_at):
+        """The shapes `ZipFile._extract_member` sanitises, which are exactly the
+        ones a reconstructed path gets wrong.
+
+        `into / '/absolute'` is `/absolute` — pathlib resets on an absolute segment
+        — and `into / '../escaped'` climbs out, so restoring the mode by rebuilding
+        the name chmods a file the extractor never wrote while leaving the one it
+        did at 0644. A downloaded archive is not trusted to name its own targets.
+        """
+        archive = tmp_path / 'hostile.zip'
+        into = tmp_path / 'out'
+        self.zip_with_modes(archive, {recorded: 0o777})
+        outside = tmp_path / 'escaped'
+        outside.write_text('untouched')
+        before = outside.stat().st_mode
+
+        assert effects.unpack(archive, into)
+
+        landed = into / lands_at
+        assert landed.is_file(), f'{recorded!r} should have been written inside {into}'
+        assert landed.stat().st_mode & 0o777 == 0o777
+        assert outside.stat().st_mode == before, 'a file outside the extraction directory was touched'
+
+    def test_nothing_outside_the_extraction_directory_is_ever_written(self, tmp_path):
+        """The property behind the parametrization: whatever an archive claims, the
+        blast radius is the directory it was unpacked into."""
+        archive = tmp_path / 'hostile.zip'
+        into = tmp_path / 'out'
+        self.zip_with_modes(archive, {'../a': 0o777, '/b': 0o755, 'c': 0o644})
+
+        assert effects.unpack(archive, into)
+
+        written = {path for path in tmp_path.rglob('*') if path.is_file() and path != archive}
+        assert all(into in path.parents for path in written), sorted(str(path) for path in written)
