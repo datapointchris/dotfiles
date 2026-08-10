@@ -13,6 +13,7 @@ because a verb that makes you go and ask for one is a verb nobody knows about:
 from __future__ import annotations
 
 import dataclasses
+import dataclasses as dc
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -136,8 +137,9 @@ def stats(as_json: bool = JsonOption) -> None:
     than a flag on `show`.
     """
     durations: defaultdict[str, list[float]] = defaultdict(list)
-    for record_path in runs.list_runs():
-        for outcome in runs.read(record_path).outcomes:
+    records = [runs.read(path) for path in runs.list_runs()]
+    for record in records:
+        for outcome in record.outcomes:
             durations[outcome.address].append(outcome.timing.duration_seconds)
 
     if not durations:
@@ -154,8 +156,10 @@ def stats(as_json: bool = JsonOption) -> None:
         for address, seconds in sorted(durations.items(), key=lambda item: -sum(item[1]))
     }
 
+    unconverged = _never_converged(records)
+
     if as_json:
-        emit_json(summary)
+        emit_json({'durations': summary, 'unconverged': [dc.asdict(entry) for entry in unconverged]})
         return
 
     table = Table(box=None, pad_edge=False)
@@ -165,3 +169,78 @@ def stats(as_json: bool = JsonOption) -> None:
     for address, row in summary.items():
         table.add_row(address, *(str(row[key]) for key in ('runs', 'total', 'median', 'slowest')))
     console.print(table)
+
+    if unconverged:
+        console.print()
+        console.print('[bold yellow]never converged[/]  installed again on every recent apply')
+        churn = Table(box=None, pad_edge=False)
+        churn.add_column('address')
+        churn.add_column('machine')
+        churn.add_column('applies', justify='right')
+        for entry in unconverged:
+            churn.add_row(entry.address, entry.machine, str(entry.applies))
+        console.print(churn)
+
+
+CHURN_THRESHOLD = 3
+"""Consecutive applies acting on one item before it is called unconverged.
+
+Three rather than two because an item legitimately installs on two runs in a row
+— a release lands between them, or the first apply was the machine's first. What
+three consecutive says is that installing it does not make it installed, which is
+never a fact about the world.
+"""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Unconverged:
+    """One item an apply keeps acting on, and how many runs deep it goes."""
+
+    address: str
+    machine: str
+    applies: int
+
+
+def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
+    """Items an apply acts on every time, which no amount of applying settles.
+
+    The failure mode this exists to name: `brew install pkg-config` succeeds,
+    `brew list` reports `pkgconf` because the formula was renamed, and the
+    evidence check looks for the declared name and finds nothing. The install
+    reports success, the run reports converged, and the item is reinstalled
+    forever — thirteen times before the fleet shared its run history and made the
+    repetition visible at all.
+
+    Counted per machine, from the newest apply backwards, stopping at the first
+    run that left the item alone. A total count would rank a tool that drifted
+    monthly for a year above one that has not converged since Tuesday, and only
+    the second is broken.
+
+    A converged item is *absent* from a record rather than present with no
+    action — only changes get outcomes — so absence is what ends a streak. Making
+    absence transparent instead kept counting through the runs that proved the
+    item fine, which reported two long-fixed faults as current: the App Store
+    rename and the awscli branch both showed six-deep streaks made entirely of
+    history.
+    """
+    applies = [record for record in records if record.verb == 'apply']
+    by_machine: defaultdict[str, list[runs.RunRecord]] = defaultdict(list)
+    for record in applies:
+        by_machine[record.machine].append(record)
+
+    found: list[Unconverged] = []
+    for machine, history in by_machine.items():
+        ordered = sorted(history, key=lambda record: record.started_at, reverse=True)
+        streaks: dict[str, int] = {}
+        alive: set[str] | None = None
+        for record in ordered:
+            acted = {outcome.address for outcome in record.outcomes if outcome.action == 'done'}
+            # The newest apply seeds the set: an item it left alone converged
+            # there, whatever it did before, and this names what is wrong *now*.
+            alive = acted if alive is None else alive & acted
+            if not alive:
+                break
+            for address in alive:
+                streaks[address] = streaks.get(address, 0) + 1
+        found.extend(Unconverged(address, machine, count) for address, count in streaks.items() if count >= CHURN_THRESHOLD)
+    return sorted(found, key=lambda entry: (-entry.applies, entry.address))

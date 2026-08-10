@@ -71,6 +71,15 @@ class Output(StrEnum):
     """
 
 
+ANSWER_LIMIT = 200
+"""How much of a successful command's stdout the run log keeps.
+
+Long enough for the answers whose whole content is the answer — a version
+string, a resolved path, a one-line status — and far short of an install
+transcript. The cut is by length rather than by naming which commands count,
+because the caller that would have to declare it is every provider.
+"""
+
 NOT_FOUND = 127
 """A command that does not exist, as a shell reports it rather than as a crash."""
 
@@ -171,6 +180,14 @@ def run(
         install` is thousands of lines nobody will ever read, and keeping all of
         them is how a debug stream turns into something people switch off — while
         a failed one is the entire reason the stream exists.
+
+        The exception is a *short* successful answer, kept up to `ANSWER_LIMIT`.
+        A version probe succeeds and its whole meaning is the one line it prints,
+        so recording only the argv and the exit code makes an item that is
+        permanently stale undiagnosable from the record: `toolbox --version`
+        appears to have run fine, on every run, for weeks. That was measured — it
+        is why the toolbox drift on one Mac could not be read from the shared run
+        history and needed an ssh to answer.
         """
         fields = {
             'argv': list(argv),
@@ -180,6 +197,8 @@ def run(
         }
         if not completed.ok:
             fields['transcript'] = completed.transcript
+        elif (answer := completed.stdout.strip()) and len(answer) <= ANSWER_LIMIT:
+            fields['answer'] = answer
         log.debug('ran', **fields)
         return completed
 

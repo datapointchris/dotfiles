@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 
 from dotfiles import runs
 from dotfiles import sinks
+from dotfiles.commands import report
 from dotfiles.event import Event
 from dotfiles.main import app
 from dotfiles.resolve import Stage
@@ -100,3 +101,60 @@ def test_a_successful_item_does_not_repeat_its_detail_below_the_table(runs_dir: 
     recorded(runs_dir, Event('packages', done))
 
     assert 'installed zk 0.14' not in runner.invoke(app, ['report', 'latest']).stdout
+
+
+def churn_record(machine: str, started: str, *done: str) -> runs.RunRecord:
+    identity = runs.Identity(id='r' + started[-6:], machine=machine, verb='apply', started=BEGAN)
+    record = sinks.record([Event('packages', change(name, Verdict.MISSING)) for name in done], identity)
+    record.started_at = started
+    for outcome in record.outcomes:
+        outcome.action = 'done'
+    return record
+
+
+def test_an_item_installed_every_apply_is_named_as_unconverged(runs_dir: Path) -> None:
+    """The failure this exists to surface: the install succeeds, the evidence check
+    cannot see its result, and the item is reinstalled forever while the run
+    reports converged. pkg-config did it thirteen times unnoticed."""
+    for day in ('01', '02', '03', '04'):
+        runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
+
+    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+
+    assert [(entry.address, entry.applies) for entry in found] == [('packages/zk', 4)]
+
+
+def test_an_item_the_newest_apply_left_alone_is_not_named(runs_dir: Path) -> None:
+    """A converged item is absent from the record rather than present with no
+    action, so absence is what ends a streak. Counting through it reported two
+    long-fixed faults — an App Store rename and a dead awscli branch — as
+    current, on streaks made entirely of history."""
+    for day in ('01', '02', '03'):
+        runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
+    runs.write(churn_record(MACHINE, '2026-08-04T00:00:00Z', 'other'), runs_dir)
+
+    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+
+    assert not [entry for entry in found if entry.address == 'packages/zk']
+
+
+def test_a_short_streak_is_not_yet_a_fault(runs_dir: Path) -> None:
+    """An item legitimately installs twice running — a release lands between two
+    applies, or the first was the machine's first."""
+    for day in ('03', '04'):
+        runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
+
+    assert not report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+
+
+def test_streaks_are_counted_per_machine(runs_dir: Path) -> None:
+    """One box churning is not evidence about another, and the fleet shares this
+    directory now — an unsplit count would blame every machine for one."""
+    for day in ('01', '02', '03'):
+        runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
+        runs.write(churn_record('linux-lxc-server', f'2026-08-{day}T00:00:00Z', 'other'), runs_dir)
+
+    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+
+    assert {entry.machine for entry in found} == {MACHINE, 'linux-lxc-server'}
+    assert all(entry.applies == 3 for entry in found)

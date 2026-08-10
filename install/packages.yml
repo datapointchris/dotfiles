@@ -44,11 +44,16 @@ system_packages:
     brew: ca-certificates
     description: SSL/TLS certificates
 
+  # `brew: pkgconf`, not pkg-config. Homebrew retired the pkg-config formula and
+  # made the name an alias, so `brew install pkg-config` succeeds while
+  # `brew list` — which is what the evidence check reads — reports `pkgconf`.
+  # The entry was therefore missing on every run and reinstalled on every apply:
+  # 13 of them recorded before the shared run history made it visible.
   - name: pkg-config
     tier: core
     apt: pkg-config
     pacman: pkgconf
-    brew: pkg-config
+    brew: pkgconf
     description: Build configuration tool
 
   # Node.js — the system package is the floor, not the version projects build
