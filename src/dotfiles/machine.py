@@ -152,6 +152,23 @@ class Requirement:
     path: str
     consumers: tuple[str, ...]
     narrowing: Mapping[str, str]
+    restore: str = ''
+    """How to get this one back, where safekeep is not the answer.
+
+    Every entry here is restored from a snapshot except the one that says where
+    the snapshots are: `~/.config/safekeep/default.toml` on a machine with no
+    backup yet cannot be restored from the backup it configures. The default
+    covers the rest, and an entry overrides it only when it is genuinely wrong.
+    """
+
+    tags: tuple[str, ...] = ()
+    """Restore scenarios, for the safekeep block `machines requirements` emits.
+
+    Additive rather than the whole set: everything here is tagged `dotfiles` by
+    the emitter, because `safekeep restore --tag dotfiles` wanting exactly this
+    register is the point. A declared tag says which *other* scenario an entry
+    also belongs to, and only earns its place where that is not obvious.
+    """
 
     @property
     def is_file(self) -> bool:
@@ -403,6 +420,8 @@ def _requirements(
                     path=str(entry.get('path', '')),
                     consumers=tuple(entry.get('consumers') or ()),
                     narrowing=narrowing,
+                    restore=str(entry.get('restore', '')),
+                    tags=tuple(str(tag) for tag in entry.get('tags') or ()),
                 )
             )
     return tuple(found)

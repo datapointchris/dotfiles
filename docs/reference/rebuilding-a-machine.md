@@ -27,14 +27,19 @@ holds, which is why the capture step comes first.
 covers the verbs and `safekeep tags` says what a given tag would bring back.
 
 Getting the capture *set* right is the hard part, because what dies in a wipe is
-unobvious. `~/.env` holds the machine's identity, and everything below its
-`# OVERRIDES` marker is hand-written and exists nowhere else. The machine-local
-overlay at `~/.local/shell/local.sh` sits outside this repo on purpose, so
-employer shell code stays off a synced clone — which also means nothing
-redeploys it. The generated part of `~/.env` names the path for that reason.
-`syncer`'s config is machine-local for the same reason, and without it a rebuilt
-box has no registry of repos to clone. Add credentials, SSH keys, and anything
-under `~/.config` that was authored rather than deployed.
+unobvious. `dotfiles machines requirements` answers the half the repo can prove —
+every value and file a machine needs that `apply` will never write — and
+`--safekeep` emits those files as `[[back_up_paths]]` blocks to paste straight
+into the config, each tagged `dotfiles`.
+
+That is a floor and not the set. It covers what is declared, which is by
+definition narrower than what is worth keeping: `~/.env` below its `# OVERRIDES`
+marker is hand-written and exists nowhere else, `~/.config/syncer/repos.json`
+points at a registry whose location differs per machine, and credentials, SSH
+keys and anything under `~/.config` that was authored rather than deployed are
+all outside the register entirely. Anything found that way and worth checking
+forever belongs in `required_files:`, which is what makes `dotfiles check` report
+it on every machine from then on.
 
 Confirm the destination survives the wipe: a snapshot inside the machine you are
 about to erase is not a backup. On WSL that means a Windows or network path, not

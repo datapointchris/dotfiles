@@ -31,6 +31,9 @@ from dotfiles.session import Session
 
 NAME = 'env'
 
+RESTORE = 'restore it with safekeep'
+"""What gets a required file back, unless its entry declares otherwise."""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
@@ -159,7 +162,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                     Stage.ENVIRONMENT,
                     entry.path,
                     Verdict.MISSING,
-                    detail=f'restore it with safekeep — {entry.description or "machine-local file"}',
+                    detail=f'{entry.restore or RESTORE} — {entry.description or "machine-local file"}',
                     repair=Repair.BY_HAND,
                 )
             )
