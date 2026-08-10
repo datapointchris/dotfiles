@@ -210,7 +210,7 @@ def test_each_manager_is_asked_once_however_many_packages_name_it(monkeypatch: p
     """195 subprocesses to answer one question is what this replaced."""
     asked: list[str] = []
 
-    def record(name: str) -> frozenset[str]:
+    def record(name: str, **_asked_how: object) -> frozenset[str]:
         asked.append(name)
         return frozenset({'curl'})
 
@@ -228,7 +228,7 @@ def test_a_manager_that_cannot_answer_is_not_asked_again(monkeypatch: pytest.Mon
     declared flatpak app, which is the shape of the cost this cache exists for."""
     asked: list[str] = []
 
-    def refuse(name: str) -> None:
+    def refuse(name: str, **_asked_how: object) -> None:
         asked.append(name)
         return None
 
@@ -243,7 +243,7 @@ def test_a_manager_that_cannot_answer_is_not_asked_again(monkeypatch: pytest.Mon
 def test_only_the_managers_that_answered_are_reported_as_asked(monkeypatch: pytest.MonkeyPatch) -> None:
     """`asked` is what the system row prints, and naming a manager that returned
     nothing would turn a shrug into a claim to have measured something."""
-    monkeypatch.setattr(ev, 'query', lambda name: frozenset({'curl'}) if name == 'apt' else None)
+    monkeypatch.setattr(ev, 'query', lambda name, **kwargs: frozenset({'curl'}) if name == 'apt' else None)
 
     inventories = ev.Inventories()
     inventories.get('apt')

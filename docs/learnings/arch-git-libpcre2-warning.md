@@ -31,7 +31,24 @@ This is a known Arch Linux packaging issue where:
 
 ## Solution
 
-### Proper Fix: Reinstall pcre2 and Rebuild Library Cache
+### It resolves upstream, and the workaround below never fixed it
+
+The warning is a version-symbol mismatch between the `git` binary and the
+`libpcre2-8` it was linked against, so only a rebuild of one of them clears it —
+which happens on its own the next time either package is rebuilt in the repos.
+
+The Arch installer used to run `pacman -S pcre2` and `sudo ldconfig` after every
+package install, both `2>/dev/null || true`, and neither could have worked.
+Reinstalling gives back the identical package, and `ldconfig` rebuilds
+`/etc/ld.so.cache`, which has nothing to say about symbol versions. They were
+added while debugging this, the warning stopped for an unrelated reason, and the
+commands stayed. They did not survive the conversion of the package installers to
+providers.
+
+Run them by hand if a machine is showing the warning today — they cost nothing
+and rule out an actually-broken cache — but expect the pair below to be the fix.
+
+### The commands, for a machine showing this now
 
 The proper solution is to ensure pcre2 is correctly installed and rebuild the library cache:
 
@@ -43,18 +60,12 @@ sudo pacman -S --noconfirm pcre2
 sudo ldconfig
 ```
 
-This is implemented automatically in the Arch installation scripts under `install/archlinux/`.
+### What `ldconfig` does and does not do
 
-### Why This Works
-
-- `ldconfig` is the standard Linux utility for fixing library linking issues
-- It updates the runtime linker bindings and caches
-- Ensures git can find correct version information in libpcre2
-- Not a hack - this is the proper system-level solution
-
-### Already Fixed
-
-If you're using the dotfiles installation process, this fix is automatically applied during package installation.
+- It updates the runtime linker bindings and rebuilds `/etc/ld.so.cache`
+- That fixes a library the linker cannot *find*
+- It does not change which version symbols a compiled binary asks for, which is
+  what this warning is about
 
 ## Related Issues
 
@@ -76,4 +87,4 @@ All commands function normally.
 
 ## Last Updated
 
-2025-11-25
+2026-08-09

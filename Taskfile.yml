@@ -22,10 +22,13 @@ tasks:
     cmds:
       - uv run dotfiles apply {{.CLI_ARGS}}
 
+  # An alias for `install`, not a second verb. Reconcile has one act: `apply`
+  # installs what is missing and upgrades what is behind, and which of those a
+  # given row needs is the verdict's answer rather than the caller's.
   update:
-    desc: "Update everything, or a subset: task update -- tools --mine"
+    desc: "Reconcile this machine, same as install: task update -- --skip plugins"
     cmds:
-      - bash "{{.DOTFILES_DIR}}/update.sh" {{.CLI_ARGS}}
+      - uv run dotfiles apply {{.CLI_ARGS}}
 
   relink:
     desc: Deploy every symlink, pruning the ones whose source is gone

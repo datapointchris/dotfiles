@@ -74,20 +74,51 @@ def test_the_resolver_selects_what_the_old_filters_selected(declaration: catalog
 @pytest.mark.parametrize('name', MACHINES)
 def test_the_resolver_selects_the_system_packages_the_old_filter_selected(declaration: catalog.Catalog, name: str) -> None:
     """Per installer, not per manager: reading `pacman` as one installer drops the
-    five `aur:` entries and reading `brew` as one drops 21 casks and 12 mas apps."""
+    five `aur:` entries and reading `brew` as one drops 21 casks and 12 mas apps.
+
+    `get_system_packages` was never the whole of the old filter on WSL. The
+    pipeline there was `parse_packages | grep -v -E '<the docker family>'`, so the
+    exclusion belongs on this side of the comparison — reproduced from the
+    declaration rather than by naming the packages, since naming them is how the
+    grep and the list came to disagree in the first place.
+    """
     data = parse_packages.load_packages()
     machine = machines.load(name, REPO_ROOT)
     plan = resolve.resolve(declaration, machine)
     tier = machine.subscription('system_packages').tier or 'workstation'
 
     for installer in machine.coordinates.installers:
-        expected = sorted(parse_packages.get_system_packages(data, installer, tier))
+        grepped_out = {
+            entry.package_for(installer)
+            for entry in declaration.section('system_packages')
+            if isinstance(entry, catalog.SystemPackage) and entry.excludes_host == str(machine.coordinates.host)
+        }
+        expected = sorted(set(parse_packages.get_system_packages(data, installer, tier)) - grepped_out)
         actual = sorted(
             item.entry.package_for(installer)
             for item in plan.for_section('system_packages')
             if isinstance(item.entry, catalog.SystemPackage) and item.entry.package_for(installer)
         )
         assert actual == expected, installer
+
+
+def test_wsl_plans_none_of_the_docker_packages_its_apt_repo_does_not_carry(declaration: catalog.Catalog) -> None:
+    """The direct assertion the parity gate above cannot make, since it now reads
+    the same field the resolver does.
+
+    The docker family lives in Docker's own apt repository, which nothing in the
+    installer configures — so on WSL `apt install docker-ce` fails, and `check`
+    reported five packages missing forever on a machine deliberately never going
+    to have them. Docker Desktop on the Windows side is what serves that host.
+    """
+    machine = machines.load('wsl-work-workstation', REPO_ROOT)
+    plan = resolve.resolve(declaration, machine)
+
+    planned = {item.name for item in plan.for_section('system_packages')}
+    excluded = {entry.name for entry in declaration.section('system_packages') if getattr(entry, 'excludes_host', '') == 'wsl'}
+
+    assert excluded, 'nothing declares excludes_host, so this asserts nothing'
+    assert not (planned & excluded)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -392,7 +423,12 @@ def test_an_entry_is_dropped_where_the_package_it_configures_is_not_installed(tm
     with_docker = system_plan(tmp_path / 'a', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
     without = system_plan(tmp_path / 'b', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': False})
 
-    assert [item.address for item in with_docker.for_resource('system')] == ['system/docker', 'group/docker']
+    # The `manager/*` rows come from the same plan and are not what this is about:
+    # they are one per package manager the plan reaches, so the machine that
+    # installs docker has them and the machine that installs nothing has none.
+    planned = [item.address for item in with_docker.for_resource('system') if item.provider != 'manager']
+
+    assert planned == ['system/docker', 'group/docker']
     assert without.for_resource('system') == ()
 
 

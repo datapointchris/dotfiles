@@ -214,30 +214,37 @@ system_packages:
   # Docker (cross-platform via official repos - WSL uses Windows Docker Desktop)
   # Ubuntu: needs the official apt repo, which install/wsl/docker-repo.sh adds
   # by hand — it is a documented escape hatch, not a step the installer runs.
+  # Hence excludes_host on every apt-named entry below: without the repo, apt
+  # cannot resolve them, and WSL wants Docker Desktop rather than a daemon.
   # Arch: official repos already up-to-date
   # macOS: OrbStack provides Docker CLI (see macos_casks)
   - name: docker
     apt: docker-ce
     pacman: docker
+    excludes_host: wsl
     description: Docker CLI (official repositories)
 
   - name: docker-cli
     apt: docker-ce-cli
+    excludes_host: wsl
     description: Docker CLI (Ubuntu official repo - separate package)
 
   - name: containerd
     apt: containerd.io
     pacman: containerd
+    excludes_host: wsl
     description: Container runtime
 
   - name: docker-buildx-plugin
     apt: docker-buildx-plugin
     pacman: docker-buildx
+    excludes_host: wsl
     description: Docker Buildx plugin
 
   - name: docker-compose-plugin
     apt: docker-compose-plugin
     pacman: docker-compose
+    excludes_host: wsl
     description: Docker Compose V2 plugin
     # macOS: OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed
 
@@ -515,7 +522,8 @@ system_packages:
     brew: libpq
     description: PostgreSQL client (psql CLI for database connections)
     # Notes:
-    # - macOS: requires `brew link --force libpq` after install (handled in post-install)
+    # - macOS: libpq is keg-only, so psql exists only once it is force-linked —
+    #   the `psql-linked` row in system.yml, which reports it on every check
     # - Arch: installs full postgresql package, but server doesn't run unless configured
     # - All platforms: provides psql, pg_dump, pg_restore CLI tools
 

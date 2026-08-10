@@ -32,6 +32,7 @@ from dotfiles.event import Summary
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
+from dotfiles.resources import Batched
 from dotfiles.resources import Change
 from dotfiles.resources import Resource
 from dotfiles.session import Session
@@ -96,14 +97,19 @@ class Selection:
         return cls(resources, frozenset(provider.name for provider in registry.PROVIDERS) - narrowed)
 
     @classmethod
-    def at(cls, stage: Stage) -> Selection:
-        """Every provider that runs at one stage, and the resources holding them.
+    def at(cls, *stages: Stage) -> Selection:
+        """Every provider that runs at these stages, and the resources holding them.
 
         Derived from the registry rather than listed, because a phase *is* a stage
-        and the six system-configuration providers are not a list anyone should
-        have to keep in step by hand.
+        and the system-configuration providers are not a list anyone should have to
+        keep in step by hand.
+
+        Several stages because a phase is not always one: the package managers and
+        the app stores installing through them are two stages so that ordering
+        holds, and one phase, because a caller asking for system packages is asking
+        for both.
         """
-        wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage is stage)
+        wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage in stages)
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 
@@ -222,18 +228,87 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
     record says nothing about the half that never ran.
     """
     known = resources()
+    for group in _batches(planned):
+        yield from _act(session, known[group[0].resource], group, privilege)
+
+
+def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+    """The actionable events, in runs of one resource and one provider.
+
+    Consecutive rather than gathered, so the stream stays a stream and the order
+    stays the convergence order. Events already arrive grouped — the walk is
+    resource by resource and the plan is sorted by stage — so a run breaks only
+    where the work genuinely changes hands.
+
+    This exists for `Batched` resources and costs the others nothing: a group of
+    one is what a provider with nothing to gain from company receives.
+    """
+    batch: list[Event] = []
     for event in planned:
         change = event.payload
         if not isinstance(change, Change) or not change.actionable:
             continue
+        if batch and _owner(batch[-1]) != _owner(event):
+            yield batch
+            batch = []
+        batch.append(event)
+    if batch:
+        yield batch
+
+
+def _owner(event: Event) -> tuple[str, str]:
+    change = event.payload
+    desired = change.desired if isinstance(change, Change) else None
+    return (event.resource, desired.provider if desired else '')
+
+
+def _act(session: Session, resource: Resource, group: list[Event], privilege: Privilege) -> Iterator[Event]:
+    """One group's repairs, isolated at the granularity the resource acts at.
+
+    Item by item unless the resource declares itself `Batched` and there is more
+    than one to do — which is the pre-existing behaviour for every resource that
+    does not, down to the per-item clock.
+    """
+    changes = [event.payload for event in group if isinstance(event.payload, Change)]
+    if isinstance(resource, Batched) and len(changes) > 1:
+        yield from _act_together(session, resource, group, changes, privilege)
+        return
+
+    for event, change in zip(group, changes, strict=True):
         clock = runs.Stopwatch()
         try:
             with clock.phase('act'):
-                outcome = known[event.resource].perform(session, change, privilege)
+                outcome = resource.perform(session, change, privilege)
         except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
             yield Event(event.resource, Refusal(f'{change.item}: {failed}'), stage=change.stage)
         else:
             yield Event(event.resource, outcome, stage=change.stage, timing=clock.finish())
+
+
+def _act_together(session: Session, resource: Batched, group: list[Event], changes: list[Change], privilege: Privilege) -> Iterator[Event]:
+    """One transaction, and the isolation that is honest about being one.
+
+    A raising batch takes its whole group down, unlike the item-by-item path. That
+    is not a weaker guarantee, it is the true one: `pacman -S a b c` either happens
+    or it does not, and reporting two of the three as repaired because they came
+    earlier in a list would be a fiction the machine does not support.
+
+    The duration is recorded against the first event rather than repeated on each,
+    so the run record's totals stay the time actually spent. Splitting it evenly
+    would be inventing per-item numbers out of a single measurement.
+    """
+    clock = runs.Stopwatch()
+    try:
+        with clock.phase('act'):
+            outcomes = resource.perform_batch(session, changes, privilege)
+    except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
+        for event, change in zip(group, changes, strict=True):
+            yield Event(event.resource, Refusal(f'{change.item}: {failed}'), stage=change.stage)
+        return
+
+    timing = clock.finish()
+    for index, (event, outcome) in enumerate(zip(group, outcomes, strict=True)):
+        yield Event(event.resource, outcome, stage=outcome.change.stage, timing=timing if index == 0 else None)
 
 
 def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> Iterator[Event]:

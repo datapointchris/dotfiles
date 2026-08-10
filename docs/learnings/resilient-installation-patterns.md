@@ -49,14 +49,21 @@ formula in a tap that wasn't added). A missing `borders` tap once silently took
 out tmux, neovim, and every other system package in the same invocation, which
 only surfaced phases later as "tmux: command not found" when tpm ran.
 
-The fix (`install/macos/system-packages.sh`) is a batch fast-path with a
-per-package fallback: attempt the batch (fast in the common case), and on failure
-retry each package individually so failures are isolated and the culprits are
-named explicitly, rather than reporting a vague "some packages may have failed."
+The fix is a batch fast-path with a per-package fallback: attempt the batch (fast
+in the common case), and on failure retry each package individually so failures
+are isolated and the culprits are named explicitly, rather than reporting a vague
+"some packages may have failed."
 
 - Pay the slow per-package cost only when the batch actually fails
 - Report exactly which packages failed (`Failed to install: borders`), not a guess
 - Applies to any batched installer where one bad argument aborts the whole command
+
+It lived in the macOS package script, which is why it protected brew and nothing
+else — the reason has nothing to do with brew, and `apt-get install a b c`
+exiting 1 says just as little about which of the three broke. Every manager gets
+it now: `registry._transact` batches, then isolates on failure, for whichever
+manager a group belongs to. Registering the taps moved *before* the batch for the
+same reason, since an unresolvable formula is what aborts it.
 
 ## Re-runnability: a `status:` Check Can Freeze Sub-Components
 

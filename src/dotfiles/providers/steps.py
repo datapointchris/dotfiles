@@ -1,17 +1,19 @@
-"""Machine state with no shared mechanism behind it: five rows, five pairs of functions.
+"""Machine state with no shared mechanism behind it: one pair of functions per row.
 
 `~/Library` being visible is a file flag plus an extended attribute. The
 screenshot directory existing is a directory existing. The Xcode licence is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
-directory is a JSON merge into a user config. The Windows font path is discovered
-by asking Windows. The scheduled check is a systemd user timer or a LaunchAgent,
-and lives in `providers/schedule.py` because it is the only one long enough to
-crowd the others out.
+directory is a JSON merge into a user config. libpq is a formula Homebrew
+installs and deliberately does not link. The Windows font path is discovered by
+asking Windows. The scheduled check is a systemd user timer or a LaunchAgent, and
+lives in `providers/schedule.py` because it is the only one long enough to crowd
+the others out.
 
 This is the shape `custom_installers` settled on and for the same reason: the
 declaration names *which*, this module says *how*, and a test asserts the two
 sets match in both directions. A `check:`/`apply:` argv pair in the YAML would be
-a command language invented for six rows, and four of them would not fit it.
+a command language invented for a handful of rows, and most of them would not fit
+it.
 
 Every function here observes without escalating. `_xcode_licence` is the
 exception the design predicted — `xcodebuild -license status` needs root to read
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 from collections.abc import Callable
 from pathlib import Path
@@ -299,6 +302,43 @@ def _write_fontconfig() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# libpq, which Homebrew installs without linking
+# ─────────────────────────────────────────────────────────────────────────────
+
+KEG_ONLY = 'libpq'
+
+
+def _psql_linked() -> State:
+    """Whether `psql` resolves, which is the whole point of installing libpq.
+
+    libpq is keg-only: Homebrew installs it and deliberately puts nothing on PATH,
+    because its binaries collide with the `postgresql` formula's. So a Mac that
+    declared `psql` gets the files and no command, and nothing says so.
+
+    A step rather than a branch at the end of the brew install, which is where
+    `system-packages.sh` had it. The link is machine state — it survives, it can
+    be undone by a later `brew unlink`, and a run that installs nothing should
+    still notice it is missing. Only a declared row gets checked on a converged
+    machine; a post-install branch runs exactly when something else is installing.
+    """
+    if not shutil.which('brew'):
+        return State(Verdict.UNKNOWN, 'no brew on PATH, so whether libpq is linked cannot be read', repair=Repair.NONE)
+    if not run(['brew', 'list', KEG_ONLY], output=Output.QUIET).ok:
+        return State(Verdict.MATCHED, f'{KEG_ONLY} is not installed, so there is nothing to link')
+    if shutil.which('psql'):
+        return State(Verdict.MATCHED, f'psql resolves to {shutil.which("psql")}')
+    return State(Verdict.MISSING, f'{KEG_ONLY} is installed but keg-only, so psql is on no PATH')
+
+
+def _link_psql() -> Result:
+    """`--force`, which is what keg-only means: without it brew declines and exits 0."""
+    linked = run(['brew', 'link', '--force', KEG_ONLY], output=Output.QUIET)
+    if not linked.ok:
+        return Result(False, f'brew link --force {KEG_ONLY} exited {linked.returncode}')
+    return Result(True, f'{KEG_ONLY} linked, so psql is on PATH')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The table
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -326,6 +366,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'xcode-licence': (_xcode_licence, _accept_xcode_licence),
     'orbstack-docker-plugins': (_orbstack_plugins, _unprivileged(_add_orbstack_plugins)),
     'windows-fonts': (_windows_fonts, _unprivileged(_write_fontconfig)),
+    'psql-linked': (_psql_linked, _unprivileged(_link_psql)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""
 

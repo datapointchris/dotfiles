@@ -11,8 +11,7 @@ Two front doors sit over the same implementation, so neither can drift from the 
 dotfiles <noun> <verb>       task <verb>
              \                  /
               src/dotfiles/            the package: phase walk, symlinks, catalog
-              update.sh                the half of the phase registry still in bash
-              install/common/*         the per-tool installer scripts
+              install/common/*         the per-tool installer scripts still in bash
 ```
 
 `src/dotfiles/bridge.py` is the seam. Every function in it reaches bash that has not
@@ -179,39 +178,29 @@ and none of them is a preference in disguise. A flag with no consumer is how
 
 ## Selective installs and updates
 
-There are two phase registries while the conversion is half done: `apply.REGISTRY` in
-Python, which `dotfiles apply` walks, and `install/phases.sh`, which `update.sh` still
-walks. `tests/cli/test_phase_registry.py` sources the bash one and asserts the two agree
-on names, order and which phases have an owner — order included, because registry order
-is a real dependency chain and a registry that agreed on the set but not the sequence
-would install a machine wrongly and report success.
+There is one phase registry: `apply.REGISTRY`, which `dotfiles apply` walks. There were
+two while the conversion was half done — `install/phases.sh` held the same list for
+`update.sh`, and `tests/cli/test_phase_registry.py` sourced the bash one to assert they
+agreed on names, order and ownership. Both are gone, because reconcile has one verb.
+Order is still asserted rather than membership alone: registry order is a real dependency
+chain, and a registry that agreed on the set but not the sequence would install a machine
+wrongly and report success.
 
-There are four groups a selector can name, and what distinguishes them is what they cost
-rather than what they contain — `task update -- --list` prints the contents:
+A selector is a resource, or one provider inside one — `dotfiles apply --help` lists
+what `--skip` takes and `dotfiles <noun> apply --source` narrows below that. The bash
+half had four hand-maintained groups (`system`, `languages`, `tools`, `plugins`) whose
+membership was a fifth list to keep in step; a resource and a provider are what the
+registry already knows, so there is nothing to maintain.
 
-| Group | Why it is its own group |
-| --- | --- |
-| `system` | Needs sudo, and dominates the runtime |
-| `languages` | The version managers themselves, which everything below depends on |
-| `tools` | The installed binaries, and the only group `--mine` narrows |
-| `plugins` | Cheap, and the one group worth running alone after a config change |
-
-`config` exists as a group at install time and has nothing to update, which is why naming
-it is a usage error rather than a no-op.
-
-A selector is a group name **or** a phase name, and every name `--list` prints is
-selectable. Listing names that could not be given as arguments was the original
-discoverability bug.
-
-The selectors belong to the bash half, so they are typed through `task` until those
-phases convert; `dotfiles update` is self-update and takes none of them.
+The one group worth its own name was `system`, because it needs sudo and dominates the
+runtime. `--skip system` is that, and it is derived rather than declared.
 
 ```bash
-task update                           # everything
-task update -- tools plugins          # named groups
-task update -- --no-system            # skip the sudo-gated, slowest group
-task update -- --mine                 # only tools owned by datapointchris
-dotfiles apply --owner datapointchris # install those tools, no brew or casks
+dotfiles apply                        # everything
+dotfiles apply --skip system          # skip the sudo-gated, slowest part
+dotfiles apply --skip plugins/tpm     # one provider, not all of plugins
+dotfiles packages apply --source cargo_packages   # one section
+dotfiles apply --owner datapointchris # only tools traceable to that owner
 dotfiles apply --skip system          # a whole resource
 dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
 ```
@@ -241,23 +230,22 @@ by finding `go_tools` items, so a globally narrowed plan made `--skip packages/g
 planning a runtime the caller never named. That derivation is a provider's now and happens
 at resolve time, before a selection exists.
 
-Both commands are manifest-aware when `MACHINE` is set in `~/.env`. The narrowing is
-built once in `install/common/lib/package-query.sh` and read by every tool script, which
-is what makes `--mine` reach cargo, uv, and npm — before that each script hand-rolled
-the filter block and only `go-tools.sh` honoured the owner.
+Narrowing is the resolver's: `--owner` produces a plan containing only that owner's
+entries, and `Plan.providers` says which phases have anything left to do. It was a
+hand-rolled filter block per installer script before that, and only the Go one honoured
+the owner — so `--mine` ran cargo, uv and npm in full while claiming to filter.
 
-### Update never installs
+### Install and update are one act
 
-`update.sh` reconciles what is on the machine; `apply` creates. That line used to be
-drawn by accident rather than intent: `go install @latest`, `cargo binstall`, and the
-release installers all create as a side effect of upgrading, while `uv tool upgrade` and
-`<tool> update` cannot. Whether an update installed a newly declared tool came down to
-which section of `packages.yml` it had been added to.
+There is no update verb. `apply` installs what is missing and upgrades what is behind,
+and which of those a given row needs is the verdict's answer rather than the caller's.
 
-Every phase now skips a tool it finds missing, records it through
-`install/common/lib/missing-tools.sh`, and the run ends with what was declared but not
-installed. Reported rather than silently fixed, so adding a tool on one machine and
-pulling on another still surfaces — which is the job the accidental behaviour was doing.
+That line used to be drawn by accident rather than intent. `go install @latest`, `cargo
+binstall` and the release installers all create as a side effect of upgrading, while `uv
+tool upgrade` and `<tool> update` cannot — so whether an update installed a newly
+declared tool came down to which section of `packages.yml` it had been added to. A
+`MISSING` row and a `STALE` row are now different verdicts with different repairs, and
+both are reported before either is acted on.
 
 `dotfiles packages check` answers the same question on demand. It is deliberately
 separate from `dotfiles machines check`, which runs on every commit: that one compares
@@ -269,13 +257,13 @@ through a rollout is not a repo defect that should fail a commit.
 A per-tool line must be derived from observed state: a version or ref that changed, or a
 non-zero exit. It may never be derived from "the command returned", because
 `uv tool upgrade`, `cargo binstall`, `npm update -g`, and `git pull --quiet` all exit 0
-whether or not anything changed. Each of those phases snapshots the installed version
-through `install/common/lib/installed-versions.sh` before and after, and reports
-`already at latest`, `updated: <before> → <after>`, or a failure from the difference.
+whether or not anything changed.
 
-A phase-level line reports only that the phase completed, and is worded so — `Homebrew
-update completed`, not `Homebrew packages updated` — because a system package manager
-offers no cheap way to tell a no-op from real work.
+The `Change` is what supplies that now. A row is planned because it was measured as
+missing or behind, and its `Outcome` names what was repaired — where the bash snapshotted
+installed versions either side of every command to work out the same thing afterwards.
+The one place the snapshot survives is `clone.pull`, which reports the commit either side
+because `git pull --quiet` on a current clone prints nothing at all.
 
 Where a tool already reports its own outcome accurately, the installer delegates instead
 of re-deriving one. `theme.sh --update` and `font.sh --update` run `theme update` /
@@ -297,7 +285,8 @@ walking up from the working directory, so every management action was gated behi
 
 **`update.sh` had no argument surface at all.** Its final line was a bare `main`, so
 there was no way to skip the sudo-gated system phase or to refresh only your own tools.
-Selective update did not exist anywhere in the repository.
+Selective update did not exist anywhere in the repository. It gained one, and then went
+entirely: `apply` is the update, and `--skip` is the selector.
 
 It was bash in this repository, on the grounds that a separately-distributed binary
 could never function on its own — the CLI's job is invoking scripts that exist only
@@ -312,10 +301,10 @@ real type system, a test suite, and dependencies it can declare.
 | --- | --- |
 | Machine bootstrap | `install.sh` — POSIX sh, up to the point uv installs the CLI |
 | Installing | `src/dotfiles/apply.py` — the phase registry and the walk |
-| Updating the machine | `update.sh` over `install/phases.sh`, not yet converted |
+| Updating the machine | `dotfiles apply` — one verb; a behind package is a `STALE` row |
 | Updating this installation | `src/dotfiles/commands/manage.py` — pull, relink, rebuild the venv |
 | Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |
-| Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
+| Package query narrowing | `src/dotfiles/resolve.py` — the plan is narrowed before a provider sees it |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |

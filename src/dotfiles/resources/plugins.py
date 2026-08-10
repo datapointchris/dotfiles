@@ -43,6 +43,14 @@ class Observed:
     present: frozenset[str]
     """Addresses whose checkout is on disk."""
 
+    behind: frozenset[str] = frozenset()
+    """Addresses whose checkout is behind the branch it tracks.
+
+    Empty on a run that did not ask to spend the network, which is not the same as
+    "none are behind" — measuring it costs a `git fetch` per plugin, so `check`
+    declines and the row says only what it looked at.
+    """
+
     @property
     def summary(self) -> str:
         """Says *cloned* deliberately. TPM and lazy.nvim each own a plugin list
@@ -57,12 +65,16 @@ class PluginsResource:
     help = 'shell, tmux and yazi plugins cloned from git'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
+        present = frozenset(item.address for item in _planned(plan) if clone.destination(item, session.home).is_dir())
         return Observed(
-            present=frozenset(item.address for item in _planned(plan) if clone.destination(item, session.home).is_dir()),
+            present=present,
+            behind=frozenset(item.address for item in _planned(plan) if item.address in present and clone.behind(item, session.home))
+            if session.refresh
+            else frozenset(),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
-        return tuple(
+        missing = tuple(
             Change(
                 NAME,
                 item.stage,
@@ -74,6 +86,19 @@ class PluginsResource:
             for item in _planned(plan)
             if item.address not in observed.present
         )
+        stale = tuple(
+            Change(
+                NAME,
+                item.stage,
+                item.address,
+                Verdict.STALE,
+                detail=f'behind {clone.repository(item)}',
+                desired=item,
+            )
+            for item in _planned(plan)
+            if item.address in observed.behind
+        )
+        return missing + stale
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it clones it, or says why it cannot."""

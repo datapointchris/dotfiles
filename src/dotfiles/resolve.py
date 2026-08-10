@@ -45,6 +45,27 @@ class Stage(enum.IntEnum):
     branches on must not lie about which file it is talking about."""
 
     SYSTEM = 20
+    SYSTEM_APPS = 25
+    """Casks, App Store apps and flatpak apps, all of which need SYSTEM first.
+
+    Not a nicety: `mas` is itself a Homebrew formula, a cask needs the brew the
+    formula stage bootstrapped, and a flatpak app needs the flatpak binary. The
+    plan sorts on `(stage, provider, name)`, so without a stage of their own all
+    three would sort *before* `system` on the provider name alone and every one of
+    them would run against a manager that was not there yet.
+    """
+
+    SYSTEM_UPGRADE = 27
+    """Bringing each package manager's installed set up to date, after both.
+
+    After rather than before, for two reasons. A manager that had to be
+    bootstrapped — Homebrew on a fresh Mac, flatpak on a machine that just
+    declared its first app — cannot be asked what is behind until the stage that
+    installs it has run. And the partial-upgrade constraint an install has is
+    already covered by `syspkg.REFRESH`, which syncs before each transaction; this
+    stage is about the packages nothing planned to touch.
+    """
+
     TOOLCHAIN = 30
     TOOLS = 40
     NODE = 50
@@ -56,8 +77,9 @@ class Stage(enum.IntEnum):
     YAZI_PLUGINS = 105
     """Both after SYMLINKS, because each program reads the config that pass just
     deployed. Two stages rather than one so each is a phase a caller can select,
-    and because only one of them has a bash half left: `update.sh` still runs
-    tpm, and nothing in bash has ever installed a yazi plugin."""
+    and because only one of them still shells out at all: TPM owns a plugin list
+    this repo does not declare, and nothing has ever installed a yazi plugin that
+    way."""
 
     SYSTEM_CONFIG = 110
     """Last, where `install.sh` put the two halves of it that existed.
@@ -225,6 +247,8 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
     broken — `win32yank` exists for exactly that reason and says so in the file.
     """
     if isinstance(entry, catalog.SystemPackage):
+        if entry.excludes_host and str(coordinates.host) == entry.excludes_host:
+            return False
         return any(entry.package_for(installer) for installer in coordinates.installers)
     if isinstance(entry, catalog.MacosCask | catalog.MasApp | catalog.MacosDefault):
         return coordinates.os_family is axes.OSFamily.DARWIN

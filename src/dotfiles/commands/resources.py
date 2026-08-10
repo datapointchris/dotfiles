@@ -147,10 +147,11 @@ def _apply_phases(
     Narrowing *below* a section — one tool out of `github_releases` — is still
     the resolver's, and still absent.
 
-    `--owner` is here because `update.sh --mine` reaches the converted phases
-    through this: `install/phases.sh` filters the phase list by its `owner_aware`
-    column, but a phase that runs Python and cannot be told whose entries were
-    asked for narrows nothing and updates the lot.
+    `--owner` is here because a phase that cannot be told whose entries were asked
+    for narrows nothing and updates the lot. It arrived to serve `update.sh --mine`
+    against `install/phases.sh`'s hand-maintained `owner_aware` column; the column
+    and the script are gone and the flag is the survivor, because ownership is a
+    fact about the entries and `Plan.providers` derives it.
     """
     from dotfiles import apply
     from dotfiles import registry
@@ -391,9 +392,15 @@ def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> No
 
 
 @system_app.command('apply')
-def system_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
-    """Apply the system configuration this repo declares."""
-    _apply_phases('system', machine, False, offline, None)
+def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, source: str = SourceOption) -> None:
+    """Install the declared system packages and apply the system configuration.
+
+    `--source` is worth having here now that this resource installs four package
+    sections beside its configuration rows. `--source system_packages` is the
+    payload without the configuration — which is what a container image wants
+    baked in, and what a machine wants after adding one package to the list.
+    """
+    _apply_phases('system', machine, False, offline, source)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

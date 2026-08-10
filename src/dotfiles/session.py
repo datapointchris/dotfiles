@@ -117,7 +117,7 @@ class Session:
         """
         from dotfiles import evidence
 
-        return evidence.Inventories()
+        return evidence.Inventories(refresh=self.refresh)
 
     @property
     def env_file(self) -> Path:

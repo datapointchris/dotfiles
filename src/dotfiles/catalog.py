@@ -255,6 +255,22 @@ class SystemPackage(Entry):
     brew: str = ''
     aur: str = ''
 
+    excludes_host: str = ''
+    """One host whose package manager cannot resolve this entry, however it is named.
+
+    The negative form, and the only negative narrowing in the file, because the
+    fact being recorded is negative: the docker family lives in Docker's own apt
+    repository, which `docker-repo.sh` adds by hand as a documented escape hatch
+    and no installer configures. Ubuntu-on-metal would be the same, and Arch is
+    unaffected because pacman carries docker in the official repos — so this is a
+    fact about one host rather than about apt.
+
+    `install/wsl/system-packages.sh` said it as a `grep -v -E` over five package
+    names piped between the parser and apt, which excluded them from the install
+    and from nothing else. `check` went on planning all five and reporting them
+    missing on a machine that was deliberately never going to have them.
+    """
+
     def package_for(self, manager: str) -> str:
         """This package's name under one manager, or '' where it has none."""
         return getattr(self, manager, '')
@@ -264,9 +280,12 @@ class SystemPackage(Entry):
         # rebuilds the class, leaving the zero-argument form's __class__ cell
         # pointing at the original and raising TypeError on every call.
         managers = ('apt', 'pacman', 'brew', 'aur')
-        if any(self.package_for(manager) for manager in managers):
-            return Entry.problems(self)
-        return (f'names no package under any of {", ".join(managers)}, so no machine can install it', *Entry.problems(self))
+        found = []
+        if not any(self.package_for(manager) for manager in managers):
+            found.append(f'names no package under any of {", ".join(managers)}, so no machine can install it')
+        if self.excludes_host and self.excludes_host not in set(axes.AXIS_TYPES['host']):
+            found.append(f'excludes host {self.excludes_host!r}, which is not a host. Known: {", ".join(axes.AXIS_TYPES["host"])}')
+        return (*found, *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

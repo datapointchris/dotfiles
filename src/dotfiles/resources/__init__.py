@@ -176,6 +176,31 @@ class Resource(Protocol):
         ...
 
 
+@runtime_checkable
+class Batched(Protocol):
+    """A resource whose repairs are cheaper together than one at a time.
+
+    A second protocol rather than a method on `Resource`, because only one kind of
+    resource has this shape and the other six would carry an identical one-line
+    override. The engine asks with `isinstance`, so opting in is declaring the
+    method and nothing else.
+
+    The shape is a package manager's. `pacman -S` over 94 declared packages is one
+    dependency resolution, one download set and one authorization; the same 94 as
+    separate calls is 94 of each, which on a fresh machine is the difference
+    between seconds and minutes — and apt is worse, because each call re-reads its
+    whole package cache. Nothing else here batches: a symlink, a clone and a
+    `defaults write` cost the same alone as in company.
+
+    The contract is one Outcome per Change, in the order given, so a caller can
+    zip them back together. A provider that cannot honour that should not opt in.
+    """
+
+    def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """Do these Changes together, re-checking live as `perform` does."""
+        ...
+
+
 def privileged(changes: Sequence[Change]) -> tuple[Change, ...]:
     """What a run will need root for, known before anything runs.
 

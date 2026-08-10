@@ -51,6 +51,74 @@ def subdirectory(item: DesiredItem) -> str:
     return getattr(item.entry, 'subdirectory', '')
 
 
+def tracked(item: DesiredItem, home: Path) -> Path | None:
+    """The checkout a `git pull` would move, or None where there is none.
+
+    A subdirectory plugin has none by construction: what survives is the copy
+    `_subdirectory` made, and the shallow clone it came out of was deleted. So
+    `yazi-rs/plugins` moving upstream is not drift this can measure, and saying so
+    is better than reporting every yazi plugin permanently current.
+    """
+    if subdirectory(item):
+        return None
+    target = destination(item, home)
+    return target if (target / '.git').is_dir() else None
+
+
+def behind(item: DesiredItem, home: Path) -> bool | None:
+    """Whether the checkout is behind the branch it tracks, or None if unaskable.
+
+    A fetch, which is why this is measured only when a run has asked to spend the
+    network. `update.sh` pulled every plugin on every run and reported the commit
+    either side to say whether anything moved; asking first is what lets `check`
+    report a plugin as behind without moving it, and `apply` skip the ones that
+    are not.
+    """
+    checkout = tracked(item, home)
+    if checkout is None:
+        return None
+    if not run(['git', '-C', str(checkout), 'fetch', '--quiet'], output=Output.QUIET).ok:
+        return None
+
+    local = run(['git', '-C', str(checkout), 'rev-parse', 'HEAD'], output=Output.QUIET)
+    upstream = run(['git', '-C', str(checkout), 'rev-parse', '@{u}'], output=Output.QUIET)
+    if not (local.ok and upstream.ok):
+        return None
+    return local.transcript.strip() != upstream.transcript.strip()
+
+
+def pull(item: DesiredItem, home: Path) -> Result:
+    """Bring one checkout up to its remote, naming the commits either side.
+
+    `--ff-only`, because nothing commits to these: a merge here would be a
+    divergence nobody meant to create, and resolving it silently is the trap
+    `dotfiles update` refuses for its own checkout. Without arguments otherwise —
+    a clone made with no `-b` tracks origin's default branch, so the
+    `symbolic-ref refs/remotes/origin/HEAD` dance `update.sh` did was answering a
+    question git had already answered.
+    """
+    checkout = tracked(item, home)
+    if checkout is None:
+        return Result(False, f'{destination(item, home)} is not a checkout this can pull')
+
+    was = _commit(checkout)
+    result = run(['git', '-C', str(checkout), 'pull', '--quiet', '--ff-only'], output=Output.STREAM)
+    if not result.ok:
+        return Result(False, result.transcript.strip() or f'git pull exited {result.returncode}')
+    return Result(True, f'{item.name} updated: {was} → {_commit(checkout)}')
+
+
+def _commit(checkout: Path) -> str:
+    """The short commit, which is the only evidence a pull actually moved anything.
+
+    `git pull --quiet` on a current clone exits 0 and prints nothing, so the
+    report has no other way to tell a no-op from an update — the reason
+    `update.sh` snapshotted commits either side of every one of these.
+    """
+    read = run(['git', '-C', str(checkout), 'rev-parse', '--short', 'HEAD'], output=Output.QUIET)
+    return read.transcript.strip() if read.ok else 'unknown'
+
+
 def clone(item: DesiredItem, home: Path) -> Result:
     """Clone one plugin into place.
 

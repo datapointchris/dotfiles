@@ -40,8 +40,11 @@ A first-class `linux` platform plus a tiered system-package model:
   via `system_packages: core|workstation`.
 
 - **Platform wiring.** `install.sh` and `update.sh` gained a `linux` branch
-  (apt, no GUI/flatpak/preferences steps), the Taskfile resolves a generic Linux
-  host to `linux`, and `install/linux/system-packages.sh` installs the core tier.
+  (apt, no GUI/flatpak/preferences steps) and the Taskfile resolves a generic
+  Linux host to `linux`. The per-platform package script that installed the core
+  tier is gone: the tier is a subscription the resolver reads, so a manifest
+  saying `system_packages: core` plans only the core entries and one provider
+  installs them whatever the platform is.
 
 - **Optional overlays.** The server ships only a shell overlay and no configs of
   its own, and the symlinks manager treats every overlay as optional. Those
@@ -74,6 +77,6 @@ writes from the manifest rather than leaving to be typed by hand — see
 - `install/manifests/linux-lxc-server.yml` — the minimal profile
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
 - `src/dotfiles/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
-- `install.sh` / `update.sh` — `linux` platform branch and tier gating
+- `install.sh` — `linux` platform branch; the tier is a subscription `src/dotfiles/machine.py` reads
 - `shell/pkg/apt/apt.sh` — the apt overlay these helpers moved to
 - `src/dotfiles/resources/symlinks.py` — `layers()`, where an overlay is optional

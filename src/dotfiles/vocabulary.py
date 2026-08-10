@@ -82,9 +82,9 @@ RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', '
 """Ordered as the machine converges, not alphabetically.
 
 The order is a real dependency chain, not presentation: symlinks must land after
-the tools that provide `task` and before tpm reads the tmux config it deploys
-(`install/phases.sh:22-25`). Step 4 turns this tuple into the resolver's
-topological input; until then it is what `check` walks and what the help lists.
+the tools that provide `task` and before tpm reads the tmux config it deploys.
+Step 4 turns this tuple into the resolver's topological input; until then it is
+what `check` walks and what the help lists.
 """
 
 ADDRESS_SEPARATOR = '/'

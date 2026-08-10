@@ -154,6 +154,15 @@ def test_a_system_package_naming_no_manager_is_refused(tmp_path: Path) -> None:
     assert_named(found, 'names no package under any of apt, pacman, brew, aur')
 
 
+def test_a_package_excluding_a_host_that_does_not_exist_is_refused(tmp_path: Path) -> None:
+    """A misspelled exclusion silently excludes nothing, which is the failure mode
+    a negative narrowing has and a positive one does not: `host: wsl2` plans for
+    no machine and is noticed, `excludes_host: wsl2` plans for every machine and
+    is not."""
+    found = issues(tmp_path, {'system_packages': [{'name': 'docker', 'apt': 'docker-ce', 'excludes_host': 'wsl2'}]})
+    assert_named(found, "excludes host 'wsl2', which is not a host")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Declared types
 # ─────────────────────────────────────────────────────────────────────────────

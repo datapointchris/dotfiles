@@ -147,5 +147,5 @@ the offline bundle if it holds one, the network otherwise. What each does with
 the result is different enough that a common wrapper would be branches.
 
 **No failure-log protocol.** The scripts emitted structured `FAILURE_MANUAL`
-blocks for `run-installer.sh` to collect. Each function returns a `Result`
+blocks for the wrapper to collect. Each function returns a `Result`
 instead, and the phase writes the log.

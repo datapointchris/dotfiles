@@ -36,6 +36,7 @@ import inside every method and the explanation each would need.
 from __future__ import annotations
 
 import dataclasses as dc
+from collections.abc import Callable
 from collections.abc import Sequence
 
 from dotfiles import catalog as catalogs
@@ -45,6 +46,8 @@ from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Result
+from dotfiles.providers import bootstrap
 from dotfiles.providers import cargo
 from dotfiles.providers import clone
 from dotfiles.providers import custom
@@ -54,6 +57,7 @@ from dotfiles.providers import macdefaults
 from dotfiles.providers import npm
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
+from dotfiles.providers import syspkg
 from dotfiles.providers import toolchain
 from dotfiles.providers import uvtool
 from dotfiles.resolve import DesiredItem
@@ -152,6 +156,15 @@ class Provider:
         `apply` reporting a converged machine.
         """
         return Outcome(change, OutcomeStatus.REFUSED, f"run 'dotfiles {self.resource} apply', which still drives the phase registry")
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """Repair several of this provider's items, one Outcome each in order.
+
+        One at a time by default, which is what every provider but the package
+        managers wants: a release download, a clone and a `defaults write` cost
+        the same alone as in company.
+        """
+        return [install_one(self, session, change, privilege) for change in changes]
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -319,6 +332,27 @@ class SystemPackageProvider(RegistryProvider):
     def needs_root(self, item: DesiredItem) -> bool:
         return True
 
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """One transaction per manager, and one bootstrap and refresh before each.
+
+        Grouped by manager rather than done in the order given, because the order
+        given is the plan's and the transaction is the manager's. A machine has one
+        of apt/pacman/brew, so this is usually one group — plus the AUR's, which is
+        genuinely a second manager and a second transaction.
+        """
+        outcomes: dict[str, Outcome] = {}
+        for manager, wanted in _by_manager(session, changes).items():
+            ready = _bootstrap(manager, session, privilege)
+            if not ready.ok:
+                outcomes |= {change.item: Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change, _ in wanted}
+                continue
+            outcomes |= _transact(manager, wanted, privilege)
+        unreachable = 'no package manager on this machine installs it'
+        return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, unreachable)) for change in changes]
+
 
 @dc.dataclass(frozen=True, slots=True)
 class UvToolProvider(CatalogProvider):
@@ -353,11 +387,70 @@ class GitUvToolProvider(UvToolProvider):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class CaskProvider(RegistryProvider):
+    """A GUI application Homebrew installs, which is one manager away from a formula.
+
+    Its own provider rather than a `SystemPackage` with a fifth manager column,
+    because a cask is not an alternative spelling of anything: `macos_casks` is a
+    separate section a manifest subscribes to separately, and an entry there names
+    an app rather than a package that happens to be graphical.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        return _through('cask', session, changes, privilege, lambda item: item.name)
+
+
+@dc.dataclass(frozen=True, slots=True)
 class AppStoreProvider(CatalogProvider):
-    """An App Store app, judged by its bundle. Its CLI is a second question."""
+    """An App Store app, judged by its bundle. Its CLI is a second question.
+
+    The bundle rather than a `mas list` inventory, because the two answer
+    different questions: an app installed from the store on another machine and
+    restored by Migration Assistant is present and is not in `mas list`. Which is
+    also why `mas` has no entry in `evidence.INSTALLER_QUERIES`.
+    """
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_app_bundle(item)
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """`mas install`, which needs an App Store this process cannot sign into.
+
+        mas 7 dropped `account` and offers no way to ask whether anyone is signed
+        in, so there is nothing to gate on — the install is attempted and a
+        sign-in failure is reported as the failure it is. `mas-apps.sh` said the
+        same thing in a comment and then printed advice on every failure; the
+        advice is here, once, on the outcome that earns it.
+        """
+        return _through('mas', session, changes, privilege, _app_id)
+
+
+def _app_id(item: DesiredItem) -> str:
+    """An App Store app is addressed by number, and only by number."""
+    entry = item.entry
+    return str(entry.id) if isinstance(entry, catalogs.MasApp) else ''
+
+
+@dc.dataclass(frozen=True, slots=True)
+class FlatpakProvider(RegistryProvider):
+    """A Flathub app, addressed by its reverse-DNS id rather than its name."""
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        return _through('flatpak', session, changes, privilege, _flatpak_id)
+
+
+def _flatpak_id(item: DesiredItem) -> str:
+    entry = item.entry
+    return entry.flatpak_id if isinstance(entry, catalogs.FlatpakApp) else ''
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -373,10 +466,111 @@ class CloneProvider(CatalogProvider):
     """
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
-        if clone.destination(item, session.home).is_dir():
-            return Outcome(change, OutcomeStatus.SKIPPED, f'{clone.destination(item, session.home)} appeared since the check')
-        result = clone.clone(item, session.home)
+        """Clone what is missing, pull what is behind.
+
+        Two repairs behind one verb because the verdict already separates them,
+        and the alternative was `update.sh` pulling every plugin on every run to
+        find out whether any of them had moved.
+        """
+        landed = clone.destination(item, session.home)
+        if change.verdict is Verdict.STALE:
+            result = clone.pull(item, session.home)
+        elif landed.is_dir():
+            return Outcome(change, OutcomeStatus.SKIPPED, f'{landed} appeared since the check')
+        else:
+            result = clone.clone(item, session.home)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class ManagerProvider(Provider):
+    """Whether each package manager on this machine is behind, and the upgrade.
+
+    One synthetic row per manager, subscribed to by nothing — the shape a
+    toolchain has, and for the same reason: a machine has pacman because of what
+    its manifest asked pacman for, not because it named pacman.
+
+    This is what `update.sh`'s `update_system_packages` was, and it is here rather
+    than in a second front door because the question is measurable. That script
+    ran `pacman -Syu`, `brew upgrade`, `mas upgrade` and `flatpak update`
+    unconditionally and reported whatever they printed; a row that reads the
+    manager's outdated list first can say *what* is behind before it moves, and
+    say nothing on a machine that is current.
+
+    The whole manager rather than the declared packages, deliberately. Arch does
+    not support partial upgrades at all, and everywhere else a declared package's
+    dependencies are as much this repo's business as the package — `pacman -S
+    <one>` leaves a machine in a combination nobody tests.
+    """
+
+    ownable: bool = False
+    """A package manager belongs to nobody, so `--owner` skips these whole rather
+    than dropping them for answering `owner is None`."""
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        """One row per manager this machine actually installs something through.
+
+        Read off what the earlier providers resolved rather than off the
+        coordinates, which is the two-pass signature doing its job: a Mac
+        subscribing to no casks has nothing for `brew upgrade --cask` to move, and
+        a machine with no flatpak apps should not be told its flatpak is behind.
+        """
+        return tuple(
+            DesiredItem(
+                section='',
+                provider=self.name,
+                resource=self.resource,
+                stage=self.stage,
+                name=manager,
+                executable='',
+                evidence_path='',
+                precondition=resolve.Precondition.NONE,
+                entry=None,
+                reason=Reason('managers', f'installs {provider}'),
+            )
+            for manager, provider in _managers_in_use(machine, planned)
+        )
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """Behind, current, or unmeasured — never guessed.
+
+        The networked managers report UNKNOWN rather than MATCHED when nothing
+        asked them, because a `check` that says "current" having asked nobody is
+        the measured-looking wrong answer this resource exists to stop.
+        """
+        return ev.by_currency(item, installed)
+
+    def needs_root(self, item: DesiredItem) -> bool:
+        return item.name in syspkg.ESCALATES
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        ready = _bootstrap(item.name, session, privilege)
+        if not ready.ok:
+            return Outcome(change, OutcomeStatus.REFUSED, ready.detail)
+        result = syspkg.upgrade(item.name, privilege)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+def _managers_in_use(machine: machines.Machine, planned: tuple[DesiredItem, ...]) -> tuple[tuple[str, str], ...]:
+    """Which managers this machine's plan reaches, each with the provider that reached it.
+
+    Keyed on the provider that planned an item rather than on the machine's
+    installer family, which is a superset: `brew` brings `cask` and `mas` with it,
+    and a Mac subscribing to no casks has nothing for `brew upgrade --cask` to
+    move. `flatpak` is in no family at all — it is opt-in per machine rather than
+    something a package manager carries — so it appears here only when flatpak
+    apps were planned, which is exactly when its runtime exists.
+    """
+    reached = {item.provider for item in planned}
+    found: dict[str, str] = {}
+    if 'system' in reached:
+        for manager in syspkg.PREFERENCE:
+            if manager in machine.coordinates.installers:
+                found[manager] = 'system'
+    for provider in ('cask', 'mas', 'flatpak'):
+        if provider in reached:
+            found[provider] = provider
+    return tuple(found.items())
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -616,9 +810,10 @@ def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
 
 PROVIDERS: tuple[Provider, ...] = (
     SystemPackageProvider('system', 'system', Stage.SYSTEM, 'system_packages'),
-    RegistryProvider('cask', 'system', Stage.SYSTEM, 'macos_casks'),
-    AppStoreProvider('mas', 'system', Stage.SYSTEM, 'mas_apps'),
-    RegistryProvider('flatpak', 'system', Stage.SYSTEM, 'flatpak_apps'),
+    CaskProvider('cask', 'system', Stage.SYSTEM_APPS, 'macos_casks'),
+    AppStoreProvider('mas', 'system', Stage.SYSTEM_APPS, 'mas_apps'),
+    FlatpakProvider('flatpak', 'system', Stage.SYSTEM_APPS, 'flatpak_apps'),
+    ManagerProvider('manager', 'system', Stage.SYSTEM_UPGRADE),
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
@@ -699,6 +894,123 @@ def evidence_for(item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
 def needs_root(item: DesiredItem) -> bool:
     provider = named(item.provider)
     return provider is not None and provider.needs_root(item)
+
+
+def _by_manager(session: Session, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
+    """Which manager installs each change, and under what name.
+
+    A machine's `installers` is the family its package manager selects — pacman
+    brings the AUR with it, brew brings casks and the App Store — so an entry
+    declaring names under three managers is narrowed to the one or two this
+    machine can actually use. `PREFERENCE` breaks the remaining tie, which is only
+    ever pacman against the AUR.
+
+    A change no manager on this machine can install is absent from the result and
+    answered separately, rather than silently dropped.
+    """
+    usable = session.machine.coordinates.installers
+    grouped: dict[str, list[tuple[Change, str]]] = {}
+    for change in changes:
+        names = ev.declared_names(change.desired) if change.desired else {}
+        chosen = next((manager for manager in syspkg.PREFERENCE if manager in usable and manager in names), '')
+        if chosen:
+            grouped.setdefault(chosen, []).append((change, names[chosen][0]))
+    return grouped
+
+
+def _bootstrap(manager: str, session: Session, privilege: Privilege) -> Result:
+    """Whatever this manager needs to exist before it can install anything.
+
+    Routed here rather than dispatched inside `providers.bootstrap`, for the same
+    reason every other route is: this module is where a provider is matched to the
+    mechanism that serves it, and the mechanism modules stay ignorant of the
+    session. Four of the seven managers need nothing, and saying so as a fallthrough
+    keeps `apt` and `pacman` from paying for a table lookup they would never use.
+    """
+    if manager == 'brew':
+        ready = bootstrap.homebrew()
+        return ready if not ready.ok else bootstrap.taps(session.catalog.macos_taps)
+    if manager == 'cask':
+        return bootstrap.homebrew()
+    if manager == 'aur':
+        return bootstrap.aur()
+    if manager == 'flatpak':
+        return bootstrap.flathub(session.machine.coordinates.installers[0], privilege)
+    return Result(True, '')
+
+
+def _through(
+    manager: str,
+    session: Session,
+    changes: Sequence[Change],
+    privilege: Privilege,
+    name_of: Callable[[DesiredItem], str],
+) -> list[Outcome]:
+    """One manager's whole group, bootstrapped once and installed in one call.
+
+    The three single-manager providers share this rather than each repeating the
+    bootstrap-then-transact shape, and `SystemPackageProvider` does not because its
+    group is not single-manager: it chooses between the names an entry declares,
+    which is the one thing this does not have to do.
+    """
+    wanted = [(change, name_of(change.desired)) for change in changes if change.desired and name_of(change.desired)]
+    if not wanted:
+        return [Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more') for change in changes]
+
+    ready = _bootstrap(manager, session, privilege)
+    if not ready.ok:
+        return [Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change in changes]
+
+    outcomes = _transact(manager, wanted, privilege)
+    undeclared = 'nothing declares this any more'
+    return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, undeclared)) for change in changes]
+
+
+def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privilege) -> dict[str, Outcome]:
+    """One manager's whole batch, falling back to one call per package on failure.
+
+    The fallback is what lets the report name the package that broke: `brew
+    install a b c` exiting 1 says nothing about which of the three is at fault, and
+    the machine still wants the other two. Paid only when something is already
+    wrong.
+    """
+    refreshed = syspkg.refresh(manager, privilege)
+    if not refreshed.ok:
+        reason = f'{manager} could not be refreshed: {refreshed.detail}'
+        return {change.item: Outcome(change, OutcomeStatus.FAILED, reason) for change, _ in wanted}
+
+    together = syspkg.install(manager, [name for _, name in wanted], privilege)
+    if together.ok:
+        return {change.item: Outcome(change, OutcomeStatus.DONE, f'{manager}: {name}') for change, name in wanted}
+
+    isolated: dict[str, Outcome] = {}
+    for change, name in wanted:
+        alone = syspkg.install(manager, [name], privilege)
+        status = OutcomeStatus.DONE if alone.ok else OutcomeStatus.FAILED
+        isolated[change.item] = Outcome(change, status, f'{manager}: {name}' if alone.ok else alone.detail)
+    return isolated
+
+
+def install_one(provider: Provider, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    """One change through its provider, or a refusal naming what is missing."""
+    item = change.desired
+    if item is None:
+        return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more')
+    return provider.install(session, change, item, privilege)
+
+
+def install_all(session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    """A group of changes through the one provider that planned them.
+
+    The engine groups by provider before it gets here, so the group is homogeneous
+    and the first change names the provider for all of them. A group that somehow
+    is not answers per change, which is the same result the loop would give.
+    """
+    first = changes[0].desired if changes else None
+    provider = named(first.provider) if first else None
+    if provider is None:
+        return [install(session, change, privilege) for change in changes]
+    return provider.install_all(session, changes, privilege)
 
 
 def install(session: Session, change: Change, privilege: Privilege) -> Outcome:

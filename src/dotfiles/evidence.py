@@ -30,6 +30,7 @@ from typing import Protocol
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resources import Verdict
 
@@ -142,8 +143,28 @@ def by_app_bundle(item: DesiredItem) -> Evidence:
     return Evidence(Verdict.MISSING, f'no {item.name}.app in /Applications')
 
 
-def query(name: str) -> frozenset[str] | None:
-    """What one manager says it has installed, or None when it cannot answer."""
+OUTDATED_PREFIX = 'outdated:'
+"""What turns an inventory key into a currency question: `outdated:pacman`.
+
+A prefix on the same `get` rather than a second method on the protocol, because
+the protocol's whole value is that a test can hand in a plain dict of the answers
+it wants. A second method makes a dict stop being an Inventory, and every test
+that measures a package would need a fake instead.
+"""
+
+
+def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
+    """What one manager says, or None when it cannot answer or was not asked.
+
+    Two questions through one door: what is installed, and what is installed and
+    behind. The second is prefixed, and the networked ones among them answer only
+    under `refresh` — Flathub and the App Store have no offline catalogue, and
+    `check` runs at a prompt, in a pre-commit hook and on a timer.
+    """
+    if name.startswith(OUTDATED_PREFIX):
+        manager = name.removeprefix(OUTDATED_PREFIX)
+        return None if manager in syspkg.NETWORKED and not refresh else syspkg.outdated(manager)
+
     command = QUERIES.get(name)
     if command is None or not shutil.which(command[0]):
         return None
@@ -162,6 +183,28 @@ class Inventory(Protocol):
     """
 
     def get(self, name: str) -> frozenset[str] | None: ...
+
+
+def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
+    """Whether one package manager has anything installed and behind.
+
+    STALE rather than MISSING, because the manager is there and doing its job —
+    what has drifted is the machine's distance from what its repositories now
+    hold. `Change.actionable` covers STALE, so this is repaired by `apply` without
+    anything else having to know it is a different kind of row.
+
+    A named sample rather than a bare count. "23 pacman package(s) behind" says a
+    machine is behind and nothing about whether that matters; the first few names
+    are usually enough to tell a routine sync from a kernel bump.
+    """
+    behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
+    if behind is None:
+        return Evidence(Verdict.UNKNOWN, f'nothing asked {item.name} what is behind — it is a network call, so pass --refresh')
+    if not behind:
+        return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')
+    named = ', '.join(sorted(behind)[:3])
+    more = f' and {len(behind) - 3} more' if len(behind) > 3 else ''
+    return Evidence(Verdict.STALE, f'{len(behind)} {item.name} package(s) behind: {named}{more}')
 
 
 def by_registry(item: DesiredItem, installed: Inventory) -> Evidence:
@@ -212,18 +255,26 @@ class Inventories:
     is not re-asked once per flatpak app.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, refresh: bool = False) -> None:
         self._answers: dict[str, frozenset[str] | None] = {}
+        self._refresh = refresh
+        """Permission to spend the network on a currency question. See `query`."""
 
     def get(self, name: str) -> frozenset[str] | None:
         if name not in self._answers:
-            self._answers[name] = query(name)
+            self._answers[name] = query(name, refresh=self._refresh)
         return self._answers[name]
 
     @property
     def asked(self) -> frozenset[str]:
-        """Which managers answered, for a summary that would otherwise be a shrug."""
-        return frozenset(name for name, answer in self._answers.items() if answer is not None)
+        """Which managers answered *what they have installed*, for a summary that
+        would otherwise be a shrug.
+
+        Currency keys are excluded rather than stripped to their manager: this
+        names who vouched for the package inventory, and a manager that answered
+        `outdated:` while its `pacman -Qq` failed vouched for nothing.
+        """
+        return frozenset(name for name, answer in self._answers.items() if answer is not None and not name.startswith(OUTDATED_PREFIX))
 
 
 VERSION_PROBES = ('--version', 'version')

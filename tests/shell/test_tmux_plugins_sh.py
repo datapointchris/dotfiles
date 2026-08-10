@@ -1,9 +1,14 @@
 """tmux-plugins.sh — installing TPM's plugins without touching the live server.
 
-The real installer under the real wrapper against a stubbed HOME, so what these
-assert is what a person reads in the failure report on the machine that failed.
-TPM itself is stubbed and nothing else is: the stub stands in for the one thing
-that would otherwise need a network.
+The real installer against a stubbed HOME, so what these assert is what reaches
+the failure report on the machine that failed. TPM itself is stubbed and nothing
+else is: the stub stands in for the one thing that would otherwise need a network.
+
+Driven directly with `$FAILURE_RECORDS` set, which is the contract this script
+writes to — `install/run-installer.sh` used to source it and render it, and the
+Python `apply.run_installer` does that now. Asserting the records rather than the
+rendered log is also the honest boundary: what this script owns is which fields
+it emits, and `tests/install/test_failure_report.py` owns how they read.
 
 Two regressions are pinned here. tmux-plugins.sh piped TPM into a reader loop
 under `set -o pipefail`, so a failing TPM aborted the script at the pipeline and
@@ -32,7 +37,6 @@ from shells import shell_out
 pytestmark = requires('tmux')
 
 INSTALLER = str(REPO / 'install' / 'common' / 'plugins' / 'tmux-plugins.sh')
-WRAPPER = str(REPO / 'install' / 'run-installer.sh')
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -48,8 +52,8 @@ class Tmux:
         return self.home / '.config' / 'tmux' / 'plugins' / 'tpm'
 
     @property
-    def log(self) -> str:
-        path = self.home / 'failures.log'
+    def records(self) -> str:
+        path = self.home / 'failures.jsonl'
         return path.read_text() if path.exists() else ''
 
 
@@ -69,12 +73,11 @@ def stub_tpm(tmux: Tmux, body: str) -> None:
 
 def install(tmux: Tmux, **environment: str) -> Shell:
     return shell_out(
-        'source "$1"; run_installer "$2" tmux-plugins',
-        WRAPPER,
+        'bash "$1"',
         INSTALLER,
         DOTFILES_DIR=str(REPO),
         DOTFILES_PYTHON=sys.executable,
-        FAILURES_LOG=str(tmux.home / 'failures.log'),
+        FAILURE_RECORDS=str(tmux.home / 'failures.jsonl'),
         HOME=str(tmux.home),
         XDG_CONFIG_HOME=str(tmux.home / '.config'),
         **environment,
@@ -121,9 +124,9 @@ def test_tpms_own_error_reaches_the_failure_report(tmux: Tmux) -> None:
 
     install(tmux)
 
-    assert 'tmux-plugins' in tmux.log
-    assert 'TPM plugin installation failed' in tmux.log
-    assert 'FATAL: Tmux Plugin Manager not configured in tmux.conf' in tmux.log
+    assert 'tmux-plugins' in tmux.records
+    assert 'TPM plugin installation failed' in tmux.records
+    assert 'FATAL: Tmux Plugin Manager not configured in tmux.conf' in tmux.records
 
 
 def test_the_report_carries_the_tmux_version_and_config_path(tmux: Tmux) -> None:
@@ -133,8 +136,8 @@ def test_the_report_carries_the_tmux_version_and_config_path(tmux: Tmux) -> None
 
     install(tmux)
 
-    assert 'tmux: tmux ' in tmux.log
-    assert f'{tmux.config} (present)' in tmux.log
+    assert 'tmux: tmux ' in tmux.records
+    assert f'{tmux.config} (present)' in tmux.records
 
 
 def test_a_failing_tpm_does_not_abort_before_reporting(tmux: Tmux) -> None:
@@ -156,8 +159,8 @@ def test_tpm_output_on_stdout_still_reaches_the_report(tmux: Tmux) -> None:
 
     install(tmux)
 
-    assert 'SSL certificate problem' in tmux.log
-    assert 'exit 128' in tmux.log
+    assert 'SSL certificate problem' in tmux.records
+    assert 'exit 128' in tmux.records
 
 
 def test_a_missing_tpm_is_reported_rather_than_crashed_on(tmux: Tmux) -> None:
@@ -165,7 +168,7 @@ def test_a_missing_tpm_is_reported_rather_than_crashed_on(tmux: Tmux) -> None:
 
     install(tmux)
 
-    assert 'TPM not found' in tmux.log
+    assert 'TPM not found' in tmux.records
 
 
 def test_a_missing_tmux_conf_is_reported_rather_than_silently_installing_nothing(tmux: Tmux) -> None:
@@ -175,7 +178,7 @@ def test_a_missing_tmux_conf_is_reported_rather_than_silently_installing_nothing
     result = install(tmux)
 
     assert not result.ok
-    assert 'no plugin list to read' in tmux.log
+    assert 'no plugin list to read' in tmux.records
 
 
 def test_success_writes_no_failure_entry(tmux: Tmux) -> None:
@@ -185,4 +188,4 @@ def test_success_writes_no_failure_entry(tmux: Tmux) -> None:
 
     assert result.ok
     assert 'Installing tmux-yank...' in result.stdout + result.stderr
-    assert tmux.log == ''
+    assert tmux.records == ''

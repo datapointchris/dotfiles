@@ -17,9 +17,10 @@ tools that provide `task` and before tpm reads the tmux config it deploys, and t
 node toolchain sits between the cargo phase that ships fnm and the npm globals
 that install against what it pins.
 
-`install/phases.sh` still holds the same registry for `update.sh`, and
-`tests/cli/test_phase_registry.py` asserts the two name the same phases — the one
-thing that keeps the halves from drifting while both exist.
+This is the only registry. `install/phases.sh` held a second one for `update.sh`
+and `tests/cli/test_phase_registry.py` existed to assert the two agreed; both are
+gone, because reconcile has one verb and `apply` installs what is missing and
+upgrades what is behind.
 """
 
 from __future__ import annotations
@@ -80,8 +81,8 @@ Node that fnm links as its default alias. The converged providers put what they
 install on this process's PATH as well — see `providers/toolchain.put_on_path` —
 so this is what the phases that still shell out get, and the two agree.
 Order mirrors `.zshenv` so a phase resolves the same binary an interactive shell
-would. `install/tool-path.sh` says the same thing to `update.sh`, and
-`tests/cli/test_phase_registry.py` asserts the two agree.
+would. `install/tool-path.sh` said the same thing to `update.sh` and went with it;
+this is the one list now.
 """
 
 
@@ -145,8 +146,15 @@ class Run:
         reader a fresh one with cold caches. Five phases read this, and one
         `apply --owner` was parsing packages.yml seven times — while the module
         docstring above claimed the declaration is read once per run.
+
+        `refresh` because this is the verb that spends the network, and it is what
+        lets a currency question be asked at all. The App Store and Flathub have no
+        offline catalogue, so `check` declines those reads and leaves their
+        managers UNKNOWN — unrepairable, which would make `mas upgrade` and
+        `flatpak update` the two things `update.sh` did that nothing replaced. An
+        offline run keeps the refusal, because there is nothing to ask.
         """
-        return Session(machine_name=self.machine, offline=self.offline, owner=self.owner)
+        return Session(machine_name=self.machine, offline=self.offline, owner=self.owner, refresh=not self.offline)
 
     @classmethod
     def resolve(
@@ -189,21 +197,6 @@ class Run:
             owner=owner,
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
         )
-
-    @property
-    def system_tier(self) -> str:
-        """ "core", "workstation", or "" when the phase is off for this machine.
-
-        A bare `true` still means the full set: manifests predating the tier said
-        so that way, and reading it as "" would silently install no system
-        packages on a machine whose declaration asks for all of them.
-        """
-        declared = self.manifest.get('system_packages')
-        if declared is None or declared is False:
-            return ''
-        if declared is True:
-            return 'workstation'
-        return str(declared)
 
     def wants(self, feature: str) -> bool:
         return self.manifest.get(feature) is True
@@ -308,42 +301,28 @@ def _record_failure(context: Run, completed: Completed, records: Path, script: P
         log.write(report)
 
 
-def _run_scripts(context: Run, scripts: list[Path], *, tier: str = '') -> bool:
-    """Run several scripts in order, reporting whether all of them succeeded.
-
-    Every one runs even after a failure: a broken cask must not stop the Xcode
-    licence or the Docker configuration that follow it, and the report at the end
-    is what names all of them at once.
-    """
-    environment = {'SYSTEM_PACKAGE_TIER': tier} if tier else None
-    return all([run_installer(context, script, script.stem, env=environment) for script in scripts])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The phases
 # ─────────────────────────────────────────────────────────────────────────────
 
 COMMON = paths.INSTALL_DIR / 'common'
 
-SYSTEM_SCRIPTS = {
-    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'mas-apps.sh'),
-    'wsl': ('system-packages.sh',),
-    'archlinux': ('system-packages.sh',),
-    'linux': ('system-packages.sh',),
-}
-
 
 def _overlay(coords: coordinates.Coordinates) -> str:
     """Which `install/<overlay>/` directory these coordinates ask for.
 
     Keyed on the package manager, with apt split by host — which is the whole of
-    what the four platform labels ever distinguished here. `install/wsl/` differs
-    from `install/linux/` only by filtering the docker-ce family out of an apt
-    list, because WSL uses Docker Desktop; that is a fact about the host.
+    what the four platform labels ever distinguished here.
 
-    So Arch-on-WSL lands on the pacman scripts, which is the answer a fused
-    `PLATFORM` string could not give: it has no row of its own, and every
-    coordinate it needs already exists. Dies with the scripts in step C.
+    What is left of it is the `PLATFORM` in `environment()`, which the remaining
+    installer scripts read so `detect_platform` does not have to grep
+    `/proc/version` and guess. The package scripts it used to select are gone, and
+    with them `install/{archlinux,macos,linux}/` — the difference between the
+    apt overlays, the docker-ce family, is `excludes_host` in the declaration now.
+
+    So Arch-on-WSL lands on the pacman answer, which is the one a fused `PLATFORM`
+    string could not give: it has no row of its own, and every coordinate it needs
+    already exists.
     """
     if coords.package_manager is coordinates.PackageManager.BREW:
         return 'macos'
@@ -353,33 +332,23 @@ def _overlay(coords: coordinates.Coordinates) -> str:
 
 
 def _system_packages(context: Run) -> bool:
-    """The OS package manager, plus whatever else that platform configures.
+    """Everything an OS package manager installs, and the app stores built on them.
 
-    The tier gates only the package payload. Everything beside it — fontconfig on
-    WSL, preferences and the Xcode licence on macOS — runs whether or not this
-    machine wants packages, because it is configuration rather than payload.
+    One phase over two stages, so `pacman -S` runs before the flatpak apps that
+    need the flatpak binary and `brew install` before the casks and the App Store
+    apps that need brew and `mas`.
 
-    What is left here is the configuration that has not converted yet. Arch's
-    `system-config.sh` was the first of it to go: its docker group, its two units
-    and its TTY auto-login are `system.yml` rows now, applied by the
-    `system-config` phase at the end of the run rather than in the middle of this
-    one. Nothing installed later depended on them.
+    Nothing here reads the tier or the flatpak flag any more. Both are
+    subscriptions, so the resolver has already applied them and a machine that
+    declares `system_packages: false` plans no packages to converge — which is
+    also what retires the inverted branch this function carried. It gated the
+    *bootstrap* on the payload switch, so a manifest with no tier ran `brew
+    install` with no brew; the bootstrap belongs to the provider that needs it,
+    and casks and App Store apps subscribe to nothing and so cannot be gated by a
+    tier at all.
     """
-    overlay = context.platform
-    platform_dir = paths.INSTALL_DIR / overlay
-    heading(f'System packages ({overlay})')
-
-    scripts = [platform_dir / name for name in SYSTEM_SCRIPTS[overlay]] if context.system_tier else []
-    # macOS's list is the payload *and* the configuration, and only the first
-    # entry of it is gated. Splitting it here rather than in the table keeps the
-    # table readable as "what this platform runs".
-    if overlay == 'macos' and not context.system_tier:
-        scripts = [platform_dir / name for name in SYSTEM_SCRIPTS['macos'][1:]]
-
-    if overlay == 'archlinux' and context.wants('flatpak'):
-        scripts.append(platform_dir / 'flatpak.sh')
-
-    return _run_scripts(context, scripts, tier=context.system_tier or 'workstation')
+    heading('System packages')
+    return _converge(context, engine.Selection.at(Stage.SYSTEM, Stage.SYSTEM_APPS))
 
 
 def _go_toolchain(context: Run) -> bool:
@@ -534,8 +503,7 @@ def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str,
 
 def _cargo_packages(context: Run) -> bool:
     """cargo-binstall is not installed here. It is a precondition of the provider,
-    which is what makes `packages apply --source cargo_packages` — the door
-    `update.sh` uses — get it too."""
+    which is what makes `packages apply --source cargo_packages` get it too."""
     heading('Rust/cargo tools')
     return _converge(context, engine.Selection.of('packages/cargo'))
 

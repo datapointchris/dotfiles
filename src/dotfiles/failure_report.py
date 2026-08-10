@@ -1,9 +1,9 @@
 """Installer failure records, and the report rendered from them.
 
 An installer that fails calls `record`, which appends one JSON object to the
-file named by $FAILURE_RECORDS. When the installer exits, run-installer.sh calls
-`render`, which turns those records plus the installer's console output into the
-entries a person reads in $FAILURES_LOG.
+file named by $FAILURE_RECORDS. When the installer exits, `apply.run_installer`
+renders those records plus the installer's console output into the entries a
+person reads in $FAILURES_LOG.
 
     python -m dotfiles.failure_report record <tool> <url> [version] [reason] [detail]
     python -m dotfiles.failure_report render --records F --console F --script S --tool T --exit N
@@ -20,7 +20,7 @@ Reached from bash as `dotfiles_python -m dotfiles.failure_report`, which
 `install/common/lib/python.sh` defines as the CLI's own `sys.executable` and
 documents as never the system interpreter. It carried a stdlib-only rule for that
 system interpreter until 2026-08-08, by which time nothing had invoked it that way
-for months. Both callers go with `run-installer.sh`.
+for months.
 """
 
 from __future__ import annotations

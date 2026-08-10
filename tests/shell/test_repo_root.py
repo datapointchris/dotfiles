@@ -65,5 +65,13 @@ def test_no_script_walks_up_the_tree_by_hand(script: Path) -> None:
 
 def test_the_glob_finds_the_scripts_it_is_meant_to_cover() -> None:
     """A `git ls-files` pattern that stops matching collects zero cases and
-    reports green, which is the failure mode this whole file exists to catch."""
-    assert len(assigning_scripts()) > 10
+    reports green, which is the failure mode this whole file exists to catch.
+
+    The threshold is "still finding scripts", not a number. A count here is a
+    second thing to maintain and it fails for the wrong reason — this asserted
+    `> 10` and broke on the commit that deleted the platform package scripts,
+    which is a conversion succeeding rather than a glob rotting. It falls to zero
+    the moment the pattern stops matching, which is the case worth catching, and
+    it is meant to reach zero legitimately once nothing here is bash.
+    """
+    assert assigning_scripts()

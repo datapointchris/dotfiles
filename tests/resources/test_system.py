@@ -9,6 +9,7 @@ each manager.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import stat
 from pathlib import Path
 from typing import Any
@@ -16,14 +17,19 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
+from dotfiles import providers
 from dotfiles import registry
 from dotfiles.privilege import Privilege
+from dotfiles.providers import bootstrap
+from dotfiles.providers import syspkg
+from dotfiles.resolve import Stage
+from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-from dotfiles.resources import privileged
 from dotfiles.resources import system
 from dotfiles.session import Session
 
@@ -57,8 +63,32 @@ def session(
     return Session(machine_name='box', repo=repo, home=home, **overrides)
 
 
+@pytest.fixture(autouse=True)
+def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
+    """No test in this file asks a package manager what is behind.
+
+    Autouse because the `manager` rows are planned from whatever else the plan
+    reached, so every fixture here grows one per manager without asking — and the
+    unstubbed read is `pacman -Qu` against the Arch box running the suite, which
+    makes a verdict here depend on when that machine last synced. Currency is
+    measured in its own tests, against a stub that says what it wants.
+    """
+    monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
+
+
+def payload(live: Session):
+    """Everything the plan holds for this resource but the manager rows."""
+    return [item for item in live.plan.for_resource('system') if item.provider != 'manager']
+
+
 def only_item(live: Session):
-    items = live.plan.for_resource('system')
+    """The one payload item, ignoring the manager rows planned beside it.
+
+    A `manager/<name>` row is one per package manager the rest of the plan
+    reaches, so it appears wherever a package does. It is what upgrades that
+    manager, and it is never what a test about a package name is looking at.
+    """
+    items = [item for item in live.plan.for_resource('system') if item.provider != 'manager']
     assert len(items) == 1, items
     return items[0]
 
@@ -129,7 +159,7 @@ def test_a_real_inventory_query_is_parsed(tmp_path: Path, fake_bin: Path) -> Non
     observed = system.RESOURCE.observe(live, live.plan)
 
     assert observed.asked == {'apt'}
-    assert system.RESOURCE.diff(live.plan, observed) == ()
+    assert changes(live) == []
 
 
 def test_every_installer_maps_to_a_query_or_is_deliberately_unqueryable() -> None:
@@ -154,7 +184,7 @@ def test_the_system_resource_takes_only_its_own_items(tmp_path: Path, fake_bin: 
         {**WORKSTATION, 'go_tools': ['task']},
     )
 
-    assert {item.address for item in live.plan.for_resource('system')} == {'system/curl'}
+    assert {item.address for item in payload(live)} == {'system/curl'}
     assert {item.address for item in live.plan.for_resource('packages')} == {'go/task'}
 
 
@@ -173,7 +203,7 @@ def test_a_configuration_row_is_planned_beside_the_packages(tmp_path: Path) -> N
     is why the group membership and the apt package answer to the same noun."""
     live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION, zshenv(tmp_path))
 
-    assert {item.address for item in live.plan.for_resource('system')} == {'system/curl', 'file/zdotdir'}
+    assert {item.address for item in payload(live)} == {'system/curl', 'file/zdotdir'}
 
 
 def test_a_configuration_change_declares_that_it_needs_root(tmp_path: Path) -> None:
@@ -232,55 +262,442 @@ def test_a_row_that_became_true_since_the_report_is_skipped(tmp_path: Path, gran
     assert system.RESOURCE.perform(live, change, granted).status is OutcomeStatus.SKIPPED
 
 
-def test_a_package_row_is_still_refused_rather_than_silently_skipped(tmp_path: Path, fake_bin: Path) -> None:
-    """Installing an apt package means the package backends, which convert with
-    their own step. Saying so is what stops a run reporting converged for work it
-    never did."""
-    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nprintf "" \n')
-    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
+class Manager:
+    """The package manager, recording what it was asked to do rather than doing it.
 
-    outcome = system.RESOURCE.perform(live, only_change(live), Privilege())
+    The seam is `syspkg`, not `effects.run`: what these assert is which manager was
+    chosen, what it was handed and in how many calls — the decisions this provider
+    makes. Whether `pacman -S` is spelled right is `INSTALL`'s business, and a test
+    that let it run would install packages on the machine running the suite.
+    """
 
-    assert outcome.status is OutcomeStatus.REFUSED
+    def __init__(self, *, fails: frozenset[str] = frozenset(), refuses: bool = False) -> None:
+        self.calls: list[tuple[str, tuple[str, ...]]] = []
+        self.refreshed: list[str] = []
+        self._fails = fails
+        self._refuses = refuses
 
+    def install(self, manager: str, names, privilege) -> providers.Result:
+        self.calls.append((manager, tuple(names)))
+        broken = sorted(self._fails.intersection(names))
+        if broken:
+            return providers.Result(False, f'{manager} could not install {broken[0]}')
+        return providers.Result(True, f'{manager}: {" ".join(names)}')
 
-def test_a_machine_with_no_root_reports_the_refusal_rather_than_crashing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The LXC container and the Docker harnesses. Everything unprivileged still
-    lands; this row is reported and the run continues."""
-    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
-    live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
-
-    privilege = Privilege()
-    outcome = system.RESOURCE.perform(live, only_change(live), privilege)
-
-    assert outcome.status is OutcomeStatus.FAILED
-    assert 'no sudo' in outcome.message
-
-
-def only_change(live: Session):
-    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
-    assert len(changes) == 1, changes
-    return changes[0]
+    def refresh(self, manager: str, privilege) -> providers.Result:
+        self.refreshed.append(manager)
+        return providers.Result(False, 'no root') if self._refuses else providers.Result(True, '')
 
 
-def test_a_macos_preference_does_not_ask_for_a_password(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Preferences are user-level. A Mac whose only drift is its Dock size must
-    converge without a prompt, which means `needs_root` has to reach the Change
-    rather than being assumed per resource."""
-    monkeypatch.setenv('PATH', str(tmp_path / 'empty-bin'))
-    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
-    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'macos'}, declared)
+@pytest.fixture
+def manager(monkeypatch: pytest.MonkeyPatch):
+    def install(**kwargs) -> Manager:
+        recorder = Manager(**kwargs)
+        monkeypatch.setattr(syspkg, 'install', recorder.install)
+        monkeypatch.setattr(syspkg, 'refresh', recorder.refresh)
+        return recorder
 
-    changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
-
-    assert [change.privileged for change in changes] == [False]
-    assert privileged(changes) == ()
+    return install
 
 
-def test_macos_rows_are_absent_from_a_linux_plan(tmp_path: Path) -> None:
-    """A Linux box is not *declining* macOS preferences, it cannot have them —
-    the same rule that keeps casks out of an Arch plan."""
-    declared = {'macos_defaults': [{'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'}]}
-    live = session(tmp_path, {}, {'machine': 'box', 'platform': 'linux'}, declared)
+class Bootstraps:
+    """Every manager's precondition, answering however a test says the machine is.
 
-    assert live.plan.for_resource('system') == ()
+    Stubbed rather than exercised: what a bootstrap *does* is
+    `tests/install/test_bootstrap.py`'s question, and letting these run would
+    build yay and download the Homebrew installer on the box running the suite.
+    What is asserted through this is that the right one runs, once, before the
+    batch its manager serves.
+    """
+
+    def __init__(self, *, refuses: str = '') -> None:
+        self.ran: list[str] = []
+        self.tapped: list[str] = []
+        self._refuses = refuses
+
+    def _answer(self, name: str) -> providers.Result:
+        self.ran.append(name)
+        return providers.Result(False, f'{name} is unavailable here') if name == self._refuses else providers.Result(True, '')
+
+    def homebrew(self) -> providers.Result:
+        return self._answer('homebrew')
+
+    def aur(self) -> providers.Result:
+        return self._answer('aur')
+
+    def flathub(self, installer: str, privilege) -> providers.Result:
+        self.ran.append(f'flathub:{installer}')
+        return providers.Result(False, 'no bus') if self._refuses == 'flathub' else providers.Result(True, '')
+
+    def taps(self, wanted) -> providers.Result:
+        self.tapped.extend(wanted)
+        return self._answer('taps')
+
+
+@pytest.fixture
+def bootstraps(monkeypatch: pytest.MonkeyPatch):
+    def arrange(**kwargs) -> Bootstraps:
+        recorder = Bootstraps(**kwargs)
+        for name in ('homebrew', 'aur', 'flathub', 'taps'):
+            monkeypatch.setattr(bootstrap, name, getattr(recorder, name))
+        return recorder
+
+    return arrange
+
+
+DECLARED = {
+    'system_packages': [
+        {'name': 'curl', 'apt': 'curl'},
+        {'name': '7zip', 'apt': 'p7zip-full'},
+        {'name': 'ripgrep', 'apt': 'ripgrep'},
+    ]
+}
+"""apt names only, deliberately. `fake_bin` keeps the real `/usr/bin` behind it —
+see its docstring — so a `pacman:` key here is answered by whatever the box running
+the suite has installed, and all three read as MATCHED on an Arch machine."""
+
+
+def answers_empty(fake_bin: Path, *managers: str) -> None:
+    """Shadow each manager's inventory query with one that reports nothing installed.
+
+    Necessary rather than tidy. `fake_bin` keeps the real `/usr/bin` behind it, so
+    an unshadowed `flatpak list` is answered by the box running the suite — and on
+    this Arch machine that means the app under test reads MATCHED, no Change is
+    produced, and the assertion is made against an empty batch that installed
+    nothing. Which is a green test proving nothing at all.
+    """
+    for manager in managers:
+        executable(fake_bin, manager, '#!/bin/sh\nprintf "" \n')
+
+
+def missing(tmp_path: Path, fake_bin: Path) -> Session:
+    """A machine whose manager answers, with none of the three installed."""
+    answers_empty(fake_bin, 'dpkg-query')
+    return session(tmp_path, DECLARED, WORKSTATION)
+
+
+def test_the_whole_batch_is_one_transaction(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """One `apt-get install` over three packages rather than three over one: one
+    dependency resolution, one authorization, one cache read."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
+
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('apt', ('p7zip-full', 'curl', 'ripgrep'))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE] * 3
+
+
+def test_the_declared_name_is_used_rather_than_the_entry_name(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """The entry is `7zip` and the package is `p7zip-full` on apt. Installing the
+    entry name is installing something that does not exist."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
+
+    system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert 'p7zip-full' in recorder.calls[0][1]
+    assert '7zip' not in recorder.calls[0][1]
+
+
+def test_the_manager_is_refreshed_once_before_the_batch(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """apt resolves against its cached lists, so a stale cache 404s on files that
+    exist. Once per manager, not once per package."""
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
+
+    system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.refreshed == ['apt']
+
+
+def test_a_refresh_that_cannot_run_fails_the_batch_rather_than_installing_anyway(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """Installing against a database that could not be refreshed is the
+    partial-upgrade case on Arch, and both fail later naming the wrong cause."""
+    recorder = manager(refuses=True)
+    live = missing(tmp_path, fake_bin)
+
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.FAILED] * 3
+    assert 'could not be refreshed' in outcomes[0].message
+
+
+def test_a_failed_batch_is_retried_one_package_at_a_time(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """`apt-get install a b c` exiting 1 says nothing about which of the three is
+    broken, and the machine still wants the other two."""
+    recorder = manager(fails=frozenset({'p7zip-full'}))
+    live = missing(tmp_path, fake_bin)
+
+    outcomes = system.RESOURCE.perform_batch(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls[0] == ('apt', ('p7zip-full', 'curl', 'ripgrep'))
+    assert recorder.calls[1:] == [('apt', ('p7zip-full',)), ('apt', ('curl',)), ('apt', ('ripgrep',))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.FAILED, OutcomeStatus.DONE, OutcomeStatus.DONE]
+
+
+def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_path: Path, fake_bin: Path, manager) -> None:
+    """Reporting it installed would leave a run claiming a converged machine it
+    never touched.
+
+    Built by hand rather than planned, because `resolve.available` filters a
+    brew-only entry off an apt machine before it can reach a provider — so this
+    asserts what the guard does, at the only level it is reachable from.
+    """
+    recorder = manager()
+    live = missing(tmp_path, fake_bin)
+    item = live.plan.for_resource('system')[0]
+    unusable = dc.replace(item, entry=catalog.SystemPackage.from_mapping({'name': 'mas', 'brew': 'mas'}))
+    change = Change('system', unusable.stage, unusable.address, Verdict.MISSING, desired=unusable)
+
+    outcomes = registry.BY_NAME['system'].install_all(live, [change], Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.REFUSED]
+
+
+def test_a_manager_whose_bootstrap_refuses_installs_nothing_through_it(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """REFUSED rather than FAILED, because nothing was written and the run has not
+    gone wrong — a Mac with no Homebrew yet is a machine mid-build, not a broken
+    one, and `Outcome.ok` is what keeps the phase honest about the difference."""
+    recorder = manager()
+    ready = bootstraps(refuses='homebrew')
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'macos_casks': [{'name': 'ghostty'}]}, MAC)
+
+    outcomes = registry.BY_NAME['cask'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.REFUSED]
+    assert 'homebrew is unavailable' in outcomes[0].message
+    assert ready.ran == ['homebrew']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Casks, App Store apps and flatpak apps
+# ─────────────────────────────────────────────────────────────────────────────
+
+MAC = {'machine': 'box', 'platform': 'macos', 'system_packages': 'workstation'}
+ARCH = {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation', 'flatpak': True}
+
+
+def test_casks_install_in_one_brew_call(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """A cask is a formula from another tap of the same manager, so it batches for
+    the same reason and through the same code."""
+    recorder = manager()
+    bootstraps()
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'macos_casks': [{'name': 'ghostty'}, {'name': 'orbstack'}]}, MAC)
+
+    outcomes = registry.BY_NAME['cask'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('cask', ('ghostty', 'orbstack'))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE] * 2
+
+
+def test_an_app_store_app_is_installed_by_its_numeric_id(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """`mas install Xcode` is not a command. The name is for the report and the
+    bundle check; the id is the only thing the App Store answers to."""
+    recorder = manager()
+    bootstraps()
+    live = session(tmp_path, {'mas_apps': [{'name': 'Xcode', 'id': 497799835}]}, MAC)
+
+    registry.BY_NAME['mas'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('mas', ('497799835',))]
+
+
+def test_a_flatpak_app_is_installed_by_its_reverse_dns_id(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    recorder = manager()
+    bootstraps()
+    answers_empty(fake_bin, 'flatpak')
+    live = session(tmp_path, {'flatpak_apps': [{'name': 'dbeaver', 'flatpak_id': 'io.dbeaver.DBeaverCommunity'}]}, ARCH)
+
+    registry.BY_NAME['flatpak'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('flatpak', ('io.dbeaver.DBeaverCommunity',))]
+
+
+def test_the_flathub_bootstrap_is_told_which_manager_installs_flatpak(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """flatpak is the manager, so it is not one of its own packages — the machine's
+    own package manager is what puts it there."""
+    manager()
+    ready = bootstraps()
+    answers_empty(fake_bin, 'flatpak')
+    live = session(tmp_path, {'flatpak_apps': [{'name': 'dbeaver', 'flatpak_id': 'io.dbeaver.DBeaverCommunity'}]}, ARCH)
+
+    registry.BY_NAME['flatpak'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert ready.ran == ['flathub:pacman']
+
+
+def test_the_taps_are_registered_before_the_formulae_that_live_in_them(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """A formula in an unregistered tap is unresolvable, and one unresolvable
+    formula aborts the whole batched install before it touches anything."""
+    manager()
+    ready = bootstraps()
+    answers_empty(fake_bin, 'brew')
+    declared = {'macos_taps': ['FelixKratz/formulae'], 'system_packages': [{'name': 'borders', 'brew': 'borders'}]}
+    live = session(tmp_path, declared, MAC)
+
+    registry.BY_NAME['system'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert ready.ran == ['homebrew', 'taps']
+    assert ready.tapped == ['FelixKratz/formulae']
+
+
+def test_the_apps_are_planned_after_the_packages_that_provide_their_managers(tmp_path: Path, fake_bin: Path) -> None:
+    """`mas` is itself a Homebrew formula and a cask needs the brew that installed
+    it. The plan sorts on `(stage, provider, name)`, so on stage alone all three app
+    providers would sort ahead of `system` — which is what SYSTEM_APPS exists for.
+    """
+    declared = {
+        'system_packages': [{'name': 'mas', 'brew': 'mas'}],
+        'macos_casks': [{'name': 'ghostty'}],
+        'mas_apps': [{'name': 'Xcode', 'id': 497799835}],
+    }
+    live = session(tmp_path, declared, MAC)
+
+    assert [item.provider for item in payload(live)] == ['system', 'cask', 'mas']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The managers themselves, which is what `update.sh` upgraded
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def behind(monkeypatch: pytest.MonkeyPatch, answers: dict[str, frozenset[str] | None]) -> None:
+    monkeypatch.setattr(syspkg, 'outdated', lambda manager: answers.get(manager))
+
+
+def manager_rows(live: Session) -> dict[str, Change]:
+    observed = system.RESOURCE.observe(live, live.plan)
+    found = system.RESOURCE.diff(live.plan, observed)
+    return {change.item.removeprefix('manager/'): change for change in found if change.item.startswith('manager/')}
+
+
+def test_a_manager_is_planned_for_every_one_the_machine_installs_through(tmp_path: Path, fake_bin: Path) -> None:
+    """Read off what the plan reached rather than off the coordinates, which are a
+    superset: brew brings `cask` and `mas` with it, and a Mac subscribing to no
+    casks has nothing for `brew upgrade --cask` to move."""
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'brew': 'curl'}], 'macos_casks': [{'name': 'ghostty'}]}, MAC)
+
+    assert set(manager_rows(live)) <= {'brew', 'cask'}
+    assert 'mas' not in {item.name for item in live.plan.for_resource('system') if item.provider == 'manager'}
+
+
+def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset()})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    assert 'apt' not in manager_rows(live)
+
+
+def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """STALE rather than MISSING: the manager is there and doing its job, and what
+    drifted is the machine's distance from what its repositories now hold. A count
+    alone says a machine is behind and nothing about whether it matters."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset({'curl', 'linux-image-generic'})})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.STALE
+    assert change.actionable
+    assert 'linux-image-generic' in change.detail
+
+
+def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Flathub and the App Store have no offline catalogue, so `check` does not ask
+    them — and reporting them current having asked nobody is the measured-looking
+    wrong answer this resource exists to stop."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': None})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.UNKNOWN
+    assert change.repair is Repair.NONE
+    assert '--refresh' in change.detail
+
+
+def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The gate is on the read, not on the row: a locally-answerable manager is
+    measured whatever the verb, and the two that need a round trip wait to be
+    asked for."""
+    asked: list[str] = []
+
+    def record(manager: str) -> frozenset[str]:
+        asked.append(manager)
+        return frozenset()
+
+    monkeypatch.setattr(syspkg, 'outdated', record)
+
+    assert ev.query('outdated:mas') is None
+    assert ev.query('outdated:mas', refresh=True) == frozenset()
+    assert ev.query('outdated:pacman') == frozenset()
+    assert asked == ['mas', 'pacman']
+
+
+def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Whole-manager rather than per package. Arch does not support partial
+    upgrades at all, and elsewhere a declared package's dependencies are as much
+    this repo's business as the package — `pacman -S <one>` leaves a machine in a
+    combination nobody tests."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset({'curl'})})
+    ran: list[str] = []
+
+    def record(manager: str, privilege: Privilege) -> providers.Result:
+        ran.append(manager)
+        return providers.Result(True, f'{manager} upgraded')
+
+    monkeypatch.setattr(syspkg, 'upgrade', record)
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    outcome = registry.BY_NAME['manager'].install(live, manager_rows(live)['apt'], _row(live, 'apt'), Privilege(offer=False))
+
+    assert ran == ['apt']
+    assert outcome.status is OutcomeStatus.DONE
+
+
+def test_the_upgrade_runs_after_both_install_stages(tmp_path: Path, fake_bin: Path) -> None:
+    """A manager that had to be bootstrapped cannot be asked what is behind until
+    the stage that installs it has run — Homebrew on a fresh Mac, flatpak on a
+    machine declaring its first app."""
+    answers_empty(fake_bin, 'brew')
+    declared = {'system_packages': [{'name': 'curl', 'brew': 'curl'}], 'macos_casks': [{'name': 'ghostty'}]}
+    live = session(tmp_path, declared, MAC)
+
+    stages = [item.stage for item in live.plan.for_resource('system')]
+
+    assert stages == sorted(stages)
+    assert max(item.stage for item in live.plan.for_resource('system') if item.provider == 'manager') is Stage.SYSTEM_UPGRADE
+
+
+def _row(live: Session, manager: str):
+    found = [item for item in live.plan.for_resource('system') if item.provider == 'manager' and item.name == manager]
+    assert len(found) == 1, found
+    return found[0]
+
+
+def changes(live: Session):
+    """Every change but the manager rows', which `unmeasured_currency` leaves UNKNOWN.
+
+    Filtered here rather than at each call site: a manager row is planned beside
+    whatever else the plan reached, so an unfiltered list would put an unrelated
+    UNKNOWN in front of every batch assertion in this file.
+    """
+    observed = system.RESOURCE.observe(live, live.plan)
+    return [change for change in system.RESOURCE.diff(live.plan, observed) if not change.item.startswith('manager/')]
+
+
+def only_change(live: Session) -> Change:
+    found = changes(live)
+    assert len(found) == 1, found
+    return found[0]

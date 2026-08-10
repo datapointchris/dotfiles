@@ -7,6 +7,7 @@ a stub that answers `git clone` cannot get that wrong.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -247,3 +248,91 @@ def test_a_machine_declining_plugins_plans_none(tmp_path: Path) -> None:
     live = session(tmp_path, manifest={'machine': 'box', 'platform': 'linux', 'shell_plugins': False, 'tmux_plugins': False})
 
     assert changes(live) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Currency: a checkout that is behind, which is what `update.sh` pulled blindly
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def refreshing(tmp_path: Path, packages: dict[str, Any] | None = None, manifest: dict[str, Any] | None = None) -> Session:
+    """The same session, permitted to spend the network measuring currency."""
+    live = session(tmp_path, packages, manifest)
+    return dc.replace(live, refresh=True)
+
+
+def commit(repo: Path, message: str) -> None:
+    subprocess.run(['git', 'add', '-A'], cwd=repo, check=True)
+    subprocess.run(['git', '-c', 'user.email=t@e.st', '-c', 'user.name=T', 'commit', '-qm', message], cwd=repo, check=True)
+
+
+def cloned(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> Session:
+    """One shell plugin, cloned from a real local repository that can then move."""
+    packages = {'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}]}
+    manifest = {'machine': 'box', 'platform': 'linux', 'shell_plugins': True}
+    live = session(tmp_path, packages, manifest)
+    for change in changes(live):
+        plugins.RESOURCE.perform(live, change, unprivileged)
+    return refreshing(tmp_path, packages, manifest)
+
+
+def test_a_current_checkout_is_not_reported_behind(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
+    live = cloned(tmp_path, upstream, unprivileged)
+
+    assert changes(live) == ()
+
+
+def test_a_checkout_whose_remote_moved_is_stale(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
+    """`update.sh` pulled every plugin on every run and compared the commits either
+    side to find out whether anything had moved. Asking first is what lets `check`
+    report this without moving it."""
+    live = cloned(tmp_path, upstream, unprivileged)
+    (upstream / 'forgit.plugin.zsh').write_text('# forgit, newer\n')
+    commit(upstream, 'move')
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('shell-plugin/forgit', Verdict.STALE)]
+
+
+def test_a_stale_checkout_is_repaired_by_pulling_not_recloning(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
+    live = cloned(tmp_path, upstream, unprivileged)
+    (upstream / 'forgit.plugin.zsh').write_text('# forgit, newer\n')
+    commit(upstream, 'move')
+
+    outcome = plugins.RESOURCE.perform(live, changes(live)[0], unprivileged)
+    landed = live.home / '.config' / 'zsh' / 'plugins' / 'forgit' / 'forgit.plugin.zsh'
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert landed.read_text() == '# forgit, newer\n'
+    assert changes(live) == ()
+
+
+def test_check_does_not_fetch_to_answer_this(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
+    """A fetch per plugin, on a verb that runs at a prompt, in a pre-commit hook
+    and on a timer. Empty is not "none are behind" — it is "nobody looked", which
+    is why the row says only what it measured."""
+    cloned(tmp_path, upstream, unprivileged)
+    (upstream / 'forgit.plugin.zsh').write_text('# forgit, newer\n')
+    commit(upstream, 'move')
+
+    packages = {'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}]}
+    unrefreshed = session(tmp_path, packages, {'machine': 'box', 'platform': 'linux', 'shell_plugins': True})
+
+    assert changes(unrefreshed) == ()
+
+
+def test_a_subdirectory_plugin_is_never_reported_behind(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
+    """What survives is the copy; the shallow clone it came out of was deleted. So
+    the monorepo moving is not drift this can measure, and reporting it would be a
+    change nothing here could repair."""
+    packages = {'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]}
+    manifest = {'machine': 'box', 'platform': 'linux', 'yazi_plugins': True}
+    live = session(tmp_path, packages, manifest)
+    for change in changes(live):
+        plugins.RESOURCE.perform(live, change, unprivileged)
+    (monorepo / 'git.yazi' / 'main.lua').write_text('-- git, newer\n')
+    commit(monorepo, 'move')
+
+    item = live.plan.for_provider('yazi-plugin')[0]
+
+    assert clone.tracked(item, live.home) is None
+    assert changes(refreshing(tmp_path, packages, manifest)) == ()
