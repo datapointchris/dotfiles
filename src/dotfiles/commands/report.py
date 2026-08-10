@@ -36,6 +36,23 @@ UNSUCCESSFUL = {str(OutcomeStatus.FAILED), str(OutcomeStatus.REFUSED)}
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 
+def _unsuccessful(record: runs.RunRecord) -> str:
+    """What kept a run from converging, in the words `apply` used at the time.
+
+    Not `RunRecord.converged`, which is true only where every item MATCHED — that
+    is the right answer for `show`, whose reader is looking at one run, and the
+    wrong one for a list, where it marks a healthy apply that repaired something
+    the same as the run that could not examine a resource at all.
+    """
+    refused = [issue.address for issue in record.issues]
+    failed = [outcome.address for outcome in record.outcomes if outcome.action in UNSUCCESSFUL]
+    named = sorted(set(refused + failed))
+    if not named:
+        return ''
+    shown = ', '.join(named[:3])
+    return f'{len(named)} unconverged: {shown}' + (', …' if len(named) > 3 else '')
+
+
 def _find(identifier: str | None) -> Path:
     """Resolve a run id to its record, or the newest run when none is given."""
     if identifier is None:
@@ -117,8 +134,19 @@ def list_runs(
     if as_json:
         emit_json([path.stem for path in found])
         return
+    if not found:
+        return
+    # Names alone made this a directory listing with a filter: finding which run
+    # failed meant opening each record in turn, and the fleet shares `runs/`, so
+    # "which one went wrong" is the question the list is reached for.
+    table = Table(box=None, pad_edge=False)
+    table.add_column('run')
+    table.add_column('outcome')
     for path in found:
-        console.print(path.stem)
+        wrong = _unsuccessful(runs.read(path))
+        colour = 'red' if wrong else 'green'
+        table.add_row(path.stem, f'[{colour}]{wrong or "ok"}[/]')
+    console.print(table)
 
 
 @app.command('show')

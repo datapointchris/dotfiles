@@ -20,6 +20,7 @@ from dotfiles import runs
 from dotfiles import sinks
 from dotfiles.commands import report
 from dotfiles.event import Event
+from dotfiles.event import Refusal
 from dotfiles.main import app
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
@@ -75,6 +76,27 @@ def test_the_id_a_rendering_leads_with_is_one_show_accepts(runs_dir: Path) -> No
 
     assert result.exit_code == 0
     assert 'abc123abc123' in result.stdout
+
+
+def test_the_list_names_the_resource_that_did_not_converge(runs_dir: Path) -> None:
+    """The list was names alone, so finding the run that failed meant opening each
+    record in turn — and `runs/` is shared by the whole fleet, which is exactly
+    when that stops being viable."""
+    recorded(runs_dir, Event('packages', Refusal('packages could not be examined')))
+
+    result = runner.invoke(app, ['report', 'list'])
+
+    assert 'packages' in result.stdout
+    assert 'unconverged' in result.stdout
+
+
+def test_the_list_calls_a_run_with_nothing_wrong_ok(runs_dir: Path) -> None:
+    recorded(runs_dir, Event('packages', Outcome(change('zk', Verdict.MISSING), OutcomeStatus.DONE)))
+
+    result = runner.invoke(app, ['report', 'list'])
+
+    assert 'unconverged' not in result.stdout
+    assert 'ok' in result.stdout
 
 
 def test_a_run_where_nothing_drifted_says_converged(runs_dir: Path) -> None:
