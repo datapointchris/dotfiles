@@ -127,6 +127,132 @@ def available(manager: str) -> bool:
     return effects.run([INSTALL[manager][0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Currency: what is installed and behind
+# ─────────────────────────────────────────────────────────────────────────────
+
+OUTDATED: dict[str, tuple[str, ...]] = {
+    'pacman': ('pacman', '-Qu'),
+    'aur': ('yay', '-Qu'),
+    'apt': ('apt', 'list', '--upgradable'),
+    'brew': ('brew', 'outdated', '--formula', '--quiet'),
+    'cask': ('brew', 'outdated', '--cask', '--greedy', '--quiet'),
+    'flatpak': ('flatpak', 'remote-ls', '--updates', '--columns=application'),
+    'mas': ('mas', 'outdated'),
+}
+"""How each manager is asked what it has installed and behind.
+
+The first five read a local index and cost milliseconds; the last two are network
+calls, which is why `NETWORKED` exists rather than this table being uniform.
+
+`yay -Qu` rather than `pacman -Qu` for the AUR: both list the same local
+packages, but only yay knows an AUR package's upstream version, so pacman reports
+every one of them current forever.
+
+`--greedy` on the casks because an auto-updating cask is excluded otherwise, and
+this repo installed it and would like to know. That is the flag `update.sh` used
+and the reason it used it.
+"""
+
+EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})
+"""Which currency queries report "nothing to upgrade" as a failure.
+
+`pacman -Qu` exits 1 having printed nothing when every package is current, which
+is the query's convention for an empty result rather than an error — the same one
+`grep` uses. Reading that as "the manager could not answer" is what the first
+version of this did, and it reported a fully-current Arch box as unmeasurable.
+
+Only these two, and only with no output: a genuine pacman failure prints to
+stderr, which `Output.QUIET` keeps in the same transcript, so a non-zero exit that
+said something is still a non-answer.
+"""
+
+NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas'})
+"""Which currency reads reach the network, and so are measured only on request.
+
+There is no local answer for either: Flathub's available versions live on
+Flathub, and the App Store has no offline catalogue. `check` runs at a prompt, in
+a pre-commit hook and on a timer, so it must not spend a round trip to say
+whether Discord is behind — the same rule the release cache follows, arrived at
+for the same reason.
+"""
+
+UPGRADE: dict[str, tuple[str, ...]] = {
+    'pacman': ('pacman', '-Syu', '--noconfirm'),
+    'aur': ('yay', '-Syu', '--noconfirm'),
+    'apt': ('apt-get', 'upgrade', '-y'),
+    'brew': ('brew', 'upgrade'),
+    'cask': ('brew', 'upgrade', '--cask', '--greedy'),
+    'flatpak': ('flatpak', 'update', '-y'),
+    'mas': ('mas', 'upgrade'),
+}
+"""How each manager upgrades everything it installed.
+
+Whole-machine rather than per package, which is not a shortcut: Arch does not
+support partial upgrades at all, and for the rest a declared package's
+dependencies are as much this repo's business as the package. `pacman -S <name>`
+would upgrade one package and leave the machine in a combination nobody tests.
+
+The pacman and yay rows are the same command as their `REFRESH`, because on Arch
+the sync *is* the upgrade. Spelling it twice is deliberate: `refresh` runs before
+an install, `upgrade` runs because a machine is behind, and a later change to one
+should not silently move the other.
+"""
+
+
+def outdated(manager: str) -> frozenset[str] | None:
+    """What this manager has installed and behind, or None where it cannot say.
+
+    None rather than an empty set, because "nothing is behind" and "nobody
+    asked" are the difference between MATCHED and UNKNOWN — and reporting a
+    machine current because its package manager is absent is the failure this
+    whole resource exists to avoid.
+
+    An empty result is also returned for a manager with nothing to upgrade, and
+    that is the answer, not a non-answer: the command exited 0 having listed
+    nothing.
+    """
+    command = OUTDATED.get(manager)
+    if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
+        return None
+    listed = effects.run(list(command), output=Output.QUIET)
+    if listed.ok:
+        return _names(listed.transcript)
+    silent = not listed.transcript.strip()
+    return frozenset() if manager in EMPTY_IS_NONZERO and silent else None
+
+
+def _names(transcript: str) -> frozenset[str]:
+    """The package each line names, ignoring the lines that name none.
+
+    Field one, since every one of these prints `<name> <versions…>` or a bare
+    name — `mas` included, whose field one is the numeric id it is addressed by.
+    Two adjustments, both apt's: it spells the name `curl/noble-updates`, so a
+    name ends at its first `/`, and it prefaces the list with `Listing...` and a
+    warning that its CLI is not stable, on the same stream as the answer. A first
+    field ending in `.` or `:` is apt talking rather than apt answering.
+    """
+    found = set()
+    for line in transcript.splitlines():
+        field = line.split()[0] if line.split() else ''
+        if not field or field.endswith(('.', ':')):
+            continue
+        found.add(field.split('/')[0])
+    return frozenset(found)
+
+
+def upgrade(manager: str, privilege: Privilege) -> Result:
+    """Bring everything this manager installed up to date."""
+    command = list(UPGRADE[manager])
+    try:
+        completed = privilege.run(command, reason=f'upgrade every {manager} package') if manager in ESCALATES else effects.run(command)
+    except PrivilegeUnavailable:
+        return Result(False, refusal(privilege.state))
+    if completed.ok:
+        return Result(True, f'{" ".join(command)}')
+    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}')
+
+
 PROBE_SECONDS = 10.0
 """Long enough for a cold binary, short enough that a manager which is not going
 to answer does not hold the run. Same bound and same reason as

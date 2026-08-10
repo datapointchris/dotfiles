@@ -50,6 +50,15 @@ class Observed:
     config: dict[str, sysconfig.State]
     """One state per `system.yml` row, keyed by address."""
 
+    packages: int = 0
+    """How many of the observed rows are declared packages.
+
+    Counted rather than derived from `len(self.evidence)`, which also holds one
+    row per package manager — those are what upgrades a manager, not something
+    `packages.yml` declares, and folding them in made a 96-package machine report
+    99.
+    """
+
     @property
     def summary(self) -> str:
         """Names which managers answered, because a machine whose manager is
@@ -57,7 +66,7 @@ class Observed:
         a row saying "all installed" without saying who was asked would read as a
         measurement when it was a shrug."""
         asked = ', '.join(sorted(self.asked)) or 'nothing'
-        line = f'all {len(self.evidence)} declared system packages installed (asked {asked})'
+        line = f'all {self.packages} declared system packages installed (asked {asked})'
         return f'{line}, and {len(self.config)} configuration item(s) match' if self.config else line
 
 
@@ -73,6 +82,7 @@ class SystemResource:
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
+            packages=sum(1 for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:

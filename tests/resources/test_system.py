@@ -25,6 +25,7 @@ from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
+from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -62,8 +63,32 @@ def session(
     return Session(machine_name='box', repo=repo, home=home, **overrides)
 
 
+@pytest.fixture(autouse=True)
+def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
+    """No test in this file asks a package manager what is behind.
+
+    Autouse because the `manager` rows are planned from whatever else the plan
+    reached, so every fixture here grows one per manager without asking — and the
+    unstubbed read is `pacman -Qu` against the Arch box running the suite, which
+    makes a verdict here depend on when that machine last synced. Currency is
+    measured in its own tests, against a stub that says what it wants.
+    """
+    monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
+
+
+def payload(live: Session):
+    """Everything the plan holds for this resource but the manager rows."""
+    return [item for item in live.plan.for_resource('system') if item.provider != 'manager']
+
+
 def only_item(live: Session):
-    items = live.plan.for_resource('system')
+    """The one payload item, ignoring the manager rows planned beside it.
+
+    A `manager/<name>` row is one per package manager the rest of the plan
+    reaches, so it appears wherever a package does. It is what upgrades that
+    manager, and it is never what a test about a package name is looking at.
+    """
+    items = [item for item in live.plan.for_resource('system') if item.provider != 'manager']
     assert len(items) == 1, items
     return items[0]
 
@@ -134,7 +159,7 @@ def test_a_real_inventory_query_is_parsed(tmp_path: Path, fake_bin: Path) -> Non
     observed = system.RESOURCE.observe(live, live.plan)
 
     assert observed.asked == {'apt'}
-    assert system.RESOURCE.diff(live.plan, observed) == ()
+    assert changes(live) == []
 
 
 def test_every_installer_maps_to_a_query_or_is_deliberately_unqueryable() -> None:
@@ -159,7 +184,7 @@ def test_the_system_resource_takes_only_its_own_items(tmp_path: Path, fake_bin: 
         {**WORKSTATION, 'go_tools': ['task']},
     )
 
-    assert {item.address for item in live.plan.for_resource('system')} == {'system/curl'}
+    assert {item.address for item in payload(live)} == {'system/curl'}
     assert {item.address for item in live.plan.for_resource('packages')} == {'go/task'}
 
 
@@ -178,7 +203,7 @@ def test_a_configuration_row_is_planned_beside_the_packages(tmp_path: Path) -> N
     is why the group membership and the apt package answer to the same noun."""
     live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION, zshenv(tmp_path))
 
-    assert {item.address for item in live.plan.for_resource('system')} == {'system/curl', 'file/zdotdir'}
+    assert {item.address for item in payload(live)} == {'system/curl', 'file/zdotdir'}
 
 
 def test_a_configuration_change_declares_that_it_needs_root(tmp_path: Path) -> None:
@@ -534,11 +559,142 @@ def test_the_apps_are_planned_after_the_packages_that_provide_their_managers(tmp
     }
     live = session(tmp_path, declared, MAC)
 
-    assert [item.provider for item in live.plan.for_resource('system')] == ['system', 'cask', 'mas']
+    assert [item.provider for item in payload(live)] == ['system', 'cask', 'mas']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The managers themselves, which is what `update.sh` upgraded
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def behind(monkeypatch: pytest.MonkeyPatch, answers: dict[str, frozenset[str] | None]) -> None:
+    monkeypatch.setattr(syspkg, 'outdated', lambda manager: answers.get(manager))
+
+
+def manager_rows(live: Session) -> dict[str, Change]:
+    observed = system.RESOURCE.observe(live, live.plan)
+    found = system.RESOURCE.diff(live.plan, observed)
+    return {change.item.removeprefix('manager/'): change for change in found if change.item.startswith('manager/')}
+
+
+def test_a_manager_is_planned_for_every_one_the_machine_installs_through(tmp_path: Path, fake_bin: Path) -> None:
+    """Read off what the plan reached rather than off the coordinates, which are a
+    superset: brew brings `cask` and `mas` with it, and a Mac subscribing to no
+    casks has nothing for `brew upgrade --cask` to move."""
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'system_packages': [{'name': 'curl', 'brew': 'curl'}], 'macos_casks': [{'name': 'ghostty'}]}, MAC)
+
+    assert set(manager_rows(live)) <= {'brew', 'cask'}
+    assert 'mas' not in {item.name for item in live.plan.for_resource('system') if item.provider == 'manager'}
+
+
+def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset()})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    assert 'apt' not in manager_rows(live)
+
+
+def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """STALE rather than MISSING: the manager is there and doing its job, and what
+    drifted is the machine's distance from what its repositories now hold. A count
+    alone says a machine is behind and nothing about whether it matters."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset({'curl', 'linux-image-generic'})})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.STALE
+    assert change.actionable
+    assert 'linux-image-generic' in change.detail
+
+
+def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Flathub and the App Store have no offline catalogue, so `check` does not ask
+    them — and reporting them current having asked nobody is the measured-looking
+    wrong answer this resource exists to stop."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': None})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.UNKNOWN
+    assert change.repair is Repair.NONE
+    assert '--refresh' in change.detail
+
+
+def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The gate is on the read, not on the row: a locally-answerable manager is
+    measured whatever the verb, and the two that need a round trip wait to be
+    asked for."""
+    asked: list[str] = []
+
+    def record(manager: str) -> frozenset[str]:
+        asked.append(manager)
+        return frozenset()
+
+    monkeypatch.setattr(syspkg, 'outdated', record)
+
+    assert ev.query('outdated:mas') is None
+    assert ev.query('outdated:mas', refresh=True) == frozenset()
+    assert ev.query('outdated:pacman') == frozenset()
+    assert asked == ['mas', 'pacman']
+
+
+def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Whole-manager rather than per package. Arch does not support partial
+    upgrades at all, and elsewhere a declared package's dependencies are as much
+    this repo's business as the package — `pacman -S <one>` leaves a machine in a
+    combination nobody tests."""
+    answers_empty(fake_bin, 'dpkg-query')
+    behind(monkeypatch, {'apt': frozenset({'curl'})})
+    ran: list[str] = []
+
+    def record(manager: str, privilege: Privilege) -> providers.Result:
+        ran.append(manager)
+        return providers.Result(True, f'{manager} upgraded')
+
+    monkeypatch.setattr(syspkg, 'upgrade', record)
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    outcome = registry.BY_NAME['manager'].install(live, manager_rows(live)['apt'], _row(live, 'apt'), Privilege(offer=False))
+
+    assert ran == ['apt']
+    assert outcome.status is OutcomeStatus.DONE
+
+
+def test_the_upgrade_runs_after_both_install_stages(tmp_path: Path, fake_bin: Path) -> None:
+    """A manager that had to be bootstrapped cannot be asked what is behind until
+    the stage that installs it has run — Homebrew on a fresh Mac, flatpak on a
+    machine declaring its first app."""
+    answers_empty(fake_bin, 'brew')
+    declared = {'system_packages': [{'name': 'curl', 'brew': 'curl'}], 'macos_casks': [{'name': 'ghostty'}]}
+    live = session(tmp_path, declared, MAC)
+
+    stages = [item.stage for item in live.plan.for_resource('system')]
+
+    assert stages == sorted(stages)
+    assert max(item.stage for item in live.plan.for_resource('system') if item.provider == 'manager') is Stage.SYSTEM_UPGRADE
+
+
+def _row(live: Session, manager: str):
+    found = [item for item in live.plan.for_resource('system') if item.provider == 'manager' and item.name == manager]
+    assert len(found) == 1, found
+    return found[0]
 
 
 def changes(live: Session):
-    return list(system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan)))
+    """Every change but the manager rows', which `unmeasured_currency` leaves UNKNOWN.
+
+    Filtered here rather than at each call site: a manager row is planned beside
+    whatever else the plan reached, so an unfiltered list would put an unrelated
+    UNKNOWN in front of every batch assertion in this file.
+    """
+    observed = system.RESOURCE.observe(live, live.plan)
+    return [change for change in system.RESOURCE.diff(live.plan, observed) if not change.item.startswith('manager/')]
 
 
 def only_change(live: Session) -> Change:

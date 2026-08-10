@@ -423,7 +423,12 @@ def test_an_entry_is_dropped_where_the_package_it_configures_is_not_installed(tm
     with_docker = system_plan(tmp_path / 'a', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
     without = system_plan(tmp_path / 'b', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': False})
 
-    assert [item.address for item in with_docker.for_resource('system')] == ['system/docker', 'group/docker']
+    # The `manager/*` rows come from the same plan and are not what this is about:
+    # they are one per package manager the plan reaches, so the machine that
+    # installs docker has them and the machine that installs nothing has none.
+    planned = [item.address for item in with_docker.for_resource('system') if item.provider != 'manager']
+
+    assert planned == ['system/docker', 'group/docker']
     assert without.for_resource('system') == ()
 
 

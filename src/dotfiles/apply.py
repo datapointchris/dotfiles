@@ -145,8 +145,15 @@ class Run:
         reader a fresh one with cold caches. Five phases read this, and one
         `apply --owner` was parsing packages.yml seven times — while the module
         docstring above claimed the declaration is read once per run.
+
+        `refresh` because this is the verb that spends the network, and it is what
+        lets a currency question be asked at all. The App Store and Flathub have no
+        offline catalogue, so `check` declines those reads and leaves their
+        managers UNKNOWN — unrepairable, which would make `mas upgrade` and
+        `flatpak update` the two things `update.sh` did that nothing replaced. An
+        offline run keeps the refusal, because there is nothing to ask.
         """
-        return Session(machine_name=self.machine, offline=self.offline, owner=self.owner)
+        return Session(machine_name=self.machine, offline=self.offline, owner=self.owner, refresh=not self.offline)
 
     @classmethod
     def resolve(

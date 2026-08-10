@@ -473,6 +473,97 @@ class CloneProvider(CatalogProvider):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class ManagerProvider(Provider):
+    """Whether each package manager on this machine is behind, and the upgrade.
+
+    One synthetic row per manager, subscribed to by nothing — the shape a
+    toolchain has, and for the same reason: a machine has pacman because of what
+    its manifest asked pacman for, not because it named pacman.
+
+    This is what `update.sh`'s `update_system_packages` was, and it is here rather
+    than in a second front door because the question is measurable. That script
+    ran `pacman -Syu`, `brew upgrade`, `mas upgrade` and `flatpak update`
+    unconditionally and reported whatever they printed; a row that reads the
+    manager's outdated list first can say *what* is behind before it moves, and
+    say nothing on a machine that is current.
+
+    The whole manager rather than the declared packages, deliberately. Arch does
+    not support partial upgrades at all, and everywhere else a declared package's
+    dependencies are as much this repo's business as the package — `pacman -S
+    <one>` leaves a machine in a combination nobody tests.
+    """
+
+    ownable: bool = False
+    """A package manager belongs to nobody, so `--owner` skips these whole rather
+    than dropping them for answering `owner is None`."""
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        """One row per manager this machine actually installs something through.
+
+        Read off what the earlier providers resolved rather than off the
+        coordinates, which is the two-pass signature doing its job: a Mac
+        subscribing to no casks has nothing for `brew upgrade --cask` to move, and
+        a machine with no flatpak apps should not be told its flatpak is behind.
+        """
+        return tuple(
+            DesiredItem(
+                section='',
+                provider=self.name,
+                resource=self.resource,
+                stage=self.stage,
+                name=manager,
+                executable='',
+                evidence_path='',
+                precondition=resolve.Precondition.NONE,
+                entry=None,
+                reason=Reason('managers', f'installs {provider}'),
+            )
+            for manager, provider in _managers_in_use(machine, planned)
+        )
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """Behind, current, or unmeasured — never guessed.
+
+        The networked managers report UNKNOWN rather than MATCHED when nothing
+        asked them, because a `check` that says "current" having asked nobody is
+        the measured-looking wrong answer this resource exists to stop.
+        """
+        return ev.by_currency(item, installed)
+
+    def needs_root(self, item: DesiredItem) -> bool:
+        return item.name in syspkg.ESCALATES
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        ready = _bootstrap(item.name, session, privilege)
+        if not ready.ok:
+            return Outcome(change, OutcomeStatus.REFUSED, ready.detail)
+        result = syspkg.upgrade(item.name, privilege)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+def _managers_in_use(machine: machines.Machine, planned: tuple[DesiredItem, ...]) -> tuple[tuple[str, str], ...]:
+    """Which managers this machine's plan reaches, each with the provider that reached it.
+
+    Keyed on the provider that planned an item rather than on the machine's
+    installer family, which is a superset: `brew` brings `cask` and `mas` with it,
+    and a Mac subscribing to no casks has nothing for `brew upgrade --cask` to
+    move. `flatpak` is in no family at all — it is opt-in per machine rather than
+    something a package manager carries — so it appears here only when flatpak
+    apps were planned, which is exactly when its runtime exists.
+    """
+    reached = {item.provider for item in planned}
+    found: dict[str, str] = {}
+    if 'system' in reached:
+        for manager in syspkg.PREFERENCE:
+            if manager in machine.coordinates.installers:
+                found[manager] = 'system'
+    for provider in ('cask', 'mas', 'flatpak'):
+        if provider in reached:
+            found[provider] = provider
+    return tuple(found.items())
+
+
+@dc.dataclass(frozen=True, slots=True)
 class ToolchainProvider(Provider):
     """A language runtime, in the plan because the tools that need it are.
 
@@ -712,6 +803,7 @@ PROVIDERS: tuple[Provider, ...] = (
     CaskProvider('cask', 'system', Stage.SYSTEM_APPS, 'macos_casks'),
     AppStoreProvider('mas', 'system', Stage.SYSTEM_APPS, 'mas_apps'),
     FlatpakProvider('flatpak', 'system', Stage.SYSTEM_APPS, 'flatpak_apps'),
+    ManagerProvider('manager', 'system', Stage.SYSTEM_UPGRADE),
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
