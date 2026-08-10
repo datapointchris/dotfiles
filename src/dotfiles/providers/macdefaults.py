@@ -69,7 +69,7 @@ class Domain:
         if not exported.ok:
             return None
         try:
-            return plistlib.loads(exported.transcript.encode())
+            return plistlib.loads(exported.stdout.encode())
         except (plistlib.InvalidFileException, ValueError):
             return None
 

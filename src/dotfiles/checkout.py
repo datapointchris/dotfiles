@@ -85,8 +85,8 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
     if not counts.ok:
         return None
 
-    ahead, behind = (int(count) for count in counts.transcript.split())
-    return Position(upstream.transcript.strip(), ahead, behind, _last_fetch(repo))
+    ahead, behind = (int(count) for count in counts.stdout.split())
+    return Position(upstream.stdout.strip(), ahead, behind, _last_fetch(repo))
 
 
 DEPLOYMENT_BRANCH = 'main'
@@ -108,7 +108,7 @@ def stray_branch(repo: Path = paths.REPO_ROOT) -> str | None:
     branch = _git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')
     if not branch.ok:
         return None
-    name = branch.transcript.strip()
+    name = branch.stdout.strip()
     return None if name in {DEPLOYMENT_BRANCH, 'HEAD'} else name
 
 
@@ -153,7 +153,7 @@ def _last_fetch(repo: Path) -> dt.datetime | None:
     if not located.ok:
         return None
 
-    marker = repo / located.transcript.strip() / 'FETCH_HEAD'
+    marker = repo / located.stdout.strip() / 'FETCH_HEAD'
     try:
         return dt.datetime.fromtimestamp(marker.stat().st_mtime, dt.UTC)
     except OSError:

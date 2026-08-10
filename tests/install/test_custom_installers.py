@@ -13,6 +13,7 @@ entry would test a function that does not exist.
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import zipfile
 from pathlib import Path
@@ -80,6 +81,11 @@ class Runs:
         argv = tuple(str(part) for part in command)
         self.calls.append(argv)
         answer = next((completed for key, completed in self.answers.items() if any(key in part for part in argv)), Completed(argv, 0, ''))
+        # A fake naming only what a command printed means it printed it on stdout.
+        # A real `Output.QUIET` run fills both fields and every parser reads
+        # `stdout`, so without this a fixture would model an answer no subprocess
+        # can produce — and the gpg fingerprint read would find nothing.
+        answer = dataclasses.replace(answer, stdout=answer.stdout or answer.transcript)
 
         if argv[0] == 'bash' and Path(argv[1]).is_file():
             self.scripts.append(Path(argv[1]).read_bytes())

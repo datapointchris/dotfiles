@@ -84,7 +84,7 @@ def behind(item: DesiredItem, home: Path) -> bool | None:
     upstream = run(['git', '-C', str(checkout), 'rev-parse', '@{u}'], output=Output.QUIET)
     if not (local.ok and upstream.ok):
         return None
-    return local.transcript.strip() != upstream.transcript.strip()
+    return local.stdout.strip() != upstream.stdout.strip()
 
 
 def pull(item: DesiredItem, home: Path) -> Result:
@@ -116,7 +116,7 @@ def _commit(checkout: Path) -> str:
     `update.sh` snapshotted commits either side of every one of these.
     """
     read = run(['git', '-C', str(checkout), 'rev-parse', '--short', 'HEAD'], output=Output.QUIET)
-    return read.transcript.strip() if read.ok else 'unknown'
+    return read.stdout.strip() if read.ok else 'unknown'
 
 
 def clone(item: DesiredItem, home: Path) -> Result:

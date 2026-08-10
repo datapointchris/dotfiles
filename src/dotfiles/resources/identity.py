@@ -78,7 +78,7 @@ class IdentityResource:
 
 def _config(field: str) -> str:
     result = run(['git', 'config', '--global', '--get', field], output=Output.QUIET)
-    return result.transcript.strip() if result.ok else ''
+    return result.stdout.strip() if result.ok else ''
 
 
 RESOURCE = IdentityResource()

@@ -58,6 +58,31 @@ def test_quiet_keeps_the_output_and_stream_keeps_it_too() -> None:
     assert run(['echo', 'marker'], output=Output.DATA).transcript == ''
 
 
+def test_stdout_is_the_answer_alone_and_the_transcript_still_carries_both() -> None:
+    """The field a parser reads must not carry the other stream.
+
+    `brew outdated --formula --quiet` listed one package while brew's auto-update
+    wrote a `✔︎` progress line to stderr, and the currency row — which parsed the
+    merged transcript field by field — reported `2 brew package(s) behind:
+    ollama, ✔︎`. The transcript keeps both on purpose: `go install`'s TLS error
+    behind the work firewall is the whole diagnosis and arrives on stderr.
+    """
+    said = run(['sh', '-c', 'echo answer; echo noise >&2'], output=Output.QUIET)
+
+    assert said.stdout.split() == ['answer']
+    assert 'noise' in said.transcript
+
+
+def test_a_stream_run_offers_no_separated_answer_rather_than_a_merged_one() -> None:
+    """STREAM redirects stderr into the stdout pipe deliberately, so there is no
+    answer to hand back. Empty parses to nothing; merged text parses to something
+    wrong, which is the failure this field exists to prevent."""
+    said = run(['sh', '-c', 'echo answer; echo noise >&2'], output=Output.STREAM)
+
+    assert said.stdout == ''
+    assert 'answer' in said.transcript
+
+
 def test_the_environment_is_added_to_rather_than_replacing_the_inherited_one() -> None:
     """A child still needs PATH. Handing it only the overrides is how a script
     that shells out to `git` stops finding git."""

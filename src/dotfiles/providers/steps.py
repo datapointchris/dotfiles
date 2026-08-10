@@ -84,7 +84,7 @@ def _finder_info(path: Path) -> bool:
     mechanism as well as the attribute.
     """
     listed = run(['xattr', str(path)], output=Output.QUIET)
-    return listed.ok and FINDER_INFO in listed.transcript.split()
+    return listed.ok and FINDER_INFO in listed.stdout.split()
 
 
 def _show_library() -> Result:
@@ -142,7 +142,7 @@ def _xcode_licence() -> State:
         return State(Verdict.MATCHED, 'no Xcode command line tools, so no licence to accept')
 
     selected = run(['xcode-select', '-p'], output=Output.QUIET)
-    if selected.ok and selected.transcript.strip() == COMMAND_LINE_TOOLS:
+    if selected.ok and selected.stdout.strip() == COMMAND_LINE_TOOLS:
         return State(Verdict.MATCHED, 'Command Line Tools only, which needs no licence')
 
     return State(Verdict.UNKNOWN, 'needs root to read (xcodebuild -license status)', repair=Repair.NONE)
@@ -262,7 +262,7 @@ def _windows_fonts_directory() -> Path | None:
     if not WINDOWS_MOUNT.is_dir():
         return None
     asked = run(['cmd.exe', '/C', 'echo %USERNAME%'], output=Output.QUIET)
-    user = asked.transcript.strip() if asked.ok else ''
+    user = asked.stdout.strip() if asked.ok else ''
     if not user or user == '%USERNAME%':
         return None
     return WINDOWS_MOUNT / 'Users' / user / 'AppData' / 'Local' / 'Microsoft' / 'Windows' / 'Fonts'

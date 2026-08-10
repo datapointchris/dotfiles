@@ -200,7 +200,7 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     result = run(command, output=Output.QUIET)
     if not result.ok:
         return None
-    lines = [line.strip() for line in result.transcript.splitlines() if line.strip()]
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     if name == 'mas':
         # `mas list` prints `<id>  <Name>  (<version>)`, and the id is the only
         # field an entry can be matched on: the App Store title and the bundle
@@ -350,8 +350,8 @@ def reported_version(executable: str) -> str | None:
         return None
     for probe in VERSION_PROBES:
         result = run([found, probe], output=Output.QUIET, timeout=PROBE_SECONDS)
-        if result.ok and result.transcript.strip():
-            return result.transcript.strip()
+        if result.ok and result.stdout.strip():
+            return result.stdout.strip()
     return None
 
 

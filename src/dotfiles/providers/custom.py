@@ -434,7 +434,7 @@ def _verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: P
     effects.run(['gpg', '--quiet', '--import', str(keys)], env=environment, output=Output.QUIET)
 
     listed = effects.run(['gpg', '--list-keys', '--with-colons'], env=environment, output=Output.QUIET)
-    fingerprints = {line.split(':')[9] for line in listed.transcript.splitlines() if line.startswith('fpr:')}
+    fingerprints = {line.split(':')[9] for line in listed.stdout.splitlines() if line.startswith('fpr:')}
     if not fingerprints & set(MOUNT_S3_KEYS):
         return 'the mount-s3 signing key is not one of the pinned fingerprints'
 

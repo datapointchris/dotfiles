@@ -75,6 +75,24 @@ class Completed:
     returncode: int
     transcript: str
 
+    stdout: str = ''
+    """The answer alone. Parse this; `transcript` is for reading, not for parsing.
+
+    `transcript` is stdout and stderr concatenated, which is right for a diagnosis
+    — `go install`'s TLS error and npm's warnings are the whole point of keeping
+    it — and wrong for anything that reads fields out of lines. `brew outdated
+    --formula --quiet` printed one package and brew's auto-update wrote a `✔︎`
+    progress line to stderr, so the currency row reported `2 brew package(s)
+    behind: ollama, ✔︎`. `syspkg._names` already carried a guard against apt's
+    chatter, which is the same disease treated one manager at a time.
+
+    Only `Output.QUIET` separates the two. `Output.STREAM` redirects stderr into
+    the stdout pipe deliberately, so there is no separated answer to give and this
+    stays empty rather than handing back the merged text under a name that says
+    otherwise — empty parses to nothing, where merged text parses to something
+    wrong.
+    """
+
     @property
     def ok(self) -> bool:
         return self.returncode == 0
@@ -175,6 +193,7 @@ def run(
             command=argv,
             returncode=captured.returncode,
             transcript=captured.stdout + captured.stderr,
+            stdout=captured.stdout,
         )
 
     lines: list[str] = []

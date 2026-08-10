@@ -225,7 +225,7 @@ def outdated(manager: str) -> frozenset[str] | None:
         return None
     listed = effects.run(list(command), output=Output.QUIET)
     if listed.ok:
-        return _names(listed.transcript)
+        return _names(listed.stdout)
     silent = not listed.transcript.strip()
     return frozenset() if manager in EMPTY_IS_NONZERO and silent else None
 

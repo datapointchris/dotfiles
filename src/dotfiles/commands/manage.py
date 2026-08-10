@@ -112,13 +112,13 @@ def update(
         error('pull refused, and git said why above — a self-update never forces or resets')
         raise typer.Exit(pulled.returncode)
 
-    was, now = before.transcript.strip(), bridge.git('rev-parse', 'HEAD').transcript.strip()
+    was, now = before.stdout.strip(), bridge.git('rev-parse', 'HEAD').stdout.strip()
     if was == now:
         success('already up to date')
         return
 
-    incoming = bridge.git('log', '--oneline', f'{was}..{now}').transcript.splitlines()
-    changed = bridge.git('diff', '--name-only', was, now).transcript.splitlines()
+    incoming = bridge.git('log', '--oneline', f'{was}..{now}').stdout.splitlines()
+    changed = bridge.git('diff', '--name-only', was, now).stdout.splitlines()
     deployed = [path for path in changed if path.startswith(DEPLOYED_PREFIXES)]
     dependencies = [path for path in changed if path in DEPENDENCY_FILES]
 
