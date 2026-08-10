@@ -342,7 +342,7 @@ real type system, a test suite, and dependencies it can declare.
 | Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |
 | Package query narrowing | `src/dotfiles/resolve.py` — the plan is narrowed before a provider sees it |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
-| Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
+| Package declarations | `src/dotfiles/catalog.py` — one typed row per entry; a section's schema is its dataclass |
 | Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |
 | Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |

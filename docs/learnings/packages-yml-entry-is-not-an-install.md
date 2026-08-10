@@ -42,9 +42,9 @@ each, so they cannot diverge again.
   and none of the second is dead configuration that reads as working.
 - A phase that consumes what an earlier phase installed is an ordering *and* a PATH
   dependency — the installers never read `.zshenv`.
-- Test the invariant, not the instance: `tests/install/test_parse_packages.py` now
-  asserts that any manifest with `npm_globals` also installs fnm, so a new manifest
-  is covered the day it is written.
+- Test the invariant, not the instance: `tests/resolver/test_validate.py` asserts
+  that any manifest with `npm_globals` also installs fnm, read off disk rather than
+  from a list of names, so a new manifest is covered the day it is written.
 - Anything the bundler only exercises for one tool (a zip layout, a naming scheme)
   should be a function with unit tests, not an inline block that has never met a
   second shape.

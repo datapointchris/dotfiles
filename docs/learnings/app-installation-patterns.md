@@ -75,7 +75,7 @@ git_uv_tools:
     tracks_branch: true    # publishes no releases, so there is no tag to pin
 ```
 
-The pin is not optional. Each of these tools carries `pyselfupdate`, which reads uv's receipt to decide what it may do: a git requirement with no `rev=` is treated as a dev checkout, so the tool never prints an update notice and refuses to reinstall over itself. And once a receipt *is* pinned, `uv tool upgrade` re-resolves the pin to the same commit forever and reports "already at latest" however far behind it is. See `install/common/lib/uv-git-tools.sh`.
+The pin is not optional. Each of these tools carries `pyselfupdate`, which reads uv's receipt to decide what it may do: a git requirement with no `rev=` is treated as a dev checkout, so the tool never prints an update notice and refuses to reinstall over itself. And once a receipt *is* pinned, `uv tool upgrade` re-resolves the pin to the same commit forever and reports "already at latest" however far behind it is. See `src/dotfiles/providers/uvtool.py`, which carries that reasoning now.
 
 **Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then pushed to GitHub — and a release must be cut for the fleet to pick them up, since the install tracks release tags rather than `main`.
 

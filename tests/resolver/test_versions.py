@@ -47,6 +47,17 @@ def test_output_with_no_version_in_it_parses_to_nothing(output: str) -> None:
         ('1.22.9', '1.23', False),
         ('0.49', '0.50', False),
         ('2.0.0', '1.99.99', True),
+        # Numeric, not lexical: 10 sorts before 9 as text and after it as a number.
+        ('1.10.0', '1.9.0', True),
+        ('1.9.0', '1.10.0', False),
+        # Release *tags*, not tool output. A monorepo component carries its prefix
+        # on both sides of the comparison and a formula-style tag carries its name,
+        # so the numbers have to be found inside the tag rather than at the front
+        # of it.
+        ('cli/v1.2.1', 'cli/v1.2.0', True),
+        ('cli/v1.2.0', 'cli/v1.2.1', False),
+        ('jq-1.8.3', 'jq-1.8.2', True),
+        ('jq-1.8.2', 'jq-1.8.3', False),
     ],
 )
 def test_a_floor_is_met_or_not(current: str, floor: str, expected: bool) -> None:

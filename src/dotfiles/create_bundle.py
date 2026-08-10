@@ -608,10 +608,9 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     """Stage every declared Go tool's prebuilt binary.
 
     The asset is named by `providers.gotool.stage`, which is the same module that
-    installs from it. The bundler used to expand `binary_pattern` itself, out of a
-    pipe-joined `parse_packages` row, while the installer looked for whatever came
-    out — so a pattern change moved one side and not the other, silently, on the
-    one machine the bundle exists for.
+    installs from it. Naming it here as well is what went wrong before: the two
+    sides expanded `binary_pattern` off different data, so a pattern change moved
+    one and not the other, silently, on the one machine the bundle exists for.
     """
     log.info('Downloading Go tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))

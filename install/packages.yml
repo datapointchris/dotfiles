@@ -2,7 +2,7 @@
 # Universal Package Configuration
 # ================================================================
 # Single source of truth for ALL packages across ALL platforms
-# Parsed by src/dotfiles/parse_packages.py
+# Parsed by src/dotfiles/catalog.py into typed rows, one dataclass per section
 
 # ================================================================
 # MACOS HOMEBREW TAPS
@@ -28,7 +28,7 @@ system_packages:
   #   (no tier)    -> workstation-only extras (the default). Kept off servers.
   # A manifest picks its tier via `system_packages: core|workstation`; a
   # workstation request installs everything, a core request only the tagged
-  # base. See src/dotfiles/parse_packages.py:get_system_packages.
+  # base. The tier is honoured by Subscription.wants in src/dotfiles/machine.py.
 
   # Essential Build Tools
   - name: build-essential
@@ -1700,7 +1700,8 @@ macos_casks:
 # NOTES
 # ================================================================
 # This file is the single source of truth for package installation
-# Parsed by src/dotfiles/parse_packages.py (Python)
+# Parsed by src/dotfiles/catalog.py; a section's schema is its dataclass, so an
+# unknown key is refused at load time rather than silently ignored
 #
 # Package Management Philosophy:
 #   - System packages: apt/pacman/brew for OS-level tools (see system_packages)
@@ -1733,20 +1734,13 @@ macos_casks:
 #   go_tools and Rust because it declared cargo_packages, so a row here carries a
 #   version floor and nothing else. registry.ToolchainProvider does the deriving.
 #
-# Parsing examples:
-#   python parse_packages.py --type=system --manager=apt
-#   python parse_packages.py --type=cargo
-#   python parse_packages.py --type=npm
-#   python parse_packages.py --type=go
-#   python parse_packages.py --type=mas
-#   python parse_packages.py --type=flatpak
-#   python parse_packages.py --type=macos-casks
-#   python parse_packages.py --get=runtimes.node.version
+# Reading this file:
+#   dotfiles packages list --help    # the selectors, which are not listed here
+#   dotfiles packages show <name>    # one entry's declaration, resolved
 #
-# To update all packages:
-#   task update           # Updates everything
-#   task macos:update-all # macOS-specific
-#   task wsl:update-all   # WSL-specific
+# Installing what it declares:
+#   dotfiles apply                   # creates what is missing, upgrades what is
+#                                    # behind; `task update` is an alias for it
 #
 # To add new packages:
 #   1. Add to this file under the appropriate section

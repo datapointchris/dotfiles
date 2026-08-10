@@ -1,11 +1,4 @@
-"""What each machine should have, and the parity that proves the answer unchanged.
-
-The parity half is step 4's gate: `resolve` replaces 28 bash call sites into
-`parse_packages`, and the only thing that makes that safe is asserting the two
-agree on every machine and every section before the old side is deleted. It goes
-when `parse_packages` does, at the end of the step — a test comparing against a
-deleted module is a test asserting nothing.
-"""
+"""What each machine should have."""
 
 from __future__ import annotations
 
@@ -18,14 +11,11 @@ import yaml
 from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
-from dotfiles import parse_packages
 from dotfiles import registry
 from dotfiles import resolve
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MACHINES = machines.names(REPO_ROOT)
-
-NAME_SUBSCRIBED = ('go_tools', 'github_releases', 'custom_installers', 'cargo_packages', 'npm_globals', 'uv_tools', 'git_uv_tools')
 
 
 @pytest.fixture(scope='module')
@@ -46,74 +36,9 @@ def synthetic(tmp_path: Path, packages: dict[str, Any], manifest: dict[str, Any]
     return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Parity with the bash-facing filters — the step 4 gate
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize('name', MACHINES)
-@pytest.mark.parametrize('section', NAME_SUBSCRIBED)
-def test_the_resolver_selects_what_the_old_filters_selected(declaration: catalog.Catalog, name: str, section: str) -> None:
-    data = parse_packages.load_packages()
-    old = {
-        'go_tools': lambda m: [row.split('|')[0] for row in parse_packages.filter_go_packages_by_manifest(data, m, 'name_package')],
-        'github_releases': lambda m: parse_packages.filter_github_releases_by_manifest(data, m),
-        'custom_installers': lambda m: parse_packages.filter_custom_installers_by_manifest(data, m),
-        'cargo_packages': lambda m: parse_packages.filter_cargo_packages_by_manifest(data, m),
-        'npm_globals': lambda m: parse_packages.filter_npm_packages_by_manifest(data, m),
-        'uv_tools': lambda m: parse_packages.filter_uv_packages_by_manifest(data, m),
-        'git_uv_tools': lambda m: [row.split('|')[0] for row in parse_packages.filter_git_uv_packages_by_manifest(data, m)],
-    }
-
-    # `available()` is deliberately not a subscription — a Mac is not declining
-    # awscli, it cannot have it — and the old filter is handed a manifest with no
-    # coordinates in it, so it can express membership and nothing else. Narrowing
-    # the expectation the same way is what keeps this a parity check on the part
-    # the two halves both answer.
-    coordinates = machines.load(name).coordinates
-    subscribed = set(old[section](parse_packages.load_manifest(name)))
-    expected = sorted(
-        entry.name for entry in declaration.section(section) if entry.name in subscribed and resolve.available(entry, coordinates)
-    )
-    actual = sorted(item.name for item in planned(declaration, name).for_section(section))
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize('name', MACHINES)
-def test_the_resolver_selects_the_system_packages_the_old_filter_selected(declaration: catalog.Catalog, name: str) -> None:
-    """Per installer, not per manager: reading `pacman` as one installer drops the
-    five `aur:` entries and reading `brew` as one drops 21 casks and 12 mas apps.
-
-    `get_system_packages` was never the whole of the old filter on WSL. The
-    pipeline there was `parse_packages | grep -v -E '<the docker family>'`, so the
-    exclusion belongs on this side of the comparison — reproduced from the
-    declaration rather than by naming the packages, since naming them is how the
-    grep and the list came to disagree in the first place.
-    """
-    data = parse_packages.load_packages()
-    machine = machines.load(name, REPO_ROOT)
-    plan = resolve.resolve(declaration, machine)
-    tier = machine.subscription('system_packages').tier or 'workstation'
-
-    for installer in machine.coordinates.installers:
-        grepped_out = {
-            entry.package_for(installer)
-            for entry in declaration.section('system_packages')
-            if isinstance(entry, catalog.SystemPackage) and entry.excludes_host == str(machine.coordinates.host)
-        }
-        expected = sorted(set(parse_packages.get_system_packages(data, installer, tier)) - grepped_out)
-        actual = sorted(
-            item.entry.package_for(installer)
-            for item in plan.for_section('system_packages')
-            if isinstance(item.entry, catalog.SystemPackage) and item.entry.package_for(installer)
-        )
-        assert actual == expected, installer
-
-
 def test_wsl_plans_none_of_the_docker_packages_its_apt_repo_does_not_carry(declaration: catalog.Catalog) -> None:
-    """The direct assertion the parity gate above cannot make, since it now reads
-    the same field the resolver does.
+    """The expectation is built from the declaration rather than from the field
+    the resolver reads, so a resolver that had this wrong could not agree with it.
 
     The docker family lives in Docker's own apt repository, which nothing in the
     installer configures — so on WSL `apt install docker-ce` fails, and `check`

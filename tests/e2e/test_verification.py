@@ -10,12 +10,11 @@ code, so `test_every_declared_tool_is_installed` asserted a single `returncode =
 is a named red line here — `test_the_machine_carries_what_it_declares[wsl-…-go/sesh]`
 — and the tools that *are* fine stay quiet.
 
-**The declaration decides what is checked.** `verifiable_commands` in
-`parse_packages` covered the sections that helper knew, and everything else was
-written out by hand at the bottom of the script — which is how it went on
-asserting `menu` and `theme-sync` for months after both were deleted, and never
-checked taplo, fnm, broot or atuin at all. `resolve.resolve` answers for the whole
-plan.
+**The declaration decides what is checked.** The shell script this replaced asked
+a helper that knew only some of the sections, and wrote everything else out by
+hand at the bottom — which is how it went on asserting `menu` and `theme-sync` for
+months after both were deleted, and never checked taplo, fnm, broot or atuin at
+all. `resolve.resolve` answers for the whole plan.
 
 **The observation stays independent.** Expectations come from the resolver;
 whether something is *there* is asked of the container in shell, and nothing here

@@ -919,9 +919,8 @@ def declared_items(environment: Environment) -> tuple[DesiredItem, ...]:
     The resolver's answer rather than a reading of `packages.yml`, for the same
     reason `base_plan` takes it: a tool added or removed changes what is verified
     with no list here to update. It is also strictly wider than the shell script
-    this replaced, which read `parse_packages --verify-commands` and so saw only
-    the sections that helper named — 141 checks against the 214 items Arch
-    resolves.
+    this replaced, which asked a helper that knew only some of the sections — 141
+    checks against the 214 items Arch resolves.
 
     Sorted so the parameter ids a run prints are stable between collections.
     """

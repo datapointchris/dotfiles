@@ -39,7 +39,7 @@ along it. `MACHINE` is the only value chosen by hand anywhere in the repo; it
 selects a manifest, and the manifest declares the coordinates.
 
 `install/` handles provisioning — manifests in `install/manifests/`,
-the Windows-side scripts WSL needs in `install/wsl/`, shared libraries in
+the Windows-side scripts WSL needs in `install/wsl/`, what those scripts share in
 `install/common/lib/`, and every package in `install/packages.yml`.
 
 Some tools are developed elsewhere and installed from GitHub rather than living

@@ -18,6 +18,8 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import validate
 from dotfiles.validate import Severity
 
@@ -150,6 +152,38 @@ def test_an_entry_nothing_can_install_is_an_error(tmp_path: Path, section: str, 
     assert module in ' '.join(messages(found, Severity.ERROR))
 
 
+@pytest.mark.parametrize('section', ['cargo_packages', 'go_tools'])
+def test_a_pattern_with_no_repo_to_expand_it_against_is_a_warning(tmp_path: Path, section: str) -> None:
+    """Both sections carrying the pair, because the check derives them from the
+    dataclasses rather than naming one — a version that looked only at cargo would
+    pass this for `go_tools` while the field sat unread there too.
+
+    A warning, not an error: the tool installs by whatever its manager does
+    without a prebuilt asset, so the declaration is degraded rather than broken.
+    """
+    entry: dict[str, Any] = {'name': 'ghost', 'binary_pattern': 'ghost-{version}.tar.gz'}
+    if section == 'go_tools':
+        entry['package'] = 'example.com/ghost'
+    root = tree(tmp_path, packages={section: [entry]}, manifests={'test-machine': {**LINUX, section: ['ghost']}})
+
+    found = validate.declaration(root)
+
+    assert messages(found, Severity.WARNING) == ["'ghost' declares binary_pattern but no github_repo, so no asset URL can be built"]
+    assert validate.errors(found) == ()
+
+
+def test_a_pattern_beside_its_repo_reports_nothing(tmp_path: Path) -> None:
+    """The pair is the legal shape, and the overwhelmingly common one — a check
+    firing on it would bury every real finding under the whole cargo section."""
+    root = tree(
+        tmp_path,
+        packages={'cargo_packages': [{'name': 'ghost', 'github_repo': 'someone/ghost', 'binary_pattern': 'ghost-{version}.tar.gz'}]},
+        manifests={'test-machine': {**LINUX, 'cargo_packages': ['ghost']}},
+    )
+
+    assert validate.declaration(root) == ()
+
+
 def test_an_entry_no_manifest_names_is_a_warning_not_an_error(tmp_path: Path) -> None:
     """An entry lands in `packages.yml` before the manifest that wants it, and a
     tool being staged is not a broken declaration."""
@@ -202,3 +236,93 @@ def test_the_real_declaration_is_sound() -> None:
     """The gate the pre-commit hook is. Every synthetic test above proves a check
     fires; this proves the repo passes all of them at once."""
     assert validate.errors(validate.declaration()) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariants the loader cannot express
+#
+# `catalog.load` refuses a key no reader consumes, which is a per-entry rule. Each
+# of these is a relation — between two fields, or between a manifest and the
+# declaration — and none is expressible as a dataclass field, which is why they
+# are asserted rather than loaded. Against the real files, because a synthetic
+# fixture proves a check works and only the shipped declaration proves the repo
+# passes it.
+#
+# Every read goes through the loader the tool reads with, never `yaml.safe_load`:
+# a manifest key is not always its section name and does not always take a list,
+# so a test with its own parser is a second copy of a grammar `machine.py` owns.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+MARKERS = ('install/packages.yml', 'src/dotfiles', 'pyproject.toml')
+"""Files that together identify a dotfiles checkout and nothing else."""
+
+
+def checkout() -> Path:
+    """The checkout these tests came from, found by what is in it.
+
+    Not `paths.REPO_ROOT`, which lets `$DOTFILES_DIR` win unconditionally: that is
+    right for the CLI, which must deploy the machine's repo from wherever it is
+    invoked, and wrong here. `.zshenv` pins that variable to ~/dotfiles, so a run
+    from a worktree would assert against main's declaration while reporting on the
+    branch — green against files the branch never touched.
+
+    Anchored on markers rather than counting parents, because a count is a claim
+    about where this file sits and moving it one directory changes the answer in
+    silence.
+    """
+    for candidate in Path(__file__).resolve().parents:
+        if all((candidate / marker).exists() for marker in MARKERS):
+            return candidate
+    raise RuntimeError(f'no dotfiles checkout above {__file__}: none of its parents holds {", ".join(MARKERS)}')
+
+
+CHECKOUT = checkout()
+
+
+def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
+    """The node toolchain is planned because npm globals are, and it needs fnm to
+    put a node on PATH at all — which is how a WSL offline install died with
+    `fnm not found`.
+
+    Asked of every manifest on disk rather than a list of names, so one added
+    tomorrow is covered the day it is written, and asked through `subscription`
+    because that is the function production narrows with: whether a machine wants
+    an entry is a question about coverage, tier and spelling that only the loader
+    answers the same way twice.
+    """
+    declaration = catalog.load(CHECKOUT / 'install' / 'packages.yml')
+    fnm = declaration.find('cargo_packages', 'fnm')
+    assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
+
+    for name in machines.names(CHECKOUT):
+        machine = machines.load(name, CHECKOUT)
+        npm = machine.subscription('npm_globals')
+        if not any(npm.wants(entry) for entry in declaration.section('npm_globals')):
+            continue
+        assert machine.subscription('cargo_packages').wants(fnm), (
+            f'{name} installs npm globals but not fnm, so the node toolchain cannot resolve'
+        )
+
+
+def test_fnm_overrides_both_target_triples() -> None:
+    """fnm names its assets after the OS word — `fnm-linux.zip`, `fnm-macos.zip` —
+    so the bare `{target}` triple 404s on every bundle build.
+
+    Both overrides or neither is the assertion: a linux-only override leaves the
+    macOS bundle broken and vice versa, and one of the two going missing is the
+    shape that survives a careless edit.
+    """
+    fnm = catalog.load(CHECKOUT / 'install' / 'packages.yml').find('cargo_packages', 'fnm')
+
+    assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
+    assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
+
+
+def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> None:
+    """The real-declaration half of `_unbuildable_assets`, which is a warning and
+    so is not covered by `test_the_real_declaration_is_sound` above — that one
+    folds to errors alone."""
+    unbuildable = [finding for finding in validate.declaration(CHECKOUT) if 'binary_pattern' in finding.message]
+
+    assert unbuildable == []
