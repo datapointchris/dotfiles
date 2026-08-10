@@ -106,9 +106,14 @@ github: ANONYMOUS — 60 API calls/hour, release failures are suspect (gh auth l
 ```
 
 Add `--environment <name>` for one — never `-k`, which matches test names too and
-quietly selects all four. The environments are independent containers, so four
-shells running one `--environment` each finish in the time of the slowest rather
-than the sum. `--keep` leaves containers up; `--reuse` and `--installed` imply it.
+quietly selects all four. `--keep` leaves containers up; `--reuse` and
+`--installed` imply it.
+
+**One full install at a time.** A second checkout can no longer collide with the
+first — `harness.container_name` suffixes a linked worktree's — but that buys the
+cheap rungs in parallel, not four installs at once. An install is twenty to thirty
+minutes of one box's CPU and disk, and running them concurrently makes the box
+unusable for the duration.
 
 `eza -1 tests/install/e2e/` is what is left: the cases that cannot be a container
 at all, needing a real macOS account, the current machine, or a real firewall.
