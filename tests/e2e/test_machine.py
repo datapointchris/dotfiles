@@ -206,7 +206,19 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
     `tests/install/test_offline_versions.py` asserts the mechanism directly and
     cheaply; this is the same property observed on a real install, where a path
     that bypassed the short-circuit would show up as a resolution attempt.
+
+    Read off the two sentences the bundle paths actually print. This asserted
+    `'Using cached'` — a phrase nothing in this repo emits and uv stopped printing
+    when the bootstrap moved from `pip install` to a wheelhouse — so it had been
+    failing for a reason that said nothing about versions at all.
+
+    `Checksum verified from offline bundle` is the tighter of the two and is why
+    it is required rather than either-or: the digest is looked up by the asset
+    *filename*, which is built from the bundled version, so a tag resolved online
+    would name a file `checksums.txt` has no line for and fall through to the
+    network instead of printing this.
     """
     if not machine.environment.offline:
         pytest.skip('only the offline environment installs from a bundle')
-    assert 'Using cached' in machine.install_log
+    assert 'Checksum verified from offline bundle' in machine.install_log
+    assert 'installed from the bundle at' in machine.install_log
