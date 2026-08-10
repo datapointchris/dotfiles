@@ -55,12 +55,12 @@ changes, which is most of the time.
     uv run pytest tests/e2e --docker --installed      # reuse the install too
 
 The four environments are independent containers and no longer share a name with
-another checkout's — `harness.container_name` suffixes a linked worktree's. What
-that buys is a second checkout running the cheap rungs while the first holds a
-container, not four full installs at once: an install is twenty to thirty minutes
-of one box's CPU and disk, and running them concurrently makes the box unusable
-for the duration. One full install at a time; parallelism belongs at the rungs
-that cost seconds.
+another checkout's — `harness.container_name` suffixes a linked worktree's. Two
+full installs at once is measured and fine (2026-08-10), which is what a second
+worktree working its own environment costs. Beyond two the limit is the box
+rather than the rig, and no number above it is claimed here: an install is twenty
+to thirty minutes of CPU and disk, so every environment at once makes the machine
+unusable for the duration.
 
 Pick an environment with `--environment`, never `-k`. `-k` filters on test names
 as well as parameter ids, so `-k offline` also matches

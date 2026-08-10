@@ -10,6 +10,7 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import subprocess
 from pathlib import Path
 
@@ -389,6 +390,53 @@ class TestGithubCredential:
         harness.start(ARCHLINUX, 'dotfiles-e2e-pretend')
 
         assert '--env' in started[0] and 'GITHUB_TOKEN' in started[0]
+
+
+class TestBaseImage:
+    """One image per distinct base, and the digest is the whole of what makes two
+    bases distinct. Environments differing only in how the install is *run*
+    against the base — firewalled, carrying a bundle — share the one it produces.
+    """
+
+    @staticmethod
+    def _identified(monkeypatch: pytest.MonkeyPatch) -> None:
+        """`docker image inspect` answered from the image name it was asked about,
+        so a shared source image yields one id the way a real shared one does and
+        two different images stay two."""
+        monkeypatch.setattr(harness, 'docker', lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, f'sha256:{args[-1]}\n', ''))
+
+    def test_offline_and_restricted_are_one_image(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Same source image and same manifest, so the plan through the base stage
+        is the same plan. The environment name in the tag was the only thing making
+        them two, and what it bought was building and storing the base twice."""
+        self._identified(monkeypatch)
+
+        assert harness.base_tag(harness.OFFLINE) == harness.base_tag(harness.RESTRICTED)
+
+    def test_a_different_source_image_is_a_different_base(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`wsl-ubuntu:26.04` is Microsoft's published rootfs, which is why that
+        environment does not install onto `ubuntu:26.04` — so the same manifest
+        over each is two machines, however alike the declaration."""
+        self._identified(monkeypatch)
+
+        assert harness.base_tag(harness.WSL) != harness.base_tag(harness.OFFLINE)
+
+    def test_a_different_manifest_is_a_different_base(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Held against the same source image, so it is the declaration under test
+        and not the two facts moving together."""
+        self._identified(monkeypatch)
+        elsewhere = dc.replace(harness.OFFLINE, name='pretend', manifest='archlinux-personal-workstation')
+
+        assert harness.base_tag(elsewhere) != harness.base_tag(harness.OFFLINE)
+
+    def test_the_tag_names_no_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """What the sharing rests on: a tag two environments both reach cannot
+        carry either name, and one that did would read as an ownership the ledger
+        deliberately declines to record."""
+        self._identified(monkeypatch)
+
+        for environment in ENVIRONMENTS:
+            assert environment.name not in harness.base_tag(environment)
 
 
 def _never_called(*args: object, **kwargs: object) -> object:

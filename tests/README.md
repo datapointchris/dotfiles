@@ -97,13 +97,17 @@ already says the Rust toolchain is wanted when `cargo_packages` resolve, so
 only the part no section declares: an OS with a package manager, curl, git and
 unzip.
 
-The base is tagged `dotfiles-e2e-base:<env>-<digest>`, where the digest covers the
+The base is tagged `dotfiles-e2e-base:<digest>`, where the digest covers the
 resolved plan at or below that stage plus the source image's id — so a comment
 edit in `packages.yml` does not rebuild multiple GB and a manifest that drops a
-package does. It is rebuilt anyway after two weeks, because the digest cannot see
-which versions the distro shipped. `$XDG_CACHE_HOME/dotfiles/e2e-bases.json`
-records what each tag holds; docker's store is the storage, and that file is what
-makes the tags explicable and prunable.
+package does. The digest is the whole tag, so two environments differing only in
+how the install is *run* against the base share one image: `offline` and
+`restricted` declare the same manifest over the same source image, and naming
+each in its own tag built and stored that base twice. It is rebuilt anyway after
+two weeks, because the digest cannot see which versions the distro shipped.
+`$XDG_CACHE_HOME/dotfiles/e2e-bases.json` records what each tag holds — the
+source image and manifest that made it, never which environment asked first —
+and docker's store is the storage.
 
 `test_harness.py` is everything decidable without starting anything: the network
 derivation, the environment definitions, the exec script. `test_container.py`

@@ -831,7 +831,16 @@ def base_digest(environment: Environment) -> str:
 
 
 def base_tag(environment: Environment) -> str:
-    return f'{BASE_REPOSITORY}:{environment.name}-{base_digest(environment)}'
+    """The digest alone, so environments resolving to the same base share one image.
+
+    The environment's name was in front of it, and was the only thing separating
+    `offline` from `restricted`: identical source image, identical manifest,
+    therefore identical digest and the same multi-GB image built and stored twice.
+    What an environment *is* beyond that — firewalled, carrying a bundle, expected
+    to converge — decides how the install is run against the base, never what the
+    base contains, and `base_digest` already says so in the sentence above.
+    """
+    return f'{BASE_REPOSITORY}:{base_digest(environment)}'
 
 
 BASE_MAX_AGE = dt.timedelta(days=14)
@@ -866,10 +875,16 @@ def ledger() -> dict[str, dict[str, object]]:
 
 
 def record_base(tag: str, environment: Environment, built: dt.datetime) -> None:
-    """Write what this tag holds, so a later run can explain and prune it."""
+    """Write what this tag holds, so a later run can explain and prune it.
+
+    What *made* the image, never which environment asked for it. A tag is reached
+    by every environment whose digest matches, so recording the one that happened
+    to build it first would read as an ownership it does not have — and would be
+    wrong the moment the other one reuses it.
+    """
     entries = ledger()
     entries[tag] = {
-        'environment': environment.name,
+        'source_image': environment.image,
         'manifest': environment.manifest,
         'through': BASE_STAGE,
         'built': built.isoformat(),
@@ -912,6 +927,12 @@ def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
     tested whatever code was mounted when the container was created, so a fix made
     since reported as still broken. A base carries OS state; the code arrives on
     every run.
+
+    The builder container is named per environment even though the tag is not, so
+    two environments sharing a base and running concurrently cannot `docker rm -f`
+    each other's build. They both build it and both commit the same tag, which
+    wastes one build and corrupts nothing; sequentially — which is what one pytest
+    session does — the second finds the first fresh and skips it.
     """
     tag = base_tag(environment)
     stamp = now or dt.datetime.now(dt.UTC)
