@@ -89,6 +89,10 @@ The split to hold to is mechanism versus values: mounting a Windows share is a W
 
 Windows Git Bash cannot follow symlinks across the WSL boundary, so `install/wsl/sync-windows-shell.sh` copies the files instead and writes the `.bashrc` that loads them. The load order is the `SHELL_FILES` array in that script, which is also its copy manifest. The generated `.bashrc` sources each file separately: a broken file then costs only itself and names itself on the way out. An earlier version concatenated everything into one `combined.sh` for startup speed, which measured at ~0.1ms of saved file opens against a ~60ms startup, and turned one syntax error into a shell with no aliases or functions at all.
 
+`~/.env` crosses with them, for the same reason `local.sh` does: there is no `dotfiles env apply` on the Windows side, and since the coordinates split the WSL files read their machine-specific values out of that file rather than carrying them. `$winchris` is the one that shows — a literal export until the employee ID left the repo, and now derived from `WINDOWS_USER`, which nothing else on that side supplies.
+
+The sync is a `windows-shell` row in `install/system.yml` narrowed to `host: wsl`, so `dotfiles apply` performs it and `dotfiles check` reports a Windows tree that has fallen behind. Its observer runs the same script with `--check`, which renders the whole tree into a scratch directory and diffs it — the list that decides the answer is the list that does the work, where a second copy of it in Python would report a newly added file converged forever. Neither half compares a file the render did not write, because staging deliberately never deletes `local.sh` or `~/.env`: the Windows copy may be the only one left.
+
 ## What a machine is, and who says so
 
 Nothing detects it. `MACHINE` is the one hand-chosen value; it selects a

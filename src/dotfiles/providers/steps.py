@@ -5,9 +5,10 @@ screenshot directory existing is a directory existing. The Xcode licence is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
-asking Windows. The scheduled check is a systemd user timer or a LaunchAgent, and
-lives in `providers/schedule.py` because it is the only one long enough to crowd
-the others out.
+asking Windows, and the Git Bash shell tree beside it is a directory on the other
+side of a filesystem boundary that only this machine can see. The scheduled check
+is a systemd user timer or a LaunchAgent, and lives in `providers/schedule.py`
+because it is the only one long enough to crowd the others out.
 
 This is the shape `custom_installers` settled on and for the same reason: the
 declaration names *which*, this module says *how*, and a test asserts the two
@@ -30,6 +31,7 @@ import stat
 from collections.abc import Callable
 from pathlib import Path
 
+from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.privilege import Privilege
@@ -250,6 +252,8 @@ FONTCONFIG = Path('.config') / 'fontconfig' / 'fonts.conf'
 
 WINDOWS_MOUNT = Path('/mnt/c')
 
+SYNC_WINDOWS_SHELL = paths.INSTALL_DIR / 'wsl' / 'sync-windows-shell.sh'
+
 
 def _windows_fonts_directory() -> Path | None:
     """Where Windows puts a non-admin user's fonts, or None if it cannot be found.
@@ -296,6 +300,37 @@ def _windows_fonts() -> State:
     if target.is_file() and target.read_text() == _fontconfig_content(fonts):
         return State(Verdict.MATCHED)
     return State(Verdict.MISSING if not target.is_file() else Verdict.STALE, f'{target} does not point at {fonts}')
+
+
+def _windows_shell() -> State:
+    """Whether the Git Bash tree on the Windows side matches this repo.
+
+    Asked of the sync script rather than reimplemented here. `--check` renders
+    the whole tree into a scratch directory and diffs it against the Windows
+    home, so the list that decides this answer is the same list that does the
+    work — a second copy of it in Python would report a newly added file
+    converged forever.
+
+    Silence means converged, and that covers the two cases where there is
+    nothing to sync: not WSL, and no reachable Windows home. Both are facts
+    about the machine rather than drift, which is the same call `_windows_fonts`
+    makes about a box with no /mnt/c.
+    """
+    checked = run(['bash', str(SYNC_WINDOWS_SHELL), '--check'], output=Output.QUIET)
+    if not checked.ok:
+        return State(Verdict.UNKNOWN, f'{SYNC_WINDOWS_SHELL.name} --check exited {checked.returncode}', repair=Repair.NONE)
+
+    behind = [line for line in checked.stdout.splitlines() if line.strip()]
+    if not behind:
+        return State(Verdict.MATCHED)
+    return State(Verdict.STALE, f'the Windows Git Bash tree is behind this repo: {", ".join(behind)}')
+
+
+def _sync_windows_shell() -> Result:
+    synced = run(['bash', str(SYNC_WINDOWS_SHELL)], output=Output.QUIET)
+    if not synced.ok:
+        return Result(False, f'{SYNC_WINDOWS_SHELL.name} exited {synced.returncode}: {synced.transcript.strip()}')
+    return Result(True, 'the Windows Git Bash tree matches this repo')
 
 
 def _write_fontconfig() -> Result:
@@ -388,6 +423,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'xcode-licence': (_xcode_licence, _accept_xcode_licence),
     'orbstack-docker-plugins': (_orbstack_plugins, _unprivileged(_add_orbstack_plugins)),
     'windows-fonts': (_windows_fonts, _unprivileged(_write_fontconfig)),
+    'windows-shell': (_windows_shell, _unprivileged(_sync_windows_shell)),
     'psql-linked': (_psql_linked, _unprivileged(_link_psql)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""

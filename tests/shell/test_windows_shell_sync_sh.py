@@ -199,3 +199,64 @@ def test_every_declared_file_has_a_source_in_the_repo(windows: Windows) -> None:
     result = sync(windows.home, 'stage_shell_files "$2"', str(windows.staged))
 
     assert 'WARNING' not in result.stdout
+
+
+def test_the_env_file_is_staged_so_the_windows_side_has_the_machine_values(tmp_path: Path) -> None:
+    """$winchris was a literal export until the employee ID left the repo; it now
+    resolves from WINDOWS_USER, which lives in ~/.env and nothing else carries."""
+    source = tmp_path / 'wsl.env'
+    source.write_text('export WINDOWS_USER=600002371\n')
+    home = tmp_path / 'win-home'
+
+    result = sync(home, 'stage_env_file "$2" "$3"', str(home), str(source))
+
+    assert result.ok, result.stderr
+    assert 'WINDOWS_USER=600002371' in (home / '.env').read_text()
+
+
+def test_staging_the_env_is_a_no_op_when_there_is_none(tmp_path: Path) -> None:
+    home = tmp_path / 'win-home'
+    home.mkdir()
+
+    result = sync(home, 'stage_env_file "$2" "$3"', str(home), str(tmp_path / 'absent.env'))
+
+    assert result.ok
+    assert not (home / '.env').exists()
+
+
+def test_a_freshly_synced_tree_reports_no_drift(tmp_path: Path) -> None:
+    """The check has to be silent on a converged machine or every apply resyncs."""
+    home = tmp_path / 'win-home'
+
+    rendered = sync(home, 'render_windows_home "$2" >/dev/null', str(home))
+    assert rendered.ok, rendered.stderr
+
+    drift = sync(home, 'windows_home_drift "$2"', str(home))
+
+    assert drift.ok, drift.stderr
+    assert drift.stdout.strip() == ''
+
+
+def test_drift_names_the_file_that_is_missing_or_behind(tmp_path: Path) -> None:
+    home = tmp_path / 'win-home'
+    assert sync(home, 'render_windows_home "$2" >/dev/null', str(home)).ok
+
+    (home / '.local' / 'shell' / 'aliases.sh').unlink()
+    (home / '.inputrc').write_text('# edited on the Windows side\n')
+
+    drift = sync(home, 'windows_home_drift "$2"', str(home))
+
+    assert 'missing: .local/shell/aliases.sh' in drift.stdout
+    assert 'stale: .inputrc' in drift.stdout
+
+
+def test_a_windows_only_overlay_is_not_drift(tmp_path: Path) -> None:
+    """Staging never deletes local.sh or ~/.env, so a Windows copy the WSL side no
+    longer has must not read as being behind — it is the only copy left."""
+    home = tmp_path / 'win-home'
+    assert sync(home, 'render_windows_home "$2" >/dev/null', str(home)).ok
+    (home / '.local' / 'shell' / 'local.sh').write_text('echo out-of-repo\n')
+
+    drift = sync(home, 'windows_home_drift "$2"', str(home))
+
+    assert drift.stdout.strip() == ''

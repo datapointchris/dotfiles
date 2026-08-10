@@ -98,6 +98,26 @@ stage_local_file() {
   echo "  Copied: local.sh"
 }
 
+# The generated ~/.env, staged for the same reason as local.sh and with the same
+# never-delete rule: the Windows side runs no `dotfiles env apply` of its own,
+# and the .bashrc has always sourced this file.
+#
+# Not optional decoration. Since the employee ID left the repo, the WSL files
+# read their machine-specific values from here rather than carrying them —
+# $winchris is `[[ -n "$WINDOWS_USER" ]] && export ...` where it used to be a
+# literal. Without ~/.env on this side, Git Bash loses winchris, and update-tldr
+# and aws-login both resolve their Windows paths through it.
+stage_env_file() {
+  local dest="$1"
+  local src="${2:-$HOME/.env}"
+
+  [[ -f "$src" ]] || return 0
+
+  mkdir -p "$dest"
+  cp "$src" "$dest/.env"
+  echo "  Copied: .env"
+}
+
 write_bashrc() {
   local win_home="$1"
 
@@ -160,45 +180,89 @@ BASHRC_TAIL
   } >"$win_home/.bashrc"
 }
 
+# Everything the Windows side gets, written into one directory.
+#
+# Factored out of main so `--check` can render into a scratch tree and diff it.
+# That is the whole point: the list that decides whether the Windows side is
+# behind is the list that puts the files there, so a file added to one is added
+# to the other and cannot be reported converged forever.
+render_windows_home() {
+  local dest="$1"
+
+  mkdir -p "$dest/.config/git"
+
+  stage_shell_files "$dest/.local/shell"
+  stage_local_file "$dest/.local/shell"
+  stage_env_file "$dest"
+
+  write_bashrc "$dest"
+  echo "  Wrote: .bashrc"
+
+  # Git for Windows reads ~/.config/git/config natively, so this needs no
+  # include wiring on the Windows side. The Windows ~/.gitconfig is left alone:
+  # it carries that machine's identity, which this repo never ships.
+  cp "$DOTFILES_DIR/configs/common/.config/git/common.gitconfig" "$dest/.config/git/config"
+  echo "  Copied: .config/git/config"
+
+  # Reuse the comprehensive readline config used on Mac/Linux:
+  # vi mode, case-insensitive + colored completion, Shift-Tab cycling, UTF-8, history search.
+  cp "$DOTFILES_DIR/configs/common/.config/readline/inputrc" "$dest/.inputrc"
+  echo "  Copied: .inputrc"
+}
+
+# What a sync would change, one line per file, and silence when there is nothing.
+#
+# Only files the render produced are compared, which is what keeps the two
+# never-delete rules from reading as drift: a local.sh or a ~/.env this side no
+# longer has is deliberately left alone on the Windows side, and a tree holding
+# one this render did not write is not behind.
+windows_home_drift() {
+  local live="$1" rendered relative
+
+  rendered=$(mktemp -d)
+  render_windows_home "$rendered" >/dev/null
+
+  while IFS= read -r -d '' file; do
+    relative="${file#"$rendered"/}"
+    if [[ ! -e "$live/$relative" ]]; then
+      echo "missing: $relative"
+    elif ! cmp -s "$file" "$live/$relative"; then
+      echo "stale: $relative"
+    fi
+  done < <(find "$rendered" -type f -print0)
+
+  rm -rf "$rendered"
+}
+
 main() {
+  local mode="${1:-sync}"
+
   # Skip if not in WSL
   if ! is_wsl; then
-    echo "Not in WSL - skipping Windows shell sync"
+    [[ "$mode" == "--check" ]] || echo "Not in WSL - skipping Windows shell sync"
     return 0
   fi
 
   local win_home
   win_home=$(get_windows_home)
   if [[ -z "$win_home" ]] || [[ ! -d "$win_home" ]]; then
-    echo "Could not determine Windows home directory - skipping sync"
+    [[ "$mode" == "--check" ]] || echo "Could not determine Windows home directory - skipping sync"
     return 0
   fi
 
-  local win_shell_dir="$win_home/.local/shell"
-  local shared_gitconfig="$DOTFILES_DIR/configs/common/.config/git/common.gitconfig"
+  # Drift on stdout and nothing else, so the caller reads an empty answer as
+  # converged. Exit status stays 0 either way: being behind is a report, not a
+  # failure of the check.
+  if [[ "$mode" == "--check" ]]; then
+    windows_home_drift "$win_home"
+    return 0
+  fi
 
   echo "Syncing shell files to Windows Git Bash..."
   echo "  Windows home: $win_home"
-  echo "  Target: $win_shell_dir"
+  echo "  Target: $win_home/.local/shell"
 
-  mkdir -p "$win_home/.config/git"
-
-  stage_shell_files "$win_shell_dir"
-  stage_local_file "$win_shell_dir"
-
-  write_bashrc "$win_home"
-  echo "  Wrote: .bashrc"
-
-  # Git for Windows reads ~/.config/git/config natively, so this needs no
-  # include wiring on the Windows side. The Windows ~/.gitconfig is left alone:
-  # it carries that machine's identity, which this repo never ships.
-  cp "$shared_gitconfig" "$win_home/.config/git/config"
-  echo "  Copied: .config/git/config"
-
-  # Reuse the comprehensive readline config used on Mac/Linux:
-  # vi mode, case-insensitive + colored completion, Shift-Tab cycling, UTF-8, history search.
-  cp "$DOTFILES_DIR/configs/common/.config/readline/inputrc" "$win_home/.inputrc"
-  echo "  Copied: .inputrc"
+  render_windows_home "$win_home"
 
   echo "Windows shell sync complete."
 }

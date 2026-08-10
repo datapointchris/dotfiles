@@ -543,3 +543,9 @@ steps:
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory
     host: wsl
+  # A declared row rather than a task to remember, because the tree is assembled
+  # on this side and only ever executed on the other one: drift in it surfaces
+  # days later, on the one machine with no working shell left to debug from.
+  - name: windows-shell
+    description: The Git Bash shell tree on the Windows side — the shared files, .bashrc, ~/.env
+    host: wsl
