@@ -135,7 +135,7 @@ CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *toolchain.TOOL_PATH_DIRS, *SYSTEM
 
 
 # The agent the measurement used, and not cosmetic: crates.io answers curl's
-# default agent with 403. `install/offline/test-connectivity.sh` carries the same
+# default agent with 403. `dotfiles.network` carries the same
 # constant and the reason — a run that omitted it recorded crates.io as a firewall
 # block, which would have meant bundling all nine cargo tools for nothing. A
 # container re-probe that synthesizes its own request walks into it again, which
@@ -181,7 +181,7 @@ def measured_probes() -> tuple[Probe, ...]:
     """Every row of `install/offline/connectivity-results.txt`.
 
     Derived rather than typed: that file is written by
-    `install/offline/test-connectivity.sh` from packages.yml and the manifest, and
+    `dotfiles network check --output` from the resolved plan, and
     is committed precisely so this does not have to be guessed. A container that
     blocks more than the firewall manufactures failures no machine has, and they
     read as real ones in a log — clone-based installers dying is the shape it

@@ -7,12 +7,15 @@ content of this page, and it described an installer this repo does not use.
 
 ## Find out what is actually blocked
 
-`bash install/offline/test-connectivity.sh` walks every URL the install touches
-and writes a pass/fail line per host to
-`install/offline/connectivity-results.txt`. Run it on the restricted machine
-first: the answer is rarely "the internet is blocked" and usually "GitHub
-release assets are blocked but the API is not", which changes what you need to
-carry in.
+`dotfiles network check` walks every URL the install touches and reports a
+pass/fail line per host. Run it on the restricted machine first: the answer is
+rarely "the internet is blocked" and usually "GitHub release assets are blocked
+but the API is not", which changes what you need to carry in.
+
+Pass `--output install/offline/connectivity-results.txt` to record the run there.
+That path is named rather than defaulted on purpose — every unfirewalled machine
+finds everything reachable, so a default would let a check run anywhere replace
+the one record of what work actually blocks.
 
 The results file is committed deliberately. It is a record of one network's
 behaviour at one time, which is the only way to compare against it after the
