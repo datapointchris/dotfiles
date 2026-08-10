@@ -36,7 +36,7 @@ def a_run(machine='macos-personal-workstation', verb='apply') -> runs.RunRecord:
     hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
     and was therefore never true, and this fixture typing the same word is the
     reason no test noticed."""
-    record = runs.start(machine, verb, flags={'skip': ['system']})
+    record = runs.start(runs.begin(machine, verb), flags={'skip': ['system']})
     record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(observe=1, fetch=1, act=1))
     record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
     record.record_issue('packages/github/yq', 'checksum', 'no checksum published')
@@ -68,7 +68,7 @@ class TestRoundTrip:
             assert set(outcome.timing.phases) <= set(runs.PHASES)
 
     def test_an_outcome_cannot_be_recorded_without_a_timing(self):
-        record = runs.start('m', 'apply')
+        record = runs.start(runs.begin('m', 'apply'))
         with pytest.raises(TypeError):
             record.record_outcome('packages/github/fzf', str(Verdict.MATCHED), 'planned')  # type: ignore[call-arg]
 
@@ -76,7 +76,7 @@ class TestRoundTrip:
         """The record is what leaves the machine when an offline install goes
         wrong, so a failure whose reason lives only in the console is a record
         that cannot answer the one question it was uploaded for."""
-        record = runs.start('m', 'apply')
+        record = runs.start(runs.begin('m', 'apply'))
         record.record_outcome(
             'packages/ghrelease/win32yank',
             str(Verdict.MISSING),
@@ -110,12 +110,12 @@ class TestConvergence:
         assert not a_run().converged
 
     def test_a_run_where_everything_matched_has_converged(self):
-        record = runs.start('m', 'check')
+        record = runs.start(runs.begin('m', 'check'))
         record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
         assert runs.finish(record).converged
 
     def test_a_run_that_changed_something_has_not_converged(self):
-        record = runs.start('m', 'apply')
+        record = runs.start(runs.begin('m', 'apply'))
         record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(act=1))
         assert not runs.finish(record).converged
 
@@ -126,13 +126,13 @@ class TestSpan:
         over, so measuring from here times the walk over an already-collected list
         — which is how an apply that installed 112 things recorded 0.0003s."""
         began = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=4)
-        record = runs.finish(runs.start('m', 'apply', started=began))
+        record = runs.finish(runs.start(runs.begin('m', 'apply', began)))
 
         assert record.duration_seconds > 200
 
     def test_the_file_is_named_after_the_start_not_the_finish(self, runs_dir):
         began = dt.datetime(2026, 8, 10, 14, 0, 0, tzinfo=dt.UTC)
-        path = runs.write(runs.finish(runs.start('wsl-work-workstation', 'apply', started=began)), runs_dir)
+        path = runs.write(runs.finish(runs.start(runs.begin('wsl-work-workstation', 'apply', began))), runs_dir)
 
         assert path.stem == '20260810T140000Z-wsl-work-workstation-apply'
 

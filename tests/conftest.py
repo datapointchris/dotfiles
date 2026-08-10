@@ -147,6 +147,27 @@ reads a unit test may legitimately want and only the second word separates them.
 
 
 @pytest.fixture(autouse=True)
+def logging_is_configured():
+    """Unconfigured structlog writes to stdout, which the suite must never see.
+
+    `main.root` configures it for every real invocation, so production is covered
+    — but a test calling into `effects` or a provider directly never reaches that
+    callback, and structlog's default `PrintLogger` would put debug lines on
+    stdout, where a `--json` assertion is reading. Configured with no event log,
+    so the console sink alone is live and nothing writes a file.
+
+    Per test rather than per session, because a test that exercises `open_log`
+    installs a file handler onto a `tmp_path` that is gone by the next one, and a
+    bound `run_id` outlives the test that bound it. Both are cheap to redo and
+    neither is cheap to debug.
+    """
+    from dotfiles import logging as dotfiles_logging
+
+    dotfiles_logging.configure()
+    dotfiles_logging.clear_run()
+
+
+@pytest.fixture(autouse=True)
 def no_installing_on_this_machine(request, monkeypatch):
     """Refuse a command that would change the box the tests run on.
 

@@ -1,18 +1,23 @@
-"""Readers of the event stream. One measurement, several things done with it.
+"""Where a run's two artefacts are opened and closed. One run, both ends of it.
 
 Before this, everything that wanted to know what a run found called the walk
 itself and printed on the way past — which is why `runs.py` was complete, tested,
 and had no caller for months. Recording is not a feature bolted onto the walk; it
 is one more consumer of what the walk already yields, and it works because the
 walk yields values instead of printing them.
+
+The debug event log is the same job at the other end: `open_log` at the start,
+`keep` at the finish, both taking the one `runs.Identity` that names them. They
+live together because failing to record must never fail the run, and that rule is
+easier to hold in one module than to remember at six call sites.
 """
 
 from __future__ import annotations
 
-import datetime as dt
 from collections.abc import Iterable
 from pathlib import Path
 
+from dotfiles import logging
 from dotfiles import runs
 from dotfiles.event import Event
 from dotfiles.event import Refusal
@@ -21,7 +26,22 @@ from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 
 
-def record(events: Iterable[Event], machine: str, verb: str, started: dt.datetime, flags: dict | None = None) -> runs.RunRecord:
+def open_log(identity: runs.Identity) -> None:
+    """Point the debug stream at this run's file, beside the record it will write.
+
+    Falls back to the console sink alone rather than failing: `$XDG_STATE_HOME`
+    is absent on a fresh machine and read-only in more containers than it should
+    be, and a verb that cannot open a log file has still been asked a question it
+    can answer. Same rule as `keep` and `status.record`.
+    """
+    try:
+        logging.configure(event_log=runs.event_log_path(identity))
+    except OSError:
+        logging.configure()
+    logging.bind_run(identity.id, identity.machine)
+
+
+def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> runs.RunRecord:
     """Accumulate one run's events into the record `dotfiles report` reads.
 
     A `Change` is what was decided and an `Outcome` is what was done, so a `plan`
@@ -30,11 +50,11 @@ def record(events: Iterable[Event], machine: str, verb: str, started: dt.datetim
 
     Timing comes off the event rather than being measured here: the engine is what
     holds the clock, because it is the only thing that knows when observing
-    started and when a write finished. `started` is the same rule applied to the
-    run as a whole — this runs after the last event, so it is the one span nothing
-    in the stream carries and the verb has to hand over.
+    started and when a write finished. The run's own span is the same rule applied
+    one level up — this runs after the last event, so the start is the one moment
+    nothing in the stream carries and the identity has to hold.
     """
-    written = runs.start(machine, verb, flags, started=started)
+    written = runs.start(identity, flags)
     for event in events:
         match event.payload:
             case Change() as change:
@@ -53,7 +73,7 @@ def record(events: Iterable[Event], machine: str, verb: str, started: dt.datetim
     return runs.finish(written)
 
 
-def keep(events: Iterable[Event], machine: str, verb: str, started: dt.datetime, flags: dict | None = None) -> Path | None:
+def keep(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> Path | None:
     """Write the run record and hand back where it landed, or write nothing.
 
     Every verb records, through one function, because recording is a reader of the
@@ -71,7 +91,7 @@ def keep(events: Iterable[Event], machine: str, verb: str, started: dt.datetime,
     `status.record`.
     """
     try:
-        return runs.write(record(events, machine, verb, started, flags))
+        return runs.write(record(events, identity, flags))
     except OSError:
         return None
 

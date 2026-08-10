@@ -12,6 +12,13 @@ work. That vocabulary belongs above this line, not on it.
 
 Everything here is a chokepoint on purpose. A resource that reaches the world
 some other way cannot be tested without the world.
+
+Which is also why the debug event stream is emitted from here and nowhere else.
+The questions asked after a failed install are what did it actually download and
+which step was slow, and both are answered one level *below* the run record — the
+record says an item took nine seconds, and only these lines say which of the four
+commands behind it did. Instrumenting the walk instead would restate the record
+in a second format.
 """
 
 from __future__ import annotations
@@ -22,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -29,6 +37,9 @@ from enum import StrEnum
 from pathlib import Path
 
 from dotfiles import github_release
+from dotfiles import logging
+
+log = logging.get_logger('effects')
 
 
 class Output(StrEnum):
@@ -151,6 +162,27 @@ def run(
     if show is not None and output is not Output.STREAM:
         raise ValueError('only a streaming command echoes anything, so there is nothing for `show` to filter')
 
+    began = time.perf_counter()
+
+    def answered(completed: Completed) -> Completed:
+        """Every command, on the way out, whichever of the five exits it took.
+
+        The transcript only when the command failed. A successful `apt-get
+        install` is thousands of lines nobody will ever read, and keeping all of
+        them is how a debug stream turns into something people switch off — while
+        a failed one is the entire reason the stream exists.
+        """
+        fields = {
+            'argv': list(argv),
+            'returncode': completed.returncode,
+            'seconds': round(time.perf_counter() - began, 3),
+            'cwd': directory,
+        }
+        if not completed.ok:
+            fields['transcript'] = completed.transcript
+        log.debug('ran', **fields)
+        return completed
+
     def missing(problem: OSError) -> Completed:
         """A command the kernel would not start, reported as a shell reports one.
 
@@ -163,7 +195,7 @@ def run(
         Windows under it, and one unrunnable binary makes every package
         unmeasurable.
         """
-        return Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}')
+        return answered(Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}'))
 
     def expired(problem: subprocess.TimeoutExpired) -> Completed:
         """A timeout is a non-answer, in the shape every caller already handles.
@@ -171,7 +203,7 @@ def run(
         `subprocess.run` has already killed the child by the time this raises, so
         nothing is left running behind the report.
         """
-        return Completed(command=argv, returncode=TIMED_OUT, transcript=f'{argv[0]} did not answer within {problem.timeout:g}s')
+        return answered(Completed(command=argv, returncode=TIMED_OUT, transcript=f'{argv[0]} did not answer within {problem.timeout:g}s'))
 
     if output is Output.DATA:
         try:
@@ -180,7 +212,7 @@ def run(
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
             return expired(problem)
-        return Completed(command=argv, returncode=completed.returncode, transcript='')
+        return answered(Completed(command=argv, returncode=completed.returncode, transcript=''))
 
     if output is Output.QUIET:
         try:
@@ -189,11 +221,13 @@ def run(
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
             return expired(problem)
-        return Completed(
-            command=argv,
-            returncode=captured.returncode,
-            transcript=captured.stdout + captured.stderr,
-            stdout=captured.stdout,
+        return answered(
+            Completed(
+                command=argv,
+                returncode=captured.returncode,
+                transcript=captured.stdout + captured.stderr,
+                stdout=captured.stdout,
+            )
         )
 
     lines: list[str] = []
@@ -219,7 +253,7 @@ def run(
     except OSError as problem:
         return missing(problem)
 
-    return Completed(command=argv, returncode=process.returncode, transcript=''.join(lines))
+    return answered(Completed(command=argv, returncode=process.returncode, transcript=''.join(lines)))
 
 
 def fetch(url: str, destination: Path, *, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
@@ -230,7 +264,22 @@ def fetch(url: str, destination: Path, *, repo: str = '', tag: str = '', asset_n
     runs it under a system python3 this package cannot import into. One
     implementation, reachable from both.
     """
-    return github_release.download_asset(url, destination, repo, tag, asset_name)
+    began = time.perf_counter()
+    ok = github_release.download_asset(url, destination, repo, tag, asset_name)
+    log.debug(
+        'fetched',
+        url=url,
+        destination=str(destination),
+        repo=repo,
+        tag=tag,
+        ok=ok,
+        seconds=round(time.perf_counter() - began, 3),
+        # The literal answer to "what did it actually download", which a machine
+        # behind a captive portal needs most: a fetch that reports success having
+        # written a 900-byte login page looks identical to one that worked.
+        bytes=destination.stat().st_size if destination.exists() else 0,
+    )
+    return ok
 
 
 def unpack(archive: Path, into: Path) -> bool:
@@ -253,20 +302,37 @@ def unpack(archive: Path, into: Path) -> bool:
     execute bit. `tar -xf` and `unzip` both preserve the mode, so this is a
     regression the shell never had.
     """
+    began = time.perf_counter()
+
+    def extracted(container: str, ok: bool) -> bool:
+        log.debug(
+            'unpacked',
+            archive=str(archive),
+            into=str(into),
+            container=container,
+            ok=ok,
+            seconds=round(time.perf_counter() - began, 3),
+        )
+        return ok
+
     into.mkdir(parents=True, exist_ok=True)
     try:
         if zipfile.is_zipfile(archive):
-            with zipfile.ZipFile(archive) as bundle:
-                for member in bundle.infolist():
-                    restore_mode(member, bundle.extract(member, into))
-            return True
+            with zipfile.ZipFile(archive) as zipped:
+                for member in zipped.infolist():
+                    restore_mode(member, zipped.extract(member, into))
+            return extracted('zip', True)
         if tarfile.is_tarfile(archive):
-            with tarfile.open(archive) as bundle:
-                bundle.extractall(into, filter='data')
-            return True
+            # A name of its own, not the zip's reused. One name bound to two
+            # container types reads as one thing and typechecks as neither.
+            with tarfile.open(archive) as tarred:
+                tarred.extractall(into, filter='data')
+            return extracted('tar', True)
     except (OSError, tarfile.TarError, zipfile.BadZipFile):
-        return False
-    return False
+        return extracted('unreadable', False)
+    # Neither sniffer recognised it, which is a different failure from one that
+    # threw halfway through and worth being able to tell apart in the stream.
+    return extracted('unrecognised', False)
 
 
 def restore_mode(member: zipfile.ZipInfo, landed: str) -> None:
@@ -298,13 +364,16 @@ def restore_mode(member: zipfile.ZipInfo, landed: str) -> None:
 
 def gunzip(source: Path, destination: Path) -> bool:
     """Decompress a bare gzipped file — a compressed binary, not an archive."""
+    began = time.perf_counter()
     destination.parent.mkdir(parents=True, exist_ok=True)
+    ok = True
     try:
         with gzip.open(source, 'rb') as compressed, destination.open('wb') as plain:
             shutil.copyfileobj(compressed, plain)
     except (OSError, gzip.BadGzipFile):
-        return False
-    return True
+        ok = False
+    log.debug('gunzipped', source=str(source), destination=str(destination), ok=ok, seconds=round(time.perf_counter() - began, 3))
+    return ok
 
 
 def make_executable(path: Path) -> None:

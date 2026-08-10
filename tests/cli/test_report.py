@@ -44,7 +44,8 @@ def change(item: str, verdict: Verdict) -> Change:
 
 
 def recorded(runs_dir: Path, *events: Event, verb: str = 'apply') -> Path:
-    return runs.write(sinks.record(events, MACHINE, verb, BEGAN), runs_dir=runs_dir)
+    identity = runs.Identity(id='abc123abc123', machine=MACHINE, verb=verb, started=BEGAN)
+    return runs.write(sinks.record(events, identity), runs_dir=runs_dir)
 
 
 def test_the_rendering_names_the_file_it_came_from(runs_dir: Path) -> None:

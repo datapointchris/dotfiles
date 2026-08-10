@@ -2,10 +2,13 @@
 
 Every run writes a record. It is state by data.md's test — it survives the run,
 nobody authored it, and deleting it changes what the tool can answer — so it
-lands under `$XDG_STATE_HOME/dotfiles/runs/`. `event_log_path` names the debug
-stream meant to sit beside it, and nothing calls it: no verb passes an
-`event_log` to `logging.configure`, so the record is the only thing a run leaves
-behind and a failure's reason has to survive on it.
+lands under `$XDG_STATE_HOME/dotfiles/runs/`, beside the debug event stream for
+the same run that `event_log_path` names.
+
+**An `Identity` is settled before the run does anything**, because the two files
+are written at opposite ends of it — the log is opened first and the record is
+assembled from the event stream last — and they have to agree on a filename and
+an id. Neither end is allowed to invent one.
 
 **Timing is a field, not something parsed back out of the logs.** A statistic
 that has to grep a log stream is a statistic nobody computes, so every outcome
@@ -19,7 +22,8 @@ directory over Syncthing.
 **Records are kept indefinitely.** There is no retention bound and no prune verb,
 because the value of the history is that it goes back: "is this getting slower"
 cannot be answered by a window that drops the comparison. A record is a few
-kilobytes of JSON, so the directory grows at a rate nothing needs to manage.
+kilobytes of JSON and its event log a few tens, and the directory is its own
+Syncthing folder — so the fleet manages what accumulates there, not this module.
 """
 
 import dataclasses
@@ -47,6 +51,40 @@ def _now() -> dt.datetime:
 
 def _stamp(moment: dt.datetime) -> str:
     return moment.isoformat().replace('+00:00', 'Z')
+
+
+@dataclasses.dataclass(frozen=True)
+class Identity:
+    """Who a run is, settled before it starts.
+
+    Not part of the record — it is what both of a run's files are named and
+    stamped from, and the record is only one of them.
+    """
+
+    id: str
+    machine: str
+    verb: str
+    started: dt.datetime
+
+    @property
+    def stem(self) -> str:
+        """The name both files share, minus the extension.
+
+        Sorts chronologically as text, so listing needs no parsing. Basic-format
+        ISO 8601 because a colon is legal in a POSIX filename and a nuisance in
+        every shell that later has to name one.
+        """
+        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.machine}-{self.verb}'
+
+
+def begin(machine: str, verb: str, started: dt.datetime | None = None) -> Identity:
+    """`started` is for a verb that has work to do before it knows its machine.
+
+    `apply` validates the declaration and reports a stray branch before
+    `Session.resolve` can say what machine this is, and that work is part of the
+    run whether or not a name existed to file it under yet.
+    """
+    return Identity(id=uuid.uuid4().hex[:12], machine=machine, verb=verb, started=started or _now())
 
 
 @dataclasses.dataclass
@@ -150,20 +188,20 @@ class Stopwatch:
         )
 
 
-def start(machine: str, verb: str, flags: dict | None = None, started: dt.datetime | None = None) -> RunRecord:
-    """`started` is for a record assembled once the run is over.
+def start(identity: Identity, flags: dict | None = None) -> RunRecord:
+    """Everything naming the run comes off the identity, nothing is minted here.
 
-    A record built from an event stream is built at the end, so stamping "now"
-    there measures how long it took to walk a list that had already been
-    collected — a WSL apply that installed 112 things recorded 0.0003 seconds, and
-    named its file after the moment it finished rather than the moment it began.
+    A record built from an event stream is built at the end, so a `uuid` and a
+    "now" taken here would name a different run from the log opened at the start
+    and time the walk over an already-collected list — a WSL apply that installed
+    112 things recorded 0.0003 seconds that way.
     """
     return RunRecord(
-        id=uuid.uuid4().hex[:12],
-        machine=machine,
-        verb=verb,
+        id=identity.id,
+        machine=identity.machine,
+        verb=identity.verb,
         flags=flags or {},
-        started_at=_stamp(started or _now()),
+        started_at=_stamp(identity.started),
     )
 
 
@@ -175,17 +213,14 @@ def finish(record: RunRecord) -> RunRecord:
 
 
 def record_filename(record: RunRecord) -> str:
-    """Sorts chronologically as text, so listing needs no parsing.
-
-    Basic-format ISO 8601 because a colon is legal in a POSIX filename and a
-    nuisance in every shell that later has to name one.
-    """
+    """Through `Identity.stem`, so a record written at the end of a run cannot
+    land on a different name from the log opened at the start of it."""
     started = dt.datetime.fromisoformat(record.started_at.replace('Z', '+00:00'))
-    return f'{started.strftime("%Y%m%dT%H%M%SZ")}-{record.machine}-{record.verb}'
+    return Identity(record.id, record.machine, record.verb, started).stem
 
 
-def event_log_path(record: RunRecord, runs_dir: Path | None = None) -> Path:
-    return (runs_dir or paths.RUNS_DIR) / f'{record_filename(record)}.jsonl'
+def event_log_path(identity: Identity, runs_dir: Path | None = None) -> Path:
+    return (runs_dir or paths.RUNS_DIR) / f'{identity.stem}.jsonl'
 
 
 def write(record: RunRecord, runs_dir: Path | None = None) -> Path:

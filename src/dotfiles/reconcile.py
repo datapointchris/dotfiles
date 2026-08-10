@@ -29,6 +29,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles import registry
+from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import validate
 from dotfiles.event import Event
@@ -341,6 +342,13 @@ def apply_machine(
         warn(str(refused))
         return ExitCode.ISSUE
 
+    # Here rather than at the top, because a run is filed under the machine it
+    # ran on and nothing before this knows which that is. `began` is carried down
+    # so the span still covers the declaration gate, which is part of the run
+    # whether or not there was a name to file it under yet.
+    identity = runs.begin(session.machine_name, 'apply', began)
+    sinks.open_log(identity)
+
     if not selection.resources:
         warn('nothing selected')
         return ExitCode.USAGE
@@ -393,7 +401,7 @@ def apply_machine(
     # Both halves, which is what `sinks.record` is built for: a `Change` is what
     # was decided and an `Outcome` is what was done, so a record of an `apply`
     # carries the pair where a record of a `plan` carries verdicts alone.
-    recorded = sinks.keep([*planned, *performed], session.machine_name, 'apply', began, flags or {})
+    recorded = sinks.keep([*planned, *performed], identity, flags or {})
 
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
     if unsuccessful:

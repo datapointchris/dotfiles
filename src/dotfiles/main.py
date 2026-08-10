@@ -14,12 +14,12 @@ subcommand name, so declaring `--machine` on the group turns
 
 from __future__ import annotations
 
-import datetime as dt
-
 import typer
 
 from dotfiles import engine
+from dotfiles import logging
 from dotfiles import reconcile
+from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import status
 from dotfiles.commands import machines
@@ -71,6 +71,11 @@ def root(
     version: bool = typer.Option(False, '--version', '-V', callback=_version, is_eager=True, help='Show the version'),
 ) -> None:
     """Nothing but `--version` belongs here — see the module docstring."""
+    # Except this, which is not a knob: unconfigured structlog logs through a
+    # PrintLogger onto *stdout*, which would put diagnostics in the channel
+    # `--json` owns. A recording verb calls `sinks.open_log` afterwards to add the
+    # file sink; every other command gets the console one and stops there.
+    logging.configure()
 
 
 SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
@@ -119,15 +124,16 @@ def plan(
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
     """
-    began = dt.datetime.now(dt.UTC)
     skipped = _skipped(skip)
     named = Session.resolve(machine).machine_name
+    identity = runs.begin(named, 'plan')
+    sinks.open_log(identity)
     events = reconcile.survey(skipped, machine, refresh=refresh)
     results = reconcile.plan_machine(events)
-    sinks.keep(events, named, 'plan', began, {'skip': sorted(skipped)})
+    sinks.keep(events, identity, {'skip': sorted(skipped)})
 
     if as_json:
-        emit_json(status.document(results, named, dt.datetime.now(dt.UTC), verb='plan'))
+        emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
         for result in results:
             render_result(result)
@@ -153,11 +159,13 @@ def check(
     Exits 3 when it finds something, and never 1.
     """
     skipped = _skipped(skip)
-    when = dt.datetime.now(dt.UTC)
     checked_machine = Session.resolve(machine).machine_name
+    identity = runs.begin(checked_machine, 'check')
+    when = identity.started
+    sinks.open_log(identity)
     events = reconcile.survey(skipped, machine, refresh=refresh)
     results = reconcile.check_machine(events, skip=skipped)
-    sinks.keep(events, checked_machine, 'check', when, {'skip': sorted(skipped)})
+    sinks.keep(events, identity, {'skip': sorted(skipped)})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge

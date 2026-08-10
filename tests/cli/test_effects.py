@@ -118,3 +118,61 @@ def test_streaming_refuses_a_deadline() -> None:
     not observe one anyway — so this is refused instead of silently ignored."""
     with pytest.raises(ValueError, match='no deadline'):
         run(['echo', 'hi'], output=Output.STREAM, timeout=1)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The debug event stream, which is emitted from here and nowhere else
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def logged(caplog) -> list[dict]:
+    """Every `ran` line this test produced, as the fields it carries.
+
+    Off `record.msg`, which is where `wrap_for_formatter` leaves the whole event
+    dict — structlog hands stdlib one positional argument rather than setting an
+    attribute per key, so `getattr(record, 'argv')` finds nothing.
+    """
+    return [record.msg for record in caplog.records if isinstance(record.msg, dict) and record.msg.get('event') == 'ran']
+
+
+def test_every_command_is_logged_with_what_it_cost(caplog) -> None:
+    """The record says an item took nine seconds; only this says which of the four
+    commands behind it did. That is the whole reason the stream is emitted from
+    the chokepoint rather than from the walk."""
+    with caplog.at_level('DEBUG'):
+        run(['true'], output=Output.QUIET)
+
+    line = logged(caplog)[0]
+    assert line['argv'] == ['true']
+    assert line['returncode'] == 0
+    assert line['seconds'] >= 0
+
+
+def test_a_successful_command_does_not_keep_its_transcript(caplog) -> None:
+    """A successful `apt-get install` is thousands of lines nobody will read, and
+    keeping every one is how a debug stream becomes something people switch off."""
+    with caplog.at_level('DEBUG'):
+        run(['echo', 'a lot of output'], output=Output.QUIET)
+
+    assert 'transcript' not in logged(caplog)[0]
+
+
+def test_a_failed_command_keeps_its_transcript(caplog) -> None:
+    """The one case the stream exists for. `dotfiles report` carries the provider's
+    one-line reason; what the command actually said is only ever here."""
+    with caplog.at_level('DEBUG'):
+        run(['sh', '-c', 'echo what went wrong >&2; exit 3'], output=Output.QUIET)
+
+    line = logged(caplog)[0]
+    assert line['returncode'] == 3
+    assert 'what went wrong' in line['transcript']
+
+
+@pytest.mark.parametrize('output', list(Output))
+def test_a_command_that_would_not_start_is_still_logged(output: Output, caplog) -> None:
+    """`missing` and `expired` return without touching the normal exits, so a run
+    instrumented only on the happy paths loses exactly the commands worth seeing."""
+    with caplog.at_level('DEBUG'):
+        run(['definitely-not-a-real-binary-xyz'], output=output)
+
+    assert logged(caplog)[0]['returncode'] == NOT_FOUND

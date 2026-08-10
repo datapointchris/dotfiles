@@ -14,7 +14,7 @@ their readers are:
 | Artefact | Written by | Read by |
 | --- | --- | --- |
 | `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
-| `runs/<id>.jsonl` | nobody yet — see below | a person debugging one failure |
+| `runs/<id>.jsonl` | every `plan`, `check` and `apply` | a person debugging one failure |
 | `status.json` | every `check` | another machine; the bundle builder reads `plan --json` |
 | `nudge` | every `check` | zsh, at every prompt |
 
@@ -27,14 +27,22 @@ no fork at all.
 
 ## The run record
 
-One file per run today: a JSON record of what happened. The full debug event
-stream is meant to sit beside it and does not, which is the section after this.
+Two files per run under one stem: a JSON record of what happened, and the full
+debug stream beside it.
 
-**`sinks.keep` is the only thing that drives it**, and every verb calls it, because
-recording is a reader of the event stream rather than a step each verb has to
-remember. It swallows an `OSError` on purpose — `$XDG_STATE_HOME` is a Syncthing
-folder on the fleet and absent on a fresh machine, and neither is a reason for a
-verb to fail a question it answered.
+**A `runs.Identity` is settled before the run starts**, because the two files are
+written at opposite ends of it — `sinks.open_log` opens the stream first,
+`sinks.keep` assembles the record from the event stream last — and they have to
+agree on a filename and an id. Neither end is allowed to mint one. That is what
+lets `run_id` in the log select exactly the lines belonging to the record beside
+it, and what stopped the record from timing the loop over an already-collected
+list and naming its file after the moment the run finished.
+
+**Both ends swallow an `OSError` on purpose.** `$XDG_STATE_HOME` is a Syncthing
+folder on the fleet, absent on a fresh machine and read-only in more containers
+than it should be; a verb that cannot open a log has still been asked a question
+it can answer, so it falls back to the console sink and carries on. Same rule as
+`status.record`.
 
 **The verb hands over when the run began.** A record assembled from an event
 stream is assembled once the last event is in, so a timestamp taken there measures
@@ -64,15 +72,32 @@ across the items would be inventing a number — and each item's row carries wha
 acting on it cost. The finer `fetch`/`verify`/`extract` breakdown is a provider's
 to write and no consumer reads it yet.
 
-**The event stream is built and nothing opens it.** `logging.configure` takes an
-`event_log` and `runs.event_log_path` names one, but the only caller of either is
-`tests/install/test_logging.py`, so no machine has ever written a `.jsonl`. The
-design stands: the questions asked after a failed install — what did it actually
-download, which step was slow — are answerable only if the detail was recorded
-while nobody wanted it, which is why everything is emitted at debug and the file
-sink keeps all of it whatever `LOG_LEVEL` says, moving only the console threshold.
-Until a verb passes the path in, a failed item's reason reaches the record and
-nowhere else, which is why `Outcome.message` is on the record at all.
+## The event stream is emitted from `effects` and nowhere else
+
+The questions asked after a failed install — what did it actually download, which
+step was slow — are answerable only if the detail was recorded while nobody wanted
+it. So everything is emitted at debug and the file sink keeps all of it whatever
+`LOG_LEVEL` says; that variable moves the console threshold and nothing else.
+
+**Both are below the record, which is why the walk is not instrumented.**
+`effects` is already the one module that touches the world outside the process, so
+a line in `run`, `fetch`, `unpack` and `gunzip` covers every subprocess, download
+and extraction there is. The record says an item took nine seconds; only these
+lines say which of the four commands behind it did. Logging the walk instead would
+restate the record — address, verdict, action and per-phase timings are already
+there — in a second format that then has to agree with the first.
+
+**A command's transcript is kept only when it failed.** A successful `apt-get
+install` is thousands of lines nobody will read, and keeping every one is how a
+debug stream turns into something people switch off; a failed one is the entire
+reason the stream exists. The record still carries the provider's one-line
+`Outcome.message`, which is what survives being uploaded off the machine — the
+stream is what stays behind and says what the command actually printed.
+
+Measured on a converged Arch workstation: a read-only `check` makes 77 calls
+through `effects` and writes about 25KB. The scheduled check runs every six hours
+(`schedule.INTERVAL_SECONDS`), and the state directory is its own Syncthing
+folder, so the fleet keeps the history and no verb here prunes it.
 
 `dotfiles report` is how the records are asked about, and `--help` lists the
 verbs. The one that shaped the format is `stats`: it totals time per address
