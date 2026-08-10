@@ -77,8 +77,7 @@ content of its own. Three rules keep it that way:
   tldr or cheat's universe. The alternative surfaces thirty backup tools you do not have.
 - **Metadata lives once; content is pulled live.** The registry stores *why you would want it*
   (description, tags, why_use). What it *is* comes live from `--help`, `type`, or the
-  tldr/cheat page. `toolbox check` guards registry ↔ PATH ↔ disk so nothing lives in two
-  places and drifts.
+  tldr/cheat page, so nothing lives in two places and drifts.
 - **Tags are the discovery contract.** Search is biased to name and tags. A missing result
   means a missing tag, not a change to the search tool.
 

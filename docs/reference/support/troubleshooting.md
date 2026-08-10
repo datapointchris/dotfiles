@@ -5,7 +5,6 @@
 ```sh
 dotfiles plan        # symlink health and package-manifest drift
 dotfiles packages check   # declared in packages.yml but not installed
-toolbox check        # registry vs PATH vs disk
 ```
 
 Between them these answer most of "why isn't this working", and they answer it
