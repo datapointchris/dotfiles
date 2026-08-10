@@ -143,7 +143,11 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
     moving it is a change to both.
     """
     if offline:
-        return Result(False, f'go installs from {GO_DOWNLOAD_URL}, which the offline bundle at {paths.BUNDLE_DIR} does not stage')
+        return Result(
+            False,
+            f'go installs from {GO_DOWNLOAD_URL}, which the offline bundle at {paths.BUNDLE_DIR} does not stage',
+            refused=True,
+        )
 
     release = latest_release()
     if release is None:
@@ -270,7 +274,11 @@ def install_node(home: Path, *, offline: bool) -> Result:
     if shutil.which('fnm') is None:
         return Result(False, "fnm is not on PATH — it ships as a cargo package, so check this machine's cargo_packages")
     if offline:
-        return Result(False, f'fnm downloads Node {NODE_DEFAULT_VERSION} from nodejs.org, which the offline bundle does not stage')
+        return Result(
+            False,
+            f'fnm downloads Node {NODE_DEFAULT_VERSION} from nodejs.org, which the offline bundle does not stage',
+            refused=True,
+        )
 
     directory = os.environ.get('FNM_DIR') or str(home / FNM_HOME)
     for command in (('fnm', 'install', NODE_DEFAULT_VERSION), ('fnm', 'default', NODE_DEFAULT_VERSION)):

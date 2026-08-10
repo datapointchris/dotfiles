@@ -409,6 +409,19 @@ class TestAwscli:
         assert result.ok
         assert fetches.urls == [] and runs.calls == []
 
+    def test_an_absent_aws_offline_is_refused_rather_than_failing_the_run(self, declared, home, bundle, effected, monkeypatch):
+        """Nothing stages the 73MB vendor zip, so an offline machine that never had
+        awscli cannot get one. Refused, because a machine missing a tool its bundle
+        was never built to carry is not a failed install."""
+        reports(monkeypatch, aws=None)
+        runs, fetches = effected()
+
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
+
+        assert not result.ok
+        assert result.refused
+        assert fetches.urls == [] and runs.calls == []
+
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, aws=None)
         stub_binary(home, 'aws')
@@ -483,16 +496,22 @@ class TestMountS3:
 
 
 class TestTerraformLs:
-    def test_offline_reports_it_rather_than_failing_the_phase(self, declared, home, bundle, effected):
+    def test_offline_refuses_it_rather_than_failing_the_stage(self, declared, home, bundle, effected):
         """Served from releases.hashicorp.com, which nothing stages into a bundle.
         The alternative is a machine that cannot finish an install because of a
-        language server."""
+        language server.
+
+        `refused` rather than the `Result(True, ...)` this used to answer. Both keep
+        the stage green, and only one of them stops `apply` printing a tick in front
+        of a sentence saying nothing was installed.
+        """
         _, fetches = effected()
 
         result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX, offline=True)
 
-        assert result.ok
-        assert 'not bundled' in result.detail
+        assert not result.ok
+        assert result.refused
+        assert custom.HASHICORP in result.detail
         assert fetches.urls == []
 
     def test_a_behind_binary_is_downloaded_verified_and_placed(self, declared, home, bundle, effected, monkeypatch):

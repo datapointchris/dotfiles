@@ -302,3 +302,24 @@ def test_repairing_a_runtime_goes_through_the_provider_that_planned_it(
 
     assert outcome.status is OutcomeStatus.DONE
     assert outcome.message == 'uv, from the provider'
+
+
+def test_a_refused_runtime_survives_the_route_as_refused_rather_than_failed(
+    tmp_path: Path, bin_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same route as above, carrying the one field that decides the exit code.
+
+    Eleven of the twelve provider `install` methods translated a `Result` with
+    their own `DONE if ok else FAILED`, so `refused` never reached an `Outcome` for
+    anything but system config. The visible cost was an offline machine reporting
+    itself unconverged over go.dev and rustup.rs — sources its bundle deliberately
+    does not stage, because the tools those runtimes build arrive prebuilt.
+    """
+    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(False, 'nothing stages it', refused=True))
+    live = session(tmp_path, BARE)
+    change = changes(live)[0]
+
+    outcome = toolchains.RESOURCE.perform(live, change, Privilege(offer=False))
+
+    assert outcome.status is OutcomeStatus.REFUSED
+    assert outcome.ok, 'a refusal wrote nothing and must not move the exit code'

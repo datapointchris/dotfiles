@@ -184,12 +184,18 @@ def test_an_unreachable_go_dev_answers_none_rather_than_raising(monkeypatch) -> 
 
 def test_go_offline_says_what_the_bundle_lacks_and_asks_for_nothing(home, bundle, effected) -> None:
     """Nothing stages the Go tarball, so an offline run is refused with the reason
-    rather than left to fail inside a download."""
+    rather than left to fail inside a download.
+
+    `refused`, not merely `not ok`: the Go tools this runtime would build come out
+    of the bundle prebuilt, so an offline machine without it is converged. Counting
+    this as a failure made the offline environment permanently red.
+    """
     runs, fetches = effected()
 
     result = toolchain.install_go(LINUX, Root(), offline=True)
 
     assert not result.ok
+    assert result.refused
     assert str(bundle) in result.detail
     assert fetches.urls == []
 
@@ -302,6 +308,7 @@ def test_rust_offline_says_the_bundle_stages_no_rustup(home, bundle, effected) -
     result = toolchain.install_rust(offline=True)
 
     assert not result.ok
+    assert result.refused
     assert str(bundle) in result.detail
 
 
@@ -346,6 +353,22 @@ def test_node_without_fnm_names_where_fnm_comes_from(home, bundle, effected) -> 
 
     assert not result.ok
     assert 'cargo_packages' in result.detail
+
+
+def test_node_offline_is_refused_because_nodejs_org_is_not_bundled(home, bundle, effected) -> None:
+    """fnm downloads Node from nodejs.org, which nothing stages. Refused rather
+    than failed, for the same reason as Go: an offline machine that never had a
+    Node to download is not a broken install."""
+    fnm = home / '.local' / 'bin' / 'fnm'
+    fnm.write_bytes(b'#!/bin/sh\n')
+    fnm.chmod(0o755)
+    runs, fetches = effected()
+
+    result = toolchain.install_node(home, offline=True)
+
+    assert not result.ok
+    assert result.refused
+    assert runs.calls == [] and fetches.urls == []
 
 
 def test_node_is_installed_and_aliased_where_zshenv_looks_for_it(home, bundle, effected, monkeypatch) -> None:

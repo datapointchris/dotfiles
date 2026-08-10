@@ -211,7 +211,7 @@ class VendoredProvider(CatalogProvider):
         if arrived := self._arrived(change, item):
             return arrived
         result = self.fetch(session, item)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         raise NotImplementedError
@@ -305,7 +305,7 @@ class CargoProvider(CatalogProvider):
         if not isinstance(entry, catalogs.CargoPackage):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a cargo_packages entry')
         result = cargo.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -322,7 +322,7 @@ class GoToolProvider(CatalogProvider):
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
         result = gotool.install(entry, offline=session.offline)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -340,7 +340,7 @@ class NpmProvider(CatalogProvider):
         if not isinstance(entry, catalogs.NpmGlobal):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not an npm_globals entry')
         result = npm.install(entry, offline=session.offline)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -405,7 +405,7 @@ class UvToolProvider(CatalogProvider):
         if not isinstance(entry, catalogs.UvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
         result = uvtool.install(entry, offline=session.offline)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -422,7 +422,7 @@ class GitUvToolProvider(UvToolProvider):
         if not isinstance(entry, catalogs.GitUvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
         result = uvtool.install_git(entry, offline=session.offline)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -520,7 +520,7 @@ class CloneProvider(CatalogProvider):
             return Outcome(change, OutcomeStatus.SKIPPED, f'{landed} appeared since the check')
         else:
             result = clone.clone(item, session.home)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -625,7 +625,7 @@ class TmuxSyncProvider(PluginSyncProvider):
         if reason := pluginsync.blocked(session.home, directory):
             return Outcome(change, OutcomeStatus.REFUSED, f'{reason}, and the stage that supplies it has not')
         result = pluginsync.sync_tmux(session.home, directory)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -656,7 +656,7 @@ class NvimSyncProvider(PluginSyncProvider):
         if not shutil.which('nvim'):
             return Outcome(change, OutcomeStatus.REFUSED, 'neovim is not installed, and the stage that installs it has not')
         result = pluginsync.sync_nvim()
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 def tmux_plugins_dir(session: Session) -> Path | None:
@@ -742,7 +742,7 @@ class ManagerProvider(Provider):
         if not ready.ok:
             return Outcome(change, OutcomeStatus.REFUSED, ready.detail)
         result = syspkg.upgrade(item.name, privilege)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 def _managers_in_use(machine: machines.Machine, planned: tuple[DesiredItem, ...]) -> tuple[tuple[str, str], ...]:
@@ -845,7 +845,7 @@ class ToolchainProvider(Provider):
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         result = self.converge(session, privilege)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
     def converge(self, session: Session, privilege: Privilege) -> providers.Result:
         """Put this runtime on the machine, by whatever means it has.
@@ -980,7 +980,7 @@ class SystemConfigProvider(Provider):
         result = self.repair(entry, privilege)
         if result.refused:
             return Outcome(change, OutcomeStatus.REFUSED, result.detail)
-        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        return Outcome.from_result(change, result)
 
 
 @dc.dataclass(frozen=True, slots=True)

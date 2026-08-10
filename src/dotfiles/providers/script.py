@@ -73,7 +73,11 @@ def run(
         err_console.print(f'{name}: {url}', soft_wrap=True)
         script = staged(name, url, Path(scratch), offline=offline)
         if script is None:
-            return Result(False, unstaged(name, url, offline=offline))
+            # Offline is a refusal and a failed download is not, which is the whole
+            # difference between the two sentences `unstaged` writes: nothing stages
+            # rustup, so an offline run reaching here is the design working, while a
+            # network that would not serve the script is the world saying no.
+            return Result(False, unstaged(name, url, offline=offline), refused=offline)
         completed = effects.run(['bash', str(script), *args], env=dict(env) if env else None, output=Output.STREAM)
 
     if completed.ok:

@@ -29,9 +29,19 @@ class Result:
 
     Distinct from a failure because `apply` exits non-zero on failures, and a row
     waiting on a package an earlier stage could not deliver is not a fault of the
-    run. `pluginsync.blocked` draws the same distinction for TPM, for the same
-    reason: every one of these preconditions is supplied by an earlier stage of
-    the same run.
+    run. `pluginsync.blocked` draws the same distinction for TPM.
+
+    Two shapes qualify, and the second is the one this was widened for. A
+    precondition an earlier stage of the same run was supposed to supply and did
+    not — brew, a system package. And a source this machine structurally cannot
+    reach: an offline run wanting go.dev or rustup.rs, which the bundle
+    deliberately does not stage because the tools those runtimes would build
+    arrive prebuilt instead. The second never becomes true by re-running, which is
+    exactly why reporting it as a failure makes an offline machine permanently
+    unconverged for working as designed.
+
+    What is *not* refused: a bundle missing something the bundler does stage. That
+    is a broken bundle and the run should say so.
     """
 
 

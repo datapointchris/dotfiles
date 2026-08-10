@@ -33,6 +33,7 @@ from collections.abc import Sequence
 from typing import Protocol
 from typing import runtime_checkable
 
+from dotfiles import providers
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
@@ -141,6 +142,23 @@ class Outcome:
     @property
     def ok(self) -> bool:
         return self.status is not OutcomeStatus.FAILED
+
+    @classmethod
+    def from_result(cls, change: Change, result: providers.Result) -> Outcome:
+        """The one place a provider's `Result` becomes a status.
+
+        Every provider that installs through `providers/` ends this way, and this
+        used to be a three-line conditional written out at each of them. Eleven of
+        the twelve dropped `refused` on the floor, so a source the offline bundle
+        was never designed to stage — go.dev, rustup.rs, nodejs.org, awscli — came
+        out `FAILED` and made an offline machine report itself unconverged for doing
+        exactly what it was built to do. `terraform-ls` had worked around the same
+        gap from the other side by answering `Result(True, ...)`, which put a green
+        tick in front of "not bundled, so it is skipped".
+        """
+        if result.refused:
+            return cls(change, OutcomeStatus.REFUSED, result.detail)
+        return cls(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
 class Observation(Protocol):

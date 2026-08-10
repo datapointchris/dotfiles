@@ -325,7 +325,7 @@ def _awscli(request: Request) -> Result:
     if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
         return offline
     if request.offline:
-        return Result(False, f'awscli installs from {request.entry.url}, which the offline bundle does not stage')
+        return Result(False, f'awscli installs from {request.entry.url}, which the offline bundle does not stage', refused=True)
 
     url = _awscli_zip(request.entry, request.target)
     with tempfile.TemporaryDirectory(prefix='dotfiles-awscli-') as scratch:
@@ -461,12 +461,12 @@ def _terraform_ls(request: Request) -> Result:
     release assets and has to be named directly.
 
     Nothing stages it into an offline bundle for the same reason, so an offline
-    run reports it rather than failing the stage — the alternative is a machine
+    run refuses it rather than failing the stage — the alternative is a machine
     that cannot finish an install because of a language server.
     """
     entry = request.entry
     if request.offline:
-        return Result(True, f'terraform-ls is not bundled (it is served from {HASHICORP}), so it is skipped offline')
+        return Result(False, f'terraform-ls is served from {HASHICORP}, which the offline bundle does not stage', refused=True)
 
     latest = github_release.latest_version(entry.repo, '')
     if latest is None:
