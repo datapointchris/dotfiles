@@ -235,7 +235,31 @@ class VendoredProvider(CatalogProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class ReleaseProvider(VendoredProvider):
-    """A binary published as a GitHub release asset."""
+    """A binary published as a GitHub release asset, and the files that ship beside it."""
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """The binary, and then whatever the release does not publish.
+
+        A companion is a separate file under `~/.local/bin`, so a present and
+        current binary says nothing about whether it is still there. Nothing
+        measured them until now: the install phase re-ran the companion fetch
+        blind on every already-current tool, which repaired the gap without ever
+        reporting it, and `check` called such a machine converged.
+
+        Reported as `MISSING` because that is what it is and what makes it
+        actionable — the detail carries which file, so a row naming the tool never
+        reads as the tool itself being absent.
+        """
+        # Named explicitly, not `super()`: `@dc.dataclass(slots=True)` rebuilds the
+        # class, so the `__class__` cell a zero-argument `super()` closes over
+        # points at the class that was replaced and it raises at the first call.
+        found = Provider.evidence(self, item, installed)
+        if found.verdict is not Verdict.MATCHED:
+            return found
+        absent = ghrelease.missing_companions(item.name)
+        if not absent:
+            return found
+        return ev.Evidence(Verdict.MISSING, f'{item.executable} is installed, but {", ".join(absent)} is not beside it')
 
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry

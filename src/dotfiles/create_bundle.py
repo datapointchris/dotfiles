@@ -563,8 +563,8 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         verify_against_upstream(bundle, cache, destination, asset)
         bundle.record('binary', tool, version, asset.filename)
 
-        for companion in published.companions:
-            extra = url_asset(companion.url)
+        for companion in releases.COMPANIONS.get(tool, ()):
+            extra = url_asset(companion.url(tag))
             extra_destination = bundle.binaries / companion.name
             cache.fetch(extra, extra_destination, f'    extra: {companion.name} ({version})')
             verify_against_upstream(bundle, cache, extra_destination, extra)

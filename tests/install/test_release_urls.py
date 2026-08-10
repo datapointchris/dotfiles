@@ -212,14 +212,20 @@ def test_the_release_publishes_the_asset_asked_for(tool, os_name, arch, resolved
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize('tool', sorted(tool for tool in providers.ASSETS if providers.ASSETS[tool]('v0', LINUX).companions))
+@pytest.mark.parametrize('tool', sorted(providers.COMPANIONS))
 def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
     """A companion is fetched from the repo tree rather than the release, so it is
-    the one download the asset-list check above cannot see."""
+    the one download the asset-list check above cannot see.
+
+    Parametrized off `COMPANIONS` directly. It used to ask each asset function
+    with a fabricated `v0` to find out which tools had any, which only worked
+    because no companion name interpolated the tag — the split that made the name
+    static is what lets this read the declaration instead of probing it.
+    """
     _, tag, _ = asset_under_test((tool, 'linux', 'x86_64'), resolved_urls)
 
-    for companion in providers.ASSETS[tool](tag, LINUX).companions:
-        response = http.get(companion.url)
+    for companion in providers.COMPANIONS[tool]:
+        response = http.get(companion.url(tag))
         assert response.status_code == 200, f'{companion.name} at {tag} answered {response.status_code}'
         assert response.text.startswith('#!'), f'{companion.name} did not come back as a script'
 

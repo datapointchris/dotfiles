@@ -355,10 +355,9 @@ def _install_release(context: Run, declaration: catalog.Catalog, tool: str, targ
     if tag is None:
         return _install_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
 
-    if not context.reinstall and _already_at(entry, tag):
+    if not context.reinstall and _already_at(entry, tag) and not ghrelease.missing_companions(tool):
         err_console.print(f'{tool} already at {tag}')
-        restored = ghrelease.ensure_companions(entry, target, tag, offline=context.offline)
-        return True if restored.ok else _install_failed(context, tool, restored.detail)
+        return True
 
     result = ghrelease.install(entry, target, offline=context.offline, tag=tag)
     if result.ok:

@@ -43,13 +43,14 @@ from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import local_dir
 from dotfiles.providers.releases import ASSETS
+from dotfiles.providers.releases import COMPANIONS
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Asset
 
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
-__all__ = ['Result', 'bin_dir', 'bundle_file', 'ensure_companions', 'install', 'local_dir', 'resolve_tag', 'unresolved']
+__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'missing_companions', 'resolve_tag', 'unresolved']
 
 
 def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
@@ -95,7 +96,7 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         if not placed.ok:
             return placed
 
-    missing = _companions(asset, offline=offline, only_missing=False)
+    missing = _companions(entry.name, tag, offline=offline)
     if missing:
         return Result(False, missing)
 
@@ -311,46 +312,45 @@ def _place_tree(asset: Asset, download: Path, target: Path) -> Result:
     return Result(True, f'{target} -> {binary}')
 
 
-def ensure_companions(entry: catalog.GithubRelease, target: Target, tag: str, *, offline: bool = False) -> Result:
-    """Restore anything the release does not publish that has gone missing.
+def missing_companions(name: str) -> tuple[str, ...]:
+    """Which of an entry's companion files are not on disk. A read, and a cheap one.
 
-    For the caller that decided not to install: a companion is a separate file
-    under `~/.local/bin` and nothing about the binary being current says it is
-    still there. The bash this replaces re-ran its companion install on every
-    invocation for exactly that reason — fzf without `fzf-tmux` installs cleanly
-    and then the tmux popup binding does nothing, which surfaces days later at a
-    keystroke rather than here.
+    This is what makes a companion part of the verdict instead of something an
+    install re-ran blind. `fzf-tmux` is a separate file under `~/.local/bin` and
+    nothing about the binary being current says it is still there — fzf installs
+    cleanly without it and then the tmux popup binding does nothing, which
+    surfaces days later at a keystroke.
 
-    Only what is missing, unlike an install, which refreshes all of them: a
-    companion is fetched at the binary's tag and the two are a matched pair.
+    Asks `COMPANIONS` rather than an asset function, so no tag has to be resolved
+    and no network is touched: a checker running offline still answers.
     """
-    build = ASSETS.get(entry.name)
-    if build is None:
-        return Result(False, f'nothing in providers.releases names an asset for {entry.name}')
-
-    problem = _companions(build(tag, target), offline=offline, only_missing=True)
-    return Result(not problem, problem)
+    return tuple(companion.name for companion in COMPANIONS.get(name, ()) if not (bin_dir() / companion.name).exists())
 
 
-def _companions(asset: Asset, *, offline: bool, only_missing: bool) -> str:
+def _companions(name: str, tag: str, *, offline: bool) -> str:
     """Fetch the files that ship with a tool without being in its release.
 
     '' when there is nothing to do or it was done. A companion is not optional,
     which is why a failure here fails the install rather than warning.
+
+    Every companion, never only the absent ones. The `only_missing` half of this
+    existed for `ensure_companions`, which ran on every already-current tool
+    because nothing measured whether a companion was there; `missing_companions`
+    measures it now, so the only caller left is an install that is placing the
+    binary anyway and wants the pair to match.
     """
-    for companion in asset.companions:
+    for companion in COMPANIONS.get(name, ()):
         destination = bin_dir() / companion.name
-        if only_missing and destination.exists():
-            continue
         destination.parent.mkdir(parents=True, exist_ok=True)
 
+        url = companion.url(tag)
         cached = bundle_file(BUNDLE_BINARIES) / companion.name
         if cached.is_file():
             shutil.copy2(cached, destination)
         elif offline:
             return f'{companion.name} is not in the offline bundle and cannot be downloaded'
-        elif not effects.fetch(companion.url, destination):
-            return f'could not download {companion.name} from {companion.url}'
+        elif not effects.fetch(url, destination):
+            return f'could not download {companion.name} from {url}'
 
         effects.make_executable(destination)
     return ''

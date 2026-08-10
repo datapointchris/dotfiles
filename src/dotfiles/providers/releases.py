@@ -51,10 +51,22 @@ class Companion:
     Not new vocabulary: the offline bundler already has this concept as
     `--print-extras`, because a companion has to be staged like any other
     download for a restricted network to install the tool at all.
+
+    **The name is static and only the URL moves with the tag**, which is the split
+    that lets a checker ask what should be on disk without resolving a release
+    first. It used to be one resolved string on the `Asset`, so the only way to
+    learn that fzf owes a `fzf-tmux` was to call an asset function with a tag —
+    which `tests/install/test_release_urls.py` did with a fabricated `v0` for
+    exactly this reason.
     """
 
     name: str
-    url: str
+
+    url_template: str
+    """Where to fetch it, with `{tag}` standing in for the release it is paired with."""
+
+    def url(self, tag: str) -> str:
+        return self.url_template.format(tag=tag)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -83,9 +95,6 @@ class Asset:
     it, so `path` is then relative to `~/.local` and what lands in `~/.local/bin`
     is a symlink into the unpacked tree rather than a copy of one file out of it.
     """
-
-    companions: tuple[Companion, ...] = ()
-    """Files to fetch alongside, from outside the release."""
 
 
 def _bare(tag: str) -> str:
@@ -152,13 +161,11 @@ def duf(tag: str, target: Target) -> Asset:
 def fzf(tag: str, target: Target) -> Asset:
     """arm64 on darwin against amd64 on linux, in one name.
 
-    `fzf-tmux` is the tmux popup wrapper, and it is a shell script in the repo
-    tree rather than an asset in the release — so it is fetched from the tag
-    instead, which is what keeps the script and the binary a matched pair.
+    Its `fzf-tmux` companion is declared in `COMPANIONS` rather than here, because
+    it is not part of the release this names.
     """
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
-    companion = Companion('fzf-tmux', f'https://raw.githubusercontent.com/junegunn/fzf/{tag}/bin/fzf-tmux')
-    return Asset(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf', companions=(companion,))
+    return Asset(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
 
 
 def glow(tag: str, target: Target) -> Asset:
@@ -350,6 +357,23 @@ ASSETS: dict[str, Callable[[str, Target], Asset]] = {
 
 `tests/install/test_release_urls.py` asserts this covers every declared release
 and that each function names the asset the release actually publishes.
+"""
+
+COMPANIONS: dict[str, tuple[Companion, ...]] = {
+    'fzf': (Companion('fzf-tmux', 'https://raw.githubusercontent.com/junegunn/fzf/{tag}/bin/fzf-tmux'),),
+}
+"""Files that ship *with* a tool without being in its release, by entry name.
+
+Its own table rather than a field on `Asset`, because a companion is not part of
+the release the asset function describes and does not depend on the tag or the
+target the way an asset name does. Separating them is what makes a companion
+*observable*: `dotfiles check` can ask what fzf owes without resolving a release,
+where reading it off an `Asset` needed a tag and therefore a network call.
+
+That mattered. Nothing measured companions at all, so a machine that lost
+`~/.local/bin/fzf-tmux` reported a converged fzf and the tmux popup binding
+silently did nothing — repaired only because the install phase re-ran
+`ensure_companions` blind on every already-current tool.
 """
 
 
