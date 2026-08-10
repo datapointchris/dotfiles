@@ -18,9 +18,10 @@ node toolchain sits between the cargo phase that ships fnm and the npm globals
 that install against what it pins.
 
 This is the only registry. `install/phases.sh` held a second one for `update.sh`
-and `tests/cli/test_phase_registry.py` existed to assert the two agreed; both are
-gone, because reconcile has one verb and `apply` installs what is missing and
-upgrades what is behind.
+and `tests/cli/test_phase_registry.py` asserted the two agreed, phase for phase.
+Both scripts are gone, because reconcile has one verb and `apply` installs what
+is missing and upgrades what is behind; the test survives, asserting this
+registry's order alone.
 """
 
 from __future__ import annotations

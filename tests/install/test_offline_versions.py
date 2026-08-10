@@ -6,10 +6,9 @@ resolver returns a newer tag, the installer builds an asset filename from it, an
 the lookup misses a cache that holds the right file under the older name. The
 install then reports a tool missing on a machine that is carrying it.
 
-`version-helpers.sh` is still bash, so this drives it the way
-`tests/cli/test_phase_registry.py` drives `phases.sh` — sourcing it and calling
-the function, never reading the file. It moves into the resolver's own tests when
-the release installers become Python.
+`version-helpers.sh` is still bash, so this drives it by sourcing it and calling
+the function, never by reading the file. It moves into the resolver's own tests
+when the release installers become Python.
 
 The blockade in the offline container test used to be the only thing
 asserting this, and it asserted it by making every GitHub host unreachable — a
