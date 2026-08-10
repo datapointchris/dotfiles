@@ -284,7 +284,7 @@ def latest(runs_dir: Path | None = None) -> Path | None:
     never run under this scheme still has records, and answering nothing there
     would be worse than answering approximately.
     """
-    link = (runs_dir.parent if runs_dir else paths.STATE_HOME) / paths.LATEST_RUN.name
+    link = (runs_dir or paths.RUNS_DIR).parent / paths.LATEST_RUN.name
     if link.is_symlink() and (target := link.resolve()).is_file():
         return target
     found = list_runs(runs_dir, limit=1)

@@ -205,3 +205,20 @@ class TestListing:
         (runs_dir.parent / 'latest-thisbox').unlink()
 
         assert runs.latest(runs_dir) == written
+
+    def test_the_link_is_read_from_where_it_was_written(self, runs_dir, monkeypatch):
+        """Read and write have to derive the link from the same root.
+
+        `write` took it from the records directory while `latest` took it from
+        `STATE_HOME`, which agree only because `RUNS_DIR` happens to sit directly
+        under it. Anything pointed elsewhere — every test using a tmp directory,
+        and `report latest` with it — wrote the link to one place and resolved a
+        *real* one from the other, so a rendered record came from the live machine
+        rather than the directory it was handed.
+        """
+        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
+        monkeypatch.setattr(paths, 'RUNS_DIR', runs_dir)
+        written = runs.write(a_run(), runs_dir)
+
+        assert runs.latest() == written, 'the default read has to find the link the write left'
+        assert runs.latest(runs_dir) == written
