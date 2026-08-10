@@ -14,11 +14,11 @@ from pathlib import Path
 
 import typer
 
-from dotfiles import bridge
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve as resolver
+from dotfiles import validate
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
@@ -142,7 +142,10 @@ def _render(plan: resolver.Plan) -> None:
 
 
 @app.command('check')
-def check_machines(name: str = typer.Argument(None, help='Machine name (default: every manifest)')) -> None:
+def check_machines(
+    name: str = typer.Argument(None, help='Machine name (default: every manifest)'),
+    as_json: bool = typer.Option(False, '--json', help='Emit the findings as JSON'),
+) -> None:
     """Validate the declaration: every manifest, and packages.yml's own structure.
 
     Whole-declaration, whether or not a machine is named. `packages.yml` is
@@ -150,11 +153,39 @@ def check_machines(name: str = typer.Argument(None, help='Machine name (default:
     `linux-lxc-server.yml` is invisible from the Mac where the commit happens —
     which is why this is what gates commits. Narrowing to one machine arrives
     with the resolver; the argument is accepted now so the surface does not move.
+
+    Exits 3 on an error and 0 on warnings alone. An invalid declaration is the
+    archetypal Issue — nothing `apply` can repair — so it takes `check`'s code
+    rather than drift's, which is what lets the same number mean the same thing
+    whether it came from here or from the whole-machine walk.
     """
     if name:
         _manifest_path(name)
         hint(f'checking every manifest, not only {name}: packages.yml is shared by all of them')
-    raise typer.Exit(bridge.declaration('verify'))
+
+    found = validate.declaration()
+    if as_json:
+        emit_json([finding.as_dict() for finding in found])
+    else:
+        _render_findings(found)
+    raise typer.Exit(ExitCode.ISSUE if validate.errors(found) else ExitCode.CONVERGED)
+
+
+def _render_findings(findings: tuple[validate.Finding, ...]) -> None:
+    """Grouped by section, because that is the file a reader has to open next."""
+    by_section: dict[str, list[validate.Finding]] = {}
+    for finding in findings:
+        by_section.setdefault(finding.section, []).append(finding)
+
+    for section in sorted(by_section):
+        console.print(f'\n[bold cyan]{section}[/]')
+        for finding in by_section[section]:
+            colour = 'red' if finding.severity is validate.Severity.ERROR else 'yellow'
+            console.print(f'  [{colour}]{finding.severity:<7}[/] {finding.message}', highlight=False)
+
+    broken, warned = len(validate.errors(findings)), len(findings) - len(validate.errors(findings))
+    console.print()
+    console.print(f'{broken} errors, {warned} warnings')
 
 
 @app.command('edit')

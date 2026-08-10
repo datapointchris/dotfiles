@@ -36,7 +36,7 @@ The layer scheme, and why two overlays may never claim one target, is
 
 ## Machine Manifests
 
-Installation is driven by machine manifests in `install/manifests/`. Each manifest defines exactly what gets installed. Every installed tool is declared as a name in a list; the name must resolve to a catalog entry in `install/packages.yml`. `packages verify` enforces this bidirectionally (every name → an entry, every entry → a name that references it or a warning).
+Installation is driven by machine manifests in `install/manifests/`. Each manifest defines exactly what gets installed. Every installed tool is declared as a name in a list; the name must resolve to a catalog entry in `install/packages.yml`. `dotfiles machines check` enforces this bidirectionally (every name → an entry, every entry → a name that references it or a warning).
 
 ```yaml
 # install/manifests/archlinux-personal-workstation.yml
@@ -57,7 +57,7 @@ git_uv_tools: [refcheck, indy, ...]
 # ... etc
 ```
 
-Runtime installation is **derived from list presence**, not from explicit booleans. A non-empty `go_tools:` list triggers the Go runtime install; a non-empty `npm_globals:` list triggers nvm + Node; `uv_tools:` or `git_uv_tools:` triggers uv. The deprecated `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true` gates were removed in the Phase 1.6 cleanup — `packages verify` flags any manifest that still sets them.
+Runtime installation is **derived from list presence**, not from explicit booleans. A non-empty `go_tools:` list triggers the Go runtime install; a non-empty `npm_globals:` list triggers nvm + Node; `uv_tools:` or `git_uv_tools:` triggers uv. The deprecated `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true` gates were removed in the Phase 1.6 cleanup — the manifest loader refuses any manifest that still sets them, naming the replacement.
 
 Run installation with: `bash install.sh --machine archlinux-personal-workstation`
 
@@ -170,7 +170,8 @@ The sidebar lists every architecture page; these are the three that answer the
 questions asked most often.
 
 [Management Interface](management-interface.md) is the one to read first — the
-two front doors, why there are exactly two verbs, and what `~/.env` decides.
+two front doors, why `plan` and `check` are different questions, and what
+`~/.env` decides.
 [Package Management](package-management.md) is which installer a tool gets and
 why. [Observability](observability.md) is what a run leaves behind and who reads
 it, which is where to start when something reported a machine wrongly.

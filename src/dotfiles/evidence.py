@@ -10,6 +10,10 @@ The rules are per provider rather than one function branching on a section name.
 which is why a section it did not name defaulted to "look for a binary called
 that" and read as permanently missing.
 
+Which rule answers for which provider is not here: it is the provider's own, in
+`registry.py`. This file holds the rules and the inventory queries — the parts
+that are about *how* to look rather than about *who* installs what.
+
 An item nothing can measure comes back `UNKNOWN`. Unverified is not permission,
 and "will reinstall" from an empty version string is the wrong answer with no way
 to tell it from a measured one.
@@ -20,8 +24,8 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import shutil
-from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 
 from dotfiles import catalog
 from dotfiles.effects import Output
@@ -138,31 +142,6 @@ def by_app_bundle(item: DesiredItem) -> Evidence:
     return Evidence(Verdict.MISSING, f'no {item.name}.app in /Applications')
 
 
-EVIDENCE: dict[str, Callable[[DesiredItem], Evidence]] = {
-    'uv': by_uv_tool,
-    'uv-git': by_uv_tool,
-    'mas': by_app_bundle,
-}
-"""How to tell whether one provider's item is present, where the answer is local.
-
-Absent from this map means one of two things: a binary on PATH — right for
-releases, go, cargo, npm and the custom installers — or, for the providers in
-`REGISTRY_PROVIDERS`, asking the package manager. A declared `installed_path`
-overrides both, because an entry saying where it lands is more specific than any
-rule about its provider.
-"""
-
-REGISTRY_PROVIDERS = frozenset({'system', 'cask', 'flatpak'})
-"""Providers whose items are only answerable by their manager.
-
-A package name is not a binary name: `p7zip-full` installs `7zz`, and
-`build-essential` and `ca-certificates` install no executable at all. Asking PATH
-about them reports every one of them missing on a fully-installed machine, which
-is why the check that predated this skipped these sections rather than getting
-them wrong.
-"""
-
-
 def query(name: str) -> frozenset[str] | None:
     """What one manager says it has installed, or None when it cannot answer."""
     command = QUERIES.get(name)
@@ -174,7 +153,18 @@ def query(name: str) -> frozenset[str] | None:
     return frozenset(line.strip() for line in result.transcript.splitlines() if line.strip())
 
 
-def by_registry(item: DesiredItem, installed: dict[str, frozenset[str]]) -> Evidence:
+class Inventory(Protocol):
+    """Whatever can answer "what does this manager have installed".
+
+    A protocol rather than the concrete `Inventories`, so a test hands in a plain
+    dict of the answers it wants and never reaches a subprocess. That is the
+    whole reason the lookup is `.get(name)` — it is `Mapping.get`'s shape.
+    """
+
+    def get(self, name: str) -> frozenset[str] | None: ...
+
+
+def by_registry(item: DesiredItem, installed: Inventory) -> Evidence:
     """Whether any name this entry declares appears in its manager's inventory.
 
     Per declared name rather than per entry name: the entry is `7zip` and the
@@ -205,22 +195,35 @@ def declared_names(item: DesiredItem) -> dict[str, list[str]]:
     return {}
 
 
-def evidence_for(item: DesiredItem, installed: dict[str, frozenset[str]]) -> Evidence:
-    if item.evidence_path:
-        return by_path(item)
-    if item.provider in REGISTRY_PROVIDERS:
-        return by_registry(item, installed)
-    return EVIDENCE.get(item.provider, by_command)(item)
+class Inventories:
+    """What each package manager says it has, asked at most once per manager.
 
-
-def inventories(items: tuple[DesiredItem, ...]) -> dict[str, frozenset[str]]:
-    """One query per manager the given items actually name.
-
-    Per manager, not per package: `packages missing` asked the world once per
+    Per manager, not per package: the check this replaced asked the world once per
     entry, which is 195 subprocesses to answer one question.
+
+    Lazy per manager rather than computed up front from the plan, which is the
+    shape it had while it belonged to one resource. Nothing under `packages` names
+    a registry package — a release, a go tool and a cargo crate are all answered by
+    PATH — so building the dict eagerly would spend `pacman -Qq` on behalf of a
+    verb that never reads it. `system` asks for the two or three its own items
+    name, and a whole-machine run asks for each of those exactly once.
+
+    A manager that cannot answer caches its `None`, so a machine without flatpak
+    is not re-asked once per flatpak app.
     """
-    wanted = {INSTALLER_QUERIES[installer] for item in items for installer in declared_names(item)}
-    return {name: answer for name in wanted if name and (answer := query(name)) is not None}
+
+    def __init__(self) -> None:
+        self._answers: dict[str, frozenset[str] | None] = {}
+
+    def get(self, name: str) -> frozenset[str] | None:
+        if name not in self._answers:
+            self._answers[name] = query(name)
+        return self._answers[name]
+
+    @property
+    def asked(self) -> frozenset[str]:
+        """Which managers answered, for a summary that would otherwise be a shrug."""
+        return frozenset(name for name, answer in self._answers.items() if answer is not None)
 
 
 VERSION_PROBES = ('--version', 'version')

@@ -23,13 +23,10 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 from dotfiles.providers import sysconfig
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-
-SOMETHING = (Escalation('a privileged action'),)
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
@@ -44,7 +41,6 @@ def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') 
 def declined(fake_bin: Path) -> Privilege:
     executable(fake_bin, 'sudo', '#!/bin/sh\nexit 1\n')
     privilege = Privilege()
-    privilege.authorize(SOMETHING)
     return privilege
 
 

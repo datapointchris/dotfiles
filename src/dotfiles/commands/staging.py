@@ -51,7 +51,7 @@ def stage(archive: str = typer.Argument(..., help='Path to a bundle archive')) -
 def check() -> None:
     """Report whether a usable bundle is staged."""
     error('bundle check is not built: it diffs a staged bundle against the plan the resolver produces')
-    hint('the resolver it was waiting on has landed; what it reads is the document `dotfiles check --json` emits')
+    hint('the resolver it was waiting on has landed; what it reads is the document `dotfiles plan --json` emits')
     raise typer.Exit(ExitCode.ISSUE)
 
 

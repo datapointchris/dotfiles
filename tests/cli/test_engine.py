@@ -15,9 +15,13 @@ from dotfiles import engine
 from dotfiles import vocabulary
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
@@ -41,7 +45,7 @@ class Fake:
     def diff(self, plan: Plan, observed: object) -> tuple[Change, ...]:
         return self._changes
 
-    def perform(self, *args: object) -> object:  # pragma: no cover - assess never reaches it
+    def perform(self, session: Session, change: Change, privilege: object) -> Outcome:  # pragma: no cover
         raise AssertionError('assess must not write')
 
 
@@ -105,7 +109,7 @@ def test_a_resource_that_raises_becomes_a_refusal_and_the_walk_continues(session
 def test_selecting_addresses_walks_only_those(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(engine, 'resources', lambda: {name: Fake(name) for name in ('packages', 'symlinks', 'env')})
 
-    assert [event.resource for event in engine.assess(session, ['symlinks', 'env'])] == ['symlinks', 'env']
+    assert [event.resource for event in engine.assess(session, engine.Selection.of('symlinks', 'env'))] == ['symlinks', 'env']
 
 
 def test_selection_keeps_convergence_order_not_the_caller_s(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,7 +117,7 @@ def test_selection_keeps_convergence_order_not_the_caller_s(session: Session, mo
     not reorder the walk — the order is a dependency chain, not a preference."""
     monkeypatch.setattr(engine, 'resources', lambda: {name: Fake(name) for name in ('packages', 'symlinks', 'env')})
 
-    assert [event.resource for event in engine.assess(session, ['env', 'packages'])] == ['packages', 'env']
+    assert [event.resource for event in engine.assess(session, engine.Selection.of('env', 'packages'))] == ['packages', 'env']
 
 
 def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -126,3 +130,141 @@ def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, mon
 
     assert events[0].stage is Stage.TOOLS
     assert events[1].stage is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Acting on what was decided
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class Writer(Fake):
+    """A resource whose perform records what it was handed, or raises."""
+
+    def __init__(self, name: str, *, changes: tuple[Change, ...] = (), explodes_on: str = '') -> None:
+        super().__init__(name, changes=changes)
+        self.performed: list[str] = []
+        self._explodes_on = explodes_on
+
+    def perform(self, session: Session, change: Change, privilege: object) -> Outcome:
+        if change.item == self._explodes_on:
+            raise RuntimeError('the disk went away')
+        self.performed.append(change.item)
+        return Outcome(change, OutcomeStatus.DONE, f'did {change.item}')
+
+
+def test_execute_acts_on_the_changes_that_were_planned(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The whole of "apply is plan then execute": what is acted on is what was
+    decided and printed, not a second measurement that may disagree."""
+    writer = Writer('packages', changes=(change('a'), change('b')))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    planned = list(engine.assess(session))
+    outcomes = [event.payload for event in engine.execute(session, planned, Privilege(offer=False))]
+
+    assert writer.performed == ['a', 'b']
+    assert all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
+
+
+def test_execute_skips_what_apply_cannot_repair(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A required machine-local value is real drift and not apply's to fix. It must
+    reach `check`, never `perform`."""
+    by_hand = Change('packages', Stage.TOOLS, 'WINDOWS_USER', Verdict.MISSING, repair=Repair.BY_HAND)
+    writer = Writer('packages', changes=(change('a'), by_hand))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    list(engine.execute(session, list(engine.assess(session)), Privilege(offer=False)))
+
+    assert writer.performed == ['a']
+
+
+def test_one_item_failing_does_not_abandon_the_rest(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolation belongs to the engine here too. Without it a run stops silently
+    part-way and the record says nothing about the half that never ran."""
+    writer = Writer('packages', changes=(change('a'), change('boom'), change('c')), explodes_on='boom')
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    payloads = [event.payload for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
+
+    assert writer.performed == ['a', 'c']
+    assert isinstance(payloads[1], Refusal)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Selection: an address is a provider, not only a resource
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_bare_resource_narrows_nothing_and_hands_over_the_same_plan(session: Session) -> None:
+    """`providers is None` rather than the full set, so a walk that excludes
+    nothing does not rebuild the plan once per resource."""
+    selection = engine.Selection.of('plugins')
+
+    assert selection.providers is None
+    assert selection.plan_for('plugins', session.plan) is session.plan
+
+
+def test_selecting_one_provider_removes_its_neighbours_from_the_plan(session: Session) -> None:
+    """Structural, not a filter each resource has to remember: what was left out
+    is not in the plan the resource is handed, so it cannot observe or act on it."""
+    narrowed = engine.Selection.of('plugins/tpm').plan_for('plugins', session.plan)
+
+    assert {item.provider for item in narrowed.for_resource('plugins')} == {'tpm'}
+
+
+def test_narrowing_one_resource_leaves_every_other_resources_items_alone(session: Session) -> None:
+    """The subtlety that makes this per-resource. `toolchains` decides it needs the
+    Go runtime because the plan contains `go_tools` items, so narrowing the plan
+    globally by `--skip packages/go` would silently stop planning Go — a resource
+    the caller never named."""
+    narrowed = engine.Selection.excluding(['packages/go']).plan_for('plugins', session.plan)
+
+    assert narrowed.for_section('go_tools') == session.plan.for_section('go_tools')
+
+
+def test_skipping_one_provider_leaves_the_rest_of_its_resource_selected() -> None:
+    selection = engine.Selection.excluding(['plugins/tpm'])
+
+    assert 'plugins' in selection.resources
+    assert selection.providers is not None
+    assert 'tpm' not in selection.providers
+    assert 'shell-plugin' in selection.providers
+
+
+def test_skipping_a_whole_resource_drops_it_from_the_walk() -> None:
+    assert 'plugins' not in engine.Selection.excluding(['plugins']).resources
+
+
+def test_a_stage_selects_the_providers_that_run_at_it() -> None:
+    """A phase *is* a stage, and the six system-configuration providers are not a
+    list anyone should keep in step by hand."""
+    selection = engine.Selection.at(Stage.SYSTEM_CONFIG)
+
+    assert selection.resources == ('system',)
+    assert selection.providers == {'group', 'systemd', 'file', 'login-shell', 'macos-default', 'step'}
+
+
+def test_the_system_config_stage_leaves_the_package_half_out_of_the_plan(session: Session) -> None:
+    """The debt A2 recorded here. That phase observed the whole `system` resource
+    and filtered afterwards, spending a package-inventory query on rows it was
+    about to discard."""
+    narrowed = engine.Selection.at(Stage.SYSTEM_CONFIG).plan_for('system', session.plan)
+
+    assert all(item.stage is Stage.SYSTEM_CONFIG for item in narrowed.for_resource('system'))
+
+
+@pytest.mark.parametrize('address', ['nonsense', 'plugins/tmux', 'packages/group', 'plugins/'])
+def test_an_address_naming_nothing_is_refused_rather_than_narrowing_to_nothing(address: str) -> None:
+    """A run that accepted a misspelt `--skip` would install the sudo-gated phase
+    the caller was trying to avoid and report success. `packages/group` is the
+    interesting one: `group` is a real provider, of a different resource."""
+    with pytest.raises(engine.UnknownAddress):
+        engine.validate([address])
+
+
+def test_a_resource_and_one_of_its_providers_together_keep_the_whole_resource() -> None:
+    """`--source` and an address can name the same resource twice. The wider of
+    the two has to win, or naming a thing twice would narrow it away."""
+    selection = engine.Selection.of('plugins', 'plugins/tpm')
+
+    assert selection.providers is not None
+    assert {'tpm', 'shell-plugin', 'yazi-plugin'} <= selection.providers

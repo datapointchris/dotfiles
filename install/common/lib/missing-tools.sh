@@ -4,7 +4,7 @@
 #
 # `update` reconciles what is on the machine; it does not create. That leaves a
 # gap it has to report, because a tool added to a manifest on another machine is
-# invisible here until something says so — and nothing did. `packages verify`
+# invisible here until something says so — and nothing did. `machines check`
 # checks the registry against the manifests, never against the machine, so the
 # drift had no reporter at all.
 #

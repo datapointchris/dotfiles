@@ -23,19 +23,15 @@ from __future__ import annotations
 
 import dataclasses as dc
 
-from dotfiles import catalog
 from dotfiles import evidence as ev
-from dotfiles.catalog import SystemConfig
+from dotfiles import registry
 from dotfiles.privilege import Privilege
-from dotfiles.providers import macdefaults
-from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
-from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
@@ -71,10 +67,10 @@ class SystemResource:
     def observe(self, session: Session, plan: Plan) -> Observed:
         mine = plan.for_resource(NAME)
         payload = tuple(item for item in mine if item.stage is not Stage.SYSTEM_CONFIG)
-        installed = ev.inventories(payload)
+        inventories = session.inventories
         return Observed(
-            evidence={item.address: ev.evidence_for(item, installed) for item in payload},
-            asked=frozenset(installed),
+            evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
+            asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
         )
 
@@ -88,6 +84,7 @@ class SystemResource:
                 detail=observed.evidence[item.address].detail,
                 repair=Repair.NONE if observed.evidence[item.address].verdict is Verdict.UNKNOWN else Repair.AUTOMATIC,
                 desired=item,
+                privileged=registry.needs_root(item),
             )
             for item in plan.for_resource(NAME)
             if item.stage is not Stage.SYSTEM_CONFIG and observed.evidence[item.address].verdict is not Verdict.MATCHED
@@ -101,7 +98,7 @@ class SystemResource:
                 detail=observed.config[item.address].detail,
                 repair=observed.config[item.address].repair,
                 desired=item,
-                privileged=_configuration(item.entry).needs_root,
+                privileged=registry.needs_root(item),
             )
             for item in _config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED
@@ -109,27 +106,14 @@ class SystemResource:
         return packages + configuration
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
-        """Configuration is this resource's; payload still belongs to the phases.
+        """Whichever provider planned it repairs it, or says why it cannot.
 
-        Split on the stage rather than on a flag, because it is the same split the
-        resolver already made: `SYSTEM_CONFIG` is what `system.yml` declares, and
-        everything else under this resource is a package a backend installs.
+        The package half's providers still answer `REFUSED` from the base class,
+        which is the same split the resolver already made: `SYSTEM_CONFIG` is what
+        `system.yml` declares, and everything else here is a package a backend
+        installs.
         """
-        if change.stage is not Stage.SYSTEM_CONFIG:
-            return Outcome(change, OutcomeStatus.REFUSED, "run 'dotfiles system apply', which still drives the phase registry")
-
-        assert change.desired is not None
-        entry = _configuration(change.desired.entry)
-
-        # Re-read rather than trusting the diff: `observe` ran before the report
-        # was printed, and an earlier change in this same batch — the docker
-        # package, zsh itself — may have made this one unnecessary or possible.
-        if _observe_one(entry).verdict is Verdict.MATCHED:
-            return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
-
-        result = _apply_one(entry, privilege)
-        status = OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED
-        return Outcome(change, status, result.detail)
+        return registry.install(session, change, privilege)
 
 
 def _config_items(plan: Plan) -> list[DesiredItem]:
@@ -137,43 +121,23 @@ def _config_items(plan: Plan) -> list[DesiredItem]:
 
 
 def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
-    """Every configuration row's state, batching what can be batched.
+    """Every configuration row's state, each provider reading its own.
 
-    The dispatch is here rather than inside either provider, so neither has to
-    import the other. It is also the only place that knows a `defaults` read is
-    cheaper in bulk: seventy-three keys live in about fifteen domains, and one
-    `defaults export` per domain answers all of them.
+    This used to branch on the entry class three ways, in a function that also
+    knew a `defaults` read is cheaper in bulk. Both are the provider's — the bulk
+    read is a hook on one of them — so what is left here is grouping the items by
+    who planned them.
     """
-    stores = macdefaults.domains([_configuration(item.entry) for item in items if isinstance(item.entry, catalog.MacosDefault)])
-    return {item.address: _observe_row(_configuration(item.entry), stores) for item in items}
+    grouped: dict[str, list[DesiredItem]] = {}
+    for item in items:
+        grouped.setdefault(item.provider, []).append(item)
 
-
-def _observe_row(entry: SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
-    if isinstance(entry, catalog.MacosDefault):
-        return macdefaults.observe_default(entry, stores)
-    if isinstance(entry, catalog.Step):
-        return steps.observe(entry.name)
-    return sysconfig.observe(entry)
-
-
-def _observe_one(entry: SystemConfig) -> sysconfig.State:
-    """One row, re-read on its own. The batch is an optimisation for the survey,
-    not a shape `perform` has to reproduce."""
-    stores = macdefaults.domains([entry]) if isinstance(entry, catalog.MacosDefault) else {}
-    return _observe_row(entry, stores)
-
-
-def _apply_one(entry: SystemConfig, privilege: Privilege) -> sysconfig.Result:
-    if isinstance(entry, catalog.MacosDefault):
-        return macdefaults.apply_default(entry)
-    if isinstance(entry, catalog.Step):
-        return steps.apply(entry.name, privilege)
-    return sysconfig.apply(entry, privilege)
-
-
-def _configuration(entry: object) -> SystemConfig:
-    assert isinstance(entry, SystemConfig)
-    return entry
+    states: dict[str, sysconfig.State] = {}
+    for name, owned in grouped.items():
+        provider = registry.named(name)
+        assert isinstance(provider, registry.SystemConfigProvider), f'{name} plans a SYSTEM_CONFIG item but is not a config provider'
+        states |= provider.states(owned)
+    return states
 
 
 RESOURCE = SystemResource()

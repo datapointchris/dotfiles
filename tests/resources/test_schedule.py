@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import paths
+from dotfiles import reconcile
 from dotfiles import status
 from dotfiles.privilege import Privilege
 from dotfiles.providers import schedule
@@ -29,6 +30,7 @@ from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import Verdict
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict as ItemVerdict
+from dotfiles.vocabulary import ExitCode
 
 WHEN = dt.datetime(2026, 8, 8, 12, 0, tzinfo=dt.UTC)
 
@@ -195,15 +197,25 @@ def test_the_unit_names_the_installed_binary_not_whatever_is_on_path(linux: Path
     assert f'ExecStart={installed} check' in (linux / 'dotfiles-check.service').read_text()
 
 
-def test_drift_does_not_leave_the_unit_permanently_failed(linux: Path, fake_bin: Path) -> None:
-    """`check` exits 1 on drift, which is normal. Without SuccessExitStatus the
-    unit sits in `systemctl --user --failed` forever, which is how a real failure
-    comes to be ignored. Exit 3 — an Issue — is still a failure, and that is the
-    one worth seeing there."""
-    executable(fake_bin, 'systemctl')
-    steps.apply('check-schedule', Privilege())
+def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
+    """A machine a version behind is the normal state between applies, and the unit
+    must not go red for it — that is how a real failure comes to be ignored.
 
-    assert 'SuccessExitStatus=1' in (linux / 'dotfiles-check.service').read_text()
+    Asserted on the verb's answer rather than on the unit file, because the unit
+    file is where the *workaround* used to live: `SuccessExitStatus=1` existed
+    only because one verb answered both "what differs" and "what is wrong". The
+    split removed the reason, so there is nothing left in the unit to assert.
+    """
+    behind = [ResourceResult('packages', Verdict.CONVERGED, 'up to date', pending=3)]
+
+    assert reconcile.exit_code(behind) is ExitCode.CONVERGED
+
+
+def test_something_actually_wrong_does_fail_the_unit() -> None:
+    """The other half: exit 3 is what should show up in `systemctl --user --failed`."""
+    broken = [ResourceResult('packages', Verdict.ISSUE, 'a checker could not run', attention=1)]
+
+    assert reconcile.exit_code(broken) is ExitCode.ISSUE
 
 
 def test_a_unit_someone_edited_is_stale_rather_than_matched(linux: Path, fake_bin: Path) -> None:

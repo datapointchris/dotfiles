@@ -70,9 +70,13 @@ def declaration(*args: str, output: Output = Output.DATA) -> int:
     becoming.
 
     `declaration.main` signals through `sys.exit`, so the SystemExit it raises is
-    the return value and not an error. Converting it here rather than letting it
-    propagate is what stops a `packages verify` finding from killing the whole
-    `check` walk before the resources after it have run.
+    the return value and not an error, and converting it here is what keeps an
+    argparse refusal from reading as a crash.
+
+    Only browsing is left behind this — `list`, `show`, `search`. Validation was
+    the caller that made the SystemExit conversion load-bearing, because a finding
+    must not kill a walk part-way through; it is a function returning findings
+    now, in `validate.py`, and reaches nothing through here.
 
     Running in-process means it prints to *our* stdout, so the same stream
     discipline `effects.run` applies to a subprocess has to be applied here by

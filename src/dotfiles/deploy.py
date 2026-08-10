@@ -21,9 +21,6 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import hint
-from dotfiles.output import warn
-from dotfiles.privilege import Privilege
-from dotfiles.resources import Repair
 from dotfiles.resources import symlinks
 from dotfiles.session import Session
 from dotfiles.symlinks import core
@@ -73,52 +70,21 @@ def _sync_windows_shell(coordinates: axes.Coordinates) -> None:
     run(['bash', str(paths.INSTALL_DIR / 'wsl' / 'sync-windows-shell.sh')], cwd=paths.REPO_ROOT)
 
 
-def deploy(session: Session) -> bool:
-    """Bring every declared link into line, then run the three jobs that follow it.
+def epilogue(session: Session) -> None:
+    """The three jobs that follow a deployment, and belong with it rather than at
+    the end of a run.
 
-    Only what differs is written: the resource decides per link, where the pass
-    this replaced recreated all of them and could not say which had been missing.
+    git needs somewhere to write that is not this repo, WSL needs the shell profile
+    copied onto the Windows host beside it, and Hyprland has to reload the files the
+    pass just deployed.
 
-    Nothing is unlinked first, and that must not be reinstated. A remove-everything
-    pass left the target tree unlinked for the length of the create pass, and a
-    daemon watching its own config in there reloads inside that window, finds
-    nothing, and writes itself a default — which the create pass then refuses as a
-    target it did not create. Hyprland does exactly this, every run, on an
-    established machine. Replacing each link in place has no such window.
+    The deploying itself is the engine's now. This used to carry its own
+    observe/diff/perform loop beside the resource's, which is one of the reasons
+    there were thirteen of them; what is left here is genuinely not the walk.
     """
-    # Before the header, not after: this is the one command that writes the branch
-    # into $HOME, so which branch it read from belongs above the list of what it did.
-    from dotfiles.commands.manage import report_stray_branch
-
-    report_stray_branch()
-
-    err_console.print('[bold blue]Deploying symlinks[/]')
-
-    changes = symlinks.RESOURCE.diff(session.plan, symlinks.RESOURCE.observe(session, session.plan))
-    # Constructed and never authorized, which is the state that refuses. Nothing
-    # a link pass does needs root; the parameter exists because `perform` takes
-    # one everywhere, and passing an unauthorized one is how this resource says
-    # so rather than being an exception to the protocol.
-    unprivileged = Privilege()
-    outcomes = [symlinks.RESOURCE.perform(session, change, unprivileged) for change in changes if change.actionable]
-
-    for outcome in outcomes:
-        if not outcome.ok:
-            warn(f'{outcome.change.item}: {outcome.message}')
-
-    refused = [change for change in changes if change.drifted and change.repair is Repair.BY_HAND]
-    if refused:
-        warn(f'refused {len(refused)} target(s) this manager did not create:')
-        for change in refused:
-            err_console.print(f'    {change.detail}')
-        hint('re-run with --force to replace them')
-
-    err_console.print(f'{sum(1 for outcome in outcomes if outcome.ok)} of {len(changes)} link(s) updated')
-
     _ensure_identity_file()
     _sync_windows_shell(session.machine.coordinates)
     _reload_compositor(session.machine.coordinates)
-    return not refused and all(outcome.ok for outcome in outcomes)
 
 
 def unlink(session: Session) -> bool:

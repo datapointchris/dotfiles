@@ -69,11 +69,15 @@ that drives a package manager, a library sourced into an interactive shell.
 
 ## Every test builds its own tree
 
-A `packages verify` test writes a `packages.yml` and manifest set into
-`tmp_path`, runs the command against it, and asserts on stdout, stderr and the
-exit code — one test per check. Reading the actual repo would make each test a
+A declaration-validation test writes a `packages.yml` and manifest set into
+`tmp_path`, calls `validate.declaration(root)` and asserts on the findings it
+returns — one test per check. Reading the actual repo would make each test a
 description of today's package list: failing on the next unrelated addition, and
 passing for reasons that have nothing to do with the check.
+
+They asserted on fragments of printed output through a subprocess until the
+findings became values. Assert on the finding, never on the sentence describing
+it: the wording is free to change and the finding is not.
 
 The package resource needs the same isolation for *installed-ness*, which is
 ambient rather than on disk. `tests/resources/test_packages.py` injects it

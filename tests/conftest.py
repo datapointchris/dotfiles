@@ -18,7 +18,6 @@ from types import ModuleType
 
 import pytest
 
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 
 REPO = Path(__file__).resolve().parent.parent
@@ -190,13 +189,15 @@ def aws_profiles():
 
 @pytest.fixture
 def unprivileged() -> Privilege:
-    """A `Privilege` that has never been authorized, which is what refuses.
+    """A `Privilege` that will not offer a prompt, which is what refuses.
 
     Every resource but `system` takes one and ignores it — `perform` carries it
     so that `observe` cannot — so a test of one of those wants the object that
-    proves nothing escalated rather than a mock that would let it.
+    proves nothing escalated rather than a mock that would let it. `offer=False`
+    is also what a non-interactive caller passes in production: root is acquired
+    at the write now, so a bare `Privilege()` in a test would prompt for real.
     """
-    return Privilege()
+    return Privilege(offer=False)
 
 
 @pytest.fixture
@@ -228,14 +229,14 @@ def _executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n')
 
 
 @pytest.fixture
-def granted(fake_bin: Path):
-    """An authorized `Privilege` whose sudo runs the command instead of dropping it.
+def granted(fake_bin: Path) -> Privilege:
+    """A `Privilege` whose sudo runs the command instead of dropping it.
 
     A fake that logged and exited 0 would let every write test pass without a file
     ever being written, which is the one result they must not be able to produce.
+
+    Nothing calls `authorize` any more: root is acquired at the first write, so the
+    fake answers `sudo -v` and then execs whatever it was handed.
     """
-    _executable(fake_bin, 'sudo', '#!/bin/sh\n[ "$1" = "-n" ] && shift\n[ "$1" = "-v" ] && exit 0\nexec "$@"\n')
-    privilege = Privilege()
-    privilege.authorize((Escalation('a privileged action'),))
-    yield privilege
-    privilege.stop()
+    _executable(fake_bin, 'sudo', '#!/bin/sh\n[ "$1" = "-v" ] && exit 0\nexec "$@"\n')
+    return Privilege()

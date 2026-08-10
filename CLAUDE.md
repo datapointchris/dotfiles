@@ -86,7 +86,7 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 
 - A new release tool is one function in `src/dotfiles/providers/releases.py` naming its
   asset, plus its `packages.yml` entry. There is no script to write, and
-  `packages verify` fails an entry that has neither
+  `dotfiles machines check` fails an entry that has neither
 - `src/dotfiles/providers/ghrelease.py` is the engine every one of them goes through
 - Verification is required by default; an entry that cannot satisfy it declares
   `checksum: unpublished` or `checksum: unlisted` and is measured against the live
@@ -260,7 +260,7 @@ table, which is why the rule above is to not write one.
 
 ## Key Custom Tools
 
-- **dotfiles** (`dotfiles`) — the front door, usable from any directory. Two verbs, `check` and `apply`, at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
+- **dotfiles** (`dotfiles`) — the front door, usable from any directory. Three reconcile verbs, Terraform-shaped: `plan` (what `apply` would change), `apply`, and `check` (what is *wrong*, which a machine merely behind on versions is not). All three sit at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
 - **Symlinks Manager** — `dotfiles symlinks apply`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
 - **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/.local/share/toolbox/registry.yml`, symlinked from `configs/common/.local/share/toolbox/`

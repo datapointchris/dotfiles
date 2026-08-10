@@ -18,7 +18,6 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import paths
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 from dotfiles.providers import steps
 from dotfiles.resources import Repair
@@ -116,7 +115,6 @@ def test_a_declined_password_leaves_the_licence_alone(fake_bin: Path, tmp_path: 
     executable(fake_bin, 'sudo', '#!/bin/sh\nexit 1\n')
     executable(fake_bin, 'xcodebuild', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
     privilege = Privilege()
-    privilege.authorize((Escalation('accept the Xcode licence'),))
 
     result = steps.apply('xcode-licence', privilege)
 

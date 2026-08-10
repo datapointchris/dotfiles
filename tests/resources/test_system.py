@@ -18,12 +18,12 @@ import yaml
 
 from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
-from dotfiles.privilege import Escalation
+from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-from dotfiles.resources import escalations
+from dotfiles.resources import privileged
 from dotfiles.resources import system
 from dotfiles.session import Session
 
@@ -72,8 +72,8 @@ def test_the_declared_package_name_is_what_is_looked_for(tmp_path: Path) -> None
     live = session(tmp_path, {'system_packages': [{'name': '7zip', 'apt': 'p7zip-full', 'pacman': '7zip'}]}, WORKSTATION)
     item = only_item(live)
 
-    assert ev.evidence_for(item, {'apt': frozenset({'p7zip-full'})}).verdict is Verdict.MATCHED
-    assert ev.evidence_for(item, {'apt': frozenset({'7zip'})}).verdict is Verdict.MISSING
+    assert registry.evidence_for(item, {'apt': frozenset({'p7zip-full'})}).verdict is Verdict.MATCHED
+    assert registry.evidence_for(item, {'apt': frozenset({'7zip'})}).verdict is Verdict.MISSING
 
 
 def test_a_package_installing_no_binary_is_still_answerable(tmp_path: Path, fake_bin: Path) -> None:
@@ -82,7 +82,7 @@ def test_a_package_installing_no_binary_is_still_answerable(tmp_path: Path, fake
     of them missing on a fully-installed machine."""
     live = session(tmp_path, {'system_packages': [{'name': 'build-essential', 'apt': 'build-essential'}]}, WORKSTATION)
 
-    assert ev.evidence_for(only_item(live), {'apt': frozenset({'build-essential'})}).verdict is Verdict.MATCHED
+    assert registry.evidence_for(only_item(live), {'apt': frozenset({'build-essential'})}).verdict is Verdict.MATCHED
 
 
 def test_an_aur_package_is_answered_by_pacman(tmp_path: Path) -> None:
@@ -93,7 +93,7 @@ def test_an_aur_package_is_answered_by_pacman(tmp_path: Path) -> None:
         {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'},
     )
 
-    assert ev.evidence_for(only_item(live), {'pacman': frozenset({'zen-browser-bin'})}).verdict is Verdict.MATCHED
+    assert registry.evidence_for(only_item(live), {'pacman': frozenset({'zen-browser-bin'})}).verdict is Verdict.MATCHED
 
 
 def test_a_manager_that_cannot_be_asked_yields_unknown(tmp_path: Path) -> None:
@@ -101,7 +101,7 @@ def test_a_manager_that_cannot_be_asked_yields_unknown(tmp_path: Path) -> None:
     dpkg-query is absent would be a measured-looking wrong answer."""
     live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
 
-    assert ev.evidence_for(only_item(live), {}).verdict is Verdict.UNKNOWN
+    assert registry.evidence_for(only_item(live), {}).verdict is Verdict.UNKNOWN
 
 
 def test_an_unmeasurable_package_is_nobody_s_to_repair(tmp_path: Path, fake_bin: Path) -> None:
@@ -187,14 +187,19 @@ def test_a_configuration_change_declares_that_it_needs_root(tmp_path: Path) -> N
     assert change.actionable
 
 
-def test_a_package_row_does_not_claim_to_need_root(tmp_path: Path, fake_bin: Path) -> None:
-    """The package backends have not converted, so their changes are still the
-    phase registry's — and a change nothing here writes must not put a password
-    prompt in front of a run."""
+def test_an_apt_package_says_it_needs_root_whoever_installs_it(tmp_path: Path, fake_bin: Path) -> None:
+    """Root is a fact about the mechanism, not about which code path reaches it.
+
+    This asserted the opposite while privilege was acquired up front: a change the
+    phase registry writes rather than `perform` must not, the reasoning went, put
+    a password prompt in front of a run that would never ask. Acquiring root at
+    the write removed that consequence — nothing prompts because of this field —
+    and left the assertion saying something untrue about apt.
+    """
     executable(fake_bin, 'dpkg-query', '#!/bin/sh\nexit 0\n')
     live = session(tmp_path, {'system_packages': [{'name': 'curl', 'apt': 'curl'}]}, WORKSTATION)
 
-    assert not only_change(live).privileged
+    assert only_change(live).privileged
 
 
 def test_configuration_is_absent_from_an_owner_narrowed_plan(tmp_path: Path) -> None:
@@ -246,7 +251,6 @@ def test_a_machine_with_no_root_reports_the_refusal_rather_than_crashing(tmp_pat
     live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
 
     privilege = Privilege()
-    privilege.authorize((Escalation('write the system zshenv'),))
     outcome = system.RESOURCE.perform(live, only_change(live), privilege)
 
     assert outcome.status is OutcomeStatus.FAILED
@@ -270,7 +274,7 @@ def test_a_macos_preference_does_not_ask_for_a_password(tmp_path: Path, monkeypa
     changes = system.RESOURCE.diff(live.plan, system.RESOURCE.observe(live, live.plan))
 
     assert [change.privileged for change in changes] == [False]
-    assert escalations(changes) == ()
+    assert privileged(changes) == ()
 
 
 def test_macos_rows_are_absent_from_a_linux_plan(tmp_path: Path) -> None:

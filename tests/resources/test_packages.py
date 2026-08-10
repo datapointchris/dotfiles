@@ -24,6 +24,7 @@ import yaml
 from dotfiles import evidence as ev
 from dotfiles import releases
 from dotfiles.privilege import Privilege
+from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -368,8 +369,8 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         attempted.append(entry.name)
         return ghrelease.Result(True, f'{entry.name} installed')
 
-    monkeypatch.setattr(packages.ghrelease, 'install', record)
-    monkeypatch.setattr(packages.custom, 'install', record)
+    monkeypatch.setattr(ghrelease, 'install', record)
+    monkeypatch.setattr(custom, 'install', record)
     return attempted
 
 

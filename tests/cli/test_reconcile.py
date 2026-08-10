@@ -7,6 +7,7 @@ it is the part most easily broken by a well-meaning change to a checker.
 
 from __future__ import annotations
 
+import dataclasses as dc
 from collections.abc import Iterable
 
 import pytest
@@ -76,21 +77,18 @@ def summaries(_session: object, addresses: Iterable[str] | None = None) -> list[
 def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
     """It was not examined, so it has nothing to report. Inventing a row would put
     something in --json that no checker produced."""
-    monkeypatch.setattr(engine, 'assess', summaries)
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
 
-    walked = reconcile.check_machine(skip=frozenset({'packages', 'system'}), machine=MACHINE)
-    addresses = [item.address for item in walked]
+    measured = summaries(None, [name for name in vocabulary.RESOURCES if name not in {'packages', 'system'}])
+    addresses = [item.address for item in reconcile.check_machine(measured)]
 
     assert 'packages' not in addresses
     assert 'system' not in addresses
     assert 'symlinks' in addresses
 
 
-def test_skipping_machines_skips_the_declaration_check(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(engine, 'assess', lambda *_: [])
-
-    assert reconcile.check_machine(skip=frozenset({'machines'}), machine=MACHINE) == []
+def test_skipping_machines_skips_the_declaration_check() -> None:
+    assert reconcile.check_machine([], skip=frozenset({'machines'})) == []
 
 
 def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -98,16 +96,12 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
     end the stream for the rows after it, or a crashed checker would read as a
     machine with nothing left to examine."""
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(Verdict.CONVERGED, 'machines'))
-    monkeypatch.setattr(
-        engine,
-        'assess',
-        lambda *_: [
-            Event('packages', Refusal('packages could not be examined: boom')),
-            Event('symlinks', Summary('all fine')),
-        ],
-    )
+    measured = [
+        Event('packages', Refusal('packages could not be examined: boom')),
+        Event('symlinks', Summary('all fine')),
+    ]
 
-    walked = {item.address: item.verdict for item in reconcile.check_machine(machine=MACHINE)}
+    walked = {item.address: item.verdict for item in reconcile.check_machine(measured)}
 
     assert walked['packages'] is Verdict.ISSUE
     assert walked['symlinks'] is Verdict.CONVERGED
@@ -130,7 +124,7 @@ def test_an_item_nobody_could_measure_is_counted_not_rendered_as_drift() -> None
     folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.NONE)], 'all installed')
 
     assert folded.verdict is Verdict.CONVERGED
-    assert '1 unmeasurable' in folded.detail
+    assert folded.unmeasured == 1
 
 
 def test_an_unmeasurable_item_beside_real_drift_leaves_the_drift_reported() -> None:
@@ -139,16 +133,63 @@ def test_an_unmeasurable_item_beside_real_drift_leaves_the_drift_reported() -> N
     folded = reconcile.from_changes('packages', changes, 'all installed')
 
     assert folded.verdict is Verdict.DRIFT
-    assert '1 item(s) differ' in folded.detail
-    assert '1 unmeasurable' in folded.detail
+    assert folded.pending == 1
+    assert folded.unmeasured == 1
 
 
-def test_an_unknown_something_could_repair_is_still_drift() -> None:
-    """`Repair.NONE` is what marks a measurement gap. An UNKNOWN that `apply` has
-    an answer for is a difference, and must not be folded away with it."""
-    folded = reconcile.from_changes('packages', [change(Change_Verdict.UNKNOWN, Repair.BY_HAND)], 'all installed')
+def test_an_unknown_someone_could_repair_is_reported_by_check_not_plan() -> None:
+    """`Repair.NONE` is what marks a measurement gap, and this is not one — someone
+    can fix it, just not `apply`. So it must not be folded away with the gaps, and
+    it belongs to the verb that asks what is wrong rather than what would change.
+    """
+    changes = [change(Change_Verdict.UNKNOWN, Repair.BY_HAND)]
 
-    assert folded.verdict is Verdict.DRIFT
+    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN).verdict is Verdict.CONVERGED
+    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK).verdict is Verdict.ISSUE
+
+
+def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
+    """The whole of the split, in one walk. `Repair` already carried the
+    distinction — its docstring describes exactly this — and one verb folding both
+    is what left the scheduled unit permanently failed on a healthy machine."""
+    changes = [
+        change(Change_Verdict.MISSING, Repair.AUTOMATIC, item='ghrelease/zk'),
+        change(Change_Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER'),
+    ]
+
+    planned = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN)
+    checked = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert planned.verdict is Verdict.DRIFT
+    assert planned.pending == 1
+    assert checked.verdict is Verdict.ISSUE
+    assert checked.attention == 1
+
+
+def test_a_package_a_version_behind_is_not_something_wrong() -> None:
+    """The case that made the split necessary. Drift is the normal state of a
+    machine between applies; reporting it as an Issue is what trained the nudge
+    away and left a systemd unit red on a box with nothing to fix."""
+    behind = [change(Change_Verdict.STALE, Repair.AUTOMATIC)]
+
+    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.PLAN).verdict is Verdict.DRIFT
+    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.CHECK).verdict is Verdict.CONVERGED
+
+
+def test_a_plan_counts_what_will_ask_for_a_password() -> None:
+    """The half of the front-loaded design worth keeping. Root is acquired at the
+    write now, so the plan's count is the only warning anyone gets — and it must
+    count only what `apply` would actually reach, not every privileged row."""
+    changes = [
+        dc.replace(change(Change_Verdict.MISSING, item='system/curl'), privileged=True),
+        dc.replace(change(Change_Verdict.MISSING, Repair.BY_HAND, item='file/zshenv'), privileged=True),
+        change(Change_Verdict.MISSING, item='ghrelease/zk'),
+    ]
+
+    folded = reconcile.from_changes('system', changes, 'all installed', reconcile.Lens.PLAN)
+
+    assert folded.pending == 2
+    assert folded.privileged == 1
 
 
 def test_nothing_at_all_says_so_without_a_gap_clause() -> None:

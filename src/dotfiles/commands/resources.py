@@ -23,7 +23,8 @@ from dotfiles.output import hint
 from dotfiles.output import render_change
 from dotfiles.output import render_result
 from dotfiles.output import success
-from dotfiles.resources import Resource
+from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -38,6 +39,19 @@ def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
     raise typer.Exit(reconcile.exit_code([result]))
 
 
+def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bool) -> None:
+    """One resource, through the same engine and the same fold the composite uses.
+
+    Narrowed by address rather than by a per-resource function, so a resource
+    cannot answer one way here and another way under `dotfiles plan` — which is
+    what seven parallel `check_*` functions made possible and eventually true.
+    """
+    from dotfiles import engine
+
+    results = reconcile.fold(engine.assess(_session(machine), engine.Selection.of(address)), lens)
+    _report(results[0], as_json)
+
+
 def _session(machine: str | None) -> Session:
     try:
         return Session.resolve(machine)
@@ -45,43 +59,37 @@ def _session(machine: str | None) -> Session:
         raise typer.BadParameter(str(unresolved)) from unresolved
 
 
-def _reconcile_one(resource: Resource, session: Session) -> ExitCode:
-    """`check` plus acting on what it found, for one resource.
+def _reconcile_one(address: str, session: Session) -> ExitCode:
+    """`plan` plus acting on what it found, for one resource.
 
-    The same walk with the last step run, which is the whole of the check/apply
-    symmetry: nothing here decides whether to write, it decides whether to call
-    the only thing that does.
-
-    Authorization happens once, between the two, with the list of what needs it —
-    which is only possible because the changes are decided before any of them
-    runs. A resource with nothing privileged never prompts.
+    The same stream with the second half run, which is the whole of the plan/apply
+    symmetry: nothing here decides whether to write, it decides whether to call the
+    only thing that does. Measured once — the changes acted on are the ones that
+    were decided, not a second look that may disagree.
     """
+    from dotfiles import engine
     from dotfiles import privilege as privileges
-    from dotfiles.resources import escalations
 
-    changes = resource.diff(session.plan, resource.observe(session, session.plan))
-
-    privilege = privileges.Privilege()
-    privilege.authorize(escalations(changes))
-    try:
-        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
-    finally:
-        privilege.stop()
+    planned = list(engine.assess(session, engine.Selection.of(address)))
+    outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
 
     for outcome in outcomes:
-        if outcome.ok:
-            success(f'{outcome.change.item}: {outcome.message or outcome.status}')
+        if isinstance(outcome, Outcome):
+            (success if outcome.ok else error)(f'{outcome.change.item}: {outcome.message or outcome.status}')
         else:
-            error(f'{outcome.change.item}: {outcome.message or outcome.status}')
+            error(str(outcome.reason))
 
-    if any(not outcome.ok for outcome in outcomes):
+    if any(not isinstance(outcome, Outcome) or not outcome.ok for outcome in outcomes):
         return ExitCode.ISSUE
-    # What `apply` could not repair is still drift, and saying so is what keeps a
-    # machine awaiting a safekeep restore from reading as converged.
-    remaining = [change for change in changes if change.drifted and not change.actionable]
-    for change in remaining:
+
+    # What `apply` could not repair is still a finding, and saying so is what keeps
+    # a machine awaiting a safekeep restore from reading as converged. It is
+    # `check`'s answer rather than `plan`'s, which is why it is reported and not
+    # counted as drift left behind.
+    _, attention, _ = reconcile.sift([event.payload for event in planned if isinstance(event.payload, Change)])
+    for change in attention:
         render_change(change)
-    return ExitCode.DRIFT if remaining else ExitCode.CONVERGED
+    return ExitCode.ISSUE if attention else ExitCode.CONVERGED
 
 
 def available_sources() -> list[str]:
@@ -145,13 +153,13 @@ def _apply_phases(
     asked for narrows nothing and updates the lot.
     """
     from dotfiles import apply
-    from dotfiles import resolve
+    from dotfiles import registry
 
     providers = None
     if source:
-        provider = resolve.PROVIDERS.get(source)
+        provider = registry.for_section(source)
         if provider is None:
-            error(f'nothing installs {source}: {resolve.UNPROVIDED.get(source, "no provider claims that section")}')
+            error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
             raise typer.Exit(ExitCode.USAGE)
         providers = frozenset({provider.name})
 
@@ -170,10 +178,16 @@ def _apply_phases(
 packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
 
 
+@packages_app.command('plan')
+def packages_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared packages `apply` would install or upgrade."""
+    _survey('packages', machine, reconcile.Lens.PLAN, as_json)
+
+
 @packages_app.command('check')
 def packages_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report packages this machine declares but has not installed."""
-    _report(reconcile.check_packages(_session(machine)), as_json)
+    _survey('packages', machine, reconcile.Lens.CHECK, as_json)
 
 
 @packages_app.command('apply')
@@ -210,10 +224,16 @@ def packages_search(query: str = typer.Argument(..., help='Substring to match'))
 toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and their version managers')
 
 
+@toolchains_app.command('plan')
+def toolchains_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which language runtimes `apply` would install or raise."""
+    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json)
+
+
 @toolchains_app.command('check')
 def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report toolchain drift."""
-    _report(reconcile.check_toolchains(_session(machine)), as_json)
+    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json)
 
 
 @toolchains_app.command('apply')
@@ -238,10 +258,16 @@ def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> N
 plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plugins')
 
 
+@plugins_app.command('plan')
+def plugins_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared plugins `apply` would clone."""
+    _survey('plugins', machine, reconcile.Lens.PLAN, as_json)
+
+
 @plugins_app.command('check')
 def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report plugin drift."""
-    _report(reconcile.check_plugins(_session(machine)), as_json)
+    _survey('plugins', machine, reconcile.Lens.CHECK, as_json)
 
 
 @plugins_app.command('apply')
@@ -260,10 +286,16 @@ def plugins_list(as_json: bool = JsonOption) -> None:
 symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the repo linked into $HOME')
 
 
+@symlinks_app.command('plan')
+def symlinks_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which declared links `apply` would deploy or prune."""
+    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json)
+
+
 @symlinks_app.command('check')
 def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report broken or missing symlinks without touching any."""
-    _report(reconcile.check_symlinks(_session(machine)), as_json)
+    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json)
 
 
 @symlinks_app.command('apply')
@@ -277,9 +309,17 @@ def symlinks_apply(
     refusal, for adopting a machine that already had dotfiles of its own.
     """
     from dotfiles import deploy
+    from dotfiles.commands.manage import report_stray_branch
+
+    # Before the walk, not in the epilogue: this is the command that writes the
+    # checked-out branch into $HOME, so which branch it read from belongs above
+    # what it did rather than after it.
+    report_stray_branch()
 
     session = Session.resolve(machine, force=force)
-    raise typer.Exit(ExitCode.CONVERGED if deploy.deploy(session) else ExitCode.DRIFT)
+    outcome = _reconcile_one('symlinks', session)
+    deploy.epilogue(session)
+    raise typer.Exit(outcome)
 
 
 @symlinks_app.command('show')
@@ -309,18 +349,22 @@ def symlinks_unlink(
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')
 
 
+@env_app.command('plan')
+def env_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show what `apply` would write to ~/.env."""
+    _survey('env', machine, reconcile.Lens.PLAN, as_json)
+
+
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report drift between the declared flags and this machine."""
-    _report(reconcile.check_env(_session(machine)), as_json)
+    _survey('env', machine, reconcile.Lens.CHECK, as_json)
 
 
 @env_app.command('apply')
 def env_apply(machine: str = MachineOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
-    from dotfiles.resources import env as env_resource
-
-    raise typer.Exit(_reconcile_one(env_resource.RESOURCE, _session(machine)))
+    raise typer.Exit(_reconcile_one('env', _session(machine)))
 
 
 @env_app.command('show')
@@ -334,10 +378,16 @@ def env_show(machine: str = MachineOption) -> None:
 system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
 
 
+@system_app.command('plan')
+def system_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show which system packages and configuration rows `apply` would change."""
+    _survey('system', machine, reconcile.Lens.PLAN, as_json)
+
+
 @system_app.command('check')
 def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report system configuration drift."""
-    _report(reconcile.check_system(_session(machine)), as_json)
+    _survey('system', machine, reconcile.Lens.CHECK, as_json)
 
 
 @system_app.command('apply')
@@ -349,6 +399,12 @@ def system_apply(machine: str = MachineOption, offline: bool = OfflineOption) ->
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")
 
 
+@identity_app.command('plan')
+def identity_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """Show whether `apply` would set this machine’s git identity."""
+    _survey('identity', machine, reconcile.Lens.PLAN, as_json)
+
+
 @identity_app.command('check')
 def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report whether this machine has a git identity.
@@ -357,4 +413,4 @@ def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> 
     there is nothing in the repo for `apply` to write. It lives in `~/.gitconfig`
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
-    _report(reconcile.check_identity(_session(machine)), as_json)
+    _survey('identity', machine, reconcile.Lens.CHECK, as_json)

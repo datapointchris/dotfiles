@@ -128,9 +128,12 @@ def update(
 
     if deployed:
         from dotfiles import deploy
+        from dotfiles.commands import resources
 
         hint(f'{len(deployed)} deployed file(s) changed — rebuilding symlinks')
-        deploy.deploy(Session.resolve())
+        session = Session.resolve()
+        resources._reconcile_one('symlinks', session)
+        deploy.epilogue(session)
 
     if not dependencies:
         return

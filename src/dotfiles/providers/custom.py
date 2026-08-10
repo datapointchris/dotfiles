@@ -644,7 +644,7 @@ INSTALLERS: dict[str, Installer] = {
 }
 """Which function installs which entry.
 
-`packages verify` checks this against `packages.yml` in one direction and
+`validate.py` checks this against `packages.yml` in one direction and
 `tests/install/test_custom_installers.py` in the other, so an entry nothing can
 install and a function nothing declares are both errors rather than silence.
 """

@@ -1,17 +1,17 @@
 """The check/apply pair every resource implements, and the registry of them.
 
-Three methods rather than two, so `check` is a **prefix** of `apply`'s call graph
+Three methods rather than two, so `plan` is a **prefix** of `apply`'s call graph
 rather than `apply` with a flag turned off:
 
-    check:  observe → diff → render
+    plan:   observe → diff → render
     apply:  observe → diff → render → perform
 
 No method takes a `dry_run`. `diff` is pure and cannot write. `observe` reads.
-`perform` is the only writer and is unreachable from `check`, because `check`
-never calls it. There is no branch inside any resource asking whether it is
+`perform` is the only writer and is unreachable from the read-only verbs, because
+neither calls it. There is no branch inside any resource asking whether it is
 allowed to write, so there is no branch that can be wrong — which is what
-`cli-design.md`'s "check IS apply's dry run, by construction rather than by flag"
-is a statement about.
+`cli-design.md`'s "the read verb IS the write verb's dry run, by construction
+rather than by flag" is a statement about.
 
 `perform` re-verifies live rather than trusting what `diff` saw: `observe` ran
 before the report was printed and before anything upstream in the stage order
@@ -19,10 +19,10 @@ installed a toolchain, so the state it decided from may be minutes old. It
 refuses rather than forces.
 
 `Privilege` is a parameter of `perform` and of nothing else, which is what makes
-"`check` never escalates" structural rather than a promise: `observe` is not
-handed one, so the code to ask for a password is not reachable from the half
-`check` runs. Six of the seven resources ignore it, and that is the point — an
-unused parameter is cheaper than a subsystem that has to be trusted.
+"the read-only verbs never escalate" structural rather than a promise: `observe`
+is not handed one, so the code to ask for a password is not reachable from the
+half `plan` and `check` run. Six of the seven resources ignore it, and that is the
+point — an unused parameter is cheaper than a subsystem that has to be trusted.
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ from collections.abc import Sequence
 from typing import Protocol
 from typing import runtime_checkable
 
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
@@ -92,8 +91,9 @@ class Change:
     privileged: bool = False
     """Whether repairing this needs root, declared here rather than discovered
     when the write is attempted. The plan is complete before anything runs, so
-    the whole list can be named at one prompt at the front — and `check` can say
-    how many of its findings will need a password without asking for one."""
+    `plan` can say how many of its findings will need a password without asking
+    for one — which is the half of the front-loaded design worth keeping now that
+    root is acquired at the write."""
 
     @property
     def drifted(self) -> bool:
@@ -176,6 +176,12 @@ class Resource(Protocol):
         ...
 
 
-def escalations(changes: Sequence[Change]) -> tuple[Escalation, ...]:
-    """What a run will need root for, in the words the prompt should use."""
-    return tuple(Escalation(f'{change.item}: {change.detail}') for change in changes if change.actionable and change.privileged)
+def privileged(changes: Sequence[Change]) -> tuple[Change, ...]:
+    """What a run will need root for, known before anything runs.
+
+    `plan` prints the count so nobody is surprised mid-run. It no longer feeds a
+    prompt: root is acquired when a write needs it, because keeping a sudo
+    timestamp alive does not work on macOS and a front prompt therefore asked for
+    a password on machines that turned out to need none.
+    """
+    return tuple(change for change in changes if change.actionable and change.privileged)

@@ -143,7 +143,7 @@ def latest(monkeypatch, tag: str | None) -> None:
 
 
 class TestCorpus:
-    """The half `packages verify` cannot ask, because it runs against a synthetic tree."""
+    """The half `validate.py` cannot ask, because it runs against a synthetic tree."""
 
     def test_every_declared_installer_has_a_function(self, declared):
         assert {entry.name for entry in declared.section('custom_installers')} <= set(custom.INSTALLERS)

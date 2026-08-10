@@ -24,7 +24,6 @@ thing that keeps the halves from drifting while both exist.
 
 from __future__ import annotations
 
-import dataclasses
 import datetime as dt
 import functools
 import os
@@ -37,6 +36,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import coordinates
 from dotfiles import deploy
+from dotfiles import engine
 from dotfiles import envfile
 from dotfiles import evidence as ev
 from dotfiles import failure_report
@@ -44,6 +44,7 @@ from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import validate
 from dotfiles import versions
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
@@ -51,13 +52,13 @@ from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
+from dotfiles.output import render_finding
 from dotfiles.output import warn
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
-from dotfiles.resources import escalations
-from dotfiles.resources import plugins
-from dotfiles.resources import system
+from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -570,14 +571,49 @@ def _uv_tools(context: Run) -> bool:
     return run_installer(context, COMMON / 'language-tools' / 'uv-tools.sh', 'uv-tools')
 
 
+def _converge(context: Run, selection: engine.Selection) -> bool:
+    """One phase's work, through the engine both verbs share.
+
+    Every phase that reached into a resource had grown its own observe/diff/perform
+    loop with its own rendering: three of the thirteen copies of the walk, each with
+    a different idea of what a refusal looks like. This is the one walk, and what it
+    still returns is a bool only because `Phase.run` does.
+
+    Selected rather than observed-then-filtered. The plugins live on opposite sides
+    of the symlink pass — TPM has to exist before the pass that deploys the tmux
+    config it reads, and the yazi plugins go after it so nothing writes into
+    `~/.config/yazi` first — and each is now an address rather than a stage sieve
+    over a walk that measured all three.
+    """
+    session = context.session
+    planned = [event for event in engine.assess(session, selection) if isinstance(event.payload, Change)]
+
+    outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
+    for outcome in outcomes:
+        if isinstance(outcome, Outcome) and outcome.ok:
+            err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
+        elif isinstance(outcome, Outcome):
+            _install_failed(context, outcome.change.item, outcome.message)
+        else:
+            warn(outcome.reason)
+
+    for change in (event.payload for event in planned if isinstance(event.payload, Change)):
+        if not change.actionable and change.drifted:
+            warn(f'{change.item}: {change.detail}')
+
+    return all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
+
+
 def _shell_plugins(context: Run) -> bool:
     heading('Shell plugins')
-    return plugins.clone(context.session, Stage.SHELL_PLUGINS)
+    return _converge(context, engine.Selection.of('plugins/shell-plugin'))
 
 
 def _symlinks(context: Run) -> bool:
     heading('Symlinking dotfiles')
-    return deploy.deploy(context.session)
+    deployed = _converge(context, engine.Selection.of('symlinks'))
+    deploy.epilogue(context.session)
+    return deployed
 
 
 def _tmux_plugins(context: Run) -> bool:
@@ -588,7 +624,7 @@ def _tmux_plugins(context: Run) -> bool:
     resolver to plan per plugin.
     """
     heading('tmux plugins')
-    if not plugins.clone(context.session, Stage.TMUX_PLUGINS):
+    if not _converge(context, engine.Selection.of('plugins/tpm')):
         return False
     if not context.wants('tmux_plugins'):
         return True
@@ -604,7 +640,7 @@ def _yazi_plugins(context: Run) -> bool:
     running six stages *earlier* is what put two writers on one path.
     """
     heading('yazi plugins')
-    return plugins.clone(context.session, Stage.YAZI_PLUGINS)
+    return _converge(context, engine.Selection.of('plugins/yazi-plugin'))
 
 
 def _nvim_plugins(context: Run) -> bool:
@@ -617,50 +653,21 @@ def _nvim_plugins(context: Run) -> bool:
 def _system_config(context: Run) -> bool:
     """Group memberships, unit enablement, files under `/etc`, and the login shell.
 
-    The system resource's own apply walk — observe, diff, perform — reached from
-    the phase registry, because that is still what `dotfiles apply` drives. There
-    is no second description of the work here: what this phase writes is exactly
-    what `dotfiles system check` prints.
+    Through the one engine, like every other converted phase, so what this writes
+    is exactly what `dotfiles system plan` prints.
 
-    **The password is asked for here rather than at the front of the run**, which
-    is not where the design wants it and is where it has to be while the package
-    backends are still bash. What decides whether root is needed at all is the
-    observation, and the observation is not right until the packages are
-    installed: on a fresh machine zsh does not exist yet, so an up-front look
-    would find the login shell unrepairable, ask for nothing, and then refuse the
-    one write it turns out to need. Asking for a password that may not be needed
-    is the other wrong answer. It moves to the front when the package backends
-    convert and the whole privileged list is knowable before anything runs.
+    Selected by stage off the registry, which repays the debt A2 took here. This
+    briefly observed the whole `system` resource and filtered afterwards, spending
+    one package-inventory query per run on rows it was about to discard; the
+    providers at this stage are now a selection, so the package half is not in the
+    plan this walk is handed and there is nothing to query.
+
+    The password is asked for at the write that needs it, which is now the rule
+    everywhere rather than a concession here: keeping a sudo timestamp alive does
+    not work on macOS, so a front prompt bought nothing and cost a password on
+    machines needing none. `plan` states the count in advance.
     """
-    session = context.session
-    plan = dataclasses.replace(session.plan, items=tuple(item for item in session.plan.items if item.stage is Stage.SYSTEM_CONFIG))
-    if not plan.items:
-        return True
-
-    resource = system.RESOURCE
-    changes = resource.diff(plan, resource.observe(session, plan))
-    if not changes:
-        return True
-
-    heading('System configuration')
-    privilege = privileges.Privilege()
-    privilege.authorize(escalations(changes))
-    try:
-        outcomes = [resource.perform(session, change, privilege) for change in changes if change.actionable]
-    finally:
-        privilege.stop()
-
-    for outcome in outcomes:
-        if outcome.ok:
-            err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
-        else:
-            _install_failed(context, outcome.change.item, outcome.message)
-
-    for change in changes:
-        if not change.actionable:
-            warn(f'{change.item}: {change.detail}')
-
-    return all(outcome.ok for outcome in outcomes)
+    return _converge(context, engine.Selection.at(Stage.SYSTEM_CONFIG))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -677,7 +684,7 @@ class Phase:
     """Which CLI resource owns it, so `dotfiles packages apply` selects a subset."""
 
     providers: tuple[str, ...]
-    """Which of `resolve.PROVIDERS` this phase installs, or () for one that installs
+    """Which of `registry.PROVIDERS` this phase installs, or () for one that installs
     no catalogued item at all — a toolchain, the symlinks, the zsh setup.
 
     This replaces a hand-maintained `owner_aware` boolean. Ownership is already a
@@ -757,6 +764,18 @@ def apply_machine(
     from dotfiles.commands.manage import report_stray_branch
 
     report_stray_branch()
+
+    # Before anything is resolved, because everything after this is measured
+    # against the declaration: a run against one that will not hold together
+    # installs whatever survived the parse and reports success. `check` has always
+    # put this first in its walk for the same reason; refusing to *act* on it is
+    # what the read-only verb could not do.
+    if broken := validate.errors(validate.declaration()):
+        warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
+        for finding in broken:
+            render_finding(finding.section, finding.message)
+        hint("'dotfiles machines check' lists them, warnings included")
+        return ExitCode.ISSUE
 
     try:
         context = Run.resolve(machine, reinstall=reinstall, offline=offline, owner=owner)

@@ -14,8 +14,10 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import engine
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import Stage
+from dotfiles.providers import clone
+from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
 from dotfiles.resources import plugins
@@ -104,7 +106,7 @@ def test_a_shell_plugin_lands_where_zshrc_sources_it(tmp_path: Path) -> None:
     live = session(tmp_path)
     item = live.plan.for_provider('shell-plugin')[0]
 
-    assert plugins.destination(item, live.home) == live.home / '.config' / 'zsh' / 'plugins' / 'forgit'
+    assert clone.destination(item, live.home) == live.home / '.config' / 'zsh' / 'plugins' / 'forgit'
 
 
 def test_tpm_lands_where_the_declaration_says(tmp_path: Path) -> None:
@@ -113,7 +115,7 @@ def test_tpm_lands_where_the_declaration_says(tmp_path: Path) -> None:
     live = session(tmp_path)
     item = live.plan.for_provider('tpm')[0]
 
-    assert plugins.destination(item, live.home) == live.home / '.config' / 'tmux' / 'plugins' / 'tpm'
+    assert clone.destination(item, live.home) == live.home / '.config' / 'tmux' / 'plugins' / 'tpm'
 
 
 def test_cloning_puts_the_checkout_at_the_declared_path(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
@@ -156,7 +158,7 @@ def test_a_yazi_plugin_lands_where_yazi_looks_with_the_suffix_it_appends(tmp_pat
     live = session(tmp_path)
     item = live.plan.for_provider('yazi-plugin')[0]
 
-    assert plugins.destination(item, live.home) == live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi'
+    assert clone.destination(item, live.home) == live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi'
 
 
 def test_a_monorepo_plugin_takes_only_its_own_subdirectory(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
@@ -198,9 +200,16 @@ def test_a_subdirectory_that_moved_upstream_fails_and_says_so(tmp_path: Path, mo
     assert not (live.home / '.config' / 'yazi' / 'plugins' / '.git.yazi.staging').exists()
 
 
-def test_cloning_is_selected_by_stage(tmp_path: Path, upstream: Path) -> None:
+def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, upstream: Path) -> None:
     """The two sit on opposite sides of the symlink deployment: TPM has to be
-    there before the pass that reads the tmux config deployed alongside it."""
+    there before the pass that reads the tmux config deployed alongside it.
+
+    Selected rather than observed-then-filtered, and the difference is not
+    cosmetic: TPM is not in the plan this walk is handed, so nothing can observe
+    it, diff it or clone it. `ADDRESS_SEPARATOR` was invented for exactly this
+    pair and then went unused, which is why `--skip plugins/tpm` used to skip all
+    of `plugins`.
+    """
     live = session(
         tmp_path,
         packages={
@@ -209,10 +218,29 @@ def test_cloning_is_selected_by_stage(tmp_path: Path, upstream: Path) -> None:
         },
     )
 
-    assert plugins.clone(live, Stage.SHELL_PLUGINS)
+    planned = list(engine.assess(live, engine.Selection.of('plugins/shell-plugin')))
+    assert [event.payload.item for event in planned if isinstance(event.payload, Change)] == ['shell-plugin/forgit']
+    assert all(event.payload.ok for event in engine.execute(live, planned, Privilege(offer=False)))
 
     assert (live.home / '.config' / 'zsh' / 'plugins' / 'forgit').is_dir()
     assert not (live.home / '.config' / 'tmux' / 'plugins' / 'tpm').is_dir()
+
+
+def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path, upstream: Path) -> None:
+    """The user-visible half of provider addressing, and the inverse of the test
+    above: `--skip plugins/tpm` leaves the shell plugins alone."""
+    live = session(
+        tmp_path,
+        packages={
+            'shell_plugins': [{'name': 'forgit', 'repo': str(upstream)}],
+            'tmux_plugins': {'tpm': {'repo': str(upstream), 'install_dir': '~/.config/tmux/plugins/tpm'}},
+        },
+    )
+
+    planned = engine.assess(live, engine.Selection.excluding(['plugins/tpm']))
+    cloned = [event.payload.item for event in planned if event.resource == 'plugins' and isinstance(event.payload, Change)]
+
+    assert cloned == ['shell-plugin/forgit']
 
 
 def test_a_machine_declining_plugins_plans_none(tmp_path: Path) -> None:

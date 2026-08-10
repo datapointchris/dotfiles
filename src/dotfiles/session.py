@@ -16,12 +16,16 @@ import dataclasses as dc
 import functools
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotfiles import catalog as catalogs
 from dotfiles import envfile
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve as resolver
+
+if TYPE_CHECKING:
+    from dotfiles import evidence
 
 
 class NoMachine(Exception):
@@ -97,6 +101,23 @@ class Session:
     @functools.cached_property
     def plan(self) -> resolver.Plan:
         return resolver.resolve(self.catalog, self.machine, owner=self.owner)
+
+    @functools.cached_property
+    def inventories(self) -> evidence.Inventories:
+        """What the package managers report, shared by everything that asks.
+
+        On the Session because more than one provider wants the same answer and
+        each of them observes for itself: four providers over three managers used
+        to mean four dicts built by whichever resource happened to own them.
+        Asked lazily and cached per manager, so this costs nothing on a run that
+        names no registry package.
+
+        `evidence` is imported here rather than at module scope because it reaches
+        the resource vocabulary, which reaches this file.
+        """
+        from dotfiles import evidence
+
+        return evidence.Inventories()
 
     @property
     def env_file(self) -> Path:

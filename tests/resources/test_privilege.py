@@ -18,13 +18,10 @@ import pytest
 from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles.privilege import Authorization
-from dotfiles.privilege import Escalation
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 
 NOT_ROOT = pytest.mark.skipif(os.geteuid() == 0, reason='the ALREADY_ROOT path is the one that runs as root')
-
-INSTALL_DOCKER = (Escalation('add chris to the docker group'),)
 
 
 @pytest.fixture
@@ -70,17 +67,17 @@ def test_only_privilege_py_contains_the_string_sudo() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Authorization
+# Acquiring root
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_nothing_to_escalate_never_touches_sudo(tmp_path: Path, fake_bin: Path) -> None:
-    """A converged machine must not be asked for a password to be told so."""
+def test_a_run_that_writes_nothing_privileged_never_touches_sudo(tmp_path: Path, fake_bin: Path) -> None:
+    """A converged machine must not be asked for a password to be told so. Root is
+    acquired at the write, so a run with no privileged write never reaches one."""
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log)
-    privilege = Privilege()
 
-    assert privilege.authorize(()) is Authorization.NOT_NEEDED
+    assert Privilege().state is Authorization.NOT_NEEDED
     assert recorded(log) == []
 
 
@@ -89,7 +86,18 @@ def test_a_machine_without_sudo_reports_unavailable_rather_than_failing(fake_bin
     """The LXC container and the Docker harnesses. The unprivileged 90% of a run
     still has to land, which is what makes them runnable without a
     passwordless-sudo carve-out."""
-    assert Privilege().authorize(INSTALL_DOCKER) is Authorization.UNAVAILABLE
+    assert Privilege().acquire('add chris to the docker group') is Authorization.UNAVAILABLE
+
+
+@NOT_ROOT
+def test_a_caller_that_must_not_block_declines_without_prompting(tmp_path: Path, fake_bin: Path) -> None:
+    """`offer=False` is how a non-interactive caller says so. Without it, root is
+    acquired at the write — which is right at a terminal and a hang under a timer."""
+    log = tmp_path / 'calls'
+    fake_sudo(fake_bin, log)
+
+    assert Privilege(offer=False).acquire('anything') is Authorization.DECLINED
+    assert recorded(log) == []
 
 
 @NOT_ROOT
@@ -97,24 +105,35 @@ def test_a_declined_password_is_declined_rather_than_retried(tmp_path: Path, fak
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log, exit_code=1)
 
-    assert Privilege().authorize(INSTALL_DOCKER) is Authorization.DECLINED
+    assert Privilege().acquire('add chris to the docker group') is Authorization.DECLINED
     assert recorded(log) == ['-v']
 
 
 @NOT_ROOT
-def test_authorizing_twice_asks_once(tmp_path: Path, fake_bin: Path) -> None:
-    """`authorize` is the run's, not a provider's, and a provider that called it
-    anyway must not open a second prompt."""
+def test_a_refusal_is_not_reopened_for_every_later_write(tmp_path: Path, fake_bin: Path) -> None:
+    """A machine without a password is not going to grow one between two writes,
+    and asking again per item is how one refusal becomes a wall of prompts."""
+    log = tmp_path / 'calls'
+    fake_sudo(fake_bin, log, exit_code=1)
+    privilege = Privilege()
+
+    assert privilege.acquire('first') is Authorization.DECLINED
+    assert privilege.acquire('second') is Authorization.DECLINED
+    assert recorded(log) == ['-v']
+
+
+@NOT_ROOT
+def test_two_privileged_writes_ask_for_one_password(tmp_path: Path, fake_bin: Path) -> None:
+    """Acquiring at the write does not mean acquiring per write. The prompt happens
+    once and the rest of the run rides the answer."""
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log)
     privilege = Privilege()
-    try:
-        assert privilege.authorize(INSTALL_DOCKER) is Authorization.GRANTED
-        assert privilege.authorize(INSTALL_DOCKER) is Authorization.GRANTED
-    finally:
-        privilege.stop()
 
-    assert recorded(log) == ['-v']
+    assert privilege.run(['usermod', '-aG', 'docker', 'chris'], reason='group').ok
+    assert privilege.run(['systemctl', 'enable', 'docker'], reason='unit').ok
+
+    assert recorded(log) == ['-v', 'usermod -aG docker chris', 'systemctl enable docker']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -122,33 +141,23 @@ def test_authorizing_twice_asks_once(tmp_path: Path, fake_bin: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_running_before_authorizing_raises_rather_than_prompting() -> None:
-    """A write reached without the run having asked is a bug in the run, not a
-    reason to open a password prompt in the middle of one."""
-    with pytest.raises(PrivilegeUnavailable):
-        Privilege().run(['true'], reason='anything')
-
-
 @NOT_ROOT
-def test_a_privileged_command_cannot_open_a_second_prompt(tmp_path: Path, fake_bin: Path) -> None:
-    """`-n` after `-v`: the timestamp is valid, so this is the whole of "one
-    prompt, at the front, or none"."""
+def test_a_write_acquires_root_by_itself(tmp_path: Path, fake_bin: Path) -> None:
+    """No caller authorizes any more. This is the whole of the model change: the
+    front prompt was buying a property macOS will not give, because a sudo
+    timestamp cannot be kept alive there."""
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log)
-    privilege = Privilege()
-    try:
-        privilege.authorize(INSTALL_DOCKER)
-        assert privilege.run(['usermod', '-aG', 'docker', 'chris'], reason='group').ok
-    finally:
-        privilege.stop()
 
-    assert recorded(log) == ['-v', '-n usermod -aG docker chris']
+    assert Privilege().run(['usermod', '-aG', 'docker', 'chris'], reason='group').ok
+    assert recorded(log) == ['-v', 'usermod -aG docker chris']
 
 
 @NOT_ROOT
-def test_a_refused_run_names_why_in_words_a_report_can_print(fake_bin: Path) -> None:
+def test_a_refused_run_raises_having_written_nothing(fake_bin: Path) -> None:
+    """No sudo on the machine at all. The write must not half-happen, and the
+    caller has to be able to report why."""
     privilege = Privilege()
-    privilege.authorize(INSTALL_DOCKER)
 
     with pytest.raises(PrivilegeUnavailable):
         privilege.run(['true'], reason='anything')

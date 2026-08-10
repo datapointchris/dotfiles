@@ -727,7 +727,7 @@ SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
 """`system.yml`, in its own map rather than merged into `SECTIONS`.
 
 `SECTIONS` is what a manifest subscribes to, what `packages list --section`
-offers and what `packages verify` walks. None of those are true of a group
+offers and what `validate.py` walks. None of those are true of a group
 membership, so merging the two would put system configuration behind the
 `packages` noun — which the whole point of a `system` resource is to stop.
 """

@@ -187,10 +187,10 @@ repos:
         always_run: false
         stages: [pre-commit]
 
-      # Drift check: packages.yml ↔ manifests ↔ installer scripts
-      - id: packages-verify
-        name: packages verify (drift check)
-        entry: uv run packages verify
+      # Drift check: packages.yml ↔ manifests ↔ what can install them
+      - id: machines-check
+        name: dotfiles machines check (declaration drift)
+        entry: uv run dotfiles machines check
         language: system
         pass_filenames: false
         always_run: true

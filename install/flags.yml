@@ -15,9 +15,10 @@
 #   default      the value written when a manifest does not override it
 #   consumers    where it is read, so a dead flag is visible at a glance
 #
-# A manifest overrides a default in its own `flags:` block. `dotfiles check`
-# reports flags declared here but absent from ~/.env, and values that are
-# neither truthy nor falsey.
+# A manifest overrides a default in its own `flags:` block. `dotfiles plan`
+# reports flags declared here but absent from ~/.env; `dotfiles check` reports a
+# value that is neither truthy nor falsey, and one set here that nothing declares
+# — neither is drift apply can repair.
 #
 # NOTE: a flag belongs here only when the code is present and cheap and the
 # only question is whether this machine wants it. Payload that is expensive to

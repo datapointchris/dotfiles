@@ -27,13 +27,27 @@ gets no wrapper.
 
 `src/dotfiles/`, installed by `uv tool install` and so on `PATH` from any directory.
 
-The grammar is **noun-verb with exactly two verbs**: `check` reports drift and never
-writes, `apply` fixes it. Both sit at the top level and again under each resource, so
-narrowing to one part of the machine is the same sentence with a noun in it.
-`dotfiles --help` lists the nouns.
+The grammar is **noun-verb with three reconcile verbs**, Terraform-shaped. `plan` reports
+what `apply` would change and never writes; `apply` makes it so; `check` reports what is
+*wrong*, which is a different question. All three sit at the top level and again under
+each resource, so narrowing to one part of the machine is the same sentence with a noun
+in it. `dotfiles --help` lists the nouns.
 
-`check` is `apply` minus the last step — structurally the same walk — which is why there
+`plan` is `apply` minus the last step — structurally the same walk — which is why there
 is no `--dry-run` for `apply` to be the opposite of.
+
+**Why `check` is not just `plan` with a different name.** A package a version behind is
+drift: expected, benign, and exactly what `apply` is for. A machine-local value nobody
+set, a file only safekeep can restore, a declaration that will not validate, a checker
+that crashed — those need a person. One verb answering both meant one exit code carrying
+both, and the scheduled unit sat permanently `failed` on a machine whose only fault was
+being a version behind. The distinction was already in the data: `Repair` says who can
+fix a change, and `plan` keeps what `apply` can while `check` keeps what it cannot.
+
+So `plan` exits 1 when changes are pending (`terraform plan -detailed-exitcode`) and
+`check` exits 3 when something is wrong and never 1. The periodic timer runs `check`,
+and the shell nudge — which has always fired on Issues only — is now reading the verb
+that means it.
 
 Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
 getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
@@ -63,7 +77,7 @@ working tree, and installing a release over it would destroy the thing being upd
 Nothing should be filed to add releases here on the strength of it.
 
 For the same reason there is no update *notice* — there is no published version to
-compare against. `dotfiles check` ends with the honest equivalent: where the checkout
+compare against. Both read-only verbs end with the honest equivalent: where the checkout
 sits against the last-fetched `origin/main`, and how long ago that fetch was. It reads
 `.git` and never the network, so it is free at a prompt and correct offline, which is
 why it dates its own answer. `dotfiles update --check` is the same line after an
@@ -198,7 +212,8 @@ task update -- tools plugins          # named groups
 task update -- --no-system            # skip the sudo-gated, slowest group
 task update -- --mine                 # only tools owned by datapointchris
 dotfiles apply --owner datapointchris # install those tools, no brew or casks
-dotfiles apply --skip system          # any resource address is skippable
+dotfiles apply --skip system          # a whole resource
+dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
 ```
 
 Owner narrowing takes only the phases whose contents can be traced to a GitHub owner,
@@ -212,9 +227,17 @@ personal tool has to be installed before any self-updater can maintain it, and t
 tools span four sections (`go_tools`, `github_releases`, `custom_installers`,
 `git_uv_tools`), so owner is the only selector that reaches all of them at once.
 
-An address that names no resource is a usage error, not an empty selection. A run that
-accepted a misspelt `--skip` would install the sudo-gated phase the caller was avoiding and
-report success.
+An address is `resource` or `resource/provider`, and one naming neither is a usage error
+rather than an empty selection. A run that accepted a misspelt `--skip` would install the
+sudo-gated phase the caller was avoiding and report success — which is also why a trailing
+`plugins/` is refused instead of read as the bare resource.
+
+Skipping a provider leaves its resource in the walk with that provider removed, and the
+narrowing is structural: the resource is handed a plan that does not contain what it was
+told to leave alone, so it cannot observe it, diff it or act on it. It is applied per
+resource rather than once for the whole walk, because `toolchains` decides it needs the Go
+runtime by finding `go_tools` items in the plan — narrowing globally by `--skip packages/go`
+would silently stop planning a runtime the caller never named.
 
 Both commands are manifest-aware when `MACHINE` is set in `~/.env`. The narrowing is
 built once in `install/common/lib/package-query.sh` and read by every tool script, which
@@ -235,8 +258,8 @@ installed. Reported rather than silently fixed, so adding a tool on one machine 
 pulling on another still surfaces — which is the job the accidental behaviour was doing.
 
 `dotfiles packages check` answers the same question on demand. It is deliberately
-separate from `packages verify`, which runs on every commit: `verify` compares
-`packages.yml` against the manifests and installer scripts, and a machine part-way
+separate from `dotfiles machines check`, which runs on every commit: that one compares
+`packages.yml` against the manifests and what can install them, and a machine part-way
 through a rollout is not a repo defect that should fail a commit.
 
 ### What a phase is allowed to claim
@@ -293,8 +316,8 @@ real type system, a test suite, and dependencies it can declare.
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
 | Symlink management | `src/dotfiles/resources/symlinks.py`, primitives in `symlinks/core.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
-| Registry drift | `packages verify` — packages.yml vs manifests vs scripts |
-| Machine drift | `dotfiles check` — this machine vs what its manifest declares |
+| Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |
+| Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 

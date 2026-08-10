@@ -46,16 +46,21 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
         return
 
 
-def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> dict[str, object]:
+def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check') -> dict[str, object]:
     """The versioned interchange document.
 
-    Versioned because it crosses machines: the work box's `check` output is what
-    decides what the fleet builds into its next offline bundle, and an
-    unversioned document breaks silently when the two ends disagree about its
-    shape.
+    Versioned because it crosses machines: the work box's output is what decides
+    what the fleet builds into its next offline bundle, and an unversioned
+    document breaks silently when the two ends disagree about its shape.
+
+    `verb` names which question produced it. `plan` and `check` measure the same
+    machine and keep different findings, so two documents of one shape would
+    otherwise be indistinguishable — and the bundle builder wants the plan's rows
+    while the nudge wants the check's.
     """
     return {
         'version': 1,
+        'verb': verb,
         'machine': machine,
         'checked': when.isoformat(),
         'verdict': _worst(results),
