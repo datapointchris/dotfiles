@@ -96,3 +96,48 @@ def test_a_repo_local_identity_does_not_mask_an_unset_machine(
     monkeypatch.chdir(clone)
 
     assert [change.item for change in changes(session)] == ['user.name', 'user.email']
+
+
+def test_a_local_override_elsewhere_is_not_this_checkouts_problem(
+    gitconfig: Path, session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repo-local identity is legitimate in another clone — an employer address
+    kept out of a personal repo, deliberately — so only `session.repo` itself is
+    compared, not whatever directory the check happens to run from."""
+    gitconfig.write_text('[user]\n\tname = Chris\n\temail = chris@example.com\n')
+    clone = tmp_path / 'clone'
+    clone.mkdir()
+    subprocess.run(['git', 'init', '-q'], cwd=clone, check=True)
+    subprocess.run(['git', 'config', 'user.name', 'Work Self'], cwd=clone, check=True)
+    subprocess.run(['git', 'config', 'user.email', 'work@employer.com'], cwd=clone, check=True)
+    monkeypatch.chdir(clone)
+
+    assert changes(session) == ()
+
+
+@pytest.mark.parametrize(
+    ('local_name', 'local_email', 'expected'),
+    [
+        ('Repo Local', 'chris@example.com', ['user.name']),
+        ('Chris', 'local@example.com', ['user.email']),
+        ('Repo Local', 'local@example.com', ['user.name', 'user.email']),
+    ],
+)
+def test_a_local_override_in_this_checkout_is_named(
+    gitconfig: Path, session: Session, local_name: str, local_email: str, expected: list[str]
+) -> None:
+    """This is the failure from 2026-08-09: `~/dotfiles` itself carried a
+    repo-local override and `check` reported the machine's identity as
+    converged while every commit it produced was attributed to something
+    else."""
+    gitconfig.write_text('[user]\n\tname = Chris\n\temail = chris@example.com\n')
+    subprocess.run(['git', 'init', '-q'], cwd=session.repo, check=True)
+    subprocess.run(['git', 'config', 'user.name', local_name], cwd=session.repo, check=True)
+    subprocess.run(['git', 'config', 'user.email', local_email], cwd=session.repo, check=True)
+
+    found = changes(session)
+
+    assert [change.item for change in found] == expected
+    assert all(change.verdict is Verdict.STALE for change in found)
+    assert all(change.repair is Repair.BY_HAND for change in found)
+    assert not any(change.actionable for change in found)
