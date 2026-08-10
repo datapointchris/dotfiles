@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import dataclasses
 from collections import Counter
-from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -112,7 +111,7 @@ def test_an_owner_with_nothing_here_selects_no_phases() -> None:
 
 def context(**overrides: object) -> apply.Run:
     coords = overrides.pop('coords', LINUX)
-    return apply.Run(machine='linux-lxc-server', coords=coords, packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
+    return apply.Run(machine='linux-lxc-server', coords=coords, **overrides)  # type: ignore[arg-type]
 
 
 SHELLS = frozenset({'bash', 'sh', 'zsh', 'dash'})
@@ -149,13 +148,17 @@ def test_no_phase_hands_work_to_a_shell(name: str, monkeypatch: pytest.MonkeyPat
         return Completed(argv, 0, '')
 
     monkeypatch.setenv('HOME', str(tmp_path))
-    monkeypatch.setattr(apply, 'run', record)
-    monkeypatch.setattr(deploy, 'run', record)
+    # Whichever of the two still binds `effects.run`. `apply` stopped importing it
+    # when the last phase that resolved its own work converged instead, and a
+    # future one re-importing it has to be recorded rather than silently unpatched.
+    for module in (apply, deploy):
+        if hasattr(module, 'run'):
+            monkeypatch.setattr(module, 'run', record)
     monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter(()))
     monkeypatch.setattr(engine, 'execute', lambda *args, **kwargs: iter(()))
 
     declared = machines.load(name)
-    context = apply.Run(machine=name, coords=declared.coordinates, packages={}, manifest={})
+    context = apply.Run(machine=name, coords=declared.coordinates)
     for phase in apply.REGISTRY:
         phase.run(context)
 
@@ -243,64 +246,16 @@ def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:
         assert directory in exported[0], f'{directory} is on the phase PATH but not on a non-interactive shell PATH'
 
 
-def recorder(attempted: list[str]) -> Callable[..., bool]:
-    """Stands in for `_install_release`, recording which tools the phase reached for."""
-
-    def record(_context: apply.Run, _declaration: object, tool: str, _target: object) -> bool:
-        attempted.append(tool)
-        return True
-
-    return record
-
-
-def test_a_private_repo_tool_is_skipped_where_there_are_no_credentials(monkeypatch) -> None:
-    """Its download cannot succeed, so attempting it records a failure for
-    something the machine was never able to have and exits 3 for a reason no
-    change to this repo can fix — which is what made a container's e2e red.
-
-    The public tools in the same phase must still run: skipping the phase
-    wholesale would trade one wrong answer for a worse one.
-    """
-    packages = {
-        'github_releases': [
-            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
-            {'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True},
-        ]
-    }
-    manifest = {'github_releases': ['lazygit', 'learning']}
-    context = apply.Run(machine='linux-lxc-server', coords=LINUX, packages=packages, manifest=manifest)
-
-    attempted: list[str] = []
-    monkeypatch.setattr(apply, '_have_github_credentials', lambda: False)
-    monkeypatch.setattr(apply, '_install_release', recorder(attempted))
-
-    assert apply._github_releases(context)
-    assert attempted == ['lazygit']
-
-
-def test_a_private_repo_tool_is_installed_where_there_are_credentials(monkeypatch) -> None:
-    """The inverse mistake: a machine that can install these and does not, which
-    reads as converged while three tools are quietly absent."""
-    packages = {'github_releases': [{'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True}]}
-    manifest = {'github_releases': ['learning']}
-    context = apply.Run(machine='linux-lxc-server', coords=LINUX, packages=packages, manifest=manifest)
-
-    attempted: list[str] = []
-    monkeypatch.setattr(apply, '_have_github_credentials', lambda: True)
-    monkeypatch.setattr(apply, '_install_release', recorder(attempted))
-
-    assert apply._github_releases(context)
-    assert attempted == ['learning']
-
-
 def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatch: pytest.MonkeyPatch) -> None:
     """The module docstring claims "the declaration is read once per run", and it
     was not: `Run.session` was a plain property, so each of the five phases that
     read it built a fresh Session with cold caches. One `apply --owner` parsed the
     258-entry packages.yml seven times and resolved seven manifests.
 
-    Two rather than one is the honest floor while `Run` and `Session` both exist —
-    one read each — and it goes to one when Run collapses into Session.
+    One now, where it was two. `Run` held a second reading of both files for the
+    two phases that resolved their own work — a `packages.yml` dict and its own
+    `catalog.load()` beside the Session's — and converging those phases took the
+    duplicate with it.
     """
     reads = {'catalog': 0, 'machine': 0}
     for module, name, key in ((catalog, 'load', 'catalog'), (machines, 'load', 'machine')):
@@ -315,9 +270,8 @@ def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatc
     run = apply.Run.resolve('linux-lxc-server', owner=OWNER)
     for _ in range(len(apply.REGISTRY)):
         _ = run.session.plan
-    _ = run.declaration
 
-    assert reads == {'catalog': 2, 'machine': 2}
+    assert reads == {'catalog': 1, 'machine': 2}
 
 
 def test_the_machine_is_read_from_the_env_file_when_the_environment_is_bare(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:

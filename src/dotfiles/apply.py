@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import datetime as dt
 import functools
-import os
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -39,23 +38,16 @@ from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import envfile
-from dotfiles import evidence as ev
 from dotfiles import machine as machines
-from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles import session
 from dotfiles import validate
-from dotfiles import versions
-from dotfiles.effects import Output
-from dotfiles.effects import run
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import render_finding
 from dotfiles.output import warn
-from dotfiles.providers import custom
-from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
@@ -93,15 +85,14 @@ the tests that hold `.zshenv` to the same list.
 class Run:
     """One `apply`, and everything its phases need to answer a question.
 
-    `packages` and `manifest` are parsed once and passed down. That is the whole
-    difference between this and the bash it replaces, which asked the same two
-    files 28 separate times through 28 separate interpreters.
+    Nothing here is a raw `packages.yml` dict any more. Two phases narrowed one
+    through `parse_packages` to resolve their own work; both converge a selection
+    of the plan now, so what is left is the machine, the run's flags, and the
+    `Session` every phase actually reads.
     """
 
     machine: str
     coords: coordinates.Coordinates
-    packages: dict
-    manifest: dict
     offline: bool = False
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
@@ -121,18 +112,6 @@ class Run:
     def target(self) -> coordinates.Target:
         """What this machine's release assets are named for."""
         return coordinates.target_for(self.coords)
-
-    @functools.cached_property
-    def declaration(self) -> catalog.Catalog:
-        """The typed declaration, beside the raw `packages` dict above.
-
-        Two readings of one file, for the length of the conversion. The dict is
-        what the two list-driven phases still narrow through `parse_packages`; the
-        catalog is what a converted phase needs, because an installer wants `repo`,
-        `checksum` and `release_tag_prefix` as fields rather than as `.get` calls
-        that cannot be wrong out loud. Both go when `Run` collapses into `Session`.
-        """
-        return catalog.load()
 
     @functools.cached_property
     def session(self) -> Session:
@@ -192,34 +171,14 @@ class Run:
         return cls(
             machine=name,
             coords=declared.coordinates,
-            packages=parse_packages.load_packages(),
-            manifest=parse_packages.load_manifest(name),
             offline=offline,
             owner=owner,
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
         )
 
-    def declared(self, kind: str) -> list[str]:
-        """What this machine declares of one kind, narrowed by `--owner`.
-
-        Through the same filters `parse_packages` exposes to its own CLI, so a
-        gate here and a `--type` query from an installer script cannot disagree
-        about what the machine asked for.
-        """
-        data = parse_packages.filter_packages_by_owner(self.packages, self.owner) if self.owner else self.packages
-        return list(_FILTERS[kind](data, self.manifest))
-
 
 class Declaration(Exception):
     """The machine cannot be resolved, so nothing below can run."""
-
-
-_FILTERS: dict[str, Callable[[dict, dict], list]] = {
-    'github': parse_packages.filter_github_releases_by_manifest,
-    'custom': parse_packages.filter_custom_installers_by_manifest,
-}
-"""What is left of the manifest gates, which is the two phases that still resolve
-their own work rather than converging a selection of the plan."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -296,84 +255,36 @@ def _go_tools(context: Run) -> bool:
     return _converge(context, engine.Selection.of('packages/go'))
 
 
-def _have_github_credentials() -> bool:
-    """The same question `github_token` in `version-helpers.sh` asks, so the phase
-    and the installers it runs cannot disagree about whether to try."""
-    return bool(os.environ.get('GITHUB_TOKEN')) or run(['gh', 'auth', 'token'], output=Output.QUIET).ok
-
-
 def _github_releases(context: Run) -> bool:
-    """Every declared release, installed by `providers.ghrelease` rather than by bash.
+    """Every declared release, converged like the fifteen phases around it.
 
-    A private repo's tool is skipped where there are no credentials for it. Its
-    download cannot succeed, so attempting it records a failure for something this
-    machine was never able to have, and the run exits 3 for a reason no change to
-    this repo can fix. Warned rather than silent: credentials are a state a
-    machine can lose, unlike the WSL host `requires_wsl_host` tests for.
+    This resolved its own work until the engine could answer the two questions it
+    was resolving it for, and both are verdicts now rather than branches here.
+    A tool present but behind is `STALE`, measured against the release cache the
+    `apply` session refreshes, which is the same drift `check` prints. A
+    private-repo tool with no credentials on this machine is a `GITHUB_AUTH`
+    precondition, so it is reported as `BY_HAND` with the reason instead of being
+    dropped from the list with a warning — `repair_for` decides that, and it
+    decides it identically for `check`.
 
-    The scripts this replaces had two modes, and which one ran decided whether a
-    tool that was present but behind got upgraded: `install.sh` skipped it,
-    `update.sh` did not. There is one verb here. `apply` means "make this machine
-    match what it declares", latest is what a release entry declares unless it
-    pins, and a tool behind latest is drift — the same drift `check` already
-    prints as STALE. So it is repaired, and the mode goes away with the scripts.
-
-    The cost is one release lookup per declared tool, where present-means-skip
-    cost none. That is the right trade for a verb someone typed on purpose;
-    `check` is the one that has to stay cheap, and it reads a cache instead.
+    What that retires is a second implementation of "is it current": the tag was
+    resolved live here, per tool, on every apply, and compared by hand.
     """
-    tools = context.declared('github')
-    if not _have_github_credentials():
-        private = parse_packages.names_requiring_github_auth(context.packages, 'github_releases')
-        if skipping := sorted(set(tools) & private):
-            warn(f'no GitHub credentials on this machine, so these private-repo tools are skipped: {", ".join(skipping)}')
-            tools = [tool for tool in tools if tool not in private]
-
-    if not tools:
-        return True
     heading('GitHub release tools')
-
-    try:
-        declaration = context.declaration
-    except catalog.CatalogError as refused:
-        warn(f'cannot read the declaration, so no release can be installed: {refused}')
-        return False
-
-    target = context.target
-    return all([_install_release(context, declaration, tool, target) for tool in tools])
+    return _converge(context, engine.Selection.of('packages/ghrelease'))
 
 
-def _install_release(context: Run, declaration: catalog.Catalog, tool: str, target: coordinates.Target) -> bool:
-    """One release, reporting the same way a failed installer script did."""
-    entry = declaration.find('github_releases', tool)
-    assert isinstance(entry, catalog.GithubRelease)
+def _custom_installers(context: Run) -> bool:
+    """The nine vendors that ship themselves, each converged by its own function.
 
-    tag = ghrelease.resolve_tag(entry, offline=context.offline)
-    if tag is None:
-        return _install_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
-
-    if _already_at(entry, tag) and not ghrelease.missing_companions(tool):
-        err_console.print(f'{tool} already at {tag}')
-        return True
-
-    result = ghrelease.install(entry, target, offline=context.offline, tag=tag)
-    if result.ok:
-        err_console.print(f'[green]✓[/] {result.detail}')
-        return True
-    return _install_failed(context, tool, result.detail)
-
-
-def _already_at(entry: catalog.GithubRelease, tag: str) -> bool:
-    """Whether the installed binary is the release this run would install.
-
-    Anything unmeasurable answers False, which reinstalls: a binary that will not
-    report a version, or reports one nothing can parse, is not a binary known to
-    be current. That is the same call `check_if_update_needed` made — "could not
-    parse, will reinstall" — and the same rule `Verdict.UNKNOWN` states, except
-    that here there is something to do about it.
+    Every one runs even after a failure, and for the same reason every other phase
+    does: nine unrelated vendors are nine independent chances to be having a bad
+    day, and a machine that stopped at the first would install none of the eight
+    behind it. The engine already works that way — each change is isolated, and one
+    raising becomes a `Refusal` rather than ending the walk.
     """
-    reported = ev.reported_version(entry.executable)
-    return reported is not None and versions.at_least(reported, tag) is True
+    heading('Custom distribution tools')
+    return _converge(context, engine.Selection.of('packages/custom'))
 
 
 def _install_failed(context: Run, tool: str, detail: str) -> bool:
@@ -381,42 +292,6 @@ def _install_failed(context: Run, tool: str, detail: str) -> bool:
     with context.failures_log.open('a') as log:
         log.write(f'{tool}: {detail}\n')
     return False
-
-
-def _custom_installers(context: Run) -> bool:
-    """The nine vendors that ship themselves, each converged by its own function.
-
-    Every one runs even after a failure, and for the same reason the release phase
-    does: nine unrelated vendors are nine independent chances to be having a bad
-    day, and a machine that stopped at the first would install none of the eight
-    behind it.
-    """
-    tools = context.declared('custom')
-    if not tools:
-        return True
-    heading('Custom distribution tools')
-
-    try:
-        declaration = context.declaration
-    except catalog.CatalogError as refused:
-        warn(f'cannot read the declaration, so no custom installer can run: {refused}')
-        return False
-
-    target = context.target
-    return all([_run_custom_installer(context, declaration, tool, target) for tool in tools])
-
-
-def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str, target: coordinates.Target) -> bool:
-    entry = declaration.find('custom_installers', tool)
-    assert isinstance(entry, catalog.CustomInstaller)
-
-    result = custom.install(entry, target, offline=context.offline)
-    if result.ok:
-        # The tool's name alone when the vendor streamed its own report, so this
-        # confirms the phase considered it without restating what it just said.
-        err_console.print(f'[green]✓[/] {result.detail or tool}')
-        return True
-    return _install_failed(context, tool, result.detail)
 
 
 def _cargo_packages(context: Run) -> bool:

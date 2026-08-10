@@ -189,6 +189,29 @@ def test_a_private_repo_without_credentials_is_not_apply_s_to_fix(tmp_path: Path
     assert found[0].repair is expected
 
 
+def test_a_public_tool_beside_a_blocked_private_one_is_still_offered(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The half that is easy to lose. The install phase this replaced dropped the
+    private names out of its list and warned, which worked; skipping the section
+    wholesale would trade one wrong answer for a worse one, and a per-row `repair`
+    cannot make that mistake at all.
+    """
+    monkeypatch.setattr(ev, 'have_github_credentials', lambda: False)
+    declared = {
+        'github_releases': [
+            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
+            {'name': 'learning', 'repo': 'datapointchris/learning', 'requires_github_auth': True},
+        ]
+    }
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'github_releases': ['lazygit', 'learning']})
+
+    assert {change.item: change.repair for change in changes(live)} == {
+        'ghrelease/lazygit': Repair.AUTOMATIC,
+        'ghrelease/learning': Repair.BY_HAND,
+    }
+
+
 def test_a_private_repo_with_a_token_is_repairable(tmp_path: Path, fake_bin: Path, uv_tools: Path, monkeypatch) -> None:
     monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
     declared = {'git_uv_tools': [{'name': 'safekeep', 'repo': 'https://github.com/datapointchris/safekeep', 'requires_github_auth': True}]}
