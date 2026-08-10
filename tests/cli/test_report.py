@@ -65,6 +65,18 @@ def test_the_rendering_names_the_file_it_came_from(runs_dir: Path) -> None:
     assert str(written) in result.stdout
 
 
+def test_the_id_a_rendering_leads_with_is_one_show_accepts(runs_dir: Path) -> None:
+    """Every rendering opens with the record's id, and the lookup read filenames
+    alone — which never carry it. The one identifier in front of the reader was
+    the only one that did not resolve."""
+    recorded(runs_dir, Event('packages', change('zk', Verdict.MISSING)))
+
+    result = runner.invoke(app, ['report', 'show', 'abc123abc123'])
+
+    assert result.exit_code == 0
+    assert 'abc123abc123' in result.stdout
+
+
 def test_a_run_where_nothing_drifted_says_converged(runs_dir: Path) -> None:
     """`converged` compared the serialised verdict against `'MATCHED'`, which a
     `StrEnum` of lower-case values can never equal, so every record ever rendered

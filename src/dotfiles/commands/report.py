@@ -46,6 +46,12 @@ def _find(identifier: str | None) -> Path:
 
     matches = [path for path in runs.list_runs() if path.stem.startswith(identifier)]
     if not matches:
+        # The id every rendering leads with is the record's, and it appears nowhere
+        # in the filename the stem match reads — so the one identifier a reader has
+        # in front of them was the only one that did not resolve. Second, because
+        # this reads every record and the stem match reads none.
+        matches = [path for path in runs.list_runs() if runs.read(path).id.startswith(identifier)]
+    if not matches:
         raise typer.BadParameter(f'no run matching {identifier!r}')
     if len(matches) > 1:
         raise typer.BadParameter(f'{identifier!r} matches {len(matches)} runs; give more of the id')
