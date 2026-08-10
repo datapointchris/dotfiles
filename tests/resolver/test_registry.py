@@ -392,8 +392,8 @@ def test_a_section_needing_no_toolchain_carries_only_its_own_provider() -> None:
 
 
 def test_the_toolchain_comes_first_because_that_is_the_order_it_installs_in() -> None:
-    """Ordering is `Stage`'s and the phase registry's, not this function's — but a
-    caller reading the tuple should not have to know that to see the dependency."""
+    """Ordering is `Stage`'s, not this function's — but a caller reading the tuple
+    should not have to know that to see the dependency."""
     names = [provider.name for provider in registry.serving('cargo_packages')]
     stages = [registry.named(name).stage for name in names]  # type: ignore[union-attr]
 

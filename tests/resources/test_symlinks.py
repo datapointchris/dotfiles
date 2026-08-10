@@ -314,7 +314,7 @@ def skel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_an_untouched_skeleton_file_is_adopted_without_force(session: Session, repo: Path, home: Path, skel: Path) -> None:
     """`useradd` copies /etc/skel into every new home, so a fresh Debian account
     starts with a .bashrc nobody wrote. Refusing it made the very first apply on
-    every such machine report this phase failed, having deployed everything else
+    every such machine report this stage failed, having deployed everything else
     correctly — and the advice printed was --force, which on any other machine is
     the dangerous answer."""
     declare(repo, 'configs/common/.bashrc', 'the repo copy\n')

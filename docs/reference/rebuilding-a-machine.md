@@ -45,17 +45,16 @@ through a networked tool.
 
 ## Restore before the install, not after
 
-`install.sh` regenerates `~/.env` from the manifest **before** it runs any phase,
-preserving everything below the `# OVERRIDES` marker. Restore first and the
-managed half is rebuilt against the current manifest while the hand-edits and
-secrets survive intact.
+The `env` resource regenerates `~/.env` from the manifest at `Stage.ENVIRONMENT`,
+the first stage of the walk, preserving everything below the `# OVERRIDES` marker.
+Restore first and the managed half is rebuilt against the current manifest while
+the hand-edits and secrets survive intact.
 
 Restore afterwards and you reinstate the *old* machine's generated half — stale
-flags, possibly a stale platform — by which point every phase has already run on
-defaults. The comment at `install.sh:521` records what that costs: a run that
-fell back to `detect_platform`'s guess deployed the linux shell overlay to a
-machine whose manifest said wsl, and ignored every flag override for the whole
-install.
+flags, stale coordinates — by which point every stage has already run on
+defaults. `src/dotfiles/resources/env.py` records why it is first: everything
+below it reads the file, so a run that starts from the wrong one deploys the
+wrong overlays and ignores every flag override for its whole length.
 
 ## macOS
 

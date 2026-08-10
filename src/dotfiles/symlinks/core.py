@@ -234,7 +234,7 @@ def is_untouched_skeleton(target_path: Path) -> bool:
     `useradd` copies `/etc/skel` into every new home, so a fresh Debian or Ubuntu
     account starts with a `.bashrc` and `.bash_profile` nobody wrote. Refusing
     them means the very first `apply` on every such machine reports the symlink
-    phase failed, having correctly deployed everything else — and the advice it
+    stage failed, having correctly deployed everything else — and the advice it
     prints is `--force`, which on any other machine is the dangerous answer.
 
     Byte equality is what makes this safe rather than a special case for two

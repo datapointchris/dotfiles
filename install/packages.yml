@@ -1138,7 +1138,7 @@ tmux_plugins:
 # Declared here rather than installed by `ya pkg add`, which is yazi's own
 # package manager. `ya` writes its state to ~/.config/yazi/package.toml, a path
 # this repo also deployed a file to — two writers on one path, and the symptom
-# was every fresh install failing the symlink phase. Nothing reads that file at
+# was every fresh install failing the symlink stage. Nothing reads that file at
 # runtime: init.lua does require('git') and keymap.toml runs `plugin what-size`,
 # both resolving from the plugin directory. Splitting the plugins out of the
 # yazi install rather than moving the whole install after the symlinks is what

@@ -1,7 +1,7 @@
 """Running a subprocess: what comes back, and what never raises.
 
 `effects.run` is the one place this package starts a child, so a crash here is a
-crash in whatever phase happened to call it. The rule it enforces is a shell's:
+crash in whatever stage happened to call it. The rule it enforces is a shell's:
 a command that cannot be executed is an exit code, not an exception.
 """
 

@@ -18,7 +18,7 @@ all of them together.
 **A successful install puts its bin directory on this process's PATH.** The
 converged providers run in one process, so a runtime installed at stage 30 is
 invisible to the tools at stage 40 unless this happens — `shutil.which` reads
-`os.environ`, and the bash phases inherit it through `effects.run`. `.zshenv` says
+`os.environ`, and every command `effects.run` starts inherits it. `.zshenv` says
 the same thing for the *next* shell, which is the one shell that cannot help the
 run doing the installing.
 """

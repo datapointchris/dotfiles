@@ -90,7 +90,7 @@ the measurement shows up. `test_machine.py` needs an installed machine.
 container instead of producing them again, so changing an assertion costs seconds
 rather than a second half hour. It re-copies the repo first, so the verification
 scripts and the editable CLI are current; what is stale is exactly the install
-log and its status. Install for real when `install.sh`, a phase script or a
+log and its status. Install for real when `install.sh`, a provider or a
 package list changes — use `--installed` for everything else.
 
 **A container install borrows the host's `gh` credential.** GitHub allows 60

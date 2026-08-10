@@ -76,7 +76,7 @@ class Observed:
 
     Always the ones byte-identical to their `/etc/skel` copy: `useradd` put those
     there and nobody wrote them, so refusing them made every first install on
-    Debian report this phase failed and advise `--force`, which is the dangerous
+    Debian report this stage failed and advise `--force`, which is the dangerous
     answer everywhere else. Under `--force`, every foreign target — which is what
     adopting a machine that already had dotfiles means."""
 

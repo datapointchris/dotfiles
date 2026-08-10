@@ -519,7 +519,7 @@ class YaziPlugin(Entry):
     Declared here rather than left to `ya pkg add`, which is yazi's own package
     manager and writes its state to `~/.config/yazi/package.toml` — a path this
     repo also deployed a file to. Two writers on one path, and the symptom was
-    every fresh install failing the symlink phase.
+    every fresh install failing the symlink stage.
 
     `name` is what the config asks for and what the directory is called: yazi
     appends the `.yazi` suffix itself, `init.lua` says `require('git')`, and

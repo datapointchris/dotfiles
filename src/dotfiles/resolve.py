@@ -229,12 +229,12 @@ class Plan:
 
     @property
     def providers(self) -> frozenset[str]:
-        """Which providers have anything to do, which is how a phase learns it is empty.
+        """Which providers have anything to do, which is how a stage learns it is empty.
 
         The replacement for `install/phases.sh`'s `owner_aware` column, and
         strictly finer than it: the plan is already narrowed by this machine's
         subscriptions, so a machine declaring none of the owner's Go tools skips
-        the go-tools phase outright rather than running its installer over an
+        the go-tools stage outright rather than running its installer over an
         empty list.
         """
         return frozenset(item.provider for item in self.items)

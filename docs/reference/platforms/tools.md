@@ -56,7 +56,7 @@ without sudo.
 
 The installing side does not rely on that file. `providers/npm.py` passes
 `NPM_CONFIG_PREFIX` on every call, because the npmrc above is a symlink the
-symlink phase deploys and that phase runs *after* the npm one — on a first
+symlink stage deploys and that stage runs *after* the npm one — on a first
 install the file does not exist yet, npm falls back to its built-in prefix, and
 every global install dies with EACCES. The environment variable outranks every
 config file, so it holds in both orders.

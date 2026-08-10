@@ -295,8 +295,8 @@ def test_skipping_a_whole_resource_drops_it_from_the_walk() -> None:
 
 
 def test_a_stage_selects_the_providers_that_run_at_it() -> None:
-    """A phase *is* a stage, and the six system-configuration providers are not a
-    list anyone should keep in step by hand."""
+    """The six system-configuration providers are not a list anyone should keep
+    in step by hand."""
     selection = engine.Selection.at(Stage.SYSTEM_CONFIG)
 
     assert selection.resources == ('system',)
@@ -304,7 +304,7 @@ def test_a_stage_selects_the_providers_that_run_at_it() -> None:
 
 
 def test_the_system_config_stage_leaves_the_package_half_out_of_the_plan(session: Session) -> None:
-    """The debt A2 recorded here. That phase observed the whole `system` resource
+    """The debt A2 recorded here. That phase registry observed the whole `system` resource
     and filtered afterwards, spending a package-inventory query on rows it was
     about to discard."""
     narrowed = engine.Selection.at(Stage.SYSTEM_CONFIG).plan_for('system', session.plan)
@@ -387,7 +387,7 @@ def test_a_stage_naming_nothing_is_refused_with_the_ones_that_exist() -> None:
 
 @pytest.mark.parametrize('address', ['nonsense', 'plugins/tmux', 'packages/group', 'plugins/'])
 def test_an_address_naming_nothing_is_refused_rather_than_narrowing_to_nothing(address: str) -> None:
-    """A run that accepted a misspelt `--skip` would install the sudo-gated phase
+    """A run that accepted a misspelt `--skip` would install the sudo-gated stage
     the caller was trying to avoid and report success. `packages/group` is the
     interesting one: `group` is a real provider, of a different resource."""
     with pytest.raises(engine.UnknownAddress):

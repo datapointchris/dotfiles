@@ -17,9 +17,8 @@ the variation moved into `providers.releases.Asset`, where a bare binary is an
     TARBALL / ZIP    unpack, then take `path` out of it, plus any `extras`
     Asset.tree       unpack into ~/.local and symlink `path` out of the tree
 
-Nothing here decides *whether* to install. Its callers do — the resource from a
-`diff` it already computed, the phase by comparing what is installed against
-`resolve_tag`. An engine deciding for them would be a third opinion, free to
+Nothing here decides *whether* to install. Its caller does, from a `diff` it
+already computed. An engine deciding again would be a second opinion, free to
 disagree with the report the user was just shown.
 """
 
@@ -62,7 +61,7 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
     then gets installed.
 
     Every failure returns rather than raises, and names the step it failed at.
-    An install phase runs the whole list before reporting, because a broken
+    An install stage runs the whole list before reporting, because a broken
     release must not stop the twenty that follow it.
     """
     build = ASSETS.get(entry.name)
@@ -146,8 +145,8 @@ def bundle_version(name: str) -> str | None:
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
     """Why no tag could be decided, in the caller's words rather than a bare None.
 
-    Public because the phase resolves a tag itself — to decide whether anything
-    needs installing at all — and must report the same reason this would.
+    Public because `create_bundle` resolves a tag itself — to decide what to
+    stage for an offline machine — and must report the same reason this would.
     """
     if offline:
         return f'the offline bundle at {paths.BUNDLE_DIR} stages no version of {entry.name}'

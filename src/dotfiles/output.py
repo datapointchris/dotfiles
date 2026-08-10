@@ -86,7 +86,7 @@ def render_finding(section: str, message: str) -> None:
 
 
 def heading(text: str) -> None:
-    """Announce a phase. On stderr, because a phase banner is progress, not data."""
+    """Announce an address. On stderr, because a banner is progress, not data."""
     err_console.print()
     err_console.print(f'[bold blue]{text}[/]')
 

@@ -255,7 +255,7 @@ def test_applying_a_configuration_row_writes_it(tmp_path: Path, granted: Privile
 
 
 def test_a_row_that_became_true_since_the_report_is_skipped(tmp_path: Path, granted: Privilege) -> None:
-    """`observe` ran before the report was printed and before the packages phase
+    """`observe` ran before the report was printed and before the packages stage
     installed anything, so the state it decided from can be minutes old."""
     live = session(tmp_path, {}, WORKSTATION, zshenv(tmp_path))
     change = only_change(live)
@@ -462,7 +462,7 @@ def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_pa
 def test_a_manager_whose_bootstrap_refuses_installs_nothing_through_it(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
     """REFUSED rather than FAILED, because nothing was written and the run has not
     gone wrong — a Mac with no Homebrew yet is a machine mid-build, not a broken
-    one, and `Outcome.ok` is what keeps the phase honest about the difference."""
+    one, and `Outcome.ok` is what keeps the stage honest about the difference."""
     recorder = manager()
     ready = bootstraps(refuses='homebrew')
     answers_empty(fake_bin, 'brew')

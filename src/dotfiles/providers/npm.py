@@ -4,8 +4,8 @@ The command is the easy half. The variable is the half that broke a whole instal
 twice, and it is why this is a module rather than three lines inside the registry.
 
 **`NPM_CONFIG_PREFIX` is set here rather than left to the npmrc this repo
-deploys.** That npmrc is a symlink the symlink phase creates, and the symlink
-phase runs *after* this one — it needs `task`, which needs Go. On a first install
+deploys.** That npmrc is a symlink the symlink stage creates, and the symlink
+stage runs *after* this one — it needs `task`, which needs Go. On a first install
 the file does not exist yet, npm falls back to its built-in prefix (`/usr/local`
 on Debian, `/usr` on Arch), and every global install dies with EACCES. The
 environment variable outranks every config file, so it holds in both orders.

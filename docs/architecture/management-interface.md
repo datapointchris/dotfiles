@@ -10,7 +10,7 @@ Two front doors sit over the same implementation, so neither can drift from the 
 ```text
 dotfiles <noun> <verb>       task <verb>
              \                  /
-              src/dotfiles/            the package: phase walk, symlinks, catalog
+              src/dotfiles/            the package: the stage walk, symlinks, catalog
               install/common/*         the per-tool installer scripts still in bash
 ```
 
@@ -95,7 +95,7 @@ everything else is derived from that manifest by the resolver. The coordinates a
 select the overlay directories under `configs/`, `shell/` and `apps/`, so a shell reads
 them directly — `.zshrc` builds its source list from exactly those six variables. Placing this file by
 hand is therefore the whole of the pre-install bootstrap — `install.sh` sources it with
-`set -a` before any phase, so a rebuild that copies `~/.env` into place first never needs
+`set -a` before any stage, so a rebuild that copies `~/.env` into place first never needs
 `--machine`.
 
 It used to be hand-authored, which made it the one piece of setup with no source of
@@ -233,7 +233,7 @@ tools span four sections (`go_tools`, `github_releases`, `custom_installers`,
 
 An address is `resource` or `resource/provider`, and one naming neither is a usage error
 rather than an empty selection. A run that accepted a misspelt `--skip` would install the
-sudo-gated phase the caller was avoiding and report success — which is also why a trailing
+sudo-gated stage the caller was avoiding and report success — which is also why a trailing
 `plugins/` is refused instead of read as the bare resource.
 
 Skipping a provider leaves its resource in the walk with that provider removed, and the
@@ -246,7 +246,7 @@ planning a runtime the caller never named. That derivation is a provider's now a
 at resolve time, before a selection exists.
 
 Narrowing is the resolver's: `--owner` produces a plan containing only that owner's
-entries, and `Plan.providers` says which phases have anything left to do. It was a
+entries, and `Plan.providers` says which stages have anything left to do. It was a
 hand-rolled filter block per installer script before that, and only the Go one honoured
 the owner — so `--mine` ran cargo, uv and npm in full while claiming to filter.
 

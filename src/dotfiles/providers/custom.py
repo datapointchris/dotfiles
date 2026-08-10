@@ -27,7 +27,7 @@ differs between them is only what converging means:
     awscli                   no release to compare against; presence is enough
 
 Every failure is returned, never raised: one broken vendor must not stop the
-eight after it, and the phase reports all of them together.
+eight after it, and the stage reports all of them together.
 """
 
 from __future__ import annotations
@@ -209,7 +209,7 @@ def _present_and_offline(request: Request, installed: bool) -> Result | None:
 
     Every one of these updates from the network — a clone, a vendor script, a
     release API — so an offline run has nothing to compare against and nothing to
-    fetch. Reporting the tool present is the honest answer; failing the phase
+    fetch. Reporting the tool present is the honest answer; failing the stage
     would report a machine as broken for being exactly what its bundle made it.
     """
     if request.offline and installed:
@@ -461,7 +461,7 @@ def _terraform_ls(request: Request) -> Result:
     release assets and has to be named directly.
 
     Nothing stages it into an offline bundle for the same reason, so an offline
-    run reports it rather than failing the phase — the alternative is a machine
+    run reports it rather than failing the stage — the alternative is a machine
     that cannot finish an install because of a language server.
     """
     entry = request.entry

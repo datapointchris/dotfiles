@@ -117,14 +117,14 @@ class Selection:
     def at(cls, *stages: Stage) -> Selection:
         """Every provider that runs at these stages, and the resources holding them.
 
-        Derived from the registry rather than listed, because a phase *is* a stage
-        and the system-configuration providers are not a list anyone should have to
-        keep in step by hand.
+        Derived from the registry rather than listed, because the
+        system-configuration providers are not a list anyone should have to keep in
+        step by hand.
 
-        Several stages because a phase is not always one: the package managers and
-        the app stores installing through them are two stages so that ordering
-        holds, and one phase, because a caller asking for system packages is asking
-        for both.
+        Variadic because what a caller means by one thing is not always one stage:
+        the package managers and the app stores installing through them are two, so
+        that ordering holds, and a caller asking for system packages is asking for
+        both.
         """
         wanted = frozenset(provider.name for provider in registry.PROVIDERS if provider.stage in stages)
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
@@ -230,7 +230,7 @@ def _valid(address: str) -> str:
     """One address, or a refusal naming what was expected.
 
     Refusing an unknown address is the important half. A run that accepted a
-    misspelt `--skip` would install the sudo-gated phase the caller was trying to
+    misspelt `--skip` would install the sudo-gated stage the caller was trying to
     avoid and report success.
     """
     # `partition` on the separator rather than a split, so a trailing `plugins/`

@@ -68,7 +68,7 @@ and re-running the installer would fight the thing it is converging.
 **Offline leaves an installed tool alone rather than failing.** Every one of
 these updates over the network — a clone, a vendor script, a release API — so an
 offline run has nothing to compare against and nothing to fetch. Failing the
-phase would report a machine as broken for being exactly what its bundle made it.
+stage would report a machine as broken for being exactly what its bundle made it.
 
 ## What stays in `packages.yml`
 
@@ -158,4 +158,4 @@ the result is different enough that a common wrapper would be branches.
 
 **No failure-log protocol.** The scripts emitted structured `FAILURE_MANUAL`
 blocks for the wrapper to collect. Each function returns a `Result`
-instead, and the phase writes the log.
+instead, and the stage writes the log.

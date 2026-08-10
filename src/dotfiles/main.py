@@ -88,7 +88,7 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     something and nothing says otherwise.
 
     A misspelt address stays a usage error for the same reason: a run that
-    accepted one would install the sudo-gated phase the caller was trying to avoid
+    accepted one would install the sudo-gated stage the caller was trying to avoid
     and report success.
 
     **Called before the Session is resolved**, and every caller has to keep it
