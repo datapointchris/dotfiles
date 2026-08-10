@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Stream one repo's CI and deploy failures from ntfy to stdout, whole alert per
+# block. Exists so a single Claude session can watch the repo it is working in
+# without every session seeing every project's failures.
+#
+# Deliberately does not touch ntfy-client.service or its client.yml: that
+# subscriber is the desktop notifier and should keep alerting on everything.
+# This is a second, read-only subscription that lives and dies with whoever ran
+# it, so nothing here changes what any other session or machine sees.
+#
+# Subscribes rather than tailing ~/.local/state/ntfy/notify.log, which is the
+# obvious shortcut and loses the alert: the log holds one flattened line, so the
+# Reason and the Loki query never survive. The JSON stream carries the whole
+# body as one field.
+#
+# Matches the repo only where an alert actually names the app — the CI title and
+# the deploy body's first line. Matching the name anywhere in the alert put every
+# deploy failure in front of the homelab repo, because each one carries a runbook
+# URL under datapointchris/homelab.
+#
+# Reads the token from the hand-managed ntfy client config rather than carrying
+# one, so no secret enters this repo.
+
+set -euo pipefail
+
+NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:-http://10.0.20.29}"
+NTFY_TOPICS="${CLAUDE_CI_WATCH_TOPICS:-ci-failures,homelab-alerts}"
+NTFY_CONFIG="${CLAUDE_CI_WATCH_CONFIG:-$HOME/.config/ntfy/client.yml}"
+
+die() {
+  echo "claude-ci-watch: $1" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: claude-ci-watch [REPO|--all]
+
+Stream CI and deploy failures from ntfy, filtered to one repo.
+
+  (no argument)  the repo containing the working directory
+  REPO           that repo by name
+  --all          every failure, unfiltered
+
+Runs until interrupted, reconnecting if the stream drops.
+EOF
+}
+
+repo=""
+case "${1:-}" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --all) repo="" ;;
+  "") repo=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)") ;;
+  -*) die "unknown option: $1" ;;
+  *) repo="$1" ;;
+esac
+
+[ -r "$NTFY_CONFIG" ] || die "no readable ntfy config at $NTFY_CONFIG"
+token=$(rg -o 'default-token:\s*(\S+)' -r '$1' "$NTFY_CONFIG" || true)
+[ -n "$token" ] || die "no default-token in $NTFY_CONFIG"
+
+# stderr, not stdout: a Monitor watching this treats every stdout line as an
+# alert, and a banner is not one.
+echo "claude-ci-watch: ${repo:-all repos} via $NTFY_HOST/$NTFY_TOPICS" >&2
+
+# Quoted heredoc: every `$` below is jq's, not the shell's, and the quoted
+# delimiter is what says so to both a reader and shellcheck.
+filter=$(
+  cat <<'JQ'
+  select(.event == "message")
+  | select($repo == ""
+      or ((.title // "") | test("^CI failed:\\s*" + $repo + "\\s*$"; "i"))
+      or ((.message // "") | test("(^|\\n)Deploy failed:\\s*" + $repo + "\\s*(\\n|$)"; "i")))
+  | "\(.title)\n\(.message)"
+JQ
+)
+
+# A subscription delivers only what arrives after it connects, so replaying a
+# window is the only way to see the filter work without waiting for a failure.
+url="$NTFY_HOST/$NTFY_TOPICS/json"
+[ -n "${CLAUDE_CI_WATCH_SINCE:-}" ] && url="$url?since=$CLAUDE_CI_WATCH_SINCE"
+
+while true; do
+  # --unbuffered or jq holds matched alerts in its buffer until the stream ends,
+  # which for a subscription is never.
+  curl -sN -H "Authorization: Bearer $token" "$url" \
+    | jq --unbuffered -r --arg repo "$repo" "$filter" || true
+  sleep 5
+done
