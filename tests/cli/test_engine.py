@@ -268,3 +268,86 @@ def test_a_resource_and_one_of_its_providers_together_keep_the_whole_resource() 
 
     assert selection.providers is not None
     assert {'tpm', 'shell-plugin', 'yazi-plugin'} <= selection.providers
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Batching: a package manager repairs in one transaction, everything else does not
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class Transactional(Writer):
+    """A resource that declares itself `Batched`, recording each call's whole set."""
+
+    def __init__(self, name: str, *, changes: tuple[Change, ...] = (), explodes: bool = False) -> None:
+        super().__init__(name, changes=changes)
+        self.transactions: list[list[str]] = []
+        self._explodes = explodes
+
+    def perform_batch(self, session: Session, changes, privilege: object) -> list[Outcome]:
+        if self._explodes:
+            raise RuntimeError('the transaction was refused')
+        self.transactions.append([change.item for change in changes])
+        self.performed.extend(change.item for change in changes)
+        return [Outcome(change, OutcomeStatus.DONE, f'did {change.item}') for change in changes]
+
+
+def test_a_batched_resource_is_handed_its_whole_run_at_once(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """94 declared packages is one `pacman -S`, one dependency resolution and one
+    authorization. The same 94 one at a time is 94 of each, which on a fresh
+    machine is the difference between seconds and minutes."""
+    writer = Transactional('system', changes=(change('a'), change('b'), change('c')))
+    monkeypatch.setattr(engine, 'resources', lambda: {'system': writer})
+
+    outcomes = [event.payload for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
+
+    assert writer.transactions == [['a', 'b', 'c']]
+    assert [outcome.change.item for outcome in outcomes] == ['a', 'b', 'c']
+
+
+def test_a_resource_that_does_not_declare_batching_still_goes_one_at_a_time(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The default, and it must stay the default: a symlink, a clone and a
+    `defaults write` cost the same alone as in company."""
+    writer = Writer('packages', changes=(change('a'), change('b')))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
+
+    list(engine.execute(session, list(engine.assess(session)), Privilege(offer=False)))
+
+    assert writer.performed == ['a', 'b']
+    assert not hasattr(writer, 'transactions')
+
+
+def test_a_single_change_never_becomes_a_transaction(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One package is one package. Routing it through the batch path would lose the
+    per-item isolation for nothing."""
+    writer = Transactional('system', changes=(change('a'),))
+    monkeypatch.setattr(engine, 'resources', lambda: {'system': writer})
+
+    list(engine.execute(session, list(engine.assess(session)), Privilege(offer=False)))
+
+    assert writer.transactions == []
+    assert writer.performed == ['a']
+
+
+def test_a_failed_transaction_takes_its_whole_group(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Not a weaker guarantee than the item-by-item path — the true one. `pacman -S
+    a b c` either happens or it does not, and reporting the first two as repaired
+    because they came earlier in a list is a fiction the machine does not support."""
+    writer = Transactional('system', changes=(change('a'), change('b')), explodes=True)
+    monkeypatch.setattr(engine, 'resources', lambda: {'system': writer})
+
+    payloads = [event.payload for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
+
+    assert all(isinstance(payload, Refusal) for payload in payloads)
+    assert writer.performed == []
+
+
+def test_the_transaction_is_timed_once_rather_than_per_item(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeating one measurement on each item would multiply the run record's
+    totals by the size of the batch."""
+    writer = Transactional('system', changes=(change('a'), change('b'), change('c')))
+    monkeypatch.setattr(engine, 'resources', lambda: {'system': writer})
+
+    timings = [event.timing for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
+
+    assert timings[0] is not None
+    assert timings[1:] == [None, None]
