@@ -61,7 +61,7 @@ custom_installers:
   - theme
   - font
 
-cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot]
+cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, watchexec]
 
 npm_globals:
   - typescript-language-server

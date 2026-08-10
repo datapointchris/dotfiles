@@ -1067,6 +1067,19 @@ cargo_packages:
     binary_pattern: "broot_{version_num}.zip"
     tags: [cli, tui, files, navigation]
 
+  # The generic watcher, deliberately not a purpose-built live-diff tool. The
+  # candidates were tried and each carried its own idea of what to show:
+  # Livediff snapshots files itself rather than asking git, so it renders the
+  # last save instead of the change against the branch point, and critique
+  # wants a Bun runtime nothing else here needs. `watchexec -- <any command>`
+  # composes with the git and glow invocations already known.
+  - name: watchexec
+    command: watchexec
+    description: Run a command when files change
+    github_repo: watchexec/watchexec
+    binary_pattern: "watchexec-{version}-{target}.tar.xz"
+    tags: [cli, development]
+
   # reports_version: its first positional argument is the URL to open, so asking
   # it for a version opens a window titled "version" and blocks on the webview's
   # event loop until someone closes it. Nothing can measure whether this one is
