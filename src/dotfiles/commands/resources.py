@@ -14,8 +14,10 @@ from __future__ import annotations
 import typer
 
 from dotfiles import bridge
+from dotfiles import engine
 from dotfiles import paths
 from dotfiles import reconcile
+from dotfiles import registry
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
 from dotfiles.output import error
@@ -43,8 +45,6 @@ def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bo
     cannot answer one way here and another way under `dotfiles plan` — which is
     what seven parallel `check_*` functions made possible and eventually true.
     """
-    from dotfiles import engine
-
     results = reconcile.fold(engine.assess(_session(machine), engine.Selection.of(address)), lens)
     _report(results[0], as_json)
 
@@ -114,9 +114,6 @@ def _apply_resource(
     `install/phases.sh`'s hand-maintained `owner_aware` column; the column and the
     script are gone and the flag is the survivor.
     """
-    from dotfiles import engine
-    from dotfiles import registry
-
     addresses = (resource,)
     if source:
         provider = registry.for_section(source)

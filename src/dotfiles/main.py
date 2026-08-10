@@ -18,6 +18,7 @@ import datetime as dt
 
 import typer
 
+from dotfiles import engine
 from dotfiles import reconcile
 from dotfiles import sinks
 from dotfiles import status
@@ -96,8 +97,6 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     developer's box never and every CI runner always, so it went unnoticed for two
     commits until the runner said so.
     """
-    from dotfiles import engine
-
     try:
         return frozenset(engine.validate(addresses or ()))
     except engine.UnknownAddress as wrong:
@@ -207,8 +206,6 @@ def apply_command(
     which providers live below the line, which is the registry's knowledge and not
     a caller's.
     """
-    from dotfiles import engine
-
     try:
         ceiling = engine.stage_named(through) if through else None
     except engine.UnknownAddress as unknown:

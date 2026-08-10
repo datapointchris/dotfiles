@@ -130,6 +130,28 @@ class Selection:
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 
+    def narrowed_to(self, wanted: frozenset[str]) -> Selection:
+        """This selection, minus every provider outside `wanted` and every resource
+        left holding none.
+
+        What `--owner` means, and it has to reach the *walk* rather than only the
+        plan. `symlinks`, `env` and `identity` have no provider, so `ownable`
+        never reaches them and an owner-narrowed plan leaves all three intact —
+        `apply --owner X` would deploy every symlink, write `~/.env` and run the
+        deployment epilogue, none of which has anything to do with X. Dropping a
+        resource that holds no wanted provider excludes them by construction
+        rather than by a list of exceptions.
+
+        `dc.replace` rather than a fresh `Selection`, because a constructor call
+        listing the fields it knows about silently drops the ones it does not:
+        built positionally this returned a selection with no ceiling, so
+        `--owner X --through Y` honoured the owner and converged the whole machine.
+        """
+        current = self.providers if self.providers is not None else frozenset(provider.name for provider in registry.PROVIDERS)
+        kept = current & wanted
+        owners = {provider.resource for provider in registry.PROVIDERS if provider.name in kept}
+        return dc.replace(self, resources=tuple(name for name in self.resources if name in owners), providers=kept)
+
     def capped_at(self, ceiling: Stage | None) -> Selection:
         """The same walk, stopping after this stage. None leaves it uncapped.
 
@@ -238,9 +260,9 @@ def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
 def resources() -> dict[str, Resource]:
     """Every resource, keyed by address and ordered as `vocabulary.RESOURCES` is.
 
-    That is the order rows are measured and printed in, not the order work
-    happens in — `_in_stage_order` holds the second one, and the two differ
-    because the convergence chain interleaves these seven names.
+    Measuring and printing order, not the order work happens in: that is
+    `_in_stage_order`, and the two differ because the convergence chain
+    interleaves these seven names.
 
     Imported here rather than at module scope because `resources/packages.py`
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
@@ -309,10 +331,10 @@ def batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
     """The work a run will do, in the order it will happen and grouped as it will
     be handed over.
 
-    Public because a caller needs the grouping *before* the work runs, not after:
-    a batched provider hands `apt-get install` ninety packages and returns one
-    list of outcomes minutes later, so a reader that waits for the first outcome
-    to announce the group watches a blank screen through the longest part of an
+    Public because a caller needs the grouping *before* the work runs: a batched
+    provider hands `apt-get install` ninety packages and returns one list of
+    outcomes minutes later, so a reader that waits for the first outcome to
+    announce the group watches a blank screen through the longest part of an
     install. `execute` is safe to call with one group at a time — it re-sorts and
     re-groups what it is given, and one group is already both.
     """
@@ -326,20 +348,16 @@ def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
     rows grouped. Converging is ordered by `Stage`, and the two are not the same
     walk: the chain runs toolchains → packages → toolchains → packages → plugins →
     symlinks → plugins → system, so no ordering of the seven resource names can
-    express it. That is what the phase registry was — seventeen narrowed `assess`
-    calls in a hand-written sequence, supplying the difference. One sort supplies
-    it now, and the constraint lives on `Stage`, where the ordering is declared.
+    express it.
 
     Stable, so the order *within* a stage stays the plan's own
     `(stage, provider, name)`. Sorting on the stage alone is total rather than a
-    tie-break nobody wrote down because no two resources share a stage —
+    tie-break nobody wrote down, because no two resources share a stage —
     `tests/cli/test_engine.py` pins that, since it is the precondition for this
     function existing.
 
-    Materialised, which the previous streaming version deliberately was not. An
-    `apply` prints its whole plan before acting on any of it, so the stream was
-    already a list at every call site; what streaming bought was a property no
-    caller used, against an ordering every caller needs.
+    Materialising is the price, and it is not one anybody pays: an `apply` prints
+    its whole plan before acting on any of it, so every caller hands this a list.
     """
     staged = [(event.payload.stage, event) for event in planned if isinstance(event.payload, Change) and event.payload.actionable]
     return [event for _, event in sorted(staged, key=lambda pair: pair[0])]

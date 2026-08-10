@@ -92,12 +92,12 @@ one name and no alternative — there is nothing to prefer between.
 def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
     """One transaction. The caller has already refreshed and grouped.
 
-    Streamed, and the escalating half had to be asked for it: `Privilege.run`
-    defaults to `Output.QUIET`, so apt and pacman — the two managers that install
-    the most — buffered a transaction over every declared package while brew and
-    flatpak, which reach `effects.run` directly, streamed. `Output.STREAM` records
-    the reason in its own docstring: buffering is what made a long install look
-    hung. It keeps the transcript too, so the failure detail below is unchanged.
+    Streamed on both branches, and the escalating one has to ask: `Privilege.run`
+    defaults to `Output.QUIET` where `effects.run` defaults to `Output.STREAM`, so
+    without this apt and pacman — the two managers that install the most — go
+    silent through a transaction over every declared package while brew and
+    flatpak do not. `Output.STREAM` records the reason in its own docstring, and
+    it keeps the transcript, so the failure detail below is unaffected.
     """
     command = [*INSTALL[manager], *names]
     try:

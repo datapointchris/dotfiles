@@ -52,9 +52,8 @@ def record(events: Iterable[Event], machine: str, verb: str, flags: dict | None 
 def keep(events: Iterable[Event], machine: str, verb: str, flags: dict | None = None) -> None:
     """Write the run record, or write nothing and say nothing.
 
-    Every run records. `runs.py` was complete and tested for months with no caller
-    because the walk printed instead of returning — recording is a reader of the
-    stream now rather than a feature something has to remember to call.
+    Every verb records, through one function, because recording is a reader of the
+    event stream rather than a step each verb has to remember.
 
     Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
     the fleet and absent on a fresh machine, and neither is a reason for a verb to

@@ -39,12 +39,11 @@ def declared_machine() -> str:
     one of them had it. `Session.resolve` reads the *file* and not only the
     environment so that a run outside a login shell still knows what it is — a
     systemd user timer, a launchd agent, `docker exec` and cron all inherit no
-    `~/.env`. `apply` had a second resolver of its own that never learned it, so
-    `dotfiles apply` with no `--machine` failed with "MACHINE is not set in the
-    environment" on a machine whose `~/.env` said exactly what it was.
-
-    Found by the wsl e2e run, whose second `apply` — the idempotence assertion —
-    is a bare `docker exec` and is precisely that context.
+    `~/.env`, which is why the file is read and not only the environment. The
+    wsl e2e run is where that is load-bearing: its second `apply` — the
+    idempotence assertion — is a bare `docker exec`, so a resolver reading the
+    environment alone answers "MACHINE is not set" on a machine whose `~/.env`
+    says exactly what it is.
     """
     try:
         return envfile.read(Path.home() / '.env').get('MACHINE', '')
@@ -55,12 +54,11 @@ def declared_machine() -> str:
 def resolve_machine(machine: str | None = None) -> str:
     """The machine this run is about, from the argument, the environment or `~/.env`.
 
-    One function raising one error, because the two front doors were saying
-    different things about the same failure: this one listed the known machines
-    and `apply`'s own resolver named the two places it had looked — with
-    `dotfiles apply`, the more-used door, getting the less actionable half. Two
-    messages kept in step by hand is the arrangement that produced the bug this
-    is the tail of, so the message has one home, and `apply` resolves through it.
+    One function raising one error, so every front door says the same thing about
+    the same failure. Two messages kept in step by hand is an arrangement where
+    the more-used door gets the less actionable half, and nothing reports the
+    divergence — the message therefore has one home and `apply` resolves through
+    it like everything else.
     """
     name = machine or os.environ.get('MACHINE') or declared_machine()
     if not name:

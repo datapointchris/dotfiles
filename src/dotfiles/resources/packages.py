@@ -5,15 +5,15 @@ What the machine *should* have is `resolve.py`, and whether it has it is
 this one's, and what a difference means.
 
 `perform` is provider by provider, and there is one path through it: every
-provider installs through `providers/`, in the order `Stage` declares, so the
-noun form and the composite verb cannot install one tool differently. The PATH
-each provider needs is `providers/toolchain.put_on_path`, called as each runtime
-lands rather than assembled by whatever is driving the run.
+provider installs through `providers/`, in the order `Stage` declares, so the noun
+form and the composite verb cannot install one tool differently. The PATH each
+provider needs is `providers/toolchain.put_on_path`, called as each runtime lands
+rather than assembled by whatever drives the run.
 
-This is the only path that acts on `STALE`. A tool that is present but behind is
-a verdict measured against the release cache, and repairing it needs the `Change`
-that carries it — which is why the phase layer that returned booleans could only
-ever install what was absent.
+Acting on `STALE` is what the `Change` buys. "Behind" is a verdict measured
+against the release cache, so repairing it needs the item that carries the
+verdict — which is why a layer that returns a bool can only ever install what is
+absent.
 """
 
 from __future__ import annotations

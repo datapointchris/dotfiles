@@ -177,16 +177,16 @@ def _docker_config() -> Path:
 def _orbstack_plugins() -> State:
     """OrbStack ships docker, compose and buildx; only the plugin path is ours.
 
-    Read against docker's config rather than against the app. It used to
-    short-circuit to MATCHED where `/Applications/OrbStack.app` was absent, which
-    answers about the machine *before* the run: OrbStack is a declared cask
-    installed at `SYSTEM_APPS` and this row is decided at `SYSTEM_CONFIG`, so a
-    fresh Mac reported it converged and finished with docker pointing nowhere.
+    Read against docker's config and never against `/Applications`. OrbStack is a
+    declared cask installed at `SYSTEM_APPS` and this row is decided at
+    `SYSTEM_CONFIG` of the same run, so the app's absence answers about the
+    machine before the run — and a fresh Mac would report converged with docker
+    pointing nowhere.
 
-    The write costs nothing where the directory turns out not to exist — docker
-    ignores a `cliPluginsExtraDirs` entry it cannot read — which is what makes
-    dropping the guard the cheaper answer than teaching the row to ask what the
-    plan holds.
+    The write costs nothing where the directory turns out not to exist, because
+    docker ignores a `cliPluginsExtraDirs` entry it cannot read. That is what
+    makes reading the config cheaper than teaching the row to ask what the plan
+    holds.
     """
     config = _read_docker_config()
     if config is None:
@@ -340,9 +340,8 @@ def _link_psql() -> Result:
 
     Refuses rather than fails where brew or the formula is still absent. Both
     arrive at `SYSTEM` in the same run this is decided at `SYSTEM_CONFIG` of, so
-    reading their absence at plan time answers about the machine before the run —
-    which is what `_psql_linked` used to do, reporting UNKNOWN and unrepairable on
-    every fresh Mac.
+    their absence is a stage that has not run yet rather than a machine that
+    cannot have them — and a failure would exit the run non-zero for it.
     """
     if not shutil.which('brew'):
         return Result(False, 'brew is not installed, and the stage that supplies it has not', refused=True)

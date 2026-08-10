@@ -465,6 +465,27 @@ def install_age(machine: Machine) -> str:
     return machine.read(f'date -r {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null') or 'an unknown time'
 
 
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
+"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container."""
+
+
+def run_record(machine: Machine) -> dict:
+    """What the install recorded about itself, as values rather than as console text.
+
+    The alternative is grepping `install_log` for a sentence the run printed,
+    which pins an English fragment: reword it and the test fails with nothing
+    wrong. Every count these assertions want is a field here.
+    """
+    written = machine.read(f'cat {LATEST_RECORD}')
+    assert written.strip(), f'the install wrote no run record at {LATEST_RECORD}'
+    return json.loads(written)
+
+
+def failed_outcomes(machine: Machine) -> list[str]:
+    """Every address the run tried to repair and could not."""
+    return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'failed']
+
+
 def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:
     """A live network probe, retried before its answer is believed.
 

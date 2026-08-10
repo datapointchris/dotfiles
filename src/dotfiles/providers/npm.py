@@ -11,10 +11,10 @@ on Debian, `/usr` on Arch), and every global install dies with EACCES. The
 environment variable outranks every config file, so it holds in both orders.
 
 The prefix is also the thing `toolchain.TOOL_PATH_DIRS` has to name. Installing
-into a directory no later stage can see is a silent failure, and it happened:
-eleven language servers installed correctly and every non-interactive check
-reported them missing. `tests/cli/test_apply.py` reads `PREFIX` from here and
-asserts the two agree.
+into a directory no later stage can see is a silent failure whose shape is eleven
+language servers installed correctly and reported missing by every
+non-interactive check. `tests/cli/test_apply.py` reads `PREFIX` from here and
+asserts the two agree, so moving it fails a test rather than a container.
 """
 
 from __future__ import annotations

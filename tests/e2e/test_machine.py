@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import pytest
 from harness import Machine
+from harness import failed_outcomes
+from harness import run_record
 from harness import shadow_calls
 
 pytestmark = pytest.mark.docker
@@ -84,11 +86,16 @@ def test_no_phase_crashed(machine: Machine) -> None:
 
 
 def test_the_run_reports_its_own_outcome(machine: Machine) -> None:
-    """Exit 0 converged, 3 means a phase reported a failure. What must never
-    happen is the third case this replaced: failures, and exit 0."""
+    """Exit 0 converged, 3 means something the run attempted failed. What must
+    never happen is the third case this replaced: failures, and exit 0.
+
+    Read off the run record rather than out of the console. A grep for the
+    summary sentence pins an English fragment, and the record carries the same
+    fact as a field — which is also the only copy that survives the scroll.
+    """
     assert machine.install_status in {0, 3}
     if machine.install_status == 3:
-        assert 'phases reported a failure' in machine.install_log
+        assert failed_outcomes(machine) or run_record(machine)['issues'], 'exit 3 with nothing recorded as wrong'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,13 +107,12 @@ def test_the_machine_converged(machine: Machine) -> None:
     """The whole install, judged as the machine judges it.
 
     Deliberately not softened to "converged or has known failures": a red line
-    here is the accurate state, and the phases it names are the work. The summary
-    carries them, so the assertion message is the diagnosis.
+    here is the accurate state, and the addresses it names are the work. They come
+    off the run record, so the assertion message is the diagnosis.
     """
     if machine.install_status == 0:
         return
-    summary = [line for line in machine.install_log.splitlines() if 'phases reported a failure' in line]
-    pytest.fail(f'{machine.environment.name} did not converge: {summary or machine.install_log[-2000:]}')
+    pytest.fail(f'{machine.environment.name} did not converge: {failed_outcomes(machine) or machine.install_log[-2000:]}')
 
 
 def test_every_declared_tool_is_installed(machine: Machine) -> None:

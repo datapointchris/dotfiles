@@ -298,16 +298,15 @@ TOOL_PATH_DIRS = (
 """Where a stage finds what an earlier stage installed.
 
 Nothing in a run reads `.zshenv`, so a tool is invisible to the provider that
-consumes it unless it is named: the cargo provider needs `cargo` from rustup, the
-node toolchain needs the fnm that arrives as a cargo package, and npm-globals
+consumes it unless it is named here: the cargo provider needs `cargo` from rustup,
+the node toolchain needs the fnm that arrives as a cargo package, and npm-globals
 needs the Node that fnm links as its default alias. Order mirrors `.zshenv` so a
-run resolves the same binary an interactive shell would. `install/tool-path.sh`
-said the same thing to `update.sh` and went with it; this is the one list now.
+run resolves the same binary an interactive shell would.
 
-It is the *declaration* of those directories rather than something applied here:
-what puts them on a run's PATH is `put_on_path`, called by each provider as it
-installs. What reads the list is the e2e harness, which has to rebuild the PATH
-`docker exec` does not supply, and the tests that hold `.zshenv` to it.
+This is the *declaration* of those directories rather than something applied
+here: `put_on_path` is what places them, called by each provider as it installs.
+What reads the list is the e2e harness, which has to rebuild the PATH `docker
+exec` does not supply, and the test that holds `.zshenv` to it.
 """
 
 

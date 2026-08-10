@@ -11,25 +11,20 @@ first: a run that stopped at the first failure and left the machine half
 installed; a failure log per installer, so the summary named one of six; a
 summary printed only when nothing had gone wrong.
 
-**The report is the run record now**, not a text file in `/tmp`. The log this
-asserted against was written by the phase layer, which returned booleans and had
-no per-item value to keep — so it held one line per failed tool and nothing about
-what was decided, attempted or refused. `apply` records what every other verb
-records, and `dotfiles report latest` is where a person reads it.
+**The report is the run record**, which is why every assertion below reads a
+field rather than grepping the console. A record carries what was decided,
+attempted and refused for each address; console text carries a sentence, and a
+test pinned to one fails when the sentence is reworded and nothing is wrong.
 """
 
 from __future__ import annotations
 
-import json
-
 import pytest
 from harness import Machine
+from harness import failed_outcomes
+from harness import run_record
 
 pytestmark = pytest.mark.docker
-
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
-"""`paths.LATEST_RUN`, spelled for a shell because this reads it inside the
-container. `runs.write` points it at the record it just wrote."""
 
 
 @pytest.fixture(scope='session')
@@ -46,9 +41,7 @@ def record(restricted: Machine) -> dict:
     Read rather than reconstructed from the console: the scroll is gone by the
     time anyone asks, which is the whole reason a record exists.
     """
-    written = restricted.read(f'cat {LATEST_RECORD}')
-    assert written.strip(), f'the install wrote no run record at {LATEST_RECORD}'
-    return json.loads(written)
+    return run_record(restricted)
 
 
 def test_the_firewall_actually_broke_something(restricted: Machine) -> None:
@@ -72,18 +65,22 @@ def test_the_record_is_the_apply_that_just_ran(record: dict) -> None:
     assert record['outcomes'], 'a run that installed a machine recorded no outcomes'
 
 
-def test_every_failure_reached_the_record(record: dict) -> None:
+def test_every_failure_reached_the_record(restricted: Machine, record: dict) -> None:
     """More than one thing fails behind this firewall, and the record is the only
     place a person sees them after the scroll is gone."""
-    failed = [outcome for outcome in record['outcomes'] if outcome['action'] == 'failed']
+    failed = failed_outcomes(restricted)
     assert len(failed) > 1, [outcome['address'] for outcome in record['outcomes']][:40]
 
 
-def test_the_summary_names_what_did_not_converge(restricted: Machine) -> None:
-    """The run's last words have to carry both the count and where to read the
-    rest, or the record is a file nobody knows to open."""
-    assert 'did not converge' in restricted.install_log
-    assert 'dotfiles report latest' in restricted.install_log
+def test_the_record_the_run_pointed_at_is_the_one_that_exists(restricted: Machine) -> None:
+    """The run's last words name where to read the rest, and a pointer to a file
+    that is not there is worse than no pointer.
+
+    The command rather than the sentence around it: `report latest` is a public
+    verb this asserts still answers, where grepping the summary would pin a
+    wording the code is free to change.
+    """
+    assert restricted.succeeds('cd ~/dotfiles && uv run dotfiles report latest')
 
 
 def test_a_failure_is_not_silently_converged(restricted: Machine) -> None:

@@ -81,16 +81,14 @@ the grammar is `dotfiles <noun> <verb>`, and both halves are closed.
 RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity')
 """Every addressable part of the machine, in the order rows are measured and printed.
 
-**Not the convergence order**, and it cannot be. Its own docstring used to claim
-otherwise while listing `plugins` before `symlinks` and `packages` before
-`toolchains`, which is the opposite of both dependencies it named — and nothing
-noticed, because the phase registry was supplying the real order alongside it.
+**Not the convergence order, and it cannot be.** Ordering *work* is
+`resolve.Stage`, because the chain interleaves these names: toolchains → packages
+→ toolchains → packages → plugins → symlinks → plugins → system. No sequence of
+seven resource names expresses that, so a walk sorts on the stage and this tuple
+decides only who is asked first and whose row prints above whose.
 
-Ordering *work* is `resolve.Stage`, because the chain interleaves these names:
-toolchains → packages → toolchains → packages → plugins → symlinks → plugins →
-system. No sequence of seven resource names expresses that, which is why a walk
-sorts on the stage and this tuple only decides who is asked first and whose row
-prints above whose.
+A dependency stated here would therefore be a dependency nothing enforces, which
+is worse than none: it reads as a guarantee.
 """
 
 ADDRESS_SEPARATOR = '/'

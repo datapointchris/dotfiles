@@ -78,10 +78,9 @@ class Provider:
     """One way of installing things, and everything that is true of all of them.
 
     `plan` and `measure` have defaults because a provider can legitimately want
-    neither; `install` does not, because every provider here drives its own write
-    and one arriving without it would be a mechanism the walk silently declines to
-    run. It answered a REFUSED naming the phase to run instead while some still
-    installed through the registry — a state nothing is in any more.
+    neither. `install` has none: a provider that plans items and cannot repair
+    them is a mechanism the walk would silently decline to run, so it has to be a
+    loud failure rather than an inherited no-op.
     """
 
     name: str

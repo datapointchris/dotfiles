@@ -142,19 +142,15 @@ end.
 def platform_label(declared: Coordinates) -> str:
     """Which of the four labels these coordinates carry.
 
-    Keyed on the package manager, with apt split by host — which is the whole of
-    what the four labels ever distinguished.
-
-    It selects nothing any more. `install/{archlinux,macos,linux}/` went with the
-    package scripts and the difference between the apt overlays is `excludes_host`
-    in the declaration; what survives is the word in a run's header and the four
-    labels the shell overlays are still keyed by.
+    Keyed on the package manager, with apt split by host, which is the whole of
+    what the four labels distinguish. It selects nothing: what reads a label is a
+    run's header and the shell overlays that are still keyed by one.
 
     Derived rather than read off `Machine.platform_label`, because a manifest may
-    declare `coordinates:` *instead of* `platform:` and then has no label to read.
-    So Arch-on-WSL lands on the pacman answer — the one a fused `PLATFORM` string
-    had no row for, since it has no row of its own and every coordinate it needs
-    already exists.
+    declare `coordinates:` *instead of* `platform:` and then carries no label to
+    read. Arch-on-WSL therefore lands on the pacman answer, which is the point of
+    deriving it: the tuple it needs exists while the fused string has no row for
+    it.
     """
     if declared.package_manager is PackageManager.BREW:
         return 'macos'

@@ -6,11 +6,10 @@ CLI layer is deliberate: the walk, the verdict composition and the exit-code rul
 are the parts worth testing directly, and a `CliRunner` around them tests argument
 parsing at the same time as logic.
 
-`apply` used to be a seventeen-entry phase registry in `apply.py`, each phase a
-function calling the engine with its own narrow `Selection`. That registry was the
-convergence order, written by hand beside a `Stage` enum that already declared it —
-and it silently dropped whatever nobody remembered to add. The order lives on
-`Stage` now and the walk sorts by it.
+The order work happens in is `resolve.Stage`, and nothing here restates it. A
+second list of the convergence order is a list that can disagree with the first,
+and the disagreement is silent: a provider missing from it installs nothing and
+the run reports success.
 """
 
 from __future__ import annotations
@@ -21,11 +20,14 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from dotfiles import catalog
+from dotfiles import checkout
 from dotfiles import coordinates as axes
+from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import registry
 from dotfiles import sinks
 from dotfiles import validate
 from dotfiles.event import Event
@@ -307,31 +309,20 @@ def apply_machine(
 ) -> ExitCode:
     """Measure the machine once, then act on what was decided, in stage order.
 
-    One walk, where there were seventeen. Every phase in the registry this
-    replaces called `engine.assess` with its own narrow `Selection`, so a run
-    observed `packages` four times and `system` twice — and the sequence of those
-    calls *was* the convergence order, maintained by hand next to the `Stage` enum
-    that declares it. Two things fell through that gap and are in a run for the
-    first time here: `system/manager`, the OS package upgrade, which sat at a
-    stage no phase named; and `env` and `identity`, which had no phase at all, so
-    `~/.env` was written by a call at the top of the run rather than by the
-    resource that measures it.
+    One walk over the whole plan, sorted by `Stage`, which is where the ordering
+    is declared. Every resource is observed once and every provider that planned
+    something is acted on.
 
-    The offline check, the declaration check and the machine's own resolution are
-    all before the walk, because everything after them is measured against the
-    declaration: a run against one that will not hold together installs whatever
-    survived the parse and reports success.
+    The declaration check, the machine's own resolution and the offline check are
+    all before the walk. A run measured against a declaration that will not hold
+    together installs whatever survived the parse and reports success — which is
+    why the gate is scoped to the resources that *read* the declaration, and why
+    `symlinks apply` still works on a machine whose `packages.yml` is broken.
     """
-    # Imported here rather than at module scope: `commands.manage` is a leaf of
-    # the CLI and importing it upward would tie this module to the command layer
-    # that calls it. `deploy` is lazy for its own reason — it reaches the symlink
-    # resource, and this module is imported to render `--help`.
-    from dotfiles import deploy
-    from dotfiles.commands.manage import report_stray_branch
+    checkout.report_stray_branch()
 
-    report_stray_branch()
-
-    if broken := validate.errors(validate.declaration()):
+    reads_declaration = {provider.resource for provider in registry.PROVIDERS}
+    if set(selection.resources) & reads_declaration and (broken := validate.errors(validate.declaration())):
         warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
         for finding in broken:
             render_finding(finding.section, finding.message)
@@ -351,9 +342,16 @@ def apply_machine(
     if not selection.resources:
         warn('nothing selected')
         return ExitCode.USAGE
-    if owner is not None and not plan.providers:
-        warn(f'nothing selected for owner {owner}')
-        return ExitCode.USAGE
+
+    # The walk, not only the plan. An owner narrows which *entries* are wanted,
+    # and a resource with no provider — symlinks, env, identity — has no entry to
+    # narrow, so it survives an owner-narrowed plan untouched and gets deployed
+    # by a command that asked for one person's tools.
+    if owner is not None:
+        selection = selection.narrowed_to(plan.providers)
+        if not selection.resources:
+            warn(f'nothing selected for owner {owner}')
+            return ExitCode.USAGE
 
     if offline and not paths.BUNDLE_DIR.is_dir():
         warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
@@ -365,10 +363,8 @@ def apply_machine(
 
     planned = list(engine.assess(session, selection))
 
-    # Before acting rather than after, because a resource nothing could examine is
-    # a part of the machine this run is about to skip. The phase layer dropped
-    # these entirely — it filtered the stream to `Change` before looking at it, so
-    # a checker that crashed was invisible to `apply` and visible to `check`.
+    # Before acting, because a resource nothing could examine is a part of the
+    # machine this run is about to skip without touching.
     for event in planned:
         if isinstance(event.payload, Refusal):
             warn(event.payload.reason)
@@ -393,9 +389,8 @@ def apply_machine(
         deploy.epilogue(session)
 
     # Both halves, which is what `sinks.record` is built for: a `Change` is what
-    # was decided and an `Outcome` is what was done. `apply` has recorded nothing
-    # until now — its phase layer returned booleans, so there was no per-item
-    # value to keep.
+    # was decided and an `Outcome` is what was done, so a record of an `apply`
+    # carries the pair where a record of a `plan` carries verdicts alone.
     sinks.keep([*planned, *performed], session.machine_name, 'apply', flags or {})
 
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
@@ -412,16 +407,14 @@ def apply_machine(
 def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     """Act, announcing each group of work before it happens.
 
-    The heading is the address `plan` prints and `--skip` takes. The registry
-    carried seventeen prose names for these — "GitHub release tools", "Rust/cargo
-    tools" — which were a hand-written approximation of a grouping the walk
-    already computes.
+    The heading is the address `plan` prints and `--skip` takes, so one run's
+    output and the next run's `--skip` argument are the same vocabulary.
 
     **Announced before the group runs, not as its first outcome arrives.** A
     batched provider hands `apt-get install` every declared package at once and
     returns one list of outcomes minutes later, so printing on the first outcome
-    leaves the longest part of a fresh install looking hung — which is the same
-    defect `effects.Output.STREAM` exists to record.
+    leaves the longest stretch of a fresh install looking hung — the same defect
+    `effects.Output.STREAM` exists to record.
     """
     privilege = privileges.Privilege()
     for group in engine.batches(planned):
@@ -460,10 +453,10 @@ def _unrepairable(planned: Iterable[Event]) -> list[Change]:
     """What differs and `apply` cannot fix, which is `check`'s answer reported here.
 
     Reported and not counted: a machine-local value nobody has set and a file only
-    safekeep restores are real findings, and exiting non-zero for them would make
-    every freshly-installed work box look like a failed install between the
-    install and the restore. `apply` answers whether the work it attempted
-    succeeded; whether anything is *wrong* is the question `check` exists for.
+    safekeep restores are real findings, and exiting non-zero for them makes every
+    freshly-installed work box look like a failed install between the install and
+    the restore. `apply` answers whether the work it attempted succeeded; whether
+    anything is *wrong* is the question `check` exists for.
     """
     _, attention, _ = sift([event.payload for event in planned if isinstance(event.payload, Change)])
     return attention
@@ -473,8 +466,8 @@ def _unsuccessful(events: Iterable[Event]) -> list[str]:
     """Every item this run tried and could not do, plus anything it could not measure.
 
     A resource that refused to be examined counts: it was in the selection, so
-    part of the machine went unconverged, and a walk that reported success on the
-    strength of a checker that crashed is the thing `Refusal` exists to prevent.
+    part of the machine went unconverged, and reporting success on the strength of
+    a checker that crashed is what `Refusal` exists to prevent.
     """
     named = []
     for event in events:

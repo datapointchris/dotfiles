@@ -1,11 +1,11 @@
 """`apply`: what one run covers, in what order, and what it does with the results.
 
-This file replaces `test_phase_registry.py`, which asserted a seventeen-entry
-tuple and the three functions that selected subsets of it. What is asserted now is
-the property that tuple existed to provide — every provider reaches a run, in
-stage order — measured against the registry rather than against a second list, so
-adding a provider cannot leave it uninstalled by a run that reports success. That
-is exactly how `system/manager` came to sit at a stage no phase named.
+The central property is that **every provider reaches a run**, and it is asserted
+against `registry.PROVIDERS` rather than against a list kept here. A second list
+of what a run covers is a list that can disagree with the first, and the
+disagreement is silent: a provider missing from it installs nothing and the run
+reports success. `system/manager` sat unreachable that way for as long as a
+hand-written one existed.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ OWNER = busiest_owner()
 @pytest.fixture
 def quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     """Everything a run does to the world that is not the walk itself."""
-    monkeypatch.setattr('dotfiles.commands.manage.report_stray_branch', lambda: None)
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(sinks, 'keep', lambda *args, **kwargs: None)
     monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
 
@@ -128,6 +128,49 @@ def test_owner_narrowing_leaves_only_providers_with_something_to_install(name: s
 
     assert all(registry.named(provider) is not None for provider in plan.providers)
     assert plan.providers <= {provider.name for provider in registry.PROVIDERS}
+
+
+@pytest.mark.parametrize('name', machines.names())
+def test_owner_narrowing_reaches_the_walk_and_not_only_the_plan(name: str) -> None:
+    """`symlinks`, `env` and `identity` have no provider, so `ownable` never
+    reaches them and an owner-narrowed *plan* leaves all three intact.
+
+    Unnarrowed, `apply --owner X` deployed every symlink, wrote `~/.env` and
+    `~/.gitconfig`, and ran the deployment epilogue — none of which has anything
+    to do with X. The phase registry dropped the symlink phase because its
+    `providers` tuple was empty and had no phase for the other two at all, so
+    every part of this arrived with the walk.
+    """
+    plan = resolve.resolve(catalog.load(), machines.load(name), owner=OWNER)
+    narrowed = engine.Selection.everything().narrowed_to(plan.providers)
+
+    assert 'symlinks' not in narrowed.resources
+    assert 'env' not in narrowed.resources
+    assert 'identity' not in narrowed.resources
+    assert set(narrowed.resources) <= {registry.named(provider).resource for provider in plan.providers}
+
+
+def test_owner_narrowing_composes_with_skip() -> None:
+    """Two narrowings intersect rather than one replacing the other: `--skip` says
+    which addresses to leave alone and `--owner` says whose entries are wanted."""
+    plan = resolve.resolve(catalog.load(), machines.load(MACHINE), owner=OWNER)
+    narrowed = engine.Selection.excluding(('packages',)).narrowed_to(plan.providers)
+
+    assert 'packages' not in narrowed.resources
+
+
+def test_owner_narrowing_keeps_the_ceiling_it_was_handed() -> None:
+    """`--owner` and `--through` arrive from different flags and must both survive.
+
+    A narrowing that rebuilds the selection field by field drops whatever it was
+    not written to know about, and the failure is silent in the safe-looking
+    direction: `apply --owner X --through Y` would honour the owner and then
+    converge the whole machine.
+    """
+    plan = resolve.resolve(catalog.load(), machines.load(MACHINE), owner=OWNER)
+    narrowed = engine.Selection.everything().capped_at(Stage.TOOLS).narrowed_to(plan.providers)
+
+    assert narrowed.through is Stage.TOOLS
 
 
 def test_an_owner_with_nothing_here_plans_nothing(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -253,7 +296,7 @@ def test_the_run_records_both_what_was_decided_and_what_was_done(monkeypatch: py
     """`apply` recorded nothing until now, and the reason was structural: its phase
     layer returned booleans, so there was no per-item value to keep."""
     kept: list[tuple] = []
-    monkeypatch.setattr('dotfiles.commands.manage.report_stray_branch', lambda: None)
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
     monkeypatch.setattr(sinks, 'keep', lambda events, machine, verb, flags: kept.append((list(events), machine, verb)))
     walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
@@ -278,7 +321,7 @@ def deployments(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     are looking at.
     """
     ran: list[str] = []
-    monkeypatch.setattr('dotfiles.commands.manage.report_stray_branch', lambda: None)
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(sinks, 'keep', lambda *args, **kwargs: None)
     monkeypatch.setattr(deploy, 'epilogue', lambda session: ran.append(session.machine_name))
     return ran
@@ -371,7 +414,7 @@ def test_no_part_of_a_run_hands_work_to_a_shell(name: str, monkeypatch: pytest.M
 
     monkeypatch.setenv('HOME', str(tmp_path))
     monkeypatch.setenv('MACHINE', name)
-    monkeypatch.setattr('dotfiles.commands.manage.report_stray_branch', lambda: None)
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(sinks, 'keep', lambda *args, **kwargs: None)
 
     # Asserted rather than guarded, and in both directions. A module that stops
