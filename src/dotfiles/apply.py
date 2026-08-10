@@ -44,6 +44,7 @@ from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import session
 from dotfiles import validate
 from dotfiles import versions
 from dotfiles.effects import Output
@@ -174,9 +175,9 @@ class Run:
         how a wsl manifest once deployed the linux shell overlay for a whole
         install.
         """
-        name = machine or os.environ.get('MACHINE') or ''
+        name = machine or os.environ.get('MACHINE') or session.declared_machine()
         if not name:
-            raise Declaration('no machine named, and MACHINE is not set in the environment')
+            raise Declaration('no machine named, and neither the environment nor ~/.env says what this machine is')
 
         manifest_file = paths.MANIFESTS_DIR / f'{name}.yml'
         if not manifest_file.is_file():

@@ -278,3 +278,26 @@ def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatc
     _ = run.declaration
 
     assert reads == {'catalog': 2, 'machine': 2}
+
+
+def test_the_machine_is_read_from_the_env_file_when_the_environment_is_bare(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`Session.resolve` reads `~/.env` as well as the environment, for a reason it
+    states: a systemd user timer, a launchd agent, `docker exec` and cron inherit
+    no `~/.env`. `Run.resolve` predates that and never learned it, so `dotfiles
+    apply` with no `--machine` failed with "MACHINE is not set" on a machine whose
+    `~/.env` said exactly what it was — found by the e2e idempotence assertion,
+    which is a bare `docker exec`.
+    """
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    (tmp_path / '.env').write_text('MACHINE=linux-lxc-server\n')
+
+    assert apply.Run.resolve().machine == 'linux-lxc-server'
+
+
+def test_a_machine_named_nowhere_at_all_is_still_a_usage_error(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+
+    with pytest.raises(apply.Declaration):
+        apply.Run.resolve()
