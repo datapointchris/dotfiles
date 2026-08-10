@@ -1,12 +1,13 @@
-"""Reading the run records — the one part of the tree that is already real.
+"""Reading the run records.
 
-Nothing here shells out. The records were written by the observability spine in
-step 1, so this reads them directly and will not change when the resources move
-underneath it.
+Nothing here shells out — `sinks.keep` wrote the records on the way past, so this
+reads them off disk and does not change when the resources move underneath it.
 
 `path` exists to be substituted into another command: `ifiles put "$(dotfiles
 report path)"` is the whole fleet-analysis loop, which is why it prints a bare
-path to stdout and nothing else.
+path to stdout and nothing else. It is not the only place a path appears, though,
+because a verb that makes you go and ask for one is a verb nobody knows about:
+`latest` and `show` render it too, and a failed `apply` prints it unasked.
 """
 
 from __future__ import annotations
@@ -20,12 +21,16 @@ import typer
 from rich.table import Table
 
 from dotfiles import runs
+from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.resources import OutcomeStatus
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
+
+UNSUCCESSFUL = {str(OutcomeStatus.FAILED), str(OutcomeStatus.REFUSED)}
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -46,10 +51,18 @@ def _find(identifier: str | None) -> Path:
     return matches[0]
 
 
-def _render(record: runs.RunRecord) -> None:
+def _render(path: Path, record: runs.RunRecord) -> None:
+    # `[{verdict}]` reads as a Rich style tag, so the word this line exists to say
+    # was parsed as markup and dropped — every header printed a trailing blank.
     verdict = 'converged' if record.converged else 'drift'
-    console.print(f'[bold]{record.id}[/]  {record.machine}  {record.verb}  [{verdict}]')
+    colour = VERDICT_COLOURS[verdict]
+    console.print(f'[bold]{record.id}[/]  {record.machine}  {record.verb}  [{colour}]{verdict}[/]')
     console.print(f'{record.started_at} · {record.duration_seconds:.1f}s')
+    # What the reader wants the record *for* is usually to send it somewhere, and
+    # the rendering that answers every other question about a run was the one place
+    # its own location did not appear. Unwrapped and unparsed: this is meant to be
+    # copied whole, and a path is not markup however many brackets it contains.
+    console.print(str(path), soft_wrap=True, markup=False)
 
     if record.outcomes:
         table = Table(box=None, pad_edge=False)
@@ -61,21 +74,28 @@ def _render(record: runs.RunRecord) -> None:
             table.add_row(outcome.address, outcome.verdict, outcome.action, f'{outcome.timing.duration_seconds:.2f}')
         console.print(table)
 
+    # Only where it went wrong: a provider hands back a detail line for a success
+    # too, and 112 of "installed zk" buries the four that say why nothing was.
+    for outcome in record.outcomes:
+        if outcome.message and outcome.action in UNSUCCESSFUL:
+            console.print(f'[red]{outcome.action}[/] {outcome.address}: {outcome.message}')
+
     for issue in record.issues:
         console.print(f'[red]{issue.kind}[/] {issue.address}: {issue.message}')
 
 
-def _emit(record: runs.RunRecord, as_json: bool) -> None:
+def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     if as_json:
         emit_json(dataclasses.asdict(record))
     else:
-        _render(record)
+        _render(path, record)
 
 
 @app.command('latest')
 def latest(as_json: bool = JsonOption) -> None:
     """Show the most recent run."""
-    _emit(runs.read(_find(None)), as_json)
+    found = _find(None)
+    _emit(found, runs.read(found), as_json)
 
 
 @app.command('list')
@@ -97,7 +117,8 @@ def list_runs(
 @app.command('show')
 def show(identifier: str = typer.Argument(..., help='Run id, or a unique prefix'), as_json: bool = JsonOption) -> None:
     """Show one run in full."""
-    _emit(runs.read(_find(identifier)), as_json)
+    found = _find(identifier)
+    _emit(found, runs.read(found), as_json)
 
 
 @app.command('path')

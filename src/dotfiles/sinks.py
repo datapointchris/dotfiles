@@ -9,7 +9,9 @@ walk yields values instead of printing them.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Iterable
+from pathlib import Path
 
 from dotfiles import runs
 from dotfiles.event import Event
@@ -19,7 +21,7 @@ from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 
 
-def record(events: Iterable[Event], machine: str, verb: str, flags: dict | None = None) -> runs.RunRecord:
+def record(events: Iterable[Event], machine: str, verb: str, started: dt.datetime, flags: dict | None = None) -> runs.RunRecord:
     """Accumulate one run's events into the record `dotfiles report` reads.
 
     A `Change` is what was decided and an `Outcome` is what was done, so a `plan`
@@ -28,16 +30,18 @@ def record(events: Iterable[Event], machine: str, verb: str, flags: dict | None 
 
     Timing comes off the event rather than being measured here: the engine is what
     holds the clock, because it is the only thing that knows when observing
-    started and when a write finished.
+    started and when a write finished. `started` is the same rule applied to the
+    run as a whole — this runs after the last event, so it is the one span nothing
+    in the stream carries and the verb has to hand over.
     """
-    written = runs.start(machine, verb, flags)
+    written = runs.start(machine, verb, flags, started=started)
     for event in events:
         match event.payload:
             case Change() as change:
                 written.record_outcome(f'{event.resource}/{change.item}', str(change.verdict), 'planned', _timing(event))
             case Outcome() as outcome:
                 address = f'{event.resource}/{outcome.change.item}'
-                written.record_outcome(address, str(outcome.change.verdict), str(outcome.status), _timing(event))
+                written.record_outcome(address, str(outcome.change.verdict), str(outcome.status), _timing(event), outcome.message)
             case Refusal() as refusal:
                 written.record_issue(event.resource, 'refused', refusal.reason)
             case Summary():
@@ -49,11 +53,17 @@ def record(events: Iterable[Event], machine: str, verb: str, flags: dict | None 
     return runs.finish(written)
 
 
-def keep(events: Iterable[Event], machine: str, verb: str, flags: dict | None = None) -> None:
-    """Write the run record, or write nothing and say nothing.
+def keep(events: Iterable[Event], machine: str, verb: str, started: dt.datetime, flags: dict | None = None) -> Path | None:
+    """Write the run record and hand back where it landed, or write nothing.
 
     Every verb records, through one function, because recording is a reader of the
     event stream rather than a step each verb has to remember.
+
+    **The path is returned because the caller is the only one who can say it at
+    the moment it is wanted.** A failed apply tells the reader where the full
+    record is, and naming a command there instead of a file left the one thing
+    they needed to do with it — upload it — as a hunt through
+    `$XDG_STATE_HOME`.
 
     Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
     the fleet and absent on a fresh machine, and neither is a reason for a verb to
@@ -61,9 +71,9 @@ def keep(events: Iterable[Event], machine: str, verb: str, flags: dict | None = 
     `status.record`.
     """
     try:
-        runs.write(record(events, machine, verb, flags))
+        return runs.write(record(events, machine, verb, started, flags))
     except OSError:
-        return
+        return None
 
 
 def _timing(event: Event) -> runs.Timing:

@@ -11,6 +11,7 @@ hand-written one existed.
 from __future__ import annotations
 
 import dataclasses
+import datetime as dt
 from collections import Counter
 from pathlib import Path
 
@@ -298,14 +299,17 @@ def test_the_run_records_both_what_was_decided_and_what_was_done(monkeypatch: py
     kept: list[tuple] = []
     monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
-    monkeypatch.setattr(sinks, 'keep', lambda events, machine, verb, flags: kept.append((list(events), machine, verb)))
+    monkeypatch.setattr(sinks, 'keep', lambda events, machine, verb, started, flags: kept.append((list(events), machine, verb, started)))
     walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
     reconcile.apply_machine(engine.Selection.everything())
 
-    events, machine, verb = kept[0]
+    events, machine, verb, started = kept[0]
     assert (machine, verb) == (MACHINE, 'apply')
     assert [type(event.payload).__name__ for event in events] == ['Change', 'Outcome']
+    # Stamped before the walk, not when the record is assembled afterwards, or the
+    # run's own duration measures the loop over an already-collected list.
+    assert started < dt.datetime.now(dt.UTC)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

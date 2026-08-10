@@ -2,8 +2,10 @@
 
 Every run writes a record. It is state by data.md's test — it survives the run,
 nobody authored it, and deleting it changes what the tool can answer — so it
-lands under `$XDG_STATE_HOME/dotfiles/runs/` beside the full debug event stream
-for the same run.
+lands under `$XDG_STATE_HOME/dotfiles/runs/`. `event_log_path` names the debug
+stream meant to sit beside it, and nothing calls it: no verb passes an
+`event_log` to `logging.configure`, so the record is the only thing a run leaves
+behind and a failure's reason has to survive on it.
 
 **Timing is a field, not something parsed back out of the logs.** A statistic
 that has to grep a log stream is a statistic nobody computes, so every outcome
@@ -30,8 +32,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from dotfiles import paths
+from dotfiles.resources import Verdict
 
-SCHEMA = 1
+SCHEMA = 2
 
 # The phases an item passes through. Named here so a report can total the same
 # set every resource reports, rather than whatever keys happened to be written.
@@ -63,6 +66,10 @@ class Outcome:
     verdict: str
     action: str
     timing: Timing
+    message: str = ''
+    """Why, for the actions that need one. A failed install whose record cannot
+    say what the world objected to sends the reader back to the machine, which is
+    the one thing a record uploaded off it cannot do."""
 
 
 @dataclasses.dataclass
@@ -95,17 +102,21 @@ class RunRecord:
     outcomes: list[Outcome] = dataclasses.field(default_factory=list)
     issues: list[Issue] = dataclasses.field(default_factory=list)
 
-    def record_outcome(self, address: str, verdict: str, action: str, timing: Timing) -> None:
+    def record_outcome(self, address: str, verdict: str, action: str, timing: Timing, message: str = '') -> None:
         """Timing is required, so an untimed resource cannot ship and then drop
         silently out of every report that aggregates duration."""
-        self.outcomes.append(Outcome(address=address, verdict=verdict, action=action, timing=timing))
+        self.outcomes.append(Outcome(address=address, verdict=verdict, action=action, timing=timing, message=message))
 
     def record_issue(self, address: str, kind: str, message: str) -> None:
         self.issues.append(Issue(address=address, kind=kind, message=message))
 
     @property
     def converged(self) -> bool:
-        return not self.issues and all(outcome.verdict == 'MATCHED' for outcome in self.outcomes)
+        """Compared against the enum rather than a literal spelling of it. This
+        read `'MATCHED'` for as long as it existed and was therefore never true:
+        `Verdict` is a `StrEnum` whose values are lower case, so every record ever
+        written said drift — including the ones that had nothing wrong with them."""
+        return not self.issues and all(outcome.verdict == Verdict.MATCHED for outcome in self.outcomes)
 
 
 class Stopwatch:
@@ -139,13 +150,20 @@ class Stopwatch:
         )
 
 
-def start(machine: str, verb: str, flags: dict | None = None) -> RunRecord:
+def start(machine: str, verb: str, flags: dict | None = None, started: dt.datetime | None = None) -> RunRecord:
+    """`started` is for a record assembled once the run is over.
+
+    A record built from an event stream is built at the end, so stamping "now"
+    there measures how long it took to walk a list that had already been
+    collected — a WSL apply that installed 112 things recorded 0.0003 seconds, and
+    named its file after the moment it finished rather than the moment it began.
+    """
     return RunRecord(
         id=uuid.uuid4().hex[:12],
         machine=machine,
         verb=verb,
         flags=flags or {},
-        started_at=_stamp(_now()),
+        started_at=_stamp(started or _now()),
     )
 
 

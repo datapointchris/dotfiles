@@ -6,11 +6,14 @@ described. These land before anything writes records so the format is settled
 while it is still free to change.
 """
 
+import datetime as dt
 import json
 
 import pytest
 
 from dotfiles import runs
+from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Verdict
 
 
 @pytest.fixture
@@ -29,9 +32,13 @@ def timed(**phases) -> runs.Timing:
 
 
 def a_run(machine='macos-personal-workstation', verb='apply') -> runs.RunRecord:
+    """Verdicts and actions spelled by the enums the writer serialises, never by
+    hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
+    and was therefore never true, and this fixture typing the same word is the
+    reason no test noticed."""
     record = runs.start(machine, verb, flags={'skip': ['system']})
-    record.record_outcome('packages/github/fzf', 'OUTDATED', 'installed', timed(observe=1, fetch=1, act=1))
-    record.record_outcome('symlinks/common', 'MATCHED', 'none', timed(observe=1))
+    record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(observe=1, fetch=1, act=1))
+    record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
     record.record_issue('packages/github/yq', 'checksum', 'no checksum published')
     return runs.finish(record)
 
@@ -63,7 +70,23 @@ class TestRoundTrip:
     def test_an_outcome_cannot_be_recorded_without_a_timing(self):
         record = runs.start('m', 'apply')
         with pytest.raises(TypeError):
-            record.record_outcome('packages/github/fzf', 'MATCHED', 'none')  # type: ignore[call-arg]
+            record.record_outcome('packages/github/fzf', str(Verdict.MATCHED), 'planned')  # type: ignore[call-arg]
+
+    def test_why_a_failure_failed_survives_the_round_trip(self, runs_dir):
+        """The record is what leaves the machine when an offline install goes
+        wrong, so a failure whose reason lives only in the console is a record
+        that cannot answer the one question it was uploaded for."""
+        record = runs.start('m', 'apply')
+        record.record_outcome(
+            'packages/ghrelease/win32yank',
+            str(Verdict.MISSING),
+            str(OutcomeStatus.FAILED),
+            timed(act=1),
+            'checksum mismatch',
+        )
+
+        recovered = runs.read(runs.write(runs.finish(record), runs_dir))
+        assert recovered.outcomes[0].message == 'checksum mismatch'
 
     def test_an_unknown_phase_is_refused_rather_than_recorded(self):
         with pytest.raises(ValueError, match='unknown phase'), runs.Stopwatch().phase('sprint'):
@@ -88,8 +111,30 @@ class TestConvergence:
 
     def test_a_run_where_everything_matched_has_converged(self):
         record = runs.start('m', 'check')
-        record.record_outcome('symlinks/common', 'MATCHED', 'none', timed(observe=1))
+        record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
         assert runs.finish(record).converged
+
+    def test_a_run_that_changed_something_has_not_converged(self):
+        record = runs.start('m', 'apply')
+        record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(act=1))
+        assert not runs.finish(record).converged
+
+
+class TestSpan:
+    def test_the_run_is_as_long_as_the_caller_says_it_was(self):
+        """A record assembled from an event stream is assembled once the run is
+        over, so measuring from here times the walk over an already-collected list
+        — which is how an apply that installed 112 things recorded 0.0003s."""
+        began = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=4)
+        record = runs.finish(runs.start('m', 'apply', started=began))
+
+        assert record.duration_seconds > 200
+
+    def test_the_file_is_named_after_the_start_not_the_finish(self, runs_dir):
+        began = dt.datetime(2026, 8, 10, 14, 0, 0, tzinfo=dt.UTC)
+        path = runs.write(runs.finish(runs.start('wsl-work-workstation', 'apply', started=began)), runs_dir)
+
+        assert path.stem == '20260810T140000Z-wsl-work-workstation-apply'
 
 
 class TestListing:

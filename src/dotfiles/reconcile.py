@@ -14,6 +14,7 @@ the run reports success.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Iterable
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -319,6 +320,7 @@ def apply_machine(
     why the gate is scoped to the resources that *read* the declaration, and why
     `symlinks apply` still works on a machine whose `packages.yml` is broken.
     """
+    began = dt.datetime.now(dt.UTC)
     checkout.report_stray_branch()
 
     reads_declaration = {provider.resource for provider in registry.PROVIDERS}
@@ -391,13 +393,18 @@ def apply_machine(
     # Both halves, which is what `sinks.record` is built for: a `Change` is what
     # was decided and an `Outcome` is what was done, so a record of an `apply`
     # carries the pair where a record of a `plan` carries verdicts alone.
-    sinks.keep([*planned, *performed], session.machine_name, 'apply', flags or {})
+    recorded = sinks.keep([*planned, *performed], session.machine_name, 'apply', began, flags or {})
 
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
     if unsuccessful:
         err_console.rule('[bold red]failed[/]', align='left')
         warn(f'{len(unsuccessful)} item(s) did not converge: {", ".join(unsuccessful)}')
-        hint("the full record is 'dotfiles report latest'")
+        # The path, not the command that would print it. What a person does with a
+        # failed offline install is send the record to the fleet, and naming
+        # `dotfiles report latest` left them hunting `$XDG_STATE_HOME` for a file
+        # this line was already holding.
+        if recorded:
+            hint(f'the full record is {recorded}')
         return ExitCode.ISSUE
 
     err_console.rule(f'[bold green]converged[/]  {session.machine_name}', align='left')
