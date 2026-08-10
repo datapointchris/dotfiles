@@ -20,17 +20,20 @@ from __future__ import annotations
 import dataclasses
 from collections import Counter
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
 from dotfiles import apply
 from dotfiles import catalog
 from dotfiles import coordinates
+from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import resolve
+from dotfiles.effects import Completed
 from dotfiles.providers import npm
 from dotfiles.resolve import Stage
 
@@ -112,16 +115,53 @@ def context(**overrides: object) -> apply.Run:
     return apply.Run(machine='linux-lxc-server', coords=coords, packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
 
 
-def test_no_phase_runs_a_script() -> None:
-    """The property the whole conversion is for, asserted where it can regress.
+SHELLS = frozenset({'bash', 'sh', 'zsh', 'dash'})
 
-    Every phase converges a selection of the plan; none shells out to an installer,
-    and there is no environment built for one to read. TPM and lazy.nvim were the
-    last two, and a new phase reintroducing the shape would pass every other test
-    in this file.
+SHELL_SURVIVORS = frozenset({'sync-windows-shell.sh'})
+"""The one script a phase may still reach, and only on a WSL host.
+
+Git Bash reads the `.bashrc` it writes, so its *output* has to be shell; the
+generator does not, and step E converts it. Named here rather than tolerated, so
+that conversion empties this set and anything else appearing in it is a new
+phase shelling out.
+"""
+
+
+@pytest.mark.parametrize('name', machines.names())
+def test_no_phase_hands_work_to_a_shell(name: str, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """The property the whole conversion is for, asserted by running the phases.
+
+    Every phase converges a selection of the plan; none shells out to an
+    installer. Asserting that the removed symbols are gone would pass for a new
+    phase calling `effects.run(['bash', ...])` directly, which is the shape the
+    conversion exists to end — so this records what actually reached the world.
+
+    The engine is stubbed rather than exercised: what it does with a plan is its
+    own tests' subject, and what this asks is whether a phase *body* reaches a
+    shell on its own. Every machine, because the two gated calls in
+    `deploy.epilogue` fire on coordinates rather than on the phase.
     """
-    assert not hasattr(apply, 'run_installer')
-    assert not hasattr(apply.Run, 'environment')
+    invoked: list[tuple[str, ...]] = []
+
+    def record(command, **kwargs):
+        argv = tuple(str(part) for part in command)
+        invoked.append(argv)
+        return Completed(argv, 0, '')
+
+    monkeypatch.setenv('HOME', str(tmp_path))
+    monkeypatch.setattr(apply, 'run', record)
+    monkeypatch.setattr(deploy, 'run', record)
+    monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter(()))
+    monkeypatch.setattr(engine, 'execute', lambda *args, **kwargs: iter(()))
+
+    declared = machines.load(name)
+    context = apply.Run(machine=name, coords=declared.coordinates, packages={}, manifest={})
+    for phase in apply.REGISTRY:
+        phase.run(context)
+
+    shelled = [argv for argv in invoked if Path(argv[0]).name in SHELLS]
+    stowaways = [argv for argv in shelled if Path(argv[-1]).name not in SHELL_SURVIVORS]
+    assert stowaways == [], f'{name}: a phase handed work to a shell'
 
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
