@@ -16,6 +16,14 @@ editor = nvim
 [init]
 defaultBranch = main
 
+[fetch]
+prune = true
+# Not implied by fetch.prune, and safe on this fleet: every tag is created
+# inside GitHub Actions, so it reaches the server before any clone, and no
+# active repo carries a second remote — the only local-only tag would be one
+# deleted upstream on purpose.
+pruneTags = true
+
 [pull]
 rebase = true
 
@@ -97,7 +105,6 @@ path = ~/.config/git/trust.gitconfig
 detailed = tformat:%C(blue)%h%C(auto)%d %s %C(green)%cs (%cr)%C(dim yellow) - %an%C(auto)
 
 [alias]
-prune = fetch --prune
 undo-commit = reset --soft HEAD^
 unstage = restore --staged
 graph = log --graph --pretty=detailed
