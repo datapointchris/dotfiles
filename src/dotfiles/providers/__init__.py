@@ -23,6 +23,17 @@ class Result:
     ok: bool
     detail: str
 
+    refused: bool = False
+    """Nothing was written, and nothing was wrong with the write: what this row
+    needs is not on the machine to work with.
+
+    Distinct from a failure because `apply` exits non-zero on failures, and a row
+    waiting on a package an earlier stage could not deliver is not a fault of the
+    run. `pluginsync.blocked` draws the same distinction for TPM, for the same
+    reason: every one of these preconditions is supplied by an earlier stage of
+    the same run.
+    """
+
 
 def local_dir() -> Path:
     """`~/.local`, the prefix everything user-installed unpacks under.

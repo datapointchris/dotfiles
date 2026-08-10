@@ -36,7 +36,7 @@ from typing import Any
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
-from dotfiles.providers.sysconfig import Result
+from dotfiles.providers import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict

@@ -28,6 +28,7 @@ from dotfiles.effects import run
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import Result
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
@@ -47,23 +48,6 @@ class State:
     verdict: Verdict
     detail: str = ''
     repair: Repair = Repair.AUTOMATIC
-
-
-@dc.dataclass(frozen=True, slots=True)
-class Result:
-    ok: bool
-    detail: str
-
-    refused: bool = False
-    """Nothing was written, and nothing was wrong with the write: what this row
-    configures is not on the machine to configure.
-
-    Distinct from a failure because `apply` exits non-zero on failures, and a row
-    waiting on a package an earlier stage could not deliver is not a fault of the
-    run. `pluginsync.blocked` draws the same distinction for TPM, for the same
-    reason: every one of these preconditions is supplied by an earlier stage of
-    the same run.
-    """
 
 
 def current_user() -> str:

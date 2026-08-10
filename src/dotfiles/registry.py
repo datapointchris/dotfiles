@@ -202,9 +202,9 @@ class VendoredProvider(CatalogProvider):
     """A tool this package fetches and unpacks itself: a release, or a vendor's
     own installer driven through `providers/`.
 
-    These are the two that have converted, and the two whose `install` the phase
-    registry also calls — so the two front doors cannot install one tool
-    differently.
+    The distinction that earns the base class: these two fetch an asset this
+    package names, so they own the download, the checksum and the unpack. A
+    manager-backed provider hands all three to `go install` or `npm i -g`.
     """
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
@@ -964,7 +964,7 @@ class SystemConfigProvider(Provider):
     def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
         return sysconfig.observe(entry)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> Result:
         return sysconfig.apply(entry, privilege)
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
@@ -997,7 +997,7 @@ class MacDefaultProvider(SystemConfigProvider):
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.observe_default(entry, stores)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> Result:
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.apply_default(entry)
 
@@ -1009,7 +1009,7 @@ class StepProvider(SystemConfigProvider):
     def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
         return steps.observe(entry.name)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> sysconfig.Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> Result:
         return steps.apply(entry.name, privilege)
 
 
