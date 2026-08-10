@@ -466,9 +466,19 @@ class CloneProvider(CatalogProvider):
     """
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
-        if clone.destination(item, session.home).is_dir():
-            return Outcome(change, OutcomeStatus.SKIPPED, f'{clone.destination(item, session.home)} appeared since the check')
-        result = clone.clone(item, session.home)
+        """Clone what is missing, pull what is behind.
+
+        Two repairs behind one verb because the verdict already separates them,
+        and the alternative was `update.sh` pulling every plugin on every run to
+        find out whether any of them had moved.
+        """
+        landed = clone.destination(item, session.home)
+        if change.verdict is Verdict.STALE:
+            result = clone.pull(item, session.home)
+        elif landed.is_dir():
+            return Outcome(change, OutcomeStatus.SKIPPED, f'{landed} appeared since the check')
+        else:
+            result = clone.clone(item, session.home)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
