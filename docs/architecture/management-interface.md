@@ -197,16 +197,31 @@ runtime. `--skip system` is that, and it is derived rather than declared.
 
 ```bash
 dotfiles apply                        # everything
-dotfiles apply --skip system          # skip the sudo-gated, slowest part
-dotfiles apply --skip plugins/tpm     # one provider, not all of plugins
-dotfiles packages apply --source cargo_packages   # one section
-dotfiles apply --owner datapointchris # only tools traceable to that owner
-dotfiles apply --skip system          # a whole resource
+dotfiles apply --skip system          # a whole resource: the sudo-gated, slowest part
 dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
+dotfiles packages apply --source cargo_packages   # one section, and what it needs
+dotfiles apply --owner datapointchris # only tools traceable to that owner
+dotfiles apply --through system_upgrade           # stop after that stage
 ```
 
-Owner narrowing takes only the phases whose contents can be traced to a GitHub owner,
-and skips the rest rather than silently running them in full. Ownership is derived from
+`--through` is the one selector that is not a selection of parts. `--skip` and the
+resource sub-apps say *which mechanisms*; neither can say *how far*, because the stages a
+resource's providers sit at are spread across the run — expressing "the system half and
+no further" as `--skip` means knowing which providers live below the line, which is the
+registry's knowledge and not a caller's. It is a ceiling on the ordering, carried on the
+`Selection` beside the provider narrowing so the two intersect, and the e2e base images
+are built with it.
+
+A section brings what it declares it needs. `--source cargo_packages` on a machine
+without rustup installs the Rust toolchain first, because `needed_by` already says the
+runtime is wanted *because* that section resolved; narrowing to the section alone honoured
+the declaration in the plan and ignored it in the run, and failed with
+`cargo: No such file or directory`.
+
+Owner narrowing drops every provider whose contents cannot be traced to a GitHub owner,
+and then every resource left holding none — so `symlinks`, `env` and `identity`, which
+have no provider to be ownable, fall out of the walk rather than deploying in full
+alongside somebody's tools. Ownership is derived from
 whichever field carries it — `repo`, `github_repo`, or a Go import path in `package` —
 not from a `personal` tag, because a tag has to be remembered on every new tool and
 silently excludes whatever it misses.
@@ -252,7 +267,7 @@ separate from `dotfiles machines check`, which runs on every commit: that one co
 `packages.yml` against the manifests and what can install them, and a machine part-way
 through a rollout is not a repo defect that should fail a commit.
 
-### What a phase is allowed to claim
+### What a provider is allowed to claim
 
 A per-tool line must be derived from observed state: a version or ref that changed, or a
 non-zero exit. It may never be derived from "the command returned", because
