@@ -133,5 +133,19 @@ expected prefix*; the second catches the same tool installed twice by different
 methods, which is the failure PATH order hides — a stale copy in `/usr/bin`
 shadowed by a current one in `~/.local/bin` works fine until the order changes.
 
+**A refusal is not a missing tool.** The first script reads this machine's newest
+apply and reports separately anything that run reached and deliberately wrote
+nothing for — an offline install has no go.dev to fetch a toolchain from, because
+its bundle stages the Go and Rust *tools* prebuilt instead, so it converges with
+four items refused. Counting those as failures described seven broken tools on a
+machine built exactly as intended, and a verdict nobody believes is one nobody
+reads. Every way of failing to find that record leaves the set empty and requires
+everything, because a record it cannot read has to make the check stricter.
+
+Nothing about which tools those are is written in the script. It asks the run what
+it refused, so an installer that stops refusing something starts being required
+with nothing to update here — the same reason the checklist itself is derived from
+the manifest rather than written out.
+
 The e2e runs do both automatically. Document platform quirks found this way in
 [Platform Differences](../reference/platforms/differences.md).
