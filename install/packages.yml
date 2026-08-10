@@ -1073,7 +1073,9 @@ cargo_packages:
   # last save instead of the change against the branch point, and critique
   # wants a Bun runtime nothing else here needs. `watchexec -- <any command>`
   # composes with the git and glow invocations already known.
-  - name: watchexec
+  # watchexec-cli, not watchexec: the bare crate name is the library, which
+  # binstall rejects with "no binaries specified nor inferred".
+  - name: watchexec-cli
     command: watchexec
     description: Run a command when files change
     github_repo: watchexec/watchexec
