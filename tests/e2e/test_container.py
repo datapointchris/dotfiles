@@ -14,10 +14,13 @@ after touching what actually installs a machine.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from harness import SHADOW_BIN
 from harness import SHADOW_REFUSAL
 from harness import Machine
+from harness import github_token
 from harness import measured_network
 from harness import reachable_probes
 from harness import reaches
@@ -139,3 +142,34 @@ def test_an_online_environment_has_no_firewall(container: Machine) -> None:
     if container.environment.firewalled:
         pytest.skip('a firewalled environment blackholes hosts on purpose')
     assert container.succeeds('curl -fsS --connect-timeout 10 https://github.com/')
+
+
+ANONYMOUS_HOURLY_CALLS = 60
+"""What GitHub allows an unauthenticated public IP, and the number this exists to escape."""
+
+
+def test_the_github_credential_arrived_and_the_api_accepts_it(container: Machine) -> None:
+    """Asked here, at eight seconds, because the alternative is a ten-minute install
+    whose release failures are then unattributable.
+
+    The host having a token is a different fact from the container having one, and
+    only the second matters: `pytest_report_header` reads the host, so a
+    `github: authenticated` line proves the harness *found* a credential and nothing
+    about whether `docker run --env` carried it through.
+
+    Asserted against the rate limit rather than the token's presence, because a
+    token that is present and rejected leaves the container back on the anonymous
+    60 an hour — which is the state this whole mechanism exists to leave. 5000 is
+    what an accepted credential buys; anything at or below 60 is an anonymous run
+    wearing a token.
+    """
+    if container.environment.firewalled:
+        pytest.skip('a firewalled environment cannot reach the API to ask')
+    if not github_token():
+        pytest.skip('no credential on this host to pass through')
+
+    answered = container.exec('curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/rate_limit')
+
+    assert answered.returncode == 0, answered.stderr
+    limit = json.loads(answered.stdout)['resources']['core']['limit']
+    assert limit > ANONYMOUS_HOURLY_CALLS, f'the container is on the anonymous limit ({limit}), so the token did not arrive or was refused'

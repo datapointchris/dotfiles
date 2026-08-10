@@ -802,6 +802,21 @@ class ToolchainProvider(Provider):
     needed_by: str = ''
     """The catalog section whose presence requires it. Empty means ungated."""
 
+    installed_at: str = ''
+    """Where this runtime must live, for one that is installed to a fixed path.
+
+    Empty for the three that go wherever their own installer puts them, and set
+    for Go, which is unpacked over `/usr/local/go` — a path `.zshenv`,
+    `apply.TOOL_PATH_DIRS` and the verification script all name independently.
+
+    It exists because `which` answers a different question than the declaration
+    asks. A container picked up Arch's `go` package transitively, `which go` found
+    `/usr/sbin/go`, and the toolchain reported itself installed while
+    `/usr/local/go` did not exist — so every Go tool built against a runtime this
+    repo did not put there, and nothing said so until the verification script
+    checked the *location*.
+    """
+
     ownable: bool = False
     """A runtime belongs to nobody, so `--owner` skips these whole.
 
@@ -822,7 +837,7 @@ class ToolchainProvider(Provider):
                 stage=self.stage,
                 name=self.runtime,
                 executable=self.executable,
-                evidence_path='',
+                evidence_path=self.installed_at,
                 precondition=resolve.Precondition.NONE,
                 entry=declared_runtime(declaration, self.runtime),
                 reason=Reason('runtimes', f'section:{self.needed_by}' if self.needed_by else 'every machine'),
@@ -1022,7 +1037,15 @@ PROVIDERS: tuple[Provider, ...] = (
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),
     NvimSyncProvider('nvim-sync', 'plugins', Stage.NVIM_PLUGIN_SYNC, manager='lazy', feature='nvim_plugins'),
     UvToolchain('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
-    GoToolchain('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
+    GoToolchain(
+        'go-toolchain',
+        'toolchains',
+        Stage.TOOLCHAIN,
+        runtime='go',
+        executable='go',
+        needed_by='go_tools',
+        installed_at='/usr/local/go/bin/go',
+    ),
     RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
     NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
@@ -1069,6 +1092,27 @@ def named(name: str) -> Provider | None:
 
 def for_section(section: str) -> Provider | None:
     return BY_SECTION.get(section)
+
+
+def serving(section: str) -> tuple[Provider, ...]:
+    """Every provider a run narrowed to one section needs, not only the one that installs it.
+
+    `needed_by` already declares that a toolchain is wanted *because* a section
+    resolved, and `resolve` honours it — the plan for a machine with
+    `cargo_packages` carries `rust-toolchain` too. A selection that dropped it
+    honoured the declaration in the plan and ignored it in the run, so
+    `packages apply --source cargo_packages` on a machine without rustup failed
+    with `cargo binstall bat exited 127: cargo: No such file or directory` rather
+    than installing what it needed.
+
+    Derived from the registry rather than listed, so a section that grows a
+    prerequisite gets it here the moment `needed_by` says so.
+    """
+    provider = BY_SECTION.get(section)
+    if provider is None:
+        return ()
+    required = tuple(other for other in PROVIDERS if isinstance(other, ToolchainProvider) and other.needed_by == section)
+    return (*required, provider)
 
 
 def for_resource(resource: str) -> tuple[Provider, ...]:

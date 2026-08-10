@@ -30,6 +30,7 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
 from dotfiles.privilege import Privilege
+from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Batched
@@ -70,6 +71,22 @@ class Selection:
 
     None rather than the full set, so a walk that narrows nothing hands each
     resource the very same `Plan` object it was given.
+    """
+
+    through: Stage | None = None
+    """A ceiling on how far the machine converges, or None for all the way.
+
+    `Stage` is an `IntEnum` because execution order is a property of the work
+    rather than of a CLI noun, so "everything up to and including this" is already
+    a total order and this is a projection of it rather than a second opinion about
+    sequence. That is the whole reason a ceiling can be one comparison: nothing
+    here decides what comes before what.
+
+    Orthogonal to `providers` and applied with it, because they answer different
+    questions — *which mechanisms* against *how far*. A caller wanting the system
+    half of a machine names a stage and does not have to know which providers sit
+    under it, which is the knowledge `--skip` arithmetic over resources was
+    standing in for.
     """
 
     @classmethod
@@ -113,16 +130,28 @@ class Selection:
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 
+    def wants(self, resource: str, item: DesiredItem) -> bool:
+        """Whether one item survives both narrowings.
+
+        The provider test is per resource — a `--skip` aimed at one must not change
+        what another is handed — while the stage ceiling is not, because a stage is
+        a fact about the whole machine's ordering rather than about one resource's
+        contents.
+        """
+        if self.through is not None and item.stage > self.through:
+            return False
+        return self.providers is None or item.resource != resource or item.provider in self.providers
+
     def plan_for(self, resource: str, plan: Plan) -> Plan:
-        """The plan this resource should see, with its unselected providers gone.
+        """The plan this resource should see, with everything it was told to leave alone gone.
 
         Structural rather than a filter each resource has to remember: a resource
         is handed a plan that does not contain what it was told to leave alone, so
         it cannot observe it, diff it or act on it.
         """
-        if self.providers is None:
+        if self.providers is None and self.through is None:
             return plan
-        kept = tuple(item for item in plan.items if item.resource != resource or item.provider in self.providers)
+        kept = tuple(item for item in plan.items if self.wants(resource, item))
         return plan if len(kept) == len(plan.items) else dc.replace(plan, items=kept)
 
 
@@ -133,6 +162,27 @@ def validate(addresses: Iterable[str]) -> tuple[str, ...]:
     and the set is then read by the walk, the fold and the run record's flags.
     """
     return tuple(_valid(address) for address in addresses)
+
+
+def stage_named(name: str) -> Stage:
+    """One stage by the name `machines show` and the run records already print.
+
+    Here rather than in `vocabulary.py` for the reason address validation is: that
+    module holds the closed grammar of nouns and verbs, and what a stage is called
+    belongs to `resolve.Stage`. Read off the enum rather than listed, so a stage
+    added there is spellable the day it exists.
+
+    The names were already an *output* vocabulary — `machines show` groups by
+    `stage.name.lower()` — with nothing anywhere accepting one. That asymmetry is
+    what left "everything up to the symlink pass" inexpressible except as `--skip`
+    arithmetic over resources that do not line up with stages.
+    """
+    wanted = name.strip().lower()
+    for stage in Stage:
+        if stage.name.lower() == wanted:
+            return stage
+    known = ', '.join(stage.name.lower() for stage in Stage)
+    raise UnknownAddress(f'unknown stage {name}. Valid: {known}')
 
 
 def _valid(address: str) -> str:

@@ -9,6 +9,8 @@ was nothing after this".
 
 from __future__ import annotations
 
+import dataclasses as dc
+
 import pytest
 
 from dotfiles import engine
@@ -250,6 +252,60 @@ def test_the_system_config_stage_leaves_the_package_half_out_of_the_plan(session
     narrowed = engine.Selection.at(Stage.SYSTEM_CONFIG).plan_for('system', session.plan)
 
     assert all(item.stage is Stage.SYSTEM_CONFIG for item in narrowed.for_resource('system'))
+
+
+def test_a_ceiling_keeps_everything_up_to_and_including_the_stage(session: Session) -> None:
+    """`Stage` is an IntEnum because execution order is a property of the work, so
+    "everything through this" is a projection of an order that already exists
+    rather than a second opinion about sequence."""
+    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+
+    for resource in vocabulary.RESOURCES:
+        assert all(item.stage <= Stage.SYMLINKS for item in ceiling.plan_for(resource, session.plan).items)
+
+
+def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: Session) -> None:
+    """The difference from `Selection.at`, which is exactly-these-stages. A base a
+    test installs over is everything *up to* a point, and saying that with `at`
+    means enumerating every stage below — the list nothing should keep by hand."""
+    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+
+    stages = {item.stage for item in ceiling.plan_for('system', session.plan).for_resource('system')}
+
+    assert Stage.SYSTEM in stages
+    assert Stage.SYSTEM_CONFIG not in stages
+
+
+def test_a_ceiling_and_a_provider_narrowing_both_apply(session: Session) -> None:
+    """They answer different questions — which mechanisms against how far — so a
+    caller giving both means the intersection."""
+    both = dc.replace(engine.Selection.excluding(['packages/go']), through=Stage.TOOLS)
+
+    kept = both.plan_for('packages', session.plan).for_resource('packages')
+
+    assert kept, 'the narrowing removed everything, so this asserts nothing'
+    assert all(item.stage <= Stage.TOOLS and item.provider != 'go' for item in kept)
+
+
+def test_no_ceiling_hands_back_the_very_same_plan(session: Session) -> None:
+    """The property `providers is None` already had: a walk narrowing nothing must
+    not pay to rebuild the plan, and identity is how that is asserted."""
+    assert engine.Selection.everything().plan_for('packages', session.plan) is session.plan
+
+
+def test_every_stage_is_spellable_by_the_name_that_gets_printed() -> None:
+    """`machines show` groups by `stage.name.lower()` and the run records store it,
+    so the names were an output vocabulary with nothing accepting one."""
+    for stage in Stage:
+        assert engine.stage_named(stage.name.lower()) is stage
+        assert engine.stage_named(stage.name.upper()) is stage
+
+
+def test_a_stage_naming_nothing_is_refused_with_the_ones_that_exist() -> None:
+    with pytest.raises(engine.UnknownAddress) as refused:
+        engine.stage_named('halfway')
+
+    assert 'symlinks' in str(refused.value)
 
 
 @pytest.mark.parametrize('address', ['nonsense', 'plugins/tmux', 'packages/group', 'plugins/'])

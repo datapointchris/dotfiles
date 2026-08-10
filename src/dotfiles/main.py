@@ -213,13 +213,27 @@ def apply_command(
     machine: str = MachineOption,
     owner: str = typer.Option(None, '--owner', help='Only phases whose contents can be traced to this GitHub owner'),
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
+    through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
 ) -> None:
     """Make this machine match what it declares.
 
     `check` plus acting on what it found — the same walk with the last step run,
     which is why there is no `--dry-run` for this to be the opposite of.
+
+    `--through` is a ceiling on the ordering rather than a selection of parts:
+    `--skip` and the resource sub-apps say *which mechanisms*, and neither can say
+    *how far*, because the stages a resource's providers sit at are spread across
+    the run. Saying "the system half and no further" with `--skip` means knowing
+    which providers live below the line, which is the registry's knowledge and not
+    a caller's.
     """
     from dotfiles import apply
+    from dotfiles import engine
+
+    try:
+        ceiling = engine.stage_named(through) if through else None
+    except engine.UnknownAddress as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
 
     raise typer.Exit(
         apply.apply_machine(
@@ -227,6 +241,7 @@ def apply_command(
             machine=machine,
             offline=offline,
             owner=owner,
+            through=ceiling,
         )
     )
 

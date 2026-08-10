@@ -30,14 +30,14 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from pathlib import Path
+
+import httpx2
 
 from dotfiles import versions
 
-# Some hosts answer urllib's default identification with a 403 where they serve
+# Some hosts answer a default client identification with a 403 where they serve
 # curl fine.
 USER_AGENT = 'curl/8.0 (dotfiles-installer)'
 
@@ -188,16 +188,55 @@ def github_token() -> str | None:
     return None
 
 
+GITHUB_HOSTS = frozenset({'api.github.com', 'github.com'})
+"""The only hosts a GitHub credential is ever sent to.
+
+Deliberately excludes the asset CDNs — `objects.githubusercontent.com` and its
+siblings — even though a release download lands there. They are S3-backed and
+serve a pre-signed URL that needs no credential of ours; `s3.amazonaws.com`
+answers a bearer token it does not recognise with a 400, measured 2026-08-10, and
+that is the *polite* failure. The impolite one is that the token was sent at all.
+"""
+
+
+def authorized_host(url: str) -> bool:
+    """Whether this URL is one of ours to authenticate to.
+
+    Equality against a closed set, never a suffix test: `endswith('github.com')`
+    is true of `github.com.example.invalid`, so a suffix would hand the token to
+    anyone who can register a domain.
+    """
+    return urllib.parse.urlsplit(url).hostname in GITHUB_HOSTS
+
+
 def request(url: str, accept: str | None = None) -> bytes:
+    """Fetch one URL, sending a credential only where one belongs.
+
+    The token used to go on every request this module made, whatever the host —
+    so `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
+    `pypi.org` all received a GitHub PAT, and S3 rejected the download outright
+    because of it.
+
+    **Redirects are the other half, and httpx2 already handles it**: it pops
+    `Authorization` whenever the redirect target is not the same origin, which is
+    the behaviour a GitHub asset download needs by design — that URL redirects to a
+    CDN, and a client that carried the header through would leak the credential on
+    the request path that runs most often.
+
+    Both of httpx's sharp edges are stated here rather than inherited, per
+    `python.md`: redirects are *not* followed by default, and the default timeout
+    is 5s — which a 200MB neovim tarball would meet as a failure.
+    """
     headers = {'User-Agent': USER_AGENT}
     if accept:
         headers['Accept'] = accept
     token = github_token()
-    if token:
+    if token and authorized_host(url):
         headers['Authorization'] = f'Bearer {token}'
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
-        return response.read()
+
+    response = httpx2.get(url, headers=headers, follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.content
 
 
 def release_assets(repo: str, tag: str) -> dict[str, int]:
@@ -205,7 +244,7 @@ def release_assets(repo: str, tag: str) -> dict[str, int]:
     encoded = urllib.parse.quote(tag, safe='')
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return {}
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
@@ -226,13 +265,13 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     if not tag_prefix:
         try:
             payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
-        except (urllib.error.URLError, json.JSONDecodeError):
+        except (httpx2.HTTPError, json.JSONDecodeError):
             return None
         return payload.get('tag_name')
 
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
     for release in releases:
         tag = release.get('tag_name') or ''
@@ -267,7 +306,7 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     """
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
 
     best, highest = None, ()
@@ -294,7 +333,7 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
     """
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (urllib.error.URLError, json.JSONDecodeError):
+    except (httpx2.HTTPError, json.JSONDecodeError):
         return None
 
     wanted = version.removeprefix('v')
@@ -320,14 +359,14 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
                 destination.write_bytes(
                     request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
                 )
-            except (urllib.error.URLError, OSError):
+            except (httpx2.HTTPError, OSError):
                 log_warning(f'Asset API download failed for {asset_name}, falling back to the public URL')
             else:
                 return True
 
     try:
         destination.write_bytes(request(url))
-    except (urllib.error.URLError, OSError):
+    except (httpx2.HTTPError, OSError):
         return False
     return True
 
@@ -376,7 +415,7 @@ def verify_release_checksum(
     if checksum_url:
         try:
             checksums_text = request(checksum_url).decode()
-        except (urllib.error.URLError, UnicodeDecodeError):
+        except (httpx2.HTTPError, UnicodeDecodeError):
             log_error(f'Failed to download checksums from {checksum_url}')
             return Verification.FAILED
     else:

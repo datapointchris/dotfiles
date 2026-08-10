@@ -7,7 +7,7 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
-import urllib.error
+import httpx2
 
 from dotfiles import github_release
 
@@ -205,7 +205,7 @@ class TestLatestVersion:
 
     def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
         def refuse(url, accept=None):
-            raise urllib.error.URLError('no route to host')
+            raise httpx2.ConnectError('no route to host')
 
         monkeypatch.setattr(github_release, 'request', refuse)
 
@@ -257,8 +257,72 @@ class TestLatestTag:
 
     def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
         def refuse(url, accept=None):
-            raise urllib.error.URLError('no route to host')
+            raise httpx2.ConnectError('no route to host')
 
         monkeypatch.setattr(github_release, 'request', refuse)
 
         assert github_release.latest_tag('aws/aws-cli') is None
+
+
+class TestCredentialScope:
+    """Where a GitHub token is allowed to go, which is two hosts and no others.
+
+    It went on every request this module made, whatever the host — so
+    `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
+    `pypi.org` each received a GitHub PAT. S3 answered the one it did not
+    recognise with a 400, which is how it surfaced: `mount-s3` stopped installing
+    on any machine whose environment carried a token.
+    """
+
+    def test_the_api_and_the_site_are_authenticated(self):
+        assert github_release.authorized_host('https://api.github.com/repos/owner/repo/releases/latest')
+        assert github_release.authorized_host('https://github.com/owner/repo/releases/download/v1/asset.tar.gz')
+
+    def test_a_third_party_host_is_not(self):
+        for url in (
+            'https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.tar.gz',
+            'https://releases.hashicorp.com/terraform-ls/0.39.0/terraform-ls.zip',
+            'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip',
+            'https://pypi.org/pypi/pyyaml/6.0/json',
+        ):
+            assert not github_release.authorized_host(url), url
+
+    def test_the_asset_cdn_is_not_authenticated_even_though_github_redirects_there(self):
+        """A release download lands on an S3-backed CDN carrying a pre-signed URL
+        that needs nothing from us. Sending the token there is both the 400 and the
+        leak, on the request path that runs most often."""
+        assert not github_release.authorized_host('https://objects.githubusercontent.com/github-production-release-asset/1/2')
+
+    def test_a_lookalike_host_is_not_authenticated(self):
+        """Suffix matching would hand the token to anyone who can register a
+        domain ending in the right letters."""
+        for url in ('https://api.github.com.evil.test/x', 'https://notgithub.com/x', 'https://github.com.evil.test/x'):
+            assert not github_release.authorized_host(url), url
+
+    def test_the_client_strips_the_credential_across_a_redirect(self):
+        """httpx2 pops `Authorization` when a redirect leaves the origin, which is
+        the behaviour a release download needs by design: that URL redirects to a
+        CDN, and a client carrying the header through leaks the credential on the
+        request path that runs most often.
+
+        Asserted against the client rather than reimplemented, because the
+        reimplementation is what this replaced.
+        """
+        client = httpx2.Client()
+        original = client.build_request('GET', 'https://github.com/owner/repo/releases/download/v1/a.tar.gz')
+        original.headers['Authorization'] = 'Bearer ghp_pretend'
+        redirected = httpx2.Response(302, headers={'Location': 'https://objects.githubusercontent.com/x'}, request=original)
+
+        following = client._build_redirect_request(original, redirected)
+
+        assert 'authorization' not in following.headers
+
+    def test_the_client_keeps_it_on_a_same_origin_redirect(self):
+        client = httpx2.Client()
+        original = client.build_request('GET', 'https://api.github.com/repos/owner/repo/releases/assets/1')
+        original.headers['Authorization'] = 'Bearer ghp_pretend'
+        redirected = httpx2.Response(302, headers={'Location': 'https://api.github.com/elsewhere'}, request=original)
+
+        following = client._build_redirect_request(original, redirected)
+
+        assert following.headers['Authorization'] == 'Bearer ghp_pretend'

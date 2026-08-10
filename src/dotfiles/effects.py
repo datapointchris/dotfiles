@@ -214,12 +214,21 @@ def unpack(archive: Path, into: Path) -> bool:
     Members are extracted under `filter='data'`, which refuses absolute paths,
     `..` traversal and device nodes. The tar these unpack came off the internet;
     the shell `tar -xf` this replaces applied no such filter.
+
+    **A zip's permissions are restored by hand**, because `zipfile` discards them:
+    `extractall` writes every member 0644 whatever the archive recorded. Every
+    zip-distributed tool is therefore extracted non-executable, and the symptom is
+    not an obvious one — `awscli` installed, symlinked, and answered `Permission
+    denied`, which `shutil.which` reports as *not on PATH* because it tests for the
+    execute bit. `tar -xf` and `unzip` both preserve the mode, so this is a
+    regression the shell never had.
     """
     into.mkdir(parents=True, exist_ok=True)
     try:
         if zipfile.is_zipfile(archive):
             with zipfile.ZipFile(archive) as bundle:
-                bundle.extractall(into)
+                for member in bundle.infolist():
+                    restore_mode(member, bundle.extract(member, into))
             return True
         if tarfile.is_tarfile(archive):
             with tarfile.open(archive) as bundle:
@@ -228,6 +237,33 @@ def unpack(archive: Path, into: Path) -> bool:
     except (OSError, tarfile.TarError, zipfile.BadZipFile):
         return False
     return False
+
+
+def restore_mode(member: zipfile.ZipInfo, landed: str) -> None:
+    """Put back the permission bits `extractall` dropped, on the file it wrote.
+
+    **`landed` comes from the extractor, never from the member's name.** A zip
+    records whatever name its author chose, and `ZipFile._extract_member` sanitises
+    that — stripping drive letters, leading separators, `.` and `..` — before
+    deciding where to write. Reconstructing the path instead means chmod-ing
+    somewhere the extractor never touched: `into / '/etc/hosts'` is `/etc/hosts`,
+    because `pathlib` resets on an absolute segment, and `into / '../x'` climbs out.
+    A downloaded archive would then get an arbitrary chmod as the invoking user,
+    while the file that *was* extracted kept the 0644 this exists to fix.
+    `ZipFile.extract` returns the path it wrote, so there is one answer rather than
+    two that can disagree.
+
+    A zip records the creating system's mode in the high half of `external_attr`,
+    and only when that system was unix — a zip written on Windows records nothing
+    to restore, so a zero there is left alone rather than turned into 0000.
+
+    Only the permission bits are taken. The file type bits in the same field would
+    reintroduce exactly what `tarfile`'s `data` filter exists to refuse, and
+    nothing here needs a zip to describe anything but a regular file or directory.
+    """
+    mode = (member.external_attr >> 16) & 0o7777
+    if mode:
+        Path(landed).chmod(mode)
 
 
 def gunzip(source: Path, destination: Path) -> bool:

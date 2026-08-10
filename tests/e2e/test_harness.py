@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import subprocess
 
+import harness
 import pytest
+from harness import ARCHLINUX
 from harness import ASSET_CDN_HOSTS
 from harness import CONNECTIVITY_RESULTS
 from harness import CONTAINER_PATH_DIRS
@@ -256,3 +258,130 @@ def test_every_reachable_host_is_probed_once_per_method() -> None:
     assert len(keys) == len(set(keys))
     assert {probe.host for probe in probes} == set(reachable)
     assert any(probe.cloned for probe in probes), 'the git path is never re-probed'
+
+
+class TestGithubCredential:
+    """A container's API calls share the host's public IP, so its 60 anonymous
+    requests an hour are the host's too. One full install spends most of them."""
+
+    def test_the_token_is_passed_by_name_so_it_stays_out_of_the_argument_list(self, monkeypatch) -> None:
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+
+        arguments = harness.github_token_args()
+
+        assert arguments == ['--env', 'GITHUB_TOKEN']
+        assert not any('ghp_pretend' in argument for argument in arguments)
+
+    def test_the_environment_wins_over_gh(self, monkeypatch) -> None:
+        """How a caller points a run at a different account without logging out."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_from_the_environment')
+        monkeypatch.setattr(harness.subprocess, 'run', _never_called)
+
+        assert harness.github_token() == 'ghp_from_the_environment'
+
+    def test_gh_answers_when_the_environment_does_not(self, monkeypatch) -> None:
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('ghp_from_gh\n'))
+
+        assert harness.github_token() == 'ghp_from_gh'
+
+    def test_no_credential_anywhere_degrades_rather_than_raising(self, monkeypatch) -> None:
+        """An anonymous run is worth having — it is the rate limit that is not worth
+        mistaking for a broken installer, which the session header names instead."""
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+
+        assert harness.github_token() == ''
+        assert harness.github_token_args() == []
+
+    def test_the_container_is_started_with_it(self, monkeypatch) -> None:
+        """The whole point: `docker run` carries it, so every `docker exec` after
+        inherits it and the install's release lookups are authenticated."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+        started: list[tuple[str, ...]] = []
+        monkeypatch.setattr(harness, 'docker', lambda *args, **kwargs: started.append(args))
+
+        harness.start(ARCHLINUX, 'dotfiles-e2e-pretend')
+
+        assert '--env' in started[0] and 'GITHUB_TOKEN' in started[0]
+
+
+def _never_called(*args: object, **kwargs: object) -> object:
+    raise AssertionError('gh was asked for a token the environment already had')
+
+
+def _answering(stdout: str, returncode: int = 0):
+    return lambda *args, **kwargs: subprocess.CompletedProcess(args, returncode, stdout, '')
+
+
+class TestGitCredential:
+    """A private-repo tag fetch needs git authenticated, not just the API.
+
+    `git_uv_tools` pins to a release tag, so uv runs `git fetch` — which prompts
+    for a username, finds prompts disabled, and fails. On a real machine
+    `gh auth setup-git` has already written a helper; a container has neither.
+    """
+
+    def test_the_helper_reads_the_token_at_call_time_rather_than_embedding_it(self, monkeypatch) -> None:
+        """So the token stays in the environment and never lands in a config file,
+        a command line, or an image layer."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+        ran: list[str] = []
+        monkeypatch.setattr(harness.Machine, 'exec', lambda self, command, **kwargs: ran.append(command))
+
+        harness.authenticate_git(harness.Machine(environment=ARCHLINUX, container='pretend'))
+
+        assert len(ran) == 1
+        assert 'credential."https://github.com".helper' in ran[0]
+        assert '$GITHUB_TOKEN' in ran[0], 'the helper must read the token, not carry it'
+        assert 'ghp_pretend' not in ran[0]
+
+    def test_no_credential_configures_nothing(self, monkeypatch) -> None:
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+        ran: list[str] = []
+        monkeypatch.setattr(harness.Machine, 'exec', lambda self, command, **kwargs: ran.append(command))
+
+        harness.authenticate_git(harness.Machine(environment=ARCHLINUX, container='pretend'))
+
+        assert ran == []
+
+
+def test_the_container_gets_the_checkout_the_tests_came_from() -> None:
+    """`paths.REPO_ROOT` honours `$DOTFILES_DIR`, which `.zshenv` exports to
+    ~/dotfiles — so an e2e run from a git worktree mounted the wrong repo and
+    installed main's code while reporting on the branch.
+
+    Both directions were wrong and neither was visible: a fix made on the branch
+    showed as still broken, and a break on main showed as the branch's.
+    """
+    assert all((harness.UNDER_TEST / marker).exists() for marker in harness.MARKERS)
+    assert (harness.UNDER_TEST / 'src' / 'dotfiles').is_dir()
+
+
+def test_the_repo_under_test_ignores_the_environment_the_product_reads(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv('DOTFILES_DIR', str(tmp_path))
+    import importlib
+
+    assert tmp_path != importlib.reload(harness).UNDER_TEST
+
+
+def test_the_checkout_is_found_by_its_markers_rather_than_by_depth(tmp_path) -> None:
+    """A `parents[n]` count is a claim about where this file sits in the tree, so
+    moving it one directory silently answers `tests/` — which every fixture then
+    mounts as the repo."""
+    checkout = tmp_path / 'somewhere' / 'dotfiles'
+    (checkout / 'tests' / 'e2e').mkdir(parents=True)
+    (checkout / 'install.sh').write_text('#!/bin/sh\n')
+    (checkout / 'tests' / 'e2e' / 'harness.py').write_text('')
+    buried = checkout / 'tests' / 'e2e' / 'deeper' / 'still'
+    buried.mkdir(parents=True)
+
+    assert harness.repo_under_test(buried / 'anything.py') == checkout
+
+
+def test_a_path_in_no_checkout_says_so_rather_than_guessing(tmp_path) -> None:
+    with pytest.raises(RuntimeError) as refused:
+        harness.repo_under_test(tmp_path / 'nowhere' / 'file.py')
+
+    assert 'install.sh' in str(refused.value)

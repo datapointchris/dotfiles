@@ -26,6 +26,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
+from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles.coordinates import Arch
@@ -407,3 +408,108 @@ def test_the_engine_reads_home_at_call_time(tmp_path, monkeypatch):
     monkeypatch.setenv('HOME', str(tmp_path))
     assert ghrelease.bin_dir() == tmp_path / '.local' / 'bin'
     assert os.fspath(ghrelease.local_dir()) == os.fspath(tmp_path / '.local')
+
+
+class TestZipPermissions:
+    """`zipfile.extractall` writes every member 0644 whatever the archive recorded.
+
+    `tar -xf` and `unzip` both preserve the mode, so this is a regression the shell
+    never had, and its symptom is not an obvious one: awscli installed, symlinked
+    into `~/.local/bin`, and answered `Permission denied` — which `shutil.which`
+    reports as *not on PATH*, because it tests for the execute bit.
+    """
+
+    @staticmethod
+    def zip_with_modes(path: Path, members: dict[str, int]) -> None:
+        """A zip carrying whatever names it was given, including hostile ones.
+
+        `zipfile.writestr` records the name verbatim, which is what makes an
+        archive able to lie about where its members belong — and why the shapes
+        below are the ones worth enumerating.
+        """
+        with zipfile.ZipFile(path, 'w') as archive:
+            for name, mode in members.items():
+                info = zipfile.ZipInfo(name)
+                info.external_attr = mode << 16
+                archive.writestr(info, '#!/bin/sh\nexit 0\n')
+
+    def test_an_executable_member_comes_out_executable(self, tmp_path):
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'aws/install': 0o755})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert (tmp_path / 'out' / 'aws' / 'install').stat().st_mode & stat.S_IXUSR
+
+    def test_a_plain_member_stays_plain(self, tmp_path):
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'README.md': 0o644})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert not (tmp_path / 'out' / 'README.md').stat().st_mode & stat.S_IXUSR
+
+    def test_a_zip_recording_no_mode_is_left_alone(self, tmp_path):
+        """A zip written on Windows records nothing to restore, and a zero there is
+        an absent answer rather than a demand for 0000."""
+        archive = tmp_path / 'tool.zip'
+        with zipfile.ZipFile(archive, 'w') as bundle:
+            bundle.writestr(zipfile.ZipInfo('plain.txt'), 'hello')
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        assert (tmp_path / 'out' / 'plain.txt').read_text() == 'hello'
+
+    def test_the_file_type_bits_are_never_restored(self, tmp_path):
+        """Only the permission bits are taken. The type bits in the same field are
+        what `tarfile`'s `data` filter exists to refuse."""
+        archive = tmp_path / 'tool.zip'
+        self.zip_with_modes(archive, {'thing': 0o100755})
+
+        assert effects.unpack(archive, tmp_path / 'out')
+        landed = (tmp_path / 'out' / 'thing').stat().st_mode
+        assert stat.S_ISREG(landed)
+        assert landed & 0o777 == 0o755
+
+    @pytest.mark.parametrize(
+        ('recorded', 'lands_at'),
+        [
+            ('../escaped', 'escaped'),
+            ('/absolute', 'absolute'),
+            ('./relative', 'relative'),
+            # `..` components are dropped and the rest of the path is kept, so this
+            # lands beside its sibling rather than at the root of the extraction.
+            ('a/../../climbed', 'a/climbed'),
+        ],
+    )
+    def test_a_member_lying_about_where_it_belongs_is_chmodded_where_it_landed(self, tmp_path, recorded, lands_at):
+        """The shapes `ZipFile._extract_member` sanitises, which are exactly the
+        ones a reconstructed path gets wrong.
+
+        `into / '/absolute'` is `/absolute` — pathlib resets on an absolute segment
+        — and `into / '../escaped'` climbs out, so restoring the mode by rebuilding
+        the name chmods a file the extractor never wrote while leaving the one it
+        did at 0644. A downloaded archive is not trusted to name its own targets.
+        """
+        archive = tmp_path / 'hostile.zip'
+        into = tmp_path / 'out'
+        self.zip_with_modes(archive, {recorded: 0o777})
+        outside = tmp_path / 'escaped'
+        outside.write_text('untouched')
+        before = outside.stat().st_mode
+
+        assert effects.unpack(archive, into)
+
+        landed = into / lands_at
+        assert landed.is_file(), f'{recorded!r} should have been written inside {into}'
+        assert landed.stat().st_mode & 0o777 == 0o777
+        assert outside.stat().st_mode == before, 'a file outside the extraction directory was touched'
+
+    def test_nothing_outside_the_extraction_directory_is_ever_written(self, tmp_path):
+        """The property behind the parametrization: whatever an archive claims, the
+        blast radius is the directory it was unpacked into."""
+        archive = tmp_path / 'hostile.zip'
+        into = tmp_path / 'out'
+        self.zip_with_modes(archive, {'../a': 0o777, '/b': 0o755, 'c': 0o644})
+
+        assert effects.unpack(archive, into)
+
+        written = {path for path in tmp_path.rglob('*') if path.is_file() and path != archive}
+        assert all(into in path.parents for path in written), sorted(str(path) for path in written)

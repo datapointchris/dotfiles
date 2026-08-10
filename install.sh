@@ -50,13 +50,14 @@ newest_bundle() {
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh --machine NAME [--offline]
+Usage: ./install.sh --machine NAME [--offline] [--through STAGE]
 
 Puts uv and the dotfiles CLI on this machine, then runs `dotfiles apply`.
 Selectors and every other flag belong to the CLI: `dotfiles apply --help`.
 
   --machine NAME   Which manifest this machine is (or set MACHINE)
   --offline        Stage the bundle from ./ or ~/ and install with no network
+  --through STAGE  Converge only as far as this stage, and stop
 EOF
   exit 0
 }
@@ -71,6 +72,16 @@ while [ $# -gt 0 ]; do
     --offline)
       OFFLINE=1
       shift
+      ;;
+    # Passed through for the same reason --offline is: the bootstrap has to reach
+    # the CLI before any selector can be given, so a run that wants to stop part
+    # way has no earlier place to say so. Both are about *this invocation* rather
+    # than about which parts of the machine are wanted, which is the line the
+    # message below draws.
+    --through)
+      THROUGH="${2:-}"
+      [ -n "$THROUGH" ] || die "--through needs a stage name (dotfiles machines show names them)"
+      shift 2
       ;;
     -h | --help) usage ;;
     *) die "unknown argument: $1 — phases and their flags live on \`dotfiles apply\`" ;;
@@ -138,7 +149,14 @@ uv tool install "$@" --force --editable "$DOTFILES_DIR"
 # the alternative is `dotfiles: not found` from the exec below.
 command -v dotfiles >/dev/null || die "installed, but 'dotfiles' is not on PATH — check \`uv tool dir --bin\`"
 
+# Built up rather than branched over, so a third flag is one more `if` instead of
+# another exec line. `if` and not `[ … ] &&`, because a false test there is a
+# non-zero status and `set -e` above would take the script with it.
+set -- apply --machine "$MACHINE"
 if [ -n "$OFFLINE" ]; then
-  exec dotfiles apply --machine "$MACHINE" --offline
+  set -- "$@" --offline
 fi
-exec dotfiles apply --machine "$MACHINE"
+if [ -n "${THROUGH:-}" ]; then
+  set -- "$@" --through "$THROUGH"
+fi
+exec dotfiles "$@"

@@ -12,6 +12,7 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import machine as machines
 from dotfiles import registry
 from dotfiles import vocabulary
 from dotfiles.providers import ghrelease
@@ -317,3 +318,89 @@ def test_a_renamed_precondition_field_raises_rather_than_reading_as_ungated() ->
 
     with pytest.raises(AttributeError):
         registry.precondition_of(Renamed())  # type: ignore[arg-type]
+
+
+def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypatch) -> None:
+    """`which` answers a different question than the declaration asks.
+
+    A container picked up Arch's `go` package transitively, so `which go` found
+    `/usr/sbin/go` and the toolchain reported itself installed while
+    `/usr/local/go` did not exist — every Go tool then built against a runtime this
+    repo had not put there, and only the verification script's *location* check
+    noticed.
+    """
+    shadowing = tmp_path / 'bin'
+    shadowing.mkdir()
+    on_path(shadowing, 'go')
+    monkeypatch.setenv('PATH', str(shadowing))
+
+    unpacked_to = tmp_path / 'local' / 'go' / 'bin' / 'go'
+    provider = registry.GoToolchain(
+        'go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', installed_at=str(unpacked_to)
+    )
+    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), ())
+
+    assert provider.evidence(planned[0], {}).verdict is Verdict.MISSING, 'a go on PATH is not the go this repo installs'
+
+    unpacked_to.parent.mkdir(parents=True)
+    unpacked_to.write_text('#!/bin/sh\n')
+
+    assert provider.evidence(planned[0], {}).verdict is Verdict.MATCHED
+
+
+def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> None:
+    """`.zshenv`, `apply.TOOL_PATH_DIRS` and the verification script each name
+    `/usr/local/go/bin` independently; this is the fourth and the only one that
+    decides whether it gets installed."""
+    provider = registry.named('go-toolchain')
+
+    assert isinstance(provider, registry.GoToolchain)
+    assert provider.installed_at == '/usr/local/go/bin/go'
+
+
+def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch) -> None:
+    """The other three go wherever their own installer puts them, so `which` is the
+    right question for them and this must not have changed it."""
+    on_path(tmp_path, 'rustc')
+    monkeypatch.setenv('PATH', str(tmp_path))
+    provider = registry.named('rust-toolchain')
+    assert provider is not None
+
+    resolved = (item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),)
+    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), resolved)
+
+    assert planned[0].evidence_path == ''
+    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
+
+
+def test_a_section_carries_the_toolchain_it_needs() -> None:
+    """`needed_by` says a runtime is wanted *because* a section resolved, and
+    `resolve` honours it — so a selection that dropped it honoured the declaration
+    in the plan and ignored it in the run.
+
+    `packages apply --source cargo_packages` on a machine without rustup failed
+    with `cargo binstall bat exited 127: cargo: No such file or directory`, which
+    is a selection asking for something that cannot install.
+    """
+    assert [provider.name for provider in registry.serving('cargo_packages')] == ['rust-toolchain', 'cargo']
+    assert [provider.name for provider in registry.serving('go_tools')] == ['go-toolchain', 'go']
+    assert [provider.name for provider in registry.serving('npm_globals')] == ['node-toolchain', 'npm']
+
+
+def test_a_section_needing_no_toolchain_carries_only_its_own_provider() -> None:
+    assert [provider.name for provider in registry.serving('github_releases')] == ['ghrelease']
+
+
+def test_the_toolchain_comes_first_because_that_is_the_order_it_installs_in() -> None:
+    """Ordering is `Stage`'s and the phase registry's, not this function's — but a
+    caller reading the tuple should not have to know that to see the dependency."""
+    names = [provider.name for provider in registry.serving('cargo_packages')]
+    stages = [registry.named(name).stage for name in names]  # type: ignore[union-attr]
+
+    assert stages == sorted(stages)
+
+
+def test_a_section_nothing_installs_serves_nothing() -> None:
+    """`runtimes` is in `UNPROVIDED`, and the caller turns an empty answer into the
+    usage error naming why."""
+    assert registry.serving('runtimes') == ()

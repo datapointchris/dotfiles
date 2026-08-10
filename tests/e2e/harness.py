@@ -15,18 +15,53 @@ the harness was.
 
 from __future__ import annotations
 
+import datetime as dt
+import hashlib
+import json
+import os
 import shlex
 import subprocess
+import warnings
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from dotfiles import apply
+from dotfiles import catalog
+from dotfiles import engine
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve
 
-CONNECTIVITY_RESULTS = paths.INSTALL_DIR / 'offline' / 'connectivity-results.txt'
-DOCKER_DIR = paths.REPO_ROOT / 'tests' / 'install' / 'docker'
+MARKERS = ('install.sh', 'tests/e2e/harness.py')
+"""Files that together identify a dotfiles checkout and nothing else."""
+
+
+def repo_under_test(start: Path | None = None) -> Path:
+    """The checkout these tests came from, found by what is in it.
+
+    Not `paths.REPO_ROOT`, which honours `$DOTFILES_DIR` — correct for the product,
+    because the CLI must deploy the machine's repo from wherever it is invoked, and
+    exactly wrong for a harness. `.zshenv` exports that variable to `~/dotfiles`, so
+    an e2e run from a git worktree mounted `~/dotfiles` and installed *main's* code
+    while reporting on the branch: a fix made on the branch showed as still broken,
+    and a break on main showed as the branch's.
+
+    Anchored on marker files rather than counting `parents[n]`, because a count is
+    a claim about where this file sits in the tree — move it one directory and the
+    answer silently becomes `tests/`, which every fixture then mounts as the repo.
+    """
+    for candidate in (start or Path(__file__).resolve()).parents:
+        if all((candidate / marker).exists() for marker in MARKERS):
+            return candidate
+    raise RuntimeError(f'no dotfiles checkout above {start or __file__}: none of its parents holds {", ".join(MARKERS)}')
+
+
+UNDER_TEST = repo_under_test()
+
+CONNECTIVITY_RESULTS = UNDER_TEST / 'install' / 'offline' / 'connectivity-results.txt'
+DOCKER_DIR = UNDER_TEST / 'tests' / 'install' / 'docker'
 
 # The one thing a host blocklist cannot express is that the work firewall filters
 # by path: github.com serves clones, /releases/latest and the API while refusing
@@ -398,7 +433,7 @@ INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
 
 
-def install_command(environment: Environment) -> str:
+def install_command(environment: Environment, through: str = '') -> str:
     """`install.sh`, leaving its output and exit status behind in the container.
 
     Persisted rather than only returned, because the install is the expensive
@@ -409,6 +444,8 @@ def install_command(environment: Environment) -> str:
     """
     home = environment.home
     flags = ' --offline' if environment.offline else ''
+    if through:
+        flags += f' --through {through}'
     return (
         f'cd {home}/dotfiles && ./install.sh --machine {environment.manifest}{flags} 2>&1 '
         f'| tee {home}/{INSTALL_LOG}; echo ${{PIPESTATUS[0]}} > {home}/{INSTALL_STATUS}'
@@ -451,6 +488,66 @@ def blocked_host_args(environment: Environment) -> list[str]:
     return [argument for host in blocked for argument in ('--add-host', f'{host}:127.0.0.1')]
 
 
+def github_token() -> str:
+    """The host's GitHub credential, or '' where there is none.
+
+    `gh` rather than a checked-in secret or a CI variable: the credential is
+    already on this machine and already refreshed, so nothing has to be stored to
+    use it. `GITHUB_TOKEN` wins where it is set, which is how a caller points a run
+    at a different account without logging `gh` out of this one.
+    """
+    if existing := os.environ.get('GITHUB_TOKEN'):
+        return existing
+    found = subprocess.run(['gh', 'auth', 'token'], check=False, capture_output=True, text=True)
+    return found.stdout.strip() if found.returncode == 0 else ''
+
+
+def github_token_args() -> list[str]:
+    """`--env GITHUB_TOKEN` for the container, and the export that makes it resolve.
+
+    **An install needs one.** Anonymous GitHub API calls are 60 an hour *per public
+    IP*, and the container shares the host's — so one full install spends most of
+    that budget and a second inside the hour answers "did not answer with a
+    release" for every release tool. That is indistinguishable from a broken
+    installer, which is how a red run gets blamed on code that is fine and a real
+    break gets waved through as "just the rate limit".
+
+    Passed by name rather than as `GITHUB_TOKEN=<value>`, so the secret is not in
+    an argument list that `ps` or a shell history can read. Docker resolves it from
+    this process, which is what the export is for; it is still in the container's
+    own environment afterwards, which is the point of sending it.
+
+    Empty where there is no credential rather than raising: an anonymous run is
+    degraded, not impossible, and `conftest` says so once at the top of the session
+    so a rate-limited failure is never mistaken for a code one.
+    """
+    token = github_token()
+    if not token:
+        return []
+    os.environ['GITHUB_TOKEN'] = token
+    return ['--env', 'GITHUB_TOKEN']
+
+
+def authenticate_git(machine: Machine) -> None:
+    """Let git reach a private repo, the way this fleet's machines already do.
+
+    A real machine runs `gh auth setup-git`, which writes a credential helper of
+    `!gh auth git-credential`. A container has neither `gh` logged in nor a helper,
+    so a `git fetch` of a private tag prompts for a username, finds prompts
+    disabled, and fails — which is what `git_uv_tools` pinned to a private release
+    hits, and it reads as a broken installer rather than a missing credential.
+
+    The helper reads `$GITHUB_TOKEN` at call time rather than embedding it, so the
+    token stays in the container's environment and never lands in a config file, a
+    command line, or an image layer. Same shape as the host's, one indirection
+    further out.
+    """
+    if not github_token():
+        return
+    helper = '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+    machine.exec(f'git config --global credential."https://github.com".helper {shlex.quote(helper)}')
+
+
 def start(environment: Environment, name: str) -> None:
     docker(
         'run',
@@ -459,9 +556,10 @@ def start(environment: Environment, name: str) -> None:
         name,
         '--env',
         'DOTFILES_DOCKER_TEST=true',
+        *github_token_args(),
         *blocked_host_args(environment),
         '--mount',
-        f'type=bind,source={paths.REPO_ROOT},target=/dotfiles-src,readonly',
+        f'type=bind,source={UNDER_TEST},target=/dotfiles-src,readonly',
         environment.image,
         'sleep',
         'infinity',
@@ -490,7 +588,7 @@ def copy_repo(machine: Machine) -> None:
 
 def newest_bundle() -> Path | None:
     """The most recent bundle an earlier run left in the repo root, if any."""
-    existing = sorted(paths.REPO_ROOT.glob('dotfiles-offline-*-linux-x86_64.tar.gz'), key=lambda path: path.stat().st_mtime)
+    existing = sorted(UNDER_TEST.glob('dotfiles-offline-*-linux-x86_64.tar.gz'), key=lambda path: path.stat().st_mtime)
     return existing[-1] if existing else None
 
 
@@ -503,11 +601,11 @@ def build_bundle() -> Path:
     goes to stderr, leaving stdout carrying the path alone.
     """
     built = subprocess.run(
-        ['uv', 'run', '--project', str(paths.REPO_ROOT), 'dotfiles', 'bundle', 'create', '--platform', 'linux-x86_64', '--print-path'],
+        ['uv', 'run', '--project', str(UNDER_TEST), 'dotfiles', 'bundle', 'create', '--platform', 'linux-x86_64', '--print-path'],
         check=True,
         capture_output=True,
         text=True,
-        cwd=paths.REPO_ROOT,
+        cwd=UNDER_TEST,
     )
     archive = Path(built.stdout.strip())
     if not archive.is_file():
@@ -529,3 +627,200 @@ def stage_bundle(machine: Machine, *, reuse: bool = False) -> Path:
     docker('cp', str(archive), f'{machine.container}:{machine.environment.home}/', check=True)
     machine.exec(f'chown {machine.environment.user} {machine.environment.home}/{archive.name}', user='root', check=True)
     return archive
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The base image: system packages, installed once and reused
+# ─────────────────────────────────────────────────────────────────────────────
+
+BASE_STAGE = 'system_upgrade'
+"""How far a base container converges.
+
+The last of the three `SYSTEM*` stages, so a base carries the packages, the app
+stores built on them, and nothing that depends on a tool. Named as a stage rather
+than as a resource because `dotfiles system apply` would also run
+`SYSTEM_CONFIG` — group memberships, units, the login shell — which sits at the
+*end* of the whole order and needs packages a set installs later.
+"""
+
+BASE_REPOSITORY = 'dotfiles-e2e-base'
+
+BASE_LEDGER = 'e2e-bases.json'
+"""What each base image was built from, under `$XDG_CACHE_HOME/dotfiles`.
+
+The image is the artifact and docker's store is its cache — `docker save` into
+this directory would duplicate multiple GB that docker already manages, and
+reloading it costs minutes a tag lookup does not. What docker cannot answer is
+*which plan* a tag came from, so that is what lives here: enough to report on the
+bases, prune the superseded ones, and explain why a rebuild happened.
+"""
+
+
+def base_plan(environment: Environment) -> tuple[str, ...]:
+    """Every item a base container is expected to carry, as addresses.
+
+    The resolver's answer rather than a reading of `packages.yml`, because that is
+    what the install will do — an item is in the base if and only if the plan puts
+    it at or below `BASE_STAGE`.
+    """
+    ceiling = engine.stage_named(BASE_STAGE)
+    plan = resolve.resolve(catalog.load(), machines.load(environment.manifest))
+    return tuple(sorted(item.address for item in plan.items if item.stage <= ceiling))
+
+
+def base_digest(environment: Environment) -> str:
+    """What makes one base different from another, and nothing else.
+
+    Content-addressed on the *plan* rather than on `packages.yml`, so a comment
+    edit or a reordering does not rebuild multiple GB while a manifest that stops
+    subscribing to a package does. The source image id is in it because a base is
+    that image plus this plan, and `archlinux:latest` moves under its own tag.
+
+    What it deliberately cannot see is which *versions* the distro shipped —
+    correct for a system base, since pacman decides that and nothing here pins it,
+    but it means a base can be stale in a way no digest catches. `BASE_MAX_AGE` is
+    the answer to that half.
+    """
+    source = docker('image', 'inspect', '--format', '{{.Id}}', environment.image).stdout.strip()
+    material = '\n'.join([source, *base_plan(environment)])
+    return hashlib.sha256(material.encode()).hexdigest()[:12]
+
+
+def base_tag(environment: Environment) -> str:
+    return f'{BASE_REPOSITORY}:{environment.name}-{base_digest(environment)}'
+
+
+BASE_MAX_AGE = dt.timedelta(days=14)
+"""When a base is rebuilt despite its digest still matching.
+
+The digest covers what this repo declares; it cannot cover what the distro
+shipped, so an unchanged plan against a moved archive silently tests two-week-old
+packages. Long enough that a base survives a working week of changes to anything
+else, short enough that "it passed on the base" keeps meaning something.
+"""
+
+
+def ledger_path() -> Path:
+    return paths.cache_home() / BASE_LEDGER
+
+
+def ledger() -> dict[str, dict[str, object]]:
+    """What the recorded bases are, or nothing.
+
+    A missing file is an ordinary first run and says nothing. A *corrupt* one is
+    not, and it costs the same multi-GB rebuild every time, so it is warned about
+    rather than folded into the same silence.
+    """
+    path = ledger_path()
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as unreadable:
+        warnings.warn(f'the base-image ledger at {path} is unreadable, so every base will be rebuilt: {unreadable}', stacklevel=2)
+        return {}
+
+
+def record_base(tag: str, environment: Environment, built: dt.datetime) -> None:
+    """Write what this tag holds, so a later run can explain and prune it."""
+    entries = ledger()
+    entries[tag] = {
+        'environment': environment.name,
+        'manifest': environment.manifest,
+        'through': BASE_STAGE,
+        'built': built.isoformat(),
+        'items': list(base_plan(environment)),
+    }
+    path = ledger_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(entries, indent=2, sort_keys=True) + '\n')
+    except OSError as unwritable:
+        # Loud, because `base_is_fresh` treats an unrecorded tag as stale: a
+        # silently unwritable cache means every run rebuilds a multi-GB base, takes
+        # ten minutes, and looks exactly like a normal first build.
+        warnings.warn(f'could not record the base image in {path}, so it will be rebuilt every run: {unwritable}', stacklevel=2)
+
+
+def base_is_fresh(tag: str, now: dt.datetime) -> bool:
+    """Whether an existing tag is still worth reusing.
+
+    Both halves have to hold: the image is there, and what the ledger says about
+    it is recent enough. A tag with no ledger entry is treated as stale rather
+    than trusted — it was built by something that did not record what it built.
+    """
+    if not image_exists(tag):
+        return False
+    recorded = ledger().get(tag, {}).get('built')
+    if not isinstance(recorded, str):
+        return False
+    try:
+        return now - dt.datetime.fromisoformat(recorded) < BASE_MAX_AGE
+    except ValueError:
+        return False
+
+
+def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
+    """The base image for this environment, built if there is not a fresh one.
+
+    The repo is deliberately *not* baked in. `conftest.py` records what happens
+    when a container reuses OS state and the repo together — the Arch harness
+    tested whatever code was mounted when the container was created, so a fix made
+    since reported as still broken. A base carries OS state; the code arrives on
+    every run.
+    """
+    tag = base_tag(environment)
+    stamp = now or dt.datetime.now(dt.UTC)
+    if base_is_fresh(tag, stamp):
+        return tag
+
+    builder = f'{BASE_REPOSITORY}-build-{environment.name}'
+    docker('rm', '-f', builder)
+    start(environment, builder)
+    machine = Machine(environment=environment, container=builder)
+    try:
+        for command in environment.prepare:
+            machine.exec(command, user='root', check=True)
+        copy_repo(machine)
+        authenticate_git(machine)
+        plant_python_shadow(machine)
+        if environment.env_file:
+            machine.exec(f'printf %s {shlex.quote(environment.env_file)} > {environment.home}/.env', check=True)
+        machine.exec(install_command(environment, through=BASE_STAGE))
+
+        # The recorded status, never the shell's. `install_command` pipes through
+        # `tee` and ends in an `echo`, so the command always exits 0 and a
+        # `check=True` here would commit an image whose install had failed — which
+        # it did once, producing a 795MB base carrying none of the 99 packages it
+        # is named after.
+        recorded = install_record(machine)
+        if recorded is None or recorded[0] != 0:
+            detail = recorded[1][-2000:] if recorded else 'the install left no status behind'
+            raise RuntimeError(f'base install for {environment.name} did not converge:\n{detail}')
+
+        # Committed after the repo is removed, so nothing downstream can read a
+        # checkout the image froze — the failure mode the note above describes.
+        machine.exec(f'rm -rf {environment.home}/dotfiles', check=True)
+        shed_caches(machine)
+        docker('commit', builder, tag, check=True)
+    finally:
+        docker('rm', '-f', builder)
+
+    record_base(tag, environment, stamp)
+    return tag
+
+
+CACHE_PATHS = ('/var/cache/pacman/pkg', '/var/cache/apt/archives', '{home}/.cache')
+"""Download caches a base has no use for, cleared before it is committed.
+
+Not a micro-optimisation: they were 2.4 GB of a 14.4 GB Arch base, and a base is
+kept per environment for two weeks on a root volume `.planning/status.md` already
+records as too small. What they hold is packages already installed and archives
+already unpacked — a set installing over this image re-downloads what *it* needs
+and nothing here would have been a hit for it.
+"""
+
+
+def shed_caches(machine: Machine) -> None:
+    for path in CACHE_PATHS:
+        machine.exec(f'rm -rf {path.format(home=machine.environment.home)}', user='root')

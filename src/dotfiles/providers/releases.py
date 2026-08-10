@@ -167,8 +167,17 @@ def fzf(tag: str, target: Target) -> Asset:
 
 
 def glow(tag: str, target: Target) -> Asset:
+    """Nested under a directory named after the archive, on both platforms.
+
+    It was flat until v2, and the entry read `path='glow'` until the tarball
+    stopped having a `glow` at its root — verified against 2.1.2 on Linux and
+    Darwin, both `glow_<version>_<suffix>/glow`. This is the drift
+    `tests/install/test_release_urls.py` exists to catch and cannot: it checks that
+    the release publishes the asset, not what is inside it.
+    """
     suffix = ('Darwin_arm64' if target.is_arm else 'Darwin_x86_64') if target.is_darwin else 'Linux_x86_64'
-    return Asset(f'glow_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='glow')
+    stem = f'glow_{_bare(tag)}_{suffix}'
+    return Asset(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/glow')
 
 
 def hadolint(tag: str, target: Target) -> Asset:
