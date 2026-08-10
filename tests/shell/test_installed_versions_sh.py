@@ -1,9 +1,11 @@
 """installed-versions.sh — what is actually installed, per package manager.
 
 Every phase used to print a success line off an exit code, and `uv tool upgrade`,
-`cargo binstall` and `npm update -g` all exit 0 for a no-op — so a no-op, a real
-upgrade and a failure were indistinguishable. These are the queries that replaced
-that: each reads the installed state so a phase can diff it across the update.
+`npm update -g` and tpm's `update_plugins` all exit 0 for a no-op — so a no-op, a
+real upgrade and a failure were indistinguishable. These are the queries that
+replaced that: each reads the installed state so a phase can diff it across the
+update. The converged providers need none of them — a `Change` says what moved and
+why — so this shrinks as each phase converts.
 """
 
 from __future__ import annotations
@@ -20,24 +22,6 @@ from shells import Shell
 from shells import shell_out
 
 LIBRARY = 'install/common/lib/installed-versions.sh'
-
-CARGO_LIST = """cat << LIST
-bat v0.26.1:
-    bat
-fd-find v10.4.2:
-    fd
-ripgrep v15.2.0:
-    rg
-LIST"""
-
-GO_BUILDINFO = (
-    'printf "toolbox: go1.26.5\\n\\tpath\\tgithub.com/datapointchris/toolbox\\n'
-    '\\tmod\\tgithub.com/datapointchris/toolbox\\tv1.7.1\\th1:abc=\\n'
-    '\\tdep\\tgithub.com/spf13/cobra\\tv1.10.2\\th1:def=\\n"'
-)
-"""What `go version -m` prints. The query this replaced ran the tool and grepped
-the first version-shaped token out of its output, which is the *toolchain*
-version for any tool whose --version says "built with go1.x"."""
 
 
 def query(snippet: str, **environment: str) -> Shell:
@@ -174,20 +158,6 @@ def test_a_tool_with_no_receipt_fails(tmp_path: Path) -> None:
     assert result.stdout == ''
 
 
-def test_a_cargo_version_matches_the_crate_name(tmp_path: Path) -> None:
-    path = stub(tmp_path / 'bin', 'cargo', CARGO_LIST)
-
-    assert query('cargo_installed_version fd-find', PATH=path).stdout.strip() == 'v10.4.2'
-
-
-def test_a_cargo_version_never_matches_a_binary_name(tmp_path: Path) -> None:
-    """`fd` is the binary `fd-find` installs; matching on it reports the wrong crate."""
-    path = stub(tmp_path / 'bin', 'cargo', CARGO_LIST)
-
-    assert not query('cargo_installed_version fd', PATH=path).ok
-    assert not query('cargo_installed_version nonexistent-crate', PATH=path).ok
-
-
 def test_npm_globals_come_out_as_sorted_name_version_pairs(tmp_path: Path) -> None:
     """A package whose entry carries no version is reported as unknown rather than
     dropped, so it still shows up in the diff."""
@@ -197,33 +167,6 @@ def test_npm_globals_come_out_as_sorted_name_version_pairs(tmp_path: Path) -> No
     result = query('npm_global_versions', PATH=path)
 
     assert result.stdout.splitlines() == ['broken unknown', 'eslint 10.8.0', 'prettier 3.9.6']
-
-
-def test_a_go_binary_reports_its_module_version_not_the_toolchain_s(tmp_path: Path) -> None:
-    path = stub(tmp_path / 'bin', 'go', GO_BUILDINFO)
-    (tmp_path / 'toolbox').touch()
-
-    assert query(f'go_binary_module_version "{tmp_path / "toolbox"}"', PATH=path).stdout.strip() == 'v1.7.1'
-
-
-def test_a_missing_binary_never_reaches_go(tmp_path: Path) -> None:
-    path = stub(tmp_path / 'bin', 'go', 'echo "go should not have run" >&2; exit 1')
-
-    result = query(f'go_binary_module_version "{tmp_path / "absent"}"', PATH=path)
-
-    assert not result.ok
-    assert result.stdout == ''
-    assert 'go should not have run' not in result.stderr
-
-
-def test_a_binary_go_cannot_read_yields_nothing_rather_than_go_s_error(tmp_path: Path) -> None:
-    path = stub(tmp_path / 'bin', 'go', 'echo "could not read Go build info" >&2; exit 1')
-    (tmp_path / 'notgo').touch()
-
-    result = query(f'go_binary_module_version "{tmp_path / "notgo"}"', PATH=path)
-
-    assert not result.ok
-    assert result.stdout == ''
 
 
 def test_a_checkout_reports_its_short_head(tmp_path: Path) -> None:

@@ -7,11 +7,13 @@ a command that cannot be executed is an exit code, not an exception.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pytest
 
 from dotfiles.effects import NOT_FOUND
+from dotfiles.effects import TIMED_OUT
 from dotfiles.effects import Output
 from dotfiles.effects import run
 
@@ -62,3 +64,32 @@ def test_the_environment_is_added_to_rather_than_replacing_the_inherited_one() -
     completed = run(['sh', '-c', 'echo "$MARKER" && command -v sh'], env={'MARKER': 'set'}, output=Output.QUIET)
     assert 'set' in completed.transcript
     assert completed.ok
+
+
+def test_a_command_that_will_not_answer_is_a_timeout_rather_than_a_hang() -> None:
+    """The failure this prevents is silent rather than loud: the binary being run
+    is whatever a declaration names, and a GUI blocks on its event loop until a
+    person closes a window. `webviewrs` did exactly that to three `dotfiles plan`
+    runs, and the scheduled check has no person to close it."""
+    completed = run(['sleep', '30'], output=Output.QUIET, timeout=0.2)
+
+    assert completed.returncode == TIMED_OUT
+    assert not completed.ok
+    assert 'did not answer' in completed.transcript
+
+
+def test_a_timeout_kills_the_child_rather_than_leaving_it_behind() -> None:
+    """`subprocess.run` kills and reaps before it raises, so nothing outlives the
+    report. Asserted because a bounded probe that leaked a process per plan would
+    be worse than the hang it replaced."""
+    started = time.monotonic()
+    run(['sleep', '30'], output=Output.QUIET, timeout=0.2)
+
+    assert time.monotonic() - started < 5
+
+
+def test_streaming_refuses_a_deadline() -> None:
+    """Minutes are a normal install rather than a hang, and the reader loop would
+    not observe one anyway — so this is refused instead of silently ignored."""
+    with pytest.raises(ValueError, match='no deadline'):
+        run(['echo', 'hi'], output=Output.STREAM, timeout=1)

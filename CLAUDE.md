@@ -21,7 +21,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 
 1. **Go Apps** (toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
-   - Installer: `install/common/language-tools/go-tools.sh`
+   - Installer: `src/dotfiles/providers/gotool.py`, through `dotfiles packages apply`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
@@ -116,7 +116,7 @@ This dotfiles setup maintains a clear separation between system package managers
 - **OS-level utilities, infrastructure tools, GUI apps, compiled libraries** → system package manager (`system_packages`: apt/pacman/brew). This is the default for anything the OS packages well.
 - **Rust CLI tools** → `cargo binstall` (`cargo_packages`), which downloads prebuilt release binaries. Falls back to `system_packages` only when upstream ships no release binary (binstall would compile from source) or a native package is required on a platform (e.g. Intel-macOS bottles).
 - **Tools needing the latest upstream version, or with their own downstream manager** → prebuilt `github_releases`.
-- **Language runtimes** → version managers, never system language packages: **uv** (Python), **rustup** (Rust), plus Go from GitHub releases. **Node.js uses fnm**, whose default version `install/common/language-managers/node.sh` pins and links; `.zshenv` puts that alias on PATH so non-interactive shells get it, and `.zshrc` adds `--use-on-cd` so a repo's `.nvmrc` wins interactively. The brew/pacman node package remains only as the bootstrap npm. Per-project switching is used — repos pin 24 and 26 — and nvm was removed for the wrong reason: the real fault was its shell-function design being invisible to non-interactive shells, which a binary does not share.
+- **Language runtimes** → version managers, never system language packages: **uv** (Python), **rustup** (Rust), plus the Go tarball from go.dev. All four install through `src/dotfiles/providers/toolchain.py`, and none is subscribed to — a machine gets Go because it declared `go_tools`. **Node.js uses fnm**, whose default version that module pins and links; `.zshenv` puts that alias on PATH so non-interactive shells get it, and `.zshrc` adds `--use-on-cd` so a repo's `.nvmrc` wins interactively. The brew/pacman node package remains only as the bootstrap npm. Per-project switching is used — repos pin 24 and 26 — and nvm was removed for the wrong reason: the real fault was its shell-function design being invisible to non-interactive shells, which a binary does not share.
 - **Language-scoped tools** → that language's manager: `npm_globals`, `uv_tools`, `go_tools`. Language servers are usually npm.
 
 **Platform Notes**:
@@ -149,7 +149,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `offline/` - Offline installation support (connectivity testing, bundles)
   - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
-  - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
+  - `common/` - Cross-platform installer scripts (plugins/) and `lib/` shared libraries
   - `packages.yml` - Package definitions
   - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)
 - `docs/` - MkDocs-based documentation site

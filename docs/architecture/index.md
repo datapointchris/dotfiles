@@ -30,7 +30,7 @@ The layer scheme, and why two overlays may never claim one target, is
 
 **System Packages**: Homebrew (macOS), apt (Ubuntu/WSL, and generic Debian/Ubuntu LXCs), pacman (Arch)
 
-**Language runtimes**: managed per language via `install/packages.yml` — version managers where useful (uv, rustup, go) or system packages otherwise (Node.js)
+**Language runtimes**: each through its own version manager — uv, rustup, the go tarball, and fnm for Node. None is subscribed to: a machine gets Go because it declared `go_tools` and Rust because it declared `cargo_packages`, so the runtime is derived from the tool lists that need it and `install/packages.yml` carries only its version floor.
 
 **Why separate**: Version managers provide cross-platform consistency and project-specific versions without system conflicts.
 

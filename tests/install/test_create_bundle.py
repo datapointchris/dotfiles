@@ -13,7 +13,16 @@ import zipfile
 
 import pytest
 
+from dotfiles import catalog
 from dotfiles import create_bundle
+from dotfiles import paths
+from dotfiles.coordinates import Arch
+from dotfiles.coordinates import OSFamily
+from dotfiles.coordinates import Target
+from dotfiles.providers import bundle as bundle_manifest
+from dotfiles.providers import cargo
+from dotfiles.providers import gotool
+from dotfiles.providers import releases
 
 
 class TestPlatform:
@@ -35,44 +44,70 @@ class TestPlatform:
         assert name == 'dotfiles-offline-v20260807-wsl-work-workstation-linux-x86_64'
 
 
+LINUX_X86 = Target(OSFamily.LINUX, Arch.X86_64)
+LINUX_ARM = Target(OSFamily.LINUX, Arch.ARM64)
+MACOS_ARM = Target(OSFamily.DARWIN, Arch.ARM64)
+MACOS_X86 = Target(OSFamily.DARWIN, Arch.X86_64)
+
+
+def crate(**fields) -> catalog.CargoPackage:
+    return catalog.CargoPackage.from_mapping({'name': 'tool', **fields})
+
+
 class TestCargoTarget:
+    """Naming lives in the provider that installs from the name; these are the
+    same cases the bundler used to answer for itself."""
+
     def test_defaults_to_the_triple_for_the_platform(self):
-        assert create_bundle.cargo_target('linux', 'x86_64') == 'x86_64-unknown-linux-gnu'
-        assert create_bundle.cargo_target('darwin', 'arm64') == 'aarch64-apple-darwin'
-        assert create_bundle.cargo_target('darwin', 'x86_64') == 'x86_64-apple-darwin'
+        assert cargo.asset_target(crate(), LINUX_X86) == 'x86_64-unknown-linux-gnu'
+        assert cargo.asset_target(crate(), MACOS_ARM) == 'aarch64-apple-darwin'
+        assert cargo.asset_target(crate(), MACOS_X86) == 'x86_64-apple-darwin'
 
     def test_linux_is_not_assumed_to_be_x86(self):
         """It was, and a linux-arm64 bundle therefore carried x86_64 cargo binaries —
         an archive that builds cleanly and installs a machine that cannot run them."""
-        assert create_bundle.cargo_target('linux', 'arm64') == 'aarch64-unknown-linux-gnu'
-        assert create_bundle.rust_triple('linux', 'arm64') == 'aarch64-unknown-linux-gnu'
+        assert cargo.asset_target(crate(), LINUX_ARM) == 'aarch64-unknown-linux-gnu'
+        assert cargo.triple(LINUX_ARM) == 'aarch64-unknown-linux-gnu'
 
     def test_an_override_applies_only_to_its_own_platform(self):
         # fnm ships fnm-linux.zip and fnm-macos.zip, named after neither triple.
-        assert create_bundle.cargo_target('linux', 'x86_64', 'linux', 'macos') == 'linux'
-        assert create_bundle.cargo_target('darwin', 'arm64', 'linux', 'macos') == 'macos'
+        fnm = crate(linux_target='linux', darwin_target='macos')
+        assert cargo.asset_target(fnm, LINUX_X86) == 'linux'
+        assert cargo.asset_target(fnm, MACOS_ARM) == 'macos'
         # A linux override must not leak into the darwin answer.
-        assert create_bundle.cargo_target('darwin', 'arm64', 'x86_64-unknown-linux-musl', '') == 'aarch64-apple-darwin'
+        assert cargo.asset_target(crate(linux_target='x86_64-unknown-linux-musl'), MACOS_ARM) == 'aarch64-apple-darwin'
 
 
 class TestPatternExpansion:
     def test_version_placeholders_differ_by_the_leading_v(self):
-        assert create_bundle.expand_pattern('tool-{version}.tar.gz', 'v1.2.3', 'linux', 'x86_64') == 'tool-v1.2.3.tar.gz'
-        assert create_bundle.expand_pattern('tool-{version_num}.tar.gz', 'v1.2.3', 'linux', 'x86_64') == 'tool-1.2.3.tar.gz'
+        assert releases.expand_pattern('tool-{version}.tar.gz', 'v1.2.3', LINUX_X86) == 'tool-v1.2.3.tar.gz'
+        assert releases.expand_pattern('tool-{version_num}.tar.gz', 'v1.2.3', LINUX_X86) == 'tool-1.2.3.tar.gz'
 
     def test_architecture_spellings_cover_every_upstream_convention(self):
         # Go releases name the architecture amd64 where the kernel says x86_64.
-        assert create_bundle.expand_pattern('{os}_{go_arch}', 'v1', 'linux', 'x86_64') == 'linux_amd64'
-        assert create_bundle.expand_pattern('{os}_{go_arch}', 'v1', 'darwin', 'arm64') == 'darwin_arm64'
+        assert releases.expand_pattern('{os}_{go_arch}', 'v1', LINUX_X86) == 'linux_amd64'
+        assert releases.expand_pattern('{os}_{go_arch}', 'v1', MACOS_ARM) == 'darwin_arm64'
         # Capitalised kernel names (gum, lazydocker).
-        assert create_bundle.expand_pattern('{Os}_{Arch}', 'v1', 'linux', 'x86_64') == 'Linux_x86_64'
+        assert releases.expand_pattern('{Os}_{Arch}', 'v1', LINUX_X86) == 'Linux_x86_64'
         # The product name for Apple rather than the kernel name (jira-cli).
-        assert create_bundle.expand_pattern('{os_mac}', 'v1', 'darwin', 'arm64') == 'macOS'
-        assert create_bundle.expand_pattern('{Os_mac}', 'v1', 'linux', 'x86_64') == 'Linux'
+        assert releases.expand_pattern('{os_mac}', 'v1', MACOS_ARM) == 'macOS'
+        assert releases.expand_pattern('{Os_mac}', 'v1', LINUX_X86) == 'Linux'
 
     def test_the_rust_target_triple_is_substituted_whole(self):
-        expanded = create_bundle.expand_pattern('rg-{version}-{target}.tar.gz', 'v14.1.0', 'linux', 'x86_64', 'x86_64-unknown-linux-musl')
-        assert expanded == 'rg-v14.1.0-x86_64-unknown-linux-musl.tar.gz'
+        entry = crate(binary_pattern='rg-{version}-{target}.tar.gz', linux_target='x86_64-unknown-linux-musl')
+
+        assert cargo.stage(entry, 'v14.1.0', LINUX_X86) == 'rg-v14.1.0-x86_64-unknown-linux-musl.tar.gz'
+
+    def test_the_two_sections_disagree_about_arm_and_each_gets_its_own_spelling(self):
+        """A cargo tool's assets say aarch64 and a Go tool's say arm64, for the same
+        CPU. The bundler used to pass a different arch string per section from two
+        call sites; each provider now carries its own."""
+        pattern = {'binary_pattern': '{platform}_{arch}.tar.gz'}
+
+        assert cargo.stage(crate(**pattern), 'v1', MACOS_ARM) == 'apple_darwin_aarch64.tar.gz'
+        assert gotool.stage(catalog.GoTool.from_mapping({'name': 'tool', 'package': 'x', **pattern}), 'v1', MACOS_ARM) == (
+            'apple_darwin_arm64.tar.gz'
+        )
 
 
 class TestAssetIdentity:
@@ -256,3 +291,79 @@ class TestFailureDetail:
     def test_blank_lines_do_not_consume_the_budget(self):
         detail = create_bundle.tail_lines('cause\n\n\n\n\n', limit=2)
         assert detail == 'cause'
+
+
+class TestBundleRoundTrip:
+    """What the bundler writes is what the provider reads back.
+
+    The two used to agree by convention: the bundler expanded a `binary_pattern`
+    out of a pipe-joined row and recorded the *command*, while `cargo-tools.sh`
+    globbed four loose patterns against two candidate names. A disagreement was
+    silent — the tool installed from the network instead, which on the firewalled
+    machine the bundle exists for means it did not install at all.
+
+    So this asserts the whole loop rather than either half: stage a package the
+    way `add_cargo_binaries` does, then ask the provider for it.
+    """
+
+    def stage(self, tmp_path, monkeypatch, entry, version='v10.4.2'):
+        target = Target(OSFamily.LINUX, Arch.X86_64)
+        staging = tmp_path / 'installers'
+        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64')
+
+        payload = tmp_path / 'build' / entry.executable
+        payload.parent.mkdir(parents=True, exist_ok=True)
+        payload.write_bytes(b'#!/bin/sh\necho hi\n')
+
+        def fetch(_cache, _asset, destination, _label):
+            with tarfile.open(destination, 'w:gz') as tar:
+                tar.add(payload, arcname=payload.name)
+
+        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: version)
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
+        monkeypatch.setattr(create_bundle.catalog, 'load', lambda: FakeCatalog(entry))
+
+        packages = {'cargo_packages': [{'name': entry.name}]}
+        manifest = {'cargo_packages': [entry.name]}
+        create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), packages, manifest)
+        bundle.write_metadata()
+
+        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        return target
+
+    def test_a_staged_cargo_package_is_found_by_the_provider_that_installs_it(self, tmp_path, monkeypatch):
+        entry = catalog.CargoPackage.from_mapping(
+            {'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'}
+        )
+        monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+        self.stage(tmp_path, monkeypatch, entry)
+
+        result = cargo.install(entry, Target(OSFamily.LINUX, Arch.X86_64), offline=True)
+
+        assert result.ok, result.detail
+        assert (tmp_path / 'home' / '.cargo' / 'bin' / 'fd').is_file()
+
+    def test_the_row_is_keyed_on_the_crate_name_the_provider_looks_up(self, tmp_path, monkeypatch):
+        """`fd-find` installs `fd`, and the bundler recorded the binary's name while
+        the provider asks by the crate's. Keyed on the declaration's own identity,
+        both sides ask the same question."""
+        entry = catalog.CargoPackage.from_mapping(
+            {'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'}
+        )
+        self.stage(tmp_path, monkeypatch, entry)
+
+        staged = bundle_manifest.staged('fd-find', 'cargo')
+
+        assert staged is not None
+        assert staged.filename == 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz'
+
+
+class FakeCatalog:
+    """Just enough Catalog for the bundler: one entry, findable by name."""
+
+    def __init__(self, entry):
+        self.entry = entry
+
+    def find(self, section, name):
+        assert name == self.entry.name
+        return self.entry

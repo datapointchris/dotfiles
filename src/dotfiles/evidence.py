@@ -233,6 +233,20 @@ Two rather than one because `terrascan` takes the subcommand and rejects the
 flag, and two rather than a per-tool field because a field carrying one
 exception for 23 tools is a field nobody maintains. Both spellings are reads on
 every CLI that has either.
+
+Which is exactly the assumption `reports_version` on the entry exists to let a
+declaration retract: a bare `version` is a read on a CLI and a *URL* to
+`webviewrs`, whose first positional argument is what it opens.
+"""
+
+PROBE_SECONDS = 10.0
+"""Long enough for a cold binary on a loaded machine, short enough that a tool
+which is not going to answer does not hold the run.
+
+The bound is here rather than left to the caller because the binary being run is
+whatever a declaration names, and the failure it prevents is silent: a GUI blocks
+on its event loop until a person closes a window, and the scheduled
+`dotfiles check` has no person.
 """
 
 
@@ -241,13 +255,14 @@ def reported_version(executable: str) -> str | None:
 
     A non-zero exit is None rather than "whatever it printed": a tool that does
     not recognise the probe prints its usage, and usage text is full of numbers
-    `versions.parse` would otherwise read as a version and report as behind.
+    `versions.parse` would otherwise read as a version and report as behind. A
+    probe that runs past `PROBE_SECONDS` is one more way of not saying.
     """
     found = shutil.which(executable)
     if not found:
         return None
     for probe in VERSION_PROBES:
-        result = run([found, probe], output=Output.QUIET)
+        result = run([found, probe], output=Output.QUIET, timeout=PROBE_SECONDS)
         if result.ok and result.transcript.strip():
             return result.transcript.strip()
     return None

@@ -27,8 +27,8 @@ if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo ""
   echo "Examples:"
   echo "  $(basename "$0") install/wsl/system-packages.sh"
-  echo "  $(basename "$0") install/common/language-tools/uv-tools.sh --validate ruff"
-  echo "  $(basename "$0") install/common/language-tools/uv-tools.sh --validate ruff --keep"
+  echo "  $(basename "$0") install/common/plugins/tmux-plugins.sh --validate tmux"
+  echo "  $(basename "$0") install/common/plugins/tmux-plugins.sh --validate tmux --keep"
   exit 0
 fi
 

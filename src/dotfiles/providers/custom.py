@@ -40,7 +40,6 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import evidence
 from dotfiles import github_release
-from dotfiles import paths
 from dotfiles import versions
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
@@ -48,10 +47,8 @@ from dotfiles.output import err_console
 from dotfiles.output import warn
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
-from dotfiles.providers import bundle_file
 from dotfiles.providers import local_dir
-
-BUNDLE_SCRIPTS = 'scripts'
+from dotfiles.providers import script
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -169,48 +166,21 @@ SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...
 
 
 def _staged_script(request: Request, url: str, into: Path) -> Path | None:
-    """The vendor's install script on disk, from the bundle or the network.
-
-    The bundle is preferred whenever it holds one, not only when offline: the
-    script is served from an unversioned URL, so a machine restoring from a bundle
-    must run the script that bundle was built against rather than whatever the
-    vendor is serving today.
-    """
-    script = into / 'install.sh'
-    cached = bundle_file(BUNDLE_SCRIPTS) / f'{request.entry.name}-install.sh'
-    if cached.is_file():
-        shutil.copy2(cached, script)
-        return script
-    if request.offline:
-        return None
-    return script if effects.fetch(url, script) else None
+    return script.staged(request.entry.name, url, into, offline=request.offline)
 
 
 def _run_vendor_script(request: Request, url: str) -> Result:
     """Fetch and run one vendor install script.
 
-    An empty detail on success, and the same for `_delegate_update` below: the
-    script's own output was streamed as it ran, and it knows what it did in a way
-    nothing here can restate. Summarising it anyway is how the bash came to print
-    `theme updated` over the top of `font already at latest` — a line that reads
-    as a verdict and contradicts the one above it.
+    Shared with the language runtimes, which converge the same way: `providers/
+    script.py` holds it, and an empty detail on success is its rule as much as
+    `_delegate_update`'s below.
     """
-    name = request.entry.name
-    with tempfile.TemporaryDirectory(prefix=f'dotfiles-{name}-') as scratch:
-        err_console.print(f'{name}: {url}', soft_wrap=True)
-        script = _staged_script(request, url, Path(scratch))
-        if script is None:
-            return Result(False, _unstaged(request, url))
-        completed = effects.run(['bash', str(script)])
-    if completed.ok:
-        return Result(True, '')
-    return Result(False, f'the {name} install script exited {completed.returncode}')
+    return script.run(request.entry.name, url, offline=request.offline)
 
 
 def _unstaged(request: Request, url: str) -> str:
-    if request.offline:
-        return f'{request.entry.name} installs from {url}, which the offline bundle at {paths.BUNDLE_DIR} does not stage'
-    return f'could not download the {request.entry.name} install script from {url}'
+    return script.unstaged(request.entry.name, url, offline=request.offline)
 
 
 def _present_and_offline(request: Request, installed: bool) -> Result | None:

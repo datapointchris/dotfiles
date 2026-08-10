@@ -112,6 +112,59 @@ def pytest_addoption(parser):
     parser.addoption('--environment', default='', help='e2e environments to run, comma-separated (default: all)')
 
 
+INSTALLING = {
+    ('go', 'install'),
+    ('cargo', 'install'),
+    ('cargo', 'binstall'),
+    ('npm', 'install'),
+    ('uv', 'tool'),
+    ('uv', 'python'),
+    ('fnm', 'install'),
+}
+"""Commands that would install something on the machine running the suite.
+
+A pair rather than a binary name, because `go version` and `uv --version` are
+reads a unit test may legitimately want and only the second word separates them.
+"""
+
+
+@pytest.fixture(autouse=True)
+def no_installing_on_this_machine(request, monkeypatch):
+    """Refuse a command that would change the box the tests run on.
+
+    Not caution. A provider converted while the fixture that stubs its installer
+    named only its two predecessors, and the resulting `pytest tests/` reached
+    proxy.golang.org and rewrote `~/go/bin/task` — green, and indistinguishable
+    from a suite that had stubbed everything. The tier system already says which
+    tests may reach the world; this is what makes the rest unable to.
+
+    **Guarded at `subprocess`, not at `effects.run`.** Most of the package binds
+    `run` at import (`from dotfiles.effects import run`), so a patch on the
+    `effects` module never reaches those callers — which is exactly how the
+    incident above got past a test that thought it had stubbed the runner. Every
+    binding lands here.
+
+    Denylisted argv only, so a test driving `git`, `bash` or `which` through the
+    same door is untouched.
+    """
+    if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
+        return
+
+    import subprocess
+
+    def refuse_installs(original):
+        def guarded(command, *args, **kwargs):
+            argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
+            if argv[:2] in INSTALLING:
+                raise AssertionError(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
+            return original(command, *args, **kwargs)
+
+        return guarded
+
+    monkeypatch.setattr(subprocess, 'run', refuse_installs(subprocess.run))
+    monkeypatch.setattr(subprocess, 'Popen', refuse_installs(subprocess.Popen))
+
+
 def pytest_collection_modifyitems(config, items):
     """Deselect an opt-in tier unless it is asked for.
 

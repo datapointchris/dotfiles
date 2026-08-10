@@ -10,7 +10,7 @@ in that rewrite and were found by running it, not by the unit tests.
 contains `.git/`, and the matcher tested it as a substring:
 
 ```python
-if pattern.endswith("/") and pattern.rstrip("/") in path_str:
+if pattern.endswith('/') and pattern.rstrip('/') in path_str:
     return True  # ".git" is a substring of ".gitconfig"
 ```
 
@@ -30,8 +30,8 @@ against `tmux/tmux.conf`. Every one of those is a file that must survive, so the
 regression test asserts both directions:
 
 ```python
-assert should_exclude(Path(".git/config"))
-assert not should_exclude(Path(".gitconfig"))
+assert should_exclude(Path('.git/config'))
+assert not should_exclude(Path('.gitconfig'))
 ```
 
 ## Hand-rolled relative paths broke 122 symlinks

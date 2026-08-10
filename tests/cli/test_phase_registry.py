@@ -33,6 +33,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import resolve
+from dotfiles.providers import npm
 
 LINUX = coordinates.PLATFORM_BUNDLES['linux']
 
@@ -90,7 +91,10 @@ def test_the_bash_owner_column_says_what_the_catalog_says() -> None:
 
 
 def _installs_something_owned_by(phase: apply.Phase, owner: str, declaration: catalog.Catalog) -> bool:
-    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers]
+    """A provider with no section subscribes to nothing, so it installs nothing
+    anyone owns — which is the honest answer for a runtime a machine gets because
+    of the tools that need it, and the same `no` the bash column carries."""
+    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers and provider.section]
     return any(entry.owner == owner for section in sections for entry in declaration.section(section))
 
 
@@ -185,10 +189,11 @@ def test_the_interpreter_handed_down_can_import_this_package() -> None:
 def test_owner_reaches_the_installers_that_do_their_own_narrowing() -> None:
     """Selecting owner-aware phases is not enough on its own.
 
-    go-tools.sh and the other list-driven scripts build their own packages.yml
-    query and read `PACKAGE_OWNER` from the environment to narrow it. Before this
-    was shared, only go-tools.sh read it — so `--mine` ran cargo, uv and npm in
-    full while claiming to filter.
+    The list-driven scripts that are left build their own packages.yml query and
+    read `PACKAGE_OWNER` from the environment to narrow it. Before that was
+    shared, only the Go one read it — so `--mine` ran cargo, uv and npm in full
+    while claiming to filter. The Go one converges through the plan now, which is
+    narrowed before a provider sees it; the three that remain still need this.
     """
     assert context(owner='datapointchris').environment()['PACKAGE_OWNER'] == 'datapointchris'
     assert 'PACKAGE_OWNER' not in context().environment()
@@ -252,22 +257,17 @@ def test_a_bare_true_system_packages_still_means_the_full_set() -> None:
 
 def test_every_directory_an_installer_writes_binaries_to_is_on_the_phase_path() -> None:
     """A phase installing into a directory no later phase can see is a silent
-    failure, and it happened: npm-install-globals.sh sets its own
-    NPM_CONFIG_PREFIX, `.zshrc` adds that prefix's bin for interactive shells,
-    and nothing else did. All eleven language servers installed correctly and
-    every non-interactive check — including the install's own verification —
-    reported them missing.
+    failure, and it happened: the npm installer set its own NPM_CONFIG_PREFIX,
+    `.zshrc` added that prefix's bin for interactive shells, and nothing else
+    did. All eleven language servers installed correctly and every
+    non-interactive check — including the install's own verification — reported
+    them missing.
 
-    The prefix is read out of the installer rather than restated here, so moving
-    it fails this instead of going unnoticed until a container reports sixteen
-    missing tools.
+    The prefix is read from the provider that sets it rather than restated here,
+    so moving it fails this instead of going unnoticed until a container reports
+    sixteen missing tools.
     """
-    installer = (paths.INSTALL_DIR / 'common' / 'language-tools' / 'npm-install-globals.sh').read_text()
-    declared = [line for line in installer.splitlines() if 'NPM_CONFIG_PREFIX=' in line and 'export' in line]
-    assert declared, 'npm-install-globals.sh no longer sets a prefix; this test needs rewriting'
-
-    prefix = declared[0].split('=', 1)[1].strip().strip('"')
-    assert f'{prefix}/bin' in apply.TOOL_PATH_DIRS, f'{prefix}/bin is where npm globals land, and no phase can see it'
+    assert f'$HOME/{npm.PREFIX}/bin' in apply.TOOL_PATH_DIRS, f'{npm.PREFIX}/bin is where npm globals land, and no phase can see it'
 
 
 def test_the_non_interactive_shell_sees_what_the_phases_installed() -> None:

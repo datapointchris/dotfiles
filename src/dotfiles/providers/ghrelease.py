@@ -39,13 +39,13 @@ from dotfiles.output import err_console
 from dotfiles.output import warn
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
+from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import local_dir
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Asset
 
-BUNDLE_MANIFEST = 'manifest.txt'
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
@@ -134,20 +134,12 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
 def bundle_version(name: str) -> str | None:
     """What version of a tool an offline bundle staged, from its manifest.
 
-    The manifest is `category|name|version|filename`, and the categories that
-    carry a version for a named tool are the four the bundler stages files under.
+    Every category the bundler stages a named tool under, not just this
+    provider's: a tool declared here on one machine is a cargo package or a Go
+    tool on another, and the question being asked is what the bundle has.
     """
-    manifest = bundle_file(BUNDLE_MANIFEST)
-    try:
-        lines = manifest.read_text().splitlines()
-    except OSError:
-        return None
-
-    for line in lines:
-        fields = line.split('|')
-        if len(fields) >= 3 and fields[0] in {'binary', 'extra', 'go-binary', 'cargo', 'script'} and fields[1] == name:
-            return fields[2] or None
-    return None
+    row = bundle.staged(name, 'binary', 'extra', 'go-binary', 'cargo', 'script')
+    return row.version if row and row.version else None
 
 
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:

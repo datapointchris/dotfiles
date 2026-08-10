@@ -74,8 +74,11 @@ TOOL_PATH_DIRS = (
 """Where a phase finds what an earlier phase installed.
 
 Nothing here reads `.zshenv`, so a tool is invisible to the phase that consumes it
-unless it is named: go-tools needs the Go toolchain, node.sh needs fnm from the
-cargo phase, npm-globals needs the Node that node.sh links as fnm's default alias.
+unless it is named: the cargo provider needs `cargo` from rustup, the node
+toolchain needs the fnm that arrives as a cargo package, and npm-globals needs the
+Node that fnm links as its default alias. The converged providers put what they
+install on this process's PATH as well — see `providers/toolchain.put_on_path` —
+so this is what the phases that still shell out get, and the two agree.
 Order mirrors `.zshenv` so a phase resolves the same binary an interactive shell
 would. `install/tool-path.sh` says the same thing to `update.sh`, and
 `tests/cli/test_phase_registry.py` asserts the two agree.
@@ -250,14 +253,11 @@ class Declaration(Exception):
 
 
 _FILTERS: dict[str, Callable[[dict, dict], list]] = {
-    'go': parse_packages.filter_go_packages_by_manifest,
-    'cargo': parse_packages.filter_cargo_packages_by_manifest,
-    'npm': parse_packages.filter_npm_packages_by_manifest,
-    'uv': parse_packages.filter_uv_packages_by_manifest,
-    'git_uv': parse_packages.filter_git_uv_packages_by_manifest,
     'github': parse_packages.filter_github_releases_by_manifest,
     'custom': parse_packages.filter_custom_installers_by_manifest,
 }
+"""What is left of the manifest gates, which is the two phases that still resolve
+their own work rather than converging a selection of the plan."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,22 +383,13 @@ def _system_packages(context: Run) -> bool:
 
 
 def _go_toolchain(context: Run) -> bool:
-    if not context.declared('go'):
-        return True
     heading('Go toolchain')
-    return run_installer(context, COMMON / 'language-managers' / 'go.sh', 'go')
+    return _converge(context, engine.Selection.of('toolchains/go-toolchain'))
 
 
 def _rust_toolchain(context: Run) -> bool:
-    if not context.declared('cargo'):
-        return True
     heading('Rust toolchain')
-    return all(
-        [
-            run_installer(context, COMMON / 'language-managers' / 'rust.sh', 'rust'),
-            run_installer(context, COMMON / 'language-tools' / 'cargo-binstall.sh', 'cargo-binstall'),
-        ]
-    )
+    return _converge(context, engine.Selection.of('toolchains/rust-toolchain'))
 
 
 def _uv_toolchain(context: Run) -> bool:
@@ -409,14 +400,12 @@ def _uv_toolchain(context: Run) -> bool:
     itself shelled out to `uv run` and died with exit 127 on `linux-lxc-server`.
     """
     heading('uv')
-    return run_installer(context, COMMON / 'language-managers' / 'uv.sh', 'uv')
+    return _converge(context, engine.Selection.of('toolchains/uv-toolchain'))
 
 
 def _go_tools(context: Run) -> bool:
-    if not context.declared('go'):
-        return True
     heading('Go tools')
-    return run_installer(context, COMMON / 'language-tools' / 'go-tools.sh', 'go-tools')
+    return _converge(context, engine.Selection.of('packages/go'))
 
 
 def _have_github_credentials() -> bool:
@@ -544,31 +533,26 @@ def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str,
 
 
 def _cargo_packages(context: Run) -> bool:
-    if not context.declared('cargo'):
-        return True
+    """cargo-binstall is not installed here. It is a precondition of the provider,
+    which is what makes `packages apply --source cargo_packages` — the door
+    `update.sh` uses — get it too."""
     heading('Rust/cargo tools')
-    return run_installer(context, COMMON / 'language-tools' / 'cargo-tools.sh', 'cargo-tools')
+    return _converge(context, engine.Selection.of('packages/cargo'))
 
 
 def _node_toolchain(context: Run) -> bool:
-    if not context.declared('npm'):
-        return True
     heading('Node toolchain')
-    return run_installer(context, COMMON / 'language-managers' / 'node.sh', 'node')
+    return _converge(context, engine.Selection.of('toolchains/node-toolchain'))
 
 
 def _npm_globals(context: Run) -> bool:
-    if not context.declared('npm'):
-        return True
     heading('npm globals')
-    return run_installer(context, COMMON / 'language-tools' / 'npm-install-globals.sh', 'npm-globals')
+    return _converge(context, engine.Selection.of('packages/npm'))
 
 
 def _uv_tools(context: Run) -> bool:
-    if not context.declared('uv') and not context.declared('git_uv'):
-        return True
     heading('Python tools (uv)')
-    return run_installer(context, COMMON / 'language-tools' / 'uv-tools.sh', 'uv-tools')
+    return _converge(context, engine.Selection.of('packages/uv', 'packages/uv-git'))
 
 
 def _converge(context: Run, selection: engine.Selection) -> bool:
@@ -684,8 +668,9 @@ class Phase:
     """Which CLI resource owns it, so `dotfiles packages apply` selects a subset."""
 
     providers: tuple[str, ...]
-    """Which of `registry.PROVIDERS` this phase installs, or () for one that installs
-    no catalogued item at all — a toolchain, the symlinks, the zsh setup.
+    """Which of `registry.PROVIDERS` this phase installs, or () for one `--owner`
+    can never select: the symlink pass, the Neovim plugins Lazy syncs from its own
+    lockfile, and the system configuration, whose rows belong to nobody on GitHub.
 
     This replaces a hand-maintained `owner_aware` boolean. Ownership is already a
     fact about the entries, so the question "can `--owner` narrow this phase" is
@@ -698,14 +683,14 @@ class Phase:
 
 REGISTRY = (
     Phase('system-packages', 'system', ('system', 'cask', 'mas', 'flatpak'), _system_packages),
-    Phase('go-toolchain', 'toolchains', (), _go_toolchain),
-    Phase('rust-toolchain', 'toolchains', (), _rust_toolchain),
-    Phase('uv', 'toolchains', (), _uv_toolchain),
+    Phase('go-toolchain', 'toolchains', ('go-toolchain',), _go_toolchain),
+    Phase('rust-toolchain', 'toolchains', ('rust-toolchain',), _rust_toolchain),
+    Phase('uv', 'toolchains', ('uv-toolchain',), _uv_toolchain),
     Phase('go-tools', 'packages', ('go',), _go_tools),
     Phase('github-releases', 'packages', ('ghrelease',), _github_releases),
     Phase('custom-installers', 'packages', ('custom',), _custom_installers),
     Phase('cargo', 'packages', ('cargo',), _cargo_packages),
-    Phase('node-toolchain', 'toolchains', (), _node_toolchain),
+    Phase('node-toolchain', 'toolchains', ('node-toolchain',), _node_toolchain),
     Phase('npm-globals', 'packages', ('npm',), _npm_globals),
     Phase('uv-tools', 'packages', ('uv', 'uv-git'), _uv_tools),
     Phase('shell-plugins', 'plugins', ('shell-plugin',), _shell_plugins),

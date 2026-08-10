@@ -24,10 +24,11 @@ tool from the fleet updater's reach for good.
 ## Solution
 
 Pin deliberately, in both directions, rather than fighting over the receipt. `git_uv_tools` are now
-installed as `<name> @ git+<repo>@<newest release tag>` by both `uv-tools.sh` (fresh install) and
-`update.sh` (update), via `install/common/lib/uv-git-tools.sh`. Moving a pin means reinstalling the
-requirement; `uv tool upgrade` cannot do it. Both dotfiles and the tools' own updaters resolve the
-version from the GitHub releases API, so they cannot disagree about which release is newest.
+installed as `<name> @ git+<repo>@<newest release tag>` by both `src/dotfiles/providers/uvtool.py`
+(fresh install) and `update.sh` (update, via `install/common/lib/uv-git-tools.sh`). Moving a pin
+means reinstalling the requirement; `uv tool upgrade` cannot do it. Both dotfiles and the tools' own
+updaters resolve the version from the GitHub releases API, so they cannot disagree about which
+release is newest.
 
 `tracks_branch: true` in packages.yml marks the exception — a repo publishing no releases has no tag
 to pin, so it follows its default branch and is upgraded with `uv tool upgrade`.

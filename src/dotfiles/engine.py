@@ -52,11 +52,15 @@ class Selection:
     anything. `--skip plugins/tpm` over-skipped to all of `plugins`, and `main.py`
     admitted so in a docstring.
 
-    **Narrowed per resource, never once for the whole walk.** `toolchains` decides
-    it needs the Go runtime because the plan contains `go_tools` items, so a plan
-    narrowed globally by `--skip packages/go` would silently stop planning Go — a
-    resource the caller never named. `plan_for` therefore touches only the items of
-    the resource being walked.
+    **Narrowed per resource, never once for the whole walk.** `plan_for` touches
+    only the items of the resource being walked, so a `--skip` aimed at one
+    resource cannot change what another one is handed. The case that proved it:
+    `toolchains` decided it needed the Go runtime by finding `go_tools` items, so a
+    globally narrowed plan made `--skip packages/go` silently stop planning Go — a
+    resource the caller never named. That derivation belongs to
+    `registry.ToolchainProvider` now and runs before a Selection exists, which
+    retires the bug rather than the rule: keeping the narrowing per resource is
+    what stops the next cross-resource reader reintroducing it.
     """
 
     resources: tuple[str, ...]

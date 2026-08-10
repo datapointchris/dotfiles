@@ -55,8 +55,11 @@ from dotfiles import paths
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import releases
+from dotfiles.providers import toolchain
 
 log = logging.getLogger('create-bundle')
 
@@ -140,51 +143,6 @@ def parse_platform(target: str) -> tuple[str, str]:
 def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
     """Dated, so two builds of the same manifest are distinguishable."""
     return f'dotfiles-offline-v{today:%Y%m%d}-{manifest}-{os_name}-{arch}'
-
-
-def rust_triple(os_name: str, arch: str) -> str:
-    """The Rust target triple for a platform, which is how cargo tools and uv both
-    name their release assets."""
-    machine = 'aarch64' if arch == 'arm64' else 'x86_64'
-    return f'{machine}-apple-darwin' if os_name == 'darwin' else f'{machine}-unknown-linux-gnu'
-
-
-def cargo_target(os_name: str, arch: str, linux_override: str = '', darwin_override: str = '') -> str:
-    """The Rust target triple in a cargo tool's asset name.
-
-    The overrides exist for tools whose assets are not named after the triple at
-    all — fnm ships fnm-linux.zip and fnm-macos.zip.
-    """
-    if os_name == 'darwin' and darwin_override:
-        return darwin_override
-    if os_name != 'darwin' and linux_override:
-        return linux_override
-    return rust_triple(os_name, arch)
-
-
-def expand_pattern(pattern: str, version: str, os_name: str, arch: str, target: str = '') -> str:
-    """The placeholder set is the union of every naming scheme upstreams use:
-    the kernel name, the Go spelling, capitalised variants (gum, lazydocker),
-    and the product name for Apple (jira-cli ships macOS, not darwin).
-    """
-    version_num = version.lstrip('v')
-    replacements = {
-        '{version}': version,
-        '{version_num}': version_num,
-        '{target}': target,
-        '{os}': os_name,
-        '{arch}': arch,
-        '{go_arch}': 'amd64' if arch == 'x86_64' else 'arm64',
-        '{Os}': 'Linux' if os_name == 'linux' else 'Darwin',
-        '{Arch}': arch,
-        '{os_mac}': 'linux' if os_name == 'linux' else 'macOS',
-        '{Os_mac}': 'Linux' if os_name == 'linux' else 'macOS',
-        '{platform}': 'linux' if os_name == 'linux' else 'apple_darwin',
-    }
-    expanded = pattern
-    for placeholder, value in replacements.items():
-        expanded = expanded.replace(placeholder, value)
-    return expanded
 
 
 @dataclass(frozen=True)
@@ -283,33 +241,6 @@ def download(url: str, destination: Path) -> None:
             return
 
     raise BundleError(f'Failed to download: {url}\n  error: {last_error}')
-
-
-def run_installer_script(script: Path, *args: str) -> list[tuple[str, str, str]]:
-    """Ask an installer script for its download URLs, as `name|version|url` lines.
-
-    One caller left: `uv.sh`, which bootstraps the interpreter this package runs
-    on and so cannot be a function in it. Everything else that answered this
-    question is Python now, and reads the declaration or a provider directly.
-    """
-    result = subprocess.run(
-        ['bash', str(script), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise BundleError(f'Could not get URL from {script.name}:\n{tail_lines(result.stderr)}')
-
-    rows = []
-    for line in result.stdout.splitlines():
-        if not line.strip():
-            continue
-        fields = line.split('|')
-        if len(fields) < 3:
-            raise BundleError(f'{script.name} emitted an unreadable row: {line!r}')
-        rows.append((fields[0], fields[1], fields[2]))
-    return rows
 
 
 #
@@ -639,39 +570,73 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, ma
             bundle.record('extra', companion.name, version, companion.name)
 
 
-def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
-    log.info('Downloading Go tool binaries...')
+def bundleable(bundle: Bundle, section: str, names: list[str]) -> list[catalog.Entry]:
+    """The declared entries a bundle can stage, with the rest said out loud.
 
-    for row in parse_packages.filter_go_packages_by_manifest(packages, manifest, output_format='binary_info'):
-        binary_name, repo, pattern = row.split('|')
-        version = fetch_latest_version(repo)
-        asset = github_asset(repo, version, expand_pattern(pattern, version, bundle.os_name, bundle.arch))
+    An entry with no repo or no `binary_pattern` cannot be staged — there is no
+    asset to name — and the machine that installs from this bundle then has no
+    source for it at all. The row filter this replaces dropped those silently,
+    which is the same information a log line carries and none of the evidence.
+    """
+    declaration = catalog.load()
+    staged = []
+    for name in names:
+        entry = declaration.find(section, name)
+        if getattr(entry, 'github_repo', '') and getattr(entry, 'binary_pattern', ''):
+            staged.append(entry)
+        else:
+            log.warning('  %s declares no github_repo/binary_pattern, so nothing is staged for it', name)
+    return staged
+
+
+def add_go_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+    """Stage every declared Go tool's prebuilt binary.
+
+    The asset is named by `providers.gotool.stage`, which is the same module that
+    installs from it. The bundler used to expand `binary_pattern` itself, out of a
+    pipe-joined `parse_packages` row, while the installer looked for whatever came
+    out — so a pattern change moved one side and not the other, silently, on the
+    one machine the bundle exists for.
+    """
+    log.info('Downloading Go tool binaries...')
+    target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
+    declared = [row.split('|')[0] for row in parse_packages.filter_go_packages_by_manifest(packages, manifest, 'name_package')]
+
+    for entry in bundleable(bundle, 'go_tools', declared):
+        assert isinstance(entry, catalog.GoTool)
+        version = fetch_latest_version(entry.github_repo)
+        asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
 
         archive_path = bundle.go_binaries / asset.filename
-        cache.fetch(asset, archive_path, f'  {binary_name} ({version})')
-        extract_go_binary(archive_path, binary_name, bundle.go_binaries / binary_name)
-        bundle.record('go-binary', binary_name, version, binary_name)
+        cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
+        extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
+        bundle.record('go-binary', entry.executable, version, entry.executable)
 
 
 def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
+    """Stage every declared Rust CLI's release binary, named by its own provider.
+
+    Recorded under the *crate* name rather than the binary's, because that is what
+    `providers.cargo` looks the row up by — a declaration agreeing with itself,
+    where the two halves used to agree by convention.
+    """
     log.info('Downloading Cargo tool binaries...')
+    target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
+    declared = parse_packages.filter_cargo_packages_by_manifest(packages, manifest)
 
-    for row in parse_packages.filter_cargo_packages_by_manifest(packages, manifest, output_format='binary_info'):
-        tool, repo, pattern, linux_override, darwin_override = row.split('|')
-        version = fetch_latest_version(repo)
-        target = cargo_target(bundle.os_name, bundle.arch, linux_override, darwin_override)
-
-        arch_name = 'aarch64' if bundle.arch == 'arm64' else bundle.arch
-        filename = expand_pattern(pattern, version, bundle.os_name, arch_name, target)
-        asset = github_asset(repo, version, filename)
+    for entry in bundleable(bundle, 'cargo_packages', declared):
+        assert isinstance(entry, catalog.CargoPackage)
+        version = fetch_latest_version(entry.github_repo)
+        filename = cargo.stage(entry, version, target)
+        asset = github_asset(entry.github_repo, version, filename)
 
         destination = bundle.binaries / filename
-        cache.fetch(asset, destination, f'  {tool} ({version})')
+        cache.fetch(asset, destination, f'  {entry.name} ({version})')
 
         if filename.endswith('.zip'):
-            filename = repackage_zip_as_tarball(destination, tool, target, version.lstrip('v'))
+            filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
 
-        bundle.record('cargo', tool, version, filename)
+        bundle.record('cargo', entry.name, version, filename)
 
 
 UV_REPO = 'astral-sh/uv'
@@ -770,7 +735,7 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
     """
     log.info('Downloading uv...')
     version = fetch_latest_version(UV_REPO)
-    triple = rust_triple(bundle.os_name, bundle.arch)
+    triple = cargo.triple(Target(OSFamily(bundle.os_name), Arch(bundle.arch)))
     asset = github_asset(UV_REPO, version, f'uv-{triple}.tar.gz')
 
     archive = bundle.bin / asset.filename
@@ -829,11 +794,14 @@ def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
 def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
     """Install scripts, from two sources.
 
-    Language managers are a hardcoded list because they are bootstrap
-    infrastructure, outside the custom_installers model in packages.yml. Custom
-    installers opt in with bundle_install_script: true, and their URL is read from
-    the declaration rather than asked of a script over a `name|version|url` pipe:
-    the script that answered that question is now a function, and the pipe was a
+    uv is named here rather than declared, because it is bootstrap infrastructure
+    and outside the custom_installers model in packages.yml. Custom installers opt
+    in with bundle_install_script: true, and their URL is read from the
+    declaration.
+
+    Neither is asked of a bash script over a `name|version|url` pipe any more.
+    That pipe was the last thing `install/common/language-managers/uv.sh` existed
+    for once the install itself became `providers/toolchain.py`, and it was a
     second place for the bundler and the installer to disagree about which file to
     stage.
 
@@ -851,10 +819,9 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
         download(entry.install_url, bundle.scripts / f'{tool}-install.sh')
         bundle.record('script', tool, 'latest', f'{tool}-install.sh')
 
-    name, version, url = run_installer_script(paths.INSTALL_DIR / 'common' / 'language-managers' / 'uv.sh', '--print-url')[0]
-    log.info('  %s...', name)
-    download(url, bundle.scripts / f'{name}-install.sh')
-    bundle.record('script', name, version, f'{name}-install.sh')
+    log.info('  uv...')
+    download(toolchain.UV_INSTALL_URL, bundle.scripts / 'uv-install.sh')
+    bundle.record('script', 'uv', 'latest', 'uv-install.sh')
 
 
 def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.date | None = None) -> Path:

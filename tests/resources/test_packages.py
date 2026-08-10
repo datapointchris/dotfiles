@@ -24,8 +24,12 @@ import yaml
 from dotfiles import evidence as ev
 from dotfiles import releases
 from dotfiles.privilege import Privilege
+from dotfiles.providers import cargo
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
+from dotfiles.providers import npm
+from dotfiles.providers import uvtool
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -322,12 +326,46 @@ def test_a_missing_release_is_missing_rather_than_unmeasured(tmp_path: Path, fak
 
 
 def test_a_registry_installed_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """apt, npm and cargo upgrade on their own schedule. Asking whether they hold
-    the newest version is asking a question their own manager owns."""
+    """apt and npm upgrade on their own schedule, and an entry naming no repo has
+    no upstream to ask. Either way it is a question nothing here owns."""
     executable(fake_bin, 'task')
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert changes(live) == ()
+
+
+CARGO_CURRENCY = {'cargo_packages': [{'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd'}]}
+DECLARES_FD = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['fd-find']}
+
+
+def test_a_cargo_package_behind_its_release_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """`cargo binstall` is the upgrade, so being behind the repo the declaration
+    names is drift rather than someone else's schedule. Without this, converting
+    the phase would have silently removed the only thing that moved these."""
+    reporting(fake_bin, 'fd', 'fd 10.2.0')
+    cached(release_cache, {'sharkdp/fd': 'v10.4.2'})
+    live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('cargo/fd-find', Verdict.STALE)]
+
+
+def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The probe is not a read for every binary. `webviewrs` opens its first
+    positional argument as a URL, so asking it for a version opened a window
+    titled `version` and blocked the plan on the webview's event loop — three
+    times, before a declaration could say so.
+
+    Asserted by making the probe leave a trace rather than by counting calls: a
+    test that only checked the verdict would pass while still running the thing.
+    """
+    ran = tmp_path / 'ran'
+    executable(fake_bin, 'webviewrs', f'#!/bin/sh\ntouch "{ran}"\nprintf "1.0.0\\n"\n')
+    cached(release_cache, {'datapointchris/webviewrs': 'v2.0.0'})
+    declared = {'cargo_packages': [{'name': 'webviewrs', 'github_repo': 'datapointchris/webviewrs', 'reports_version': False}]}
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['webviewrs']})
+
+    assert changes(live) == ()
+    assert not ran.exists()
 
 
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
@@ -362,15 +400,28 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
 
 @pytest.fixture
 def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Record what would be installed, instead of reaching GitHub or a vendor."""
+    """Record what would be installed, instead of reaching GitHub, a vendor or the
+    Go proxy.
+
+    Every converted provider is patched here, not only the ones a test names. One
+    that is missed does not fail — it *installs*, on the machine running the
+    suite: this fixture covered two providers when a third converted, and the
+    resulting run rebuilt a Go tool out of proxy.golang.org and wrote it into
+    `~/go/bin`.
+    """
     attempted: list[str] = []
 
-    def record(entry, target, *, offline=False):
+    def record(entry, target=None, *, offline=False):
         attempted.append(entry.name)
         return ghrelease.Result(True, f'{entry.name} installed')
 
     monkeypatch.setattr(ghrelease, 'install', record)
     monkeypatch.setattr(custom, 'install', record)
+    monkeypatch.setattr(gotool, 'install', record)
+    monkeypatch.setattr(cargo, 'install', record)
+    monkeypatch.setattr(npm, 'install', record)
+    monkeypatch.setattr(uvtool, 'install', record)
+    monkeypatch.setattr(uvtool, 'install_git', record)
     return attempted
 
 
@@ -422,15 +473,63 @@ def test_a_release_that_arrived_since_the_report_is_skipped(
     assert installs == []
 
 
-def test_a_provider_that_has_not_converted_is_refused_not_ignored(
+# Names no machine can have, because `fake_bin` keeps /usr/bin behind it: a real
+# package would read as installed on whichever box happens to have it, which is the
+# hazard that fixture's docstring names.
+CARGO_PACKAGE = {'cargo_packages': [{'name': 'unbuilt-crate', 'command': 'unbuilt-crate'}]}
+DECLARES_CARGO = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['unbuilt-crate']}
+
+NPM_GLOBAL = {'npm_globals': {'linters': [{'name': 'unpublished-linter'}]}}
+DECLARES_NPM = {'machine': 'box', 'platform': 'linux', 'npm_globals': ['unpublished-linter']}
+
+UV_TOOL = {'uv_tools': {'linters': [{'name': 'unreleased-linter'}]}}
+DECLARES_UV = {'machine': 'box', 'platform': 'linux', 'uv_tools': ['unreleased-linter']}
+
+
+def test_a_missing_uv_tool_is_installed_by_its_provider(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    live = session(tmp_path, UV_TOOL, DECLARES_UV)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['unreleased-linter']
+
+
+def test_a_missing_npm_global_is_installed_by_its_provider(
     tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
+    live = session(tmp_path, NPM_GLOBAL, DECLARES_NPM)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['unpublished-linter']
+
+
+def test_a_missing_cargo_package_is_installed_by_its_provider(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    live = session(tmp_path, CARGO_PACKAGE, DECLARES_CARGO)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['unbuilt-crate']
+
+
+def test_a_missing_go_tool_is_installed_by_its_provider(
+    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    """Through the same function the phase calls, so the two front doors cannot
+    install one tool differently."""
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
-    assert outcome.status is OutcomeStatus.REFUSED
-    assert installs == []
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['task']
 
 
 DECLARES_THEME = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['theme']}

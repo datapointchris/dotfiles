@@ -46,9 +46,17 @@ def item(provider: str, name: str, entry: catalog.Entry, *, executable: str = ''
 def test_no_two_providers_share_a_name_or_a_section() -> None:
     """`BY_NAME` and `BY_SECTION` are built by comprehension, so a duplicate is
     silently the last one written rather than an error — and the loser would plan
-    nothing while still appearing in `--skip`'s help."""
+    nothing while still appearing in `--skip`'s help.
+
+    A name has to be unique across the whole registry rather than within a
+    resource, because `registry.named` is what an item's provider is looked up
+    through and an item carries one name. That is why the runtimes are
+    `go-toolchain` and `uv-toolchain`: `packages` already has a `go` and a `uv`.
+    """
+    sectioned = [provider.section for provider in registry.PROVIDERS if provider.section]
+
     assert len(registry.BY_NAME) == len(registry.PROVIDERS)
-    assert len(registry.BY_SECTION) == len(registry.PROVIDERS)
+    assert len(registry.BY_SECTION) == len(sectioned)
 
 
 def test_every_provider_belongs_to_a_resource_the_cli_exposes() -> None:
@@ -57,11 +65,21 @@ def test_every_provider_belongs_to_a_resource_the_cli_exposes() -> None:
     assert {provider.resource for provider in registry.PROVIDERS} <= set(vocabulary.RESOURCES)
 
 
-def test_every_provider_plans_from_a_section_that_exists() -> None:
+def test_every_provider_plans_from_a_section_that_exists_or_from_none() -> None:
     """A typo here resolves an empty section into an empty plan, which reads as a
-    machine that declared nothing rather than as a broken registry."""
+    machine that declared nothing rather than as a broken registry.
+
+    An empty section is the deliberate case, not a typo: a toolchain subscribes to
+    nothing and is planned from what the tool providers resolved.
+    """
     declared = set(catalog.SECTIONS) | set(catalog.SYSTEM_SECTIONS)
-    assert {provider.section for provider in registry.PROVIDERS} <= declared
+    assert {provider.section for provider in registry.PROVIDERS if provider.section} <= declared
+
+
+def test_every_provider_names_a_stage_that_exists() -> None:
+    """Stage is what orders execution, so a provider whose stage is not in the
+    enum would sort into a position nothing declares."""
+    assert all(provider.stage in Stage for provider in registry.PROVIDERS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,6 +152,44 @@ def test_installing_a_system_package_needs_root_whatever_the_entry_says() -> Non
     entry = catalog.SystemPackage.from_mapping({'name': 'curl', 'apt': 'curl'})
 
     assert registry.needs_root(item('system', 'curl', entry))
+
+
+def test_the_go_runtime_is_the_only_one_that_needs_root() -> None:
+    """It unpacks over `/usr/local/go`; the other three install under `$HOME`.
+
+    Go could too, but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
+    all name `/usr/local/go/bin`, so moving it is a change to every one of them
+    and to every machine already built.
+    """
+    runtimes = {provider.name: provider for provider in registry.for_resource('toolchains')}
+    needs_root = {name: provider.needs_root(None) for name, provider in runtimes.items()}  # type: ignore[arg-type]
+
+    assert needs_root == {'go-toolchain': True, 'rust-toolchain': False, 'uv-toolchain': False, 'node-toolchain': False}
+
+
+def test_every_runtime_can_actually_install_itself() -> None:
+    """The base `Provider.install` is a faithful description of a mechanism this
+    package does not drive yet, and returns REFUSED to say so. That is the wrong
+    answer for a runtime — one with no mechanism is a missing subclass, not a
+    description — so `converge` is abstract and this is what catches the omission.
+    """
+    for provider in registry.for_resource('toolchains'):
+        assert type(provider).converge is not registry.ToolchainProvider.converge, provider.name
+
+
+def test_every_packages_provider_can_install_what_it_plans() -> None:
+    """The whole `packages` resource has converted, so the base `Provider.install`
+    — which refuses, to stop a run reporting converged for work it never did — is
+    no longer a legitimate answer here.
+
+    Asserted on the registry rather than through the resource, because there is no
+    longer an unconverted provider to write that test against: the case is now
+    unrepresentable, and this is what keeps it that way when a mechanism is added.
+    The `system` half is a different story and `tests/resources/test_system.py`
+    still holds the refusal there.
+    """
+    for provider in registry.for_resource('packages'):
+        assert type(provider).install is not registry.Provider.install, provider.name
 
 
 def test_a_macos_preference_does_not_need_root_and_the_entry_is_what_says_so() -> None:

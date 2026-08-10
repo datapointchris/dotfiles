@@ -22,7 +22,7 @@ builds and tags an older one separately.
 
 ```bash
 ./build-base.sh                                              # one-time, minutes
-./run-installer-test.sh install/common/language-tools/uv-tools.sh --validate ruff
+./run-installer-test.sh install/common/plugins/tmux-plugins.sh --validate tmux
 ./run-installer-test.sh install/wsl/system-packages.sh       # should skip: already installed
 ```
 

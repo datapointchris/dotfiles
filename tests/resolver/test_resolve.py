@@ -150,7 +150,7 @@ def test_a_system_package_with_no_name_under_this_manager_is_not_planned(tmp_pat
         {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'},
     )
 
-    assert [item.name for item in plan.items] == ['git']
+    assert [item.name for item in plan.for_section('system_packages')] == ['git']
 
 
 def test_an_aur_only_entry_is_planned_on_pacman(tmp_path: Path) -> None:
@@ -161,7 +161,7 @@ def test_an_aur_only_entry_is_planned_on_pacman(tmp_path: Path) -> None:
         {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'},
     )
 
-    assert [item.name for item in plan.items] == ['zen-browser']
+    assert [item.name for item in plan.for_section('system_packages')] == ['zen-browser']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ def test_an_entry_that_installs_no_binary_has_no_executable_to_look_for(tmp_path
         {'uv_tools': {'science': [{'name': 'numpy', 'library_only': True}, {'name': 'ruff'}]}},
         {'machine': 'box', 'platform': 'linux', 'uv_tools': ['numpy', 'ruff']},
     )
-    executables = {item.name: item.executable for item in plan.items}
+    executables = {item.name: item.executable for item in plan.for_section('uv_tools')}
 
     assert executables == {'numpy': '', 'ruff': 'ruff'}
 
@@ -214,8 +214,10 @@ def test_a_declared_install_path_becomes_the_evidence(tmp_path: Path) -> None:
         {'machine': 'box', 'platform': 'linux', 'custom_installers': ['bashselfupdate']},
     )
 
-    assert plan.items[0].evidence_path == '~/.local/lib/bashselfupdate'
-    assert plan.items[0].executable == ''
+    installed = plan.for_section('custom_installers')[0]
+
+    assert installed.evidence_path == '~/.local/lib/bashselfupdate'
+    assert installed.executable == ''
 
 
 def test_a_private_repo_carries_a_precondition_rather_than_being_dropped(declaration: catalog.Catalog) -> None:
@@ -225,6 +227,74 @@ def test_a_private_repo_carries_a_precondition_rather_than_being_dropped(declara
     private = [item for item in plan.items if item.precondition is resolve.Precondition.GITHUB_AUTH]
 
     assert private, 'the declaration has private-repo tools; none carried a precondition'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The runtimes, which are planned from what the tools resolved
+# ─────────────────────────────────────────────────────────────────────────────
+
+RUNTIMES = {'go': {'install_method': 'github_release', 'min_version': '1.23'}, 'rust': {'install_method': 'rustup'}}
+GO_TOOL = {'go_tools': [{'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}]}
+WANTS_GO = {'machine': 'box', 'platform': 'linux', 'go_tools': ['task']}
+
+
+def test_a_runtime_is_planned_because_the_tools_that_need_it_are(tmp_path: Path) -> None:
+    """Never because a manifest said `go: true` — that boolean was removed, since
+    it said nothing the tool list did not and could be set with no tools at all."""
+    plan = synthetic(tmp_path, {'runtimes': RUNTIMES, **GO_TOOL}, WANTS_GO)
+
+    assert 'go-toolchain/go' in {item.address for item in plan.items}
+
+
+def test_a_runtime_nothing_needs_is_not_planned(tmp_path: Path) -> None:
+    plan = synthetic(tmp_path, {'runtimes': RUNTIMES, **GO_TOOL}, {'machine': 'box', 'platform': 'linux'})
+
+    assert 'go-toolchain/go' not in {item.address for item in plan.items}
+
+
+def test_uv_is_planned_for_every_machine(tmp_path: Path) -> None:
+    """Ungated, unlike the other three: everything installed later resolves through
+    it, and before the CLI existed the symlink phase itself shelled out to
+    `uv run` and died with exit 127 on linux-lxc-server."""
+    plan = synthetic(tmp_path, {'runtimes': RUNTIMES}, {'machine': 'box', 'platform': 'linux'})
+
+    assert [item.address for item in plan.items] == ['uv-toolchain/uv']
+
+
+def test_a_runtime_carries_the_row_that_declares_its_floor(tmp_path: Path) -> None:
+    """And carries None where there is no row. `uv` and `node` have none at all, so
+    an item with no entry is the case `Entry | None` exists for rather than an
+    error — a synthetic row would be one `machines show` prints and `packages.yml`
+    does not contain."""
+    plan = synthetic(tmp_path, {'runtimes': RUNTIMES, **GO_TOOL}, WANTS_GO)
+    carried = {item.name: item.entry for item in plan.for_section('runtimes')}
+
+    assert isinstance(carried['go'], catalog.Runtime)
+    assert carried['go'].min_version == '1.23'
+    assert carried['uv'] is None
+
+
+def test_a_runtime_runs_at_its_own_stage_however_late_it_is_planned(tmp_path: Path) -> None:
+    """It is planned after the tools because it is planned *from* them, and it
+    installs before them because the plan is sorted by stage on the way out."""
+    plan = synthetic(tmp_path, {'runtimes': RUNTIMES, **GO_TOOL}, WANTS_GO)
+
+    assert [item.address for item in plan.items] == ['go-toolchain/go', 'uv-toolchain/uv', 'go/task']
+
+
+def test_owner_narrowing_drops_the_runtimes_whole(tmp_path: Path) -> None:
+    """A runtime belongs to nobody, so filtering by owner would drop every one of
+    them for answering `owner is None` — the wrong reason. `--mine` means "just my
+    tools" and must not turn into a toolchain install nobody asked for."""
+    install = tmp_path / 'install'
+    (install / 'manifests').mkdir(parents=True)
+    (install / 'packages.yml').write_text(yaml.safe_dump({'runtimes': RUNTIMES, **GO_TOOL}, sort_keys=False))
+    (install / 'manifests' / 'box.yml').write_text(yaml.safe_dump(WANTS_GO, sort_keys=False))
+    (install / 'flags.yml').write_text('{}')
+
+    plan = resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), owner='go-task')
+
+    assert [item.address for item in plan.items] == ['go/task']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -177,10 +177,12 @@ def test_a_capability_requirement_reaches_verification_as_its_own_kind(real_pack
     assert checked, 'no manifest declares a tool with a capability requirement'
 
 
-def test_the_git_uv_installer_is_told_which_clones_need_credentials(real_packages_data):
-    """`uv-tools.sh` reads the auth field to decide whether to try at all, so a
-    private repo missing it is an install that fails for a reason no change here
-    can fix, and a public one carrying it is a tool silently never installed."""
+def test_the_git_uv_query_says_which_clones_need_credentials(real_packages_data):
+    """A private repo missing the flag is an install that fails for a reason no
+    change here can fix, and a public one carrying it is a tool silently never
+    installed. The consumer moved — `resources/packages.repair_for` reads the
+    entry and answers `Repair.BY_HAND`, so the engine never offers the change —
+    but the field is what both spellings of the question resolve from."""
     private = parse_packages.names_requiring_github_auth(real_packages_data, 'git_uv_tools')
     assert private, 'no private git uv tool, so the credential-less path is untested'
 
@@ -430,24 +432,26 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
     [
         # WSL work: the manifest that triggered the bug. fnm is required on every
         # manifest with npm_globals — the node phase aborts without it.
-        ('wsl-work-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        ('wsl-work-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot'], ['webviewrs']),
         # macOS personal: same cargo set as WSL, also no webviewrs.
-        ('macos-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        ('macos-personal-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot'], ['webviewrs']),
         # Arch personal: the only machine that actually installs webviewrs.
         # Proves the filter is data-driven, not a hardcoded skip.
-        ('archlinux-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot', 'webviewrs'], []),
+        ('archlinux-personal-workstation', ['fnm', 'bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker', 'broot', 'webviewrs'], []),
         # Minimal LXC server: lean cargo set — no broot, no webviewrs, and no fnm
         # since it installs no npm globals. Catches mutations that hardcode-include
         # workstation cargo tools for all Linux.
-        ('linux-lxc-server', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker'], ['broot', 'webviewrs', 'fnm']),
+        ('linux-lxc-server', ['bat', 'fd-find', 'eza', 'zoxide', 'git-delta', 'oxker'], ['broot', 'webviewrs', 'fnm']),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):
     """Each machine's cargo bundle must contain its manifest's packages and nothing else.
-    Names compared are commands (binary_info first column), since fd-find→fd, git-delta→delta."""
+
+    Crate names rather than commands — `fd-find`, not `fd` — because that is what
+    the bundler stages under and what `providers.cargo` reads the row back by. The
+    two disagreed while the bundler recorded a command it had derived itself."""
     manifest = parse_packages.load_manifest(manifest_name)
-    result = parse_packages.filter_cargo_packages_by_manifest(real_packages_data, manifest, output_format='binary_info')
-    names = {line.split('|', 1)[0] for line in result}
+    names = set(parse_packages.filter_cargo_packages_by_manifest(real_packages_data, manifest))
     missing = [n for n in must_include if n not in names]
     leaked = [n for n in must_exclude if n in names]
     assert not missing, f'{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}'

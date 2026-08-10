@@ -97,7 +97,7 @@ This setup uses different package managers for different purposes, because that'
 | Rust CLI tools | cargo-binstall | bat, eza, fd, broot, git-delta |
 | Editor / binaries | GitHub releases | neovim, lazygit, yazi, fzf |
 | Python | uv | version management, ruff, mypy, etc. |
-| Node.js | system package (brew/pacman) | runtime, LSPs, formatters |
+| Node.js | fnm | runtime, LSPs, formatters |
 
 Why the split? Cross-platform consistency, project-specific versions, and keeping system packages separate from development tools.
 

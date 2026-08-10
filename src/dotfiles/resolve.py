@@ -112,7 +112,16 @@ class DesiredItem:
     executable: str
     evidence_path: str
     precondition: Precondition
-    entry: catalog.Entry
+    entry: catalog.Entry | None
+    """The declaration row behind it, where one exists.
+
+    None for an item nothing declares individually: a runtime is in the plan
+    because the tools that need it are, and `uv` and `node` have no `runtimes` row
+    at all. A `TypeVar` bounded on `Entry` would be uninhabitable for those, and a
+    synthetic entry would be a row `machines show` prints that `packages.yml` does
+    not contain.
+    """
+
     reason: Reason
 
     @property
@@ -137,13 +146,6 @@ class DesiredItem:
 class Plan:
     machine: machines.Machine
     items: tuple[DesiredItem, ...]
-    runtimes: tuple[catalog.Runtime, ...] = ()
-    """The declared runtimes, carried rather than looked up.
-
-    They are `Spelling.DERIVED` — no manifest subscribes to one — but the
-    toolchain resource needs their version constraints, and resolution finishing
-    here means it must not reach back into the catalog for them.
-    """
 
     @property
     def providers(self) -> frozenset[str]:
@@ -196,14 +198,10 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
             continue
         planned = provider.plan(machine, declaration, tuple(items))
         if owner is not None:
-            planned = tuple(item for item in planned if item.entry.owner == owner)
+            planned = tuple(item for item in planned if item.entry is not None and item.entry.owner == owner)
         items.extend(planned)
 
-    return Plan(
-        machine=machine,
-        items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))),
-        runtimes=tuple(entry for entry in declaration.section('runtimes') if isinstance(entry, catalog.Runtime)),
-    )
+    return Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
 
 
 def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed: set[str]) -> bool:

@@ -347,22 +347,25 @@ its manifest declares, and a box part-way through a rollout is not a repo defect
 commit. `dotfiles check` asks the third question — whether anything is actually wrong — and a machine
 merely behind on versions answers no.
 
-What counts as evidence is per provider, in `src/dotfiles/resources/packages.py`: a binary on PATH for a release or a go tool, the tool directory for a uv tool that ships no console script, an app bundle for a Mac App Store app, and the package manager's own inventory for anything apt, pacman, brew or flatpak installed — because a package name is not a binary name, and `p7zip-full` installs `7zz` while `build-essential` installs no executable at all.
+What counts as evidence is the provider's own, declared on its class in `src/dotfiles/registry.py` and implemented in `src/dotfiles/evidence.py`: a binary on PATH for a release or a go tool, the tool directory for a uv tool that ships no console script, an app bundle for a Mac App Store app, and the package manager's own inventory for anything apt, pacman, brew or flatpak installed — because a package name is not a binary name, and `p7zip-full` installs `7zz` while `build-essential` installs no executable at all. A runtime is the one measured by asking it: a `go` on PATH that will not report a version is not an installed toolchain.
 
-The registry carries `command` where the binary name differs from the entry name (`markdownlint-cli` → `markdownlint`, `awscli` → `aws`) and `installed_path` for entries that install no binary (`bashselfupdate` is a sourced library). Without those, an installed tool reads as missing forever — the failure mode that makes a checker get ignored.
+The declaration carries `command` where the binary name differs from the entry name (`markdownlint-cli` → `markdownlint`, `awscli` → `aws`) and `installed_path` for entries that install no binary (`bashselfupdate` is a sourced library). Without those, an installed tool reads as missing forever — the failure mode that makes a checker get ignored.
 
 ### Installation Scripts
 
-Located in `install/common/`:
+What is left in `install/common/` is `plugins/` — the editor and terminal plugin
+installers — and `lib/`, the libraries `update.sh` still sources.
 
-**Directory Structure**:
+Every tool section installs through a provider now. uv, rustup, the Go tarball and
+fnm's default Node alias are `src/dotfiles/providers/toolchain.py`; `go install`,
+`cargo binstall`, `npm install -g` and `uv tool install` are `gotool.py`,
+`cargo.py`, `npm.py` and `uvtool.py` beside it. Two of those carry a precondition
+the section needs and the runtime does not — cargo-binstall, and npm's prefix —
+which is the reason a provider is a module rather than one line in the registry.
 
-- `language-managers/` - Language runtime / version-manager bootstrappers (uv, rustup, go)
-- `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
-- `plugins/` - Editor and terminal plugin installers
-
-The specific tools in each category are defined in `install/packages.yml` (the single
-source of truth) — this list describes what each directory is *for*, not its contents.
+The single source of truth for which tool is in which section is
+`install/packages.yml`; its header comment maps each section to its install
+method.
 
 **Core Library** (`install/common/lib/`):
 
@@ -386,11 +389,8 @@ The `Taskfile.yml` provides convenience tasks for common operations but delegate
 **Updating tools**:
 
 ```bash
-# Rust tools
-cargo binstall -y <package>
-
-# GitHub release tools — converge them all, or narrow to one section
-dotfiles packages apply --source github_releases
+# Converge one section — Rust tools, Go tools, GitHub releases, custom installers
+dotfiles packages apply --source cargo_packages
 
 # System packages
 sudo apt update && sudo apt upgrade

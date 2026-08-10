@@ -10,6 +10,7 @@ stop matching what the symlink manager deploys.
 from __future__ import annotations
 
 import dataclasses as dc
+import shutil
 from pathlib import Path
 
 from dotfiles import paths
@@ -39,3 +40,18 @@ def bin_dir() -> Path:
 def bundle_file(name: str) -> Path:
     """One entry in the offline bundle, whether or not a bundle is present."""
     return paths.BUNDLE_DIR / name
+
+
+def place(source: Path, destination: Path) -> None:
+    """Put a binary where it belongs: written beside the target, then renamed over it.
+
+    A plain copy over a binary that is currently running fails with `text file
+    busy`, and the binary currently running is routinely `task`, which is what
+    invoked the install. Shared rather than written per provider because the
+    failure is a property of the destination, not of where the bytes came from.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    staged = destination.with_name(f'{destination.name}.new')
+    shutil.copy2(source, staged)
+    staged.chmod(0o755)
+    staged.replace(destination)

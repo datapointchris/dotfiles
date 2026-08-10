@@ -28,9 +28,9 @@ something the signatures enforce.
 observation behind them are not, so "the read-only verbs never escalate" is a
 property of the signatures rather than a promise about the bodies.
 
-The mechanisms are imported here rather than reached lazily: the five of them cost
-5ms on top of this module's own 85ms, measured, which is not worth five local
-imports and the five explanations they would each need.
+The mechanisms are imported here rather than reached lazily: together they cost a
+few ms on top of this module's own 85ms, measured, which is not worth a local
+import inside every method and the explanation each would need.
 """
 
 from __future__ import annotations
@@ -45,12 +45,17 @@ from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.privilege import Privilege
+from dotfiles.providers import cargo
 from dotfiles.providers import clone
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import macdefaults
+from dotfiles.providers import npm
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
+from dotfiles.providers import toolchain
+from dotfiles.providers import uvtool
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
@@ -88,7 +93,12 @@ class Provider:
     stage: Stage
 
     section: str = ''
-    """The declaration section it plans from."""
+    """The declaration section it plans from, or '' for one that subscribes to none.
+
+    A toolchain is the second kind: nothing declares Go, and a machine has it
+    because it declared `go_tools`. So the section is what a *subscription* names,
+    and `BY_SECTION` indexes only the providers that have one.
+    """
 
     ownable: bool = True
     """Whether an owner can be traced for this provider's items.
@@ -230,6 +240,58 @@ class CustomProvider(VendoredProvider):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class CargoProvider(CatalogProvider):
+    """A Rust CLI installed by `cargo binstall`, or restored from a bundle.
+
+    Not a `VendoredProvider` for the same reason `GoToolProvider` is not: nothing
+    here fetches an asset this package names. binstall resolves the crate, picks
+    the release its project published, and places the binary.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.CargoPackage):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a cargo_packages entry')
+        result = cargo.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GoToolProvider(CatalogProvider):
+    """A Go module installed by the toolchain that built it.
+
+    Not a `VendoredProvider`: nothing here fetches an asset this package names.
+    `go install` resolves the module, builds it and places the binary, and the
+    only alternative source is the prebuilt binary an offline bundle carries.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.GoTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
+        result = gotool.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class NpmProvider(CatalogProvider):
+    """A global package from the npm registry.
+
+    No currency, unlike the go and cargo providers beside it. `npm update -g`
+    upgrades every global in one call and the registry owns what latest means, so
+    asking per package whether it is behind is asking a question npm already
+    answers for itself — which is what `resources/packages.CURRENCY` says.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.NpmGlobal):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not an npm_globals entry')
+        result = npm.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
 class RegistryProvider(CatalogProvider):
     """A provider whose items only its own package manager can answer for.
 
@@ -265,6 +327,30 @@ class UvToolProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_uv_tool(item)
 
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.UvTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
+        result = uvtool.install(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GitUvToolProvider(UvToolProvider):
+    """The same mechanism, pointed at a git repo and pinned to its newest release.
+
+    A subclass rather than a flag, because only the requirement differs and the
+    evidence does not: uv puts a git-installed tool in the same per-tool directory
+    as a PyPI one.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        entry = item.entry
+        if not isinstance(entry, catalogs.GitUvTool):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
+        result = uvtool.install_git(entry, offline=session.offline)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
 
 @dc.dataclass(frozen=True, slots=True)
 class AppStoreProvider(CatalogProvider):
@@ -291,6 +377,136 @@ class CloneProvider(CatalogProvider):
             return Outcome(change, OutcomeStatus.SKIPPED, f'{clone.destination(item, session.home)} appeared since the check')
         result = clone.clone(item, session.home)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class ToolchainProvider(Provider):
+    """A language runtime, in the plan because the tools that need it are.
+
+    Nothing subscribes to a toolchain. A machine gets Go because it declared
+    `go_tools` and Rust because it declared `cargo_packages`, which is why the
+    manifest booleans that used to gate them (`go:`, `rust:`, `nvm:`, `tenv:`) were
+    removed — they said nothing the tool lists did not, and a machine could set one
+    without declaring a single tool for it.
+
+    That derivation is what the two-pass signature exists for, so this is the
+    provider it was written for rather than a special case beside it: `planned`
+    carries what the tool providers resolved, and reading it is the whole of what
+    `resources/toolchains.py` kept as a table of its own — the fifth keying of the
+    provider concept, and the one the A3 collapse did not reach.
+    """
+
+    runtime: str = ''
+    """What the row is called: `rust`, where the provider is `rust-toolchain`.
+
+    The provider name has to be unique across the whole registry — `packages`
+    already has a `go` and a `uv` — while this is what a person reads, and
+    `dotfiles toolchains plan` has printed these four words since it existed. It
+    is also the `runtimes` key, so a floor declared for it starts being honoured
+    without anything here changing.
+    """
+
+    executable: str = ''
+    """The binary that answers for it, which is not always its name: Rust is
+    measured through `rustc`."""
+
+    needed_by: str = ''
+    """The catalog section whose presence requires it. Empty means ungated."""
+
+    ownable: bool = False
+    """A runtime belongs to nobody, so `--owner` skips these whole.
+
+    Filtering instead would drop every one of them for answering `owner is None`,
+    which is the wrong reason — and it reproduces what the phase registry already
+    did, where a toolchain phase declared no providers and so never survived the
+    intersection.
+    """
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        if self.needed_by and not any(item.section == self.needed_by for item in planned):
+            return ()
+        return (
+            DesiredItem(
+                section='runtimes',
+                provider=self.name,
+                resource=self.resource,
+                stage=self.stage,
+                name=self.runtime,
+                executable=self.executable,
+                evidence_path='',
+                precondition=resolve.Precondition.NONE,
+                entry=declared_runtime(declaration, self.runtime),
+                reason=Reason('runtimes', f'section:{self.needed_by}' if self.needed_by else 'every machine'),
+            ),
+        )
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        result = self.converge(session, privilege)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        """Put this runtime on the machine, by whatever means it has.
+
+        Abstract, unlike the base `Provider.install`, because there is no honest
+        default: a runtime with no mechanism is not a faithful description of
+        anything, it is a missing subclass.
+        """
+        raise NotImplementedError
+
+
+@dc.dataclass(frozen=True, slots=True)
+class UvToolchain(ToolchainProvider):
+    """astral's install script, then the default interpreter it manages."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_uv(offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class RustToolchain(ToolchainProvider):
+    """rustup, which brings `rustc` and `cargo` together."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_rust(offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class GoToolchain(ToolchainProvider):
+    """A tarball unpacked over `/usr/local/go`, which is why this one needs root.
+
+    The only runtime that does. The other three install under `$HOME`, and Go
+    could too — but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
+    all name `/usr/local/go/bin`, so moving it is a change to every one of them
+    and to every machine already built.
+    """
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=session.offline)
+
+    def needs_root(self, item: DesiredItem) -> bool:
+        return True
+
+
+@dc.dataclass(frozen=True, slots=True)
+class NodeToolchain(ToolchainProvider):
+    """fnm's default alias, which is what a bare `node` resolves to."""
+
+    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+        return toolchain.install_node(session.home, offline=session.offline)
+
+
+def declared_runtime(declaration: catalogs.Catalog, name: str) -> catalogs.Runtime | None:
+    """The `runtimes` row carrying a toolchain's version floor, or None.
+
+    Tolerant rather than `Catalog.find`, which raises. Two of the four toolchains
+    have no row at all, and the two that do declare a floor optionally — rust names
+    an install method and no version, so any rustc satisfies it. An absent row
+    means "no floor", which is a legitimate state and not a broken plan.
+    """
+    for entry in declaration.section('runtimes'):
+        if entry.name == name and isinstance(entry, catalogs.Runtime):
+            return entry
+    return None
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -405,14 +621,18 @@ PROVIDERS: tuple[Provider, ...] = (
     RegistryProvider('flatpak', 'system', Stage.SYSTEM, 'flatpak_apps'),
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
-    CatalogProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
-    CatalogProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
-    CatalogProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
+    CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
+    GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
+    NpmProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),
-    UvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
+    GitUvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),
     CloneProvider('tpm', 'plugins', Stage.TMUX_PLUGINS, 'tmux_plugins'),
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),
+    UvToolchain('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
+    GoToolchain('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
+    RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
+    NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),
@@ -422,14 +642,16 @@ PROVIDERS: tuple[Provider, ...] = (
 )
 """The registry, in planning order — which is the two passes.
 
-Every `system.yml` provider sits after every `packages.yml` one because each is
-handed what the earlier providers resolved and some of them read it. Execution
-order is `Stage`, not this: the plan is sorted before it leaves the resolver, so
-a provider added in the wrong place here changes nothing about when it runs.
+Every provider that reads what an earlier one resolved sits after it: the
+toolchains after the tool sections that pull them in, and every `system.yml`
+provider after every `packages.yml` one. Execution order is `Stage`, not this: the
+plan is sorted before it leaves the resolver, so the Go runtime installs at
+TOOLCHAIN despite being planned after the tools that need it, and a provider put
+in the wrong place here changes nothing about when it runs.
 """
 
 UNPROVIDED: dict[str, str] = {
-    'runtimes': 'derived by the toolchain resource from the tool sections that need one, never subscribed to directly',
+    'runtimes': 'read by the toolchain providers for their floors; a machine gets a runtime from its tool lists, never by subscribing',
     'zen_extensions': 'declared and installed by nothing; the browser profile is not managed from here yet',
 }
 """Sections deliberately absent from the registry, each with the reason.
@@ -441,7 +663,12 @@ between them, so a new section has to answer this question to be committed.
 """
 
 BY_NAME: dict[str, Provider] = {provider.name: provider for provider in PROVIDERS}
-BY_SECTION: dict[str, Provider] = {provider.section: provider for provider in PROVIDERS}
+BY_SECTION: dict[str, Provider] = {provider.section: provider for provider in PROVIDERS if provider.section}
+"""Only the providers a manifest can subscribe to.
+
+A toolchain plans from no section, and indexing four of them under '' would make
+`--source runtimes` resolve to whichever was written last.
+"""
 
 
 def named(name: str) -> Provider | None:

@@ -22,7 +22,7 @@ portfolio pin different versions in `.nvmrc` — several want 24, meso wants 26 
 running the wrong one is not a subtle failure: ichrisbirch's frontend suite dies
 outright on 26 with `localStorage is undefined`.
 
-`install/common/language-managers/node.sh` installs the fleet default and links it
+`src/dotfiles/providers/toolchain.py` installs the fleet default and links it
 as fnm's `default` alias. `.zshenv` puts `~/.local/share/fnm/aliases/default/bin`
 on PATH ahead of everything else, so scripts, editors, agents and pre-commit hooks
 resolve `node` to that version without any shell integration. `.zshrc` layers
@@ -47,13 +47,19 @@ sudo pacman -S nodejs npm
 **Configuration**:
 
 npm's global prefix is set to `~/.local/share/npm` by an XDG-located user config
-at `~/.config/npm/npmrc` (deployed from `configs/common/.config/npm/npmrc`).
-`.zshrc` exports `NPM_CONFIG_USERCONFIG` to point npm at that file for interactive
-shells, and the npm-globals installer exports the same variable so non-interactive
-bash sees it too. This keeps globally-installed tools (LSPs, formatters) in
-`~/.local/share/npm/bin` — a user-writable location — independent of the Node.js
-package itself. On Arch, where system npm's default prefix is `/usr`, this is
-what makes `npm install -g` work without sudo.
+at `~/.config/npm/npmrc` (deployed from `configs/common/.config/npm/npmrc`), which
+`.zshrc` points npm at by exporting `NPM_CONFIG_USERCONFIG`. This keeps
+globally-installed tools (LSPs, formatters) in `~/.local/share/npm/bin` — a
+user-writable location — independent of the Node.js package itself. On Arch, where
+system npm's default prefix is `/usr`, this is what makes `npm install -g` work
+without sudo.
+
+The installing side does not rely on that file. `providers/npm.py` passes
+`NPM_CONFIG_PREFIX` on every call, because the npmrc above is a symlink the
+symlink phase deploys and that phase runs *after* the npm one — on a first
+install the file does not exist yet, npm falls back to its built-in prefix, and
+every global install dies with EACCES. The environment variable outranks every
+config file, so it holds in both orders.
 
 ### Python (via uv)
 

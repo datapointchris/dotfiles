@@ -235,9 +235,11 @@ sudo-gated phase the caller was avoiding and report success — which is also wh
 Skipping a provider leaves its resource in the walk with that provider removed, and the
 narrowing is structural: the resource is handed a plan that does not contain what it was
 told to leave alone, so it cannot observe it, diff it or act on it. It is applied per
-resource rather than once for the whole walk, because `toolchains` decides it needs the Go
-runtime by finding `go_tools` items in the plan — narrowing globally by `--skip packages/go`
-would silently stop planning a runtime the caller never named.
+resource rather than once for the whole walk, so a `--skip` aimed at one resource cannot
+change what another one sees. The case that proved it: `toolchains` derived the Go runtime
+by finding `go_tools` items, so a globally narrowed plan made `--skip packages/go` stop
+planning a runtime the caller never named. That derivation is a provider's now and happens
+at resolve time, before a selection exists.
 
 Both commands are manifest-aware when `MACHINE` is set in `~/.env`. The narrowing is
 built once in `install/common/lib/package-query.sh` and read by every tool script, which

@@ -10,9 +10,10 @@
 #   after=$(uv_tool_installed_ref indy) || after=""
 #
 # These exist for the update commands that exit 0 whether or not anything
-# changed and print nothing distinguishing — `uv tool upgrade`, `cargo binstall`,
-# `npm update -g`, tpm's `update_plugins`, `:Lazy update`. For those, observed
-# state is the only thing that separates "updated" from "nothing to do".
+# changed and print nothing distinguishing — `uv tool upgrade`, `npm update -g`,
+# tpm's `update_plugins`, `:Lazy update`. For those, observed state is the only
+# thing that separates "updated" from "nothing to do". A phase that converges
+# through the CLI needs none of this: a Change says what moved and why.
 #
 # Not everything needs one. brew/pacman/apt, rustup, `uv self update`, and the
 # `theme`/`font` update commands all report their own outcome accurately, and
@@ -77,22 +78,6 @@ uv_tool_pinned_rev() {
   sed -n 's/.*git = "[^"]*[?&]rev=\([^"&]*\)".*/\1/p' "$receipt" | head -n1
 }
 
-# Echoes the installed version of a crate, e.g. "v0.26.1". Returns 1 when the
-# crate is not cargo-managed — true for the packages that fall back to a system
-# package on platforms with no prebuilt binary.
-cargo_installed_version() {
-  local crate="$1"
-  cargo install --list 2>/dev/null | awk -v crate="$crate" '
-    $1 == crate && $2 ~ /^v[0-9]/ {
-      sub(/:$/, "", $2)
-      print $2
-      found = 1
-      exit
-    }
-    END { exit !found }
-  '
-}
-
 # Echoes "<package> <version>" per line for every top-level global npm package.
 npm_global_versions() {
   command -v npm >/dev/null 2>&1 || return 1
@@ -100,28 +85,6 @@ npm_global_versions() {
   npm ls -g --depth=0 --json 2>/dev/null \
     | jq -r '.dependencies // {} | to_entries[] | "\(.key) \(.value.version // "unknown")"' \
     | sort
-}
-
-# Echoes the module version stamped into a Go binary, e.g. "v1.7.1", or "(devel)"
-# for one built outside a tagged module. Returns 1 when the file carries no Go
-# build info.
-#
-# Read from the binary's embedded build info rather than by running it: the
-# version is what `go install <pkg>@latest` actually resolved, no tool needs a
-# --version flag, and nothing has to guess which of several version-shaped tokens
-# in a tool's own output is the tool's.
-go_binary_module_version() {
-  local binary_path="$1"
-  [[ -f "$binary_path" ]] || return 1
-  command -v go >/dev/null 2>&1 || return 1
-  go version -m "$binary_path" 2>/dev/null | awk '
-    $1 == "mod" {
-      print $3
-      found = 1
-      exit
-    }
-    END { exit !found }
-  '
 }
 
 # Echoes the short HEAD commit of a git checkout. Returns 1 when the path is not
