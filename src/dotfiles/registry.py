@@ -979,6 +979,8 @@ class SystemConfigProvider(Provider):
             return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
 
         result = self.repair(entry, privilege)
+        if result.refused:
+            return Outcome(change, OutcomeStatus.REFUSED, result.detail)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 
