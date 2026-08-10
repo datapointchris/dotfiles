@@ -74,12 +74,19 @@ class Stage(enum.IntEnum):
     SHELL_PLUGINS = 80
     SYMLINKS = 90
     TMUX_PLUGINS = 100
+    TMUX_PLUGIN_SYNC = 102
     YAZI_PLUGINS = 105
-    """Both after SYMLINKS, because each program reads the config that pass just
-    deployed. Two stages rather than one so each is a phase a caller can select,
-    and because only one of them still shells out at all: TPM owns a plugin list
-    this repo does not declare, and nothing has ever installed a yazi plugin that
-    way."""
+    NVIM_PLUGIN_SYNC = 107
+    """All four after SYMLINKS, because each program reads the config that pass
+    just deployed.
+
+    The two syncs are stages of their own rather than riding the clone beside
+    them, and the ordering is a real dependency both times: TPM installs the
+    plugins `tmux.conf` names and TPM itself is the clone at TMUX_PLUGINS, so the
+    sync cannot precede it. The plan sorts on `(stage, provider, name)`, which
+    would have put `tmux-sync` before `tpm` on the provider name alone — a
+    dependency held by alphabetical accident is one a rename breaks silently.
+    """
 
     SYSTEM_CONFIG = 110
     """Last, where `install.sh` put the two halves of it that existed.
@@ -103,6 +110,57 @@ class Precondition(enum.StrEnum):
 
     NONE = ''
     GITHUB_AUTH = 'github_auth'
+
+    AMD_GPU = 'amd_gpu'
+    """A ROCm build, which is 12 GiB of runtime for a device that may not be there.
+
+    A precondition rather than a coordinate, and the distinction was argued rather
+    than assumed. A seventh axis fails the bar `.planning/machine-axes.md` sets —
+    each of the six is forced by dozens of consumers and this would be forced by
+    one package name, which is what got "offline / restricted egress" rejected as
+    n=1 and told to be a capability requirement instead. `coordinates.Arch` is the
+    same verdict reached independently: a hardware fact deliberately kept out of
+    the tuple because one consumer needed it.
+
+    It also *cannot* be a coordinate, whatever the evidence said. Resolution is
+    machine-independent by construction — `machines check` validates all four
+    manifests offline from any machine, and `machines show <other>` describes that
+    machine rather than this one — so a hardware probe inside `available()` would
+    make the Mac's view of the Arch plan differ from the Arch box's.
+    """
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Preconditions:
+    """Which of them this machine currently meets, measured once per observation.
+
+    A record rather than a probe per item: both are questions about the machine
+    and neither varies between two entries asking it, so one answer is carried to
+    every row that names it. `evidence.measured_preconditions` is what fills it,
+    and the default is the pessimistic reading — a caller that measured nothing
+    has not thereby satisfied anything.
+    """
+
+    github_auth: bool = False
+    amd_gpu: bool = False
+
+    def holds(self, precondition: Precondition) -> bool:
+        """Every member named, and an unnamed one refuses.
+
+        `NONE` answers True by being written down rather than by falling off the
+        end. The difference is what a *new* member gets: adding one is a one-line
+        change in the enum above, and a dispatch that absorbed it silently would
+        answer "satisfied" — a declared precondition quietly no longer gating the
+        install it was declared to gate, which is failing open in the direction
+        that does the thing.
+        """
+        if precondition is Precondition.NONE:
+            return True
+        if precondition is Precondition.GITHUB_AUTH:
+            return self.github_auth
+        if precondition is Precondition.AMD_GPU:
+            return self.amd_gpu
+        return False
 
 
 @dc.dataclass(frozen=True, slots=True)

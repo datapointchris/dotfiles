@@ -36,6 +36,7 @@ from typing import runtime_checkable
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
+from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.session import Session
 
@@ -199,6 +200,31 @@ class Batched(Protocol):
     def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """Do these Changes together, re-checking live as `perform` does."""
         ...
+
+
+def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions) -> Repair:
+    """Whether `apply` could do anything about this one.
+
+    Shared, because the two resources that plan installable items were deciding it
+    two different ways: `packages` weighed the credentials precondition and
+    `system` answered `UNKNOWN → NONE, else AUTOMATIC` and knew nothing about
+    preconditions at all. Which meant a precondition declared on a `system_packages`
+    entry was silently ignored — the thing that has to work for a ROCm build to
+    stop being installed into a machine with no AMD device.
+
+    An unmeasurable item is nobody's to repair: there is no verdict to act on,
+    only one to report. An unmet precondition is `BY_HAND` rather than a failure,
+    because attempting it records a failure for something this machine was never
+    able to have, and the run then exits non-zero for a reason no change to this
+    repo can fix. Reported rather than dropped, because both preconditions are
+    states a machine can be in and neither is permanent from the repo's side — a
+    `gh` login is lost and restored, and the box with the GPU is a different box.
+    """
+    if verdict is Verdict.UNKNOWN:
+        return Repair.NONE
+    if not met.holds(item.precondition):
+        return Repair.BY_HAND
+    return Repair.AUTOMATIC
 
 
 def privileged(changes: Sequence[Change]) -> tuple[Change, ...]:

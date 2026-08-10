@@ -20,6 +20,11 @@ went with the rule.
 The cost is honest and stated at the prompt: a long run can stop for a password
 part-way through. `plan` says in advance how many writes will need one.
 
+**Passwordless is not the same question as prompting, and asking the wrong one
+declined root on every headless machine.** `acquire` checks `sudo -n true` before
+it considers prompting, because a box with `NOPASSWD` needs no terminal and no
+password — see `_already_granted` for the probe that was wrong and what it cost.
+
 `DECLINED` and `UNAVAILABLE` are not fatal, and that has not changed. A privileged
 action is refused and reported, and the unprivileged rest of the run still lands —
 which is what lets the Docker and LXC harnesses converge without a
@@ -95,6 +100,8 @@ class Privilege:
             self._state = Authorization.ALREADY_ROOT
         elif shutil.which('sudo') is None:
             self._state = Authorization.UNAVAILABLE
+        elif _already_granted():
+            self._state = Authorization.GRANTED
         elif not self._offer:
             self._state = Authorization.DECLINED
         else:
@@ -118,6 +125,29 @@ class Privilege:
         # password prompt reach the terminal at all: sudo reads from /dev/tty but
         # writes its prompt to stderr, and a captured stderr swallows it.
         return Authorization.GRANTED if run(['sudo', '-v'], output=Output.DATA).ok else Authorization.DECLINED
+
+
+def _already_granted() -> bool:
+    """Whether sudo would run right now without asking anyone anything.
+
+    **`sudo -n true`, and never `sudo -v`.** The two look interchangeable and are
+    not: `-v` means *validate*, which authenticates and therefore wants a
+    terminal, so it fails with "sudo: A terminal is required to authenticate" on a
+    box with `NOPASSWD: ALL` where sudo plainly works. Every headless caller is
+    that box — `docker exec` without `-t`, a systemd timer, cron, an SSH command,
+    CI — and because the answer is cached for the run, one wrong probe declined
+    root for *everything* after it.
+
+    Measured 2026-08-10 in the wsl e2e container: 33 system packages, the Go
+    toolchain and with it 15 `go install`s at exit 127, and the zdotdir file, all
+    refused as "authorization was declined" while `sudo -n true` exited 0 beside
+    them.
+
+    Asked before `offer` rather than after, deliberately: a caller that must not
+    block still gets root where taking it blocks nobody. A live sudo timestamp
+    answers yes here too, which is the same property and equally welcome.
+    """
+    return run(['sudo', '-n', 'true'], output=Output.QUIET).ok
 
 
 def refusal(state: Authorization) -> str:

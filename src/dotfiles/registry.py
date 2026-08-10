@@ -36,8 +36,10 @@ import inside every method and the explanation each would need.
 from __future__ import annotations
 
 import dataclasses as dc
+import shutil
 from collections.abc import Callable
 from collections.abc import Sequence
+from pathlib import Path
 
 from dotfiles import catalog as catalogs
 from dotfiles import coordinates
@@ -55,6 +57,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import macdefaults
 from dotfiles.providers import npm
+from dotfiles.providers import pluginsync
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
@@ -460,9 +463,10 @@ class CloneProvider(CatalogProvider):
     It deliberately does not override `measure`. Where the checkout belongs is a
     path relative to a home directory, and `evidence` is handed neither — so the
     plugins resource observes these itself rather than this class answering with
-    a `which` that would be wrong for every one of them. The honest fix is the
-    session-taking `observe` the provider protocol grows when the engine walks
-    providers; guessing here in the meantime would be worse than not answering.
+    a `which` that would be wrong for every one of them. `PluginSyncProvider`
+    beside it takes the session-shaped route instead, because two managers answer
+    that question two different ways; here one rule covers all three clones and
+    the resource applying it is not yet worth a second protocol.
     """
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
@@ -480,6 +484,159 @@ class CloneProvider(CatalogProvider):
         else:
             result = clone.clone(item, session.home)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class PluginSyncProvider(Provider):
+    """An external plugin manager, handed control of a list this repo cannot read.
+
+    One synthetic row rather than one per plugin, because there is nothing to plan
+    per plugin: TPM's list is `@plugin` lines in `tmux.conf` and lazy's is lua, so
+    neither has a `packages.yml` section for the resolver to walk. What the row
+    stands for is the *invocation* — the thing `tmux-plugins.sh` and
+    `nvim-plugins.sh` each were, minus the phase that ran them.
+
+    The row is measured rather than performed unconditionally, which the scripts
+    could not manage: each ran its manager on every apply and reported whatever it
+    printed. `providers/pluginsync.py` says what each can honestly be asked.
+    """
+
+    manager: str = ''
+    """What the row is called, which is the manager rather than the program: `tpm`
+    and `lazy` are what own the lists, and the addresses read `tmux-sync/tpm` and
+    `nvim-sync/lazy`."""
+
+    needs: str = ''
+    """A catalog section whose items must be planned first. Empty means ungated by
+    one.
+
+    The tmux sync is the case: TPM installs the plugins, and TPM is the
+    `tmux_plugins` clone. So the manifest gate on the clone gates the sync too,
+    rather than the sync reading the same boolean a second time.
+    """
+
+    feature: str = ''
+    """A manifest feature that gates it, for the sync with no section behind it.
+
+    `nvim_plugins` is in `machine.FEATURES` precisely because lazy bootstraps
+    itself and there is nothing in `packages.yml` to subscribe to.
+    """
+
+    ownable: bool = False
+    """A plugin manager's list belongs to nobody here, so `--owner` skips these
+    whole rather than dropping them for answering `owner is None`."""
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        if self.needs and not any(item.section == self.needs for item in planned):
+            return ()
+        if self.feature and not machine.wants(self.feature):
+            return ()
+        return (
+            DesiredItem(
+                section='',
+                provider=self.name,
+                resource=self.resource,
+                stage=self.stage,
+                name=self.manager,
+                executable='',
+                evidence_path='',
+                precondition=resolve.Precondition.NONE,
+                entry=None,
+                reason=Reason('plugins', f'section:{self.needs}' if self.needs else f'feature:{self.feature}'),
+            ),
+        )
+
+    def pending(self, session: Session) -> str:
+        """What still needs this manager run, or '' where nothing does.
+
+        Session-taking, unlike `evidence`, and this is the class that forced it:
+        what a plugin manager installed is a path under a home directory, and
+        `evidence` is handed neither a home nor a plan. `CloneProvider` names the
+        same gap and leaves the answer to the plugins resource; these two cannot,
+        because they answer it two different ways and a resource branching on the
+        provider name would be the table this registry exists to delete.
+        """
+        return ''
+
+
+@dc.dataclass(frozen=True, slots=True)
+class TmuxSyncProvider(PluginSyncProvider):
+    """TPM, told where to install and given a server that is not the user's."""
+
+    def pending(self, session: Session) -> str:
+        """What TPM has left to do, counting "cannot be asked yet" as work.
+
+        A precondition TPM is missing is supplied by an earlier stage of this same
+        run, so it makes the row a change rather than an unanswerable question —
+        `pluginsync.blocked` carries the reasoning and `install` re-reads it live.
+        """
+        directory = tmux_plugins_dir(session)
+        if directory is None:
+            return ''
+        if reason := pluginsync.blocked(session.home, directory):
+            return reason
+        declared = pluginsync.declared(session.home)
+        missing = pluginsync.uninstalled(declared, directory)
+        if not missing:
+            return ''
+        return f'{len(missing)} of the {len(declared)} plugins tmux.conf declares are not installed: {pluginsync.listed(missing)}'
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        directory = tmux_plugins_dir(session)
+        if directory is None:
+            return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares TPM, so there is nowhere to install its plugins')
+        if reason := pluginsync.blocked(session.home, directory):
+            return Outcome(change, OutcomeStatus.REFUSED, f'{reason}, and the stage that supplies it has not')
+        result = pluginsync.sync_tmux(session.home, directory)
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class NvimSyncProvider(PluginSyncProvider):
+    """lazy.nvim, run headless once so the first real `nvim` is not a clone storm."""
+
+    def pending(self, session: Session) -> str:
+        """Whether lazy has installed what it last recorded — not what the spec says.
+
+        The spec is lua, and the only reader of it is nvim, whose startup installs
+        what it finds missing. So a plugin *added* to the spec and not yet cloned
+        is invisible here, deliberately: that case is lazy's, it repairs itself the
+        next time the editor opens, and claiming to have checked it would be worse
+        than the row saying what it actually looked at.
+
+        What is left is the case the sync exists for, and it is the one this
+        answers exactly — a machine where lazy has never run, whose first `nvim`
+        would otherwise clone fifty repositories before drawing a window.
+        """
+        if pluginsync.recorded(session.home) is None:
+            return 'lazy has not synced on this machine, so nothing is installed ahead of the first nvim'
+        gone = pluginsync.unsynced(session.home)
+        return f'{len(gone)} plugins lazy recorded installing are not on disk: {pluginsync.listed(gone)}' if gone else ''
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        """Refused rather than failed where nvim is absent, because it is a package
+        an earlier stage of this same run installs."""
+        if not shutil.which('nvim'):
+            return Outcome(change, OutcomeStatus.REFUSED, 'neovim is not installed, and the stage that installs it has not')
+        result = pluginsync.sync_nvim()
+        return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+
+
+def tmux_plugins_dir(session: Session) -> Path | None:
+    """Where TPM's plugins belong, or None where nothing declares TPM.
+
+    Derived from the clone rather than declared a second time. `tmux_plugins`
+    names TPM's own `install_dir` because TPM has to be told the path and agree
+    with it, and the directory its plugins share with it is that path's parent — so
+    a constant here would be the same fact written twice, free to disagree with the
+    one the clone provider actually used.
+
+    From `session.plan` rather than the narrowed one a resource is handed: which
+    rows exist is the selection's business, but where TPM installs is a fact about
+    the machine, and `--skip plugins/tpm` must not change the answer.
+    """
+    planned = session.plan.for_provider('tpm')
+    return clone.destination(planned[0], session.home).parent if planned else None
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -823,7 +980,9 @@ PROVIDERS: tuple[Provider, ...] = (
     GitUvToolProvider('uv-git', 'packages', Stage.PYTHON_TOOLS, 'git_uv_tools'),
     CloneProvider('shell-plugin', 'plugins', Stage.SHELL_PLUGINS, 'shell_plugins'),
     CloneProvider('tpm', 'plugins', Stage.TMUX_PLUGINS, 'tmux_plugins'),
+    TmuxSyncProvider('tmux-sync', 'plugins', Stage.TMUX_PLUGIN_SYNC, manager='tpm', needs='tmux_plugins'),
     CloneProvider('yazi-plugin', 'plugins', Stage.YAZI_PLUGINS, 'yazi_plugins'),
+    NvimSyncProvider('nvim-sync', 'plugins', Stage.NVIM_PLUGIN_SYNC, manager='lazy', feature='nvim_plugins'),
     UvToolchain('uv-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='uv', executable='uv'),
     GoToolchain('go-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='go', executable='go', needed_by='go_tools'),
     RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
@@ -1044,8 +1203,23 @@ def executable_of(entry: catalogs.Entry) -> str:
 
 
 def precondition_of(entry: catalogs.Entry) -> resolve.Precondition:
-    needs_auth = getattr(entry, 'requires_github_auth', False)
-    return resolve.Precondition.GITHUB_AUTH if needs_auth else resolve.Precondition.NONE
+    """The one state that stops this entry installing, or NONE.
+
+    One rather than a set, because no entry declares two and a set would be
+    machinery for a case that does not exist. The day one does, this returns the
+    set and `Preconditions.holds` takes it — both are two-line changes, and
+    guessing at the shape now would be one more thing to unpick.
+
+    Plain attribute access, not `getattr(..., False)`. Both fields are on `Entry`,
+    so a rename raises here instead of quietly answering NONE — and NONE is the
+    absence of the gate, which for `requires_amd_gpu` is the 12 GiB it exists to
+    stop.
+    """
+    if entry.requires_github_auth:
+        return resolve.Precondition.GITHUB_AUTH
+    if entry.requires_amd_gpu:
+        return resolve.Precondition.AMD_GPU
+    return resolve.Precondition.NONE
 
 
 def selector_of(section: str, subscription: machines.Subscription) -> str:

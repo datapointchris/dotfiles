@@ -25,6 +25,8 @@ from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
+from dotfiles.resolve import Precondition
+from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -701,3 +703,97 @@ def only_change(live: Session) -> Change:
     found = changes(live)
     assert len(found) == 1, found
     return found[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preconditions: declared on the entry, checked live, never filtered from the plan
+# ─────────────────────────────────────────────────────────────────────────────
+
+ROCM = {'system_packages': [{'name': 'ollama', 'pacman': 'ollama-rocm', 'requires_amd_gpu': True}]}
+ARCH_BOX: dict[str, Any] = {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'}
+EMPTY_INVENTORY = '#!/bin/sh\nexit 0\n'
+"""A pacman that answers with nothing installed, so these read the declaration
+rather than the Arch box running the suite — which really does have ollama-rocm."""
+
+
+def test_a_rocm_build_is_not_installed_into_a_machine_with_no_amd_device(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """12 GiB of compute stack, inert without the device. `BY_HAND` rather than a
+    failure: attempting it records a failure for something this machine was never
+    able to have, and the run then exits non-zero for a reason no change to this
+    repo can fix."""
+    monkeypatch.setattr(ev, 'have_amd_gpu', lambda: False)
+    executable(fake_bin, 'pacman', EMPTY_INVENTORY)
+    live = session(tmp_path, ROCM, ARCH_BOX)
+
+    change = only_change(live)
+
+    assert change.verdict is Verdict.MISSING
+    assert change.repair is Repair.BY_HAND
+    assert not change.actionable, 'apply must not hand this to pacman'
+
+
+def test_the_same_entry_installs_normally_where_the_device_is_there(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ev, 'have_amd_gpu', lambda: True)
+    executable(fake_bin, 'pacman', EMPTY_INVENTORY)
+    live = session(tmp_path, ROCM, ARCH_BOX)
+
+    assert only_change(live).actionable
+
+
+def test_the_row_stays_in_the_plan_either_way(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The difference between a precondition and a coordinate, and the reason this
+    is not a seventh axis: `available()` reads coordinates and coordinates are what
+    a *manifest* says a machine is, so filtering here would make `machines show
+    archlinux-personal-workstation` describe whichever machine ran it."""
+    monkeypatch.setattr(ev, 'have_amd_gpu', lambda: False)
+    live = session(tmp_path, ROCM, ARCH_BOX)
+
+    assert [item.address for item in payload(live)] == ['system/ollama']
+
+
+def test_the_precondition_is_read_off_the_declaration_rather_than_the_name(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An entry that does not declare it is unaffected, however it is spelled — the
+    gate is `requires_amd_gpu`, not a substring of the package name."""
+    monkeypatch.setattr(ev, 'have_amd_gpu', lambda: False)
+    executable(fake_bin, 'pacman', EMPTY_INVENTORY)
+    live = session(tmp_path, {'system_packages': [{'name': 'ollama', 'pacman': 'ollama-rocm'}]}, ARCH_BOX)
+
+    assert only_change(live).actionable
+
+
+def test_the_declared_rocm_entry_is_the_one_in_packages_yml() -> None:
+    """Pinned against the real declaration, because the field is worth nothing if
+    the entry it exists for stops carrying it."""
+    ollama = catalog.load().find('system_packages', 'ollama')
+
+    assert isinstance(ollama, catalog.SystemPackage)
+    assert ollama.pacman == 'ollama-rocm'
+    assert ollama.requires_amd_gpu, 'ollama-rocm pulls 12 GiB of ROCm and must not install without the device'
+
+
+def test_the_probe_is_the_kernel_driver_node_rather_than_a_test_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The flatpak rule: ask the real precondition. `DOTFILES_DOCKER_TEST` would be
+    a test harness telling production code it is being tested, and would say
+    nothing about a machine with an Nvidia card."""
+    monkeypatch.setenv('DOTFILES_DOCKER_TEST', 'true')
+
+    assert ev.have_amd_gpu() is ev.AMD_KFD.exists()
+
+
+def test_an_unnamed_precondition_refuses_rather_than_passing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fall-through decides what a *future* enum member means, and it must not
+    mean "satisfied". Adding a `Precondition` is one line in the enum; a dispatch
+    that absorbs it silently stops gating the install the precondition exists to
+    gate. Asserted with a member this dispatch has never seen.
+    """
+    invented = 'a_precondition_nobody_wrote_a_branch_for'
+    met = Preconditions(github_auth=True, amd_gpu=True)
+
+    assert met.holds(invented) is False, 'an unnamed precondition must fail closed'
+    assert met.holds(Precondition.NONE) is True, 'NONE answers True by being named'

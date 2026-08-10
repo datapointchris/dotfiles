@@ -2,9 +2,9 @@
 
 This was most of `install.sh`. Sixteen bash functions that each read a manifest
 field, printed a header and ran one installer script — dispatch, which is what
-this CLI already is. The bash that remains is the per-tool installers under
-`install/`, which are genuine sequences of shell commands and which step 5
-converts.
+this CLI already is. **No phase runs a script any longer**: every one of them
+converges a selection of the plan, and the last two that did not — TPM and
+lazy.nvim — are providers in `providers/pluginsync.py`.
 
 Two things fall out of the move rather than being added by it. Every gate used to
 cost an interpreter spawn and a re-parse of a 258-entry `packages.yml`; here the
@@ -29,7 +29,6 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import os
-import sys
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -41,14 +40,13 @@ from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import envfile
 from dotfiles import evidence as ev
-from dotfiles import failure_report
 from dotfiles import machine as machines
 from dotfiles import parse_packages
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import session
 from dotfiles import validate
 from dotfiles import versions
-from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import err_console
@@ -61,6 +59,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -78,12 +77,15 @@ TOOL_PATH_DIRS = (
 Nothing here reads `.zshenv`, so a tool is invisible to the phase that consumes it
 unless it is named: the cargo provider needs `cargo` from rustup, the node
 toolchain needs the fnm that arrives as a cargo package, and npm-globals needs the
-Node that fnm links as its default alias. The converged providers put what they
-install on this process's PATH as well — see `providers/toolchain.put_on_path` —
-so this is what the phases that still shell out get, and the two agree.
-Order mirrors `.zshenv` so a phase resolves the same binary an interactive shell
-would. `install/tool-path.sh` said the same thing to `update.sh` and went with it;
-this is the one list now.
+Node that fnm links as its default alias. Order mirrors `.zshenv` so a phase
+resolves the same binary an interactive shell would. `install/tool-path.sh` said
+the same thing to `update.sh` and went with it; this is the one list now.
+
+It is the *declaration* of those directories rather than something applied here:
+what puts them on a run's PATH is `providers/toolchain.put_on_path`, called by
+each provider as it installs. The environment this used to build for installer
+scripts went with the last of them, and what reads this now is the e2e harness and
+the tests that hold `.zshenv` to the same list.
 """
 
 
@@ -107,7 +109,7 @@ class Run:
 
     @property
     def platform(self) -> str:
-        """The overlay whose package scripts this machine runs.
+        """The platform label this machine carries, for the run's header.
 
         Derived from the coordinates rather than read from the manifest, because
         a manifest may declare `coordinates:` *instead of* `platform:` and then
@@ -126,8 +128,8 @@ class Run:
         """The typed declaration, beside the raw `packages` dict above.
 
         Two readings of one file, for the length of the conversion. The dict is
-        what the remaining bash phases query through `parse_packages`; the catalog
-        is what a converted phase needs, because an installer wants `repo`,
+        what the two list-driven phases still narrow through `parse_packages`; the
+        catalog is what a converted phase needs, because an installer wants `repo`,
         `checksum` and `release_tag_prefix` as fields rather than as `.get` calls
         that cannot be wrong out loud. Both go when `Run` collapses into `Session`.
         """
@@ -138,9 +140,9 @@ class Run:
         """The run as the converted resources see it.
 
         Two objects describing one invocation while the conversion is in flight.
-        This one holds what the remaining bash phases need; `Session` holds the
-        typed declaration, and `Run` collapses into it when the last phase
-        converts.
+        This one holds the raw dicts the two list-driven phases still narrow;
+        `Session` holds the typed declaration, and `Run` collapses into it when
+        those two convert.
 
         Cached because the *Session* is what caches: its catalog, machine and plan
         are `cached_property` on the instance, so a plain property handed every
@@ -173,9 +175,10 @@ class Run:
         how a wsl manifest once deployed the linux shell overlay for a whole
         install.
         """
-        name = machine or os.environ.get('MACHINE') or ''
-        if not name:
-            raise Declaration('no machine named, and MACHINE is not set in the environment')
+        try:
+            name = session.resolve_machine(machine)
+        except session.NoMachine as unnamed:
+            raise Declaration(str(unnamed)) from unnamed
 
         manifest_file = paths.MANIFESTS_DIR / f'{name}.yml'
         if not manifest_file.is_file():
@@ -199,9 +202,6 @@ class Run:
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
         )
 
-    def wants(self, feature: str) -> bool:
-        return self.manifest.get(feature) is True
-
     def declared(self, kind: str) -> list[str]:
         """What this machine declares of one kind, narrowed by `--owner`.
 
@@ -211,35 +211,6 @@ class Run:
         """
         data = parse_packages.filter_packages_by_owner(self.packages, self.owner) if self.owner else self.packages
         return list(_FILTERS[kind](data, self.manifest))
-
-    def environment(self) -> dict[str, str]:
-        """What every installer script reads out of its environment.
-
-        `DOTFILES_PYTHON` is the interpreter those scripts use to read
-        `packages.yml`; this process is one by construction. `PLATFORM` is
-        exported because `detect_platform` honours it and otherwise greps
-        `/proc/version`, which is a guess.
-        """
-        environment = {
-            'DOTFILES_DIR': str(paths.REPO_ROOT),
-            'DOTFILES_PYTHON': sys.executable,
-            'TERM': os.environ.get('TERM') or 'xterm',
-            'PATH': os.pathsep.join([os.path.expandvars(entry) for entry in TOOL_PATH_DIRS] + [os.environ['PATH']]),
-            'MACHINE': self.machine,
-            'PLATFORM': self.platform,
-            'FAILURES_LOG': str(self.failures_log),
-            'INSTALLER_ACTION': 'installation',
-            'FORCE_INSTALL': 'true' if self.reinstall else 'false',
-            'OFFLINE_MODE': 'true' if self.offline else 'false',
-        }
-        if self.owner:
-            environment['PACKAGE_OWNER'] = self.owner
-        # An installer's own stdout is a pipe, so colors.sh correctly but
-        # unhelpfully turns colour off for every one of them. FORCE_COLOR is how
-        # the wrapper tells them what it can see and they cannot.
-        if sys.stderr.isatty():
-            environment['FORCE_COLOR'] = '1'
-        return environment
 
 
 class Declaration(Exception):
@@ -255,71 +226,21 @@ their own work rather than converging a selection of the plan."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Running one installer
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def run_installer(context: Run, script: Path, tool: str, *args: str, env: dict[str, str] | None = None) -> bool:
-    """Run one installer, streaming it live and keeping what a report needs.
-
-    Streamed rather than buffered for the reason `install/run-installer.sh`
-    recorded before this replaced it: buffering made a long install look hung,
-    and capturing stderr alone silently dropped TPM's cause, which it prints on
-    stdout. `effects.run` does both, which is why there is no second temp file
-    here for the console output — the transcript is the return value.
-    """
-    if not script.is_file():
-        warn(f'no installer script at {script} (machines check should have caught this)')
-        return False
-
-    records = Path(tempfile.mkstemp(prefix='dotfiles-records-', suffix='.jsonl')[1])
-    try:
-        completed = run(
-            ['bash', str(script), *args],
-            cwd=paths.REPO_ROOT,
-            env={**context.environment(), 'FAILURE_RECORDS': str(records), **(env or {})},
-            output=Output.STREAM,
-        )
-        if completed.ok:
-            return True
-        _record_failure(context, completed, records, script, tool)
-        return False
-    finally:
-        records.unlink(missing_ok=True)
-
-
-def _record_failure(context: Run, completed: Completed, records: Path, script: Path, tool: str) -> None:
-    warn(f'{tool} installation failed (see {context.failures_log})')
-    report = failure_report.render_report(
-        failure_report.read_records(records),
-        completed.transcript,
-        str(script),
-        tool,
-        completed.returncode,
-        'installation',
-    )
-    with context.failures_log.open('a') as log:
-        log.write(report)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # The phases
 # ─────────────────────────────────────────────────────────────────────────────
 
-COMMON = paths.INSTALL_DIR / 'common'
-
 
 def _overlay(coords: coordinates.Coordinates) -> str:
-    """Which `install/<overlay>/` directory these coordinates ask for.
+    """Which platform label these coordinates carry.
 
     Keyed on the package manager, with apt split by host — which is the whole of
     what the four platform labels ever distinguished here.
 
-    What is left of it is the `PLATFORM` in `environment()`, which the remaining
-    installer scripts read so `detect_platform` does not have to grep
-    `/proc/version` and guess. The package scripts it used to select are gone, and
-    with them `install/{archlinux,macos,linux}/` — the difference between the
-    apt overlays, the docker-ce family, is `excludes_host` in the declaration now.
+    It selects nothing any more. `install/{archlinux,macos,linux}/` went with the
+    package scripts, the difference between the apt overlays is `excludes_host` in
+    the declaration, and the last consumer of the `PLATFORM` this exported was an
+    installer script that no longer exists. What survives is the word in the run's
+    header, and the four labels the shell overlays are still keyed by.
 
     So Arch-on-WSL lands on the pacman answer, which is the one a fused `PLATFORM`
     string could not give: it has no row of its own, and every coordinate it needs
@@ -543,7 +464,12 @@ def _converge(context: Run, selection: engine.Selection) -> bool:
 
     outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
     for outcome in outcomes:
-        if isinstance(outcome, Outcome) and outcome.ok:
+        # A refusal is `ok` — it wrote nothing and must not fail the run — but it
+        # is not a success, and a green tick in front of "neovim is not installed"
+        # reads as one. Three statuses, three marks.
+        if isinstance(outcome, Outcome) and outcome.status in (OutcomeStatus.REFUSED, OutcomeStatus.SKIPPED):
+            err_console.print(f'[yellow]-[/] {outcome.message or outcome.change.item}')
+        elif isinstance(outcome, Outcome) and outcome.ok:
             err_console.print(f'[green]✓[/] {outcome.message or outcome.change.item}')
         elif isinstance(outcome, Outcome):
             _install_failed(context, outcome.change.item, outcome.message)
@@ -570,18 +496,16 @@ def _symlinks(context: Run) -> bool:
 
 
 def _tmux_plugins(context: Run) -> bool:
-    """TPM is a declared clone; the plugins it installs are not.
+    """TPM is a declared clone; the plugins it installs are TPM's own list.
 
-    Its list is `@plugin` lines in `tmux.conf`, which TPM reads itself, so the
-    second half stays a script: there is nothing in `packages.yml` for the
-    resolver to plan per plugin.
+    Both halves are rows now, and adjacent stages of one walk rather than a clone
+    followed by a script the phase remembered to run afterwards. The list is still
+    `@plugin` lines in `tmux.conf` and still TPM's to install — what changed is
+    that the row is measured against that file first, so a machine with its plugins
+    already cloned no longer starts a tmux server to be told so.
     """
     heading('tmux plugins')
-    if not _converge(context, engine.Selection.of('plugins/tpm')):
-        return False
-    if not context.wants('tmux_plugins'):
-        return True
-    return run_installer(context, COMMON / 'plugins' / 'tmux-plugins.sh', 'tmux-plugins')
+    return _converge(context, engine.Selection.of('plugins/tpm', 'plugins/tmux-sync'))
 
 
 def _yazi_plugins(context: Run) -> bool:
@@ -597,10 +521,14 @@ def _yazi_plugins(context: Run) -> bool:
 
 
 def _nvim_plugins(context: Run) -> bool:
-    if not context.wants('nvim_plugins'):
-        return True
+    """The `nvim_plugins` gate is the provider's now, not a branch here.
+
+    Which is what makes it visible: `dotfiles plan` prints the row on a machine
+    that wants it and prints nothing on one that does not, where the branch made
+    the difference something only a reader of this function could see.
+    """
     heading('Neovim plugins')
-    return run_installer(context, COMMON / 'plugins' / 'nvim-plugins.sh', 'nvim-plugins')
+    return _converge(context, engine.Selection.of('plugins/nvim-sync'))
 
 
 def _system_config(context: Run) -> bool:
@@ -638,8 +566,8 @@ class Phase:
 
     providers: tuple[str, ...]
     """Which of `registry.PROVIDERS` this phase installs, or () for one `--owner`
-    can never select: the symlink pass, the Neovim plugins Lazy syncs from its own
-    lockfile, and the system configuration, whose rows belong to nobody on GitHub.
+    can never select: the symlink pass and the system configuration, whose rows
+    belong to nobody on GitHub.
 
     This replaces a hand-maintained `owner_aware` boolean. Ownership is already a
     fact about the entries, so the question "can `--owner` narrow this phase" is
@@ -664,9 +592,9 @@ REGISTRY = (
     Phase('uv-tools', 'packages', ('uv', 'uv-git'), _uv_tools),
     Phase('shell-plugins', 'plugins', ('shell-plugin',), _shell_plugins),
     Phase('symlinks', 'symlinks', (), _symlinks),
-    Phase('tmux-plugins', 'plugins', ('tpm',), _tmux_plugins),
+    Phase('tmux-plugins', 'plugins', ('tpm', 'tmux-sync'), _tmux_plugins),
     Phase('yazi-plugins', 'plugins', ('yazi-plugin',), _yazi_plugins),
-    Phase('nvim-plugins', 'plugins', (), _nvim_plugins),
+    Phase('nvim-plugins', 'plugins', ('nvim-sync',), _nvim_plugins),
     Phase('system-config', 'system', (), _system_config),
 )
 

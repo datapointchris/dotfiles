@@ -32,6 +32,47 @@ class NoMachine(Exception):
     """Nothing named a machine, and `~/.env` does not either."""
 
 
+def declared_machine() -> str:
+    """What `~/.env` says this machine is, or '' where there is no such file.
+
+    Module-level rather than a method, because both front doors need it and only
+    one of them had it. `Session.resolve` reads the *file* and not only the
+    environment so that a run outside a login shell still knows what it is — a
+    systemd user timer, a launchd agent, `docker exec` and cron all inherit no
+    `~/.env`. `apply.Run.resolve` was written before that and never learned it,
+    so `dotfiles apply` with no `--machine` failed with "MACHINE is not set in the
+    environment" on a machine whose `~/.env` said exactly what it was.
+
+    Found by the wsl e2e run, whose second `apply` — the idempotence assertion —
+    is a bare `docker exec` and is precisely that context.
+    """
+    try:
+        return envfile.read(Path.home() / '.env').get('MACHINE', '')
+    except OSError:
+        return ''
+
+
+def resolve_machine(machine: str | None = None) -> str:
+    """The machine this run is about, from the argument, the environment or `~/.env`.
+
+    One function raising one error, because the two front doors were saying
+    different things about the same failure: `Session.resolve` listed the known
+    machines and `apply.Run.resolve` named the two places it had looked — with
+    `dotfiles apply`, the more-used door, getting the less actionable half. Two
+    messages kept in step by hand is the arrangement that produced the bug this
+    is the tail of, so the message has one home.
+
+    Raises `NoMachine`; `apply` catches it and re-raises as its own `Declaration`
+    for the exit code, which is a translation rather than a second opinion.
+    """
+    name = machine or os.environ.get('MACHINE') or declared_machine()
+    if not name:
+        raise NoMachine(
+            f'no machine named, and neither MACHINE nor ~/.env says what this is. Known: {", ".join(machines.names()) or "none"}'
+        )
+    return name
+
+
 @dc.dataclass(frozen=True)
 class Session:
     """One invocation's world.
@@ -78,17 +119,7 @@ class Session:
         with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
         was. Found by installing the timer and reading its first failure.
         """
-        name = machine or os.environ.get('MACHINE') or cls._declared_machine()
-        if not name:
-            raise NoMachine(f'no machine named, and MACHINE is unset. Known: {", ".join(machines.names()) or "none"}')
-        return cls(machine_name=name, **kwargs)  # type: ignore[arg-type]
-
-    @staticmethod
-    def _declared_machine() -> str:
-        try:
-            return envfile.read(Path.home() / '.env').get('MACHINE', '')
-        except OSError:
-            return ''
+        return cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
 
     @functools.cached_property
     def catalog(self) -> catalogs.Catalog:

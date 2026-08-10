@@ -160,6 +160,32 @@ class Entry:
     min_version: str = ''
     max_version: str = ''
 
+    requires_github_auth: bool = False
+    """Whether reaching this entry's upstream needs a GitHub login.
+
+    On the base rather than on the two sections that use it today, for the reason
+    `reports_version` is: it is a property of the artifact, and any section can
+    name a private repo. Declared here, `precondition_of` reads it as a plain
+    attribute that raises on a rename instead of a `getattr` default standing in
+    for "this subclass has no such field" — whose quiet answer is
+    `Precondition.NONE`, the absence of the gate.
+    """
+
+    requires_amd_gpu: bool = False
+    """Whether this entry is a ROCm build, useless without an AMD device.
+
+    Checked live and never filtered out of the plan: `available()` reads
+    coordinates, and coordinates are what a *manifest* says a machine is, so
+    resolution stays the same answer from every machine.
+    `resolve.Precondition.AMD_GPU` carries the argument for why this is not a
+    seventh coordinate axis.
+
+    One entry uses it — `ollama`, whose pacman name is `ollama-rocm` and whose
+    dependency closure is 12 GiB. On the base like its neighbour above, which
+    means any section may declare it while only the resources that evaluate
+    preconditions honour it. The same trade `reports_version` accepts.
+    """
+
     reports_version: bool = True
     """Whether asking this binary for its version is a read.
 
@@ -306,7 +332,6 @@ class GithubRelease(Entry):
     binary_link: str = ''
     release_tag_prefix: str = ''
     requires_wsl_host: bool = False
-    requires_github_auth: bool = False
     checksum: str = CHECKSUM_REQUIRED
 
     @property
@@ -419,7 +444,6 @@ class GitUvTool(Entry):
 
     repo: str
     tracks_branch: bool = False
-    requires_github_auth: bool = False
 
     @property
     def owner(self) -> str | None:

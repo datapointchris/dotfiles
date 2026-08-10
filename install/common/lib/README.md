@@ -7,22 +7,6 @@ because two or more of them needed the same thing and a copy in each was driftin
 comment says what the function is for. This page is the *why each library exists*,
 which is the part a reader cannot recover from the code.
 
-## failure-logging.sh
-
-Records a failure as one JSON object appended to `$FAILURE_RECORDS`, for
-`apply.run_installer` to render into `$FAILURES_LOG` when the installer exits.
-
-Structured records, on their own file descriptor, because the previous design put
-`FAILURE_TOOL='x'` markers on stderr and parsed them back out with grep, cut, sed
-and awk. Every part of that was a workaround for stderr carrying two things at
-once: the wrapper had to filter markers out of what it showed, markers had to be
-stripped from captured output so it could not forge a record, and splitting
-several failures apart needed an awk state machine.
-
-Nothing is written when `$FAILURE_RECORDS` is unset, so an installer run by hand
-prints its failure instead of silently swallowing it. Full reasoning:
-`src/dotfiles/failure_report.py`.
-
 ## version-helpers.sh
 
 Version comparison and the GitHub releases lookup, for the two scripts that still
@@ -43,6 +27,12 @@ Building a WSL distribution image, which is a sequence of `wsl.exe` calls with
 nothing in common with an installer.
 
 ## What is not here any more
+
+`failure-logging.sh` appended a JSON record per failure to `$FAILURE_RECORDS` for
+the wrapper to render when an installer exited. It went with the last two
+installers — TPM's and lazy.nvim's — because a provider returns an `Outcome` and a
+run record already holds every one of them, so a second channel out of a
+subprocess had nothing left to carry.
 
 `installed-versions.sh`, `package-query.sh`, `missing-tools.sh` and
 `uv-git-tools.sh` served `update.sh`, which is gone: reconcile has one verb, and

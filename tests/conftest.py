@@ -200,7 +200,8 @@ def pytest_collection_modifyitems(config, items):
 def resolve_interpreters(config, items):
     """Skip what needs a missing interpreter, or refuse the whole run.
 
-    `tests/shell` drives real bash, zsh and tmux. A machine without one should
+    `tests/shell` drives real bash and zsh, and `tests/install/test_pluginsync.py`
+    a real tmux. A machine without one should
     skip those cases and still run the rest; CI must do the opposite, because a
     runner image that has no zsh reports green having run a third of that
     directory. Both readings are right for their runner, which is why the marker

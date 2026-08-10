@@ -11,14 +11,18 @@ which is the pure question "what work would this do" separated from doing it.
 
 from __future__ import annotations
 
+import io
 import json
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
+from dotfiles.commands import machines
 from dotfiles.main import app
+from dotfiles.resolve import Precondition
 from dotfiles.vocabulary import ExitCode
 
 runner = CliRunner()
@@ -197,3 +201,26 @@ def test_report_list_on_an_empty_history_is_empty_not_an_error(empty_state: Path
 
 # What `apply` would do without doing it is `tests/cli/test_phase_registry.py`,
 # which is also where the Python registry is checked against the bash one.
+
+
+def test_a_precondition_is_annotated_on_the_row_it_belongs_to() -> None:
+    """It was not, for as long as it existed: rich reads `[amd_gpu]` as a style tag
+    and swallowed it, silently, on every entry that declared one.
+
+    Asserted on the value the row is built from rather than on the row. Matching
+    the printed line means pinning a terminal width to steady it, which only
+    picks which terminal the suite pretends to be — and it pretends wrong for
+    whoever actually ran the command.
+    """
+    assert machines.precondition_note(Precondition.AMD_GPU) == r'  \[amd_gpu]'
+    assert machines.precondition_note(Precondition.GITHUB_AUTH) == r'  \[github_auth]'
+    assert machines.precondition_note(Precondition.NONE) == '', 'an item with no precondition gets no suffix'
+
+
+def test_the_annotation_survives_the_renderer_that_used_to_eat_it() -> None:
+    """The escape is the content, so one case goes through a real console: an
+    unescaped `[amd_gpu]` reaches the terminal as nothing at all."""
+    written = io.StringIO()
+    Console(file=written, width=200, force_terminal=False).print(f'row{machines.precondition_note(Precondition.AMD_GPU)}')
+
+    assert '[amd_gpu]' in written.getvalue()

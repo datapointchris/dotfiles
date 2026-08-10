@@ -33,9 +33,16 @@ def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def fake_sudo(directory: Path, log: Path, exit_code: int = 0) -> None:
+def fake_sudo(directory: Path, log: Path, exit_code: int = 0, *, passwordless: bool = False) -> None:
+    """A sudo that records its argv and answers `-n` the way a real one would.
+
+    The `-n` split is the whole point of the stub. `sudo -n true` is what a
+    machine with `NOPASSWD` answers yes to with no terminal and no password, and
+    `sudo -v` is what needs one — a stub that treats them alike cannot tell the
+    two probes apart, which is exactly how the wrong one shipped.
+    """
     script = directory / 'sudo'
-    script.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit {exit_code}\n')
+    script.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\n[ "$1" = "-n" ] && exit {0 if passwordless else 1}\nexit {exit_code}\n')
     script.chmod(script.stat().st_mode | stat.S_IEXEC)
 
 
@@ -92,12 +99,46 @@ def test_a_machine_without_sudo_reports_unavailable_rather_than_failing(fake_bin
 @NOT_ROOT
 def test_a_caller_that_must_not_block_declines_without_prompting(tmp_path: Path, fake_bin: Path) -> None:
     """`offer=False` is how a non-interactive caller says so. Without it, root is
-    acquired at the write — which is right at a terminal and a hang under a timer."""
+    acquired at the write — which is right at a terminal and a hang under a timer.
+
+    The `-n` probe still runs, because it is the thing that cannot block; what
+    `offer=False` forbids is the prompt after it.
+    """
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log)
 
     assert Privilege(offer=False).acquire('anything') is Authorization.DECLINED
-    assert recorded(log) == []
+    assert recorded(log) == ['-n true']
+
+
+@NOT_ROOT
+def test_a_passwordless_machine_is_granted_without_a_terminal(tmp_path: Path, fake_bin: Path) -> None:
+    """The regression. `sudo -v` means *validate*, which authenticates and so wants
+    a terminal — it fails with "a terminal is required" on a box with `NOPASSWD:
+    ALL` where sudo plainly works. Every headless caller is that box, and because
+    the answer is cached for the run, one wrong probe declined root for everything
+    after it.
+
+    Measured in the wsl e2e container: 33 system packages, the Go toolchain and
+    with it 15 `go install`s at exit 127, and the zdotdir file, all refused as
+    "authorization was declined" while `sudo -n true` exited 0 beside them.
+    """
+    log = tmp_path / 'calls'
+    fake_sudo(fake_bin, log, exit_code=1, passwordless=True)
+
+    assert Privilege().acquire('install 94 packages') is Authorization.GRANTED
+    assert recorded(log) == ['-n true'], 'a machine needing no password must never be asked for one'
+
+
+@NOT_ROOT
+def test_a_passwordless_machine_is_granted_even_where_prompting_is_forbidden(tmp_path: Path, fake_bin: Path) -> None:
+    """`offer` is about prompting, not about escalating — the field says so. A timer
+    on a passwordless box gets root, because taking it blocks nobody."""
+    log = tmp_path / 'calls'
+    fake_sudo(fake_bin, log, exit_code=1, passwordless=True)
+
+    assert Privilege(offer=False).acquire('anything') is Authorization.GRANTED
+    assert recorded(log) == ['-n true']
 
 
 @NOT_ROOT
@@ -106,7 +147,7 @@ def test_a_declined_password_is_declined_rather_than_retried(tmp_path: Path, fak
     fake_sudo(fake_bin, log, exit_code=1)
 
     assert Privilege().acquire('add chris to the docker group') is Authorization.DECLINED
-    assert recorded(log) == ['-v']
+    assert recorded(log) == ['-n true', '-v']
 
 
 @NOT_ROOT
@@ -119,7 +160,7 @@ def test_a_refusal_is_not_reopened_for_every_later_write(tmp_path: Path, fake_bi
 
     assert privilege.acquire('first') is Authorization.DECLINED
     assert privilege.acquire('second') is Authorization.DECLINED
-    assert recorded(log) == ['-v']
+    assert recorded(log) == ['-n true', '-v']
 
 
 @NOT_ROOT
@@ -133,7 +174,7 @@ def test_two_privileged_writes_ask_for_one_password(tmp_path: Path, fake_bin: Pa
     assert privilege.run(['usermod', '-aG', 'docker', 'chris'], reason='group').ok
     assert privilege.run(['systemctl', 'enable', 'docker'], reason='unit').ok
 
-    assert recorded(log) == ['-v', 'usermod -aG docker chris', 'systemctl enable docker']
+    assert recorded(log) == ['-n true', '-v', 'usermod -aG docker chris', 'systemctl enable docker']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +191,7 @@ def test_a_write_acquires_root_by_itself(tmp_path: Path, fake_bin: Path) -> None
     fake_sudo(fake_bin, log)
 
     assert Privilege().run(['usermod', '-aG', 'docker', 'chris'], reason='group').ok
-    assert recorded(log) == ['-v', 'usermod -aG docker chris']
+    assert recorded(log) == ['-n true', '-v', 'usermod -aG docker chris']
 
 
 @NOT_ROOT

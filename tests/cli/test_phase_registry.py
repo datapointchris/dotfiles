@@ -18,20 +18,22 @@ success.
 from __future__ import annotations
 
 import dataclasses
-import subprocess
 from collections import Counter
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
 from dotfiles import apply
 from dotfiles import catalog
 from dotfiles import coordinates
+from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import resolve
+from dotfiles.effects import Completed
 from dotfiles.providers import npm
 from dotfiles.resolve import Stage
 
@@ -113,42 +115,53 @@ def context(**overrides: object) -> apply.Run:
     return apply.Run(machine='linux-lxc-server', coords=coords, packages={}, manifest={}, **overrides)  # type: ignore[arg-type]
 
 
-def test_the_interpreter_handed_down_can_import_this_package() -> None:
-    """The installer scripts read packages.yml through `$DOTFILES_PYTHON`.
+SHELLS = frozenset({'bash', 'sh', 'zsh', 'dash'})
 
-    Handing them one that cannot import `dotfiles` is the failure the whole
-    system-python bootstrap existed to prevent, so this asserts the interpreter
-    rather than the variable being set.
+SHELL_SURVIVORS = frozenset({'sync-windows-shell.sh'})
+"""The one script a phase may still reach, and only on a WSL host.
+
+Git Bash reads the `.bashrc` it writes, so its *output* has to be shell; the
+generator does not, and step E converts it. Named here rather than tolerated, so
+that conversion empties this set and anything else appearing in it is a new
+phase shelling out.
+"""
+
+
+@pytest.mark.parametrize('name', machines.names())
+def test_no_phase_hands_work_to_a_shell(name: str, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """The property the whole conversion is for, asserted by running the phases.
+
+    Every phase converges a selection of the plan; none shells out to an
+    installer. Asserting that the removed symbols are gone would pass for a new
+    phase calling `effects.run(['bash', ...])` directly, which is the shape the
+    conversion exists to end — so this records what actually reached the world.
+
+    The engine is stubbed rather than exercised: what it does with a plan is its
+    own tests' subject, and what this asks is whether a phase *body* reaches a
+    shell on its own. Every machine, because the two gated calls in
+    `deploy.epilogue` fire on coordinates rather than on the phase.
     """
-    interpreter = context().environment()['DOTFILES_PYTHON']
-    subprocess.run([interpreter, '-c', 'import dotfiles, yaml'], check=True)
+    invoked: list[tuple[str, ...]] = []
 
+    def record(command, **kwargs):
+        argv = tuple(str(part) for part in command)
+        invoked.append(argv)
+        return Completed(argv, 0, '')
 
-def test_owner_reaches_the_installers_that_do_their_own_narrowing() -> None:
-    """Selecting owner-aware phases is not enough on its own.
+    monkeypatch.setenv('HOME', str(tmp_path))
+    monkeypatch.setattr(apply, 'run', record)
+    monkeypatch.setattr(deploy, 'run', record)
+    monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter(()))
+    monkeypatch.setattr(engine, 'execute', lambda *args, **kwargs: iter(()))
 
-    The list-driven scripts that are left build their own packages.yml query and
-    read `PACKAGE_OWNER` from the environment to narrow it. Before that was
-    shared, only the Go one read it — so `--mine` ran cargo, uv and npm in full
-    while claiming to filter. The Go one converges through the plan now, which is
-    narrowed before a provider sees it; the three that remain still need this.
-    """
-    assert context(owner='datapointchris').environment()['PACKAGE_OWNER'] == 'datapointchris'
-    assert 'PACKAGE_OWNER' not in context().environment()
+    declared = machines.load(name)
+    context = apply.Run(machine=name, coords=declared.coordinates, packages={}, manifest={})
+    for phase in apply.REGISTRY:
+        phase.run(context)
 
-
-def test_the_platform_handed_down_is_the_declared_one() -> None:
-    """`detect_platform` honours $PLATFORM and otherwise greps /proc/version.
-
-    Leaving it unset is how a wsl manifest once deployed the linux shell overlay
-    for a whole install — it worked on an established machine only because a
-    pre-existing ~/.env happened to export the right answer.
-
-    Derived from the coordinates rather than read from the manifest, so the four
-    labelled platforms must still come out with the names their script
-    directories have.
-    """
-    assert context().environment()['PLATFORM'] == 'linux'
+    shelled = [argv for argv in invoked if Path(argv[0]).name in SHELLS]
+    stowaways = [argv for argv in shelled if Path(argv[-1]).name not in SHELL_SURVIVORS]
+    assert stowaways == [], f'{name}: a phase handed work to a shell'
 
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
@@ -177,15 +190,8 @@ def test_a_machine_declaring_coordinates_can_be_applied() -> None:
     run = context(coords=arch_on_wsl)
 
     assert apply._overlay(arch_on_wsl) == 'archlinux'
-    assert run.environment()['PLATFORM'] == 'archlinux'
+    assert run.platform == 'archlinux'
     assert run.target == coordinates.target_for(arch_on_wsl)
-
-
-def test_the_tool_path_is_prepended_rather_than_replacing_the_caller_s() -> None:
-    """A phase still needs `bash`, `git` and `tar`, which live in neither."""
-    path = context().environment()['PATH'].split(':')
-    assert path[: len(apply.TOOL_PATH_DIRS)] != path
-    assert '/usr/bin' in path or '/bin' in path
 
 
 def test_the_system_packages_phase_converges_a_selection_rather_than_running_scripts() -> None:
@@ -312,3 +318,46 @@ def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatc
     _ = run.declaration
 
     assert reads == {'catalog': 2, 'machine': 2}
+
+
+def test_the_machine_is_read_from_the_env_file_when_the_environment_is_bare(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`Session.resolve` reads `~/.env` as well as the environment, for a reason it
+    states: a systemd user timer, a launchd agent, `docker exec` and cron inherit
+    no `~/.env`. `Run.resolve` predates that and never learned it, so `dotfiles
+    apply` with no `--machine` failed with "MACHINE is not set" on a machine whose
+    `~/.env` said exactly what it was — found by the e2e idempotence assertion,
+    which is a bare `docker exec`.
+    """
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    (tmp_path / '.env').write_text('MACHINE=linux-lxc-server\n')
+
+    assert apply.Run.resolve().machine == 'linux-lxc-server'
+
+
+def test_a_machine_named_nowhere_at_all_is_still_a_usage_error(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+
+    with pytest.raises(apply.Declaration):
+        apply.Run.resolve()
+
+
+def test_both_front_doors_give_the_same_diagnosis_for_an_unnamed_machine(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One failure, one message. They disagreed — `Session.resolve` listed the
+    known machines and `Run.resolve` named where it had looked — and `apply`, the
+    more-used door, got the less actionable half. Two messages kept in step by
+    hand is what produced the bug this is the tail of.
+    """
+    from dotfiles import session as sessions
+
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+
+    with pytest.raises(apply.Declaration) as through_apply:
+        apply.Run.resolve()
+    with pytest.raises(sessions.NoMachine) as through_session:
+        sessions.Session.resolve()
+
+    assert str(through_apply.value) == str(through_session.value)
+    assert 'linux-lxc-server' in str(through_apply.value), 'the message has to name what it would accept'

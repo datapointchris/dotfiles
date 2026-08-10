@@ -1,48 +1,45 @@
-# Docker-Based Installer Testing
+# The container image the e2e tier installs into
 
-Run one installer script in an isolated container, with real network calls and a
-real installation. For the whole-machine equivalent — a full `install.sh` per
-environment, including the offline lifecycle — see `tests/e2e/`.
+One image, built once, with the expensive half of a machine already on it. For
+what runs *in* it — a full `dotfiles apply` per environment, including the offline
+lifecycle — see `tests/e2e/`.
 
 ## What is here
 
 `ls` this directory rather than trusting a list; each script's `--help` says what
-it takes. The shape is a three-tier image strategy, and that is the part worth
+it takes. The shape is a two-tier image strategy, and that is the part worth
 explaining:
 
 1. Base OS (`ubuntu:26.04`, matching the work WSL)
 2. A reusable image with system packages already installed
-3. Ephemeral per-test containers built from it
 
-Tier 2 is why a test takes seconds rather than minutes: the expensive half —
-`apt` — happens once, and every test reuses it. `build-base.sh --ubuntu 24.04`
-builds and tags an older one separately.
-
-## Running one
+Tier 2 is why a run takes seconds to start rather than minutes: the expensive
+half — `apt` — happens once, and every container reuses it.
+`build-base.sh --ubuntu 24.04` builds and tags an older one separately.
 
 ```bash
-./build-base.sh                                              # one-time, minutes
-./run-installer-test.sh install/common/plugins/tmux-plugins.sh --validate tmux
+./build-base.sh                    # one-time, minutes
+uv run pytest tests/e2e -m docker  # what uses it
 ```
 
-`--keep` leaves the container for `docker exec -it <name> /bin/bash`, and
-`--no-cache` on `build-base.sh` forces a rebuild.
+`--no-cache` forces a rebuild.
 
-## What this no longer covers
+## Why there is no per-installer runner any more
 
-The `github_releases` and `custom_installers` entries were 32 bash scripts and are
-now `src/dotfiles/providers/`, so there is nothing here to point at one. Their
-coverage is `tests/install/test_ghrelease.py` and
-`tests/install/test_custom_installers.py` for the install sequences,
-`tests/install/test_release_urls.py --e2e` for what upstream actually publishes,
-and `tests/e2e/` for a real install in a real container.
+There are no installer scripts. `run-installer-test.sh` took one script path, ran
+it in a container and validated a binary came out, and it went with the last
+script it could be pointed at — TPM's, in the commit that made the two plugin
+managers providers. The 32 release and custom installers had gone the same way
+before it, and the platform package scripts before them.
 
-What remains testable here is a script: the language-tool installers and the
-per-platform system-package scripts.
+What replaced its coverage is per-mechanism: `tests/install/` for the install
+sequences a provider drives, `tests/install/test_release_urls.py --e2e` for what
+upstream actually publishes, and `tests/e2e/` for a real install in a real
+container — which is the one thing this image is still for.
 
 ## Troubleshooting
 
 **Base image not found** — `./build-base.sh`.
 
-**Permission errors** — the runner fixes ownership after copying files; check the
+**Permission errors** — the build fixes ownership after copying files; check the
 `chown` step completed.
