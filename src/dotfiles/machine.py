@@ -156,7 +156,7 @@ class Requirement:
     """How to get this one back, where safekeep is not the answer.
 
     Every entry here is restored from a snapshot except the one that says where
-    the snapshots are: `~/.config/safekeep/default.toml` on a machine with no
+    the snapshots are: `~/.config/safekeep/` on a machine with no
     backup yet cannot be restored from the backup it configures. The default
     covers the rest, and an entry overrides it only when it is genuinely wrong.
     """

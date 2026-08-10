@@ -121,9 +121,15 @@ required_files:
   # is where the snapshots go and that is a property of the machine. Absence is
   # silent in the way this register is for: safekeep with no config copies
   # nothing, and nothing runs it interactively to notice.
+  #
+  # The directory, not a filename: safekeep privileges no name. `resolve_config`
+  # globs `*.toml` and takes the single match whatever it is called, `default` is
+  # only what `config init` calls a config you did not name, and a machine may
+  # legitimately hold several — one per destination. Pinning `default.toml`
+  # reported a machine carrying `work.toml` as missing a file it had.
   - name: safekeep config
-    path: ~/.config/safekeep/default.toml
-    description: What this machine backs up and where, including the files above
+    path: ~/.config/safekeep/
+    description: The configs saying what this machine backs up and where, including the files above
     network_trust: employer
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
