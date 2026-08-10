@@ -25,6 +25,8 @@ from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
+from dotfiles.resolve import Precondition
+from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -782,3 +784,16 @@ def test_the_probe_is_the_kernel_driver_node_rather_than_a_test_flag(monkeypatch
     monkeypatch.setenv('DOTFILES_DOCKER_TEST', 'true')
 
     assert ev.have_amd_gpu() is ev.AMD_KFD.exists()
+
+
+def test_an_unnamed_precondition_refuses_rather_than_passing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fall-through decides what a *future* enum member means, and it must not
+    mean "satisfied". Adding a `Precondition` is one line in the enum; a dispatch
+    that absorbs it silently stops gating the install the precondition exists to
+    gate. Asserted with a member this dispatch has never seen.
+    """
+    invented = 'a_precondition_nobody_wrote_a_branch_for'
+    met = Preconditions(github_auth=True, amd_gpu=True)
+
+    assert met.holds(invented) is False, 'an unnamed precondition must fail closed'
+    assert met.holds(Precondition.NONE) is True, 'NONE answers True by being named'

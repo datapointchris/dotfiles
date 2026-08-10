@@ -145,11 +145,22 @@ class Preconditions:
     amd_gpu: bool = False
 
     def holds(self, precondition: Precondition) -> bool:
+        """Every member named, and an unnamed one refuses.
+
+        `NONE` answers True by being written down rather than by falling off the
+        end. The difference is what a *new* member gets: adding one is a one-line
+        change in the enum above, and a dispatch that absorbed it silently would
+        answer "satisfied" — a declared precondition quietly no longer gating the
+        install it was declared to gate, which is failing open in the direction
+        that does the thing.
+        """
+        if precondition is Precondition.NONE:
+            return True
         if precondition is Precondition.GITHUB_AUTH:
             return self.github_auth
         if precondition is Precondition.AMD_GPU:
             return self.amd_gpu
-        return True
+        return False
 
 
 @dc.dataclass(frozen=True, slots=True)
