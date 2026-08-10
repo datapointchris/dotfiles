@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from dotfiles import evidence as ev
+from dotfiles import paths
 from dotfiles import releases
 from dotfiles.privilege import Privilege
 from dotfiles.providers import cargo
@@ -471,6 +472,67 @@ def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin:
 
     assert changes(live) == ()
     assert not ran.exists()
+
+
+def staged_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rows: dict[str, str], category: str = 'binary') -> Path:
+    """A bundle manifest, written the way `create_bundle.Bundle.record` writes it."""
+    installers = tmp_path / 'installers'
+    installers.mkdir(parents=True, exist_ok=True)
+    lines = [f'{category}|{name}|{version}|{name}' for name, version in rows.items()]
+    (installers / 'manifest.txt').write_text('# Format: category|name|version|filename\n' + '\n'.join(lines) + '\n')
+    monkeypatch.setattr(paths, 'BUNDLE_DIR', installers)
+    return installers
+
+
+def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    """The machine a bundle exists for cannot reach GitHub, so the release cache is
+    empty and every installed tool used to answer UNKNOWN — which meant extracting a
+    newer bundle onto a built machine upgraded nothing. Offline the bundle is the
+    upstream, so being behind it is ordinary drift."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
+def test_offline_a_tool_at_its_bundles_version_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert changes(live) == ()
+
+
+def test_offline_a_tool_the_bundle_does_not_carry_says_so_rather_than_reporting_current(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch
+) -> None:
+    """The rule the cache exists to keep, applied to the other upstream: it may be
+    out of date, it may not lie. A bundle with no row for a tool is a different
+    finding from a cache nobody has filled, and the detail says which."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'something-else': '1.0.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.UNKNOWN, Repair.NONE)]
+    assert 'bundle' in found[0].detail
+
+
+def test_offline_never_writes_what_the_bundle_holds_into_the_release_cache(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch
+) -> None:
+    """A bundle's versions are what one tarball happens to hold, not what upstream
+    published. Persisting them would have the next online run read a bundle's
+    contents as the release cache."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
+
+    packages.RESOURCE.observe(live, live.plan)
+
+    assert not release_cache.exists()
 
 
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:

@@ -27,6 +27,7 @@ from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
+from dotfiles.providers import ghrelease
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
@@ -76,6 +77,15 @@ class Observed:
 
     consulted_network: bool = False
 
+    from_bundle: bool = False
+    """Whether `latest` came from a staged bundle rather than the release cache.
+
+    Carried so an unanswerable row can say which upstream had nothing to say. The
+    two are different findings on a machine that cannot reach GitHub: a cache with
+    no entry means nobody has asked, while a bundle with no row for a tool means
+    the bundle does not carry it and never will until a newer one is built.
+    """
+
     @property
     def summary(self) -> str:
         """What the row says when nothing drifted.
@@ -104,6 +114,7 @@ class PackagesResource:
             reported={item.address: found for item in present if (found := ev.reported_version(item.executable))},
             latest=latest,
             consulted_network=consulted,
+            from_bundle=session.offline,
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -157,21 +168,50 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
 
 
 def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:
-    """The cached upstream versions, refreshed only when this run is allowed to.
+    """What each present tool should be at, from whichever upstream this run has.
 
-    Offline never asks, whatever `--refresh` says: the flag means "spend the
-    network on being current", and there is no network to spend. It reports
-    `UNKNOWN` from the cache it has, which is the honest answer rather than a
-    failure.
+    Offline never asks GitHub, whatever `--refresh` says: the flag means "spend the
+    network on being current", and there is no network to spend.
+
+    **Offline, the bundle is the upstream.** Reading the release cache there was the
+    honest answer only while a force flag existed to move a tool anyway — with the
+    cache empty on the machine a bundle exists for, every installed tool answered
+    `UNKNOWN` and nothing could repair it, so extracting a newer bundle onto a built
+    machine upgraded nothing. The bundle records a version per staged file for
+    exactly this kind of question, which is why `resolve_tag` can already name a tag
+    with no network at all.
     """
+    if session.offline:
+        return _staged(present), False
+
     entries = releases.load()
-    if not session.refresh or session.offline or not present:
+    if not session.refresh or not present:
         return entries, False
 
     now = dt.datetime.now(dt.UTC)
     entries = releases.refresh(tuple({_wanted(item) for item in present}), entries, now)
     releases.save(entries)
     return entries, True
+
+
+def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
+    """What a staged bundle holds for each present tool, keyed as the cache is.
+
+    Stamped now rather than with the bundle's build date, because the TTL is about
+    how stale an *answer* is and this answer cannot go stale: what the bundle
+    carries is what the bundle carries until a newer one is extracted.
+
+    Deliberately not written back through `releases.save`. These versions are what
+    one tarball happens to hold, not what upstream published, and persisting them
+    would have the next online run read a bundle's contents as the release cache.
+    """
+    now = dt.datetime.now(dt.UTC)
+    found = {}
+    for item in present:
+        version = ghrelease.bundle_version(item.name)
+        if version:
+            found[_wanted(item).key] = releases.Cached(version=version, checked=now)
+    return found
 
 
 def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -207,14 +247,13 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
 
     cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
     if cached is None:
-        reason = 'offline, so upstream could not be asked' if observed.consulted_network is False else 'upstream did not answer'
         return (
             Change(
                 NAME,
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
-                detail=f'no cached release for {_wanted(item).repo} within the TTL ({reason}); check --refresh to measure',
+                detail=_unmeasurable(item, observed),
                 repair=Repair.NONE,
                 desired=item,
                 observed=reported,
@@ -222,6 +261,16 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     return _compared(item, reported, cached.version, versions.at_least(reported, cached.version), f'{cached.version} is the latest release')
+
+
+def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
+    """Why nothing can say whether this one is current, in the terms of the upstream
+    that was asked. A bundle carrying no row for a tool and a cache nobody has
+    filled are different problems with different fixes."""
+    if observed.from_bundle:
+        return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
+    reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
+    return f'no cached release for {_wanted(item).repo} within the TTL ({reason}); check --refresh to measure'
 
 
 def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str) -> tuple[Change, ...]:

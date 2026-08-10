@@ -122,10 +122,14 @@ reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
 On a machine that is already built, extracting a newer bundle refreshes
-~/installers. apply installs what is missing and upgrades what is behind, so
-running it again is what moves a tool onto the bundled version:
+~/installers. Offline, this manifest is what "latest" means -- a tool older
+than the version recorded here reads as out of date, and apply moves it onto
+the bundled one:
 
   dotfiles packages apply --offline
+
+Which also means the reverse: a tool this bundle does not carry cannot be
+measured offline at all, and says so rather than reporting itself current.
 
 Go tools take the bundled binary when proxy.golang.org is unreachable, so
 that is how a firewalled machine moves off the version it was built with.
