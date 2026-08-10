@@ -1,0 +1,9 @@
+# syncer tool config. Every option, annotated: syncer config example config
+
+default_policy = "standard"
+
+# Prune a feature branch once its remote is gone and the merge target provably holds its work.
+# standard's own default:gone = report still wins on the default branch, since a role selector
+# beats "*".
+[policies.standard.rules]
+"*:gone" = "delete_local"
