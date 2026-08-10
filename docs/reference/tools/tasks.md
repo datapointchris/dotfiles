@@ -14,9 +14,9 @@ remember and nothing else.
 it can be tested and read without counting indentation. The Taskfile calls those
 scripts. This is why the Taskfile stays short as the install grows.
 
-**Platform detection is not reimplemented per task.** It lives in
-`install/platform-detection.sh`, which the Taskfile and the remaining bash
-installers source.
+**Platform detection is not reimplemented per task.** A machine's coordinates
+come from its manifest through `src/dotfiles/coordinates.py`, so no task and no
+script asks `uname` what it is running on.
 
 ## Two front doors, one implementation
 

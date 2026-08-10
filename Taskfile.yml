@@ -1,8 +1,8 @@
 version: '3'
 
 # Composite operations live in install/ops/ so this file and the `dotfiles` CLI
-# share one implementation. Platform detection belongs to those scripts, which
-# source install/platform-detection.sh — do not reintroduce it here.
+# share one implementation. Platform detection is `coordinates.py`'s and reaches
+# here only through those scripts — do not reintroduce it as a Taskfile var.
 vars:
   DOTFILES_DIR:
     sh: pwd
