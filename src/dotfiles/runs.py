@@ -38,7 +38,7 @@ from pathlib import Path
 from dotfiles import paths
 from dotfiles.resources import Verdict
 
-SCHEMA = 2
+SCHEMA = 3
 
 # The phases an item passes through. Named here so a report can total the same
 # set every resource reports, rather than whatever keys happened to be written.
@@ -65,6 +65,14 @@ class Identity:
     machine: str
     verb: str
     started: dt.datetime
+    host: str = ''
+    """Which *box*, per data.md § "Machine identity is a bare lowercased hostname".
+
+    Separate from `machine`, which names the manifest — two boxes legitimately
+    share one, and macmini and mbp both declare `macos-personal-workstation`. The
+    standard's reason for keeping them apart is the same one that applies here:
+    the platform prefix duplicated a separate field and drifted.
+    """
 
     @property
     def stem(self) -> str:
@@ -73,18 +81,33 @@ class Identity:
         Sorts chronologically as text, so listing needs no parsing. Basic-format
         ISO 8601 because a colon is legal in a POSIX filename and a nuisance in
         every shell that later has to name one.
+
+        The host rather than the manifest, because `runs/` is shared by the whole
+        fleet and the filename is the only thing `list_runs` reads: keyed on the
+        manifest, the two Macs' records were one indistinguishable stream, and
+        neither `--machine` nor the per-machine streak count could separate them.
         """
-        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.machine}-{self.verb}'
+        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.host or self.machine}-{self.verb}'
 
 
-def begin(machine: str, verb: str, started: dt.datetime | None = None) -> Identity:
+def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str | None = None) -> Identity:
     """`started` is for a verb that has work to do before it knows its machine.
 
     `apply` validates the declaration and reports a stray branch before
     `Session.resolve` can say what machine this is, and that work is part of the
     run whether or not a name existed to file it under yet.
+
+    `host` defaults from `paths` rather than being threaded through the three
+    callers: the box a run happens on is not something a verb decides, and every
+    one of them would have passed the same global.
     """
-    return Identity(id=uuid.uuid4().hex[:12], machine=machine, verb=verb, started=started or _now())
+    return Identity(
+        id=uuid.uuid4().hex[:12],
+        machine=machine,
+        verb=verb,
+        started=started or _now(),
+        host=paths.MACHINE_ID if host is None else host,
+    )
 
 
 @dataclasses.dataclass
@@ -137,8 +160,22 @@ class RunRecord:
     schema: int = SCHEMA
     finished_at: str = ''
     duration_seconds: float = 0.0
+    host: str = ''
+    """Empty on a record written before schema 3, which is why every reader takes
+    `host or machine` rather than `host` — a bare `host` would pool the entire
+    pre-3 history of all four boxes into one nameless bucket."""
     outcomes: list[Outcome] = dataclasses.field(default_factory=list)
     issues: list[Issue] = dataclasses.field(default_factory=list)
+
+    @property
+    def box(self) -> str:
+        """Which machine this ran on, as well as the record can say.
+
+        The manifest is the fallback and not an equivalent: it answers correctly
+        for the three boxes that do not share one, and for the two Macs it is the
+        same wrong answer the host field was added to fix.
+        """
+        return self.host or self.machine
 
     def record_outcome(self, address: str, verdict: str, action: str, timing: Timing, message: str = '') -> None:
         """Timing is required, so an untimed resource cannot ship and then drop
@@ -202,6 +239,7 @@ def start(identity: Identity, flags: dict | None = None) -> RunRecord:
         verb=identity.verb,
         flags=flags or {},
         started_at=_stamp(identity.started),
+        host=identity.host,
     )
 
 
@@ -216,7 +254,7 @@ def record_filename(record: RunRecord) -> str:
     """Through `Identity.stem`, so a record written at the end of a run cannot
     land on a different name from the log opened at the start of it."""
     started = dt.datetime.fromisoformat(record.started_at.replace('Z', '+00:00'))
-    return Identity(record.id, record.machine, record.verb, started).stem
+    return Identity(record.id, record.machine, record.verb, started, record.host).stem
 
 
 def event_log_path(identity: Identity, runs_dir: Path | None = None) -> Path:
@@ -252,7 +290,14 @@ def list_runs(
     verb: str | None = None,
     limit: int | None = None,
 ) -> list[Path]:
-    """Newest first. Filenames sort chronologically, so this reads no files."""
+    """Newest first. Filenames sort chronologically, so this reads no files.
+
+    `machine` matches whatever the stem carries, which is the host from schema 3
+    on and the manifest before it. Deliberately not reconciled by reading the
+    records: that would cost a parse of every file in a shared directory to
+    answer a question the filename already answers, and the old names stay
+    findable under the only identity they ever had.
+    """
     directory = runs_dir or paths.RUNS_DIR
     if not directory.exists():
         return []
@@ -272,13 +317,14 @@ def latest(runs_dir: Path | None = None) -> Path | None:
 
     The fleet shares `runs/`, so the newest record in the directory is whichever
     machine ran most recently — `report latest` after an apply here would show a
-    check that happened on a Mac. Narrowing on the record's machine does not fix
-    it either: that names the manifest, and both Macs declare the same one.
+    check that happened on a Mac.
 
-    The link is the answer because it is per-host *and* deliberately not synced,
-    which is what makes it a statement about this box. Everything else stays
-    fleet-wide, which is the point of sharing the directory — `report list` and
-    `report stats` see all four.
+    The link stays the answer now that the record carries a host and narrowing
+    could work: it is O(1) where narrowing is a listing plus a parse per name,
+    and it is deliberately not synced, which is what makes it a statement about
+    this box rather than about a name this box happens to share. Everything else
+    stays fleet-wide, which is the point of sharing the directory — `report list`
+    and `report stats` see all four.
 
     Falls back to the newest record where the link is missing: a machine that has
     never run under this scheme still has records, and answering nothing there

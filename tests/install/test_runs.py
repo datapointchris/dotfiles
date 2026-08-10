@@ -32,12 +32,17 @@ def timed(**phases) -> runs.Timing:
     return stopwatch.finish()
 
 
-def a_run(machine='macos-personal-workstation', verb='apply') -> runs.RunRecord:
+def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs.RunRecord:
     """Verdicts and actions spelled by the enums the writer serialises, never by
     hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
     and was therefore never true, and this fixture typing the same word is the
-    reason no test noticed."""
-    record = runs.start(runs.begin(machine, verb), flags={'skip': ['system']})
+    reason no test noticed.
+
+    `host` is explicit rather than left to default, because the default is the
+    real hostname of whatever box runs the suite — which put `archlinux` in the
+    filenames these tests assert on.
+    """
+    record = runs.start(runs.begin(machine, verb, host=machine if host is None else host), flags={'skip': ['system']})
     record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(observe=1, fetch=1, act=1))
     record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
     record.record_issue('packages/github/yq', 'checksum', 'no checksum published')
@@ -133,9 +138,10 @@ class TestSpan:
 
     def test_the_file_is_named_after_the_start_not_the_finish(self, runs_dir):
         began = dt.datetime(2026, 8, 10, 14, 0, 0, tzinfo=dt.UTC)
-        path = runs.write(runs.finish(runs.start(runs.begin('wsl-work-workstation', 'apply', began))), runs_dir)
+        identity = runs.begin('wsl-work-workstation', 'apply', began, host='worklaptop')
+        path = runs.write(runs.finish(runs.start(identity)), runs_dir)
 
-        assert path.stem == '20260810T140000Z-wsl-work-workstation-apply'
+        assert path.stem == '20260810T140000Z-worklaptop-apply'
 
 
 class TestListing:
@@ -147,6 +153,28 @@ class TestListing:
 
         listed = runs.list_runs(runs_dir)
         assert [path.stem.split('-')[0] for path in listed] == ['20260803T000000Z', '20260802T000000Z', '20260801T000000Z']
+
+    def test_two_boxes_sharing_a_manifest_are_separate_runs(self, runs_dir):
+        """macmini and mbp both declare `macos-personal-workstation`. Keyed on the
+        manifest their records were one indistinguishable stream — the reason
+        "check the reports for both of them" could not be answered at all."""
+        runs.write(a_run(host='macmini'), runs_dir)
+        older = a_run(host='mbp')
+        older.started_at = '2026-08-01T00:00:00Z'
+        runs.write(older, runs_dir)
+
+        assert len(runs.list_runs(runs_dir, machine='macmini')) == 1
+        assert len(runs.list_runs(runs_dir, machine='mbp')) == 1
+        assert {runs.read(path).box for path in runs.list_runs(runs_dir)} == {'macmini', 'mbp'}
+
+    def test_a_record_written_before_the_host_field_still_names_its_machine(self, runs_dir):
+        """Every reader takes `box`, not `host`: a bare `host` would pool the whole
+        pre-schema-3 history of all four boxes into one nameless bucket."""
+        record = a_run()
+        record.host = ''
+        written = runs.write(record, runs_dir)
+
+        assert runs.read(written).box == 'macos-personal-workstation'
 
     def test_a_machine_whose_name_contains_hyphens_still_filters(self, runs_dir):
         runs.write(a_run(machine='macos-personal-workstation'), runs_dir)

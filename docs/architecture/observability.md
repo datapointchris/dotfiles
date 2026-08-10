@@ -38,6 +38,21 @@ lets `run_id` in the log select exactly the lines belonging to the record beside
 it, and what stopped the record from timing the loop over an already-collected
 list and naming its file after the moment the run finished.
 
+**The stem names the box, the record names both.** `machine` is the manifest and
+`host` is the bare lowercased hostname, per `~/dev/standards/data.md` § "Machine
+identity is a bare lowercased hostname" — two boxes legitimately share a manifest,
+and macmini and mbp both declare `macos-personal-workstation`. Keyed on the
+manifest alone, as it was through schema 2, their records were one
+indistinguishable stream in a directory the whole fleet shares: `report list
+--machine` could not separate them, the per-machine streak count in
+`_never_converged` pooled both boxes so either Mac leaving an item alone ended the
+other's streak, and "check the reports for both Macs" had no answer at all.
+`paths.machine_id` had already been introduced for exactly this, and the `status-`,
+`nudge-` and `latest-` files were keyed on it — the run records were the one place
+it never reached. Readers take `RunRecord.box`, never `host`, because a record
+written before schema 3 carries no host and a bare read would pool the entire
+earlier history of all four boxes under one empty name.
+
 **Both ends swallow an `OSError` on purpose.** `$XDG_STATE_HOME` is a Syncthing
 folder on the fleet, absent on a fresh machine and read-only in more containers
 than it should be; a verb that cannot open a log has still been asked a question

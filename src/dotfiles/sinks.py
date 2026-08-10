@@ -38,7 +38,7 @@ def open_log(identity: runs.Identity) -> None:
         logging.configure(event_log=runs.event_log_path(identity))
     except OSError:
         logging.configure()
-    logging.bind_run(identity.id, identity.machine)
+    logging.bind_run(identity.id, identity.host or identity.machine)
 
 
 def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> runs.RunRecord:

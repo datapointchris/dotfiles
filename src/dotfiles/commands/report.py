@@ -80,7 +80,7 @@ def _render(path: Path, record: runs.RunRecord) -> None:
     # was parsed as markup and dropped — every header printed a trailing blank.
     verdict = 'converged' if record.converged else 'drift'
     colour = VERDICT_COLOURS[verdict]
-    console.print(f'[bold]{record.id}[/]  {record.machine}  {record.verb}  [{colour}]{verdict}[/]')
+    console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  [{colour}]{verdict}[/]')
     console.print(f'{record.started_at} · {record.duration_seconds:.1f}s')
     # What the reader wants the record *for* is usually to send it somewhere, and
     # the rendering that answers every other question about a run was the one place
@@ -260,7 +260,11 @@ def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     applies = [record for record in records if record.verb == 'apply']
     by_machine: defaultdict[str, list[runs.RunRecord]] = defaultdict(list)
     for record in applies:
-        by_machine[record.machine].append(record)
+        # By box, not by manifest. Keyed on the manifest, macmini's and mbp's
+        # applies interleaved into one history, so either Mac leaving an item
+        # alone ended the other's streak and a real fault on one of them read as
+        # settled.
+        by_machine[record.box].append(record)
 
     found: list[Unconverged] = []
     for machine, history in by_machine.items():
