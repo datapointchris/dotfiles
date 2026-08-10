@@ -40,8 +40,8 @@ anything expensive.
 #### Validate Installation
 
 ```bash
-bash tests/install/verification/verify-installed-packages.sh
-bash tests/install/verification/detect-installed-duplicates.sh
+dotfiles plan     # what apply would still change on this machine
+dotfiles check    # what is wrong, including a tool with a copy nothing declares
 ```
 
 #### Container installs

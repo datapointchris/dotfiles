@@ -28,13 +28,22 @@ from harness import SHADOW_REFUSAL
 from harness import Environment
 from harness import ShadowCall
 from harness import blocked_host_args
+from harness import copies_script
+from harness import declared_items
 from harness import exec_script
 from harness import measured_network
+from harness import probe_of
+from harness import probe_script
 from harness import reachable_probes
 from harness import shadow_source
+from harness import shell_path
 
 from dotfiles import machine as machines
 from dotfiles import network
+from dotfiles.resolve import DesiredItem
+from dotfiles.resolve import Precondition
+from dotfiles.resolve import Reason
+from dotfiles.resolve import Stage
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The measured network
@@ -628,3 +637,136 @@ class TestContainerName:
         monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=128))
 
         assert harness.linked_worktree(Path('/anywhere')) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The verification sweep, derived without a machine
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The same split `measured_network` gets: what a probe *is* is decided here and
+# asserted in a tenth of a second, and only running it needs a container. The
+# shell script this replaced could be checked no other way than by installing a
+# machine and reading its transcript.
+
+
+def desired(**overrides) -> DesiredItem:
+    fields = {
+        'section': 'go_tools',
+        'provider': 'go',
+        'resource': 'packages',
+        'stage': Stage.TOOLS,
+        'name': 'task',
+        'executable': 'task',
+        'evidence_path': '',
+        'precondition': Precondition.NONE,
+        'entry': None,
+        'reason': Reason('go_tools', 'named'),
+    }
+    return DesiredItem(**{**fields, **overrides})
+
+
+def test_a_binary_is_looked_for_on_path() -> None:
+    assert probe_of(desired()) == 'command -v task'
+
+
+def test_a_declared_path_is_looked_for_on_disk() -> None:
+    """`bashselfupdate` is a sourced library and puts nothing on PATH, so the
+    checkout it lands in is the only evidence there is."""
+    probe = probe_of(desired(executable='', evidence_path='~/.local/share/bashselfupdate'))
+
+    assert probe.startswith('[ -e ')
+    assert '"$HOME"/' in probe
+
+
+def test_a_declared_path_beats_a_binary_of_the_same_name() -> None:
+    """The same precedence `Provider.evidence` applies: an entry saying where it
+    lands is more specific than a rule about how its neighbours are found."""
+    assert probe_of(desired(evidence_path='/opt/task')).startswith('[ -e ')
+
+
+def test_an_item_with_nothing_to_look_for_gets_no_probe() -> None:
+    """A macOS default, a systemd unit, a group membership. Each is real and none
+    is a file — and a probe that answered anyway would be a green tick for
+    something nobody examined."""
+    assert probe_of(desired(executable='', evidence_path='')) == ''
+
+
+def test_a_home_relative_path_expands_rather_than_quoting_the_tilde() -> None:
+    """`shlex.quote('~/x')` produces a literal directory named `~`, because the
+    shell expands the tilde before quoting and not after. Every path-evidenced
+    item then reads as missing on a machine carrying it."""
+    assert shell_path('~/.local/bin/ya') == '"$HOME"/.local/bin/ya'
+    assert shell_path('~/Application Support/x') == '"$HOME"/\'Application Support/x\''
+
+
+def test_a_path_that_is_not_home_relative_is_quoted_whole() -> None:
+    assert shell_path('/opt/a directory/tool') == "'/opt/a directory/tool'"
+
+
+def test_the_sweep_asks_after_every_item_it_can_and_no_others() -> None:
+    """One `docker exec` for the lot. Two hundred of them is half a minute per
+    environment spent starting processes, before the first assertion runs."""
+    items = [desired(name='task'), desired(name='sesh', executable='sesh'), desired(name='xcode', executable='', evidence_path='')]
+
+    lines = probe_script(items).splitlines()
+
+    assert len(lines) == 2
+    assert all(line.startswith('printf ') for line in lines)
+    assert ' go/task ' in lines[0] and ' go/sesh ' in lines[1]
+
+
+def test_the_copies_sweep_asks_once_per_binary() -> None:
+    """Two entries can name one binary — a section declaring `awscli` beside a
+    system package of the same name — and asking twice buys nothing."""
+    items = [
+        desired(name='ripgrep', executable='rg'),
+        desired(name='ripgrep-all', executable='rg'),
+        desired(name='sesh', executable='sesh'),
+    ]
+
+    assert len(copies_script(items).splitlines()) == 2
+
+
+def test_every_environment_resolves_the_items_it_will_be_asked_about() -> None:
+    """The manifest is the checklist, so a tool added or removed changes what is
+    verified with nothing here to update. An environment resolving to nothing
+    would collect no nodes and report a green run having asked no questions."""
+    for environment in ENVIRONMENTS:
+        items = declared_items(environment)
+        assert items, environment.name
+        assert [item.address for item in items] == sorted(item.address for item in items)
+
+
+def test_every_item_node_is_paired_with_the_container_that_declares_it() -> None:
+    """The cross product is generated and then cut back, so this is what says the
+    cut happened. Left unfiltered it would ask an Arch machine for wsl's
+    `win32yank` — a red line about the pairing wearing the costume of a missing
+    tool, on the tier where finding that out costs half an hour.
+
+    Collection in a subprocess for the same reason as the `--environment` test
+    above: the deselection is pytest's, not the rig's.
+    """
+    from dotfiles import paths
+
+    collected = subprocess.run(
+        ['uv', 'run', 'pytest', 'tests/e2e/test_verification.py', '--docker', '--collect-only', '-q', '-o', 'addopts='],
+        cwd=paths.REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    nodes = [line for line in collected.stdout.splitlines() if 'test_the_machine_carries_what_it_declares[' in line]
+    assert nodes, collected.stdout[-2000:]
+
+    declared = {environment.name: {item.address for item in declared_items(environment)} for environment in ENVIRONMENTS}
+    for node in nodes:
+        # `[<container>-<declared>-<address>]`: pytest composes the id from both
+        # parametrizations, and the two naming the same environment is the whole
+        # claim. No environment name carries a hyphen; every address may.
+        container, _, rest = node.partition('[')[2].rstrip(']').partition('-')
+        declaring, _, address = rest.partition('-')
+
+        assert container == declaring, f'{node} asks a {container} machine about a {declaring} item'
+        assert address in declared[declaring], f'{declaring} does not declare {address}'
+
+    assert len(nodes) == sum(len(addresses) for addresses in declared.values())

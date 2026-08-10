@@ -123,29 +123,41 @@ be — a real macOS account, or the current machine.
 
 ## Verification
 
+On a real machine, ask the machine:
+
 ```sh
-bash tests/install/verification/verify-installed-packages.sh
-bash tests/install/verification/detect-installed-duplicates.sh
+dotfiles plan     # what apply would still change
+dotfiles check    # what is wrong, which a machine merely behind is not
 ```
 
-The first checks that everything the manifest declared is present *and in the
-expected prefix*; the second catches the same tool installed twice by different
-methods, which is the failure PATH order hides — a stale copy in `/usr/bin`
-shadowed by a current one in `~/.local/bin` works fine until the order changes.
+A tool with a second copy nothing declares is one of `check`'s findings. That is
+the failure PATH order hides — a stale copy in `/usr/bin` shadowed by a current
+one in `~/.local/bin` works fine until the order changes — and it lives there
+rather than in a test because it is a question about a machine somebody is using.
 
-**A refusal is not a missing tool.** The first script reads this machine's newest
-apply and reports separately anything that run reached and deliberately wrote
-nothing for — an offline install has no go.dev to fetch a toolchain from, because
-its bundle stages the Go and Rust *tools* prebuilt instead, so it converges with
-four items refused. Counting those as failures described seven broken tools on a
-machine built exactly as intended, and a verdict nobody believes is one nobody
-reads. Every way of failing to find that record leaves the set empty and requires
-everything, because a record it cannot read has to make the check stricter.
+A copy is only a finding when nothing explains it. Two explanations are read off
+the declaration: the location the item's own evidence names, and a copy the OS
+package manager attributes to a package this manifest declares. The second is not
+a nicety — fnm owns `node` and `npm` while pacman's `nodejs` ships `/usr/bin/node`
+underneath it, which is the bootstrap the declaration asks for, and reporting that
+pair was two of the nine findings the shell script produced on a healthy machine.
 
-Nothing about which tools those are is written in the script. It asks the run what
-it refused, so an installer that stops refusing something starts being required
-with nothing to update here — the same reason the checklist itself is derived from
-the manifest rather than written out.
+**In the e2e tier, verification is deliberately a second opinion.**
+`tests/e2e/test_verification.py` asks the container in shell and never runs
+`dotfiles check`: a verification reading the product's own evidence agrees with
+the installer exactly when they are wrong together. It takes the *expectations*
+from `resolve.resolve`, so a tool added or removed changes what is verified with
+no list to update, and every declared item is its own test node — a missing tool
+is a named red line rather than a return code with a transcript attached.
 
-The e2e runs do both automatically. Document platform quirks found this way in
+**A refusal is not a missing tool.** Each node reads this machine's own pinned run
+record and skips anything that run reached and deliberately wrote nothing for — an
+offline install has no go.dev to fetch a toolchain from, because its bundle stages
+the Go and Rust *tools* prebuilt instead, so it converges with four items refused.
+Counting those as failures described seven broken tools on a machine built exactly
+as intended, and a verdict nobody believes is one nobody reads. Every way of
+failing to read that record leaves the set empty and requires everything, because
+a record it cannot read has to make the check stricter.
+
+Document platform quirks found this way in
 [Platform Differences](../reference/platforms/differences.md).

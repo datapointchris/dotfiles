@@ -18,7 +18,6 @@ from __future__ import annotations
 import pytest
 from harness import Machine
 from harness import failed_outcomes
-from harness import refused_outcomes
 from harness import run_record
 from harness import shadow_calls
 
@@ -120,45 +119,32 @@ def test_the_machine_converged(converged_machine: Machine) -> None:
     )
 
 
-def test_every_declared_tool_is_installed(converged_machine: Machine) -> None:
-    """The manifest is the checklist, so a tool added or removed changes what is
-    verified with no list here to update.
+def test_neovim_starts_without_errors(converged_machine: Machine) -> None:
+    """Presence is not health, and this is the difference.
 
-    An absence the run *refused* is not a finding here: the script reads this
-    machine's own newest apply and reports those separately, so a bundle that was
-    never built to carry awscli does not read as a broken install. Exit 0 therefore
-    means every tool whose install path could have delivered it did.
+    Every plugin directory can be on disk while the config that loads them raises
+    on startup, and `test_verification.py` cannot see that: it asks whether the
+    declaration landed, which is a question about files. Nothing declares "and it
+    runs".
     """
-    home = converged_machine.environment.home
-    result = converged_machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
-    assert result.returncode == 0, result.stdout[-4000:]
+    started = converged_machine.exec('timeout 30 nvim --headless +qa 2>&1')
+    assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 
-def test_verification_excuses_an_absence_only_where_the_run_refused_one(converged_machine: Machine) -> None:
-    """The two sources have to agree, and this is the direction exit 0 cannot check.
-
-    A refusal suppresses a red line, so a mechanism that over-matched — a substring
-    where a whole name was meant, a stale record from another machine — would buy
-    a green verification by excusing tools nothing refused. Asserting the counts
-    against each other catches that: an environment whose run refused nothing must
-    report nothing refused, and `offline` must report some, or the machinery is
-    silently inert everywhere it is not needed.
-    """
-    home = converged_machine.environment.home
-    result = converged_machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
-    excused = 'Refused:' in result.stdout
-
-    assert excused == bool(refused_outcomes(converged_machine)), (
-        f'the run refused {refused_outcomes(converged_machine)} and verification {"excused something" if excused else "excused nothing"}'
-    )
+def test_yazi_starts_without_errors(converged_machine: Machine) -> None:
+    """Its own check because it has its own failure: `package.toml` had two owners,
+    so a fresh install deployed the file twice and yazi refused every start."""
+    started = converged_machine.exec('timeout 20 yazi --clear-cache 2>&1')
+    assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 
-def test_nothing_is_installed_twice(machine: Machine) -> None:
-    """Two copies on PATH means the one that wins is decided by PATH order rather
-    than by the manifest — apt's `batcat` shadowing the cargo `bat`, and so on."""
-    home = machine.environment.home
-    result = machine.exec(f'cd {home}/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh')
-    assert result.returncode == 0, result.stdout[-4000:]
+def test_docker_compose_is_the_v2_plugin(converged_machine: Machine) -> None:
+    """`docker compose`, not `docker-compose`. The binary being present says
+    nothing about the subcommand resolving, which is what every compose file here
+    is written against."""
+    if converged_machine.environment.name == 'wsl':
+        pytest.skip('WSL uses Docker Desktop on the Windows host, which a container is not')
+    assert converged_machine.succeeds('docker compose version')
 
 
 def test_the_apps_work(converged_machine: Machine) -> None:

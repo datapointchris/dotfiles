@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
@@ -28,6 +29,7 @@ from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
+from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
@@ -72,6 +74,13 @@ class Observed:
 
     reported: dict[str, str] = dc.field(default_factory=dict)
     """Address → the version string an installed release binary printed."""
+
+    shadowed: dict[str, tuple[str, ...]] = dc.field(default_factory=dict)
+    """Address → the copies of its binary that nothing this machine declares explains.
+
+    Only populated for an item that has more than one copy on PATH, so the common
+    case carries an empty dict and costs nothing to fold.
+    """
 
     latest: dict[str, releases.Cached] = dc.field(default_factory=dict)
     """Cache key → the newest upstream release, for entries still inside the TTL."""
@@ -134,6 +143,7 @@ class PackagesResource:
             evidence=evidence,
             met=ev.measured_preconditions(),
             reported={item.address: found for item in present if (found := ev.reported_version(item.executable))},
+            shadowed=_shadowing(mine, evidence, plan, session.repo),
             latest=latest,
             consulted_network=consulted,
             from_bundle=session.offline,
@@ -180,11 +190,79 @@ class PackagesResource:
                 )
             elif _has_currency(item):
                 changes.extend(currency_of(item, observed))
+
+            if stray := observed.shadowed.get(item.address):
+                changes.append(
+                    Change(
+                        NAME,
+                        item.stage,
+                        item.address,
+                        Verdict.UNDECLARED,
+                        detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
+                        repair=Repair.BY_HAND,
+                        desired=item,
+                        observed=', '.join(stray),
+                    )
+                )
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
+
+
+def _shadowing(
+    mine: tuple[DesiredItem, ...],
+    evidence: dict[str, ev.Evidence],
+    plan: Plan,
+    checkout: Path,
+) -> dict[str, tuple[str, ...]]:
+    """Which declared tools have a copy on PATH that nothing declared put there.
+
+    Two copies of one binary means the one that runs is decided by PATH order
+    rather than by the declaration, and the loser is invisible: `apply` installs,
+    `evidence` finds *a* binary, and every verb reports the machine converged
+    while the tool anyone actually runs came from somewhere else.
+
+    **A second copy is not by itself a finding**, which is the whole difficulty
+    and why the shell script this replaces reported nine things on a healthy
+    machine. Three explanations are legitimate, and none of them is a list here:
+
+    - the copy this item's own evidence names — whatever the provider installed;
+    - a copy an OS package manager attributes to a package *this manifest
+      declares*. fnm owns node and npm while pacman's `nodejs` ships `/usr/bin/node`
+      underneath it, and that second copy is the bootstrap npm the declaration asks
+      for;
+    - a copy owned by a package the manager installed to satisfy something else.
+      Nobody chose it, so nobody can be told to remove it: yay needs a compiler,
+      so pacman's Go sits under the tarball's on every machine that builds an AUR
+      package.
+
+    What is left over is a stray somebody installed by hand and then declared
+    through another mechanism — `shellcheck` from pacman beside the release
+    binary. `Repair.BY_HAND` because removing one is a judgement about which: the
+    declaration says what should be there and cannot say what else is safe to
+    uninstall.
+    """
+    index = ev.executables_on_path(checkout)
+    declared: set[str] = set()
+    for item in plan.items:
+        if isinstance(item.entry, catalog.SystemPackage):
+            declared.update(filter(None, (item.entry.package_for(installer) for installer in syspkg.OWNER)))
+
+    candidates = [item for item in mine if item.executable and len(index.get(item.executable, ())) > 1]
+    explained = declared | (syspkg.unchosen() if candidates else frozenset())
+
+    shadowed = {}
+    for item in candidates:
+        if evidence[item.address].verdict is not Verdict.MATCHED:
+            continue
+        stray = tuple(
+            path for path in index[item.executable] if path != evidence[item.address].detail and syspkg.owner_of(path) not in explained
+        )
+        if stray:
+            shadowed[item.address] = stray
+    return shadowed
 
 
 def _has_currency(item: DesiredItem) -> bool:

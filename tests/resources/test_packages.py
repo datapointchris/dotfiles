@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -799,3 +800,126 @@ def test_a_custom_installer_that_arrived_since_the_report_is_skipped(
 
     assert packages.RESOURCE.perform(live, change, unprivileged).status is OutcomeStatus.SKIPPED
     assert installs == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A second copy on PATH
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The question `detect-installed-duplicates.sh` asked, moved to where a real
+# machine can be asked it. That script reported nine findings on a converged Arch
+# box, two of them the declared bootstrap npm sitting under fnm — so what counts
+# as an *explanation* is what these cover, not the counting.
+#
+# The tool is deliberately a name no machine carries. `fake_bin` keeps
+# `/usr/bin:/bin` behind it so the fixture can run `git` and `bash`, which means a
+# test naming a real tool measures the box it runs on: `rg` here found
+# `/usr/bin/rg` and every assertion below inverted.
+
+CARGO_TOOL = {'cargo_packages': [{'name': 'frobnicate', 'command': 'frob'}]}
+DECLARES_FROB = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['frobnicate']}
+
+OWNED_BY_FROBNICATE = '#!/bin/sh\n[ "$1" = "--version" ] && exit 0\n[ "$1" = "-Qoq" ] && echo frobnicate\nexit 0\n'
+"""A package manager that says the same package owns whatever it is asked about."""
+
+
+def second_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A directory behind `fake_bin`, for the copy that loses."""
+    directory = tmp_path / 'other-bin'
+    directory.mkdir(exist_ok=True)
+    monkeypatch.setenv('PATH', f'{os.environ["PATH"]}{os.pathsep}{directory}')
+    return directory
+
+
+def shadow_changes(live: Session) -> list[Change]:
+    return [change for change in changes(live) if change.verdict is Verdict.UNDECLARED]
+
+
+def test_one_copy_of_a_declared_tool_reports_nothing(tmp_path: Path, fake_bin: Path) -> None:
+    executable(fake_bin, 'frob')
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+
+    assert shadow_changes(live) == []
+
+
+def test_a_second_copy_on_path_is_reported_against_the_item_that_declares_it(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Which of the two runs is decided by PATH order rather than by the manifest,
+    and the loser is invisible to every other check: `apply` installs, evidence
+    finds *a* binary, and the machine reports converged while the tool anyone
+    actually runs came from somewhere else."""
+    executable(fake_bin, 'frob')
+    stray = executable(second_bin(tmp_path, monkeypatch), 'frob')
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+
+    found = shadow_changes(live)
+
+    assert [change.item for change in found] == ['cargo/frobnicate']
+    assert found[0].observed == str(stray)
+    assert str(fake_bin / 'frob') in found[0].detail
+
+
+def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`check`'s subject and not `plan`'s. The declaration says what should be
+    installed and cannot say which of two copies may be removed safely, so an
+    `apply` that deleted one would be acting on a judgement nobody declared."""
+    executable(fake_bin, 'frob')
+    executable(second_bin(tmp_path, monkeypatch), 'frob')
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+
+    change = shadow_changes(live)[0]
+
+    assert change.repair is Repair.BY_HAND
+    assert change.drifted and not change.actionable
+
+
+def test_the_same_binary_reachable_twice_is_one_installation(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`~/.local/bin/fd` pointing at `/usr/bin/fd` is one tool with two names.
+    Counting paths rather than real paths reports every symlinked companion this
+    repo deploys on purpose."""
+    real = executable(fake_bin, 'frob')
+    (second_bin(tmp_path, monkeypatch) / 'frob').symlink_to(real)
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+
+    assert shadow_changes(live) == []
+
+
+def test_a_copy_a_declared_package_owns_is_explained(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The pair that made the shell script unreadable: fnm owns `node` and `npm`
+    while pacman's `nodejs` ships `/usr/bin/node` underneath, and that second copy
+    is the bootstrap the declaration asks for. Asking the package manager who put
+    a file there is what separates it from a stray."""
+    executable(fake_bin, 'frob')
+    executable(second_bin(tmp_path, monkeypatch), 'frob')
+    executable(fake_bin, 'pacman', OWNED_BY_FROBNICATE)
+    declared = {**CARGO_TOOL, 'system_packages': [{'name': 'frobnicate', 'apt': 'frobnicate', 'pacman': 'frobnicate'}]}
+    live = session(tmp_path, declared, {**DECLARES_FROB, 'system_packages': 'workstation'})
+
+    assert shadow_changes(live) == []
+
+
+def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The inverse, and the direction that must not fail open: a package manager
+    answering at all is not an explanation, or every `/usr/bin` copy on a Linux
+    box would excuse itself."""
+    executable(fake_bin, 'frob')
+    executable(second_bin(tmp_path, monkeypatch), 'frob')
+    executable(fake_bin, 'pacman', OWNED_BY_FROBNICATE)
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+
+    assert [change.item for change in shadow_changes(live)] == ['cargo/frobnicate']
+
+
+def test_a_copy_inside_the_checkout_is_not_machine_state(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`uv run dotfiles check` from the repo puts `.venv/bin` first on PATH, so
+    every tool the dev environment also carries reads as duplicated. A second copy
+    that exists for the duration of a development command is not the machine."""
+    executable(fake_bin, 'frob')
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+    inside = live.repo / '.venv' / 'bin'
+    inside.mkdir(parents=True)
+    executable(inside, 'frob')
+    monkeypatch.setenv('PATH', f'{inside}{os.pathsep}{os.environ["PATH"]}')
+
+    assert shadow_changes(live) == []

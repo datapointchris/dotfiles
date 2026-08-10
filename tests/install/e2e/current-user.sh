@@ -80,15 +80,18 @@ echo ""
 # ================================================================
 STEP_START=$(date +%s)
 print_header "STEP 2/4: Running Verification" "cyan"
-echo "Running: bash tests/install/verification/verify-installed-packages.sh"
+echo "Running: dotfiles plan"
 echo ""
 
-if bash "$DOTFILES_DIR/tests/install/verification/verify-installed-packages.sh"; then
-  log_success "Verification passed"
+# The product's own measurement, which is the right instrument on a real machine.
+# The second opinion `tests/e2e/test_verification.py` gives is for judging an
+# install nobody inspected, and it needs a container to be independent of.
+if dotfiles plan; then
+  log_success "Nothing left to converge"
 else
   EXIT_CODE=$?
-  log_warning "Verification failed with exit code: $EXIT_CODE"
-  log_info "Some tools may not be installed or configured correctly"
+  log_warning "plan exited $EXIT_CODE: the machine differs from its declaration"
+  log_info "Run 'dotfiles apply' to close the gap, or 'dotfiles check' for what apply cannot fix"
 fi
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -101,10 +104,12 @@ echo ""
 # ================================================================
 STEP_START=$(date +%s)
 print_header "STEP 3/4: Checking for Alternate Installations" "cyan"
-echo "Running: bash tests/install/verification/detect-installed-duplicates.sh"
+echo "Running: dotfiles check"
 echo ""
 
-bash "$DOTFILES_DIR/tests/install/verification/detect-installed-duplicates.sh"
+# A declared tool with a copy nothing declares is an Issue in `check`'s grammar,
+# which is where the duplicate detector's question moved.
+dotfiles check || log_info "check reported issues; each names the tool and where the other copy is"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
 STEP_NAMES+=("Detect alternates")
@@ -146,8 +151,8 @@ echo ""
 print_section "Test Results" "cyan"
 echo ""
 echo "  Installation Verification:"
-echo "    • verify-installed-packages.sh: $(print_cyan "Completed")"
-echo "    • detect-installed-duplicates.sh: $(print_cyan "Completed")"
+echo "    • dotfiles plan: $(print_cyan "Completed")"
+echo "    • dotfiles check: $(print_cyan "Completed")"
 if [[ "${STEP_STATUS[0]:-}" == "PASS" ]]; then
   echo "    • test-all-apps.sh: $(print_green "✓ PASS") (34 checks)"
 else

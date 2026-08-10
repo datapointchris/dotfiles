@@ -81,17 +81,17 @@ uv run pytest tests/e2e --docker -k wsl
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
 
-**4. Verify the script works** (`tests/install/verification/verify-installed-packages.sh`):
+**4. Verify the interpreter can import the package**
+(`tests/e2e/test_machine.py::test_the_interpreter_the_installers_get_can_import_the_package`):
 
-```bash
-if python3 -m dotfiles.parse_packages --type=system --manager=apt >/dev/null 2>&1; then
-  print_success "parse_packages.py: working (yaml module available)"
-else
-  print_error "parse_packages.py: FAILED (yaml module missing)"
-fi
+```python
+assert machine.succeeds('"$(uv tool dir)/dotfiles/bin/python" -c "import dotfiles, yaml"')
 ```
 
-Defense in depth - catches issues even if test environment differs.
+Defense in depth - catches issues even if test environment differs. This was a
+`parse_packages.py --type=system` call in the verification shell script; the
+property is the same and the subject is now the interpreter itself, which is what
+`$DOTFILES_PYTHON` hands every installer.
 
 ## Key Learnings
 
@@ -156,6 +156,5 @@ Best practice for testing system installations:
 - `install/wsl/docker-images.sh` - Manage WSL Docker images
 - `tests/install/README.md` - Full install-test suite (e2e, integration, unit)
 - `install/wsl/` - WSL installation scripts
-- `tests/install/verification/verify-installed-packages.sh` - Installation verification
-- `src/dotfiles/parse_packages.py` - Package list parser
+- `tests/e2e/test_verification.py` - Installation verification, derived from the resolver
 - `docs/development/testing.md` - Testing documentation

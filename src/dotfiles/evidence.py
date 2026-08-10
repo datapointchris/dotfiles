@@ -69,6 +69,48 @@ def macos_app(name: str) -> Path | None:
     return None
 
 
+def executables_on_path(checkout: Path, search: str | None = None) -> dict[str, tuple[str, ...]]:
+    """Every name PATH can resolve, to every location that answers for it.
+
+    `shutil.which` answers with the winner alone, which is the right answer to
+    "is it installed" and no answer at all to "how many of it are there". One walk
+    of the PATH directories rather than a `which -a` per item: the check this
+    replaced ran a subprocess per declared tool, and `symlinks._link_for` is the
+    same lesson from the other direction.
+
+    Deduplicated by real path, because `~/.local/bin/fd` pointing at `/usr/bin/fd`
+    is one installation reachable by two names and not two installations. Order is
+    PATH order, so the first entry is the copy that wins.
+
+    `checkout` is left out entirely: `uv run dotfiles check` from the repo puts
+    `.venv/bin` in front, and a second `mypy` that exists for the duration of a
+    development command is not machine state. Taken as an argument rather than
+    read from `paths` because the run's own checkout is the one that matters — the
+    same reason `Session` carries `repo`.
+    """
+    found: dict[str, list[str]] = {}
+    seen: dict[str, set[str]] = {}
+    excluded = str(checkout)
+
+    for directory in (os.environ.get('PATH', '') if search is None else search).split(os.pathsep):
+        if not directory or directory == excluded or directory.startswith(f'{excluded}{os.sep}'):
+            continue
+        try:
+            entries = sorted(os.scandir(directory), key=lambda entry: entry.name)
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.is_file() or not os.access(entry.path, os.X_OK):
+                continue
+            real = os.path.realpath(entry.path)
+            if real in seen.setdefault(entry.name, set()):
+                continue
+            seen[entry.name].add(real)
+            found.setdefault(entry.name, []).append(entry.path)
+
+    return {name: tuple(paths_) for name, paths_ in found.items()}
+
+
 QUERIES: dict[str, list[str]] = {
     'pacman': ['pacman', '-Qq'],
     'apt': ['dpkg-query', '-W', '-f=${Package}\n'],

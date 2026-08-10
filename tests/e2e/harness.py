@@ -22,6 +22,7 @@ import os
 import shlex
 import subprocess
 import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -29,11 +30,17 @@ from urllib.parse import urlsplit
 
 from dotfiles import catalog
 from dotfiles import engine
+from dotfiles import evidence as ev
 from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles.providers import clone
 from dotfiles.providers import toolchain
+from dotfiles.resolve import DesiredItem
+from dotfiles.resolve import Precondition
+from dotfiles.resources import symlinks
+from dotfiles.session import Session
 
 MARKERS = ('install.sh', 'tests/e2e/harness.py')
 """Files that together identify a dotfiles checkout and nothing else."""
@@ -662,6 +669,39 @@ def refused_outcomes(machine: Machine) -> list[str]:
     return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'refused']
 
 
+def recorded_as(item: DesiredItem) -> frozenset[str]:
+    """Every spelling a run record may carry for one item.
+
+    `sinks.py` writes `f'{event.resource}/{change.item}'`, and `change.item` is
+    each resource's own choice: `packages` and `plugins` pass `item.address`, so a
+    row reads `packages/custom/awscli`, while `toolchains` passes `item.name` and
+    writes `toolchains/go` for an item addressed `go-toolchain/go`. Both are
+    matched rather than one being guessed at.
+
+    Deliberately not the shell script's answer, which keyed on the address's last
+    segment because it had no `resource` to hand — and so let anything named
+    `awscli` excuse every absent `aws`, whichever provider had refused.
+    """
+    return frozenset({f'{item.resource}/{item.address}', f'{item.resource}/{item.name}'})
+
+
+def refusals(machine: Machine) -> dict[str, str]:
+    """The same set, keyed by address and carrying the reason each gave.
+
+    Addressed as the record writes them — `packages/go/sesh`, which is
+    `f'{item.resource}/{item.address}'` — so a caller matches an item exactly
+    rather than on its last segment. The shell script this replaces keyed on the
+    segment alone and said why: it had no `resource` to hand. It also meant
+    anything named `awscli` excused every absent `aws`, whichever provider had
+    refused.
+    """
+    return {
+        outcome['address']: outcome.get('message') or 'no reason recorded'
+        for outcome in run_record(machine)['outcomes']
+        if outcome['action'] == 'refused'
+    }
+
+
 def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:
     """A live network probe, retried before its answer is believed.
 
@@ -851,6 +891,321 @@ reloading it costs minutes a tag lookup does not. What docker cannot answer is
 *which plan* a tag came from, so that is what lives here: enough to report on the
 bases, prune the superseded ones, and explain why a rebuild happened.
 """
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# What the machine should be carrying, and one sweep that asks it
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class Declared:
+    """One item, and which environment's manifest asked for it.
+
+    The environment travels with the item because `container` is parametrized by
+    the fixture's own `params` and pytest refuses to parametrize it twice — so the
+    pairing cannot be expressed as one `metafunc.parametrize` over both names.
+    What happens instead is the cross product, cut back to the matched pairs in
+    `pytest_collection_modifyitems`, and this is what lets that comparison be made.
+    """
+
+    environment: str
+    item: DesiredItem
+
+
+def declared_items(environment: Environment) -> tuple[DesiredItem, ...]:
+    """Every item this environment's manifest resolves to, in address order.
+
+    The resolver's answer rather than a reading of `packages.yml`, for the same
+    reason `base_plan` takes it: a tool added or removed changes what is verified
+    with no list here to update. It is also strictly wider than the shell script
+    this replaced, which read `parse_packages --verify-commands` and so saw only
+    the sections that helper named — 141 checks against the 214 items Arch
+    resolves.
+
+    Sorted so the parameter ids a run prints are stable between collections.
+    """
+    plan = resolve.resolve(catalog.load(), machines.load(environment.manifest))
+    return tuple(sorted(plan.items, key=lambda item: item.address))
+
+
+def shell_path(declared: str) -> str:
+    """A declared path as shell that expands, with everything else quoted.
+
+    `~` is expanded by the shell before quoting and not after, so the obvious
+    `shlex.quote('~/.local/bin/x')` produces a literal directory named `~` and
+    every path-evidenced item reads as missing.
+    """
+    if declared.startswith('~/'):
+        return f'"$HOME"/{shlex.quote(declared[2:])}'
+    return shlex.quote(declared)
+
+
+def probe_of(item: DesiredItem) -> str:
+    """The shell that answers where one item is, or '' for one asked another way.
+
+    **Its own observation, deliberately, and not `dotfiles check`.** The tier
+    exists to say whether the install worked, and a checker that agreed with the
+    installer because they share the code that decides what "installed" means
+    would answer that question by assuming it.
+
+    A plugin is a checkout and puts nothing on PATH, so `clone.destination` is
+    asked where it belongs — the declaration's answer, which TPM is separately
+    *told*, and not a directory named here. Without this the zsh plugins, TPM and
+    tmux-fzf would be silently unexamined, which is coverage the shell script had.
+    Asked home-relative and left that way: `exec_script` exports the container's
+    `HOME`, so `"$HOME"` is the one spelling that is right in every environment
+    and this stays a pure function of the item.
+
+    **Empty for a registry package, which PATH cannot answer for.** `command -v
+    7zip` fails on Arch against a `7zip` that is installed and working, because
+    the package ships `7z`; `build-essential` and `libssl-dev` name no binary at
+    all. Measured against the Arch container, asking PATH about system packages
+    failed 30 of them. Those are `registry_names`' question instead.
+
+    Empty too for an item with no evidence of any kind — a macOS default, a
+    systemd unit, a group membership. Each is real and is somebody else's
+    assertion; what none of them is, is a file this can look for.
+    """
+    if registry_names(item):
+        return ''
+    if item.evidence_path:
+        target = item.evidence_path
+    elif isinstance(item.entry, catalog.ShellPlugin | catalog.TmuxPlugin | catalog.YaziPlugin):
+        target = str(clone.destination(item, Path('~')))
+    elif item.executable:
+        return f'command -v {shlex.quote(item.executable)}'
+    else:
+        return ''
+    return f'[ -e {shell_path(target)} ] && printf %s {shell_path(target)}'
+
+
+def registry_names(item: DesiredItem) -> dict[str, list[str]]:
+    """Query name → the names this entry goes by there, for a package a manager owns.
+
+    `evidence.declared_names` is the declaration's own table — the entry is
+    `7zip` and the package is `p7zip-full` on apt and `7zip` on pacman — and
+    reusing it is reusing the declaration, not the evidence. `INSTALLER_QUERIES`
+    is what collapses `aur` onto pacman's query, an AUR package being a pacman
+    package once it is installed.
+    """
+    named: dict[str, list[str]] = {}
+    for installer, names in ev.declared_names(item).items():
+        named.setdefault(ev.INSTALLER_QUERIES[installer], []).extend(names)
+    return named
+
+
+PRECONDITION_PROBES: dict[Precondition, str] = {
+    Precondition.AMD_GPU: '[ -e /dev/kfd ]',
+    Precondition.GITHUB_AUTH: '[ -n "${GITHUB_TOKEN:-}" ]',
+}
+"""How to ask the container whether a declared precondition holds there.
+
+Measured rather than assumed, and measured *here* rather than through
+`evidence.measured_preconditions`, which would ask the host. An item whose
+precondition fails was never installable, so `repair_for` makes it `BY_HAND`,
+`apply` never attempts it, and **nothing is recorded** — not a refusal either. So
+a run record cannot excuse it and this is the only thing that can: ollama declares
+`requires_amd_gpu`, no container has a `/dev/kfd`, and it failed here as a missing
+package on a machine that was right not to have it.
+"""
+
+
+def probe_script(items: Sequence[DesiredItem]) -> str:
+    """One script asking after every item, rather than one `exec` each.
+
+    Two hundred `docker exec` calls is half a minute per environment spent on
+    process startup, and the per-item nodes this feeds want the answer before the
+    first of them runs. The same lesson as `Inventories`: ask the machine once,
+    and ask each package manager once rather than once per package.
+
+    Three kinds of line, tagged, because a tab cannot appear in a path, a package
+    name or a manager's name — where a space appears in all three.
+    """
+    lines = [
+        f'printf \'held\\t%s\\t%s\\n\' {precondition} "$({probe} && echo yes || true)"'
+        for precondition, probe in PRECONDITION_PROBES.items()
+        if any(item.precondition is precondition for item in items)
+    ]
+    # Guarded on the binary existing, and that guard is the whole point: a manager
+    # this machine does not have must leave *no* line, so an apt-only package on
+    # Arch is unaskable rather than reported absent. Piping a missing command
+    # through `tr` succeeds with empty output, which reads identically to a
+    # manager that answered and listed nothing.
+    lines += [
+        f'command -v {ev.QUERIES[query][0]} >/dev/null 2>&1 && '
+        f"printf 'listed\\t%s\\t%s\\n' {query} \"$({shlex.join(ev.QUERIES[query])} 2>/dev/null | tr '\\n' ' ')\""
+        for query in sorted({query for item in items for query in registry_names(item)})
+        if query in ev.QUERIES
+    ]
+    lines += [
+        f'printf \'found\\t%s\\t%s\\n\' {shlex.quote(item.address)} "$({probe} 2>/dev/null || true)"'
+        for item in items
+        if (probe := probe_of(item))
+    ]
+    return '\n'.join(lines)
+
+
+@dataclass(frozen=True)
+class Sweep:
+    """What one run of `probe_script` found, as three answers rather than one.
+
+    `listed` holding no entry for a manager and holding an empty set for it are
+    different facts, and the difference decides a skip against a failure: apt on
+    Arch cannot be asked, while pacman answering with nothing means the package is
+    not there.
+    """
+
+    found: dict[str, str]
+    """Address → where the machine has it, '' where it looked and found nothing."""
+
+    listed: dict[str, frozenset[str]]
+    """Query name → what that manager says it has, for the ones that answered."""
+
+    held: frozenset[Precondition]
+    """Which declared preconditions this machine actually meets."""
+
+    def observed(self, item: DesiredItem) -> bool | None:
+        """Whether the machine has one item, or None where nothing could ask.
+
+        None is not a pass. It is what the per-item test skips on, and the reason
+        is always the machine rather than the item: no manager that could answer,
+        or an item whose evidence is not a file, a binary or a package.
+        """
+        if item.precondition is not Precondition.NONE and item.precondition not in self.held:
+            return None
+        if names := registry_names(item):
+            answerable = {query: found for query, found in names.items() if query in self.listed}
+            if not answerable:
+                return None
+            return any(name in self.listed[query] for query, found in answerable.items() for name in found)
+        if item.address in self.found:
+            return bool(self.found[item.address])
+        return None
+
+
+def probed(machine: Machine, items: Sequence[DesiredItem]) -> Sweep:
+    """Run the sweep and read its three kinds of line back."""
+    answered = machine.exec(probe_script(items))
+
+    found: dict[str, str] = {}
+    listed: dict[str, frozenset[str]] = {}
+    held: set[Precondition] = set()
+    for line in answered.stdout.splitlines():
+        kind, tab, rest = line.partition('\t')
+        subject, tab, value = rest.partition('\t')
+        if not tab:
+            continue
+        if kind == 'found':
+            found[subject] = value.strip()
+        elif kind == 'listed':
+            listed[subject] = frozenset(value.split())
+        elif kind == 'held' and value.strip() == 'yes':
+            held.add(Precondition(subject))
+
+    return Sweep(found=found, listed=listed, held=frozenset(held))
+
+
+def declared_links(environment: Environment) -> tuple[Path, ...]:
+    """Every path the symlink manager says this machine should have, sorted.
+
+    `resources.symlinks.declared` is a walk of the repo and reads no `$HOME`, so
+    the host can answer for the container: same checkout, and the targets are
+    built under the container's home rather than this one's.
+
+    Derived rather than listed, which is the whole difference from the script this
+    replaces — that one named `zshrc`, `tmux.conf`, `gitconfig` and `init.lua`,
+    four of the several hundred, chosen once and never revisited.
+    """
+    machine = machines.load(environment.manifest)
+    session = Session(machine_name=environment.manifest, repo=UNDER_TEST, home=Path(environment.home))
+    return tuple(sorted(link.target for link in symlinks.declared(session, machine.coordinates)))
+
+
+def deployed_script(targets: Sequence[Path]) -> str:
+    """One `test -e` per declared link, in a single script.
+
+    `-e` and not `-L`: what matters is that the path resolves to something, and a
+    machine where safekeep restored a real file over a link is a different finding
+    from one where the pass never ran.
+    """
+    return '\n'.join(f"[ -e {shlex.quote(str(target))} ] || printf '%s\\n' {shlex.quote(str(target))}" for target in targets)
+
+
+def unexplained_copies(machine: Machine, items: Sequence[DesiredItem]) -> dict[str, tuple[str, ...]]:
+    """Declared binaries the machine answers to more than once, minus the explained.
+
+    The same two explanations `resources.packages._shadowing` applies, reached
+    independently: a copy the OS package manager attributes to a package this
+    manifest declares, and a copy owned by a package installed to satisfy
+    something else. Both are declaration questions rather than evidence ones,
+    which is why sharing them costs no independence — what is not shared is
+    anything that decides whether a thing is installed.
+
+    Two `exec` calls and only when the first finds something, because on a
+    converged machine it usually finds nothing.
+    """
+    swept = machine.exec(copies_script(items))
+    duplicated = {
+        binary: tuple(found.split())
+        for binary, tab, found in (line.partition('\t') for line in swept.stdout.splitlines())
+        if tab and len(found.split()) > 1
+    }
+    if not duplicated:
+        return {}
+
+    declared = {
+        name
+        for item in items
+        if isinstance(item.entry, catalog.SystemPackage)
+        for installer in ('apt', 'pacman', 'aur', 'brew')
+        if (name := item.entry.package_for(installer))
+    }
+    every = [path for paths in duplicated.values() for path in paths]
+    answered = machine.exec(ownership_script(every))
+
+    explained = set()
+    for line in answered.stdout.splitlines():
+        path, tab, owner = line.partition('\t')
+        if tab and owner.strip() and (owner.strip() in declared or owner.strip().startswith('unchosen:')):
+            explained.add(path)
+
+    return {
+        binary: remaining for binary, paths in duplicated.items() if len(remaining := tuple(p for p in paths if p not in explained)) > 1
+    }
+
+
+def ownership_script(paths: Sequence[str]) -> str:
+    """Who put each of these here, and whether anybody asked for it.
+
+    `unchosen:` prefixes a package the manager installed to satisfy something
+    else — yay needs a compiler, so pacman's Go sits under the tarball's on every
+    machine that builds an AUR package, and nobody can be told to remove it.
+    """
+    return '\n'.join(
+        f'owner="$(pacman -Qoq {shlex.quote(path)} 2>/dev/null || dpkg-query -S {shlex.quote(path)} 2>/dev/null | cut -d: -f1)"; '
+        f'if [ -n "$owner" ] && {{ pacman -Qdq "$owner" >/dev/null 2>&1 || apt-mark showauto "$owner" 2>/dev/null | grep -qx "$owner"; }}; '
+        f'then owner="unchosen:$owner"; fi; '
+        f'printf \'%s\\t%s\\n\' {shlex.quote(path)} "$owner"'
+        for path in paths
+    )
+
+
+def copies_script(items: Sequence[DesiredItem]) -> str:
+    """Every path each declared binary answers to, resolved through its symlinks.
+
+    `type -aP` rather than `command -v`, which answers with the winner alone —
+    the whole question here is how many there are. Resolved in the container
+    because a symlink means nothing off the machine it is on, and
+    `~/.local/bin/fd` pointing at `/usr/bin/fd` is one installation with two
+    names rather than a duplicate.
+    """
+    lines = [
+        f"printf '%s\\t%s\\n' {shlex.quote(binary)} "
+        f'"$(type -aP {shlex.quote(binary)} 2>/dev/null | while read -r found; do readlink -f "$found"; done | sort -u | tr \'\\n\' \' \')"'
+        for binary in dict.fromkeys(item.executable for item in items if item.executable)
+    ]
+    return '\n'.join(lines)
 
 
 def base_plan(environment: Environment) -> tuple[str, ...]:

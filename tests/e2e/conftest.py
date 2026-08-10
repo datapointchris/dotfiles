@@ -80,6 +80,7 @@ import pytest
 from harness import ARCHLINUX
 from harness import ENVIRONMENTS
 from harness import UNDER_TEST
+from harness import Declared
 from harness import Environment
 from harness import Machine
 from harness import authenticate_git
@@ -87,6 +88,7 @@ from harness import build_base
 from harness import clear_shadow_calls
 from harness import container_name
 from harness import copy_repo
+from harness import declared_items
 from harness import docker
 from harness import github_token
 from harness import github_token_args
@@ -179,6 +181,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             config.hook.pytest_deselected(items=installing)
             items[:] = [item for item in items if item not in installing]
 
+    _narrow_to_declaring_environment(config, items)
     _narrow_to_level(config, items)
 
     wanted = str(config.getoption('--environment')).strip()
@@ -200,6 +203,55 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if dropping:
         config.hook.pytest_deselected(items=dropping)
         items[:] = keeping
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Give a per-item test one node per thing its manifest declares.
+
+    Every environment's items are offered to every environment's container here,
+    and `_narrow_to_declaring_environment` throws away the mismatches. The direct
+    pairing would be one `metafunc.parametrize` over both names with `container`
+    indirect — pytest refuses it, because `container` is parametrized by its own
+    `params=ENVIRONMENTS` and a second parametrization of a fixture is an error.
+
+    Unmatched nodes never run: they are deselected during collection, which costs
+    a fraction of a second and no container at all. Doing it the other way round —
+    skipping inside the test — would report two thousand skips per run and bury
+    the ones that mean something.
+
+    The environment is in this id as well as the container's, so a node reads
+    `[archlinux-archlinux-cargo/bat]`. Not redundancy to tidy away: an id here
+    naming the address alone repeats across manifests, and pytest silently
+    numbers duplicates — `cargo/bat0`, `cargo/bat1` — which renames every node
+    the day a manifest stops declaring one of them. Saying it twice is what keeps
+    an id stable and is what `test_every_item_node_is_paired_with_the_container_that_declares_it`
+    reads to check the pairing.
+    """
+    if 'declared_item' not in metafunc.fixturenames:
+        return
+
+    offered = [Declared(environment.name, item) for environment in ENVIRONMENTS for item in declared_items(environment)]
+    metafunc.parametrize('declared_item', offered, ids=[f'{one.environment}-{one.item.address}' for one in offered])
+
+
+def _narrow_to_declaring_environment(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Keep the node where the container and the item name the same environment.
+
+    The other half of `pytest_generate_tests` above: the cross product exists only
+    because the two parametrizations cannot be written as one, and every pair that
+    does not agree is asking an Arch machine about wsl's `win32yank`.
+    """
+    dropping = [
+        item
+        for item in items
+        if (callspec := getattr(item, 'callspec', None))
+        and isinstance(declared := callspec.params.get('declared_item'), Declared)
+        and (environment := callspec.params.get('container')) is not None
+        and declared.environment != environment.name
+    ]
+    if dropping:
+        config.hook.pytest_deselected(items=dropping)
+        items[:] = [item for item in items if item not in dropping]
 
 
 def _purpose(config: pytest.Config) -> str:

@@ -85,6 +85,69 @@ build cache. mas installs into the user's App Store session and flatpak into a
 per-user installation, so neither has anything to escalate for.
 """
 
+OWNER: dict[str, tuple[str, ...]] = {
+    'pacman': ('pacman', '-Qoq'),
+    'apt': ('dpkg-query', '-S'),
+}
+"""How to ask which package a file on disk came from.
+
+Only the two managers that own paths outside a prefix of their own, because this
+answers one question: whether a second copy of a declared binary is something the
+machine asked for. brew keeps its formulae in its own cellar and `Inventories`
+already speaks for it; a cask, an App Store app and a flatpak put nothing on PATH
+to attribute.
+"""
+
+
+UNCHOSEN: dict[str, tuple[str, ...]] = {
+    'pacman': ('pacman', '-Qdq'),
+    'apt': ('apt-mark', 'showauto'),
+}
+"""How to ask which packages are here to satisfy something else.
+
+The distinction both managers already keep, and the one that separates a second
+copy somebody installed from a second copy that arrived underneath one they did.
+Measured in the Arch container: `/usr/lib/go/bin/go` sits beside the tarball's Go
+because yay needs a compiler to build AUR packages, and on the personal
+workstation `ripgrep` and `fzf` are there for the same kind of reason.
+"""
+
+
+def unchosen() -> frozenset[str]:
+    """Every package installed as a dependency rather than asked for by name."""
+    found: set[str] = set()
+    for manager, command in UNCHOSEN.items():
+        if not effects.run([INSTALL[manager][0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
+            continue
+        listed = effects.run(list(command), output=Output.QUIET, timeout=PROBE_SECONDS)
+        if listed.ok:
+            found.update(line.strip() for line in listed.stdout.splitlines() if line.strip())
+    return frozenset(found)
+
+
+def owner_of(path: str) -> str:
+    """The package that put a file there, or '' when no manager claims it.
+
+    Empty for a file this repo installed itself — a release binary in
+    `~/.local/bin`, a Go tool in `~/go/bin` — which is the answer, not a failure:
+    those are placed by a provider rather than by a package manager, and the
+    caller is asking precisely whether something *else* put a copy on PATH.
+
+    The first manager that answers wins, and no machine here has two of them.
+    """
+    for manager, command in OWNER.items():
+        if not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
+            continue
+        found = effects.run([*command, path], output=Output.QUIET, timeout=PROBE_SECONDS)
+        if not found.ok or not found.stdout.strip():
+            continue
+        # `pacman -Qoq` prints the bare name; `dpkg-query -S` prints
+        # `<package>: <path>`, and a diverted file lists several comma-separated.
+        answer = found.stdout.splitlines()[0].strip()
+        return answer.split(':')[0].split(',')[0].strip() if manager == 'apt' else answer
+    return ''
+
+
 PREFERENCE: tuple[str, ...] = ('pacman', 'apt', 'brew', 'aur')
 """Which manager wins where an entry declares a package under several.
 
