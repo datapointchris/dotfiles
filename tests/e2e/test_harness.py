@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import subprocess
 
+import harness
 import pytest
+from harness import ARCHLINUX
 from harness import ASSET_CDN_HOSTS
 from harness import CONNECTIVITY_RESULTS
 from harness import CONTAINER_PATH_DIRS
@@ -256,3 +258,57 @@ def test_every_reachable_host_is_probed_once_per_method() -> None:
     assert len(keys) == len(set(keys))
     assert {probe.host for probe in probes} == set(reachable)
     assert any(probe.cloned for probe in probes), 'the git path is never re-probed'
+
+
+class TestGithubCredential:
+    """A container's API calls share the host's public IP, so its 60 anonymous
+    requests an hour are the host's too. One full install spends most of them."""
+
+    def test_the_token_is_passed_by_name_so_it_stays_out_of_the_argument_list(self, monkeypatch) -> None:
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+
+        arguments = harness.github_token_args()
+
+        assert arguments == ['--env', 'GITHUB_TOKEN']
+        assert not any('ghp_pretend' in argument for argument in arguments)
+
+    def test_the_environment_wins_over_gh(self, monkeypatch) -> None:
+        """How a caller points a run at a different account without logging out."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_from_the_environment')
+        monkeypatch.setattr(harness.subprocess, 'run', _never_called)
+
+        assert harness.github_token() == 'ghp_from_the_environment'
+
+    def test_gh_answers_when_the_environment_does_not(self, monkeypatch) -> None:
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('ghp_from_gh\n'))
+
+        assert harness.github_token() == 'ghp_from_gh'
+
+    def test_no_credential_anywhere_degrades_rather_than_raising(self, monkeypatch) -> None:
+        """An anonymous run is worth having — it is the rate limit that is not worth
+        mistaking for a broken installer, which the session header names instead."""
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+
+        assert harness.github_token() == ''
+        assert harness.github_token_args() == []
+
+    def test_the_container_is_started_with_it(self, monkeypatch) -> None:
+        """The whole point: `docker run` carries it, so every `docker exec` after
+        inherits it and the install's release lookups are authenticated."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+        started: list[tuple[str, ...]] = []
+        monkeypatch.setattr(harness, 'docker', lambda *args, **kwargs: started.append(args))
+
+        harness.start(ARCHLINUX, 'dotfiles-e2e-pretend')
+
+        assert '--env' in started[0] and 'GITHUB_TOKEN' in started[0]
+
+
+def _never_called(*args: object, **kwargs: object) -> object:
+    raise AssertionError('gh was asked for a token the environment already had')
+
+
+def _answering(stdout: str, returncode: int = 0):
+    return lambda *args, **kwargs: subprocess.CompletedProcess(args, returncode, stdout, '')

@@ -71,6 +71,18 @@ scripts and the editable CLI are current; what is stale is exactly the install
 log and its status. Install for real when `install.sh`, a phase script or a
 package list changes — use `--installed` for everything else.
 
+**A container install borrows the host's `gh` credential.** GitHub allows 60
+anonymous API calls an hour *per public IP*, the container shares the host's, and
+one full install spends most of them — so an unauthenticated second run inside
+the hour answers "did not answer with a release" for every release tool, which
+reads exactly like a broken installer. The harness passes `GITHUB_TOKEN` through
+when `gh auth token` answers, and the pytest header says which run you got:
+
+```text
+github: authenticated
+github: ANONYMOUS — 60 API calls/hour, release failures are suspect (gh auth login)
+```
+
 Add `--environment <name>` for one — never `-k`, which matches test names too and
 quietly selects all four. The environments are independent containers, so four
 shells running one `--environment` each finish in the time of the slowest rather

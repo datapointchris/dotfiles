@@ -77,6 +77,7 @@ from harness import Machine
 from harness import clear_shadow_calls
 from harness import copy_repo
 from harness import docker
+from harness import github_token
 from harness import image_exists
 from harness import install_age
 from harness import install_command
@@ -98,6 +99,22 @@ def keeping_containers(config: pytest.Config) -> bool:
     """Asking to reuse a container implies keeping it, or the next run finds
     nothing to reuse and silently pays for a whole install again."""
     return bool(config.getoption('--keep') or reusing_containers(config))
+
+
+def pytest_report_header(config: pytest.Config) -> str:
+    """Say whether a container run is authenticated, before anything installs.
+
+    Anonymous GitHub API calls are 60 an hour per public IP and a full install
+    spends most of them, so an unauthenticated run fails on every release tool with
+    "did not answer with a release" — which reads exactly like a broken installer.
+    Naming it in the header is what keeps a red run from being argued about: either
+    the line says the calls are authenticated, or the failures are suspect.
+    """
+    if not config.getoption('--docker'):
+        return ''
+    return (
+        'github: authenticated' if github_token() else 'github: ANONYMOUS — 60 API calls/hour, release failures are suspect (gh auth login)'
+    )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:

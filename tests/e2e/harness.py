@@ -15,6 +15,7 @@ the harness was.
 
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 from dataclasses import dataclass
@@ -451,6 +452,46 @@ def blocked_host_args(environment: Environment) -> list[str]:
     return [argument for host in blocked for argument in ('--add-host', f'{host}:127.0.0.1')]
 
 
+def github_token() -> str:
+    """The host's GitHub credential, or '' where there is none.
+
+    `gh` rather than a checked-in secret or a CI variable: the credential is
+    already on this machine and already refreshed, so nothing has to be stored to
+    use it. `GITHUB_TOKEN` wins where it is set, which is how a caller points a run
+    at a different account without logging `gh` out of this one.
+    """
+    if existing := os.environ.get('GITHUB_TOKEN'):
+        return existing
+    found = subprocess.run(['gh', 'auth', 'token'], check=False, capture_output=True, text=True)
+    return found.stdout.strip() if found.returncode == 0 else ''
+
+
+def github_token_args() -> list[str]:
+    """`--env GITHUB_TOKEN` for the container, and the export that makes it resolve.
+
+    **An install needs one.** Anonymous GitHub API calls are 60 an hour *per public
+    IP*, and the container shares the host's — so one full install spends most of
+    that budget and a second inside the hour answers "did not answer with a
+    release" for every release tool. That is indistinguishable from a broken
+    installer, which is how a red run gets blamed on code that is fine and a real
+    break gets waved through as "just the rate limit".
+
+    Passed by name rather than as `GITHUB_TOKEN=<value>`, so the secret is not in
+    an argument list that `ps` or a shell history can read. Docker resolves it from
+    this process, which is what the export is for; it is still in the container's
+    own environment afterwards, which is the point of sending it.
+
+    Empty where there is no credential rather than raising: an anonymous run is
+    degraded, not impossible, and `conftest` says so once at the top of the session
+    so a rate-limited failure is never mistaken for a code one.
+    """
+    token = github_token()
+    if not token:
+        return []
+    os.environ['GITHUB_TOKEN'] = token
+    return ['--env', 'GITHUB_TOKEN']
+
+
 def start(environment: Environment, name: str) -> None:
     docker(
         'run',
@@ -459,6 +500,7 @@ def start(environment: Environment, name: str) -> None:
         name,
         '--env',
         'DOTFILES_DOCKER_TEST=true',
+        *github_token_args(),
         *blocked_host_args(environment),
         '--mount',
         f'type=bind,source={paths.REPO_ROOT},target=/dotfiles-src,readonly',
