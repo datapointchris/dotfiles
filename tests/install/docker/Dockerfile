@@ -72,9 +72,17 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/opt/build-u
 
 # Remove baked-in dotfiles — tests provide fresh copy via bind mount at runtime.
 # Keeping an empty dir so bind mounts and internal copies have a target.
+#
+# The recursive chown is not belt-and-braces. This stage runs as root with
+# HOME=/home/testuser, so everything it touches lands in the user's home owned by
+# root: `git config --global` writes .gitconfig, and the uv bootstrap creates
+# .cache, .config/uv, .local/share and .local/state. Deleting the *contents*
+# above leaves those parents root-owned, and the install then dies at
+# `failed to create directory /home/testuser/.cache/uv: Permission denied` —
+# which is every test in the offline and restricted environments, at 7 seconds.
 RUN rm -rf /home/testuser/dotfiles \
     && mkdir -p /home/testuser/dotfiles \
-    && chown testuser:testuser /home/testuser/dotfiles
+    && chown -R testuser:testuser /home/testuser
 
 # Switch back to testuser for subsequent stages
 USER testuser
