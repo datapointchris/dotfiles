@@ -43,7 +43,7 @@ handing it to something else means retyping a name that changes every build.
 substitution rather than a copy-paste:
 
 ```bash
-ifiles put "$(dotfiles bundle create --print-path)"
+ifiles upload "$(dotfiles bundle create --print-path)"
 ```
 
 The build log is unaffected — it goes to stderr either way, so it still reaches

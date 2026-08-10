@@ -3,7 +3,7 @@
 Nothing here shells out — `sinks.keep` wrote the records on the way past, so this
 reads them off disk and does not change when the resources move underneath it.
 
-`path` exists to be substituted into another command: `ifiles put "$(dotfiles
+`path` exists to be substituted into another command: `ifiles upload "$(dotfiles
 report path)"` is the whole fleet-analysis loop, which is why it prints a bare
 path to stdout and nothing else. It is not the only place a path appears, though,
 because a verb that makes you go and ask for one is a verb nobody knows about:

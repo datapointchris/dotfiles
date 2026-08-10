@@ -102,7 +102,7 @@ folder, so the fleet keeps the history and no verb here prunes it.
 `dotfiles report` is how the records are asked about, and `--help` lists the
 verbs. The one that shaped the format is `stats`: it totals time per address
 across every record, which is the question that made timing a field. `path` exists
-so a record can be piped somewhere else in one word — `ifiles put "$(dotfiles
+so a record can be piped somewhere else in one word — `ifiles upload "$(dotfiles
 report path)"` is the fleet-analysis loop.
 
 **`apply` records both halves**: a `Change` is what was decided and an `Outcome`

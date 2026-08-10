@@ -46,7 +46,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'requirements': 'machines: the register supplied by hand, which show prints in passing and no other verb can name alone',
     'prune': 'bundle: removes a staged artefact, not drift. Run records are never pruned',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
-    'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles put "$(dotfiles report path)"`',
+    'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
     'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
     'shell-init': 'hidden; the `starship init` / `zoxide init` convention for a shell snippet',
