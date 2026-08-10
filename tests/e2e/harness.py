@@ -60,6 +60,45 @@ def repo_under_test(start: Path | None = None) -> Path:
 
 UNDER_TEST = repo_under_test()
 
+
+def linked_worktree(checkout: Path) -> str | None:
+    """The worktree's own name, or `None` for the checkout git calls the main one.
+
+    Asked of git rather than of the path, because "is this a worktree" is a fact
+    git holds: `--git-dir` answers `.git` for the main checkout and
+    `<common>/worktrees/<name>` for a linked one.
+    """
+    completed = subprocess.run(('git', '-C', str(checkout), 'rev-parse', '--git-dir'), capture_output=True, text=True)
+    if completed.returncode != 0:
+        return None
+    git_dir = Path(completed.stdout.strip())
+    return git_dir.name if git_dir.parent.name == 'worktrees' else None
+
+
+CHECKOUT = linked_worktree(UNDER_TEST)
+
+
+def container_name(*parts: str) -> str:
+    """A container name no other checkout of this repo can claim.
+
+    Every name here was global — `dotfiles-e2e-archlinux` and two siblings — and
+    every fixture that owns one begins by `docker rm -f`-ing it. Two checkouts
+    running the same environment therefore did not queue, they destroyed each
+    other: a `rm -f` at one run's exit killed the other's install at exit 137,
+    which reads as an OOM. Naming them apart is what makes a second checkout safe
+    to run in rather than a rule to remember.
+
+    The main checkout keeps the bare name, so the containers already on the box
+    stay reachable and the common case stays readable. Only a linked worktree
+    takes a suffix, and it is that worktree's name because that is what says
+    whose container it is in `docker ps`.
+    """
+    suffix = (
+        () if CHECKOUT is None else (''.join(character if character.isalnum() or character in '_.-' else '-' for character in CHECKOUT),)
+    )
+    return '-'.join(('dotfiles-e2e', *parts, *suffix))
+
+
 CONNECTIVITY_RESULTS = UNDER_TEST / 'install' / 'offline' / 'connectivity-results.txt'
 DOCKER_DIR = UNDER_TEST / 'tests' / 'install' / 'docker'
 
@@ -211,7 +250,7 @@ class Environment:
     env_file: str | None = None
     """`~/.env` contents, or None to let install.sh generate it — which is what is
     being rehearsed. Hand-writing a stub hid two bugs at once: `env sync` failed
-    because uv is installed by a later phase and the warning said it was
+    because uv is installed by a later stage and the warning said it was
     "continuing with the existing file", meaning the stub; and the stub carried no
     MACHINE, so manifest-derived verification checked 45 things instead of 138 and
     still reported success."""
@@ -240,7 +279,7 @@ ARCHLINUX = Environment(
     user='archlinuxuser',
     home='/home/archlinuxuser',
     manifest='archlinux-personal-workstation',
-    # git only, and sudo for the phases that need it. No python either, which is
+    # git only, and sudo for the stages that need it. No python either, which is
     # the state the other three images cannot reach — `plant_python_shadow` gives
     # every environment the hostile version of the same question.
     prepare=(
@@ -365,8 +404,8 @@ def shadow_source(home: str) -> str:
 
     The caller comes from `/proc/$PPID/cmdline` because the argv alone does not
     say who ran it, and who ran it is the entire diagnosis — uv probing PATH for
-    an interpreter is expected, a phase script calling `python3` is the bug this
-    step deleted.
+    an interpreter is expected, anything else reaching for `python3` is the bug
+    this step deleted.
     """
     return (
         '#!/bin/sh\n'
@@ -795,7 +834,7 @@ def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
     if base_is_fresh(tag, stamp):
         return tag
 
-    builder = f'{BASE_REPOSITORY}-build-{environment.name}'
+    builder = container_name('base-build', environment.name)
     docker('rm', '-f', builder)
     start(environment, builder)
     machine = Machine(environment=environment, container=builder)

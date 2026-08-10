@@ -11,6 +11,7 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import harness
 import pytest
@@ -123,7 +124,7 @@ def test_every_environment_names_a_manifest_that_exists(environment: Environment
 @pytest.mark.parametrize('environment', ENVIRONMENTS, ids=lambda environment: environment.name)
 def test_every_environment_installs_as_a_named_user_in_its_own_home(environment: Environment) -> None:
     """Never root, and never `/root`: the real machines install as a sudo user,
-    and a run as root passes the sudo-gated phases for the wrong reason. A WSL
+    and a run as root passes the sudo-gated stages for the wrong reason. A WSL
     rootfs ships with no login user at all, which is why one is committed into
     the image rather than created per-container."""
     assert environment.user != 'root'
@@ -167,6 +168,43 @@ def test_asking_for_one_environment_collects_only_that_one() -> None:
     assert any('[offline]' in line for line in selected)
 
 
+def test_the_set_tier_is_not_collected_when_nothing_may_install() -> None:
+    """`--installed` means assert against the install already there, and a set
+    test cannot honour it — `over_base` starts a container and installs into it.
+
+    Collected anyway they were the whole difference between the tier the ladder
+    documents and the one it delivered: nine minutes against the seconds that
+    make it the rung most fixes land on.
+    """
+    from dotfiles import paths
+
+    def collect(*flags: str) -> list[str]:
+        completed = subprocess.run(
+            [
+                'uv',
+                'run',
+                'pytest',
+                'tests/e2e',
+                '--docker',
+                '--environment',
+                'archlinux',
+                *flags,
+                '--collect-only',
+                '-q',
+                '-o',
+                'addopts=',
+            ],
+            cwd=paths.REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return [line for line in completed.stdout.splitlines() if '::' in line]
+
+    assert any('test_set.py' in line for line in collect()), 'the set tier is gone from the default selection'
+    assert not [line for line in collect('--installed') if 'test_set.py' in line]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # What a container command actually runs
 # ─────────────────────────────────────────────────────────────────────────────
@@ -183,7 +221,7 @@ def test_the_exec_path_leads_with_the_directories_an_install_writes_to() -> None
 
 
 def test_the_exec_path_still_carries_the_system_directories() -> None:
-    """A phase needs `bash`, `git` and `tar`, which live in none of the above."""
+    """An install needs `bash`, `git` and `tar`, which live in none of the above."""
     assert '/usr/bin' in CONTAINER_PATH_DIRS
     assert '/bin' in CONTAINER_PATH_DIRS
 
@@ -222,7 +260,7 @@ def test_the_shadow_refuses_and_says_why() -> None:
 
 
 def test_a_uv_probe_is_not_a_stranger() -> None:
-    """uv scanning PATH for an interpreter is expected; a phase script calling
+    """uv scanning PATH for an interpreter is expected; anything else calling
     `python3` is the bug. Matched on basename, because `~/.local/share/uv` puts
     the substring in paths that have nothing to do with uv running."""
     assert ShadowCall(caller='/home/tester/.local/bin/uv tool install', argv='python3 -c ...').by_uv
@@ -385,3 +423,48 @@ def test_a_path_in_no_checkout_says_so_rather_than_guessing(tmp_path) -> None:
         harness.repo_under_test(tmp_path / 'nowhere' / 'file.py')
 
     assert 'install.sh' in str(refused.value)
+
+
+class TestContainerName:
+    """Two checkouts of this repo must not be able to name the same container.
+
+    Every fixture owning one begins by removing it, so a shared name is not a
+    queue, it is one run destroying another's install mid-flight.
+    """
+
+    def test_the_main_checkout_keeps_the_bare_name(self, monkeypatch) -> None:
+        """The containers already on the box stay reachable, and the common case
+        stays readable in `docker ps`."""
+        monkeypatch.setattr(harness, 'CHECKOUT', None)
+
+        assert harness.container_name('archlinux') == 'dotfiles-e2e-archlinux'
+        assert harness.container_name('set', 'wsl') == 'dotfiles-e2e-set-wsl'
+
+    def test_a_worktree_takes_its_own_name(self, monkeypatch) -> None:
+        monkeypatch.setattr(harness, 'CHECKOUT', 'convert-the-wsl-scripts')
+
+        assert harness.container_name('archlinux') == 'dotfiles-e2e-archlinux-convert-the-wsl-scripts'
+
+    def test_a_branch_shaped_name_is_made_legal_for_docker(self, monkeypatch) -> None:
+        """A worktree may be named for a branch, and docker accepts only
+        `[a-zA-Z0-9_.-]` after the first character."""
+        monkeypatch.setattr(harness, 'CHECKOUT', 'feature/wsl scripts')
+
+        assert harness.container_name('wsl') == 'dotfiles-e2e-wsl-feature-wsl-scripts'
+
+    def test_the_main_worktree_is_recognised_by_git_rather_than_by_path(self, monkeypatch) -> None:
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('.git\n'))
+
+        assert harness.linked_worktree(Path('/anywhere')) is None
+
+    def test_a_linked_worktree_is_named_by_its_git_dir(self, monkeypatch) -> None:
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('/home/c/dotfiles/.git/worktrees/some-branch\n'))
+
+        assert harness.linked_worktree(Path('/anywhere')) == 'some-branch'
+
+    def test_no_git_at_all_is_the_main_checkout(self, monkeypatch) -> None:
+        """An unpacked tarball is one checkout on the box, which is the case the
+        bare name is for — not a reason to fail collection."""
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=128))
+
+        assert harness.linked_worktree(Path('/anywhere')) is None

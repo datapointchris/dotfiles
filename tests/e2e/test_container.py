@@ -30,7 +30,7 @@ pytestmark = pytest.mark.docker
 
 
 def test_the_container_is_running_as_the_installing_user(container: Machine) -> None:
-    """Root would pass the sudo-gated phases for the wrong reason, and would write
+    """Root would pass the sudo-gated stages for the wrong reason, and would write
     into `/root` rather than the home the real machine uses."""
     assert container.read('id -un') == container.environment.user
 
@@ -105,12 +105,12 @@ def test_the_shadow_names_whoever_called_it(container: Machine) -> None:
     assert all(call.caller for call in called)
 
 
-def test_the_machine_declares_itself_before_anything_runs(container: Machine) -> None:
+def test_the_machine_declares_itself_before_anything_runs(fresh_container: Machine) -> None:
     """`~/.env` either was written here or is deliberately absent so `install.sh`
     generates it — and generating it is the step being rehearsed."""
-    home = container.environment.home
-    exists = container.succeeds(f'test -f {home}/.env')
-    assert exists == (container.environment.env_file is not None)
+    home = fresh_container.environment.home
+    exists = fresh_container.succeeds(f'test -f {home}/.env')
+    assert exists == (fresh_container.environment.env_file is not None)
 
 
 def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> None:

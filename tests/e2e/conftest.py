@@ -45,7 +45,7 @@ producing them again. It re-copies the repo first, so the verification scripts a
 the editable CLI are current even though the install is not — what is stale is
 exactly `install_status` and `install_log`, and the flag's name says so.
 
-Run it without the flag when `install.sh`, a phase script or a package list
+Run it without the flag when `install.sh`, a provider or a package list
 changes. Run it with the flag when a test, an assertion or a verification script
 changes, which is most of the time.
 
@@ -54,14 +54,19 @@ changes, which is most of the time.
     uv run pytest tests/e2e --docker --reuse          # reuse the OS state, install again
     uv run pytest tests/e2e --docker --installed      # reuse the install too
 
-The four environments are independent containers, so four shells running one
-`--environment` each finish in the time of the slowest rather than the sum.
+The four environments are independent containers and no longer share a name with
+another checkout's — `harness.container_name` suffixes a linked worktree's. What
+that buys is a second checkout running the cheap rungs while the first holds a
+container, not four full installs at once: an install is twenty to thirty minutes
+of one box's CPU and disk, and running them concurrently makes the box unusable
+for the duration. One full install at a time; parallelism belongs at the rungs
+that cost seconds.
 
 Pick an environment with `--environment`, never `-k`. `-k` filters on test names
 as well as parameter ids, so `-k offline` also matches
 `test_the_offline_run_never_resolved_a_version_online[archlinux]` and quietly
-selects every environment — which starts a container whose name another running
-process is already using, and `docker rm -f` then kills that install.
+selects every environment — which within one checkout is still a container
+another of its own runs is using, and `docker rm -f` then kills that install.
 """
 
 from __future__ import annotations
@@ -79,6 +84,7 @@ from harness import Machine
 from harness import authenticate_git
 from harness import build_base
 from harness import clear_shadow_calls
+from harness import container_name
 from harness import copy_repo
 from harness import docker
 from harness import github_token
@@ -121,11 +127,25 @@ def pytest_report_header(config: pytest.Config) -> str:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Honour `--environment`, which is the only safe way to run one of these.
+    """Honour `--environment`, and drop what `--installed` cannot mean.
 
-    Only items carrying a `container` parameter are touched, so nothing outside
-    the container tiers is affected by asking for one environment.
+    Only items carrying a `container` parameter are narrowed by environment, so
+    nothing outside the container tiers is affected by asking for one.
+
+    `--installed` additionally deselects the set tier, which is the difference
+    between the rung the ladder documents and the one it delivered: `--installed`
+    says assert against the install that is already there, and a set test cannot
+    honour that — `over_base` starts a fresh container and installs a section
+    into it. Collected anyway, they made `tests/e2e --installed` take nine
+    minutes where the tier is meant to answer in seconds, which is what pushes a
+    question back up to the half-hour rung.
     """
+    if config.getoption('--installed'):
+        installing = [item for item in items if 'over_base' in getattr(item, 'fixturenames', ())]
+        if installing:
+            config.hook.pytest_deselected(items=installing)
+            items[:] = [item for item in items if item not in installing]
+
     wanted = str(config.getoption('--environment')).strip()
     if not wanted:
         return
@@ -167,7 +187,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
             pytest.skip(f'image {environment.image} is absent and nothing here builds it')
         subprocess.run(environment.build_image, check=True, cwd=UNDER_TEST)
 
-    name = f'dotfiles-e2e-{environment.name}'
+    name = container_name(environment.name)
     # `--reuse` keeps the OS state — an Arch container is 4.5GB of pacman
     # downloads — and never the repo inside it. Reusing both is how the Arch
     # harness came to test whatever code was mounted when the container was
@@ -186,12 +206,19 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
             for command in environment.prepare:
                 subject.exec(command, user='root', check=True)
 
+            # Inside the guard with `prepare`, and for the same reason: this is
+            # setup for a container nothing has installed into. Written over a
+            # reused container it destroys the `~/.env` the install generated —
+            # a 45-byte stub naming no MACHINE replacing the manifest-derived
+            # file — and `--installed` then fails three tests that read it, with
+            # "~/.env does not declare this machine" against a machine that
+            # declared itself correctly half an hour earlier.
+            if environment.env_file:
+                subject.exec(f'printf %s {shlex.quote(environment.env_file)} > {environment.home}/.env', check=True)
+
         copy_repo(subject)
         authenticate_git(subject)
         plant_python_shadow(subject)
-
-        if environment.env_file:
-            subject.exec(f'printf %s {shlex.quote(environment.env_file)} > {environment.home}/.env', check=True)
 
         yield subject
     finally:
@@ -207,7 +234,7 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
 
     Session-scoped because the install is the expensive part and every test is a
     different question about the same finished machine. `install_status` is
-    recorded rather than asserted here: `dotfiles apply` exits 3 when a phase
+    recorded rather than asserted here: `dotfiles apply` exits 3 when a stage
     fails, and the tests are what say whether that mattered.
 
     `--installed` goes further and skips the install entirely, reading the record
@@ -244,6 +271,42 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
     return container
 
 
+@pytest.fixture
+def fresh_container(container: Machine, request: pytest.FixtureRequest) -> Machine:
+    """`container` narrowed to a run that started it empty.
+
+    Under `--reuse` or `--installed` the container is one a previous run installed
+    into, so a question about the state *before* an install is being put to a
+    machine that is after one. `~/.env` is the case that made this necessary: it
+    is present because the last install wrote it, not because the rig planted it,
+    and the assertion reads as a rig failure.
+
+    Skipping rather than adapting, because there is no version of "before the
+    install" that a already-installed container can answer.
+    """
+    if reusing_containers(request.config):
+        pytest.skip('--reuse/--installed: asks about a container before an install, and this one is after one')
+    return container
+
+
+@pytest.fixture
+def fresh_install(machine: Machine, request: pytest.FixtureRequest) -> Machine:
+    """`machine` narrowed to a run that performed the install itself.
+
+    `--installed` returns the container without going through the install fixture,
+    and `clear_shadow_calls` lives there — so the shadow log is not this install's
+    record but everything since the last one, including the assertions of the run
+    reading it. A test asking what the install did has nothing to read.
+
+    Distinct from `fresh_container`, which turns on `--reuse` too: `--reuse` does
+    perform an install, so anything reading what an install did is answerable
+    under it.
+    """
+    if request.config.getoption('--installed'):
+        pytest.skip('--installed: reads what the install did, and this run did not perform one')
+    return machine
+
+
 @pytest.fixture(scope='session')
 def base(container_environment: Environment) -> str:
     """The base image for this environment: system packages and nothing above them.
@@ -278,7 +341,7 @@ def over_base(base: str, container_environment: Environment) -> Iterator[Machine
     result depend on the first's. Starting from an image costs about a second,
     which is what makes per-test isolation affordable here and not there.
     """
-    name = f'dotfiles-e2e-set-{container_environment.name}'
+    name = container_name('set', container_environment.name)
     docker('rm', '-f', name)
     docker(
         'run',

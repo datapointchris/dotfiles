@@ -54,25 +54,25 @@ def test_the_interpreter_the_installers_get_can_import_the_package(machine: Mach
     assert machine.succeeds('"$(uv tool dir)/dotfiles/bin/python" -c "import dotfiles, yaml"')
 
 
-def test_nothing_but_uv_reached_for_the_system_python(machine: Machine) -> None:
+def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) -> None:
     """The whole install ran with a `python3` first on PATH that exits 1 loudly,
     and only uv is allowed to have found it.
 
     This is what replaced `pip install --user PyYAML` into Apple's interpreter:
     scripts reach Python through `$DOTFILES_PYTHON`, which is the CLI's own
-    `sys.executable`, so a bare `python3` anywhere in a phase is the old bootstrap
+    `sys.executable`, so a bare `python3` anywhere in a run is the old bootstrap
     growing back. uv is exempt because scanning PATH for an interpreter is what it
     is supposed to do — the offline path passes `--no-python-downloads` and needs
     to find a real one, which it does after rejecting this stub.
     """
-    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(machine) if not call.by_uv]
+    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.by_uv]
     assert not strangers, strangers
 
 
-def test_no_phase_crashed(machine: Machine) -> None:
-    """A phase may fail; none may raise.
+def test_no_stage_crashed(machine: Machine) -> None:
+    """A stage may fail; none may raise.
 
-    A traceback in our own code means the walk stopped, so every phase after it
+    A traceback in our own code means the walk stopped, so every stage after it
     silently did not run — which is how a symlink pass that had already deployed
     everything took tmux, Neovim and the shell config down with it.
 
