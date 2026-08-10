@@ -26,9 +26,9 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
    - Binary location: `~/go/bin/`
 
 2. **Symlinked Script Apps** (notes): Symlinked from repo
-   - Located in `apps/{platform}/` as executable files (bash, or Python via a `uv run --script` / `python3` shebang). A Python app that outgrows a single file becomes a module in `src/dotfiles/` with a `[project.scripts]` entry instead
-   - Symlinked to `~/.local/bin/`
-   - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
+   - Located in `apps/common/` or an `apps/<axis>/<value>/` overlay as executable files (bash, or Python via a `uv run --script` / `python3` shebang). A Python app that outgrows a single file becomes a module in `src/dotfiles/` with a `[project.scripts]` entry instead
+   - Symlinked to `~/.local/bin/`, flattened — the axis path is dropped at the destination
+   - Deployed by `TREES` in `src/dotfiles/resources/symlinks.py`, which names that destination
 
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
    - Installed by a function in `src/dotfiles/providers/custom.py`
@@ -127,28 +127,24 @@ This dotfiles setup maintains a clear separation between system package managers
 
 ## Project Overview
 
-A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
+A cross-platform dotfiles repository with manifest-driven installation and shared configurations, overridden per coordinate rather than per platform. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
 **This repo does not use `stow`** — symlinking is self-managed by the symlink manager (`dotfiles symlinks apply`). Don't reach for stow conventions or assume a stow-shaped layout.
 
 **Directory Structure**:
 
-- `configs/` - Platform configurations (what gets deployed)
-  - `common/` - Shared configurations (Neovim, tmux, zsh, git)
-  - `macos/` - macOS-specific dotfiles and GUI app configs
-  - `wsl/` - Ubuntu WSL configurations for restricted work environment
-  - `archlinux/` - Arch Linux configurations
-- `apps/` - Personal CLI applications (bash or Python scripts, symlinked; see `apps/` for full listing)
-  - `common/` - Cross-platform tools (notes, packup, patterns, and more)
-  - `macos/` - macOS-specific tools
-  - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
+- `configs/` - Configurations (what gets deployed), as `common/` plus `<axis>/<value>/` overlays
+- `apps/` - Personal CLI applications (bash or Python scripts), same layout, symlinked to `~/.local/bin/`
+- `shell/` - Shell source files, same layout, symlinked to `~/.local/shell/` — and the only one of
+  the three that keeps `<axis>/<value>/` in the deployed path, since nothing but `.zshrc` reads there
+  and it makes a sourced file say which coordinate asked for it
 - `src/dotfiles/` - The Python package: one importable tree, one console script per
-  `[project.scripts]`. The symlinks manager lives here as `symlinks/`
+  `[project.scripts]`. Symlink deployment is `resources/symlinks.py`; `symlinks/core.py` holds
+  the helpers it walks the tree with
 - `install/` - Repository management tools
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `offline/` - Offline installation support (connectivity testing, bundles)
-  - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
+  - `wsl/` - The one platform-specific install directory left (Windows font, shell sync, docker repo)
   - `common/` - Cross-platform installer scripts (plugins/) and `lib/` shared libraries
   - `packages.yml` - Package definitions
   - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)
@@ -158,11 +154,12 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Key Systems**:
 
-- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type, and the `platform` a machine declares
-- **Shell Files** - `shell/` contains only platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `dotfiles symlinks apply`
-- **MACHINE and PLATFORM are the only two axes** (⚠️ do not add a third) - `MACHINE` is the single hand-chosen value; it selects a manifest, which declares everything else, and `render_env.py` derives `PLATFORM` and every flag from it. `PLATFORM` is a *sharing* key, not a second identity — it exists because several machines share an OS overlay, and it keys `configs/`, `apps/`, `shell/`. Nothing else selects anything. A `MACHINE_ROLE` axis (work/personal/server) was tried and removed: it was rendered from the same manifest so it carried no information `MACHINE` did not, it declared three values while shipping one file, and that file served one machine
-- **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild — which is what `dotfiles check` reports. A mechanism that is generic (mounting a Windows share) belongs in the platform overlay; only the values naming an employer go in the local file
-- **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a platform overlay under `configs/`
+- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type. A manifest resolves its coordinates through a `platform:` bundle name or declares `coordinates:` directly — never both, because two spellings of one fact is the drift the split exists to end
+- **Shell Files** - `shell/` holds `common/` plus `<axis>/<value>/` overlays; symlinked to `~/.local/shell/` by `dotfiles symlinks apply`
+- **Six axes, one hand-chosen value** - `MACHINE` is the only thing chosen by hand; it selects a manifest, and the manifest says where the machine sits on each of the six axes in `src/dotfiles/coordinates.py` — package manager, OS family, display stack, host, network trust, capacity. `dotfiles env apply` writes them into `~/.env` as `DOTFILES_PKG`, `DOTFILES_OS` and their four siblings, which every shell and every overlay reads. Nothing is detected: a guess cannot answer whether a box is on employer or fleet network, or whether it is meant to be a workstation or a server. **Never enumerate the overlay directories in prose** — read `OVERLAY_DIRS` and the enums beside it, or run `eza -1 -D configs apps shell` for the ones that exist, because an axis earns a directory only where something actually differs along it. Why the fused `PLATFORM` string was split, and why a `MACHINE_ROLE` axis was tried and removed before it: `docs/architecture/index.md`
+- **A deployed path lives in exactly one layer** - `declared()` in `src/dotfiles/resources/symlinks.py` walks each layer and appends without deduplicating, so the same relative path in both `common/` and an overlay is a collision producing two links at one target, never an override. There is no merge step: an overlay carries the whole file, which is why a config that differs on one machine moves out of `common/` rather than being patched on top of it
+- **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild — which is what `dotfiles check` reports. A mechanism that is generic (mounting a Windows share) belongs in the coordinate overlay that owns it; only the values naming an employer go in the local file
+- **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a coordinate overlay under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

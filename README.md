@@ -29,7 +29,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
+`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base with `<axis>/<value>/` overlays layered on top, where the axes are the six a machine varies along (`src/dotfiles/coordinates.py`). `eza -1 -D configs apps shell` shows which overlays exist, and most do not — an axis earns a directory only where something actually differs along it. `install/` handles provisioning — machine manifests in `install/manifests/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 
