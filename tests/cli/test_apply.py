@@ -182,6 +182,32 @@ def test_a_run_that_repaired_everything_converges(quiet: None, monkeypatch: pyte
     assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
 
 
+def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The longest part of a fresh install is one batched `apt-get install` over
+    every declared package, and it returns its outcomes minutes later as one list.
+
+    Announcing on the first outcome therefore leaves the screen blank through
+    exactly the stretch a person is watching to see whether the run has hung —
+    measured against a real container, where `dotfiles apply` printed nothing for
+    four minutes while apt unpacked 33 packages. `Output.STREAM`'s own docstring
+    records the same defect from the other side.
+    """
+    announced: list[str] = []
+
+    def acting(session, planned, privilege):
+        announced.append(f'acted:{planned[0].item}')
+        return iter((done(planned[0].item),))
+
+    monkeypatch.setenv('MACHINE', MACHINE)
+    monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter((drift('ripgrep'),)))
+    monkeypatch.setattr(engine, 'execute', acting)
+    monkeypatch.setattr('dotfiles.reconcile.heading', lambda text: announced.append(f'heading:{text}'))
+
+    reconcile.apply_machine(engine.Selection.everything())
+
+    assert announced == ['heading:packages', 'acted:ripgrep']
+
+
 def test_a_failed_write_is_an_issue(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
     """`install.sh` exited 0 whatever failed, because the phase layer returned
     booleans nothing looked at — so `install.sh && next-thing` chained straight
@@ -404,11 +430,11 @@ def test_the_machine_is_read_from_the_env_file_when_the_environment_is_bare(
     monkeypatch.delenv('MACHINE', raising=False)
     monkeypatch.setenv('HOME', str(tmp_path))
     (tmp_path / '.env').write_text(f'MACHINE={MACHINE}\n')
-    walk = walked(monkeypatch, Walk())
+    walk = walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
     monkeypatch.delenv('MACHINE', raising=False)
 
     assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
-    assert walk.acted
+    assert walk.acted, 'it resolved the machine but never reached the walk'
 
 
 def test_a_machine_named_nowhere_at_all_is_a_usage_error(quiet: None, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:

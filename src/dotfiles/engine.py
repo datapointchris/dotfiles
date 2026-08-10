@@ -301,8 +301,22 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
     record says nothing about the half that never ran.
     """
     known = resources()
-    for group in _batches(_in_stage_order(planned)):
+    for group in batches(planned):
         yield from _act(session, known[group[0].resource], group, privilege)
+
+
+def batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+    """The work a run will do, in the order it will happen and grouped as it will
+    be handed over.
+
+    Public because a caller needs the grouping *before* the work runs, not after:
+    a batched provider hands `apt-get install` ninety packages and returns one
+    list of outcomes minutes later, so a reader that waits for the first outcome
+    to announce the group watches a blank screen through the longest part of an
+    install. `execute` is safe to call with one group at a time — it re-sorts and
+    re-groups what it is given, and one group is already both.
+    """
+    return _batches(_in_stage_order(planned))
 
 
 def _in_stage_order(planned: Iterable[Event]) -> list[Event]:

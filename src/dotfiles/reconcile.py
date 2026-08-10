@@ -410,20 +410,25 @@ def apply_machine(
 
 
 def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
-    """Act, printing each outcome under the address that owns it.
+    """Act, announcing each group of work before it happens.
 
-    The heading is the address `plan` prints and `--skip` takes, changing where
-    the engine's own batch boundary changes. The registry carried seventeen prose
-    names for these — "GitHub release tools", "Rust/cargo tools" — which were a
-    hand-written approximation of a grouping the walk already computes.
+    The heading is the address `plan` prints and `--skip` takes. The registry
+    carried seventeen prose names for these — "GitHub release tools", "Rust/cargo
+    tools" — which were a hand-written approximation of a grouping the walk
+    already computes.
+
+    **Announced before the group runs, not as its first outcome arrives.** A
+    batched provider hands `apt-get install` every declared package at once and
+    returns one list of outcomes minutes later, so printing on the first outcome
+    leaves the longest part of a fresh install looking hung — which is the same
+    defect `effects.Output.STREAM` exists to record.
     """
-    announced = ''
-    for event in engine.execute(session, planned, privileges.Privilege()):
-        if (owner := _address(event)) != announced:
-            heading(owner)
-            announced = owner
-        _render(event)
-        yield event
+    privilege = privileges.Privilege()
+    for group in engine.batches(planned):
+        heading(_address(group[0]))
+        for event in engine.execute(session, group, privilege):
+            _render(event)
+            yield event
 
 
 def _address(event: Event) -> str:
