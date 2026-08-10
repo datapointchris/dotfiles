@@ -950,6 +950,7 @@ custom_installers:
   # releases, so currency costs one API call instead of the whole tarball.
   - name: mount-s3
     repo: awslabs/mountpoint-s3
+    release_tag_prefix: mountpoint-s3-
     url: https://s3.amazonaws.com/mountpoint-s3-release
     description: Mountpoint for Amazon S3 — mount an S3 bucket as a local filesystem (Linux only, GPG-verified)
 

@@ -32,28 +32,35 @@ question:
 | --- | --- |
 | `theme`, `font`, `zmk-build` | the checkout exists → delegate to the tool's own `update` |
 | `bashselfupdate` | the install script *is* the update, so run it every time |
-| `bats`, `terraform-ls` | upstream publishes releases → compare, then skip |
-| `mount-s3` | the same, from `awslabs/mountpoint-s3` |
+| `bats`, `terraform-ls` | clone or download at the tag upstream reports |
+| `mount-s3` | the bucket serves `latest/`, so fetch it |
 | `claude-code` | self-updates in the background → presence is enough |
-| `awscli` | nothing cheap to ask → presence is enough |
+| `awscli` | no release to compare against → presence is enough |
 
-Two of those deserve their reasoning stated, because they look like corners cut.
+**Whether a tool is behind is not decided here.** It was, briefly: `bats`,
+`terraform-ls` and `mount-s3` each carried a version comparison inside the
+installer, and those comparisons only ever ran because the install phase called
+every installer on every `apply`. That is an unconditional re-run standing in for
+a measurement, and it stops working the moment these rows converge through the
+engine, which only ever acts on a verdict. `resources/packages.CURRENCY` measures
+it now, off the `repo:` each entry already declares — so an installer that is
+called is one the machine needs, and `dotfiles check` can say a custom installer
+is behind for the first time.
 
-**`awscli` is skipped when present.** AWS publishes no GitHub release for
-`aws/aws-cli` — `/releases/latest` 404s — so there is nothing to compare an
-installed version against, and the installer zip is 73MB (measured 2026-08-08).
-The vendor's `aws/install --update` converges by itself, but running it on every
-`apply` spends 73MB to answer a question with no cheaper form. `--reinstall` is
-the update path.
+That is also why the entries declare `repo:` for tools whose bytes never come
+from GitHub. The repo is where the *version* lives, which is a declarative fact
+even when the distribution is not — `mount-s3` adds `release_tag_prefix:` beside
+it, because its tags are `mountpoint-s3-1.23.0` in a repo that tags other things.
 
-**`mount-s3` was the same shape and is not any more.** AWS's bucket serves only
-`latest/{arch}/`, so the download URL carries no version and the old script
-fetched the whole tarball on every update run just to find out what was in it.
-But `awslabs/mountpoint-s3` publishes the same builds as GitHub releases and
-`mount-s3 --version` reports that tag's number, so currency costs one API call.
-That is why the entry declares `repo:` for a tool whose bytes never come from
-GitHub — the repo is where the *version* lives, which is a declarative fact even
-when the distribution is not.
+**`awscli` is the one entry nothing can answer for.** AWS publishes no GitHub
+release for `aws/aws-cli` — `/releases/latest` 404s, rechecked 2026-08-10 — so
+the entry names no `repo`, `_has_currency` never asks, and presence is the whole
+verdict. The vendor's `aws/install --update` converges by itself, but running it
+on every `apply` spends 73MB (measured 2026-08-08) to answer a question with no
+cheaper form. The tags endpoint does list `2.36.19`, so a max-by-version over one
+page of tags would work; it is not built, because reading "newest" off that
+endpoint means trusting an ordering GitHub does not promise and nothing else here
+needs the mechanism.
 
 **Offline leaves an installed tool alone rather than failing.** Every one of
 these updates over the network — a clone, a vendor script, a release API — so an

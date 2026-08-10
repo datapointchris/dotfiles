@@ -270,7 +270,23 @@ class ReleaseProvider(VendoredProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class CustomProvider(VendoredProvider):
-    """A vendor that ships its own installer."""
+    """A vendor that ships its own installer, and whatever else that installer places."""
+
+    def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """The binary, and then the pieces beside it that are not binaries.
+
+        `bats` is the case: it is on PATH and current while `~/.local/lib/bats-assert`
+        is gone, which shows up as a failing `load` line in a suite rather than in
+        any verdict. Same shape as `ReleaseProvider` above, and named explicitly
+        rather than through `super()` for the same slotted-dataclass reason.
+        """
+        found = Provider.evidence(self, item, installed)
+        if found.verdict is not Verdict.MATCHED or not isinstance(item.entry, catalogs.CustomInstaller):
+            return found
+        absent = custom.missing_parts(item.entry)
+        if not absent:
+            return found
+        return ev.Evidence(Verdict.MISSING, f'{item.name} is installed, but {", ".join(absent)} is not')
 
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry

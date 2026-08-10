@@ -122,9 +122,10 @@ reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
 On a machine that is already built, extracting a newer bundle refreshes
-~/installers, but apply skips every tool already present. Move them with:
+~/installers. apply installs what is missing and upgrades what is behind, so
+running it again is what moves a tool onto the bundled version:
 
-  dotfiles packages apply --reinstall
+  dotfiles packages apply --offline
 
 Go tools take the bundled binary when proxy.golang.org is unreachable, so
 that is how a firewalled machine moves off the version it was built with.

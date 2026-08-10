@@ -201,6 +201,17 @@ class Entry:
     on every plan is noise rather than a finding.
     """
 
+    release_tag_prefix: str = ''
+    """Which tags in `repo` are this entry's, for a repo that releases more than one thing.
+
+    On the base for the same reason as the two above: it describes the *repo the
+    entry is measured against*, and both `github_releases` and `custom_installers`
+    name one. `mount-s3` is the case that moved it — its releases are tagged
+    `mountpoint-s3-1.23.0` in a repo that tags other things too, and that prefix
+    lived as a constant in `providers/custom.py` beside a second copy of the repo
+    name the declaration already carried.
+    """
+
     section: ClassVar[str]
     structure: ClassVar[Structure] = Structure.LIST
     honoured_constraints: ClassVar[tuple[str, ...]] = ()
@@ -330,7 +341,6 @@ class GithubRelease(Entry):
 
     repo: str
     binary_link: str = ''
-    release_tag_prefix: str = ''
     requires_wsl_host: bool = False
     checksum: str = CHECKSUM_REQUIRED
 

@@ -39,10 +39,10 @@ from dotfiles.session import Session
 
 NAME = 'packages'
 
-CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage)
+CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller)
 """The entries whose currency is a question with an upstream answer.
 
-All three install from a repo this declaration names, so "what should be
+All four install from a repo this declaration names, so "what should be
 installed" is decided by a tag rather than by anyone else's schedule. `go install
 @latest` and `cargo binstall` are not exceptions to that — they *are* the upgrade,
 because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
@@ -50,6 +50,15 @@ because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
 Everything else here defers to a registry that upgrades on its own: asking apt or
 npm whether a package is the newest one is asking a question the machine's own
 manager already owns.
+
+`CustomInstaller` is here because the alternative was the install phase running
+every vendor's installer on every apply and letting each decide internally whether
+it was already current — `terraform-ls`, `bats` and `mount-s3` each held their own
+copy of this comparison. That is an unconditional re-run standing in for a
+measurement, and it stops working the moment those rows converge through the
+engine, which only ever acts on a verdict. The four with no repo to ask —
+`awscli`, `claude-code` — fall out through `_has_currency` rather than being named
+here, and are the entries `check` honestly cannot answer for.
 """
 
 
@@ -125,18 +134,21 @@ class PackagesResource:
 def _has_currency(item: DesiredItem) -> bool:
     """Whether this item can be compared against an upstream at all.
 
-    Both halves have to hold, and an entry failing either is not a finding — it is
-    a question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
+    Every clause has to hold, and an entry failing one is not a finding — it is a
+    question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
     tool declared by module path alone names no repo to consult. A GUI names one
     and still cannot be asked: probing `webviewrs` opened a window and blocked the
-    plan on its event loop, which is what `reports_version` exists to declare.
+    plan on its event loop, which is what `reports_version` exists to declare. And
+    something that installs no binary has nothing to ask — `bashselfupdate` is a
+    sourced library found by its `installed_path`, so it names a repo and still has
+    no version to report.
     """
-    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(_wanted(item).repo)
+    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
-    if isinstance(entry, catalog.GithubRelease):
+    if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
         return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix)
     if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)

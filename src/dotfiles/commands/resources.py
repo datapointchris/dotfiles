@@ -122,7 +122,6 @@ SourceOption = typer.Option(
 )
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
-ReinstallOption = typer.Option(False, '--reinstall', help='Reinstall even when already present')
 OfflineOption = typer.Option(False, '--offline', help='Install from a staged offline bundle')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 
@@ -130,7 +129,6 @@ OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this
 def _apply_phases(
     resource: str,
     machine: str | None,
-    reinstall: bool,
     offline: bool,
     source: str | None,
     owner: str | None = None,
@@ -168,7 +166,6 @@ def _apply_phases(
         apply.apply_machine(
             only=frozenset({resource}),
             machine=machine,
-            reinstall=reinstall,
             offline=offline,
             owner=owner,
             providers=providers,
@@ -195,12 +192,11 @@ def packages_check(machine: str = MachineOption, as_json: bool = JsonOption) -> 
 def packages_apply(
     machine: str = MachineOption,
     source: str = SourceOption,
-    reinstall: bool = ReinstallOption,
     offline: bool = OfflineOption,
     owner: str = OwnerOption,
 ) -> None:
     """Install every declared package that is missing."""
-    _apply_phases('packages', machine, reinstall, offline, source, owner)
+    _apply_phases('packages', machine, offline, source, owner)
 
 
 @packages_app.command('list')
@@ -238,9 +234,9 @@ def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -
 
 
 @toolchains_app.command('apply')
-def toolchains_apply(machine: str = MachineOption, reinstall: bool = ReinstallOption, offline: bool = OfflineOption) -> None:
+def toolchains_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
     """Install or update the language toolchains."""
-    _apply_phases('toolchains', machine, reinstall, offline, None)
+    _apply_phases('toolchains', machine, offline, None)
 
 
 @toolchains_app.command('list')
@@ -272,9 +268,9 @@ def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> N
 
 
 @plugins_app.command('apply')
-def plugins_apply(machine: str = MachineOption, reinstall: bool = ReinstallOption, offline: bool = OfflineOption) -> None:
+def plugins_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
     """Install or update the declared plugins."""
-    _apply_phases('plugins', machine, reinstall, offline, None)
+    _apply_phases('plugins', machine, offline, None)
 
 
 @plugins_app.command('list')
@@ -400,7 +396,7 @@ def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, so
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
     """
-    _apply_phases('system', machine, False, offline, source)
+    _apply_phases('system', machine, offline, source)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

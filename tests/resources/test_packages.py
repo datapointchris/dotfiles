@@ -298,6 +298,53 @@ def test_an_unparseable_version_is_unknown_rather_than_behind(tmp_path: Path, fa
     assert [change.verdict for change in changes(live)] == [Verdict.UNKNOWN]
 
 
+MOUNT_S3 = {
+    'custom_installers': [
+        {
+            'name': 'mount-s3',
+            'description': 'mountpoint for S3',
+            'repo': 'awslabs/mountpoint-s3',
+            'release_tag_prefix': 'mountpoint-s3-',
+        }
+    ]
+}
+DECLARES_MOUNT_S3 = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['mount-s3']}
+
+AWSCLI = {'custom_installers': [{'name': 'awscli', 'command': 'aws', 'description': "AWS's CLI"}]}
+DECLARES_AWSCLI = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['awscli']}
+
+
+def test_a_custom_installer_behind_its_repo_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """Currency for these used to live inside each installer, reached only because
+    the install phase ran every one of them on every apply. Measured here, a
+    version behind is a verdict rather than something a vendor script decides
+    privately — and the tag prefix comes off the declaration rather than a constant
+    in `providers/custom.py`."""
+    reporting(fake_bin, 'mount-s3', 'mount-s3 1.22.0')
+    cached(release_cache, {'awslabs/mountpoint-s3#mountpoint-s3-': 'mountpoint-s3-1.23.0'})
+    live = session(tmp_path, MOUNT_S3, DECLARES_MOUNT_S3)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('custom/mount-s3', Verdict.STALE)]
+
+
+def test_a_custom_installer_at_its_repos_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'mount-s3', 'mount-s3 1.23.0')
+    cached(release_cache, {'awslabs/mountpoint-s3#mountpoint-s3-': 'mountpoint-s3-1.23.0'})
+    live = session(tmp_path, MOUNT_S3, DECLARES_MOUNT_S3)
+
+    assert changes(live) == ()
+
+
+def test_a_custom_installer_naming_no_repo_is_not_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """awscli publishes no GitHub release, so the declaration names no repo and
+    there is nothing to compare against. Silence is the honest answer — an UNKNOWN
+    row on every plan for a question nobody can answer is noise, not a finding."""
+    reporting(fake_bin, 'aws', 'aws-cli/2.36.19 Python/3.14.6')
+    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+
+    assert changes(live) == ()
+
+
 def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """A pin names the release, so the declaration is the whole answer. This is
     what keeps a pinned tool checkable on a machine that never reaches GitHub."""

@@ -102,7 +102,6 @@ class Run:
     coords: coordinates.Coordinates
     packages: dict
     manifest: dict
-    reinstall: bool = False
     offline: bool = False
     owner: str | None = None
     failures_log: Path = paths.REPO_ROOT / 'unused'
@@ -164,7 +163,6 @@ class Run:
         cls,
         machine: str | None = None,
         *,
-        reinstall: bool = False,
         offline: bool = False,
         owner: str | None = None,
     ) -> Run:
@@ -196,7 +194,6 @@ class Run:
             coords=declared.coordinates,
             packages=parse_packages.load_packages(),
             manifest=parse_packages.load_manifest(name),
-            reinstall=reinstall,
             offline=offline,
             owner=owner,
             failures_log=Path(tempfile.gettempdir()) / f'dotfiles-install-failures-{stamp}.txt',
@@ -355,7 +352,7 @@ def _install_release(context: Run, declaration: catalog.Catalog, tool: str, targ
     if tag is None:
         return _install_failed(context, tool, ghrelease.unresolved(entry, offline=context.offline))
 
-    if not context.reinstall and _already_at(entry, tag) and not ghrelease.missing_companions(tool):
+    if _already_at(entry, tag) and not ghrelease.missing_companions(tool):
         err_console.print(f'{tool} already at {tag}')
         return True
 
@@ -413,7 +410,7 @@ def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str,
     entry = declaration.find('custom_installers', tool)
     assert isinstance(entry, catalog.CustomInstaller)
 
-    result = custom.install(entry, target, offline=context.offline, reinstall=context.reinstall)
+    result = custom.install(entry, target, offline=context.offline)
     if result.ok:
         # The tool's name alone when the vendor streamed its own report, so this
         # confirms the phase considered it without restating what it just said.
@@ -628,7 +625,6 @@ def apply_machine(
     only: frozenset[str] | None = None,
     machine: str | None = None,
     *,
-    reinstall: bool = False,
     offline: bool = False,
     owner: str | None = None,
     providers: frozenset[str] | None = None,
@@ -659,7 +655,7 @@ def apply_machine(
         return ExitCode.ISSUE
 
     try:
-        context = Run.resolve(machine, reinstall=reinstall, offline=offline, owner=owner)
+        context = Run.resolve(machine, offline=offline, owner=owner)
     except Declaration as problem:
         warn(str(problem))
         return ExitCode.USAGE
