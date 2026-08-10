@@ -29,6 +29,8 @@ from dotfiles.vocabulary import ExitCode
 bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
 windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL install')
 
+JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
+
 PLATFORMS = ('linux-x86_64', 'linux-arm64', 'darwin-x86_64', 'darwin-arm64')
 
 
@@ -95,7 +97,7 @@ def prune() -> None:
 
 
 @windows_app.command('check')
-def windows_check() -> None:
+def windows_check(as_json: bool = JsonOption) -> None:
     """Report which Windows tools are missing from this WSL machine's PATH.
 
     A real checker as of the conversion, and cheap enough to be one: the question
@@ -105,7 +107,7 @@ def windows_check() -> None:
     """
     try:
         into = windows.destination()
-    except windows.WindowsError as unreachable:
+    except windows.WindowsSideError as unreachable:
         error(str(unreachable))
         raise typer.Exit(ExitCode.ISSUE) from unreachable
 
@@ -134,7 +136,7 @@ def windows_apply(
     try:
         into = windows.destination()
         unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
-    except windows.WindowsError as unreachable:
+    except windows.WindowsSideError as unreachable:
         error(str(unreachable))
         raise typer.Exit(ExitCode.ISSUE) from unreachable
 

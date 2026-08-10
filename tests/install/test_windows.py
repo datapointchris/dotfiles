@@ -98,11 +98,11 @@ class TestInstallingFromABundle:
         empty, into = tmp_path / 'empty', tmp_path / 'bin'
         empty.mkdir()
 
-        with pytest.raises(windows.WindowsError, match='no .exe files'):
+        with pytest.raises(windows.WindowsSideError, match='no .exe files'):
             windows.install_from_bundle(empty, into)
 
     def test_a_bundle_that_is_not_there_says_so(self, tmp_path) -> None:
-        with pytest.raises(windows.WindowsError, match='bundle not found'):
+        with pytest.raises(windows.WindowsSideError, match='bundle not found'):
             windows.install_from_bundle(tmp_path / 'absent.tar.gz', tmp_path / 'bin')
 
     def test_a_bundle_newer_than_the_declaration_still_installs_in_full(self, tmp_path) -> None:
@@ -126,8 +126,86 @@ class TestReachingWindows:
         and a guess here writes binaries into a directory nothing reads."""
         monkeypatch.setattr(windows, 'under_wsl', lambda: False)
 
-        with pytest.raises(windows.WindowsError, match='not running under WSL'):
+        with pytest.raises(windows.WindowsSideError, match='not running under WSL'):
             windows.windows_home()
 
     def test_the_destination_is_the_one_directory_git_bash_puts_on_its_path(self, tmp_path) -> None:
         assert windows.destination(tmp_path) == tmp_path / '.local' / 'bin'
+
+
+class TestCopyingAWingetBinary:
+    """The function that decides whether `windows apply` calls a tool unresolved.
+
+    Pure filesystem given a home and a destination, so both of its branches are
+    testable with no Windows anywhere — which is worth doing precisely because the
+    path around it is the one nothing off a WSL box can exercise.
+    """
+
+    @staticmethod
+    def _package(home, tool, *, nested: bool = False):
+        """Lay out a winget package the way winget does: a version-stamped
+        directory whose name starts with the package id."""
+        package = home / windows.WINGET_PACKAGES / f'{tool.winget}_Microsoft.Winget.Source_8wekyb3d8bbwe'
+        location = package / 'inner-1.2.3' if nested else package
+        location.mkdir(parents=True)
+        (location / tool.exe).write_text('BINARY')
+        return package
+
+    def test_a_binary_at_the_package_root_is_found(self, tmp_path) -> None:
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+        tool = next(tool for tool in windows.TOOLS if tool.name == 'jq')
+        self._package(home, tool)
+
+        assert windows._copy_winget_binary(home, into, tool) is True
+        assert (into / 'jq.exe').read_text() == 'BINARY'
+
+    def test_a_binary_nested_under_the_package_is_found(self, tmp_path) -> None:
+        """Some packages put the exe a level down, which is why the search
+        recurses rather than only looking at the package root."""
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+        tool = next(tool for tool in windows.TOOLS if tool.name == 'rg')
+        self._package(home, tool, nested=True)
+
+        assert windows._copy_winget_binary(home, into, tool) is True
+        assert (into / 'rg.exe').read_text() == 'BINARY'
+
+    def test_the_package_is_matched_by_prefix_because_its_name_carries_a_version(self, tmp_path) -> None:
+        """An exact-name lookup finds nothing, since winget stamps the directory
+        with a version and a source suffix that no declaration knows."""
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+        tool = next(tool for tool in windows.TOOLS if tool.name == 'fd')
+        package = self._package(home, tool)
+
+        assert package.name != tool.winget
+        assert package.name.startswith(tool.winget)
+        assert windows._copy_winget_binary(home, into, tool) is True
+
+    def test_a_package_that_installed_nothing_reports_false(self, tmp_path) -> None:
+        """winget exits non-zero for "already at latest version", so its status is
+        ignored and this is what actually decides the outcome — an empty package
+        directory has to read as unresolved rather than as a copy."""
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+        tool = next(tool for tool in windows.TOOLS if tool.name == 'bat')
+        (home / windows.WINGET_PACKAGES / f'{tool.winget}_x').mkdir(parents=True)
+
+        assert windows._copy_winget_binary(home, into, tool) is False
+        assert not (into / 'bat.exe').exists()
+
+    def test_no_winget_directory_at_all_reports_false(self, tmp_path) -> None:
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+
+        assert windows._copy_winget_binary(home, into, windows.TOOLS[0]) is False
+
+    def test_one_tool_does_not_pick_up_another_tools_binary(self, tmp_path) -> None:
+        """The glob is per package id, so a machine with only `fd` installed must
+        still report `fzf` unresolved rather than copying whatever it finds."""
+        home, into = tmp_path / 'home', tmp_path / 'bin'
+        into.mkdir(parents=True)
+        self._package(home, next(tool for tool in windows.TOOLS if tool.name == 'fd'))
+
+        assert windows._copy_winget_binary(home, into, next(tool for tool in windows.TOOLS if tool.name == 'fzf')) is False

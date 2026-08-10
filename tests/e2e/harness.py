@@ -151,6 +151,7 @@ class Probe:
     section: str
     name: str
     target: str
+    reach: str = ''
 
     @property
     def host(self) -> str:
@@ -162,7 +163,19 @@ class Probe:
 
     @property
     def cloned(self) -> bool:
-        return self.section.endswith('clone')
+        """Whether this row was measured as a clone, which decides how it replays.
+
+        The recorded REACH where the file carries one. The fallback is the section
+        name, and it is wrong for exactly the rows that matter: a custom installer
+        is `custom_installer` whether it clones or downloads, and theme, font and
+        bashselfupdate all clone — so every one of them replayed as `curl --head`
+        against a `.git` URL, which GitHub answers, so it passed for the wrong
+        reason and a blocked git transport would have read as reachable.
+
+        Kept rather than removed because the committed file predates the column
+        and can only be regenerated behind the firewall it describes.
+        """
+        return self.reach == 'clone' if self.reach else self.section.endswith('clone')
 
     def command(self) -> str:
         """The same request the measurement made, to re-run inside a container.
@@ -193,7 +206,8 @@ def measured_probes() -> tuple[Probe, ...]:
         fields = [cell.strip() for cell in line.split('|')]
         if len(fields) < 4 or fields[0] not in {'YES', 'NO'}:
             continue
-        probes.append(Probe(verdict=fields[0], section=fields[1], name=fields[2], target=fields[3]))
+        reach = fields[4] if len(fields) > 4 else ''
+        probes.append(Probe(verdict=fields[0], section=fields[1], name=fields[2], target=fields[3], reach=reach))
     return tuple(probes)
 
 

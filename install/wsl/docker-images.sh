@@ -26,7 +26,6 @@ show_usage() {
   help_row "$(basename "$0") prune"
 
   help_end
-  exit 0
 }
 
 # List Docker images
@@ -67,10 +66,9 @@ build_image() {
   docker image ls --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep -E "REPOSITORY|$docker_image"
 }
 
-# A version deletes that image; no version deletes every WSL image. The scope is
-# the argument's presence rather than a flag, which is what retired `clean-all`:
-# it was this verb's set-wide form bolted to `prune`'s, so "delete the images" was
-# unspellable without also wiping a ~400MB download.
+# A version deletes that image; no version deletes every WSL image. Scope is the
+# argument's presence rather than a flag, so deleting the images never implies
+# discarding a ~400MB download that `prune` owns.
 delete_image() {
   local version=${1:-}
 
@@ -194,6 +192,7 @@ show_wsl_resources() {
 main() {
   if [[ $# -eq 0 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
     show_usage
+    exit 0
   fi
 
   local command=$1
@@ -219,6 +218,9 @@ main() {
       echo "Unknown command: $command"
       echo ""
       show_usage
+      # 2 is a usage error. Printing help and exiting 0 reported a typo to the
+      # caller as a successful run.
+      exit 2
       ;;
   esac
 }

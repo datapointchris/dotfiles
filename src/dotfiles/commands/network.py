@@ -33,6 +33,8 @@ from dotfiles import network
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.output import success
+from dotfiles.output import warn
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -57,7 +59,8 @@ def check(machine_name: str | None = MachineOption, output: Path | None = Output
         error(str(unresolved))
         raise typer.Exit(ExitCode.ISSUE) from unresolved
 
-    verdicts = network.measure_all(machine)
+    measurement = network.measure_all(machine)
+    verdicts = measurement.verdicts
     blocked = [verdict for verdict in verdicts if not verdict.reachable]
 
     if as_json:
@@ -66,6 +69,7 @@ def check(machine_name: str | None = MachineOption, output: Path | None = Output
                 'machine': machine.name,
                 'reachable': len(verdicts) - len(blocked),
                 'blocked': len(blocked),
+                'unprobed': list(measurement.unprobed),
                 'probes': [
                     {
                         'section': verdict.probe.section,
@@ -81,12 +85,14 @@ def check(machine_name: str | None = MachineOption, output: Path | None = Output
     else:
         for verdict in blocked:
             console.print(f'[red]blocked[/red]  {verdict.probe.section}/{verdict.probe.name}  {verdict.probe.target}')
+        for reason in measurement.unprobed:
+            warn(reason)
         console.print(f'{len(verdicts) - len(blocked)} reachable, {len(blocked)} blocked')
 
     if output is not None:
         written = network.render(
             machine,
-            verdicts,
+            measurement,
             host=socket.gethostname(),
             when=dt.datetime.now().astimezone().strftime('%a %d %b %Y %I:%M:%S %p %Z'),
             user=getpass.getuser(),
@@ -94,6 +100,6 @@ def check(machine_name: str | None = MachineOption, output: Path | None = Output
         )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(written)
-        console.print(f'results written to {output}')
+        success(f'results written to {output}')
 
     raise typer.Exit(ExitCode.ISSUE if blocked else ExitCode.CONVERGED)

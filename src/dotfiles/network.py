@@ -105,20 +105,49 @@ class Verdict:
     reachable: bool
 
 
-def probes(machine: machines.Machine) -> tuple[Probe, ...]:
+@dc.dataclass(frozen=True, slots=True)
+class Derived:
+    """What the declaration says to probe, and what it could not answer for.
+
+    `unprobed` is carried as data rather than warned about in passing, and ends up
+    in the results file. The question a reader has is whether a row is absent
+    because nothing needed probing or because the probe could not be built, and a
+    warning on stderr — which is what the shell did — answers that for whoever was
+    watching the run and for nobody afterwards.
+    """
+
+    probes: tuple[Probe, ...]
+    unprobed: tuple[str, ...]
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Measurement:
+    verdicts: tuple[Verdict, ...]
+    unprobed: tuple[str, ...]
+
+
+def derive(machine: machines.Machine) -> Derived:
     """Every source this machine's plan would reach, in the order they are tried.
 
     Derived from `resolve.resolve` rather than from `packages.yml` directly, so a
     row this machine does not subscribe to is not probed and a NO always names
     something this machine would really have failed to get.
+
+    Pure: no request is made here, which is what lets the derivation be tested
+    without a network and what keeps `unprobed` a statement about the declaration
+    rather than about today's connectivity.
     """
     plan = resolve.resolve(catalog.load(), machine)
-    return (
-        *_release_probes(plan),
-        *_clone_probes(plan),
-        *_custom_installer_probes(plan, coordinates.target_for(machine.coordinates)),
-        *_runtime_probes(),
-        *_registry_probes(plan),
+    installers, unprobed = _custom_installer_probes(plan, coordinates.target_for(machine.coordinates))
+    return Derived(
+        probes=(
+            *_release_probes(plan),
+            *_clone_probes(plan),
+            *installers,
+            *_runtime_probes(),
+            *_registry_probes(plan),
+        ),
+        unprobed=unprobed,
     )
 
 
@@ -175,7 +204,7 @@ def _clone_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
     return cloned
 
 
-def _custom_installer_probes(plan: resolve.Plan, target: Target) -> tuple[Probe, ...]:
+def _custom_installer_probes(plan: resolve.Plan, target: Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Whatever each installer says it reaches, asked of the installer.
 
     `providers.custom.sources` is the answer rather than a `source_type` word here,
@@ -186,21 +215,26 @@ def _custom_installer_probes(plan: resolve.Plan, target: Target) -> tuple[Probe,
 
     An installer with no sources on this platform installs the tool from somewhere
     else — awscli from Homebrew, mount-s3 not at all — and is left out rather than
-    probed, because a probe of nothing is a block that does not exist.
+    probed, because a probe of nothing is a block that does not exist. It is named
+    in the second return value, because "nothing to probe" and "probed and fine"
+    are different answers and the row's absence cannot tell them apart.
     """
-    found = []
+    found, unprobed = [], []
     for entry in _entries(plan, catalog.CustomInstaller):
-        for source in custom.sources(entry, target):
+        sources = custom.sources(entry, target)
+        if not sources:
+            unprobed.append(f'{entry.name}: installs from nothing on this platform')
+            continue
+        for source in sources:
             found.append(Probe('custom_installer', entry.name, source.url, source.reach))
-    return tuple(found)
+    return tuple(found), tuple(unprobed)
 
 
 def _runtime_probes() -> tuple[Probe, ...]:
     """Where the language runtimes come from, imported rather than retyped.
 
-    These three URLs were spelled out in the shell script beside the constants the
-    installers actually use, which is two copies of one fact; the installer's copy
-    is the one that decides where a real install goes.
+    The installer's own constant is the one that decides where a real install
+    goes, so a probe holding its own copy can measure a URL nothing uses.
     """
     return (
         Probe('language_manager', 'uv installer', toolchain.UV_INSTALL_URL),
@@ -255,56 +289,74 @@ def measure(probe: Probe) -> bool:
     return bool(fallback and effects.run(fallback, output=effects.Output.QUIET).ok)
 
 
-def asset_probe(machine: machines.Machine) -> Probe | None:
+def asset_probe(machine: machines.Machine) -> tuple[Probe | None, str]:
     """A real release asset, discovered from the API rather than synthesized.
 
-    Added here and not in `probes` because it is the one row whose target cannot be
-    derived: the asset host is a redirect target, and which host it is has changed
-    upstream. Asking keeps `probes` pure, which is what lets it be tested without a
-    network, and puts the one live lookup in the function that was always going to
+    Discovered and not derived: the asset host is a redirect target, and which
+    host it is has changed upstream. Asking here rather than in `derive` keeps
+    that one pure, and puts the live lookup in the path that was always going to
     make requests.
 
-    None where the API could not be asked or the release publishes no asset — an
-    unprobed row, exactly as the shell reported it, and never a NO. A blocked API
-    already has its own row, so inferring a second failure from it would report one
-    block as two.
+    Never a NO when it cannot be built. A blocked API already has its own row, so
+    inferring a second failure from it reports one block as two — but the reason
+    is returned rather than dropped, because a reader otherwise cannot tell an
+    unprobed asset row from a machine that has no releases to probe.
     """
     releases = _entries(resolve.resolve(catalog.load(), machine), catalog.GithubRelease)
     if not releases:
-        return None
+        return None, ''
 
-    latest = f'https://api.github.com/repos/{releases[0].repo}/releases/latest'
+    repo = releases[0].repo
+    latest = f'https://api.github.com/repos/{repo}/releases/latest'
     answered = effects.run(
         ('curl', '-fsSL', '-A', PROBE_AGENT, '--connect-timeout', str(TIMEOUT_SECONDS), latest),
         output=effects.Output.QUIET,
     )
     if not answered.ok:
-        return None
+        return None, f'release asset delivery: {repo} did not answer, so no asset URL could be resolved'
     try:
         assets = json.loads(answered.stdout).get('assets') or []
     except json.JSONDecodeError:
-        return None
-    url = assets[0].get('browser_download_url') if assets else None
-    return Probe('github_asset', 'release asset download', url) if url else None
+        return None, f'release asset delivery: {repo} answered with something that is not JSON'
+    if not assets:
+        url = None
+    else:
+        url = assets[0].get('browser_download_url')
+    if not url:
+        return None, f'release asset delivery: the newest {repo} release publishes no asset'
+    return Probe('github_asset', 'release asset download', url), ''
 
 
 RESULTS_HEADER = 'Dotfiles Connectivity Test Results'
-RULE = '-' * 70
+RULE = '-' * 78
 
 
-def render(machine: machines.Machine, verdicts: tuple[Verdict, ...], *, host: str, when: str, user: str, system: str) -> str:
+def render(machine: machines.Machine, measurement: Measurement, *, host: str, when: str, user: str, system: str) -> str:
     """The measurement as the committed results file.
 
     The column layout is load-bearing rather than decorative: `tests/e2e/harness.py`
     parses this file to decide which hosts the firewalled containers blackhole, and
     it splits on the pipes. The environment facts are arguments rather than read
     here so the render is pure and one call can be diffed against another.
+
+    REACH is a fifth column because the four before it cannot carry it. Whoever
+    replays a row has to know whether it was a clone or a download, and a replay
+    that differs from the recorded request measures a different question — the trap
+    `Probe.as_shell` documents. The only other source is the section name, which
+    cannot answer it: a custom installer's section is `custom_installer` whether it
+    clones or downloads, and three of them clone.
     """
     rows = '\n'.join(
-        f'{"YES" if verdict.reachable else "NO":<4}| {verdict.probe.section:<18}| {verdict.probe.name:<24}| {verdict.probe.target}'
-        for verdict in verdicts
+        f'{"YES" if verdict.reachable else "NO":<4}| {verdict.probe.section:<18}| {verdict.probe.name:<24}| '
+        f'{verdict.probe.target:<64}| {verdict.probe.reach}'
+        for verdict in measurement.verdicts
     )
-    reachable = sum(1 for verdict in verdicts if verdict.reachable)
+    reachable = sum(1 for verdict in measurement.verdicts if verdict.reachable)
+    unprobed = (
+        ['', 'Unprobed - nothing to ask, rather than asked and blocked:', *(f'  {reason}' for reason in measurement.unprobed)]
+        if measurement.unprobed
+        else []
+    )
     return '\n'.join(
         (
             '=' * 38,
@@ -316,12 +368,13 @@ def render(machine: machines.Machine, verdicts: tuple[Verdict, ...], *, host: st
             f'Manifest: {machine.name}',
             f'OS: {system}',
             '',
-            f'Summary: {reachable} reachable, {len(verdicts) - reachable} blocked',
+            f'Summary: {reachable} reachable, {len(measurement.verdicts) - reachable} blocked',
             '',
-            f'{"":<4}| {"SECTION":<18}| {"NAME":<24}| TARGET',
+            f'{"":<4}| {"SECTION":<18}| {"NAME":<24}| {"TARGET":<64}| REACH',
             RULE,
             rows,
             RULE,
+            *unprobed,
             '',
             'Legend: YES = reachable, NO = blocked or unreachable',
             '',
@@ -329,9 +382,16 @@ def render(machine: machines.Machine, verdicts: tuple[Verdict, ...], *, host: st
     )
 
 
-def measure_all(machine: machines.Machine) -> tuple[Verdict, ...]:
+def measure_all(machine: machines.Machine) -> Measurement:
     """Every derived probe, plus the one asset row that has to be discovered."""
-    found = list(probes(machine))
-    if (asset := asset_probe(machine)) is not None:
+    derived = derive(machine)
+    found = list(derived.probes)
+    unprobed = list(derived.unprobed)
+
+    asset, why = asset_probe(machine)
+    if asset is not None:
         found.append(asset)
-    return tuple(Verdict(probe, measure(probe)) for probe in found)
+    elif why:
+        unprobed.append(why)
+
+    return Measurement(tuple(Verdict(probe, measure(probe)) for probe in found), tuple(unprobed))

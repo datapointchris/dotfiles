@@ -18,8 +18,11 @@ WSL = 'wsl-work-workstation'
 ARCHLINUX = 'archlinux-personal-workstation'
 
 
+LXC = 'linux-lxc-server'
+
+
 def probes_for(name: str) -> tuple[network.Probe, ...]:
-    return network.probes(machines.load(name))
+    return network.derive(machines.load(name)).probes
 
 
 def test_two_machines_are_probed_differently() -> None:
@@ -56,17 +59,19 @@ def test_a_registry_is_probed_once_however_many_sections_reach_it() -> None:
 
 
 def test_a_registry_nothing_installs_from_is_not_probed() -> None:
-    """Gated on the plan actually resolving tools of that type.
+    """Both directions, against two manifests that genuinely differ.
 
-    A machine with no cargo tools has nothing to lose to a blocked crates.io, and
-    saying otherwise is what would send someone bundling nine tools for nothing.
+    `linux-lxc-server` declares no npm globals and `wsl-work-workstation` declares
+    eleven, so the branch this is named for actually executes. Asserting
+    `probed == declared` against one manifest that declares some passes with both
+    sides True and never runs the not-probed case at all.
+
+    It matters because a machine with nothing to lose to a blocked registry should
+    not be told it is blocked — that is what would send someone bundling tools for
+    nothing.
     """
-    bare = machines.load(WSL)
-    plan = resolve.resolve(catalog.load(), bare)
-    installs_go = bool([item for item in plan.items if isinstance(item.entry, catalog.GoTool)])
-    probed_go = any(probe.name == 'proxy.golang.org' for probe in network.probes(bare))
-
-    assert probed_go == installs_go
+    assert any(probe.name == 'registry.npmjs.org' for probe in probes_for(WSL))
+    assert not any(probe.name == 'registry.npmjs.org' for probe in probes_for(LXC))
 
 
 def test_a_clone_is_probed_as_a_clone() -> None:
@@ -122,21 +127,53 @@ def test_the_results_file_is_the_shape_the_harness_parses() -> None:
     firewalled containers blackhole, so the column layout is an interface and not
     a presentation choice."""
     machine = machines.load(WSL)
-    verdicts = (
-        network.Verdict(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True),
-        network.Verdict(network.Probe('git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', Reach.CLONE), False),
+    measurement = network.Measurement(
+        (
+            network.Verdict(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True),
+            network.Verdict(network.Probe('git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', Reach.CLONE), False),
+        ),
+        (),
     )
 
     rows = [
         [cell.strip() for cell in line.split('|')]
-        for line in network.render(machine, verdicts, host='h', when='w', user='u', system='s').splitlines()
+        for line in network.render(machine, measurement, host='h', when='w', user='u', system='s').splitlines()
         if line.split('|')[0].strip() in {'YES', 'NO'}
     ]
 
     assert rows == [
-        ['YES', 'registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'],
-        ['NO', 'git_clone', 'forgit', 'https://github.com/wfxr/forgit.git'],
+        ['YES', 'registry', 'crates.io', 'https://crates.io/api/v1/crates/bat', 'download'],
+        ['NO', 'git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', 'clone'],
     ]
+
+
+def test_the_recorded_reach_survives_the_file() -> None:
+    """The column the harness replays from, and the reason it exists.
+
+    A custom installer's section is `custom_installer` whether it clones or
+    downloads, so a reader deriving reach from the section name gets every one of
+    those wrong — and replays a `.git` URL as `curl --head`, which GitHub answers,
+    so it passes for the wrong reason while a blocked git transport reads as
+    reachable.
+    """
+    cloned = network.Probe('custom_installer', 'theme', 'https://github.com/datapointchris/theme.git', Reach.CLONE)
+    measurement = network.Measurement((network.Verdict(cloned, True),), ())
+
+    written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
+    row = next(line for line in written.splitlines() if line.startswith('YES'))
+
+    assert row.split('|')[-1].strip() == 'clone'
+    assert not row.split('|')[1].strip().endswith('clone'), 'the section cannot answer it, which is the point'
+
+
+def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped() -> None:
+    """`awscli` on a Mac installs from Homebrew and reaches nothing, so it gets no
+    row — and a reader cannot tell that from a machine where it was never
+    declared. The reason is carried instead of warned about and lost."""
+    derived = network.derive(machines.load('macos-personal-workstation'))
+
+    assert any('installs from nothing' in reason for reason in derived.unprobed)
+    assert not any(probe.name == 'awscli' for probe in derived.probes)
 
 
 def test_the_summary_counts_what_the_rows_say() -> None:
@@ -144,6 +181,6 @@ def test_the_summary_counts_what_the_rows_say() -> None:
     with the table under it."""
     verdicts = tuple(network.Verdict(network.Probe('registry', str(index), f'https://h/{index}'), index % 2 == 0) for index in range(5))
 
-    written = network.render(machines.load(WSL), verdicts, host='h', when='w', user='u', system='s')
+    written = network.render(machines.load(WSL), network.Measurement(verdicts, ()), host='h', when='w', user='u', system='s')
 
     assert 'Summary: 3 reachable, 2 blocked' in written

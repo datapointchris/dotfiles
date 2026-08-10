@@ -2,10 +2,9 @@
 
 Two install paths reach the same eight binaries: winget where the network allows
 it, and a bundle of GitHub release assets where it does not. **They are declared
-once, here.** The winget ids lived in the WSL setup script this replaces and the
-release specs in `windows_bundle.py`, in two languages, agreeing only by hand — so
-a ninth tool added to one path would install online and be missing from the
-bundle, or the reverse, with nothing reporting either.
+once, here.** Nothing else keeps the two channels in step, so a tool declared for
+one and not the other installs online and is missing from the bundle, or the
+reverse, with nothing reporting either.
 
 `packages.yml` deliberately does not describe these. Its sections carry the Linux
 and macOS asset patterns, and these repos name their Windows assets differently
@@ -66,8 +65,13 @@ that entry exists to avoid.
 """
 
 
-class WindowsError(Exception):
-    """A failure to report with a message rather than a traceback."""
+class WindowsSideError(Exception):
+    """A failure to report with a message rather than a traceback.
+
+    Not `WindowsError`: that is a builtin, an `OSError` alias defined on Windows,
+    and shadowing it is at its most confusing in the module whose subject is
+    Windows.
+    """
 
 
 def under_wsl() -> bool:
@@ -90,16 +94,16 @@ def windows_home() -> Path:
     account is named after is exactly what does not go in this repo.
     """
     if not under_wsl():
-        raise WindowsError('not running under WSL, so there is no Windows home to find')
+        raise WindowsSideError('not running under WSL, so there is no Windows home to find')
 
     answered = effects.run(('cmd.exe', '/c', 'echo %USERNAME%'), output=effects.Output.QUIET)
     user = answered.stdout.strip().strip('\r')
     if not answered.ok or not user:
-        raise WindowsError('could not ask Windows for its username')
+        raise WindowsSideError('could not ask Windows for its username')
 
     home = Path('/mnt/c/Users') / user
     if not home.is_dir():
-        raise WindowsError(f'Windows home does not exist at {home}')
+        raise WindowsSideError(f'Windows home does not exist at {home}')
     return home
 
 
@@ -134,9 +138,13 @@ def install_via_winget(into: Path) -> tuple[str, ...]:
     into.mkdir(parents=True, exist_ok=True)
     home = windows_home()
 
+    # From the Windows home, or cmd.exe warns about a UNC path it cannot use as a
+    # working directory and falls back to C:\Windows — the WSL cwd it inherits is
+    # `\\wsl$\...` and is not a path Windows can be *in*.
     for tool in TOOLS:
         effects.run(
             ('cmd.exe', '/c', f'winget install --accept-package-agreements --accept-source-agreements {tool.winget}'),
+            cwd=home,
             output=effects.Output.STREAM,
         )
 
@@ -176,14 +184,14 @@ def install_from_bundle(source: Path, into: Path) -> tuple[str, ...]:
     if source.is_dir():
         return _copy_bundle(source, into)
     if not source.is_file():
-        raise WindowsError(f'bundle not found: {source}')
+        raise WindowsSideError(f'bundle not found: {source}')
 
     with tempfile.TemporaryDirectory() as workspace:
         try:
             with tarfile.open(source) as archive:
                 archive.extractall(workspace, filter='data')
         except (tarfile.TarError, OSError) as unreadable:
-            raise WindowsError(f'could not extract bundle archive {source}: {unreadable}') from unreadable
+            raise WindowsSideError(f'could not extract bundle archive {source}: {unreadable}') from unreadable
         return _copy_bundle(Path(workspace), into)
 
 
@@ -197,7 +205,7 @@ def _copy_bundle(bundle: Path, into: Path) -> tuple[str, ...]:
     """
     executables = sorted(bundle.glob('*.exe'))
     if not executables:
-        raise WindowsError(f'no .exe files in {bundle}')
+        raise WindowsSideError(f'no .exe files in {bundle}')
 
     into.mkdir(parents=True, exist_ok=True)
     for executable in executables:
