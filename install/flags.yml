@@ -71,6 +71,18 @@ required_files:
       - configs/common/.config/zsh/.zshrc
       - install/wsl/sync-windows-shell.sh
 
+  # The default identity on the one machine whose default is not the personal one.
+  # Declared rather than shipped for the same reason as the values above: it names
+  # an employer. Absence is silent in the way that earns a place here — git ignores
+  # a missing include without a word, so the machine would fall through to
+  # useConfigOnly and refuse every commit while naming nothing.
+  - name: employer.gitconfig
+    path: ~/.config/git/employer.gitconfig
+    description: Employer git identity, the default for repos that are not personal
+    machine: wsl-work-workstation
+    consumers:
+      - configs/trust/employer/.config/git/trust.gitconfig
+
 flags:
   - name: ZSHRC_DEBUG
     description: Print per-step timings during zsh startup

@@ -25,38 +25,77 @@ from dotfiles.resources import symlinks
 from dotfiles.session import Session
 from dotfiles.symlinks import core
 
-IDENTITY_FILE = Path.home() / '.gitconfig'
+GIT_CONFIG_ENTRY = Path.home() / '.config' / 'git' / 'config'
+HOME_GITCONFIG = Path.home() / '.gitconfig'
 
-IDENTITY_PLACEHOLDER = """\
-# This machine's git identity. Not in the dotfiles repo: identity is per-machine,
-# and the shared config sets user.useConfigOnly so a machine without one refuses
-# to commit rather than guessing an author from the hostname.
+GIT_CONFIG_STUB = """\
+# This machine's git entry point, and the only file in this directory the repo
+# does not own. Both of its jobs need it to be a real file rather than a symlink.
 #
-# Read after ~/.config/git/config, so anything here wins.
+# It includes the shared config, which git no longer reads by itself now that the
+# repo's copy is named common.gitconfig. And it is where `git config --global`
+# writes, which is the reason it must not be a link: git follows one when writing,
+# so an entry point linked into the checkout takes an identity with it.
+#
+# It carries no [user] of its own. Identity arrives through the trust include, and
+# useConfigOnly refuses a commit while nothing has set one.
+[include]
+path = ~/.config/git/common.gitconfig
 """
 
 
-def _ensure_identity_file() -> None:
+def _identity_in(path: Path) -> str:
+    """What git reads out of one file, rather than this guessing at config syntax."""
+    result = run(['git', 'config', '--file', str(path), '--get', 'user.email'], output=Output.QUIET)
+    return result.stdout.strip() if result.ok else ''
+
+
+def _ensure_git_config_entry() -> None:
     """Give `git config --global` somewhere to write that is not this repo.
 
-    Absent `~/.gitconfig`, git writes to `~/.config/git/config` — which this repo
-    owns through a symlink, so following git's own "Please tell me who you are"
-    hint on a fresh machine commits an identity into the checkout. An empty file
-    redirects the write and deliberately carries no [user], so `useConfigOnly`
-    still refuses to commit until someone sets one.
+    git writes to `~/.config/git/config` only while `~/.gitconfig` is absent, and
+    it follows a symlink when writing, so the entry point has to exist, be real,
+    and be the only one. Left as a link into the repo, following git's own "Please
+    tell me who you are" hint on a fresh machine commits an identity into the
+    checkout.
 
-    A dangling link has to go first: `exists()` follows it and so reads as absent,
-    while `write_text()` follows it and creates its target. Every machine that
-    predates this file had `~/.gitconfig` linked into `configs/<platform>/`, so
-    the link left behind by that source's removal aims the write at the one place
-    the placeholder exists to stay out of.
+    A link here is unlinked rather than adopted. After the rename to
+    common.gitconfig the old entry point is an orphan the symlink stage prunes
+    first, but a machine reaching this out of order would otherwise write through
+    it into the repo, which is the one outcome this exists to prevent.
     """
-    if IDENTITY_FILE.is_symlink() and not IDENTITY_FILE.exists():
-        IDENTITY_FILE.unlink()
-    if IDENTITY_FILE.exists():
+    if GIT_CONFIG_ENTRY.is_symlink():
+        GIT_CONFIG_ENTRY.unlink()
+    if not GIT_CONFIG_ENTRY.exists():
+        GIT_CONFIG_ENTRY.parent.mkdir(parents=True, exist_ok=True)
+        GIT_CONFIG_ENTRY.write_text(GIT_CONFIG_STUB)
+        hint(f'created {GIT_CONFIG_ENTRY}')
+    _retire_home_gitconfig()
+
+
+def _retire_home_gitconfig() -> None:
+    """Remove the `~/.gitconfig` this used to create, now that the entry point is XDG.
+
+    git prefers it over `~/.config/git/config` for reads and writes both, so one
+    left behind silently out-ranks the entire include chain — the identity a trust
+    overlay supplies would resolve, and then lose to whatever is in here.
+
+    An identity in it is never deleted. On the employer machine it is the only
+    copy of an address the repo deliberately does not hold, so this reports and
+    leaves it rather than destroying the value while tidying up after itself.
+    """
+    if not HOME_GITCONFIG.exists():
+        # `exists()` follows a link, so a dangling one reads as absent here and
+        # still has to be unlinked: left behind it is the write target git picks.
+        if HOME_GITCONFIG.is_symlink():
+            HOME_GITCONFIG.unlink()
         return
-    IDENTITY_FILE.write_text(IDENTITY_PLACEHOLDER)
-    hint(f'created {IDENTITY_FILE} — set an identity with: git config --global user.email <address>')
+    if identity := _identity_in(HOME_GITCONFIG):
+        err_console.print(f'  [red]✗[/] ~/.gitconfig holds {identity} and out-ranks ~/.config/git/config')
+        hint('move it into ~/.config/git/employer.gitconfig, then delete ~/.gitconfig')
+        return
+    HOME_GITCONFIG.unlink()
+    hint(f'removed {HOME_GITCONFIG} — the entry point is now {GIT_CONFIG_ENTRY}')
 
 
 def _sync_windows_shell(coordinates: axes.Coordinates) -> None:
@@ -82,7 +121,7 @@ def epilogue(session: Session) -> None:
     observe/diff/perform loop beside the resource's, which is one of the reasons
     there were thirteen of them; what is left here is genuinely not the walk.
     """
-    _ensure_identity_file()
+    _ensure_git_config_entry()
     _sync_windows_shell(session.machine.coordinates)
     _reload_compositor(session.machine.coordinates)
 

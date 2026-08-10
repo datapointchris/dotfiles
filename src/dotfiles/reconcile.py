@@ -387,7 +387,7 @@ def apply_machine(
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
     # and here reads what they write. Run whether or not the pass changed
-    # anything, because `~/.gitconfig` has to exist on a converged machine too.
+    # anything, because the git entry point has to exist on a converged machine too.
     #
     # Gated on the ceiling as well as the selection, because every one of the jobs
     # is justified by "the pass above just deployed these files": git needs

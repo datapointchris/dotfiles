@@ -1,0 +1,13 @@
+# The identity personal work commits under.
+#
+# In the repo rather than hand-written per machine, which is what the identity
+# was before: every address here is already in this repo's own commit objects,
+# so shipping it discloses nothing, and a value the repo owns cannot drift on one
+# machine or be lost when a symlink is pruned.
+#
+# Deployed to every machine and read only where a trust overlay includes it —
+# unconditionally on fleet, behind a remote match on employer. Deploying it
+# everywhere costs nothing because an unincluded file is never read.
+[user]
+name = Chris Birch
+email = datapointchris@gmail.com

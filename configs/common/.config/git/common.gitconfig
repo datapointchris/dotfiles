@@ -1,11 +1,11 @@
 [advice]
 addIgnoredFile = false
 
-# No identity here, by design — it is the one git setting that differs per
-# machine rather than per platform, so it lives in ~/.gitconfig, which git reads
-# after this file. useConfigOnly stops git synthesizing one from hostname and
-# username when that file is missing: on a machine where employer and personal
-# repos coexist, a guessed author is a wrong author that commits silently.
+# No identity here, by design — it differs per machine, not per platform, so it
+# arrives through the trust include at the foot of this file. useConfigOnly stops
+# git synthesizing one from hostname and username when nothing sets it: on a
+# machine where employer and personal repos coexist, a guessed author is a wrong
+# author that commits silently.
 [user]
 useConfigOnly = true
 
@@ -76,13 +76,20 @@ path = ~/.config/delta/current.gitconfig
 	helper =
 	helper = !gh auth git-credential
 
-# Whatever one coordinate needs that the rest do not. WSL is the only machine
-# with anything left, and what it needs is autocrlf. Absolute rather than
+# Whatever one coordinate needs that the rest do not, one include per axis and
+# each named for the overlay directory that supplies it. Absolute rather than
 # relative because this file is reached through a symlink and a relative include
 # would resolve against the repo. Ignored while absent, so a machine shipping
 # none needs no file.
+#
+# trust comes last: it carries identity, and on a machine hosting both employer
+# and personal work the personal exception is an includeIf that has to be read
+# after the default it overrides.
 [include]
-path = ~/.config/git/overlay.gitconfig
+path = ~/.config/git/host.gitconfig
+
+[include]
+path = ~/.config/git/trust.gitconfig
 
 # %cs/%cr rather than %ad with --date=short, so the format carries its own date
 # rendering and stays usable from any alias without a paired flag.

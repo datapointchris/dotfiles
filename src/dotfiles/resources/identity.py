@@ -1,14 +1,20 @@
 """The git identity this machine commits under.
 
-Checked and never written. An identity is personal and per-machine, so there is
-nothing in the repo for `apply` to write — which is not a gap in this resource
-but the reason it is one: the repo ships no identity and sets `user.useConfigOnly`,
-so a machine without one discovers it when git refuses a commit, mid-work. Asking
-here moves that discovery to the moment someone is already looking at the machine.
+Checked and never written. Where it comes from is the trust axis's business: a
+fleet machine includes the personal identity the repo ships, and the employer
+machine defaults to an address the repo deliberately does not hold. Either way
+`apply` has nothing to write here, and `user.useConfigOnly` means a machine
+without one discovers it when git refuses a commit, mid-work. Asking here moves
+that discovery to the moment someone is already looking at the machine.
 
 `--global` rather than a plain `--get`, so a repo-local override cannot mask an
 unset machine — which is exactly what would happen when the check runs from
-inside a clone that sets its own.
+inside a clone that sets its own. `--includes` because `--global` implies
+`--no-includes`: identity now always arrives through an include, so without it
+this reads the entry-point stub, which carries no [user] by design, and calls
+every machine unset. The pair also ignores the employer machine's `includeIf`,
+which is what makes this report the machine's default rather than whatever the
+current directory happens to resolve to.
 """
 
 from __future__ import annotations
@@ -77,7 +83,7 @@ class IdentityResource:
 
 
 def _config(field: str) -> str:
-    result = run(['git', 'config', '--global', '--get', field], output=Output.QUIET)
+    result = run(['git', 'config', '--global', '--includes', '--get', field], output=Output.QUIET)
     return result.stdout.strip() if result.ok else ''
 
 

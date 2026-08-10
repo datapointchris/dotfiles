@@ -1,9 +1,12 @@
 """The one write deployment makes into `$HOME` that this repo does not own.
 
 Every other path the deploy touches is a symlink the manager can recreate from
-the checkout. `~/.gitconfig` is the exception — a real file, deliberately not in
-the repo — which is why the rule that it must never be written *through* a link
-is worth pinning rather than leaving to the next reader to rediscover.
+the checkout. `~/.config/git/config` is the exception — a real file, deliberately
+not in the repo — which is why the rule that it must never be written *through* a
+link is worth pinning rather than leaving to the next reader to rediscover.
+
+Git picks that path for `git config --global` only while `~/.gitconfig` is absent,
+so retiring the latter is part of the same contract and is pinned here beside it.
 """
 
 from __future__ import annotations
@@ -14,54 +17,100 @@ import pytest
 
 from dotfiles import deploy
 
+IDENTITY = '[user]\n\temail = someone@example.com\n'
+
 
 @pytest.fixture
-def identity_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`IDENTITY_FILE` resolves `Path.home()` at import, so redirect the constant."""
-    path = tmp_path / '.gitconfig'
-    monkeypatch.setattr(deploy, 'IDENTITY_FILE', path)
+def entry_point(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Both constants resolve `Path.home()` at import, so redirect them."""
+    path = tmp_path / '.config' / 'git' / 'config'
+    monkeypatch.setattr(deploy, 'GIT_CONFIG_ENTRY', path)
+    monkeypatch.setattr(deploy, 'HOME_GITCONFIG', tmp_path / '.gitconfig')
     return path
 
 
-def test_absent_identity_file_is_created(identity_file: Path) -> None:
-    deploy._ensure_identity_file()
-    assert identity_file.read_text() == deploy.IDENTITY_PLACEHOLDER
+@pytest.fixture
+def home_gitconfig(entry_point: Path) -> Path:
+    return deploy.HOME_GITCONFIG
 
 
-def test_an_existing_identity_file_is_left_alone(identity_file: Path) -> None:
-    """The placeholder carries no [user], so overwriting one would drop an identity."""
-    identity_file.write_text('[user]\n\temail = someone@example.com\n')
-    deploy._ensure_identity_file()
-    assert 'someone@example.com' in identity_file.read_text()
+def test_absent_entry_point_is_created(entry_point: Path) -> None:
+    """Including its parent, which on a fresh machine does not exist yet."""
+    deploy._ensure_git_config_entry()
+    assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
 
 
-def test_a_dangling_link_is_replaced_rather_than_written_through(identity_file: Path, tmp_path: Path) -> None:
-    """The regression: this wrote the placeholder into the checkout.
+def test_an_existing_entry_point_is_left_alone(entry_point: Path) -> None:
+    """The stub carries no [user], so overwriting one would drop an identity."""
+    entry_point.parent.mkdir(parents=True)
+    entry_point.write_text(IDENTITY)
 
-    A machine predating the identity file had `~/.gitconfig` linked into
-    `configs/<platform>/`, and removing that source left the link behind. To
-    `exists()` a dangling link reads as absent, so the guard fell through; to
-    `write_text()` it reads as its target, so the write created the repo file.
+    deploy._ensure_git_config_entry()
+
+    assert 'someone@example.com' in entry_point.read_text()
+
+
+def test_a_linked_entry_point_is_replaced_rather_than_written_through(entry_point: Path, tmp_path: Path) -> None:
+    """The regression this whole file exists for.
+
+    The entry point used to be a symlink into the checkout. `git config --global`
+    follows a link when writing, so the first person to follow git's own "Please
+    tell me who you are" hint committed an identity into the repo — which is
+    exactly what happened while this change was being written.
     """
-    vanished_source = tmp_path / 'configs' / 'archlinux' / '.gitconfig'
-    identity_file.symlink_to(vanished_source)
+    repo_file = tmp_path / 'configs' / 'common' / '.config' / 'git' / 'common.gitconfig'
+    repo_file.parent.mkdir(parents=True)
+    repo_file.write_text('# shared\n')
+    entry_point.parent.mkdir(parents=True)
+    entry_point.symlink_to(repo_file)
 
-    deploy._ensure_identity_file()
+    deploy._ensure_git_config_entry()
 
-    assert not vanished_source.exists()
-    assert not identity_file.is_symlink()
-    assert identity_file.read_text() == deploy.IDENTITY_PLACEHOLDER
+    assert not entry_point.is_symlink()
+    assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
+    assert repo_file.read_text() == '# shared\n'
 
 
-def test_a_live_link_is_honoured(identity_file: Path, tmp_path: Path) -> None:
-    """Pointing the identity at a private synced file is not this function's business
-    to undo — it only needs `git config --global` to miss the repo-owned config."""
+def test_home_gitconfig_carrying_no_identity_is_removed(entry_point: Path, home_gitconfig: Path) -> None:
+    """The placeholder this used to write. While it exists git prefers it for both
+    reads and writes, so it silently out-ranks the entire include chain."""
+    home_gitconfig.write_text('# placeholder, no [user]\n')
+
+    deploy._ensure_git_config_entry()
+
+    assert not home_gitconfig.exists()
+
+
+def test_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, home_gitconfig: Path) -> None:
+    """On the employer machine it is the only copy of an address the repo does not
+    hold, so this reports and leaves it rather than destroying a value while
+    tidying up after itself."""
+    home_gitconfig.write_text(IDENTITY)
+
+    deploy._ensure_git_config_entry()
+
+    assert 'someone@example.com' in home_gitconfig.read_text()
+
+
+def test_a_dangling_home_gitconfig_link_is_removed(entry_point: Path, home_gitconfig: Path, tmp_path: Path) -> None:
+    """`exists()` follows a link, so a dangling one reads as absent while still
+    being the path git writes through."""
+    home_gitconfig.symlink_to(tmp_path / 'configs' / 'archlinux' / '.gitconfig')
+
+    deploy._ensure_git_config_entry()
+
+    assert not home_gitconfig.is_symlink()
+
+
+def test_a_linked_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, home_gitconfig: Path, tmp_path: Path) -> None:
+    """Pointing it at a private synced file is a deliberate act, and the identity
+    behind the link is as irreplaceable as one written directly into it."""
     elsewhere = tmp_path / 'private' / 'gitconfig'
     elsewhere.parent.mkdir()
-    elsewhere.write_text('[user]\n\temail = someone@example.com\n')
-    identity_file.symlink_to(elsewhere)
+    elsewhere.write_text(IDENTITY)
+    home_gitconfig.symlink_to(elsewhere)
 
-    deploy._ensure_identity_file()
+    deploy._ensure_git_config_entry()
 
-    assert identity_file.is_symlink()
+    assert home_gitconfig.is_symlink()
     assert 'someone@example.com' in elsewhere.read_text()

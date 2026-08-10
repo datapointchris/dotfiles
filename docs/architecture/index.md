@@ -112,13 +112,20 @@ Configurations use inheritance: a shared base with coordinate overlays on top.
 
 **Example: Git Config**
 
-Git reads both `~/.config/git/config` and `~/.gitconfig`, in that order, and the repo uses the
-split deliberately. Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships
-from `configs/common/.config/git/config`, which git loads natively with no include wiring. One
-coordinate adds what genuinely differs, through `configs/host/wsl/.config/git/overlay.gitconfig`:
-`core.autocrlf`, because a checkout on the Linux side is edited from Windows tools too. That file
-is pulled in by an include at the end of the common config and is ignored while absent, so every
-other machine ships nothing.
+`~/.config/git/config` is the entry point and the only file in that directory the repo does not
+own. It is a real file holding a single include of `common.gitconfig`, written by the deploy
+epilogue, and it must be real rather than a symlink for two reasons: git writes there when
+`~/.gitconfig` is absent, and it follows a symlink when writing, so an entry point linked into the
+checkout would commit an identity into the repo the first time anyone followed git's own "Please
+tell me who you are" hint.
+
+Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships from
+`configs/common/.config/git/common.gitconfig`. Below it sits one include per axis, each named for
+the overlay directory that supplies it: `host.gitconfig` carries `core.autocrlf` from
+`configs/host/wsl/`, because a checkout on the Linux side is edited from Windows tools too, and
+`trust.gitconfig` carries identity. Both are ignored while absent, so a machine needing neither
+ships nothing. Trust comes last because its employer form overrides a default with an `includeIf`,
+and git resolves last-wins.
 
 The `gh` credential helper used to be in that overlay and is now common, which is what collapsed
 three near-identical files into one. It was per-platform only because it named an absolute path —
@@ -126,14 +133,27 @@ three near-identical files into one. It was per-platform only because it named a
 Silicon one, a distinction no platform string draws. `gh` unqualified resolves everywhere git runs
 here.
 
-Identity is the exception, and it is not in this repo at all. `user.name` and `user.email` differ
-per *machine* rather than per platform — a machine that hosts both employer and personal
-repositories needs a different default from one that hosts only personal work — so they belong in
-`~/.gitconfig`, which git reads last and which nothing here writes. The common config sets
-`user.useConfigOnly = true` so that a machine without one fails loudly rather than inventing an
-author from the hostname. Scoping identity per repository on a mixed machine is a
-`~/.gitconfig` concern too, and `includeIf "hasconfig:remote.*.url:..."` keys on the remote rather
-than the checkout path, so it survives a repo being cloned somewhere unexpected.
+Identity rides the trust axis, because that is the thing it actually varies with: a machine hosting
+employer work alongside personal needs a different default from one hosting only personal work.
+A fleet machine's `trust.gitconfig` includes `personal.gitconfig` unconditionally, so the three
+personal machines take their identity from the repo and nobody sets one by hand. The personal
+address is in the repo because it is already in every commit object here — shipping it discloses
+nothing, and a value the repo owns cannot drift on one machine or vanish when a symlink is pruned.
+
+The employer machine inverts the pair: `employer.gitconfig` is the default, and `personal.gitconfig`
+is included behind `includeIf "hasconfig:remote.*.url:..."`. That direction is deliberate — a repo
+slipping through the match commits under the employer address, which is wrong but internal, where
+the reverse puts a personal address into employer history. `hasconfig` keys on the remote rather
+than the checkout path, so it holds wherever a repo is cloned; it takes two blocks because the
+condition matches the URL literally and HTTPS and SSH spell the same remote differently.
+
+`employer.gitconfig` is the one identity the repo does not ship, so `install/flags.yml` declares it
+and `dotfiles check` fails while it is missing. That declaration is load-bearing: git ignores an
+absent include silently, and `user.useConfigOnly = true` would then refuse every commit while
+naming nothing. For the same reason the check runs `git config --global --includes --get` —
+`--global` alone implies `--no-includes` and would report every machine unset, and the pair
+deliberately ignores the `includeIf` so it reports the machine's default rather than whatever the
+current directory resolves to.
 
 **Example: Neovim**
 

@@ -175,7 +175,7 @@ main() {
   fi
 
   local win_shell_dir="$win_home/.local/shell"
-  local shared_gitconfig="$DOTFILES_DIR/configs/common/.config/git/config"
+  local shared_gitconfig="$DOTFILES_DIR/configs/common/.config/git/common.gitconfig"
 
   echo "Syncing shell files to Windows Git Bash..."
   echo "  Windows home: $win_home"

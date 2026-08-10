@@ -1,0 +1,4 @@
+# A fleet machine hosts personal work only, so the personal identity is simply
+# the default and nothing here needs a condition.
+[include]
+path = ~/.config/git/personal.gitconfig
