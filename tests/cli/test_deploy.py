@@ -11,13 +11,26 @@ so retiring the latter is part of the same contract and is pinned here beside it
 
 from __future__ import annotations
 
+import dataclasses as dc
 from pathlib import Path
 
 import pytest
 
+from dotfiles import coordinates as axes
 from dotfiles import deploy
 
 IDENTITY = '[user]\n\temail = someone@example.com\n'
+
+EMPLOYER = axes.Coordinates(
+    package_manager=axes.PackageManager.APT,
+    os_family=axes.OSFamily.LINUX,
+    display_stack=axes.DisplayStack.NONE,
+    host=axes.Host.WSL,
+    network_trust=axes.NetworkTrust.EMPLOYER,
+    capacity=axes.Capacity.WORKSTATION,
+)
+"""Off the fleet, where an identity in ~/.gitconfig is the only copy there is.
+The rescue advice differs by trust, so the coordinate is what these exercise."""
 
 
 @pytest.fixture
@@ -36,7 +49,7 @@ def home_gitconfig(entry_point: Path) -> Path:
 
 def test_absent_entry_point_is_created(entry_point: Path) -> None:
     """Including its parent, which on a fresh machine does not exist yet."""
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
     assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
 
 
@@ -45,7 +58,7 @@ def test_an_existing_entry_point_is_left_alone(entry_point: Path) -> None:
     entry_point.parent.mkdir(parents=True)
     entry_point.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert 'someone@example.com' in entry_point.read_text()
 
@@ -64,7 +77,7 @@ def test_a_linked_entry_point_is_replaced_rather_than_written_through(entry_poin
     entry_point.parent.mkdir(parents=True)
     entry_point.symlink_to(repo_file)
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert not entry_point.is_symlink()
     assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
@@ -76,7 +89,7 @@ def test_home_gitconfig_carrying_no_identity_is_removed(entry_point: Path, home_
     reads and writes, so it silently out-ranks the entire include chain."""
     home_gitconfig.write_text('# placeholder, no [user]\n')
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert not home_gitconfig.exists()
 
@@ -87,7 +100,7 @@ def test_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, home_gitc
     tidying up after itself."""
     home_gitconfig.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert 'someone@example.com' in home_gitconfig.read_text()
 
@@ -97,7 +110,7 @@ def test_a_dangling_home_gitconfig_link_is_removed(entry_point: Path, home_gitco
     being the path git writes through."""
     home_gitconfig.symlink_to(tmp_path / 'configs' / 'archlinux' / '.gitconfig')
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert not home_gitconfig.is_symlink()
 
@@ -110,7 +123,37 @@ def test_a_linked_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, 
     elsewhere.write_text(IDENTITY)
     home_gitconfig.symlink_to(elsewhere)
 
-    deploy._ensure_git_config_entry()
+    deploy._ensure_git_config_entry(EMPLOYER)
 
     assert home_gitconfig.is_symlink()
     assert 'someone@example.com' in elsewhere.read_text()
+
+
+FLEET = dc.replace(EMPLOYER, network_trust=axes.NetworkTrust.FLEET, host=axes.Host.NATIVE)
+
+
+def test_a_fleet_machine_is_told_to_delete_rather_than_to_rescue(
+    entry_point: Path, home_gitconfig: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The repo already ships that address in personal.gitconfig, so there is
+    nothing to preserve. Naming a rescue file here sent one Mac looking for a
+    destination its trust overlay never includes."""
+    home_gitconfig.write_text(IDENTITY)
+
+    deploy._ensure_git_config_entry(FLEET)
+
+    advice = capsys.readouterr()
+    assert 'personal.gitconfig' in advice.out + advice.err
+    assert 'local.gitconfig' not in advice.out + advice.err
+    assert home_gitconfig.exists()
+
+
+def test_off_the_fleet_it_is_told_where_to_move_it(entry_point: Path, home_gitconfig: Path, capsys: pytest.CaptureFixture) -> None:
+    """There the identity is the only copy of an address the repo deliberately
+    does not hold, so it needs somewhere to go before ~/.gitconfig is deleted."""
+    home_gitconfig.write_text(IDENTITY)
+
+    deploy._ensure_git_config_entry(EMPLOYER)
+
+    advice = capsys.readouterr()
+    assert 'local.gitconfig' in advice.out + advice.err

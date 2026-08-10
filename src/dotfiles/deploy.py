@@ -28,6 +28,19 @@ from dotfiles.symlinks import core
 GIT_CONFIG_ENTRY = Path.home() / '.config' / 'git' / 'config'
 HOME_GITCONFIG = Path.home() / '.gitconfig'
 
+PERSONAL_IDENTITY = Path.home() / '.config' / 'git' / 'personal.gitconfig'
+"""The identity the repo ships, included unconditionally on a fleet machine."""
+
+LOCAL_IDENTITY = Path.home() / '.config' / 'git' / 'local.gitconfig'
+"""The identity the repo declares and never holds, on a machine whose default is
+not the personal one.
+
+Named for what it is to this repo — machine-local, like `~/.local/shell/local.sh`
+beside it — rather than for whose address it happens to carry. It was
+`employer.gitconfig`, which reads as a category the repo is entitled to know and
+is wrong on the first machine that keeps a second identity for any other reason.
+"""
+
 GIT_CONFIG_STUB = """\
 # This machine's git entry point, and the only file in this directory the repo
 # does not own. Both of its jobs need it to be a real file rather than a symlink.
@@ -50,7 +63,7 @@ def _identity_in(path: Path) -> str:
     return result.stdout.strip() if result.ok else ''
 
 
-def _ensure_git_config_entry() -> None:
+def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
     """Give `git config --global` somewhere to write that is not this repo.
 
     git writes to `~/.config/git/config` only while `~/.gitconfig` is absent, and
@@ -70,19 +83,23 @@ def _ensure_git_config_entry() -> None:
         GIT_CONFIG_ENTRY.parent.mkdir(parents=True, exist_ok=True)
         GIT_CONFIG_ENTRY.write_text(GIT_CONFIG_STUB)
         hint(f'created {GIT_CONFIG_ENTRY}')
-    _retire_home_gitconfig()
+    _retire_home_gitconfig(coordinates)
 
 
-def _retire_home_gitconfig() -> None:
+def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
     """Remove the `~/.gitconfig` this used to create, now that the entry point is XDG.
 
     git prefers it over `~/.config/git/config` for reads and writes both, so one
     left behind silently out-ranks the entire include chain — the identity a trust
     overlay supplies would resolve, and then lose to whatever is in here.
 
-    An identity in it is never deleted. On the employer machine it is the only
-    copy of an address the repo deliberately does not hold, so this reports and
-    leaves it rather than destroying the value while tidying up after itself.
+    An identity in it is never deleted, but where it should go depends on the
+    machine. Off the fleet it is the only copy of an address the repo
+    deliberately does not hold, so it moves to the machine-local identity file.
+    On a fleet machine the repo already ships that address in
+    personal.gitconfig, so there is nothing to preserve and the file is simply
+    in the way — advising a rescue file there sent one Mac looking for a
+    destination its trust overlay never includes.
     """
     if not HOME_GITCONFIG.exists():
         # `exists()` follows a link, so a dangling one reads as absent here and
@@ -92,7 +109,10 @@ def _retire_home_gitconfig() -> None:
         return
     if identity := _identity_in(HOME_GITCONFIG):
         err_console.print(f'  [red]✗[/] ~/.gitconfig holds {identity} and out-ranks ~/.config/git/config')
-        hint('move it into ~/.config/git/employer.gitconfig, then delete ~/.gitconfig')
+        if coordinates.network_trust is axes.NetworkTrust.FLEET:
+            hint(f'this machine already has that identity from {PERSONAL_IDENTITY.name}, so delete ~/.gitconfig')
+        else:
+            hint(f'move it into {LOCAL_IDENTITY}, then delete ~/.gitconfig')
         return
     HOME_GITCONFIG.unlink()
     hint(f'removed {HOME_GITCONFIG} — the entry point is now {GIT_CONFIG_ENTRY}')
@@ -121,7 +141,7 @@ def epilogue(session: Session) -> None:
     observe/diff/perform loop beside the resource's, which is one of the reasons
     there were thirteen of them; what is left here is genuinely not the walk.
     """
-    _ensure_git_config_entry()
+    _ensure_git_config_entry(session.machine.coordinates)
     _sync_windows_shell(session.machine.coordinates)
     _reload_compositor(session.machine.coordinates)
 

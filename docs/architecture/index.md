@@ -154,14 +154,14 @@ personal machines take their identity from the repo and nobody sets one by hand.
 address is in the repo because it is already in every commit object here — shipping it discloses
 nothing, and a value the repo owns cannot drift on one machine or vanish when a symlink is pruned.
 
-The employer machine inverts the pair: `employer.gitconfig` is the default, and `personal.gitconfig`
+A machine off the fleet inverts the pair: `local.gitconfig` is the default, and `personal.gitconfig`
 is included behind `includeIf "hasconfig:remote.*.url:..."`. That direction is deliberate — a repo
 slipping through the match commits under the employer address, which is wrong but internal, where
 the reverse puts a personal address into employer history. `hasconfig` keys on the remote rather
 than the checkout path, so it holds wherever a repo is cloned; it takes two blocks because the
 condition matches the URL literally and HTTPS and SSH spell the same remote differently.
 
-`employer.gitconfig` is the one identity the repo does not ship, so `install/flags.yml` declares it
+`local.gitconfig` is the one identity the repo does not ship, so `install/flags.yml` declares it
 and `dotfiles check` fails while it is missing. That declaration is load-bearing: git ignores an
 absent include silently, and `user.useConfigOnly = true` would then refuse every commit while
 naming nothing. For the same reason the check runs `git config --global --includes --get` —

@@ -4,11 +4,11 @@
 # history. Both spellings are already in this repo's log from the arrangement
 # that had it the other way round.
 #
-# employer.gitconfig is the one identity this repo does not ship, so it is
+# local.gitconfig is the one identity this repo does not ship, so it is
 # declared in install/flags.yml and `dotfiles check` fails while it is missing.
 # Without that the machine simply refuses to commit, naming nothing.
 [include]
-path = ~/.config/git/employer.gitconfig
+path = ~/.config/git/local.gitconfig
 
 # Keyed on the remote rather than the checkout path, so it holds wherever a repo
 # is cloned rather than only under a blessed directory. Two blocks because the

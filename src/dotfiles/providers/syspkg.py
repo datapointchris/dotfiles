@@ -40,7 +40,7 @@ INSTALL: dict[str, tuple[str, ...]] = {
     'aur': ('yay', '-S', '--needed', '--noconfirm'),
     'apt': ('apt-get', 'install', '-y'),
     'brew': ('brew', 'install', '--quiet'),
-    'cask': ('brew', 'install', '--quiet', '--cask'),
+    'cask': ('brew', 'install', '--quiet', '--cask', '--adopt'),
     'mas': ('mas', 'install'),
     'flatpak': ('flatpak', 'install', '-y', 'flathub'),
 }
@@ -49,6 +49,15 @@ INSTALL: dict[str, tuple[str, ...]] = {
 `--needed` and `-y` and `--quiet` are all the same instruction in three dialects:
 do not ask, and do not reinstall what is already there. `apt-get` rather than
 `apt`, which prints "this is not a stable CLI" to stderr on every scripted call.
+
+`--adopt` is the cask equivalent of the same idea, one step further out. A cask
+whose app is already in /Applications — installed by hand before this repo
+managed it, or restored by Migration Assistant — fails with "It seems there is
+already an App at ...", every run, forever: the evidence check reads `brew list
+--cask`, which never learns about a bundle brew did not put there. `--adopt`
+takes ownership of an artifact *identical* to the one being installed and still
+refuses anything else, so it converges the machine without being able to
+overwrite a version nobody asked to replace.
 
 The last three are here rather than in three modules of their own because they
 differ from the first four in nothing this file knows about: same batching, same

@@ -96,7 +96,7 @@ def test_asking_for_two_formats_at_once_is_a_usage_error() -> None:
 def test_the_one_file_safekeep_cannot_restore_says_how_to_get_it_back() -> None:
     """Its own config, on a machine with no backup yet. Every other entry defaults
     to "restore it with safekeep", which for this one is a circle."""
-    entry = next(item for item in json.loads(run('archlinux-personal-workstation', '--json')) if 'safekeep' in item['path'])
+    entry = next(item for item in json.loads(run('wsl-work-workstation', '--json')) if 'safekeep' in item['path'])
 
     assert 'safekeep config init' in entry['restore']
 
@@ -113,6 +113,15 @@ def test_every_entry_carries_a_way_to_get_it_back(work: machines.Machine) -> Non
 def test_the_safekeep_config_is_itself_in_the_register() -> None:
     """The file that restores the others has to be in the snapshot too, or a
     rebuild has every declared file back and nothing that knows where they went."""
-    entries = json.loads(run('archlinux-personal-workstation', '--json'))
+    entries = json.loads(run('wsl-work-workstation', '--json'))
 
     assert any('safekeep' in entry['path'] for entry in entries)
+
+
+def test_a_fleet_machine_needs_no_safekeep_config() -> None:
+    """Syncthing is the transport there and Proxmox holds the backups, so a fleet
+    machine without one is not a machine missing anything. Narrowed on capacity
+    at first, which reported both Macs short of a file neither needs."""
+    entries = json.loads(run('macos-personal-workstation', '--json'))
+
+    assert not [entry for entry in entries if 'safekeep' in entry['path']]

@@ -83,9 +83,10 @@ required_files:
   # an employer. Absence is silent in the way that earns a place here — git ignores
   # a missing include without a word, so the machine would fall through to
   # useConfigOnly and refuse every commit while naming nothing.
-  - name: employer.gitconfig
-    path: ~/.config/git/employer.gitconfig
-    description: Employer git identity, the default for repos that are not personal
+  - name: local.gitconfig
+    path: ~/.config/git/local.gitconfig
+    description: This machine's default git identity, for repos that are not personal
+    restore: "restore it with safekeep, or rename ~/.config/git/employer.gitconfig which is what this was called"
     machine: wsl-work-workstation
     consumers:
       - configs/trust/employer/.config/git/trust.gitconfig
@@ -109,20 +110,21 @@ required_files:
       - configs/common/.config/fleet/config.yml
       - configs/common/.config/syncer/config.toml
 
-  # A machine-local file rather than a repo overlay, because the key that matters
-  # is where the snapshots go and no two machines answer it the same way — a
-  # mounted employer share on the work box, the NAS on the others. Absence is
-  # silent in the way this register is for: safekeep with no config copies
-  # nothing, and nothing runs it interactively to notice. Measured on the Arch
-  # box, which had none at all and was backing up nothing.
+  # Off the fleet only, which is the axis that actually decides it. safekeep is
+  # how a machine outside Syncthing gets the files above back; on the fleet the
+  # sync is the transport and Proxmox holds the backups, so a fleet machine with
+  # no safekeep config is not a machine missing anything. Narrowed on capacity
+  # at first, which required it on all three workstations and reported the two
+  # Macs short of a file neither needs.
   #
-  # Its own entry despite being the thing that restores the others: a rebuild
-  # needs this file back before any of them, which is exactly why it is worth
-  # having in the snapshot rather than reconstructing by hand.
+  # A machine-local file rather than a repo overlay, because the key that matters
+  # is where the snapshots go and that is a property of the machine. Absence is
+  # silent in the way this register is for: safekeep with no config copies
+  # nothing, and nothing runs it interactively to notice.
   - name: safekeep config
     path: ~/.config/safekeep/default.toml
     description: What this machine backs up and where, including the files above
-    capacity: workstation
+    network_trust: employer
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
       - safekeep
