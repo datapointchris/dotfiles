@@ -107,6 +107,16 @@ axis in the path there costs nothing and makes a sourced file say which
 coordinate asked for it.
 """
 
+FOREIGN_ADVICE = 'move it aside, or replace every such target with `dotfiles symlinks apply --force`'
+"""What to do about a refused target, named once so `diff` and `apply` agree.
+
+The command, not the bare flag: only `dotfiles symlinks apply` takes `--force`,
+and a reader met it from a `check` or composite `apply` run that does not. The
+safe answer leads because the flag is per-run rather than per-path — it adopts
+every foreign target in the run, which is a machine-wide decision to make on
+purpose and not the way to deploy one file.
+"""
+
 
 def layers(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[tuple[Path, Path, str]]:
     """The declared (source tree, destination, layer) triples, in deployment order.
@@ -203,7 +213,7 @@ class SymlinksResource:
 
         ownership = core.link_ownership(link.target, link.root)
         if ownership == 'foreign' and not (session.force or core.is_untouched_skeleton(link.target)):
-            return Outcome(change, OutcomeStatus.REFUSED, 'a target this manager did not create; --force replaces it')
+            return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {FOREIGN_ADVICE}')
 
         try:
             link.target.parent.mkdir(parents=True, exist_ok=True)
@@ -238,7 +248,7 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
             Stage.SYMLINKS,
             link.address,
             Verdict.STALE,
-            detail=f'{link.target} was not created by this manager; --force replaces it',
+            detail=f'{link.target} was not created by this manager; {FOREIGN_ADVICE}',
             repair=Repair.BY_HAND,
         )
 
