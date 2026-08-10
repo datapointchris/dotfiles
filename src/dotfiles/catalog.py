@@ -611,12 +611,15 @@ class SystemConfig(Entry):
     os_family: str = ''
     host: str = ''
     display_stack: str = ''
-    """Coordinate narrowings, and only the three anything declares.
+    capacity: str = ''
+    """Coordinate narrowings, and only the ones something declares.
 
     Hyprland replacing gdm is a fact about the display stack, not about Arch; the
-    Windows font path is a fact about the host, not about Ubuntu. A fourth axis is
-    a fourth field when a row needs one — until then declaring it is a load-time
-    error rather than a key read by nothing.
+    Windows font path is a fact about the host, not about Ubuntu; and the repo
+    registry belongs to a machine somebody works on, not to a server that
+    installs neither reader of it. A further axis is a further field when a row
+    needs one — until then declaring it is a load-time error rather than a key
+    read by nothing.
     """
 
     requires_package: str = ''
@@ -630,7 +633,7 @@ class SystemConfig(Entry):
     @property
     def narrowing(self) -> dict[str, str]:
         """The coordinates this row narrows on, keyed as `Coordinates` spells them."""
-        declared = (('os_family', self.os_family), ('host', self.host), ('display_stack', self.display_stack))
+        declared = (('os_family', self.os_family), ('host', self.host), ('display_stack', self.display_stack), ('capacity', self.capacity))
         return {axis: value for axis, value in declared if value}
 
     def problems(self) -> tuple[str, ...]:
@@ -768,6 +771,43 @@ class MacosDefault(SystemConfig):
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
+class ExternalLink(SystemConfig):
+    """A symlink from where a tool looks to a file this repo will never hold.
+
+    The symlink resource cannot express one. It *derives* every link by walking
+    `configs/`, `shell/` and `apps/` and pairing each file found with where it
+    belongs, so a link's source is a repo file by construction — and
+    `link_ownership` calls anything resolving outside the repo `foreign`, so a
+    link to `~/dev/repos.json` would be refused as someone else's file even after
+    this manager made it.
+
+    What earns a row is that the file is private on *both* sides of the trust
+    split rather than on one: the fleet's repo registry and the work box's are
+    different files, so neither can be committed and no overlay can carry either.
+    The wiring is identical everywhere, which is why the row narrows to nothing
+    while the file it points at is supplied per machine — by Syncthing on the
+    fleet, by safekeep off it.
+
+    Unprivileged: every one of these lands under `$HOME`.
+    """
+
+    section: ClassVar[str] = 'links'
+
+    path: str
+    points_at: str
+
+    needs_root: bool = False
+
+    def problems(self) -> tuple[str, ...]:
+        if Path(self.points_at).is_absolute() or self.points_at.startswith('~'):
+            return SystemConfig.problems(self)
+        return (
+            f'points_at {self.points_at!r}, which is relative; a link target is resolved from no fixed directory',
+            *SystemConfig.problems(self),
+        )
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
 class Step(SystemConfig):
     """A piece of machine state with no shared mechanism behind it.
 
@@ -818,6 +858,7 @@ SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
     ManagedFile,
     LoginShell,
     MacosDefault,
+    ExternalLink,
     Step,
 )
 """`system.yml`, in its own map rather than merged into `SECTIONS`.

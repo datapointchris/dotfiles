@@ -17,9 +17,10 @@
 # `src/dotfiles/privilege.py` instead of a `sudo` per script.
 #
 # Narrowing is per entry, and an entry carries only the key that decides it:
-#   display_stack      the machine's compositor
 #   requires_package   a system package this machine's manifest installs
 #   feature            a manifest boolean
+#   <axis>             any coordinate in src/dotfiles/coordinates.py, e.g.
+#                      display_stack, host, capacity — plus machine and platform
 # An entry with none of them applies to every machine.
 
 group_memberships:
@@ -502,6 +503,38 @@ macos_defaults:
     type: bool
     value: "true"
     description: Reduce motion
+
+# ── Links into files this repo will never hold ──────────────────
+# The symlink resource derives every link by walking configs/, shell/ and apps/,
+# so a link's source is always a repo file and none of these can be spelled
+# there. What earns them a section is that the file is private on *both* sides of
+# the trust split rather than on one: the fleet's repo registry and the work
+# box's are different files, so neither is committable and no overlay carries
+# either.
+#
+# The wiring is identical everywhere, so these narrow to nothing. Only the file
+# is per machine — Syncthing supplies it on the fleet, safekeep off it — and
+# `required_files` in flags.yml is what reports it missing. A link is checked
+# against where it points and never against whether the target is there yet.
+links:
+  # forge resolves its registry from $XDG_CONFIG_HOME/forge or ~/.local/share/forge
+  # and takes an arbitrary path only per invocation, so the link is the only way
+  # to make it read the canonical file every time.
+  - name: forge-registry
+    description: forge's repo registry, read from its XDG data directory
+    path: ~/.local/share/forge/repos.json
+    points_at: ~/dev/repos.json
+    capacity: workstation
+
+  # syncer would also take `repos_file` in its own config, and this is a link for
+  # uniformity rather than because it has to be: one rule covering both readers
+  # beats one rule and one exception, and the exception would live in a file this
+  # repo deploys — so the two registries would be named in two different places.
+  - name: syncer-registry
+    description: syncer's repo registry, read from its config directory
+    path: ~/.config/syncer/repos.json
+    points_at: ~/dev/repos.json
+    capacity: workstation
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
 # root-only licence read, a JSON merge, a keg-only formula's link, and a path

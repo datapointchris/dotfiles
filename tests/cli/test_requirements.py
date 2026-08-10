@@ -50,12 +50,14 @@ def test_a_machine_that_needs_nothing_says_so_rather_than_printing_a_bare_name()
 
 def test_json_carries_the_narrowing_that_decided_each_entry() -> None:
     """Which axis pulled an entry in is the part a reader cannot reconstruct, and
-    the part that answers "why does this machine need it and that one not"."""
+    the part that answers "why does this machine need it and that one not". An
+    empty narrowing is itself an answer — every machine — so the key is always
+    present and only sometimes populated."""
     entries = json.loads(run('wsl-work-workstation', '--json'))
 
     assert {entry['name'] for entry in entries}
     assert all(entry['kind'] in {'file', 'value'} for entry in entries)
-    assert all(entry['narrowing'] for entry in entries)
+    assert all(isinstance(entry['narrowing'], dict) for entry in entries)
 
 
 def test_the_safekeep_block_is_parseable_toml_carrying_every_file(work: machines.Machine) -> None:
