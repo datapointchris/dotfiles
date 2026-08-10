@@ -52,6 +52,27 @@ def declared_machine() -> str:
         return ''
 
 
+def resolve_machine(machine: str | None = None) -> str:
+    """The machine this run is about, from the argument, the environment or `~/.env`.
+
+    One function raising one error, because the two front doors were saying
+    different things about the same failure: `Session.resolve` listed the known
+    machines and `apply.Run.resolve` named the two places it had looked — with
+    `dotfiles apply`, the more-used door, getting the less actionable half. Two
+    messages kept in step by hand is the arrangement that produced the bug this
+    is the tail of, so the message has one home.
+
+    Raises `NoMachine`; `apply` catches it and re-raises as its own `Declaration`
+    for the exit code, which is a translation rather than a second opinion.
+    """
+    name = machine or os.environ.get('MACHINE') or declared_machine()
+    if not name:
+        raise NoMachine(
+            f'no machine named, and neither MACHINE nor ~/.env says what this is. Known: {", ".join(machines.names()) or "none"}'
+        )
+    return name
+
+
 @dc.dataclass(frozen=True)
 class Session:
     """One invocation's world.
@@ -98,10 +119,7 @@ class Session:
         with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
         was. Found by installing the timer and reading its first failure.
         """
-        name = machine or os.environ.get('MACHINE') or declared_machine()
-        if not name:
-            raise NoMachine(f'no machine named, and MACHINE is unset. Known: {", ".join(machines.names()) or "none"}')
-        return cls(machine_name=name, **kwargs)  # type: ignore[arg-type]
+        return cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
 
     @functools.cached_property
     def catalog(self) -> catalogs.Catalog:

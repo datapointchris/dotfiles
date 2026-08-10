@@ -301,3 +301,23 @@ def test_a_machine_named_nowhere_at_all_is_still_a_usage_error(tmp_path, monkeyp
 
     with pytest.raises(apply.Declaration):
         apply.Run.resolve()
+
+
+def test_both_front_doors_give_the_same_diagnosis_for_an_unnamed_machine(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One failure, one message. They disagreed — `Session.resolve` listed the
+    known machines and `Run.resolve` named where it had looked — and `apply`, the
+    more-used door, got the less actionable half. Two messages kept in step by
+    hand is what produced the bug this is the tail of.
+    """
+    from dotfiles import session as sessions
+
+    monkeypatch.delenv('MACHINE', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+
+    with pytest.raises(apply.Declaration) as through_apply:
+        apply.Run.resolve()
+    with pytest.raises(sessions.NoMachine) as through_session:
+        sessions.Session.resolve()
+
+    assert str(through_apply.value) == str(through_session.value)
+    assert 'linux-lxc-server' in str(through_apply.value), 'the message has to name what it would accept'

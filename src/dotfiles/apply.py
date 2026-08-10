@@ -175,9 +175,10 @@ class Run:
         how a wsl manifest once deployed the linux shell overlay for a whole
         install.
         """
-        name = machine or os.environ.get('MACHINE') or session.declared_machine()
-        if not name:
-            raise Declaration('no machine named, and neither the environment nor ~/.env says what this machine is')
+        try:
+            name = session.resolve_machine(machine)
+        except session.NoMachine as unnamed:
+            raise Declaration(str(unnamed)) from unnamed
 
         manifest_file = paths.MANIFESTS_DIR / f'{name}.yml'
         if not manifest_file.is_file():
