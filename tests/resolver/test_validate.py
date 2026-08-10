@@ -20,6 +20,7 @@ import yaml
 
 from dotfiles import catalog
 from dotfiles import machine as machines
+from dotfiles import paths
 from dotfiles import validate
 from dotfiles.validate import Severity
 
@@ -254,32 +255,6 @@ def test_the_real_declaration_is_sound() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-MARKERS = ('install/packages.yml', 'src/dotfiles', 'pyproject.toml')
-"""Files that together identify a dotfiles checkout and nothing else."""
-
-
-def checkout() -> Path:
-    """The checkout these tests came from, found by what is in it.
-
-    Not `paths.REPO_ROOT`, which lets `$DOTFILES_DIR` win unconditionally: that is
-    right for the CLI, which must deploy the machine's repo from wherever it is
-    invoked, and wrong here. `.zshenv` pins that variable to ~/dotfiles, so a run
-    from a worktree would assert against main's declaration while reporting on the
-    branch — green against files the branch never touched.
-
-    Anchored on markers rather than counting parents, because a count is a claim
-    about where this file sits and moving it one directory changes the answer in
-    silence.
-    """
-    for candidate in Path(__file__).resolve().parents:
-        if all((candidate / marker).exists() for marker in MARKERS):
-            return candidate
-    raise RuntimeError(f'no dotfiles checkout above {__file__}: none of its parents holds {", ".join(MARKERS)}')
-
-
-CHECKOUT = checkout()
-
-
 def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
     """The node toolchain is planned because npm globals are, and it needs fnm to
     put a node on PATH at all — which is how a WSL offline install died with
@@ -291,12 +266,12 @@ def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
     an entry is a question about coverage, tier and spelling that only the loader
     answers the same way twice.
     """
-    declaration = catalog.load(CHECKOUT / 'install' / 'packages.yml')
+    declaration = catalog.load(paths.PACKAGES_FILE)
     fnm = declaration.find('cargo_packages', 'fnm')
     assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
 
-    for name in machines.names(CHECKOUT):
-        machine = machines.load(name, CHECKOUT)
+    for name in machines.names():
+        machine = machines.load(name)
         npm = machine.subscription('npm_globals')
         if not any(npm.wants(entry) for entry in declaration.section('npm_globals')):
             continue
@@ -313,7 +288,7 @@ def test_fnm_overrides_both_target_triples() -> None:
     macOS bundle broken and vice versa, and one of the two going missing is the
     shape that survives a careless edit.
     """
-    fnm = catalog.load(CHECKOUT / 'install' / 'packages.yml').find('cargo_packages', 'fnm')
+    fnm = catalog.load(paths.PACKAGES_FILE).find('cargo_packages', 'fnm')
 
     assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
     assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
@@ -323,6 +298,6 @@ def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> Non
     """The real-declaration half of `_unbuildable_assets`, which is a warning and
     so is not covered by `test_the_real_declaration_is_sound` above — that one
     folds to errors alone."""
-    unbuildable = [finding for finding in validate.declaration(CHECKOUT) if 'binary_pattern' in finding.message]
+    unbuildable = [finding for finding in validate.declaration() if 'binary_pattern' in finding.message]
 
     assert unbuildable == []
