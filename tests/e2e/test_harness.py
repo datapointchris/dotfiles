@@ -11,7 +11,6 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
 
 import harness
 import pytest
@@ -356,9 +355,8 @@ def test_the_container_gets_the_checkout_the_tests_came_from() -> None:
     Both directions were wrong and neither was visible: a fix made on the branch
     showed as still broken, and a break on main showed as the branch's.
     """
-    assert Path(harness.__file__).resolve().parents[2] == harness.UNDER_TEST
-    assert (harness.UNDER_TEST / 'install.sh').is_file()
-    assert (harness.UNDER_TEST / 'tests' / 'e2e' / 'harness.py').is_file()
+    assert all((harness.UNDER_TEST / marker).exists() for marker in harness.MARKERS)
+    assert (harness.UNDER_TEST / 'src' / 'dotfiles').is_dir()
 
 
 def test_the_repo_under_test_ignores_the_environment_the_product_reads(monkeypatch, tmp_path) -> None:
@@ -366,3 +364,24 @@ def test_the_repo_under_test_ignores_the_environment_the_product_reads(monkeypat
     import importlib
 
     assert tmp_path != importlib.reload(harness).UNDER_TEST
+
+
+def test_the_checkout_is_found_by_its_markers_rather_than_by_depth(tmp_path) -> None:
+    """A `parents[n]` count is a claim about where this file sits in the tree, so
+    moving it one directory silently answers `tests/` — which every fixture then
+    mounts as the repo."""
+    checkout = tmp_path / 'somewhere' / 'dotfiles'
+    (checkout / 'tests' / 'e2e').mkdir(parents=True)
+    (checkout / 'install.sh').write_text('#!/bin/sh\n')
+    (checkout / 'tests' / 'e2e' / 'harness.py').write_text('')
+    buried = checkout / 'tests' / 'e2e' / 'deeper' / 'still'
+    buried.mkdir(parents=True)
+
+    assert harness.repo_under_test(buried / 'anything.py') == checkout
+
+
+def test_a_path_in_no_checkout_says_so_rather_than_guessing(tmp_path) -> None:
+    with pytest.raises(RuntimeError) as refused:
+        harness.repo_under_test(tmp_path / 'nowhere' / 'file.py')
+
+    assert 'install.sh' in str(refused.value)

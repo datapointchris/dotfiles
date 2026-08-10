@@ -21,28 +21,44 @@ import json
 import os
 import shlex
 import subprocess
+import warnings
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from dotfiles import apply
+from dotfiles import catalog
+from dotfiles import engine
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve
 
-UNDER_TEST = Path(__file__).resolve().parents[2]
-"""The checkout these tests came from, and the one the container gets.
+MARKERS = ('install.sh', 'tests/e2e/harness.py')
+"""Files that together identify a dotfiles checkout and nothing else."""
 
-Not `paths.REPO_ROOT`, which honours `$DOTFILES_DIR` — correct for the product,
-because the CLI must deploy the machine's repo from wherever it is invoked, and
-exactly wrong for a harness. `.zshenv` exports that variable to `~/dotfiles`, so
-an e2e run from a git worktree mounted `~/dotfiles` and installed *main's* code
-while reporting on the branch: a fix made on the branch showed as still broken,
-and a break on main showed as the branch's.
 
-Derived from this file's own location, so the answer is the checkout the test
-module was imported from and cannot be pointed elsewhere by an environment the
-product legitimately reads.
-"""
+def repo_under_test(start: Path | None = None) -> Path:
+    """The checkout these tests came from, found by what is in it.
+
+    Not `paths.REPO_ROOT`, which honours `$DOTFILES_DIR` — correct for the product,
+    because the CLI must deploy the machine's repo from wherever it is invoked, and
+    exactly wrong for a harness. `.zshenv` exports that variable to `~/dotfiles`, so
+    an e2e run from a git worktree mounted `~/dotfiles` and installed *main's* code
+    while reporting on the branch: a fix made on the branch showed as still broken,
+    and a break on main showed as the branch's.
+
+    Anchored on marker files rather than counting `parents[n]`, because a count is
+    a claim about where this file sits in the tree — move it one directory and the
+    answer silently becomes `tests/`, which every fixture then mounts as the repo.
+    """
+    for candidate in (start or Path(__file__).resolve()).parents:
+        if all((candidate / marker).exists() for marker in MARKERS):
+            return candidate
+    raise RuntimeError(f'no dotfiles checkout above {start or __file__}: none of its parents holds {", ".join(MARKERS)}')
+
+
+UNDER_TEST = repo_under_test()
 
 CONNECTIVITY_RESULTS = UNDER_TEST / 'install' / 'offline' / 'connectivity-results.txt'
 DOCKER_DIR = UNDER_TEST / 'tests' / 'install' / 'docker'
@@ -647,11 +663,6 @@ def base_plan(environment: Environment) -> tuple[str, ...]:
     what the install will do — an item is in the base if and only if the plan puts
     it at or below `BASE_STAGE`.
     """
-    from dotfiles import catalog
-    from dotfiles import engine
-    from dotfiles import machine as machines
-    from dotfiles import resolve
-
     ceiling = engine.stage_named(BASE_STAGE)
     plan = resolve.resolve(catalog.load(), machines.load(environment.manifest))
     return tuple(sorted(item.address for item in plan.items if item.stage <= ceiling))
@@ -694,9 +705,19 @@ def ledger_path() -> Path:
 
 
 def ledger() -> dict[str, dict[str, object]]:
+    """What the recorded bases are, or nothing.
+
+    A missing file is an ordinary first run and says nothing. A *corrupt* one is
+    not, and it costs the same multi-GB rebuild every time, so it is warned about
+    rather than folded into the same silence.
+    """
+    path = ledger_path()
+    if not path.exists():
+        return {}
     try:
-        return json.loads(ledger_path().read_text())
-    except (OSError, json.JSONDecodeError):
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as unreadable:
+        warnings.warn(f'the base-image ledger at {path} is unreadable, so every base will be rebuilt: {unreadable}', stacklevel=2)
         return {}
 
 
@@ -714,8 +735,11 @@ def record_base(tag: str, environment: Environment, built: dt.datetime) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(entries, indent=2, sort_keys=True) + '\n')
-    except OSError:
-        return
+    except OSError as unwritable:
+        # Loud, because `base_is_fresh` treats an unrecorded tag as stale: a
+        # silently unwritable cache means every run rebuilds a multi-GB base, takes
+        # ten minutes, and looks exactly like a normal first build.
+        warnings.warn(f'could not record the base image in {path}, so it will be rebuilt every run: {unwritable}', stacklevel=2)
 
 
 def base_is_fresh(tag: str, now: dt.datetime) -> bool:
@@ -777,7 +801,7 @@ def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
         # Committed after the repo is removed, so nothing downstream can read a
         # checkout the image froze — the failure mode the note above describes.
         machine.exec(f'rm -rf {environment.home}/dotfiles', check=True)
-        _shed_caches(machine)
+        shed_caches(machine)
         docker('commit', builder, tag, check=True)
     finally:
         docker('rm', '-f', builder)
@@ -797,6 +821,6 @@ and nothing here would have been a hit for it.
 """
 
 
-def _shed_caches(machine: Machine) -> None:
+def shed_caches(machine: Machine) -> None:
     for path in CACHE_PATHS:
         machine.exec(f'rm -rf {path.format(home=machine.environment.home)}', user='root')
