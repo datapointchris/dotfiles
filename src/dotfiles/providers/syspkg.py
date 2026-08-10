@@ -40,28 +40,40 @@ INSTALL: dict[str, tuple[str, ...]] = {
     'aur': ('yay', '-S', '--needed', '--noconfirm'),
     'apt': ('apt-get', 'install', '-y'),
     'brew': ('brew', 'install', '--quiet'),
+    'cask': ('brew', 'install', '--quiet', '--cask'),
+    'mas': ('mas', 'install'),
+    'flatpak': ('flatpak', 'install', '-y', 'flathub'),
 }
 """How each manager is told to install, before the names are appended.
 
 `--needed` and `-y` and `--quiet` are all the same instruction in three dialects:
 do not ask, and do not reinstall what is already there. `apt-get` rather than
 `apt`, which prints "this is not a stable CLI" to stderr on every scripted call.
+
+The last three are here rather than in three modules of their own because they
+differ from the first four in nothing this file knows about: same batching, same
+per-package fallback, same absence of a refresh. A cask is a formula installed
+from a different tap of the same manager, `mas install` takes numeric ids where
+the others take names, and flatpak names a remote before its ids. That is the
+whole of the difference, and each of those is one tuple.
 """
 
 REFRESH: dict[str, tuple[str, ...]] = {
     'pacman': ('pacman', '-Syu', '--noconfirm'),
     'apt': ('apt-get', 'update'),
 }
-"""What has to happen once before the first install. brew and yay refresh
-themselves as part of installing, so naming them here would be a second download
-of the same index."""
+"""What has to happen once before the first install. brew, yay, mas and flatpak
+refresh themselves as part of installing, so naming them here would be a second
+download of the same index."""
 
 ESCALATES: frozenset[str] = frozenset({'pacman', 'apt'})
 """Which managers this package runs through sudo.
 
-brew is absent deliberately and refuses to run as root; yay is absent because it
-escalates itself for the parts that need it, and running the whole build as root
-is how an AUR package ends up with root-owned files in the build cache.
+brew and its casks are absent deliberately and refuse to run as root; yay is
+absent because it escalates itself for the parts that need it, and running the
+whole build as root is how an AUR package ends up with root-owned files in the
+build cache. mas installs into the user's App Store session and flatpak into a
+per-user installation, so neither has anything to escalate for.
 """
 
 PREFERENCE: tuple[str, ...] = ('pacman', 'apt', 'brew', 'aur')
@@ -71,6 +83,9 @@ The AUR is last on purpose: a package in both the official repos and the AUR
 should come from the repos, where it is built and signed rather than compiled
 here. The order is otherwise irrelevant, since no machine has two of the first
 three.
+
+Casks, App Store apps and flatpak apps are absent because their sections declare
+one name and no alternative — there is nothing to prefer between.
 """
 
 

@@ -23,6 +23,7 @@ from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import registry
 from dotfiles.privilege import Privilege
+from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -274,6 +275,51 @@ def manager(monkeypatch: pytest.MonkeyPatch):
     return install
 
 
+class Bootstraps:
+    """Every manager's precondition, answering however a test says the machine is.
+
+    Stubbed rather than exercised: what a bootstrap *does* is
+    `tests/install/test_bootstrap.py`'s question, and letting these run would
+    build yay and download the Homebrew installer on the box running the suite.
+    What is asserted through this is that the right one runs, once, before the
+    batch its manager serves.
+    """
+
+    def __init__(self, *, refuses: str = '') -> None:
+        self.ran: list[str] = []
+        self.tapped: list[str] = []
+        self._refuses = refuses
+
+    def _answer(self, name: str) -> providers.Result:
+        self.ran.append(name)
+        return providers.Result(False, f'{name} is unavailable here') if name == self._refuses else providers.Result(True, '')
+
+    def homebrew(self) -> providers.Result:
+        return self._answer('homebrew')
+
+    def aur(self) -> providers.Result:
+        return self._answer('aur')
+
+    def flathub(self, installer: str, privilege) -> providers.Result:
+        self.ran.append(f'flathub:{installer}')
+        return providers.Result(False, 'no bus') if self._refuses == 'flathub' else providers.Result(True, '')
+
+    def taps(self, wanted) -> providers.Result:
+        self.tapped.extend(wanted)
+        return self._answer('taps')
+
+
+@pytest.fixture
+def bootstraps(monkeypatch: pytest.MonkeyPatch):
+    def arrange(**kwargs) -> Bootstraps:
+        recorder = Bootstraps(**kwargs)
+        for name in ('homebrew', 'aur', 'flathub', 'taps'):
+            monkeypatch.setattr(bootstrap, name, getattr(recorder, name))
+        return recorder
+
+    return arrange
+
+
 DECLARED = {
     'system_packages': [
         {'name': 'curl', 'apt': 'curl'},
@@ -286,9 +332,22 @@ see its docstring — so a `pacman:` key here is answered by whatever the box ru
 the suite has installed, and all three read as MATCHED on an Arch machine."""
 
 
+def answers_empty(fake_bin: Path, *managers: str) -> None:
+    """Shadow each manager's inventory query with one that reports nothing installed.
+
+    Necessary rather than tidy. `fake_bin` keeps the real `/usr/bin` behind it, so
+    an unshadowed `flatpak list` is answered by the box running the suite — and on
+    this Arch machine that means the app under test reads MATCHED, no Change is
+    produced, and the assertion is made against an empty batch that installed
+    nothing. Which is a green test proving nothing at all.
+    """
+    for manager in managers:
+        executable(fake_bin, manager, '#!/bin/sh\nprintf "" \n')
+
+
 def missing(tmp_path: Path, fake_bin: Path) -> Session:
     """A machine whose manager answers, with none of the three installed."""
-    executable(fake_bin, 'dpkg-query', '#!/bin/sh\nprintf "" \n')
+    answers_empty(fake_bin, 'dpkg-query')
     return session(tmp_path, DECLARED, WORKSTATION)
 
 
@@ -371,6 +430,111 @@ def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_pa
 
     assert recorder.calls == []
     assert [outcome.status for outcome in outcomes] == [OutcomeStatus.REFUSED]
+
+
+def test_a_manager_whose_bootstrap_refuses_installs_nothing_through_it(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """REFUSED rather than FAILED, because nothing was written and the run has not
+    gone wrong — a Mac with no Homebrew yet is a machine mid-build, not a broken
+    one, and `Outcome.ok` is what keeps the phase honest about the difference."""
+    recorder = manager()
+    ready = bootstraps(refuses='homebrew')
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'macos_casks': [{'name': 'ghostty'}]}, MAC)
+
+    outcomes = registry.BY_NAME['cask'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == []
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.REFUSED]
+    assert 'homebrew is unavailable' in outcomes[0].message
+    assert ready.ran == ['homebrew']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Casks, App Store apps and flatpak apps
+# ─────────────────────────────────────────────────────────────────────────────
+
+MAC = {'machine': 'box', 'platform': 'macos', 'system_packages': 'workstation'}
+ARCH = {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation', 'flatpak': True}
+
+
+def test_casks_install_in_one_brew_call(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """A cask is a formula from another tap of the same manager, so it batches for
+    the same reason and through the same code."""
+    recorder = manager()
+    bootstraps()
+    answers_empty(fake_bin, 'brew')
+    live = session(tmp_path, {'macos_casks': [{'name': 'ghostty'}, {'name': 'orbstack'}]}, MAC)
+
+    outcomes = registry.BY_NAME['cask'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('cask', ('ghostty', 'orbstack'))]
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE] * 2
+
+
+def test_an_app_store_app_is_installed_by_its_numeric_id(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """`mas install Xcode` is not a command. The name is for the report and the
+    bundle check; the id is the only thing the App Store answers to."""
+    recorder = manager()
+    bootstraps()
+    live = session(tmp_path, {'mas_apps': [{'name': 'Xcode', 'id': 497799835}]}, MAC)
+
+    registry.BY_NAME['mas'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('mas', ('497799835',))]
+
+
+def test_a_flatpak_app_is_installed_by_its_reverse_dns_id(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    recorder = manager()
+    bootstraps()
+    answers_empty(fake_bin, 'flatpak')
+    live = session(tmp_path, {'flatpak_apps': [{'name': 'dbeaver', 'flatpak_id': 'io.dbeaver.DBeaverCommunity'}]}, ARCH)
+
+    registry.BY_NAME['flatpak'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert recorder.calls == [('flatpak', ('io.dbeaver.DBeaverCommunity',))]
+
+
+def test_the_flathub_bootstrap_is_told_which_manager_installs_flatpak(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """flatpak is the manager, so it is not one of its own packages — the machine's
+    own package manager is what puts it there."""
+    manager()
+    ready = bootstraps()
+    answers_empty(fake_bin, 'flatpak')
+    live = session(tmp_path, {'flatpak_apps': [{'name': 'dbeaver', 'flatpak_id': 'io.dbeaver.DBeaverCommunity'}]}, ARCH)
+
+    registry.BY_NAME['flatpak'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert ready.ran == ['flathub:pacman']
+
+
+def test_the_taps_are_registered_before_the_formulae_that_live_in_them(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:
+    """A formula in an unregistered tap is unresolvable, and one unresolvable
+    formula aborts the whole batched install before it touches anything."""
+    manager()
+    ready = bootstraps()
+    answers_empty(fake_bin, 'brew')
+    declared = {'macos_taps': ['FelixKratz/formulae'], 'system_packages': [{'name': 'borders', 'brew': 'borders'}]}
+    live = session(tmp_path, declared, MAC)
+
+    registry.BY_NAME['system'].install_all(live, changes(live), Privilege(offer=False))
+
+    assert ready.ran == ['homebrew', 'taps']
+    assert ready.tapped == ['FelixKratz/formulae']
+
+
+def test_the_apps_are_planned_after_the_packages_that_provide_their_managers(tmp_path: Path, fake_bin: Path) -> None:
+    """`mas` is itself a Homebrew formula and a cask needs the brew that installed
+    it. The plan sorts on `(stage, provider, name)`, so on stage alone all three app
+    providers would sort ahead of `system` — which is what SYSTEM_APPS exists for.
+    """
+    declared = {
+        'system_packages': [{'name': 'mas', 'brew': 'mas'}],
+        'macos_casks': [{'name': 'ghostty'}],
+        'mas_apps': [{'name': 'Xcode', 'id': 497799835}],
+    }
+    live = session(tmp_path, declared, MAC)
+
+    assert [item.provider for item in live.plan.for_resource('system')] == ['system', 'cask', 'mas']
 
 
 def changes(live: Session):

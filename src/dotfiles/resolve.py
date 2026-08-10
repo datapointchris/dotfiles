@@ -45,6 +45,16 @@ class Stage(enum.IntEnum):
     branches on must not lie about which file it is talking about."""
 
     SYSTEM = 20
+    SYSTEM_APPS = 25
+    """Casks, App Store apps and flatpak apps, all of which need SYSTEM first.
+
+    Not a nicety: `mas` is itself a Homebrew formula, a cask needs the brew the
+    formula stage bootstrapped, and a flatpak app needs the flatpak binary. The
+    plan sorts on `(stage, provider, name)`, so without a stage of their own all
+    three would sort *before* `system` on the provider name alone and every one of
+    them would run against a manager that was not there yet.
+    """
+
     TOOLCHAIN = 30
     TOOLS = 40
     NODE = 50

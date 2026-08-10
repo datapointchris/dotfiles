@@ -36,6 +36,7 @@ import inside every method and the explanation each would need.
 from __future__ import annotations
 
 import dataclasses as dc
+from collections.abc import Callable
 from collections.abc import Sequence
 
 from dotfiles import catalog as catalogs
@@ -45,6 +46,8 @@ from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Result
+from dotfiles.providers import bootstrap
 from dotfiles.providers import cargo
 from dotfiles.providers import clone
 from dotfiles.providers import custom
@@ -333,7 +336,7 @@ class SystemPackageProvider(RegistryProvider):
         return self.install_all(session, [change], privilege)[0]
 
     def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
-        """One transaction per manager, and one refresh before each.
+        """One transaction per manager, and one bootstrap and refresh before each.
 
         Grouped by manager rather than done in the order given, because the order
         given is the plan's and the transaction is the manager's. A machine has one
@@ -342,7 +345,11 @@ class SystemPackageProvider(RegistryProvider):
         """
         outcomes: dict[str, Outcome] = {}
         for manager, wanted in _by_manager(session, changes).items():
-            outcomes.update(_transact(manager, wanted, privilege))
+            ready = _bootstrap(manager, session, privilege)
+            if not ready.ok:
+                outcomes |= {change.item: Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change, _ in wanted}
+                continue
+            outcomes |= _transact(manager, wanted, privilege)
         unreachable = 'no package manager on this machine installs it'
         return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, unreachable)) for change in changes]
 
@@ -380,11 +387,70 @@ class GitUvToolProvider(UvToolProvider):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class CaskProvider(RegistryProvider):
+    """A GUI application Homebrew installs, which is one manager away from a formula.
+
+    Its own provider rather than a `SystemPackage` with a fifth manager column,
+    because a cask is not an alternative spelling of anything: `macos_casks` is a
+    separate section a manifest subscribes to separately, and an entry there names
+    an app rather than a package that happens to be graphical.
+    """
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        return _through('cask', session, changes, privilege, lambda item: item.name)
+
+
+@dc.dataclass(frozen=True, slots=True)
 class AppStoreProvider(CatalogProvider):
-    """An App Store app, judged by its bundle. Its CLI is a second question."""
+    """An App Store app, judged by its bundle. Its CLI is a second question.
+
+    The bundle rather than a `mas list` inventory, because the two answer
+    different questions: an app installed from the store on another machine and
+    restored by Migration Assistant is present and is not in `mas list`. Which is
+    also why `mas` has no entry in `evidence.INSTALLER_QUERIES`.
+    """
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_app_bundle(item)
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        """`mas install`, which needs an App Store this process cannot sign into.
+
+        mas 7 dropped `account` and offers no way to ask whether anyone is signed
+        in, so there is nothing to gate on — the install is attempted and a
+        sign-in failure is reported as the failure it is. `mas-apps.sh` said the
+        same thing in a comment and then printed advice on every failure; the
+        advice is here, once, on the outcome that earns it.
+        """
+        return _through('mas', session, changes, privilege, _app_id)
+
+
+def _app_id(item: DesiredItem) -> str:
+    """An App Store app is addressed by number, and only by number."""
+    entry = item.entry
+    return str(entry.id) if isinstance(entry, catalogs.MasApp) else ''
+
+
+@dc.dataclass(frozen=True, slots=True)
+class FlatpakProvider(RegistryProvider):
+    """A Flathub app, addressed by its reverse-DNS id rather than its name."""
+
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        return self.install_all(session, [change], privilege)[0]
+
+    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+        return _through('flatpak', session, changes, privilege, _flatpak_id)
+
+
+def _flatpak_id(item: DesiredItem) -> str:
+    entry = item.entry
+    return entry.flatpak_id if isinstance(entry, catalogs.FlatpakApp) else ''
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -643,9 +709,9 @@ def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
 
 PROVIDERS: tuple[Provider, ...] = (
     SystemPackageProvider('system', 'system', Stage.SYSTEM, 'system_packages'),
-    RegistryProvider('cask', 'system', Stage.SYSTEM, 'macos_casks'),
-    AppStoreProvider('mas', 'system', Stage.SYSTEM, 'mas_apps'),
-    RegistryProvider('flatpak', 'system', Stage.SYSTEM, 'flatpak_apps'),
+    CaskProvider('cask', 'system', Stage.SYSTEM_APPS, 'macos_casks'),
+    AppStoreProvider('mas', 'system', Stage.SYSTEM_APPS, 'mas_apps'),
+    FlatpakProvider('flatpak', 'system', Stage.SYSTEM_APPS, 'flatpak_apps'),
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
@@ -748,6 +814,54 @@ def _by_manager(session: Session, changes: Sequence[Change]) -> dict[str, list[t
         if chosen:
             grouped.setdefault(chosen, []).append((change, names[chosen][0]))
     return grouped
+
+
+def _bootstrap(manager: str, session: Session, privilege: Privilege) -> Result:
+    """Whatever this manager needs to exist before it can install anything.
+
+    Routed here rather than dispatched inside `providers.bootstrap`, for the same
+    reason every other route is: this module is where a provider is matched to the
+    mechanism that serves it, and the mechanism modules stay ignorant of the
+    session. Four of the seven managers need nothing, and saying so as a fallthrough
+    keeps `apt` and `pacman` from paying for a table lookup they would never use.
+    """
+    if manager == 'brew':
+        ready = bootstrap.homebrew()
+        return ready if not ready.ok else bootstrap.taps(session.catalog.macos_taps)
+    if manager == 'cask':
+        return bootstrap.homebrew()
+    if manager == 'aur':
+        return bootstrap.aur()
+    if manager == 'flatpak':
+        return bootstrap.flathub(session.machine.coordinates.installers[0], privilege)
+    return Result(True, '')
+
+
+def _through(
+    manager: str,
+    session: Session,
+    changes: Sequence[Change],
+    privilege: Privilege,
+    name_of: Callable[[DesiredItem], str],
+) -> list[Outcome]:
+    """One manager's whole group, bootstrapped once and installed in one call.
+
+    The three single-manager providers share this rather than each repeating the
+    bootstrap-then-transact shape, and `SystemPackageProvider` does not because its
+    group is not single-manager: it chooses between the names an entry declares,
+    which is the one thing this does not have to do.
+    """
+    wanted = [(change, name_of(change.desired)) for change in changes if change.desired and name_of(change.desired)]
+    if not wanted:
+        return [Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more') for change in changes]
+
+    ready = _bootstrap(manager, session, privilege)
+    if not ready.ok:
+        return [Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change in changes]
+
+    outcomes = _transact(manager, wanted, privilege)
+    undeclared = 'nothing declares this any more'
+    return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, undeclared)) for change in changes]
 
 
 def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privilege) -> dict[str, Outcome]:
