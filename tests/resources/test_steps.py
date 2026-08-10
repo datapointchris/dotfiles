@@ -51,6 +51,23 @@ def test_a_visible_library_folder_reports_nothing(home: Path) -> None:
     assert steps.observe('library-visible').verdict is Verdict.MATCHED
 
 
+def test_a_library_hidden_only_by_the_finder_attribute_is_drift(home: Path, fake_bin: Path) -> None:
+    """The read goes through `xattr`, not `os.listxattr`, which CPython provides
+    on Linux alone. On the one platform this row exists for, that raised
+    `AttributeError` straight past the `OSError` guard, so every macOS run
+    answered `system could not be examined` instead of examining it — and the
+    suite could not see it, because on Linux the call succeeds and returns
+    nothing.
+    """
+    (home / 'Library').mkdir()
+    executable(fake_bin, 'xattr', f'#!/bin/sh\nprintf "{steps.FINDER_INFO}\\n"\n')
+
+    state = steps.observe('library-visible')
+
+    assert state.verdict is Verdict.STALE
+    assert steps.FINDER_INFO in state.detail
+
+
 def test_no_library_folder_is_unknown_rather_than_drifted(home: Path) -> None:
     state = steps.observe('library-visible')
 

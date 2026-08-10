@@ -75,10 +75,16 @@ def _hidden_flag(path: Path) -> bool:
 
 
 def _finder_info(path: Path) -> bool:
-    try:
-        return FINDER_INFO in os.listxattr(path)
-    except OSError:
-        return False
+    """Read through `xattr`, not `os.listxattr`, which is Linux-only.
+
+    Asking CPython raised `AttributeError` on the one platform this row exists
+    for, and the `OSError` guard that was here could not catch it: every macOS
+    run reported the whole system resource unexaminable. `xattr` is what
+    `_show_library` already writes through, so the pair now agrees on the
+    mechanism as well as the attribute.
+    """
+    listed = run(['xattr', str(path)], output=Output.QUIET)
+    return listed.ok and FINDER_INFO in listed.transcript.split()
 
 
 def _show_library() -> Result:
