@@ -312,3 +312,36 @@ def _never_called(*args: object, **kwargs: object) -> object:
 
 def _answering(stdout: str, returncode: int = 0):
     return lambda *args, **kwargs: subprocess.CompletedProcess(args, returncode, stdout, '')
+
+
+class TestGitCredential:
+    """A private-repo tag fetch needs git authenticated, not just the API.
+
+    `git_uv_tools` pins to a release tag, so uv runs `git fetch` — which prompts
+    for a username, finds prompts disabled, and fails. On a real machine
+    `gh auth setup-git` has already written a helper; a container has neither.
+    """
+
+    def test_the_helper_reads_the_token_at_call_time_rather_than_embedding_it(self, monkeypatch) -> None:
+        """So the token stays in the environment and never lands in a config file,
+        a command line, or an image layer."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+        ran: list[str] = []
+        monkeypatch.setattr(harness.Machine, 'exec', lambda self, command, **kwargs: ran.append(command))
+
+        harness.authenticate_git(harness.Machine(environment=ARCHLINUX, container='pretend'))
+
+        assert len(ran) == 1
+        assert 'credential."https://github.com".helper' in ran[0]
+        assert '$GITHUB_TOKEN' in ran[0], 'the helper must read the token, not carry it'
+        assert 'ghp_pretend' not in ran[0]
+
+    def test_no_credential_configures_nothing(self, monkeypatch) -> None:
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+        ran: list[str] = []
+        monkeypatch.setattr(harness.Machine, 'exec', lambda self, command, **kwargs: ran.append(command))
+
+        harness.authenticate_git(harness.Machine(environment=ARCHLINUX, container='pretend'))
+
+        assert ran == []

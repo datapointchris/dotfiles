@@ -492,6 +492,26 @@ def github_token_args() -> list[str]:
     return ['--env', 'GITHUB_TOKEN']
 
 
+def authenticate_git(machine: Machine) -> None:
+    """Let git reach a private repo, the way this fleet's machines already do.
+
+    A real machine runs `gh auth setup-git`, which writes a credential helper of
+    `!gh auth git-credential`. A container has neither `gh` logged in nor a helper,
+    so a `git fetch` of a private tag prompts for a username, finds prompts
+    disabled, and fails — which is what `git_uv_tools` pinned to a private release
+    hits, and it reads as a broken installer rather than a missing credential.
+
+    The helper reads `$GITHUB_TOKEN` at call time rather than embedding it, so the
+    token stays in the container's environment and never lands in a config file, a
+    command line, or an image layer. Same shape as the host's, one indirection
+    further out.
+    """
+    if not github_token():
+        return
+    helper = '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+    machine.exec(f'git config --global credential."https://github.com".helper {shlex.quote(helper)}')
+
+
 def start(environment: Environment, name: str) -> None:
     docker(
         'run',

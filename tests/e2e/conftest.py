@@ -74,6 +74,7 @@ import pytest
 from harness import ENVIRONMENTS
 from harness import Environment
 from harness import Machine
+from harness import authenticate_git
 from harness import clear_shadow_calls
 from harness import copy_repo
 from harness import docker
@@ -184,6 +185,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
                 subject.exec(command, user='root', check=True)
 
         copy_repo(subject)
+        authenticate_git(subject)
         plant_python_shadow(subject)
 
         if environment.env_file:
