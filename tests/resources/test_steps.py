@@ -236,6 +236,65 @@ def test_a_windows_that_will_not_name_its_user_is_nothing_to_do(windows: Path, f
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# libpq, linked so that psql exists
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def brew(fake_bin: Path, *, has_libpq: bool = True) -> None:
+    """A `brew` that answers `list libpq` however this test says the machine is."""
+    executable(fake_bin, 'brew', f'#!/bin/sh\nexit {0 if has_libpq else 1}\n')
+
+
+def test_no_libpq_is_nothing_to_link_rather_than_drift(fake_bin: Path) -> None:
+    """The same shape as OrbStack's row: this is about linking a formula, and a
+    formula that is not installed is not a machine with something wrong with it."""
+    brew(fake_bin, has_libpq=False)
+
+    assert steps.observe('psql-linked').verdict is Verdict.MATCHED
+
+
+def test_an_installed_but_unlinked_libpq_is_the_drift_this_row_exists_for(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keg-only means brew installed the files and deliberately linked nothing, so
+    the Mac has libpq and no psql — which is the state nothing reported before."""
+    brew(fake_bin, has_libpq=True)
+    monkeypatch.setattr(steps.shutil, 'which', lambda name: None if name == 'psql' else f'/usr/bin/{name}')
+
+    state = steps.observe('psql-linked')
+
+    assert state.verdict is Verdict.MISSING
+    assert 'keg-only' in state.detail
+
+
+def test_a_resolvable_psql_is_converged(fake_bin: Path) -> None:
+    brew(fake_bin, has_libpq=True)
+    executable(fake_bin, 'psql')
+
+    assert steps.observe('psql-linked').verdict is Verdict.MATCHED
+
+
+def test_no_brew_is_unknown_rather_than_missing(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unverified is not permission. Without brew there is no way to ask whether a
+    keg-only formula is linked, and answering MISSING would have `apply` run
+    `brew link` on a machine with no brew."""
+    monkeypatch.setattr(steps.shutil, 'which', lambda name: None)
+
+    state = steps.observe('psql-linked')
+
+    assert state.verdict is Verdict.UNKNOWN
+    assert state.repair is Repair.NONE
+
+
+def test_linking_forces_because_keg_only_is_what_declines_without_it(fake_bin: Path, tmp_path: Path) -> None:
+    """A bare `brew link libpq` refuses a keg-only formula and exits 0, which would
+    report a successful repair that changed nothing."""
+    log = tmp_path / 'brew.log'
+    executable(fake_bin, 'brew', f'#!/bin/sh\necho "$@" >> {log}\n')
+
+    assert steps.apply('psql-linked', Privilege(offer=False)).ok
+    assert log.read_text().strip() == 'link --force libpq'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The declaration against the code
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -268,8 +327,8 @@ def test_a_step_with_no_function_says_so_rather_than_passing() -> None:
 
 
 def test_only_the_xcode_licence_declares_that_it_needs_root() -> None:
-    """Four of the five are user-level. Marking the section privileged would put
-    a password prompt in front of a Mac setting its own screenshot directory."""
+    """Every other row is user-level. Marking the section privileged would put a
+    password prompt in front of a Mac setting its own screenshot directory."""
     privileged = {entry.name for entry in declared() if entry.needs_root}  # type: ignore[attr-defined]
 
     assert privileged == {'xcode-licence'}

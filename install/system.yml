@@ -504,9 +504,10 @@ macos_defaults:
     description: Reduce motion
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
-# root-only licence read, a JSON merge, and a path discovered by asking Windows.
-# The mechanics are one pair of functions each in src/dotfiles/providers/steps.py,
-# for the same reason custom_installers has no engine.
+# root-only licence read, a JSON merge, a keg-only formula's link, and a path
+# discovered by asking Windows. The mechanics are one pair of functions each in
+# src/dotfiles/providers/steps.py, for the same reason custom_installers has no
+# engine.
 steps:
   # Its own row rather than something set up by hand on each box: a schedule
   # nobody can check is a schedule that silently stops. It writes status.json,
@@ -530,6 +531,15 @@ steps:
   - name: orbstack-docker-plugins
     description: docker's cliPluginsExtraDirs pointing at OrbStack's xbin
     os_family: darwin
+  # libpq is keg-only: brew installs it and deliberately links nothing, because
+  # its binaries collide with the postgresql formula's. A declared row rather
+  # than the branch system-packages.sh ran after installing, so a machine whose
+  # link was undone is reported by a check that installs nothing.
+  - name: psql-linked
+    description: libpq force-linked, which is what puts psql on PATH
+    os_family: darwin
+    requires_package: psql
+    needs_root: false
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory
     host: wsl
