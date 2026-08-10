@@ -315,11 +315,10 @@ def _place_tree(asset: Asset, download: Path, target: Path) -> Result:
 def missing_companions(name: str) -> tuple[str, ...]:
     """Which of an entry's companion files are not on disk. A read, and a cheap one.
 
-    This is what makes a companion part of the verdict instead of something an
-    install re-ran blind. `fzf-tmux` is a separate file under `~/.local/bin` and
-    nothing about the binary being current says it is still there — fzf installs
-    cleanly without it and then the tmux popup binding does nothing, which
-    surfaces days later at a keystroke.
+    `fzf-tmux` is a separate file under `~/.local/bin`, and nothing about the
+    binary being current says it is still there — fzf installs cleanly without it
+    and then the tmux popup binding does nothing, which surfaces days later at a
+    keystroke rather than in any verdict.
 
     Asks `COMPANIONS` rather than an asset function, so no tag has to be resolved
     and no network is touched: a checker running offline still answers.
@@ -333,11 +332,10 @@ def _companions(name: str, tag: str, *, offline: bool) -> str:
     '' when there is nothing to do or it was done. A companion is not optional,
     which is why a failure here fails the install rather than warning.
 
-    Every companion, never only the absent ones. The `only_missing` half of this
-    existed for `ensure_companions`, which ran on every already-current tool
-    because nothing measured whether a companion was there; `missing_companions`
-    measures it now, so the only caller left is an install that is placing the
-    binary anyway and wants the pair to match.
+    Every companion, never only the absent ones: the caller is placing the binary,
+    and a companion is fetched at that binary's tag so the two are a matched pair.
+    Whether one is *missing* is `missing_companions`, and it belongs to the
+    observation rather than to this.
     """
     for companion in COMPANIONS.get(name, ()):
         destination = bin_dir() / companion.name

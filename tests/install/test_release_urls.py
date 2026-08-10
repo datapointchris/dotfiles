@@ -217,10 +217,10 @@ def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
     """A companion is fetched from the repo tree rather than the release, so it is
     the one download the asset-list check above cannot see.
 
-    Parametrized off `COMPANIONS` directly. It used to ask each asset function
-    with a fabricated `v0` to find out which tools had any, which only worked
-    because no companion name interpolated the tag — the split that made the name
-    static is what lets this read the declaration instead of probing it.
+    Parametrized off `COMPANIONS` directly, which is only possible because a
+    companion's name is static and its URL is the half carrying the tag. Reading it
+    off an asset function would mean inventing a tag to ask with, and inventing one
+    is guessing at what the answer depends on.
     """
     _, tag, _ = asset_under_test((tool, 'linux', 'x86_64'), resolved_urls)
 

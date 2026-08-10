@@ -381,10 +381,10 @@ class TestAwscli:
         assert fetches.urls == []
 
     def test_an_installed_aws_is_still_converged_because_presence_is_not_currency(self, declared, home, bundle, effected, monkeypatch):
-        """Presence used to end it here, which is what made `--reinstall` the only
-        way to move awscli. The resource compares against `aws/aws-cli`'s tags now,
-        so reaching this function means the machine is behind and the 73MB is being
-        spent on a measured difference."""
+        """Currency for awscli is the resource's, against `aws/aws-cli`'s tags, so
+        reaching this function means the machine is behind it. Ending here on
+        presence would make the entry unupgradable: the vendor's 73MB zip is the
+        only other thing that knows what version it holds."""
         reports(monkeypatch, aws='aws-cli/2.36.18 Python/3.14.6')
         stub_binary(home, 'aws')
         zipped = io.BytesIO()
@@ -399,16 +399,15 @@ class TestAwscli:
         assert any('aws/install' in argv[0] for argv in runs.calls)
 
     def test_an_installed_aws_is_left_alone_offline(self, declared, home, bundle, effected, monkeypatch):
-        """The one case that still ends without asking: there is no network to
-        compare against and nothing staged to install from."""
+        """The one case that ends without asking: nothing staged to install from,
+        and no network to fetch the vendor's zip."""
         reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
-        _, fetches = effected()
+        runs, fetches = effected()
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
 
         assert result.ok
-        assert 'offline' in result.detail
-        assert fetches.urls == []
+        assert fetches.urls == [] and runs.calls == []
 
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, aws=None)
@@ -551,8 +550,8 @@ class TestBats:
         `bats` being current says `~/.local/lib/bats-assert` is still there, and its
         absence surfaces as a failing `load` line in a suite, not here.
 
-        It used to be restored on the branch where the installer found bats current
-        — a repair nobody had measured, which is why `check` never mentioned it.
+        Measured rather than restored blind, which is what lets `check` mention it
+        at all — a repair nothing observes is a repair nobody can be told about.
         """
         (home / '.local' / 'lib' / 'bats-support').mkdir(parents=True)
 

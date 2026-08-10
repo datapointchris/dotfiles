@@ -352,11 +352,9 @@ DECLARES_NO_REPO = {'machine': 'box', 'platform': 'linux', 'custom_installers': 
 
 
 def test_a_custom_installer_behind_its_repo_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """Currency for these used to live inside each installer, reached only because
-    the install phase ran every one of them on every apply. Measured here, a
-    version behind is a verdict rather than something a vendor script decides
-    privately — and the tag prefix comes off the declaration rather than a constant
-    in `providers/custom.py`."""
+    """A version behind is a verdict rather than something a vendor script decides
+    privately, which is what lets the engine act on it — and the tag prefix comes
+    off the declaration, so the repo name is written once."""
     reporting(fake_bin, 'mount-s3', 'mount-s3 1.22.0')
     cached(release_cache, {'awslabs/mountpoint-s3#mountpoint-s3-': 'mountpoint-s3-1.23.0'})
     live = session(tmp_path, MOUNT_S3, DECLARES_MOUNT_S3)
@@ -486,9 +484,9 @@ def staged_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rows: dict[st
 
 def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
     """The machine a bundle exists for cannot reach GitHub, so the release cache is
-    empty and every installed tool used to answer UNKNOWN — which meant extracting a
-    newer bundle onto a built machine upgraded nothing. Offline the bundle is the
-    upstream, so being behind it is ordinary drift."""
+    empty and answers UNKNOWN for everything installed. Offline the bundle is the
+    upstream instead, which is what makes extracting a newer one onto a built
+    machine upgrade anything at all."""
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)

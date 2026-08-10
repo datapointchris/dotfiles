@@ -254,9 +254,9 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     """The newest *tag*, for a project that tags without publishing releases.
 
     `aws/aws-cli` is the case and the only one: `releases/latest` answers 404
-    while `tags` lists `2.36.19`. Without this the entry declares no repo at all,
-    so `check` cannot say whether awscli is behind and the only way to move it was
-    a `--reinstall` flag that no longer exists.
+    while `tags` lists `2.36.19`. Without this its entry could name no repo, and
+    an entry naming none is one nothing can say is behind — which for awscli means
+    a machine that never moves off whatever it first installed.
 
     **The greatest by version, never the first.** GitHub documents no ordering for
     this endpoint — it answers newest-first in practice, and has for every

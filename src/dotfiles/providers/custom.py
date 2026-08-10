@@ -14,12 +14,10 @@ modes, and which one ran decided whether a tool already present was upgraded;
 `apply` means "make this machine match what it declares", so every function here
 converges.
 
-**Whether a tool is behind is no longer asked here.** Three of these held their
-own copy of that comparison, reached only because the install phase ran every
-installer on every apply — an unconditional re-run standing in for a measurement.
-`resources/packages.CURRENCY` measures it now, off the `repo:` each entry already
-declares, so an installer that is called is one the machine needs. What is left
-per function is what *converging* means for it:
+**Whether a tool is behind is not asked here.** `resources/packages.CURRENCY`
+measures it, off the `repo:` each entry declares, so an installer that is called
+is one the machine needs and every function below can simply converge. What
+differs between them is only what converging means:
 
     theme, font, zmk-build   the tool has its own `update`, so delegate to it
     bashselfupdate           the install script is the update, so always run it
@@ -60,12 +58,11 @@ from dotfiles.providers import script
 class Request:
     """One tool to converge, and the one flag that changes how.
 
-    There is no `reinstall` here any more. It used to be how a tool with no cheap
-    currency check was moved at all, because the install phase ran every one of
-    these on every apply and each decided internally whether it was already
-    current. Currency is measured before an installer is called now, so an
-    installer that is called is one the machine needs — and a force flag would only
-    ever mean "do it despite the measurement".
+    There is no force flag and nowhere for one to attach: currency is measured
+    before an installer is called, so reaching a function below means the machine
+    needs it. A flag overriding that could only mean "write despite the
+    measurement", which `cli-design.md` § "A flag never decides whether the command
+    writes" rules out.
     """
 
     entry: catalog.CustomInstaller
@@ -90,8 +87,7 @@ def missing_parts(entry: catalog.CustomInstaller) -> tuple[str, ...]:
     The custom-installer twin of `ghrelease.missing_companions`, and it exists for
     the same reason: `bats` is on PATH and current while `~/.local/lib/bats-assert`
     is gone, which surfaces as a failing `load` line in a suite rather than in any
-    verdict. Nothing measured it, and it was restored only on the branch where the
-    installer decided bats was already current.
+    verdict.
 
     Empty for eight of the nine — most of these install one binary and nothing
     else — so this is a lookup and not a protocol for each of them to implement.
@@ -314,8 +310,8 @@ def _awscli(request: Request) -> Result:
     """AWS's own installer, which is idempotent and expensive — so it is measured first.
 
     `aws/install --update` converges by itself, so the ideal is to run it every
-    time; it is 73MB every time (measured 2026-08-08), which is why it was
-    presence-only and moved by a `--reinstall` flag that measured nothing.
+    time — and it is 73MB every time (measured 2026-08-08), which is why nothing
+    runs it without a reason.
 
     `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404,
     rechecked 2026-08-10 — but it tags every build, and the entry declares
@@ -573,11 +569,10 @@ def _bats(request: Request) -> Result:
 def _install_bats_helpers(entry: catalog.CustomInstaller) -> None:
     """The two assertion libraries, refreshed alongside the runner.
 
-    Always both, never only the absent ones. The `only_missing` half of this ran
-    on the path where bats was already current — a restore nothing had measured,
-    exactly as `ghrelease.ensure_companions` was. `missing_parts` measures it now,
-    so reaching here means the machine is being converged and the three pieces
-    should match.
+    Always both, never only the absent ones: reaching here means the runner is
+    being installed, and the three pieces are meant to be one set. Whether a helper
+    is *missing* is `missing_parts`, and it is a question for the observation rather
+    than for this.
     """
     _, support, assertions = _bats_repos(entry)
     for url, helper in zip((support, assertions), BATS_HELPERS, strict=True):

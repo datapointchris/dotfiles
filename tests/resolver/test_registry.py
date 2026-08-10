@@ -114,7 +114,7 @@ def test_a_release_missing_a_companion_is_not_converged(tmp_path, monkeypatch) -
     a converged fzf and the tmux popup binding silently did nothing — repaired only
     because the install phase re-fetched companions blind on every current tool.
     """
-    _on_path(tmp_path, 'demo')
+    on_path(tmp_path, 'demo')
     monkeypatch.setenv('PATH', str(tmp_path))
     monkeypatch.setattr(ghrelease, 'bin_dir', lambda: tmp_path)
     monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': (releases.Companion('demo-tmux', 'https://example.invalid/x'),)})
@@ -127,8 +127,8 @@ def test_a_release_missing_a_companion_is_not_converged(tmp_path, monkeypatch) -
 
 
 def test_a_release_whose_companions_are_all_present_is_matched(tmp_path, monkeypatch) -> None:
-    _on_path(tmp_path, 'demo')
-    _on_path(tmp_path, 'demo-tmux')
+    on_path(tmp_path, 'demo')
+    on_path(tmp_path, 'demo-tmux')
     monkeypatch.setenv('PATH', str(tmp_path))
     monkeypatch.setattr(ghrelease, 'bin_dir', lambda: tmp_path)
     monkeypatch.setattr(ghrelease, 'COMPANIONS', {'demo': (releases.Companion('demo-tmux', 'https://example.invalid/x'),)})
@@ -139,7 +139,7 @@ def test_a_release_whose_companions_are_all_present_is_matched(tmp_path, monkeyp
     assert found.verdict is Verdict.MATCHED
 
 
-def _on_path(directory, name: str) -> None:
+def on_path(directory, name: str) -> None:
     placed = directory / name
     placed.write_text('#!/bin/sh\n')
     placed.chmod(0o755)

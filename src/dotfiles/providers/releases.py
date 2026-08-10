@@ -52,12 +52,10 @@ class Companion:
     `--print-extras`, because a companion has to be staged like any other
     download for a restricted network to install the tool at all.
 
-    **The name is static and only the URL moves with the tag**, which is the split
-    that lets a checker ask what should be on disk without resolving a release
-    first. It used to be one resolved string on the `Asset`, so the only way to
-    learn that fzf owes a `fzf-tmux` was to call an asset function with a tag —
-    which `tests/install/test_release_urls.py` did with a fabricated `v0` for
-    exactly this reason.
+    **The name is static and only the URL moves with the tag.** Keep it that way:
+    the split is what lets a checker ask what should be on disk without resolving a
+    release first, and resolving one costs a network round trip that
+    `ghrelease.missing_companions` has to answer without.
     """
 
     name: str
@@ -370,10 +368,10 @@ target the way an asset name does. Separating them is what makes a companion
 *observable*: `dotfiles check` can ask what fzf owes without resolving a release,
 where reading it off an `Asset` needed a tag and therefore a network call.
 
-That mattered. Nothing measured companions at all, so a machine that lost
-`~/.local/bin/fzf-tmux` reported a converged fzf and the tmux popup binding
-silently did nothing — repaired only because the install phase re-ran
-`ensure_companions` blind on every already-current tool.
+Nothing else on disk says a companion is owed, which is why reading it from here
+is what lets `check` see one is gone: fzf installs cleanly without `fzf-tmux` and
+the tmux popup binding then silently does nothing, surfacing days later at a
+keystroke rather than in any verdict.
 """
 
 

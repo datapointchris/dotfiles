@@ -52,14 +52,15 @@ Everything else here defers to a registry that upgrades on its own: asking apt o
 npm whether a package is the newest one is asking a question the machine's own
 manager already owns.
 
-`CustomInstaller` is here because the alternative was the install phase running
-every vendor's installer on every apply and letting each decide internally whether
-it was already current — `terraform-ls`, `bats` and `mount-s3` each held their own
-copy of this comparison. That is an unconditional re-run standing in for a
-measurement, and it stops working the moment those rows converge through the
-engine, which only ever acts on a verdict. The four with no repo to ask —
-`awscli`, `claude-code` — fall out through `_has_currency` rather than being named
-here, and are the entries `check` honestly cannot answer for.
+`CustomInstaller` belongs with them because a vendor that ships its own installer
+still publishes releases somewhere, and the entry names where: the repo is a
+declarative fact even when the bytes come from an S3 bucket or a HashiCorp mirror.
+The engine acts on verdicts, so a section with no verdict for "behind" is a section
+that silently never upgrades.
+
+Which entries cannot be asked is `_has_currency`'s answer rather than a list here —
+an entry naming no repo, reporting no version, or installing no binary drops out
+there, and `dotfiles machines show --json` is what enumerates them.
 """
 
 
@@ -173,13 +174,12 @@ def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[
     Offline never asks GitHub, whatever `--refresh` says: the flag means "spend the
     network on being current", and there is no network to spend.
 
-    **Offline, the bundle is the upstream.** Reading the release cache there was the
-    honest answer only while a force flag existed to move a tool anyway — with the
-    cache empty on the machine a bundle exists for, every installed tool answered
-    `UNKNOWN` and nothing could repair it, so extracting a newer bundle onto a built
-    machine upgraded nothing. The bundle records a version per staged file for
-    exactly this kind of question, which is why `resolve_tag` can already name a tag
-    with no network at all.
+    **Offline, the bundle is the upstream.** It has to be: the release cache is
+    empty on a machine that has never reached GitHub, so reading it there answers
+    `UNKNOWN` for every installed tool and leaves nothing repairable — a newer
+    bundle extracted onto a built machine would upgrade nothing at all. The bundle
+    records a version per staged file, which is the same fact `resolve_tag` reads to
+    name a tag with no network.
     """
     if session.offline:
         return _staged(present), False

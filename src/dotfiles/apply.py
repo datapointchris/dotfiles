@@ -85,10 +85,10 @@ the tests that hold `.zshenv` to the same list.
 class Run:
     """One `apply`, and everything its phases need to answer a question.
 
-    Nothing here is a raw `packages.yml` dict any more. Two phases narrowed one
-    through `parse_packages` to resolve their own work; both converge a selection
-    of the plan now, so what is left is the machine, the run's flags, and the
-    `Session` every phase actually reads.
+    The machine, the run's flags, and the `Session` every phase reads. Nothing
+    here is a raw `packages.yml` dict: a phase asking what this machine declares
+    asks the resolved plan on the `Session`, which is the one measurement `plan`
+    and `check` are folded from too.
     """
 
     machine: str

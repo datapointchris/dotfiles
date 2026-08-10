@@ -241,10 +241,8 @@ class ReleaseProvider(VendoredProvider):
         """The binary, and then whatever the release does not publish.
 
         A companion is a separate file under `~/.local/bin`, so a present and
-        current binary says nothing about whether it is still there. Nothing
-        measured them until now: the install phase re-ran the companion fetch
-        blind on every already-current tool, which repaired the gap without ever
-        reporting it, and `check` called such a machine converged.
+        current binary says nothing about whether it is still there — and a
+        machine missing one is not converged, however current the binary is.
 
         Reported as `MISSING` because that is what it is and what makes it
         actionable — the detail carries which file, so a row naming the tool never

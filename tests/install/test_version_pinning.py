@@ -83,9 +83,9 @@ def test_an_unreadable_catalog_stops_the_phase_rather_than_installing_latest(tmp
     (repo / 'install' / 'flags.yml').write_text('{}')
     (repo / 'install' / 'manifests' / 'box.yml').write_text('machine: box\nplatform: linux\n')
 
-    # `Session.catalog` rather than the second reading `Run` used to hold. That
-    # duplicate went when the last two phases stopped narrowing a raw packages.yml
-    # dict; the property is the same one, asked of the object that now owns it.
+    # Asked of `Session.catalog`, which is the one reading of packages.yml a run
+    # has — so this is the parse every phase depends on, not a second one that
+    # could raise while the real one did not.
     live = Session(machine_name='box', repo=repo, home=tmp_path / 'home')
 
     with pytest.raises(Exception, match='unclosed|expected|while parsing'):

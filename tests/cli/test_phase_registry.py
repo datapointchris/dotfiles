@@ -148,9 +148,14 @@ def test_no_phase_hands_work_to_a_shell(name: str, monkeypatch: pytest.MonkeyPat
         return Completed(argv, 0, '')
 
     monkeypatch.setenv('HOME', str(tmp_path))
-    # Whichever of the two still binds `effects.run`. `apply` stopped importing it
-    # when the last phase that resolved its own work converged instead, and a
-    # future one re-importing it has to be recorded rather than silently unpatched.
+
+    # Asserted rather than guarded, and in both directions. A module that stops
+    # binding `effects.run` turns a guarded patch into a silent no-op, so this test
+    # would pass having recorded nothing at all; one that starts binding it goes
+    # unpatched and shells out unseen. Either way the fix is to edit this set, which
+    # is what the failure says.
+    binding = {module.__name__ for module in (apply, deploy) if hasattr(module, 'run')}
+    assert binding == {'dotfiles.deploy'}, f'update the patch list below: {sorted(binding)} bind effects.run'
     for module in (apply, deploy):
         if hasattr(module, 'run'):
             monkeypatch.setattr(module, 'run', record)
@@ -252,10 +257,9 @@ def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatc
     read it built a fresh Session with cold caches. One `apply --owner` parsed the
     258-entry packages.yml seven times and resolved seven manifests.
 
-    One now, where it was two. `Run` held a second reading of both files for the
-    two phases that resolved their own work — a `packages.yml` dict and its own
-    `catalog.load()` beside the Session's — and converging those phases took the
-    duplicate with it.
+    One read of the catalog and two of the machine, whatever a run's phase count
+    is. The catalog's belongs to the `Session` alone; the machine is read once to
+    resolve the run and once by the `Session` that measures it.
     """
     reads = {'catalog': 0, 'machine': 0}
     for module, name, key in ((catalog, 'load', 'catalog'), (machines, 'load', 'machine')):
