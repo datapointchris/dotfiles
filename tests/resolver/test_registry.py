@@ -250,3 +250,31 @@ def test_only_the_managers_that_answered_are_reported_as_asked(monkeypatch: pyte
     inventories.get('flatpak')
 
     assert inventories.asked == frozenset({'apt'})
+
+
+def test_a_precondition_is_readable_on_an_entry_from_any_section() -> None:
+    """The fields are on `Entry`, so `precondition_of` is a plain attribute access.
+
+    Asserted through sections that did *not* declare them before the move — a
+    cargo package and a shell plugin — because that is what the move buys: the
+    read no longer has to default for "this subclass has no such field", and a
+    default there answers `NONE`, which is the absence of the gate.
+    """
+    private = catalog.CargoPackage.from_mapping({'name': 'somecrate', 'requires_github_auth': True})
+    accelerated = catalog.ShellPlugin.from_mapping({'name': 'someplugin', 'repo': 'x/y', 'requires_amd_gpu': True})
+
+    assert registry.precondition_of(private) is Precondition.GITHUB_AUTH
+    assert registry.precondition_of(accelerated) is Precondition.AMD_GPU
+
+
+def test_a_renamed_precondition_field_raises_rather_than_reading_as_ungated() -> None:
+    """The whole point of dropping `getattr(..., False)`. A rename used to answer
+    `NONE` silently, which for `requires_amd_gpu` is the 12 GiB it exists to stop."""
+
+    class Renamed:
+        """An entry whose `requires_amd_gpu` was renamed out from under the reader."""
+
+        requires_github_auth = False
+
+    with pytest.raises(AttributeError):
+        registry.precondition_of(Renamed())  # type: ignore[arg-type]

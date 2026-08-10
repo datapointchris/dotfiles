@@ -1209,10 +1209,15 @@ def precondition_of(entry: catalogs.Entry) -> resolve.Precondition:
     machinery for a case that does not exist. The day one does, this returns the
     set and `Preconditions.holds` takes it — both are two-line changes, and
     guessing at the shape now would be one more thing to unpick.
+
+    Plain attribute access, not `getattr(..., False)`. Both fields are on `Entry`,
+    so a rename raises here instead of quietly answering NONE — and NONE is the
+    absence of the gate, which for `requires_amd_gpu` is the 12 GiB it exists to
+    stop.
     """
-    if getattr(entry, 'requires_github_auth', False):
+    if entry.requires_github_auth:
         return resolve.Precondition.GITHUB_AUTH
-    if getattr(entry, 'requires_amd_gpu', False):
+    if entry.requires_amd_gpu:
         return resolve.Precondition.AMD_GPU
     return resolve.Precondition.NONE
 
