@@ -138,6 +138,27 @@ never both, because two spellings of the same fact is the drift this exists to
 end.
 """
 
+
+def platform_label(declared: Coordinates) -> str:
+    """Which of the four labels these coordinates carry.
+
+    Keyed on the package manager, with apt split by host, which is the whole of
+    what the four labels distinguish. It selects nothing: what reads a label is a
+    run's header and the shell overlays that are still keyed by one.
+
+    Derived rather than read off `Machine.platform_label`, because a manifest may
+    declare `coordinates:` *instead of* `platform:` and then carries no label to
+    read. Arch-on-WSL therefore lands on the pacman answer, which is the point of
+    deriving it: the tuple it needs exists while the fused string has no row for
+    it.
+    """
+    if declared.package_manager is PackageManager.BREW:
+        return 'macos'
+    if declared.package_manager is PackageManager.PACMAN:
+        return 'archlinux'
+    return 'wsl' if declared.host is Host.WSL else 'linux'
+
+
 AXIS_TYPES: dict[str, type[enum.StrEnum]] = {
     'package_manager': PackageManager,
     'os_family': OSFamily,

@@ -245,7 +245,7 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
 
 
 @pytest.fixture(scope='session')
-def base(request: pytest.FixtureRequest) -> str:
+def base(container_environment: Environment) -> str:
     """The base image for this environment: system packages and nothing above them.
 
     Built once and reused across runs while its digest and its age hold, because
@@ -253,15 +253,20 @@ def base(request: pytest.FixtureRequest) -> str:
     a set test then installs sits on top of a machine that already has curl, git,
     unzip and a package manager — which is exactly the state a set's own
     prerequisites are declared against.
-    """
-    environment: Environment = request.param if hasattr(request, 'param') else ARCHLINUX
 
+    Which environment comes from `container_environment` rather than being decided
+    again here. Decided twice, the two disagreed: `--environment wsl` reached this
+    fixture as an unparametrised request, so it fell back to Arch and handed
+    `over_base` an Arch image to run with wsl's user and home. The container then
+    failed at `chown -R ubuntu` — an image with no such user — which reads as a
+    broken copy step rather than as the wrong base.
+    """
     if docker('info').returncode != 0:
         pytest.skip('Docker is not running')
-    if not image_exists(environment.image):
-        pytest.skip(f'image {environment.image} is absent')
+    if not image_exists(container_environment.image):
+        pytest.skip(f'image {container_environment.image} is absent')
 
-    return build_base(environment)
+    return build_base(container_environment)
 
 
 @pytest.fixture

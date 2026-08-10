@@ -79,12 +79,16 @@ the grammar is `dotfiles <noun> <verb>`, and both halves are closed.
 """
 
 RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity')
-"""Ordered as the machine converges, not alphabetically.
+"""Every addressable part of the machine, in the order rows are measured and printed.
 
-The order is a real dependency chain, not presentation: symlinks must land after
-the tools that provide `task` and before tpm reads the tmux config it deploys.
-Step 4 turns this tuple into the resolver's topological input; until then it is
-what `check` walks and what the help lists.
+**Not the convergence order, and it cannot be.** Ordering *work* is
+`resolve.Stage`, because the chain interleaves these names: toolchains → packages
+→ toolchains → packages → plugins → symlinks → plugins → system. No sequence of
+seven resource names expresses that, so a walk sorts on the stage and this tuple
+decides only who is asked first and whose row prints above whose.
+
+A dependency stated here would therefore be a dependency nothing enforces, which
+is worse than none: it reads as a guarantee.
 """
 
 ADDRESS_SEPARATOR = '/'

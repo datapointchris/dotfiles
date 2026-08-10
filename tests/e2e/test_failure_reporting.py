@@ -10,16 +10,21 @@ The properties are the ones the reporting was built for. Each was a real defect
 first: a run that stopped at the first failure and left the machine half
 installed; a failure log per installer, so the summary named one of six; a
 summary printed only when nothing had gone wrong.
+
+**The report is the run record**, which is why every assertion below reads a
+field rather than grepping the console. A record carries what was decided,
+attempted and refused for each address; console text carries a sentence, and a
+test pinned to one fails when the sentence is reworded and nothing is wrong.
 """
 
 from __future__ import annotations
 
 import pytest
 from harness import Machine
+from harness import failed_outcomes
+from harness import run_record
 
 pytestmark = pytest.mark.docker
-
-FAILURE_LOGS = 'ls /tmp/dotfiles-install-failures-*.txt 2>/dev/null'
 
 
 @pytest.fixture(scope='session')
@@ -27,6 +32,16 @@ def restricted(machine: Machine) -> Machine:
     if machine.environment.name != 'restricted':
         pytest.skip('only the firewalled, bundle-less environment produces real failures')
     return machine
+
+
+@pytest.fixture(scope='session')
+def record(restricted: Machine) -> dict:
+    """What the install wrote about itself, read back off the machine.
+
+    Read rather than reconstructed from the console: the scroll is gone by the
+    time anyone asks, which is the whole reason a record exists.
+    """
+    return run_record(restricted)
 
 
 def test_the_firewall_actually_broke_something(restricted: Machine) -> None:
@@ -43,24 +58,29 @@ def test_the_run_continued_past_its_failures(restricted: Machine) -> None:
     assert restricted.succeeds('command -v zsh')
 
 
-def test_there_is_exactly_one_failure_log(restricted: Machine) -> None:
-    """One per installer is how a summary came to name one failure out of six."""
-    logs = restricted.read(f'{FAILURE_LOGS} || true').split()
-    assert len(logs) == 1, f'expected one failure log, found {logs}'
+def test_the_record_is_the_apply_that_just_ran(record: dict) -> None:
+    """`apply` recorded nothing until the phase registry went, so a failed install
+    left the one durable account of itself to a text file in `/tmp`."""
+    assert record['verb'] == 'apply'
+    assert record['outcomes'], 'a run that installed a machine recorded no outcomes'
 
 
-def test_every_failure_reached_that_log(restricted: Machine) -> None:
-    """More than one thing fails behind this firewall, and the log is the only
+def test_every_failure_reached_the_record(restricted: Machine, record: dict) -> None:
+    """More than one thing fails behind this firewall, and the record is the only
     place a person sees them after the scroll is gone."""
-    contents = restricted.read(f'cat $({FAILURE_LOGS} | head -1)')
-    assert contents.count('Installation Failed') > 1, contents[-2000:]
+    failed = failed_outcomes(restricted)
+    assert len(failed) > 1, [outcome['address'] for outcome in record['outcomes']][:40]
 
 
-def test_the_summary_names_the_phases_and_the_log(restricted: Machine) -> None:
-    """The run's last words have to carry both, or the log is a file nobody knows
-    to open."""
-    assert 'phases reported a failure' in restricted.install_log
-    assert 'dotfiles-install-failures-' in restricted.install_log
+def test_the_record_the_run_pointed_at_is_the_one_that_exists(restricted: Machine) -> None:
+    """The run's last words name where to read the rest, and a pointer to a file
+    that is not there is worse than no pointer.
+
+    The command rather than the sentence around it: `report latest` is a public
+    verb this asserts still answers, where grepping the summary would pin a
+    wording the code is free to change.
+    """
+    assert restricted.succeeds('cd ~/dotfiles && uv run dotfiles report latest')
 
 
 def test_a_failure_is_not_silently_converged(restricted: Machine) -> None:

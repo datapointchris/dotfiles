@@ -130,6 +130,47 @@ class Selection:
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 
+    def narrowed_to(self, wanted: frozenset[str]) -> Selection:
+        """This selection, minus every provider outside `wanted` and every resource
+        left holding none.
+
+        What `--owner` means, and it has to reach the *walk* rather than only the
+        plan. `symlinks`, `env` and `identity` have no provider, so `ownable`
+        never reaches them and an owner-narrowed plan leaves all three intact —
+        `apply --owner X` would deploy every symlink, write `~/.env` and run the
+        deployment epilogue, none of which has anything to do with X. Dropping a
+        resource that holds no wanted provider excludes them by construction
+        rather than by a list of exceptions.
+
+        `dc.replace` rather than a fresh `Selection`, because a constructor call
+        listing the fields it knows about silently drops the ones it does not:
+        built positionally this returned a selection with no ceiling, so
+        `--owner X --through Y` honoured the owner and converged the whole machine.
+        """
+        current = self.providers if self.providers is not None else frozenset(provider.name for provider in registry.PROVIDERS)
+        kept = current & wanted
+        owners = {provider.resource for provider in registry.PROVIDERS if provider.name in kept}
+        return dc.replace(self, resources=tuple(name for name in self.resources if name in owners), providers=kept)
+
+    def capped_at(self, ceiling: Stage | None) -> Selection:
+        """The same walk, stopping after this stage. None leaves it uncapped.
+
+        A method rather than a `through=` argument travelling beside the selection
+        through every layer that takes one: a ceiling is part of what a walk covers,
+        and two arguments that are only ever passed together are two chances for a
+        call site to carry one and drop the other.
+        """
+        return self if ceiling is None else dc.replace(self, through=ceiling)
+
+    def reaches(self, stage: Stage) -> bool:
+        """Whether the ceiling admits work at this stage.
+
+        The single comparison, so the plan filter and the callers that gate work on
+        a stage having been reached cannot come to different conclusions about
+        whether `through` is inclusive.
+        """
+        return self.through is None or stage <= self.through
+
     def wants(self, resource: str, item: DesiredItem) -> bool:
         """Whether one item survives both narrowings.
 
@@ -138,7 +179,7 @@ class Selection:
         a fact about the whole machine's ordering rather than about one resource's
         contents.
         """
-        if self.through is not None and item.stage > self.through:
+        if not self.reaches(item.stage):
             return False
         return self.providers is None or item.resource != resource or item.provider in self.providers
 
@@ -217,7 +258,11 @@ def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
 
 
 def resources() -> dict[str, Resource]:
-    """Every resource, keyed by address and ordered as the machine converges.
+    """Every resource, keyed by address and ordered as `vocabulary.RESOURCES` is.
+
+    Measuring and printing order, not the order work happens in: that is
+    `_in_stage_order`, and the two differ because the convergence chain
+    interleaves these seven names.
 
     Imported here rather than at module scope because `resources/packages.py`
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
@@ -253,10 +298,10 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
     known = resources()
     covered = Selection.everything() if selection is None else selection
 
-    # Driven by `resources()` rather than by the selection, so the walk order is
-    # the convergence order whatever order a caller named its addresses in. That
-    # order is a dependency chain — symlinks after the tools that provide `task`,
-    # before tpm reads the tmux config it deploys — not a preference.
+    # Driven by `resources()` rather than by the selection, so two callers naming
+    # the same addresses in different orders get the same report. Observation is
+    # read-only and so has no dependency order to honour; what does is `execute`,
+    # which sorts by stage.
     for address, resource in known.items():
         if address in covered.resources:
             yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
@@ -278,26 +323,58 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
     record says nothing about the half that never ran.
     """
     known = resources()
-    for group in _batches(planned):
+    for group in batches(planned):
         yield from _act(session, known[group[0].resource], group, privilege)
 
 
-def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
-    """The actionable events, in runs of one resource and one provider.
+def batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+    """The work a run will do, in the order it will happen and grouped as it will
+    be handed over.
 
-    Consecutive rather than gathered, so the stream stays a stream and the order
-    stays the convergence order. Events already arrive grouped — the walk is
-    resource by resource and the plan is sorted by stage — so a run breaks only
-    where the work genuinely changes hands.
+    Public because a caller needs the grouping *before* the work runs: a batched
+    provider hands `apt-get install` ninety packages and returns one list of
+    outcomes minutes later, so a reader that waits for the first outcome to
+    announce the group watches a blank screen through the longest part of an
+    install. `execute` is safe to call with one group at a time — it re-sorts and
+    re-groups what it is given, and one group is already both.
+    """
+    return _batches(_in_stage_order(planned))
+
+
+def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
+    """The actionable events, ordered as the machine converges.
+
+    `assess` walks resource by resource, because that is how a reader wants the
+    rows grouped. Converging is ordered by `Stage`, and the two are not the same
+    walk: the chain runs toolchains → packages → toolchains → packages → plugins →
+    symlinks → plugins → system, so no ordering of the seven resource names can
+    express it.
+
+    Stable, so the order *within* a stage stays the plan's own
+    `(stage, provider, name)`. Sorting on the stage alone is total rather than a
+    tie-break nobody wrote down, because no two resources share a stage —
+    `tests/cli/test_engine.py` pins that, since it is the precondition for this
+    function existing.
+
+    Materialising is the price, and it is not one anybody pays: an `apply` prints
+    its whole plan before acting on any of it, so every caller hands this a list.
+    """
+    staged = [(event.payload.stage, event) for event in planned if isinstance(event.payload, Change) and event.payload.actionable]
+    return [event for _, event in sorted(staged, key=lambda pair: pair[0])]
+
+
+def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+    """Runs of one resource and one provider, in the order they were handed over.
+
+    Consecutive rather than gathered, so a run breaks only where the work genuinely
+    changes hands and the convergence order survives the grouping. A provider sits
+    at exactly one stage, so its items arrive together whatever else is planned.
 
     This exists for `Batched` resources and costs the others nothing: a group of
     one is what a provider with nothing to gain from company receives.
     """
     batch: list[Event] = []
     for event in planned:
-        change = event.payload
-        if not isinstance(change, Change) or not change.actionable:
-            continue
         if batch and _owner(batch[-1]) != _owner(event):
             yield batch
             batch = []

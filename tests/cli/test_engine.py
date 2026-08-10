@@ -9,8 +9,6 @@ was nothing after this".
 
 from __future__ import annotations
 
-import dataclasses as dc
-
 import pytest
 
 from dotfiles import engine
@@ -65,10 +63,44 @@ def session() -> Session:
     return Session(machine_name=MACHINE)
 
 
-def test_the_registry_is_ordered_as_the_machine_converges() -> None:
-    """Not alphabetically: symlinks must land after the tools providing `task` and
-    before tpm reads the tmux config it deploys."""
+def test_the_walk_covers_the_resources_the_vocabulary_names() -> None:
+    """One list of addresses, so `--skip`, the help and the walk cannot disagree.
+
+    It is the measuring and printing order, not the convergence order — that is
+    `resolve.Stage`, asserted below.
+    """
     assert list(engine.resources()) == list(vocabulary.RESOURCES)
+
+
+def test_no_two_resources_share_a_stage() -> None:
+    """The precondition for sorting a walk on the stage alone.
+
+    Two resources at one stage would make the order between them a tie-break
+    nobody declared, decided by whichever happened to be measured first — which
+    is the class of ordering-by-accident the phase registry was built to supply
+    and this replaces.
+    """
+    from dotfiles import registry
+
+    owners: dict[Stage, set[str]] = {}
+    for provider in registry.PROVIDERS:
+        owners.setdefault(provider.stage, set()).add(provider.resource)
+
+    # A resource with no provider decides its own stage inside its `diff`, where
+    # nothing else can read it. Naming the three here is therefore a second list,
+    # so the assertion below covers it: a fourth such resource fails this test
+    # rather than slipping past the guard — which is the same drift that put
+    # `system/manager` at a stage no phase named.
+    unprovided = {'env': Stage.ENVIRONMENT, 'identity': Stage.IDENTITY, 'symlinks': Stage.SYMLINKS}
+    assert set(vocabulary.RESOURCES) == {provider.resource for provider in registry.PROVIDERS} | set(unprovided), (
+        'a resource appeared that this test does not know the stage of; read it out of its `diff` and add it'
+    )
+
+    for resource, stage in unprovided.items():
+        owners.setdefault(stage, set()).add(resource)
+
+    shared = {stage: sorted(names) for stage, names in owners.items() if len(names) > 1}
+    assert not shared, f'these stages are claimed by more than one resource: {shared}'
 
 
 def test_a_resource_yields_its_changes_then_its_summary(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -167,6 +199,32 @@ def test_execute_acts_on_the_changes_that_were_planned(session: Session, monkeyp
     assert all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
 
 
+def test_execute_acts_in_stage_order_rather_than_in_walk_order(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The two orders differ, and the difference is a real dependency chain.
+
+    `assess` groups by resource because that is how the rows are read. The node
+    toolchain is therefore measured with the rest of `toolchains`, and has to be
+    *installed* between the cargo packages that ship fnm and the npm globals
+    resolved against what it pins — which is a position no ordering of resource
+    names can give it.
+    """
+    packages = Writer(
+        'packages',
+        changes=(
+            Change('packages', Stage.TOOLS, 'fnm', Verdict.MISSING),
+            Change('packages', Stage.NODE_TOOLS, 'typescript-language-server', Verdict.MISSING),
+        ),
+    )
+    toolchains = Writer('toolchains', changes=(Change('toolchains', Stage.NODE, 'node', Verdict.MISSING),))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': packages, 'toolchains': toolchains})
+
+    planned = list(engine.assess(session))
+    assert [event.item for event in planned if isinstance(event.payload, Change)] == ['fnm', 'typescript-language-server', 'node']
+
+    acted = [event.item for event in engine.execute(session, planned, Privilege(offer=False))]
+    assert acted == ['fnm', 'node', 'typescript-language-server']
+
+
 def test_execute_skips_what_apply_cannot_repair(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     """A required machine-local value is real drift and not apply's to fix. It must
     reach `check`, never `perform`."""
@@ -258,7 +316,7 @@ def test_a_ceiling_keeps_everything_up_to_and_including_the_stage(session: Sessi
     """`Stage` is an IntEnum because execution order is a property of the work, so
     "everything through this" is a projection of an order that already exists
     rather than a second opinion about sequence."""
-    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+    ceiling = engine.Selection.everything().capped_at(Stage.SYMLINKS)
 
     for resource in vocabulary.RESOURCES:
         assert all(item.stage <= Stage.SYMLINKS for item in ceiling.plan_for(resource, session.plan).items)
@@ -268,7 +326,7 @@ def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: S
     """The difference from `Selection.at`, which is exactly-these-stages. A base a
     test installs over is everything *up to* a point, and saying that with `at`
     means enumerating every stage below — the list nothing should keep by hand."""
-    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+    ceiling = engine.Selection.everything().capped_at(Stage.SYMLINKS)
 
     stages = {item.stage for item in ceiling.plan_for('system', session.plan).for_resource('system')}
 
@@ -279,7 +337,7 @@ def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: S
 def test_a_ceiling_and_a_provider_narrowing_both_apply(session: Session) -> None:
     """They answer different questions — which mechanisms against how far — so a
     caller giving both means the intersection."""
-    both = dc.replace(engine.Selection.excluding(['packages/go']), through=Stage.TOOLS)
+    both = engine.Selection.excluding(['packages/go']).capped_at(Stage.TOOLS)
 
     kept = both.plan_for('packages', session.plan).for_resource('packages')
 
@@ -291,6 +349,25 @@ def test_no_ceiling_hands_back_the_very_same_plan(session: Session) -> None:
     """The property `providers is None` already had: a walk narrowing nothing must
     not pay to rebuild the plan, and identity is how that is asserted."""
     assert engine.Selection.everything().plan_for('packages', session.plan) is session.plan
+
+
+def test_an_absent_ceiling_leaves_the_selection_alone() -> None:
+    """`--through` is optional and the call site passes its result straight through,
+    so `None` has to be the identity rather than a ceiling at the lowest stage."""
+    selection = engine.Selection.everything()
+
+    assert selection.capped_at(None) is selection
+
+
+def test_the_ceiling_includes_the_stage_it_names() -> None:
+    """Asserted directly because two callers read it — the plan filter and the
+    epilogue gate — and an off-by-one between them means deploying files under a
+    ceiling that planned none, or the reverse."""
+    capped = engine.Selection.everything().capped_at(Stage.SYMLINKS)
+
+    assert capped.reaches(Stage.SYMLINKS)
+    assert not capped.reaches(Stage.TMUX_PLUGINS)
+    assert engine.Selection.everything().reaches(Stage.SYSTEM_CONFIG)
 
 
 def test_every_stage_is_spellable_by_the_name_that_gets_printed() -> None:

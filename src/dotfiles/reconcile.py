@@ -1,13 +1,15 @@
-"""Walking the machine's resources and turning what they say into one verdict.
+"""The three whole-machine verbs, over one walk.
 
-This is `check` for the whole machine, and it is deliberately not in the CLI
-layer: the walk, the verdict composition and the exit-code rule are the parts
-worth testing directly, and a `CliRunner` around them tests argument parsing at
-the same time as logic.
+`plan` and `check` are folds over what the walk measured; `apply` is that same
+measurement with the second half run. Keeping all three here rather than in the
+CLI layer is deliberate: the walk, the verdict composition and the exit-code rule
+are the parts worth testing directly, and a `CliRunner` around them tests argument
+parsing at the same time as logic.
 
-Behind each resource is still bash — see `bridge.py`. What is already final is
-the shape: a walk producing one `ResourceResult` per address, and a single rule
-turning the set of them into the number a caller branches on.
+The order work happens in is `resolve.Stage`, and nothing here restates it. A
+second list of the convergence order is a list that can disagree with the first,
+and the disagreement is silent: a provider missing from it installs nothing and
+the run reports success.
 """
 
 from __future__ import annotations
@@ -17,19 +19,37 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
+from dotfiles import catalog
+from dotfiles import checkout
+from dotfiles import coordinates as axes
+from dotfiles import deploy
 from dotfiles import engine
+from dotfiles import machine as machines
+from dotfiles import paths
+from dotfiles import privilege as privileges
+from dotfiles import registry
+from dotfiles import sinks
 from dotfiles import validate
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.output import err_console
+from dotfiles.output import heading
+from dotfiles.output import hint
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
+from dotfiles.output import warn
+from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict as ItemVerdict
 from dotfiles.resources import privileged
+from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
+from dotfiles.vocabulary import address as addressed
 
 
 class Verdict(StrEnum):
@@ -261,9 +281,9 @@ def check_machine(events: Iterable[Event], *, skip: frozenset[str] = frozenset()
 def exit_code(results: list[ResourceResult]) -> ExitCode:
     """One number from many verdicts. An Issue outranks drift.
 
-    Both verbs use it, and after the split each reaches only part of its range:
-    `plan` answers 0 or 1, and 3 when something refused to be measured; `check`
-    answers 0 or 3 and never 1, because drift is not its subject.
+    Both read-only verbs use it, and after the split each reaches only part of its
+    range: `plan` answers 0 or 1, and 3 when something refused to be measured;
+    `check` answers 0 or 3 and never 1, because drift is not its subject.
     """
     verdicts = {result.verdict for result in results}
     if Verdict.ISSUE in verdicts:
@@ -271,3 +291,188 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
     if Verdict.DRIFT in verdicts:
         return ExitCode.DRIFT
     return ExitCode.CONVERGED
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# apply
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def apply_machine(
+    selection: engine.Selection,
+    machine: str | None = None,
+    *,
+    offline: bool = False,
+    owner: str | None = None,
+    force: bool = False,
+    flags: dict | None = None,
+) -> ExitCode:
+    """Measure the machine once, then act on what was decided, in stage order.
+
+    One walk over the whole plan, sorted by `Stage`, which is where the ordering
+    is declared. Every resource is observed once and every provider that planned
+    something is acted on.
+
+    The declaration check, the machine's own resolution and the offline check are
+    all before the walk. A run measured against a declaration that will not hold
+    together installs whatever survived the parse and reports success — which is
+    why the gate is scoped to the resources that *read* the declaration, and why
+    `symlinks apply` still works on a machine whose `packages.yml` is broken.
+    """
+    checkout.report_stray_branch()
+
+    reads_declaration = {provider.resource for provider in registry.PROVIDERS}
+    if set(selection.resources) & reads_declaration and (broken := validate.errors(validate.declaration())):
+        warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
+        for finding in broken:
+            render_finding(finding.section, finding.message)
+        hint("'dotfiles machines check' lists them, warnings included")
+        return ExitCode.ISSUE
+
+    try:
+        session = Session.resolve(machine, offline=offline, owner=owner, refresh=not offline, force=force)
+        plan = session.plan
+    except NoMachine as unnamed:
+        warn(str(unnamed))
+        return ExitCode.USAGE
+    except (catalog.CatalogError, machines.MachineError) as refused:
+        warn(str(refused))
+        return ExitCode.ISSUE
+
+    if not selection.resources:
+        warn('nothing selected')
+        return ExitCode.USAGE
+
+    # The walk, not only the plan. An owner narrows which *entries* are wanted,
+    # and a resource with no provider — symlinks, env, identity — has no entry to
+    # narrow, so it survives an owner-narrowed plan untouched and gets deployed
+    # by a command that asked for one person's tools.
+    if owner is not None:
+        selection = selection.narrowed_to(plan.providers)
+        if not selection.resources:
+            warn(f'nothing selected for owner {owner}')
+            return ExitCode.USAGE
+
+    if offline and not paths.BUNDLE_DIR.is_dir():
+        warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
+        hint('stage one with: ./install.sh --machine <name> --offline')
+        return ExitCode.ISSUE
+
+    label = axes.platform_label(session.machine.coordinates)
+    err_console.rule(f'[bold]dotfiles apply[/]  {session.machine_name} ({label})', align='left')
+
+    planned = list(engine.assess(session, selection))
+
+    # Before acting, because a resource nothing could examine is a part of the
+    # machine this run is about to skip without touching.
+    for event in planned:
+        if isinstance(event.payload, Refusal):
+            warn(event.payload.reason)
+
+    performed = list(_perform(session, planned))
+
+    for change in _unrepairable(planned):
+        render_change(change)
+
+    # After the walk rather than inside it: the three jobs are consequences of a
+    # deployment rather than measured drift, and nothing between the symlink stage
+    # and here reads what they write. Run whether or not the pass changed
+    # anything, because `~/.gitconfig` has to exist on a converged machine too.
+    #
+    # Gated on the ceiling as well as the selection, because every one of the jobs
+    # is justified by "the pass above just deployed these files": git needs
+    # somewhere to write that is not this repo, Hyprland has to reload the config
+    # that landed, and WSL copies the shell profile onto the Windows host. Under a
+    # ceiling below this stage nothing was deployed, and reloading a compositor
+    # over files nobody wrote is a narrowing applied to the data and not the work.
+    if 'symlinks' in selection.resources and selection.reaches(Stage.SYMLINKS):
+        deploy.epilogue(session)
+
+    # Both halves, which is what `sinks.record` is built for: a `Change` is what
+    # was decided and an `Outcome` is what was done, so a record of an `apply`
+    # carries the pair where a record of a `plan` carries verdicts alone.
+    sinks.keep([*planned, *performed], session.machine_name, 'apply', flags or {})
+
+    unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
+    if unsuccessful:
+        err_console.rule('[bold red]failed[/]', align='left')
+        warn(f'{len(unsuccessful)} item(s) did not converge: {", ".join(unsuccessful)}')
+        hint("the full record is 'dotfiles report latest'")
+        return ExitCode.ISSUE
+
+    err_console.rule(f'[bold green]converged[/]  {session.machine_name}', align='left')
+    return ExitCode.CONVERGED
+
+
+def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
+    """Act, announcing each group of work before it happens.
+
+    The heading is the address `plan` prints and `--skip` takes, so one run's
+    output and the next run's `--skip` argument are the same vocabulary.
+
+    **Announced before the group runs, not as its first outcome arrives.** A
+    batched provider hands `apt-get install` every declared package at once and
+    returns one list of outcomes minutes later, so printing on the first outcome
+    leaves the longest stretch of a fresh install looking hung — the same defect
+    `effects.Output.STREAM` exists to record.
+    """
+    privilege = privileges.Privilege()
+    for group in engine.batches(planned):
+        heading(_address(group[0]))
+        for event in engine.execute(session, group, privilege):
+            _render(event)
+            yield event
+
+
+def _address(event: Event) -> str:
+    """`packages/ghrelease`, or the bare resource for a change nothing declares."""
+    change = event.payload.change if isinstance(event.payload, Outcome) else event.payload
+    desired = change.desired if isinstance(change, Change) else None
+    return addressed(event.resource, desired.provider if desired else None)
+
+
+def _render(event: Event) -> None:
+    """Three marks for three outcomes.
+
+    A refusal is `ok` — it wrote nothing and must not read as a failure — but it
+    is not a success either, and a green tick in front of "neovim is not
+    installed" reads as one.
+    """
+    payload = event.payload
+    if isinstance(payload, Refusal):
+        warn(payload.reason)
+    elif isinstance(payload, Outcome) and payload.status in (OutcomeStatus.REFUSED, OutcomeStatus.SKIPPED):
+        err_console.print(f'[yellow]-[/] {payload.message or payload.change.item}')
+    elif isinstance(payload, Outcome) and payload.ok:
+        err_console.print(f'[green]✓[/] {payload.message or payload.change.item}')
+    elif isinstance(payload, Outcome):
+        err_console.print(f'[red]✗[/] {payload.change.item}: {payload.message}')
+
+
+def _unrepairable(planned: Iterable[Event]) -> list[Change]:
+    """What differs and `apply` cannot fix, which is `check`'s answer reported here.
+
+    Reported and not counted: a machine-local value nobody has set and a file only
+    safekeep restores are real findings, and exiting non-zero for them makes every
+    freshly-installed work box look like a failed install between the install and
+    the restore. `apply` answers whether the work it attempted succeeded; whether
+    anything is *wrong* is the question `check` exists for.
+    """
+    _, attention, _ = sift([event.payload for event in planned if isinstance(event.payload, Change)])
+    return attention
+
+
+def _unsuccessful(events: Iterable[Event]) -> list[str]:
+    """Every item this run tried and could not do, plus anything it could not measure.
+
+    A resource that refused to be examined counts: it was in the selection, so
+    part of the machine went unconverged, and reporting success on the strength of
+    a checker that crashed is what `Refusal` exists to prevent.
+    """
+    named = []
+    for event in events:
+        if isinstance(event.payload, Refusal):
+            named.append(event.resource)
+        elif isinstance(event.payload, Outcome) and not event.payload.ok:
+            named.append(event.payload.change.item)
+    return named

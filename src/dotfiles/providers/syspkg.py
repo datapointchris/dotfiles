@@ -90,11 +90,19 @@ one name and no alternative — there is nothing to prefer between.
 
 
 def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
-    """One transaction. The caller has already refreshed and grouped."""
+    """One transaction. The caller has already refreshed and grouped.
+
+    Streamed on both branches, and the escalating one has to ask: `Privilege.run`
+    defaults to `Output.QUIET` where `effects.run` defaults to `Output.STREAM`, so
+    without this apt and pacman — the two managers that install the most — go
+    silent through a transaction over every declared package while brew and
+    flatpak do not. `Output.STREAM` records the reason in its own docstring, and
+    it keeps the transcript, so the failure detail below is unaffected.
+    """
     command = [*INSTALL[manager], *names]
     try:
         completed = (
-            privilege.run(command, reason=f'install {len(names)} package(s) with {manager}')
+            privilege.run(command, reason=f'install {len(names)} package(s) with {manager}', output=Output.STREAM)
             if manager in ESCALATES
             else effects.run(command)
         )
@@ -245,7 +253,11 @@ def upgrade(manager: str, privilege: Privilege) -> Result:
     """Bring everything this manager installed up to date."""
     command = list(UPGRADE[manager])
     try:
-        completed = privilege.run(command, reason=f'upgrade every {manager} package') if manager in ESCALATES else effects.run(command)
+        completed = (
+            privilege.run(command, reason=f'upgrade every {manager} package', output=Output.STREAM)
+            if manager in ESCALATES
+            else effects.run(command)
+        )
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state))
     if completed.ok:

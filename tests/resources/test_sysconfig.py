@@ -326,15 +326,33 @@ def test_a_different_login_shell_is_stale(monkeypatch: pytest.MonkeyPatch, fake_
     assert sysconfig.observe(catalog.LoginShell.from_mapping({'name': 'zsh'})).verdict is Verdict.STALE
 
 
-def test_a_shell_that_is_not_installed_is_nobody_s_to_repair(monkeypatch: pytest.MonkeyPatch, fake_bin: Path) -> None:
-    """Ordering, stated as a verdict: zsh is a system package, so on a fresh
-    machine this is true until the package phase runs and false afterwards."""
+def test_a_shell_the_run_has_not_installed_yet_is_still_repairable(monkeypatch: pytest.MonkeyPatch, fake_bin: Path) -> None:
+    """Ordering, and it must not be stated as a verdict.
+
+    zsh is a system package at `SYSTEM` and this row is decided at
+    `SYSTEM_CONFIG` of the same run, so "not installed" measured up front is a
+    fact about the machine *before* the run. Answering `Repair.NONE` there made
+    every fresh install finish with bash as the login shell and call itself
+    converged. The repair is what asks, at the point the answer is final.
+    """
     monkeypatch.setenv('PATH', str(fake_bin))
     declare_shell(monkeypatch, '/bin/bash')
     state = sysconfig.observe(catalog.LoginShell.from_mapping({'name': 'zsh'}))
 
-    assert state.verdict is Verdict.MISSING
-    assert state.repair is Repair.NONE
+    assert state.verdict is Verdict.STALE
+    assert state.repair is Repair.AUTOMATIC
+
+
+def test_a_shell_still_missing_at_the_write_is_refused_rather_than_failed(monkeypatch: pytest.MonkeyPatch, fake_bin: Path) -> None:
+    """`apply` exits non-zero on failures, and a package an earlier stage could
+    not deliver is not this run failing to change a login shell."""
+    monkeypatch.setenv('PATH', str(fake_bin))
+    declare_shell(monkeypatch, '/bin/bash')
+
+    result = sysconfig.apply(catalog.LoginShell.from_mapping({'name': 'zsh'}), Privilege(offer=False))
+
+    assert not result.ok
+    assert result.refused
 
 
 def test_changing_the_login_shell_passes_the_resolved_path(

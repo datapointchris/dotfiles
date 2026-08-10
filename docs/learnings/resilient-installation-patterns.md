@@ -13,7 +13,7 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 - **Children** fail loudly and locally — simple, testable, predictable
 - **The parent** catches the failure and continues to the next tool
-- Failures are logged to one centralized `FAILURES_LOG` rather than one file per installer
+- Failures were logged to one centralized `FAILURES_LOG` rather than one file per installer
 - A summary is displayed at the end with manual remediation steps for each failure
 
 Every installer this was written against is Python now (`src/dotfiles/providers/`),
@@ -23,14 +23,20 @@ and turns any provider that *does* raise into a `Refusal`, and the run reports a
 the end. The isolation is in `engine._act` and `engine._measure`, one place rather
 than one call site per script.
 
+The centralized log went the same way as of 2026-08-10. It existed because the
+wrapper had booleans and console text and nothing else to keep; `apply` writes a
+run record like every other verb now, and `dotfiles report latest` is where a
+failed install is read.
+
 ## Key Learnings
 
 - Separation of concerns: child scripts don't know about resilience, wrapper handles it
 - All scripts work standalone without the failure registry (backwards compatible)
-- Keep structured failure data off both streams — it goes to the file named by `$FAILURE_RECORDS`,
-  which leaves stdout and stderr free to be merged and teed, live and whole. Capturing one stream
-  for records and letting the other through loses causes at random, because which stream an error
-  lands on is the failing tool's choice, not the installer's
+- Keep structured failure data off both streams. It went to a file named by `$FAILURE_RECORDS`,
+  which left stdout and stderr free to be merged and teed, live and whole; it is a returned value
+  now, which is the same rule with nothing left to parse. Capturing one stream for records and
+  letting the other through loses causes at random, because which stream an error lands on is the
+  failing tool's choice, not the installer's
 - Capturing all output (`2>&1`) hides installation progress from the user (a critical bug found during testing)
 
 ## Batch Commands: One Bad Item Must Not Sink the Batch

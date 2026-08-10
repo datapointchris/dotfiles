@@ -139,8 +139,8 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
     Go is the one runtime with no version manager of its own, so this is the
     manager: resolve what upstream calls current, fetch the tarball, and replace
     the whole tree. `/usr/local` rather than somewhere under `$HOME` because
-    `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS` all name
-    `/usr/local/go/bin`, and moving it is a change to every one of them.
+    `.zshenv` and `TOOL_PATH_DIRS` below both name `/usr/local/go/bin`, and
+    moving it is a change to both.
     """
     if offline:
         return Result(False, f'go installs from {GO_DOWNLOAD_URL}, which the offline bundle at {paths.BUNDLE_DIR} does not stage')
@@ -284,6 +284,30 @@ def install_node(home: Path, *, offline: bool) -> Result:
     if not reported.ok:
         return Result(False, f'fnm reported success but there is no node at {alias}')
     return Result(True, f"node {reported.transcript.strip()} is fnm's default alias")
+
+
+TOOL_PATH_DIRS = (
+    '$HOME/.local/share/fnm/aliases/default/bin',
+    '$HOME/.local/share/npm/bin',
+    '$HOME/.local/bin',
+    '$HOME/.cargo/bin',
+    '$HOME/go/bin',
+    '/usr/local/go/bin',
+    '/usr/local/bin',
+)
+"""Where a stage finds what an earlier stage installed.
+
+Nothing in a run reads `.zshenv`, so a tool is invisible to the provider that
+consumes it unless it is named here: the cargo provider needs `cargo` from rustup,
+the node toolchain needs the fnm that arrives as a cargo package, and npm-globals
+needs the Node that fnm links as its default alias. Order mirrors `.zshenv` so a
+run resolves the same binary an interactive shell would.
+
+This is the *declaration* of those directories rather than something applied
+here: `put_on_path` is what places them, called by each provider as it installs.
+What reads the list is the e2e harness, which has to rebuild the PATH `docker
+exec` does not supply, and the test that holds `.zshenv` to it.
+"""
 
 
 def put_on_path(directory: Path) -> None:

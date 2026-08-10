@@ -18,7 +18,9 @@ import datetime as dt
 
 import typer
 
+from dotfiles import engine
 from dotfiles import reconcile
+from dotfiles import sinks
 from dotfiles import status
 from dotfiles.commands import machines
 from dotfiles.commands import manage
@@ -95,33 +97,10 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     developer's box never and every CI runner always, so it went unnoticed for two
     commits until the runner said so.
     """
-    from dotfiles import engine
-
     try:
         return frozenset(engine.validate(addresses or ()))
     except engine.UnknownAddress as wrong:
         raise typer.BadParameter(str(wrong)) from wrong
-
-
-def _keep(events: list, machine: str, verb: str, flags: dict) -> None:
-    """Write the run record, or write nothing and say nothing.
-
-    Every run records. `runs.py` was complete and tested for months with no caller
-    because the walk printed instead of returning — recording is a reader of the
-    stream now rather than a feature something has to remember to call.
-
-    Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
-    the fleet and absent on a fresh machine, and neither is a reason for a verb to
-    exit non-zero when it answered the question it was asked. Same rule as
-    `status.record`, which sits ten lines below for the same reason.
-    """
-    from dotfiles import runs
-    from dotfiles import sinks
-
-    try:
-        runs.write(sinks.record(events, machine, verb, flags))
-    except OSError:
-        return
 
 
 @app.command('plan', rich_help_panel='Reconcile')
@@ -144,7 +123,7 @@ def plan(
     named = Session.resolve(machine).machine_name
     events = reconcile.survey(skipped, machine, refresh=refresh)
     results = reconcile.plan_machine(events)
-    _keep(events, named, 'plan', {'skip': sorted(skipped)})
+    sinks.keep(events, named, 'plan', {'skip': sorted(skipped)})
 
     if as_json:
         emit_json(status.document(results, named, dt.datetime.now(dt.UTC), verb='plan'))
@@ -177,7 +156,7 @@ def check(
     checked_machine = Session.resolve(machine).machine_name
     events = reconcile.survey(skipped, machine, refresh=refresh)
     results = reconcile.check_machine(events, skip=skipped)
-    _keep(events, checked_machine, 'check', {'skip': sorted(skipped)})
+    sinks.keep(events, checked_machine, 'check', {'skip': sorted(skipped)})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge
@@ -211,13 +190,13 @@ def check(
 def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
-    owner: str = typer.Option(None, '--owner', help='Only phases whose contents can be traced to this GitHub owner'),
+    owner: str = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner'),
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
 ) -> None:
     """Make this machine match what it declares.
 
-    `check` plus acting on what it found — the same walk with the last step run,
+    `plan` plus acting on what it found — the same walk with the last step run,
     which is why there is no `--dry-run` for this to be the opposite of.
 
     `--through` is a ceiling on the ordering rather than a selection of parts:
@@ -227,21 +206,19 @@ def apply_command(
     which providers live below the line, which is the registry's knowledge and not
     a caller's.
     """
-    from dotfiles import apply
-    from dotfiles import engine
-
     try:
         ceiling = engine.stage_named(through) if through else None
     except engine.UnknownAddress as unknown:
         raise typer.BadParameter(str(unknown)) from unknown
 
+    skipped = _skipped(skip)
     raise typer.Exit(
-        apply.apply_machine(
-            _skipped(skip),
+        reconcile.apply_machine(
+            engine.Selection.excluding(skipped).capped_at(ceiling),
             machine=machine,
             offline=offline,
             owner=owner,
-            through=ceiling,
+            flags={'skip': sorted(skipped), 'through': through} if through else {'skip': sorted(skipped)},
         )
     )
 

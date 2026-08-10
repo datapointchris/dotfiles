@@ -378,7 +378,7 @@ select. See `docs/architecture/github-releases.md` and
 
 ### Main Installation Flow
 
-`install.sh` is a POSIX bootstrap whose only job is reaching the CLI: check `git` and `tar`, stage a bundle, install uv, install this package, `exec dotfiles apply`. The phases and their order are `apply.REGISTRY` in `src/dotfiles/apply.py`, and the order is a dependency chain rather than a listing — symlinks land after the tools that provide `task` and before tpm reads the tmux config it deploys, and system configuration is last because every row of it needs the package it configures to be installed first.
+`install.sh` is a POSIX bootstrap whose only job is reaching the CLI: check `git` and `tar`, stage a bundle, install uv, install this package, `exec dotfiles apply`. What that run does is the whole plan, sorted by `resolve.Stage`, and the order is a dependency chain rather than a listing — symlinks land after the tools that provide `task` and before tpm reads the tmux config it deploys, and system configuration is last because every row of it needs the package it configures to be installed first.
 
 ### Taskfile Tasks
 

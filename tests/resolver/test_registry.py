@@ -197,7 +197,7 @@ def test_installing_a_system_package_needs_root_whatever_the_entry_says() -> Non
 def test_the_go_runtime_is_the_only_one_that_needs_root() -> None:
     """It unpacks over `/usr/local/go`; the other three install under `$HOME`.
 
-    Go could too, but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
+    Go could too, but `.zshenv` and `toolchain.TOOL_PATH_DIRS`
     all name `/usr/local/go/bin`, so moving it is a change to every one of them
     and to every machine already built.
     """
@@ -349,7 +349,7 @@ def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypa
 
 
 def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> None:
-    """`.zshenv`, `apply.TOOL_PATH_DIRS` and the verification script each name
+    """`.zshenv`, `toolchain.TOOL_PATH_DIRS` and the verification script each name
     `/usr/local/go/bin` independently; this is the fourth and the only one that
     decides whether it gets installed."""
     provider = registry.named('go-toolchain')

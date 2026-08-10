@@ -77,12 +77,10 @@ from dotfiles.session import Session
 class Provider:
     """One way of installing things, and everything that is true of all of them.
 
-    The base is not abstract on purpose. A provider whose mechanism this package
-    does not drive yet — the ones that still install through a phase — is a
-    faithful description of what the machine has: it plans, its items are
-    observable, and only the write is elsewhere. `install` says so in words a run
-    can print, which is what the partial `PERFORMED` map used to leave to whichever
-    resource happened to look the provider up and find nothing.
+    `plan` and `measure` have defaults because a provider can legitimately want
+    neither. `install` has none: a provider that plans items and cannot repair
+    them is a mechanism the walk would silently decline to run, so it has to be a
+    loud failure rather than an inherited no-op.
     """
 
     name: str
@@ -154,11 +152,11 @@ class Provider:
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Repair one item, re-checking live that it is still the right thing to do.
 
-        Refused rather than silently skipped by the providers that still install
-        through a phase, because a provider that did nothing quietly would leave
-        `apply` reporting a converged machine.
+        Raising rather than returning a refusal: a provider reaching this has
+        planned items nothing can act on, so the run is misconfigured rather than
+        blocked, and `engine._act` turns the exception into a `Refusal` naming it.
         """
-        return Outcome(change, OutcomeStatus.REFUSED, f"run 'dotfiles {self.resource} apply', which still drives the phase registry")
+        raise NotImplementedError(f'{self.name} plans items and cannot install them')
 
     def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """Repair several of this provider's items, one Outcome each in order.
@@ -807,7 +805,7 @@ class ToolchainProvider(Provider):
 
     Empty for the three that go wherever their own installer puts them, and set
     for Go, which is unpacked over `/usr/local/go` — a path `.zshenv`,
-    `apply.TOOL_PATH_DIRS` and the verification script all name independently.
+    `toolchain.TOOL_PATH_DIRS` and the verification script all name independently.
 
     It exists because `which` answers a different question than the declaration
     asks. A container picked up Arch's `go` package transitively, `which go` found
@@ -821,9 +819,9 @@ class ToolchainProvider(Provider):
     """A runtime belongs to nobody, so `--owner` skips these whole.
 
     Filtering instead would drop every one of them for answering `owner is None`,
-    which is the wrong reason — and it reproduces what the phase registry already
-    did, where a toolchain phase declared no providers and so never survived the
-    intersection.
+    which is the wrong reason: the answer would be right and the question wrong,
+    and a later entry gaining an owner would silently change what `--owner`
+    covers.
     """
 
     def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
@@ -879,9 +877,9 @@ class GoToolchain(ToolchainProvider):
     """A tarball unpacked over `/usr/local/go`, which is why this one needs root.
 
     The only runtime that does. The other three install under `$HOME`, and Go
-    could too — but `.zshenv`, `install/tool-path.sh` and `apply.TOOL_PATH_DIRS`
-    all name `/usr/local/go/bin`, so moving it is a change to every one of them
-    and to every machine already built.
+    could too — but `.zshenv` and `toolchain.TOOL_PATH_DIRS` both name
+    `/usr/local/go/bin`, so moving it is a change to both and to every machine
+    already built.
     """
 
     def converge(self, session: Session, privilege: Privilege) -> providers.Result:
@@ -979,6 +977,8 @@ class SystemConfigProvider(Provider):
             return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
 
         result = self.repair(entry, privilege)
+        if result.refused:
+            return Outcome(change, OutcomeStatus.REFUSED, result.detail)
         return Outcome(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
 
 

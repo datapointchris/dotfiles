@@ -178,35 +178,50 @@ and none of them is a preference in disguise. A flag with no consumer is how
 
 ## Selective installs and updates
 
-There is one phase registry: `apply.REGISTRY`, which `dotfiles apply` walks. There were
-two while the conversion was half done — `install/phases.sh` held the same list for
-`update.sh`, and `tests/cli/test_phase_registry.py` sourced the bash one to assert they
-agreed on names, order and ownership. Both are gone, because reconcile has one verb.
-Order is still asserted rather than membership alone: registry order is a real dependency
-chain, and a registry that agreed on the set but not the sequence would install a machine
-wrongly and report success.
+There is no phase registry. `dotfiles apply` measures the whole plan once and acts on it
+in `Stage` order, so what a run covers is every provider that planned something and what
+a run does first is whatever sits at the lowest stage. There were three lists of that
+order at the worst of it — `install/phases.sh` for `update.sh`, `apply.REGISTRY` for
+`install.sh`, and the `Stage` enum the resolver already sorted on — and the first two are
+gone. Keeping a hand-written one is what let `system/manager`, the OS package upgrade,
+sit at a stage no phase named and never run at all.
 
 A selector is a resource, or one provider inside one — `dotfiles apply --help` lists
 what `--skip` takes and `dotfiles <noun> apply --source` narrows below that. The bash
 half had four hand-maintained groups (`system`, `languages`, `tools`, `plugins`) whose
 membership was a fifth list to keep in step; a resource and a provider are what the
-registry already knows, so there is nothing to maintain.
+provider registry already knows, so there is nothing to maintain.
 
 The one group worth its own name was `system`, because it needs sudo and dominates the
 runtime. `--skip system` is that, and it is derived rather than declared.
 
 ```bash
 dotfiles apply                        # everything
-dotfiles apply --skip system          # skip the sudo-gated, slowest part
-dotfiles apply --skip plugins/tpm     # one provider, not all of plugins
-dotfiles packages apply --source cargo_packages   # one section
-dotfiles apply --owner datapointchris # only tools traceable to that owner
-dotfiles apply --skip system          # a whole resource
+dotfiles apply --skip system          # a whole resource: the sudo-gated, slowest part
 dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
+dotfiles packages apply --source cargo_packages   # one section, and what it needs
+dotfiles apply --owner datapointchris # only tools traceable to that owner
+dotfiles apply --through system_upgrade           # stop after that stage
 ```
 
-Owner narrowing takes only the phases whose contents can be traced to a GitHub owner,
-and skips the rest rather than silently running them in full. Ownership is derived from
+`--through` is the one selector that is not a selection of parts. `--skip` and the
+resource sub-apps say *which mechanisms*; neither can say *how far*, because the stages a
+resource's providers sit at are spread across the run — expressing "the system half and
+no further" as `--skip` means knowing which providers live below the line, which is the
+registry's knowledge and not a caller's. It is a ceiling on the ordering, carried on the
+`Selection` beside the provider narrowing so the two intersect, and the e2e base images
+are built with it.
+
+A section brings what it declares it needs. `--source cargo_packages` on a machine
+without rustup installs the Rust toolchain first, because `needed_by` already says the
+runtime is wanted *because* that section resolved; narrowing to the section alone honoured
+the declaration in the plan and ignored it in the run, and failed with
+`cargo: No such file or directory`.
+
+Owner narrowing drops every provider whose contents cannot be traced to a GitHub owner,
+and then every resource left holding none — so `symlinks`, `env` and `identity`, which
+have no provider to be ownable, fall out of the walk rather than deploying in full
+alongside somebody's tools. Ownership is derived from
 whichever field carries it — `repo`, `github_repo`, or a Go import path in `package` —
 not from a `personal` tag, because a tag has to be remembered on every new tool and
 silently excludes whatever it misses.
@@ -252,7 +267,7 @@ separate from `dotfiles machines check`, which runs on every commit: that one co
 `packages.yml` against the manifests and what can install them, and a machine part-way
 through a rollout is not a repo defect that should fail a commit.
 
-### What a phase is allowed to claim
+### What a provider is allowed to claim
 
 A per-tool line must be derived from observed state: a version or ref that changed, or a
 non-zero exit. It may never be derived from "the command returned", because
@@ -300,7 +315,7 @@ real type system, a test suite, and dependencies it can declare.
 | Concern | Owner |
 | --- | --- |
 | Machine bootstrap | `install.sh` — POSIX sh, up to the point uv installs the CLI |
-| Installing | `src/dotfiles/apply.py` — the phase registry and the walk |
+| Installing | `src/dotfiles/reconcile.py` — `apply_machine`, beside the two read verbs |
 | Updating the machine | `dotfiles apply` — one verb; a behind package is a `STALE` row |
 | Updating this installation | `src/dotfiles/commands/manage.py` — pull, relink, rebuild the venv |
 | Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |

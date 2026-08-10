@@ -54,6 +54,17 @@ class Result:
     ok: bool
     detail: str
 
+    refused: bool = False
+    """Nothing was written, and nothing was wrong with the write: what this row
+    configures is not on the machine to configure.
+
+    Distinct from a failure because `apply` exits non-zero on failures, and a row
+    waiting on a package an earlier stage could not deliver is not a fault of the
+    run. `pluginsync.blocked` draws the same distinction for TPM, for the same
+    reason: every one of these preconditions is supplied by an earlier stage of
+    the same run.
+    """
+
 
 def current_user() -> str:
     """Whose account this is, from the uid rather than from `$USER`.
@@ -258,18 +269,25 @@ def _wanted_content(entry: catalog.ManagedFile, path: Path) -> str:
 
 
 def _observe_login_shell(entry: catalog.LoginShell) -> State:
+    """Which shell the passwd entry names, and nothing about whether it exists yet.
+
+    Deliberately not asked here. zsh is a system package at `SYSTEM` and this row
+    is decided at `SYSTEM_CONFIG` of the same run, so "not installed" measured at
+    plan time is a fact about the machine before the run — and answering it as a
+    verdict makes the login shell unrepairable on every fresh machine. Whether
+    the shell has arrived is the repair's question, asked when the answer is
+    final.
+    """
     current = pwd.getpwuid(os.getuid()).pw_shell
     if Path(current).name == entry.name:
         return State(Verdict.MATCHED)
-    if shutil.which(entry.name) is None:
-        return State(Verdict.MISSING, f'{entry.name} is not installed, so it cannot be the login shell', repair=Repair.NONE)
     return State(Verdict.STALE, f'login shell is {current or "unset"}')
 
 
 def _apply_login_shell(entry: catalog.LoginShell, privilege: Privilege) -> Result:
     shell = shutil.which(entry.name)
     if shell is None:
-        return Result(False, f'{entry.name} is not installed')
+        return Result(False, f'{entry.name} is not installed, and the stage that supplies it has not', refused=True)
 
     changed = privilege.run(['chsh', '-s', shell, current_user()], reason=f'make {shell} the login shell')
     if not changed.ok:

@@ -27,12 +27,12 @@ from dataclasses import field
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from dotfiles import apply
 from dotfiles import catalog
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles.providers import toolchain
 
 MARKERS = ('install.sh', 'tests/e2e/harness.py')
 """Files that together identify a dotfiles checkout and nothing else."""
@@ -87,7 +87,7 @@ SHADOW_LOG = '.dotfiles-shadow-calls'
 # same directories is how the npm prefix came to be on three of them and not the
 # fourth, which reported eleven installed tools as missing.
 SYSTEM_PATH_DIRS = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin')
-CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *apply.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
+CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *toolchain.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -463,6 +463,27 @@ def install_record(machine: Machine) -> tuple[int, str] | None:
 def install_age(machine: Machine) -> str:
     """When that install ran, so a stale one cannot be mistaken for this run's."""
     return machine.read(f'date -r {machine.environment.home}/{INSTALL_STATUS} 2>/dev/null') or 'an unknown time'
+
+
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
+"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container."""
+
+
+def run_record(machine: Machine) -> dict:
+    """What the install recorded about itself, as values rather than as console text.
+
+    The alternative is grepping `install_log` for a sentence the run printed,
+    which pins an English fragment: reword it and the test fails with nothing
+    wrong. Every count these assertions want is a field here.
+    """
+    written = machine.read(f'cat {LATEST_RECORD}')
+    assert written.strip(), f'the install wrote no run record at {LATEST_RECORD}'
+    return json.loads(written)
+
+
+def failed_outcomes(machine: Machine) -> list[str]:
+    """Every address the run tried to repair and could not."""
+    return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'failed']
 
 
 def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:

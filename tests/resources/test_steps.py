@@ -141,12 +141,16 @@ def orbstack(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return plugins
 
 
-def test_no_orbstack_means_nothing_to_point_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A directory that does not exist is not drift. macOS without OrbStack gets
-    its docker CLI from somewhere else, or not at all."""
+def test_an_orbstack_that_has_not_been_installed_yet_is_still_planned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The app arrives at SYSTEM_APPS and this row is decided at SYSTEM_CONFIG of
+    the same run, so reading `/Applications` answers about the machine before the
+    run. It used to short-circuit to MATCHED there, which is a fresh Mac reporting
+    a converged docker config that points nowhere.
+    """
     monkeypatch.setattr(steps, 'ORBSTACK_PLUGINS', tmp_path / 'absent')
+    monkeypatch.setenv('DOCKER_CONFIG', str(tmp_path / 'docker'))
 
-    assert steps.observe('orbstack-docker-plugins').verdict is Verdict.MATCHED
+    assert steps.observe('orbstack-docker-plugins').verdict is Verdict.MISSING
 
 
 def test_a_fresh_machine_has_no_docker_config_and_gets_one(orbstack: Path) -> None:
@@ -272,26 +276,34 @@ def test_a_resolvable_psql_is_converged(fake_bin: Path) -> None:
     assert steps.observe('psql-linked').verdict is Verdict.MATCHED
 
 
-def test_no_brew_is_unknown_rather_than_missing(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Unverified is not permission. Without brew there is no way to ask whether a
-    keg-only formula is linked, and answering MISSING would have `apply` run
-    `brew link` on a machine with no brew."""
+def test_no_brew_yet_is_repairable_and_the_repair_is_what_refuses(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """brew arrives at SYSTEM in the run this row is decided at SYSTEM_CONFIG of.
+
+    It answered UNKNOWN and `Repair.NONE`, which is a fact about the machine
+    before the run stated as a fact about the machine — so a fresh Mac planned
+    nothing and finished with psql on no PATH. Repairable at plan time, refused
+    at execute time if brew still is not there: the same split
+    `pluginsync.blocked` makes for TPM.
+    """
     monkeypatch.setattr(steps.shutil, 'which', lambda name: None)
 
     state = steps.observe('psql-linked')
+    assert state.verdict is Verdict.MISSING
+    assert state.repair is Repair.AUTOMATIC
 
-    assert state.verdict is Verdict.UNKNOWN
-    assert state.repair is Repair.NONE
+    refused = steps.apply('psql-linked', Privilege(offer=False))
+    assert not refused.ok
+    assert refused.refused, 'a stage that has not run is not this run failing'
 
 
 def test_linking_forces_because_keg_only_is_what_declines_without_it(fake_bin: Path, tmp_path: Path) -> None:
     """A bare `brew link libpq` refuses a keg-only formula and exits 0, which would
     report a successful repair that changed nothing."""
     log = tmp_path / 'brew.log'
-    executable(fake_bin, 'brew', f'#!/bin/sh\necho "$@" >> {log}\n')
+    executable(fake_bin, 'brew', f'#!/bin/sh\necho "$@" >> {log}\nexit 0\n')
 
     assert steps.apply('psql-linked', Privilege(offer=False)).ok
-    assert log.read_text().strip() == 'link --force libpq'
+    assert log.read_text().splitlines()[-1] == 'link --force libpq'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

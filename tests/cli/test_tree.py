@@ -5,8 +5,7 @@ touch nothing (usage errors, which fail before any work), read only (`repo path`
 `machines list`), or are pointed at a temp directory through `XDG_STATE_HOME` —
 a real knob, the same one a caller has.
 
-What `apply` would do is covered in `test_phase_registry.py`, through `select`,
-which is the pure question "what work would this do" separated from doing it.
+What `apply` covers, and what it does with what it finds, is `test_apply.py`.
 """
 
 from __future__ import annotations
@@ -20,6 +19,7 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
+from dotfiles import vocabulary
 from dotfiles.commands import machines
 from dotfiles.main import app
 from dotfiles.resolve import Precondition
@@ -85,28 +85,29 @@ def test_apply_refuses_a_declaration_with_errors(monkeypatch: pytest.MonkeyPatch
     reasoning is stronger for `apply`, which would install whatever survived the
     parse and report success — and refusing to *act* is what the read-only verb
     could not do."""
-    from dotfiles import apply
+    from dotfiles import engine
+    from dotfiles import reconcile
     from dotfiles import validate
 
     broken = (validate.Finding('go_tools', validate.Severity.ERROR, "manifest 'box' names 'ghost-tool'"),)
     monkeypatch.setattr(validate, 'declaration', lambda repo=None: broken)
 
-    assert apply.apply_machine() is ExitCode.ISSUE
+    assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.ISSUE
 
 
 def test_apply_is_not_stopped_by_warnings_alone(monkeypatch: pytest.MonkeyPatch) -> None:
     """An entry lands in `packages.yml` before the manifest that wants it. A tool
     being staged must not block every install on the fleet."""
-    from dotfiles import apply
+    from dotfiles import engine
+    from dotfiles import reconcile
     from dotfiles import validate
 
     staged = (validate.Finding('go_tools', validate.Severity.WARNING, "'unused' is declared but no manifest names it"),)
     monkeypatch.setattr(validate, 'declaration', lambda repo=None: staged)
-    monkeypatch.setattr(apply, 'select', lambda *args, **kwargs: [])
 
-    # No phases selected, so nothing runs — the point is that it got past the gate
-    # to the "nothing selected" refusal rather than stopping at the declaration.
-    assert apply.apply_machine() is ExitCode.USAGE
+    # Nothing selected, so no walk happens — the point is that it got past the
+    # gate to the empty-selection refusal rather than stopping at the declaration.
+    assert reconcile.apply_machine(engine.Selection.excluding(vocabulary.RESOURCES)) is ExitCode.USAGE
 
 
 def test_a_bad_source_names_the_valid_ones() -> None:
@@ -199,8 +200,7 @@ def test_report_list_on_an_empty_history_is_empty_not_an_error(empty_state: Path
     assert result.output.strip() == ''
 
 
-# What `apply` would do without doing it is `tests/cli/test_phase_registry.py`,
-# which is also where the Python registry is checked against the bash one.
+# What `apply` covers, and what it does with what it finds, is `tests/cli/test_apply.py`.
 
 
 def test_a_precondition_is_annotated_on_the_row_it_belongs_to() -> None:

@@ -14,20 +14,19 @@ from __future__ import annotations
 import typer
 
 from dotfiles import bridge
+from dotfiles import engine
 from dotfiles import paths
 from dotfiles import reconcile
+from dotfiles import registry
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
 from dotfiles.output import error
 from dotfiles.output import hint
-from dotfiles.output import render_change
 from dotfiles.output import render_result
-from dotfiles.output import success
-from dotfiles.resources import Change
-from dotfiles.resources import Outcome
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
+from dotfiles.vocabulary import address as addressed
 
 
 def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
@@ -46,8 +45,6 @@ def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bo
     cannot answer one way here and another way under `dotfiles plan` — which is
     what seven parallel `check_*` functions made possible and eventually true.
     """
-    from dotfiles import engine
-
     results = reconcile.fold(engine.assess(_session(machine), engine.Selection.of(address)), lens)
     _report(results[0], as_json)
 
@@ -57,39 +54,6 @@ def _session(machine: str | None) -> Session:
         return Session.resolve(machine)
     except NoMachine as unresolved:
         raise typer.BadParameter(str(unresolved)) from unresolved
-
-
-def _reconcile_one(address: str, session: Session) -> ExitCode:
-    """`plan` plus acting on what it found, for one resource.
-
-    The same stream with the second half run, which is the whole of the plan/apply
-    symmetry: nothing here decides whether to write, it decides whether to call the
-    only thing that does. Measured once — the changes acted on are the ones that
-    were decided, not a second look that may disagree.
-    """
-    from dotfiles import engine
-    from dotfiles import privilege as privileges
-
-    planned = list(engine.assess(session, engine.Selection.of(address)))
-    outcomes = [event.payload for event in engine.execute(session, planned, privileges.Privilege())]
-
-    for outcome in outcomes:
-        if isinstance(outcome, Outcome):
-            (success if outcome.ok else error)(f'{outcome.change.item}: {outcome.message or outcome.status}')
-        else:
-            error(str(outcome.reason))
-
-    if any(not isinstance(outcome, Outcome) or not outcome.ok for outcome in outcomes):
-        return ExitCode.ISSUE
-
-    # What `apply` could not repair is still a finding, and saying so is what keeps
-    # a machine awaiting a safekeep restore from reading as converged. It is
-    # `check`'s answer rather than `plan`'s, which is why it is reported and not
-    # counted as drift left behind.
-    _, attention, _ = reconcile.sift([event.payload for event in planned if isinstance(event.payload, Change)])
-    for change in attention:
-        render_change(change)
-    return ExitCode.ISSUE if attention else ExitCode.CONVERGED
 
 
 def available_sources() -> list[str]:
@@ -126,54 +90,54 @@ OfflineOption = typer.Option(False, '--offline', help='Install from a staged off
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 
 
-def _apply_phases(
+def _apply_resource(
     resource: str,
     machine: str | None,
     offline: bool,
     source: str | None,
     owner: str | None = None,
+    *,
+    force: bool = False,
 ) -> None:
-    """Run the install phases this resource owns, or just the ones `--source` names.
+    """Converge this resource, or just what `--source` names and what that needs.
 
-    A section names a provider, and a phase declares which providers it installs,
-    so narrowing to a section is an intersection rather than a guess. This was
-    refused until `Phase.providers` replaced the hand-written `owner_aware`
-    column — before that the registry genuinely had no way to say which phase
-    installs a section, and honouring the flag would have installed more than was
-    asked for.
+    The same call `dotfiles apply` makes, narrowed by addresses rather than by a
+    resource sub-app of its own. A section names a provider and an address is
+    `resource/provider`, so `--source` is a set of addresses rather than the
+    intersection of a section against a hand-written phase-to-provider column.
 
-    Narrowing *below* a section — one tool out of `github_releases` — is still
-    the resolver's, and still absent.
+    Narrowing *below* a section — one tool out of `github_releases` — is still the
+    resolver's, and still absent.
 
-    `--owner` is here because a phase that cannot be told whose entries were asked
-    for narrows nothing and updates the lot. It arrived to serve `update.sh --mine`
-    against `install/phases.sh`'s hand-maintained `owner_aware` column; the column
-    and the script are gone and the flag is the survivor, because ownership is a
-    fact about the entries and `Plan.providers` derives it.
+    `--owner` narrows the plan rather than the selection, because ownership is a
+    fact about the entries. It arrived to serve `update.sh --mine` against
+    `install/phases.sh`'s hand-maintained `owner_aware` column; the column and the
+    script are gone and the flag is the survivor.
     """
-    from dotfiles import apply
-    from dotfiles import registry
-
-    providers = None
-    covered = frozenset({resource})
+    addresses = (resource,)
     if source:
-        serving = registry.serving(source)
-        if not serving:
+        provider = registry.for_section(source)
+        if provider is None:
             error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
             raise typer.Exit(ExitCode.USAGE)
-        # The toolchain a section needs comes with it. `needed_by` says a runtime
-        # is wanted *because* this section resolved, so narrowing to the section
-        # and dropping the runtime asks for something that cannot install.
-        providers = frozenset(provider.name for provider in serving)
-        covered |= {provider.resource for provider in serving}
+        if provider.resource != resource:
+            error(f'{source} belongs to {provider.resource}, not {resource}')
+            raise typer.Exit(ExitCode.USAGE)
+        # Every provider `serving` names, not only the one that owns the section:
+        # `needed_by` says a runtime is wanted *because* this section resolved, so
+        # narrowing to the section and dropping the runtime asks for something that
+        # cannot install. The addresses carry their own resources, which is what
+        # lets a `packages` selection reach `toolchains` without naming it here.
+        addresses = tuple(addressed(one.resource, one.name) for one in registry.serving(source))
 
     raise typer.Exit(
-        apply.apply_machine(
-            only=covered,
+        reconcile.apply_machine(
+            engine.Selection.of(*addresses),
             machine=machine,
             offline=offline,
             owner=owner,
-            providers=providers,
+            force=force,
+            flags={'selection': ', '.join(addresses)},
         )
     )
 
@@ -201,7 +165,7 @@ def packages_apply(
     owner: str = OwnerOption,
 ) -> None:
     """Install every declared package that is missing."""
-    _apply_phases('packages', machine, offline, source, owner)
+    _apply_resource('packages', machine, offline, source, owner)
 
 
 @packages_app.command('list')
@@ -241,7 +205,7 @@ def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -
 @toolchains_app.command('apply')
 def toolchains_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
     """Install or update the language toolchains."""
-    _apply_phases('toolchains', machine, offline, None)
+    _apply_resource('toolchains', machine, offline, None)
 
 
 @toolchains_app.command('list')
@@ -275,7 +239,7 @@ def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> N
 @plugins_app.command('apply')
 def plugins_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
     """Install or update the declared plugins."""
-    _apply_phases('plugins', machine, offline, None)
+    _apply_resource('plugins', machine, offline, None)
 
 
 @plugins_app.command('list')
@@ -309,19 +273,14 @@ def symlinks_apply(
 
     Only what differs is written. `--force` is the deliberate answer to a
     refusal, for adopting a machine that already had dotfiles of its own.
+
+    The stray-branch warning and `deploy.epilogue` are `apply_machine`'s, and
+    were this command's own until it and the composite verb became one call. The
+    checkout warning has to come first — this is the command that writes the
+    checked-out branch into `$HOME` — and it does, because the walk reports it
+    before measuring anything.
     """
-    from dotfiles import deploy
-    from dotfiles.commands.manage import report_stray_branch
-
-    # Before the walk, not in the epilogue: this is the command that writes the
-    # checked-out branch into $HOME, so which branch it read from belongs above
-    # what it did rather than after it.
-    report_stray_branch()
-
-    session = Session.resolve(machine, force=force)
-    outcome = _reconcile_one('symlinks', session)
-    deploy.epilogue(session)
-    raise typer.Exit(outcome)
+    _apply_resource('symlinks', machine, False, None, force=force)
 
 
 @symlinks_app.command('show')
@@ -366,7 +325,7 @@ def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
 @env_app.command('apply')
 def env_apply(machine: str = MachineOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
-    raise typer.Exit(_reconcile_one('env', _session(machine)))
+    _apply_resource('env', machine, False, None)
 
 
 @env_app.command('show')
@@ -401,7 +360,7 @@ def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, so
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
     """
-    _apply_phases('system', machine, offline, source)
+    _apply_resource('system', machine, offline, source)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

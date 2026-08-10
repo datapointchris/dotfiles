@@ -21,6 +21,7 @@ from dotfiles import paths
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.output import warn
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -109,6 +110,26 @@ def stray_branch(repo: Path = paths.REPO_ROOT) -> str | None:
         return None
     name = branch.transcript.strip()
     return None if name in {DEPLOYMENT_BRANCH, 'HEAD'} else name
+
+
+def report_stray_branch() -> None:
+    """Say when the deployed config is coming from somewhere other than `main`.
+
+    The branch name is already inside `position.describe` as part of the upstream,
+    where it reads as incidental. It is not: this checkout is what `$HOME` links
+    into, so the branch decides what the machine is running.
+
+    Deliberately a warning and not a refusal. Checking out a branch here is a
+    legitimate thing to do on purpose, and the failure it guards against is not
+    knowing — which a line of output fixes and a blocked command does not.
+
+    Beside `stray_branch` rather than in the command layer, because both write
+    verbs announce it and neither is a command: `reconcile` would otherwise reach
+    upward into the CLI that calls it, which is an import only a deferred one can
+    satisfy.
+    """
+    if stray := stray_branch():
+        warn(f'deploying from branch {stray}, not {DEPLOYMENT_BRANCH} — this checkout is what $HOME links into')
 
 
 def fetch(repo: Path = paths.REPO_ROOT) -> bool:

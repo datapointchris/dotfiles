@@ -20,15 +20,15 @@ import typer
 
 from dotfiles import bridge
 from dotfiles import checkout
+from dotfiles import engine
 from dotfiles import paths
+from dotfiles import reconcile
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import success
-from dotfiles.output import warn
-from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 repo_app = typer.Typer(no_args_is_help=True, help='The dotfiles repository itself')
@@ -127,13 +127,8 @@ def update(
         console.print(f'  {line}')
 
     if deployed:
-        from dotfiles import deploy
-        from dotfiles.commands import resources
-
         hint(f'{len(deployed)} deployed file(s) changed — rebuilding symlinks')
-        session = Session.resolve()
-        resources._reconcile_one('symlinks', session)
-        deploy.epilogue(session)
+        reconcile.apply_machine(engine.Selection.of('symlinks'), flags={'selection': 'symlinks'})
 
     if not dependencies:
         return
@@ -162,7 +157,7 @@ def report_position(*, fetch_first: bool) -> ExitCode:
         error('could not reach the remote')
         return ExitCode.ISSUE
 
-    report_stray_branch()
+    checkout.report_stray_branch()
 
     position = checkout.read()
     if position is None:
@@ -171,18 +166,3 @@ def report_position(*, fetch_first: bool) -> ExitCode:
 
     console.print(f'[bold]repo[/] {position.describe(dt.datetime.now(dt.UTC))}')
     return ExitCode.DRIFT if position.behind else ExitCode.CONVERGED
-
-
-def report_stray_branch() -> None:
-    """Say when the deployed config is coming from somewhere other than `main`.
-
-    The branch name is already inside `position.describe` as part of the upstream,
-    where it reads as incidental. It is not: this checkout is what `$HOME` links
-    into, so the branch decides what the machine is running.
-
-    Deliberately a warning and not a refusal. Checking out a branch here is a
-    legitimate thing to do on purpose, and the failure it guards against is not
-    knowing — which a line of output fixes and a blocked command does not.
-    """
-    if stray := checkout.stray_branch():
-        warn(f'deploying from branch {stray}, not {checkout.DEPLOYMENT_BRANCH} — this checkout is what $HOME links into')
