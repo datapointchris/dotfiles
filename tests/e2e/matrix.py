@@ -16,10 +16,10 @@ cost, and what failed. That file is what `task test:report` reads — the same
 shape as `dotfiles report` and deliberately not part of it, because how the tests
 did is not a fact about this machine.
 
-    uv run python tests/e2e/matrix.py                    # levels 0-3
-    uv run python tests/e2e/matrix.py --through full     # everything
-    uv run python tests/e2e/matrix.py --level set        # one rung
-    uv run python tests/e2e/matrix.py --environment wsl  # one column
+    uv run python tests/e2e/matrix.py                                   # every level
+    uv run python tests/e2e/matrix.py --through existing-install         # skip the hour
+    uv run python tests/e2e/matrix.py --level section-over-base          # one rung
+    uv run python tests/e2e/matrix.py --environment wsl                  # one column
 """
 
 from __future__ import annotations
@@ -180,7 +180,7 @@ def report(cells: list[Cell], into: Path, wall: float) -> Path:
 def main(argv: list[str] | None = None) -> int:
     known = ', '.join(f'{level.number}/{level.name}' for level in levels.LEVELS)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--through', default=str(levels.DEFAULT_THROUGH), help=f'run levels up to and including this one ({known})')
+    parser.add_argument('--through', default=levels.LAST, help=f'stop after this level, top of the ladder by default ({known})')
     parser.add_argument('--level', default='', help='run exactly one level instead of a ladder')
     parser.add_argument('--environment', default='', help='comma-separated environments (default: all)')
     parser.add_argument('--concurrency', type=int, default=0, help="override every level's own width")

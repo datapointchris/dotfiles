@@ -104,7 +104,7 @@ tasks:
       - uv run pytest
 
   test:e2e:
-    desc: Install whole machines in containers (tens of minutes each)
+    desc: 'Raw pytest over every e2e level at once — prefer test:matrix, which orders and records them'
     cmds:
       - uv run pytest tests/e2e --docker {{.CLI_ARGS}}
 
@@ -118,34 +118,44 @@ tasks:
   # name rather than remembering a file path and a flag combination.
 
   test:matrix:
-    desc: 'Walk levels 0-3 over every environment (--through full for all of it)'
+    desc: 'Every level over every environment — the whole matrix, and it costs an hour'
     cmds:
-      - uv run python tests/e2e/matrix.py {{.CLI_ARGS}}
+      - uv run python tests/e2e/matrix.py --keep {{.CLI_ARGS}}
+
+  test:matrix:quick:
+    desc: 'The matrix without the rung measured in hours: no-container through existing-install'
+    cmds:
+      - uv run python tests/e2e/matrix.py --through existing-install --keep {{.CLI_ARGS}}
 
   test:level:
-    desc: 'Run one rung: task test:level -- --level set --environment wsl'
+    desc: 'One rung by name: task test:level -- --level section-over-base --environment wsl'
     cmds:
       - uv run python tests/e2e/matrix.py {{.CLI_ARGS}}
 
-  test:container:
-    desc: 'Level 1: the container and the firewall, nothing installed (~25s each)'
+  test:no-container:
+    desc: 'Level 0: everything decidable without starting a machine (~30s)'
     cmds:
-      - uv run python tests/e2e/matrix.py --level container {{.CLI_ARGS}}
+      - uv run python tests/e2e/matrix.py --level no-container {{.CLI_ARGS}}
 
-  test:set:
-    desc: 'Level 2: one section over a base image (minutes each)'
+  test:empty-container:
+    desc: 'Level 1: a container with nothing installed in it (~25s each)'
     cmds:
-      - uv run python tests/e2e/matrix.py --level set {{.CLI_ARGS}}
+      - uv run python tests/e2e/matrix.py --level empty-container {{.CLI_ARGS}}
 
-  test:installed:
+  test:section-over-base:
+    desc: 'Level 2: one packages.yml section over a base image (minutes each)'
+    cmds:
+      - uv run python tests/e2e/matrix.py --level section-over-base {{.CLI_ARGS}}
+
+  test:existing-install:
     desc: 'Level 3: assert against the install already in the container (~20s each)'
     cmds:
-      - uv run python tests/e2e/matrix.py --level installed {{.CLI_ARGS}}
+      - uv run python tests/e2e/matrix.py --level existing-install {{.CLI_ARGS}}
 
-  test:full:
-    desc: 'Level 4: install whole machines from nothing (20-30 min EACH, serial)'
+  test:fresh-install:
+    desc: 'Level 4: install whole machines from nothing (20-30 min each, two at a time)'
     cmds:
-      - uv run python tests/e2e/matrix.py --level full --keep {{.CLI_ARGS}}
+      - uv run python tests/e2e/matrix.py --level fresh-install --keep {{.CLI_ARGS}}
 
   test:report:
     desc: What the last matrix runs did, and what each cell cost
@@ -153,7 +163,7 @@ tasks:
       - uv run python tests/e2e/report.py {{.CLI_ARGS}}
 
   test:logs:
-    desc: 'Tail a running cell: task test:logs -- full-archlinux'
+    desc: 'Tail a running cell: task test:logs -- fresh-install-archlinux'
     cmds:
       - uv run python tests/e2e/report.py --tail {{.CLI_ARGS}}
 

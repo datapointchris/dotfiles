@@ -387,7 +387,7 @@ def over_base(base: str, container_environment: Environment) -> Iterator[Machine
     result depend on the first's. Starting from an image costs about a second,
     which is what makes per-test isolation affordable here and not there.
     """
-    name = container_name('set', container_environment.name)
+    name = container_name('section', container_environment.name)
     docker('rm', '-f', name)
     docker(
         'run',

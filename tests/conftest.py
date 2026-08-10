@@ -115,7 +115,9 @@ def pytest_addoption(parser):
     # file path and a flag combination and so had to be remembered. It selects
     # *and* sets the mode: `installed` and `full` are the same tests, and
     # `--installed` is the whole difference between them.
-    parser.addoption('--level', default='', help='run one rung of the ladder: 0/unit, 1/container, 2/set, 3/installed, 4/full')
+    parser.addoption(
+        '--level', default='', help='one rung of the ladder, by name or number; `tests/e2e/levels.py` is what each costs and answers'
+    )
 
 
 INSTALLING = {

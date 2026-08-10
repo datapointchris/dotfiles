@@ -64,7 +64,7 @@ class Level:
 LEVELS = (
     Level(
         number=0,
-        name='unit',
+        name='no-container',
         purpose=None,
         fixture=None,
         docker=False,
@@ -76,8 +76,8 @@ LEVELS = (
     ),
     Level(
         number=1,
-        name='container',
-        purpose='probe',
+        name='empty-container',
+        purpose='empty',
         fixture='container',
         docker=True,
         installed=False,
@@ -88,8 +88,8 @@ LEVELS = (
     ),
     Level(
         number=2,
-        name='set',
-        purpose='set',
+        name='section-over-base',
+        purpose='section',
         fixture='over_base',
         docker=True,
         installed=False,
@@ -100,7 +100,7 @@ LEVELS = (
     ),
     Level(
         number=3,
-        name='installed',
+        name='existing-install',
         purpose='machine',
         fixture='machine',
         docker=True,
@@ -112,7 +112,7 @@ LEVELS = (
     ),
     Level(
         number=4,
-        name='full',
+        name='fresh-install',
         purpose='machine',
         fixture='machine',
         docker=True,
@@ -132,13 +132,20 @@ LEVELS = (
 BY_NAME = {level.name: level for level in LEVELS}
 BY_NUMBER = {level.number: level for level in LEVELS}
 
-DEFAULT_THROUGH = 3
-"""Where `task test:matrix` stops.
+LAST = LEVELS[-1].name
+"""Where a matrix run stops unless told otherwise: the top.
 
-Level 4 is opt-in because it is the only one whose cost is measured in hours once
-the environments are counted, and because levels 0 to 3 catch what it would catch
-about the rig, the assertions and one section at a time.
+`--through` defaults here because "run the matrix" should mean the matrix. The
+expensive rung is opt-*out*, and the runner prints what each level costs before
+it spends it, so the price is stated rather than hidden behind a default that
+quietly did less than the word says.
+
+`task test:matrix:quick` is the subset worth having — everything below the rung
+whose cost is measured in hours once the environments are counted.
 """
+
+QUICK_THROUGH = 'existing-install'
+"""What `--through` means for the subset that answers most questions in a minute."""
 
 
 def resolve(wanted: str) -> Level:
@@ -160,11 +167,11 @@ def level_of(fixturenames: tuple[str, ...] | list[str], *, docker: bool, install
     its cheapest rung.
     """
     if not docker:
-        return BY_NAME['unit']
+        return BY_NAME['no-container']
     if 'over_base' in fixturenames:
-        return BY_NAME['set']
+        return BY_NAME['section-over-base']
     if 'machine' in fixturenames or 'fresh_install' in fixturenames:
-        return BY_NAME['installed'] if installed else BY_NAME['full']
+        return BY_NAME['existing-install'] if installed else BY_NAME['fresh-install']
     if 'container' in fixturenames or 'fresh_container' in fixturenames:
-        return BY_NAME['container']
-    return BY_NAME['unit']
+        return BY_NAME['empty-container']
+    return BY_NAME['no-container']
