@@ -188,15 +188,57 @@ def github_token() -> str | None:
     return None
 
 
+GITHUB_HOSTS = frozenset({'api.github.com', 'github.com'})
+"""The only hosts a GitHub credential is ever sent to.
+
+Deliberately excludes the asset CDNs — `objects.githubusercontent.com` and its
+siblings — even though a release download lands there. They are S3-backed and
+serve a pre-signed URL that needs no credential of ours; `s3.amazonaws.com`
+answers a bearer token it does not recognise with a 400, measured 2026-08-10, and
+that is the *polite* failure. The impolite one is that the token was sent at all.
+"""
+
+
+def authorized_host(url: str) -> bool:
+    """Whether this URL is one of ours to authenticate to."""
+    return urllib.parse.urlsplit(url).hostname in GITHUB_HOSTS
+
+
+class _StripAuthorizationAcrossHosts(urllib.request.HTTPRedirectHandler):
+    """Drop the credential when a redirect leaves GitHub.
+
+    urllib re-sends every header to a redirect target, and a GitHub asset download
+    redirects to a CDN by design — so the default behaviour hands the token to a
+    third party on the request path that runs most often. Stripping it here rather
+    than declining to follow the redirect, because following it is how the download
+    works and the pre-signed URL needs nothing from us.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001, ANN201 — urllib's signature
+        following = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if following is not None and not authorized_host(newurl):
+            following.remove_header('Authorization')
+        return following
+
+
 def request(url: str, accept: str | None = None) -> bytes:
+    """Fetch one URL, sending a credential only where one belongs.
+
+    The token used to go on every request this module made, whatever the host —
+    so `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
+    `pypi.org` all received a GitHub PAT, and S3 rejected the download outright
+    because of it. Scoping it is a fix for both halves: the tools install again,
+    and a credential stops leaving the estate it belongs to.
+    """
     headers = {'User-Agent': USER_AGENT}
     if accept:
         headers['Accept'] = accept
     token = github_token()
-    if token:
+    if token and authorized_host(url):
         headers['Authorization'] = f'Bearer {token}'
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
+    opener = urllib.request.build_opener(_StripAuthorizationAcrossHosts())
+    with opener.open(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
         return response.read()
 
 

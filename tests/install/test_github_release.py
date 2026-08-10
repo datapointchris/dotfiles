@@ -8,6 +8,7 @@ Run with: pytest tests/install/test_github_release.py
 """
 
 import urllib.error
+import urllib.request
 
 from dotfiles import github_release
 
@@ -262,3 +263,62 @@ class TestLatestTag:
         monkeypatch.setattr(github_release, 'request', refuse)
 
         assert github_release.latest_tag('aws/aws-cli') is None
+
+
+class TestCredentialScope:
+    """Where a GitHub token is allowed to go, which is two hosts and no others.
+
+    It went on every request this module made, whatever the host — so
+    `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
+    `pypi.org` each received a GitHub PAT. S3 answered the one it did not
+    recognise with a 400, which is how it surfaced: `mount-s3` stopped installing
+    on any machine whose environment carried a token.
+    """
+
+    def test_the_api_and_the_site_are_authenticated(self):
+        assert github_release.authorized_host('https://api.github.com/repos/owner/repo/releases/latest')
+        assert github_release.authorized_host('https://github.com/owner/repo/releases/download/v1/asset.tar.gz')
+
+    def test_a_third_party_host_is_not(self):
+        for url in (
+            'https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.tar.gz',
+            'https://releases.hashicorp.com/terraform-ls/0.39.0/terraform-ls.zip',
+            'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip',
+            'https://pypi.org/pypi/pyyaml/6.0/json',
+        ):
+            assert not github_release.authorized_host(url), url
+
+    def test_the_asset_cdn_is_not_authenticated_even_though_github_redirects_there(self):
+        """A release download lands on an S3-backed CDN carrying a pre-signed URL
+        that needs nothing from us. Sending the token there is both the 400 and the
+        leak, on the request path that runs most often."""
+        assert not github_release.authorized_host('https://objects.githubusercontent.com/github-production-release-asset/1/2')
+
+    def test_a_lookalike_host_is_not_authenticated(self):
+        """Suffix matching would hand the token to anyone who can register a
+        domain ending in the right letters."""
+        for url in ('https://api.github.com.evil.test/x', 'https://notgithub.com/x', 'https://github.com.evil.test/x'):
+            assert not github_release.authorized_host(url), url
+
+    def test_the_header_is_dropped_when_a_redirect_leaves_github(self, monkeypatch):
+        """urllib re-sends every header to a redirect target, so following one off
+        GitHub is what hands the credential to a third party."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_pretend')
+        handler = github_release._StripAuthorizationAcrossHosts()
+        original = urllib.request.Request('https://github.com/owner/repo/releases/download/v1/a.tar.gz')
+        original.add_header('Authorization', 'Bearer ghp_pretend')
+
+        followed = handler.redirect_request(original, None, 302, 'Found', {}, 'https://objects.githubusercontent.com/x')
+
+        assert followed is not None
+        assert followed.get_header('Authorization') is None
+
+    def test_the_header_survives_a_redirect_that_stays_on_github(self):
+        handler = github_release._StripAuthorizationAcrossHosts()
+        original = urllib.request.Request('https://github.com/owner/repo/releases/latest')
+        original.add_header('Authorization', 'Bearer ghp_pretend')
+
+        followed = handler.redirect_request(original, None, 302, 'Found', {}, 'https://api.github.com/repos/owner/repo')
+
+        assert followed is not None
+        assert followed.get_header('Authorization') == 'Bearer ghp_pretend'
