@@ -521,6 +521,21 @@ def app_store_item(tmp_path: Path, name: str, identifier: int):
     return live.plan.for_resource('system')[0]
 
 
+def test_the_app_store_provider_asks_mas_and_not_only_the_bundle(tmp_path: Path) -> None:
+    """Through `registry.evidence_for`, not `by_app_store` directly.
+
+    The rule and the provider that uses it are separate edits, and the wiring is
+    the half that silently reverted once: with the rule written and the provider
+    still pointing at `by_app_bundle`, every test below this one passed while the
+    machine kept reporting the app missing.
+    """
+    item = app_store_item(tmp_path, 'Disk Space Analyzer', 446243721)
+
+    found = registry.evidence_for(item, {'mas': frozenset({'446243721'})})
+
+    assert found.verdict is Verdict.MATCHED
+
+
 def test_an_app_store_app_whose_bundle_is_not_its_store_title_is_found_by_mas(tmp_path: Path) -> None:
     """446243721 is `Disk Space Analyzer` in the store and `Disk Inspector.app` on
     disk, so no name-derived path finds it. Before mas was asked, this fell through

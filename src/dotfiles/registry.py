@@ -444,16 +444,17 @@ class CaskProvider(RegistryProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class AppStoreProvider(CatalogProvider):
-    """An App Store app, judged by its bundle. Its CLI is a second question.
+    """An App Store app, judged by its bundle and then by `mas list`.
 
-    The bundle rather than a `mas list` inventory, because the two answer
-    different questions: an app installed from the store on another machine and
-    restored by Migration Assistant is present and is not in `mas list`. Which is
-    also why `mas` has no entry in `evidence.INSTALLER_QUERIES`.
+    The bundle first, because the two answer different questions: an app
+    installed from the store on another machine and restored by Migration
+    Assistant is present and is not in `mas list`. `mas` second, because a store
+    title and a bundle name are free to differ, and the bundle check alone cannot
+    see an app that renamed itself.
     """
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
-        return ev.by_app_bundle(item)
+        return ev.by_app_store(item, installed)
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
