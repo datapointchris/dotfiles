@@ -43,6 +43,20 @@ tools for nothing.
 
 TIMEOUT_SECONDS = 10
 
+REPORT_LANDING = ('-o', '/dev/null', '-w', '%{url_effective}')
+"""Make curl say where the chain ended, since `-L` means it often is not the target.
+
+Three sources redirect to a host the requested URL does not name — the uv and
+claude-code installers, and every GitHub release asset. The verdict was always
+right, because `-L` follows through and the final fetch is what succeeds or fails;
+the *host* was not, and that is what the firewalled containers blackhole.
+
+Part of the request rather than added at the call site so `as_shell` keeps
+rendering what actually ran. It changes only where output goes: same method, same
+URL, same agent, which is the property a replay depends on. curl writes this even
+when `-f` makes it exit non-zero, so a refused probe still names the host that
+refused it."""
+
 DOTFILES_REPO = 'https://github.com/datapointchris/dotfiles.git'
 """Probed as its own row because the install starts by cloning it.
 
@@ -80,12 +94,12 @@ class Probe:
         """
         if self.cloned:
             return ('git', 'ls-remote', '--quiet', self.target, 'HEAD')
-        return ('curl', '-fsSL', '--head', '-A', PROBE_AGENT, '--connect-timeout', str(TIMEOUT_SECONDS), self.target)
+        return ('curl', '-fsSL', '--head', '-A', PROBE_AGENT, '--connect-timeout', str(TIMEOUT_SECONDS), *REPORT_LANDING, self.target)
 
     def fallback_command(self) -> tuple[str, ...] | None:
         if self.cloned:
             return None
-        return ('curl', '-fsSL', '-A', PROBE_AGENT, '--connect-timeout', str(TIMEOUT_SECONDS), '-r', '0-0', self.target)
+        return ('curl', '-fsSL', '-A', PROBE_AGENT, '--connect-timeout', str(TIMEOUT_SECONDS), '-r', '0-0', *REPORT_LANDING, self.target)
 
     def as_shell(self) -> str:
         """The probe as a copyable one-liner, for a container to replay.
@@ -103,6 +117,13 @@ class Probe:
 class Verdict:
     probe: Probe
     reachable: bool
+
+    landed: str = ''
+    """The host the request ended on, when that is not the one it started on.
+
+    Empty is the common answer and means "the target's own host", so a reader and
+    the harness both see a redirect only where there was one. Defaulted because it
+    is a later addition and the constructions that predate it are still correct."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -275,18 +296,50 @@ def _registry_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
     return tuple(found.values())
 
 
-def measure(probe: Probe) -> bool:
-    """Whether this source answered, through `effects` like every other subprocess.
+def measure(probe: Probe) -> Verdict:
+    """Whether this source answered, and which host answered, through `effects`.
 
     The range GET runs only when HEAD fails, so a host that accepts HEAD costs one
     request rather than two — which matters against `api.github.com`, where the
     probe run shares the machine's hourly budget with everything else.
+
+    The landing is taken from whichever attempt ran last, because that is the one
+    the verdict describes. A HEAD refused by a CDN and a range GET refused by the
+    same CDN land identically; a HEAD refused at the entry host and a range GET
+    that got further do not, and the second is the truer answer.
     """
     environment = {'GIT_TERMINAL_PROMPT': '0'} if probe.cloned else None
-    if effects.run(probe.command(), env=environment, output=effects.Output.QUIET).ok:
-        return True
+    answered = effects.run(probe.command(), env=environment, output=effects.Output.QUIET)
+    if answered.ok:
+        return Verdict(probe, True, _landing(probe, answered.stdout))
+
     fallback = probe.fallback_command()
-    return bool(fallback and effects.run(fallback, output=effects.Output.QUIET).ok)
+    if fallback is None:
+        return Verdict(probe, False, _landing(probe, answered.stdout))
+    retried = effects.run(fallback, output=effects.Output.QUIET)
+    return Verdict(probe, retried.ok, _landing(probe, retried.stdout or answered.stdout))
+
+
+def _landing(probe: Probe, written: str) -> str:
+    """The host curl ended on, where that is not the host it started on.
+
+    The host and not the effective URL, though curl reports the URL: the host is
+    all any reader of this wants, and a release asset's effective URL is 900-odd
+    characters of signed CDN query string carrying a SAS signature and a JWT. That
+    is unreadable in a file whose reason for being committed is that it gets read
+    and diffed, and it is a short-lived credential nobody needs in git.
+
+    A clone has no chain to report and `git ls-remote` writes refs on the same
+    stream, so it is answered before anything is parsed rather than after — a ref
+    line happens not to look like a URL, which is luck and not a check.
+    """
+    if probe.cloned:
+        return ''
+    landed = written.strip()
+    if '//' not in landed:
+        return ''
+    host = urlsplit(landed).netloc
+    return host if host != probe.host else ''
 
 
 def asset_probe(machine: machines.Machine) -> tuple[Probe | None, str]:
@@ -330,6 +383,28 @@ def asset_probe(machine: machines.Machine) -> tuple[Probe | None, str]:
 RESULTS_HEADER = 'Dotfiles Connectivity Test Results'
 RULE = '-' * 78
 
+LANDED_COLUMN = 'LANDED'
+"""The header word that says a file records where each probe ended.
+
+Read by `tests/e2e/harness.py` to decide whether it can derive the blocked hosts
+from the rows or has to fall back to the CDN names it used to hardcode. Named here
+because the file that writes the column is the one that should say what identifies
+it."""
+
+
+def _row(verdict: Verdict) -> str:
+    """One measured row, ending at REACH unless there is a landing to add.
+
+    The trailing separator is omitted rather than emitted empty, so a row carries a
+    sixth field only when it has one to carry. `rstrip` cannot do it: it takes the
+    padding off and leaves the pipe, which splits to an empty sixth field and is the
+    thing being avoided.
+    """
+    head = f'{"YES" if verdict.reachable else "NO":<4}| {verdict.probe.section:<18}| {verdict.probe.name:<24}| {verdict.probe.target:<64}| '
+    if not verdict.landed:
+        return f'{head}{verdict.probe.reach}'
+    return f'{head}{verdict.probe.reach:<9}| {verdict.landed}'
+
 
 def render(machine: machines.Machine, measurement: Measurement, *, host: str, when: str, user: str, system: str) -> str:
     """The measurement as the committed results file.
@@ -345,12 +420,16 @@ def render(machine: machines.Machine, measurement: Measurement, *, host: str, wh
     `Probe.as_shell` documents. The only other source is the section name, which
     cannot answer it: a custom installer's section is `custom_installer` whether it
     clones or downloads, and three of them clone.
+
+    LANDED is sixth, holds a host rather than a URL, and is written only where a row
+    redirected off its own host — three rows in forty-odd. Always writing it would
+    repeat TARGET on every other line, in a file whose reason for being committed is
+    that a human reads it and diffs it. The absent value is why the *header* is what
+    says whether a file carries the column at all: "nothing redirected" and "written
+    before the column existed" are different facts, and the rows cannot tell them
+    apart.
     """
-    rows = '\n'.join(
-        f'{"YES" if verdict.reachable else "NO":<4}| {verdict.probe.section:<18}| {verdict.probe.name:<24}| '
-        f'{verdict.probe.target:<64}| {verdict.probe.reach}'
-        for verdict in measurement.verdicts
-    )
+    rows = '\n'.join(_row(verdict) for verdict in measurement.verdicts)
     reachable = sum(1 for verdict in measurement.verdicts if verdict.reachable)
     unprobed = (
         ['', 'Unprobed - nothing to ask, rather than asked and blocked:', *(f'  {reason}' for reason in measurement.unprobed)]
@@ -370,7 +449,7 @@ def render(machine: machines.Machine, measurement: Measurement, *, host: str, wh
             '',
             f'Summary: {reachable} reachable, {len(measurement.verdicts) - reachable} blocked',
             '',
-            f'{"":<4}| {"SECTION":<18}| {"NAME":<24}| {"TARGET":<64}| REACH',
+            f'{"":<4}| {"SECTION":<18}| {"NAME":<24}| {"TARGET":<64}| {"REACH":<9}| {LANDED_COLUMN}',
             RULE,
             rows,
             RULE,
@@ -394,4 +473,4 @@ def measure_all(machine: machines.Machine) -> Measurement:
     elif why:
         unprobed.append(why)
 
-    return Measurement(tuple(Verdict(probe, measure(probe)) for probe in found), tuple(unprobed))
+    return Measurement(tuple(measure(probe) for probe in found), tuple(unprobed))

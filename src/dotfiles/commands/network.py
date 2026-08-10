@@ -77,6 +77,7 @@ def check(machine_name: str | None = MachineOption, output: Path | None = Output
                         'target': verdict.probe.target,
                         'reach': str(verdict.probe.reach),
                         'reachable': verdict.reachable,
+                        'landed': verdict.landed,
                     }
                     for verdict in verdicts
                 ],

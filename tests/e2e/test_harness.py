@@ -33,6 +33,9 @@ from harness import measured_network
 from harness import reachable_probes
 from harness import shadow_source
 
+from dotfiles import machine as machines
+from dotfiles import network
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The measured network
 # ─────────────────────────────────────────────────────────────────────────────
@@ -62,7 +65,69 @@ def test_github_stays_reachable_because_its_block_is_path_scoped() -> None:
     blocked, reachable = measured_network()
     assert 'github.com' in reachable
     assert 'github.com' not in blocked
+    assert any(host.endswith('githubusercontent.com') for host in blocked), (
+        'blackholing the CDN a download redirects to is how a path-scoped block becomes a host rule'
+    )
+
+
+OLD_FORMAT_RESULTS = """\
+    | SECTION           | NAME                    | TARGET                          | REACH
+------------------------------------------------------------------------------
+NO  | github_asset      | release asset download  | https://github.com/o/r/releases/download/v1/x| download
+YES | git_clone         | dotfiles                | https://github.com/datapointchris/dotfiles.git| clone
+------------------------------------------------------------------------------
+"""
+"""A results file as it was written before the LANDED column, hand-built because
+nothing produces this shape any more. The committed file is one of these until the
+work box is next behind its own firewall to regenerate it."""
+
+
+def network_against(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    results = tmp_path / 'connectivity-results.txt'
+    results.write_text(text)
+    monkeypatch.setattr(harness, 'CONNECTIVITY_RESULTS', results)
+    return measured_network()
+
+
+def test_a_file_without_the_landed_column_still_blackholes_the_asset_cdns(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The fallback, and it is load-bearing rather than tidy.
+
+    Deriving from the rows alone would contribute nothing here — the asset row names
+    github.com, which is reachable through the clone row, so the both-verdicts rule
+    strips it. The firewalled containers would blackhole an empty set and go on
+    reporting green while rehearsing no firewall at all.
+    """
+    blocked, _ = network_against(monkeypatch, tmp_path, OLD_FORMAT_RESULTS)
+
     assert set(ASSET_CDN_HOSTS) <= set(blocked)
+
+
+def test_a_file_with_the_landed_column_derives_the_cdn_instead(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Rendered rather than hand-written, because the header is the format marker and
+    only `network.render` writes it — a hand-built file here would keep passing after
+    the real one stopped saying what this reads."""
+    asset = network.Verdict(
+        network.Probe('github_asset', 'release asset download', 'https://github.com/o/r/releases/download/v1/x'),
+        False,
+        'release-assets.githubusercontent.com',
+    )
+    clone = network.Verdict(network.Probe('git_clone', 'dotfiles', network.DOTFILES_REPO, network.Reach.CLONE), True)
+    written = network.render(
+        machines.load('wsl-work-workstation'),
+        network.Measurement((asset, clone), ()),
+        host='h',
+        when='w',
+        user='u',
+        system='s',
+    )
+
+    blocked, _ = network_against(monkeypatch, tmp_path, written)
+
+    assert 'release-assets.githubusercontent.com' in blocked
+    assert 'github.com' not in blocked, 'the entry host is reachable through the clone row'
+    assert not set(ASSET_CDN_HOSTS) - {'release-assets.githubusercontent.com'} & set(blocked), (
+        'the hardcoded names are not added once the file says where the probe landed'
+    )
 
 
 def test_what_the_work_box_reported_blocked_is_blocked() -> None:

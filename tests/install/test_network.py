@@ -22,9 +22,19 @@ ARCHLINUX = 'archlinux-personal-workstation'
 
 LXC = 'linux-lxc-server'
 
+REACH_COLUMN = 4
+"""Indexed rather than taken from the end: LANDED follows it, and only where a row
+redirected — so `[-1]` reads REACH on most rows and something else on the three
+that matter."""
+
 
 def probes_for(name: str) -> tuple[network.Probe, ...]:
     return network.derive(machines.load(name)).probes
+
+
+def rendered_rows(measurement: network.Measurement) -> list[list[str]]:
+    written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
+    return [[cell.strip() for cell in line.split('|')] for line in written.splitlines() if line.split('|')[0].strip() in {'YES', 'NO'}]
 
 
 def test_two_machines_are_probed_differently() -> None:
@@ -164,8 +174,83 @@ def test_the_recorded_reach_survives_the_file() -> None:
     written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
     row = next(line for line in written.splitlines() if line.startswith('YES'))
 
-    assert row.split('|')[-1].strip() == 'clone'
+    assert row.split('|')[REACH_COLUMN].strip() == 'clone'
     assert not row.split('|')[1].strip().endswith('clone'), 'the section cannot answer it, which is the point'
+
+
+def measured_through(monkeypatch: pytest.MonkeyPatch, probe: network.Probe, *, ok: bool, written: str) -> network.Verdict:
+    """`measure` with curl replaced by what a real run would have printed.
+
+    Both attempts answer the same way, because what is under test is the reading of
+    the output rather than which attempt produced it.
+    """
+    completed = network.effects.Completed(command=(), returncode=0 if ok else 1, transcript=written, stdout=written)
+    monkeypatch.setattr(network.effects, 'run', lambda *_, **__: completed)
+    return network.measure(probe)
+
+
+def test_a_probe_that_moved_hosts_records_where_it_ended(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The whole point: `claude.ai` answers a 302 and `downloads.claude.ai` serves
+    the bytes, so a firewall built from the requested host blocks a host the work
+    box reaches and leaves the one that refuses resolvable."""
+    probe = network.Probe('custom_installer', 'claude-code', 'https://claude.ai/install.sh')
+
+    verdict = measured_through(monkeypatch, probe, ok=True, written='https://downloads.claude.ai/claude-code-releases/bootstrap.sh')
+
+    assert verdict.reachable
+    assert verdict.landed == 'downloads.claude.ai'
+
+
+def test_a_probe_that_stayed_put_records_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Empty is the common answer, and writing it anyway would repeat TARGET on
+    forty-odd of the file's rows to say nothing."""
+    probe = network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat')
+
+    verdict = measured_through(monkeypatch, probe, ok=True, written='https://crates.io/api/v1/crates/bat')
+
+    assert verdict.landed == ''
+
+
+def test_a_refused_probe_still_names_the_host_that_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """curl writes `-w` output whatever the exit status, and the failing case is the
+    one the firewall is built from — a NO whose landing is unknown is the bug."""
+    probe = network.Probe('github_asset', 'release asset download', 'https://github.com/neovim/neovim/releases/download/v1/x')
+    signed = 'https://release-assets.githubusercontent.com/neovim/x?sig=SECRET&jwt=SECRET'
+
+    verdict = measured_through(monkeypatch, probe, ok=False, written=signed)
+
+    assert not verdict.reachable
+    assert verdict.landed == 'release-assets.githubusercontent.com', 'the host, so no signed query string reaches git'
+
+
+def test_a_clone_never_claims_a_landing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`git ls-remote` writes refs on the same stream curl writes the URL on, so the
+    answer is the reach and not a guess at whether a line looks like a URL."""
+    probe = network.Probe('git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', Reach.CLONE)
+
+    verdict = measured_through(monkeypatch, probe, ok=True, written='deadbeef\tHEAD')
+
+    assert verdict.landed == ''
+
+
+def test_a_landing_reaches_the_results_file_and_an_absent_one_adds_no_column() -> None:
+    """The harness splits on pipes, so where the value sits is an interface.
+
+    The absent case is why `records_landings` reads the header: these two rows are
+    indistinguishable from a file written before the column existed.
+    """
+    moved = network.Verdict(
+        network.Probe('language_manager', 'uv installer', 'https://astral.sh/uv/install.sh'),
+        True,
+        'releases.astral.sh',
+    )
+    stayed = network.Verdict(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True)
+
+    rows = rendered_rows(network.Measurement((moved, stayed), ()))
+
+    assert rows[0][5] == 'releases.astral.sh'
+    assert len(rows[1]) == 5, 'a row that did not redirect ends at REACH'
+    assert rows[1][REACH_COLUMN] == 'download'
 
 
 def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeypatch: pytest.MonkeyPatch) -> None:

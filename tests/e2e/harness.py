@@ -30,6 +30,7 @@ from urllib.parse import urlsplit
 from dotfiles import catalog
 from dotfiles import engine
 from dotfiles import machine as machines
+from dotfiles import network
 from dotfiles import paths
 from dotfiles import resolve
 from dotfiles.providers import toolchain
@@ -107,6 +108,11 @@ DOCKER_DIR = UNDER_TEST / 'tests' / 'install' / 'docker'
 # /releases/download/. Blackholing the CDNs a download redirects to is how that
 # becomes a host rule, and it is why a github.com row measured NO does not become
 # a github.com entry.
+#
+# Only for a results file predating the LANDED column, which records the host each
+# probe really ended on and so derives this. Three names because a hardcoded list
+# has to guess at every CDN GitHub might use; the derivation names the one it
+# measured, and is right on the day it is read rather than the day it was typed.
 ASSET_CDN_HOSTS = (
     'objects.githubusercontent.com',
     'release-assets.githubusercontent.com',
@@ -152,10 +158,23 @@ class Probe:
     name: str
     target: str
     reach: str = ''
+    landed: str = ''
 
     @property
     def host(self) -> str:
         return urlsplit(self.target if '//' in self.target else f'https://{self.target}').netloc
+
+    @property
+    def effective_host(self) -> str:
+        """The host that actually answered — the one a firewall has to be given.
+
+        `-L` means the requested URL frequently is not the host serving the bytes:
+        claude.ai lands on downloads.claude.ai, astral.sh on releases.astral.sh, and
+        every release asset on a githubusercontent CDN. Blackholing the requested
+        host builds a firewall the work box does not have, and leaves the host that
+        really refuses resolvable.
+        """
+        return self.landed or self.host
 
     @property
     def reachable(self) -> bool:
@@ -207,20 +226,40 @@ def measured_probes() -> tuple[Probe, ...]:
         if len(fields) < 4 or fields[0] not in {'YES', 'NO'}:
             continue
         reach = fields[4] if len(fields) > 4 else ''
-        probes.append(Probe(verdict=fields[0], section=fields[1], name=fields[2], target=fields[3], reach=reach))
+        landed = fields[5] if len(fields) > 5 else ''
+        probes.append(Probe(verdict=fields[0], section=fields[1], name=fields[2], target=fields[3], reach=reach, landed=landed))
     return tuple(probes)
 
 
+def records_landings() -> bool:
+    """Whether this file carries the LANDED column, read off its header.
+
+    The header and not the rows, because the column is written only where a row
+    redirected: a file where nothing redirected and a file written before the
+    column existed have identically shaped rows and mean opposite things. Guessing
+    from the rows would read the second as the first and silently drop the CDN
+    fallback, leaving the firewalled containers hostile to nothing.
+    """
+    return any(network.LANDED_COLUMN in line for line in CONNECTIVITY_RESULTS.read_text().splitlines() if 'TARGET' in line)
+
+
 def measured_network() -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """`(blocked, reachable)` hosts, for building the container's `--add-host` set."""
+    """`(blocked, reachable)` hosts, for building the container's `--add-host` set.
+
+    Keyed on where a probe *ended*, not on what it asked for. A reachable row that
+    redirected proves both hosts answered and contributes both; a blocked one knows
+    only that the chain died, and the last host curl reached is the nearest thing to
+    a culprit there is.
+    """
     probes = measured_probes()
-    reachable = {probe.host for probe in probes if probe.reachable and probe.host}
-    blocked = {probe.host for probe in probes if not probe.reachable and probe.host}
+    reachable = {host for probe in probes if probe.reachable for host in (probe.host, probe.effective_host) if host}
+    blocked = {probe.effective_host for probe in probes if not probe.reachable and probe.effective_host}
 
     # A host under both verdicts is a path-scoped block; taking the host down
     # would take down the paths that work.
     blocked = {host for host in blocked if host not in reachable}
-    blocked |= set(ASSET_CDN_HOSTS)
+    if not records_landings():
+        blocked |= set(ASSET_CDN_HOSTS)
     return tuple(sorted(blocked)), tuple(sorted(reachable))
 
 
