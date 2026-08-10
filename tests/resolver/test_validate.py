@@ -152,6 +152,38 @@ def test_an_entry_nothing_can_install_is_an_error(tmp_path: Path, section: str, 
     assert module in ' '.join(messages(found, Severity.ERROR))
 
 
+@pytest.mark.parametrize('section', ['cargo_packages', 'go_tools'])
+def test_a_pattern_with_no_repo_to_expand_it_against_is_a_warning(tmp_path: Path, section: str) -> None:
+    """Both sections carrying the pair, because the check derives them from the
+    dataclasses rather than naming one — a version that looked only at cargo would
+    pass this for `go_tools` while the field sat unread there too.
+
+    A warning, not an error: the tool installs by whatever its manager does
+    without a prebuilt asset, so the declaration is degraded rather than broken.
+    """
+    entry: dict[str, Any] = {'name': 'ghost', 'binary_pattern': 'ghost-{version}.tar.gz'}
+    if section == 'go_tools':
+        entry['package'] = 'example.com/ghost'
+    root = tree(tmp_path, packages={section: [entry]}, manifests={'test-machine': {**LINUX, section: ['ghost']}})
+
+    found = validate.declaration(root)
+
+    assert messages(found, Severity.WARNING) == ["'ghost' declares binary_pattern but no github_repo, so no asset URL can be built"]
+    assert validate.errors(found) == ()
+
+
+def test_a_pattern_beside_its_repo_reports_nothing(tmp_path: Path) -> None:
+    """The pair is the legal shape, and the overwhelmingly common one — a check
+    firing on it would bury every real finding under the whole cargo section."""
+    root = tree(
+        tmp_path,
+        packages={'cargo_packages': [{'name': 'ghost', 'github_repo': 'someone/ghost', 'binary_pattern': 'ghost-{version}.tar.gz'}]},
+        manifests={'test-machine': {**LINUX, 'cargo_packages': ['ghost']}},
+    )
+
+    assert validate.declaration(root) == ()
+
+
 def test_an_entry_no_manifest_names_is_a_warning_not_an_error(tmp_path: Path) -> None:
     """An entry lands in `packages.yml` before the manifest that wants it, and a
     tool being staged is not a broken declaration."""
@@ -287,13 +319,10 @@ def test_fnm_overrides_both_target_triples() -> None:
     assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
 
 
-def test_a_cargo_binary_pattern_names_the_repo_it_builds_a_url_for() -> None:
-    """`binary_pattern` exists only to construct a GitHub release URL, so an entry
-    carrying one without a `github_repo` is dead configuration that reads as
-    working — the same failure `install_script` was refused for, one relation up
-    where the loader cannot see it."""
-    declaration = catalog.load(CHECKOUT / 'install' / 'packages.yml')
+def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> None:
+    """The real-declaration half of `_unbuildable_assets`, which is a warning and
+    so is not covered by `test_the_real_declaration_is_sound` above — that one
+    folds to errors alone."""
+    unbuildable = [finding for finding in validate.declaration(CHECKOUT) if 'binary_pattern' in finding.message]
 
-    orphaned = [entry.name for entry in declaration.section('cargo_packages') if entry.binary_pattern and not entry.github_repo]
-
-    assert orphaned == []
+    assert unbuildable == []
