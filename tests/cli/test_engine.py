@@ -65,10 +65,35 @@ def session() -> Session:
     return Session(machine_name=MACHINE)
 
 
-def test_the_registry_is_ordered_as_the_machine_converges() -> None:
-    """Not alphabetically: symlinks must land after the tools providing `task` and
-    before tpm reads the tmux config it deploys."""
+def test_the_walk_covers_the_resources_the_vocabulary_names() -> None:
+    """One list of addresses, so `--skip`, the help and the walk cannot disagree.
+
+    It is the measuring and printing order, not the convergence order — that is
+    `resolve.Stage`, asserted below.
+    """
     assert list(engine.resources()) == list(vocabulary.RESOURCES)
+
+
+def test_no_two_resources_share_a_stage() -> None:
+    """The precondition for sorting a walk on the stage alone.
+
+    Two resources at one stage would make the order between them a tie-break
+    nobody declared, decided by whichever happened to be measured first — which
+    is the class of ordering-by-accident the phase registry was built to supply
+    and this replaces.
+    """
+    from dotfiles import registry
+
+    owners: dict[Stage, set[str]] = {}
+    for provider in registry.PROVIDERS:
+        owners.setdefault(provider.stage, set()).add(provider.resource)
+
+    # The three resources with no provider decide their own stage in `diff`.
+    for resource, stage in (('env', Stage.ENVIRONMENT), ('identity', Stage.IDENTITY), ('symlinks', Stage.SYMLINKS)):
+        owners.setdefault(stage, set()).add(resource)
+
+    shared = {stage: sorted(names) for stage, names in owners.items() if len(names) > 1}
+    assert not shared, f'these stages are claimed by more than one resource: {shared}'
 
 
 def test_a_resource_yields_its_changes_then_its_summary(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -165,6 +190,32 @@ def test_execute_acts_on_the_changes_that_were_planned(session: Session, monkeyp
 
     assert writer.performed == ['a', 'b']
     assert all(isinstance(outcome, Outcome) and outcome.ok for outcome in outcomes)
+
+
+def test_execute_acts_in_stage_order_rather_than_in_walk_order(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The two orders differ, and the difference is a real dependency chain.
+
+    `assess` groups by resource because that is how the rows are read. The node
+    toolchain is therefore measured with the rest of `toolchains`, and has to be
+    *installed* between the cargo packages that ship fnm and the npm globals
+    resolved against what it pins — which is a position no ordering of resource
+    names can give it.
+    """
+    packages = Writer(
+        'packages',
+        changes=(
+            Change('packages', Stage.TOOLS, 'fnm', Verdict.MISSING),
+            Change('packages', Stage.NODE_TOOLS, 'typescript-language-server', Verdict.MISSING),
+        ),
+    )
+    toolchains = Writer('toolchains', changes=(Change('toolchains', Stage.NODE, 'node', Verdict.MISSING),))
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': packages, 'toolchains': toolchains})
+
+    planned = list(engine.assess(session))
+    assert [event.item for event in planned if isinstance(event.payload, Change)] == ['fnm', 'typescript-language-server', 'node']
+
+    acted = [event.item for event in engine.execute(session, planned, Privilege(offer=False))]
+    assert acted == ['fnm', 'node', 'typescript-language-server']
 
 
 def test_execute_skips_what_apply_cannot_repair(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:

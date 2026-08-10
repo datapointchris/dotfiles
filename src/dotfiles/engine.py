@@ -217,7 +217,11 @@ def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
 
 
 def resources() -> dict[str, Resource]:
-    """Every resource, keyed by address and ordered as the machine converges.
+    """Every resource, keyed by address and ordered as `vocabulary.RESOURCES` is.
+
+    That is the order rows are measured and printed in, not the order work
+    happens in — `_in_stage_order` holds the second one, and the two differ
+    because the convergence chain interleaves these seven names.
 
     Imported here rather than at module scope because `resources/packages.py`
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
@@ -253,10 +257,10 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
     known = resources()
     covered = Selection.everything() if selection is None else selection
 
-    # Driven by `resources()` rather than by the selection, so the walk order is
-    # the convergence order whatever order a caller named its addresses in. That
-    # order is a dependency chain — symlinks after the tools that provide `task`,
-    # before tpm reads the tmux config it deploys — not a preference.
+    # Driven by `resources()` rather than by the selection, so two callers naming
+    # the same addresses in different orders get the same report. Observation is
+    # read-only and so has no dependency order to honour; what does is `execute`,
+    # which sorts by stage.
     for address, resource in known.items():
         if address in covered.resources:
             yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
@@ -278,26 +282,48 @@ def execute(session: Session, planned: Iterable[Event], privilege: Privilege) ->
     record says nothing about the half that never ran.
     """
     known = resources()
-    for group in _batches(planned):
+    for group in _batches(_in_stage_order(planned)):
         yield from _act(session, known[group[0].resource], group, privilege)
 
 
-def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
-    """The actionable events, in runs of one resource and one provider.
+def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
+    """The actionable events, ordered as the machine converges.
 
-    Consecutive rather than gathered, so the stream stays a stream and the order
-    stays the convergence order. Events already arrive grouped — the walk is
-    resource by resource and the plan is sorted by stage — so a run breaks only
-    where the work genuinely changes hands.
+    `assess` walks resource by resource, because that is how a reader wants the
+    rows grouped. Converging is ordered by `Stage`, and the two are not the same
+    walk: the chain runs toolchains → packages → toolchains → packages → plugins →
+    symlinks → plugins → system, so no ordering of the seven resource names can
+    express it. That is what the phase registry was — seventeen narrowed `assess`
+    calls in a hand-written sequence, supplying the difference. One sort supplies
+    it now, and the constraint lives on `Stage`, where the ordering is declared.
+
+    Stable, so the order *within* a stage stays the plan's own
+    `(stage, provider, name)`. Sorting on the stage alone is total rather than a
+    tie-break nobody wrote down because no two resources share a stage —
+    `tests/cli/test_engine.py` pins that, since it is the precondition for this
+    function existing.
+
+    Materialised, which the previous streaming version deliberately was not. An
+    `apply` prints its whole plan before acting on any of it, so the stream was
+    already a list at every call site; what streaming bought was a property no
+    caller used, against an ordering every caller needs.
+    """
+    staged = [(event.payload.stage, event) for event in planned if isinstance(event.payload, Change) and event.payload.actionable]
+    return [event for _, event in sorted(staged, key=lambda pair: pair[0])]
+
+
+def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+    """Runs of one resource and one provider, in the order they were handed over.
+
+    Consecutive rather than gathered, so a run breaks only where the work genuinely
+    changes hands and the convergence order survives the grouping. A provider sits
+    at exactly one stage, so its items arrive together whatever else is planned.
 
     This exists for `Batched` resources and costs the others nothing: a group of
     one is what a provider with nothing to gain from company receives.
     """
     batch: list[Event] = []
     for event in planned:
-        change = event.payload
-        if not isinstance(change, Change) or not change.actionable:
-            continue
         if batch and _owner(batch[-1]) != _owner(event):
             yield batch
             batch = []
