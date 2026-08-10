@@ -19,6 +19,16 @@ defaultBranch = main
 [pull]
 rebase = true
 
+# Catching a stack up with main is one rebase of its top branch instead of one
+# per level. Off by default upstream because it moves refs the caller did not
+# name, which is the point here and a hazard elsewhere: a stale branch pointing
+# into the rebased range follows the rebase and stops being the safety net it
+# was kept as. Measured caveat — a branch in the range that is checked out in
+# another worktree is skipped silently, exit 0 and no warning, leaving that ref
+# on pre-rebase commits. One worktree per stack, at its top.
+[rebase]
+updateRefs = true
+
 [push]
 autoSetupRemote = true
 
