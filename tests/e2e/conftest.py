@@ -75,6 +75,7 @@ import shlex
 import subprocess
 from collections.abc import Iterator
 
+import levels
 import pytest
 from harness import ARCHLINUX
 from harness import ENVIRONMENTS
@@ -126,6 +127,38 @@ def pytest_report_header(config: pytest.Config) -> str:
     )
 
 
+def _narrow_to_level(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Keep only the rung that was asked for.
+
+    Read off each test's `fixturenames` rather than a list of modules, so a test
+    moved between files lands at the level its fixtures put it at and a new file
+    needs nothing here. `levels.level_of` owns the ordering the nesting requires.
+
+    Exactly the rung, never up to it: the runner walks the ladder itself, so an
+    invocation that also ran every level below would run the unit suite five
+    times and the container tier four. Asking for `container` therefore drops the
+    1,600 unmarked tests too, which is the whole point of asking for a rung.
+    """
+    if not (wanted := str(config.getoption('--level')).strip()):
+        return
+
+    level = levels.resolve(wanted)
+    installed = bool(config.getoption('--installed'))
+    dropping = [
+        item
+        for item in items
+        if levels.level_of(
+            getattr(item, 'fixturenames', ()),
+            docker=item.get_closest_marker('docker') is not None,
+            installed=installed,
+        )
+        is not level
+    ]
+    if dropping:
+        config.hook.pytest_deselected(items=dropping)
+        items[:] = [item for item in items if item not in dropping]
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Honour `--environment`, and drop what `--installed` cannot mean.
 
@@ -145,6 +178,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         if installing:
             config.hook.pytest_deselected(items=installing)
             items[:] = [item for item in items if item not in installing]
+
+    _narrow_to_level(config, items)
 
     wanted = str(config.getoption('--environment')).strip()
     if not wanted:
@@ -167,6 +202,17 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         items[:] = keeping
 
 
+def _purpose(config: pytest.Config) -> str:
+    """What the container this run wants is *for*, which is its name's middle.
+
+    `machine` when no level was named, because a bare `pytest tests/e2e --docker`
+    is the full run — and because `--installed` has to find the container the
+    full run left, which is the one case where two levels must agree on a name.
+    """
+    wanted = str(config.getoption('--level')).strip()
+    return (levels.resolve(wanted).purpose or 'probe') if wanted else 'machine'
+
+
 @pytest.fixture(scope='session', params=ENVIRONMENTS, ids=lambda environment: environment.name)
 def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
     """A started container with the repo in it, and nothing installed.
@@ -187,7 +233,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
             pytest.skip(f'image {environment.image} is absent and nothing here builds it')
         subprocess.run(environment.build_image, check=True, cwd=UNDER_TEST)
 
-    name = container_name(environment.name)
+    name = container_name(_purpose(request.config), environment.name)
     # `--reuse` keeps the OS state — an Arch container is 4.5GB of pacman
     # downloads — and never the repo inside it. Reusing both is how the Arch
     # harness came to test whatever code was mounted when the container was

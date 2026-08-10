@@ -113,6 +113,60 @@ tasks:
     cmds:
       - fd -e py -e sh -e bash . src tests install configs apps shell | entr -c uv run pytest
 
+  # The ladder, cheapest rung first. `tests/e2e/levels.py` is what each one costs
+  # and what it can answer; these exist so reaching for the right one is typing a
+  # name rather than remembering a file path and a flag combination.
+
+  test:matrix:
+    desc: 'Walk levels 0-3 over every environment (--through full for all of it)'
+    cmds:
+      - uv run python tests/e2e/matrix.py {{.CLI_ARGS}}
+
+  test:level:
+    desc: 'Run one rung: task test:level -- --level set --environment wsl'
+    cmds:
+      - uv run python tests/e2e/matrix.py {{.CLI_ARGS}}
+
+  test:container:
+    desc: 'Level 1: the container and the firewall, nothing installed (~25s each)'
+    cmds:
+      - uv run python tests/e2e/matrix.py --level container {{.CLI_ARGS}}
+
+  test:set:
+    desc: 'Level 2: one section over a base image (minutes each)'
+    cmds:
+      - uv run python tests/e2e/matrix.py --level set {{.CLI_ARGS}}
+
+  test:installed:
+    desc: 'Level 3: assert against the install already in the container (~20s each)'
+    cmds:
+      - uv run python tests/e2e/matrix.py --level installed {{.CLI_ARGS}}
+
+  test:full:
+    desc: 'Level 4: install whole machines from nothing (20-30 min EACH, serial)'
+    cmds:
+      - uv run python tests/e2e/matrix.py --level full --keep {{.CLI_ARGS}}
+
+  test:report:
+    desc: What the last matrix runs did, and what each cell cost
+    cmds:
+      - uv run python tests/e2e/report.py {{.CLI_ARGS}}
+
+  test:logs:
+    desc: 'Tail a running cell: task test:logs -- full-archlinux'
+    cmds:
+      - uv run python tests/e2e/report.py --tail {{.CLI_ARGS}}
+
+  test:containers:
+    desc: What e2e containers exist right now, and what each is for
+    cmds:
+      - docker ps -a --filter name=dotfiles-e2e --format 'table {{"{{"}}.Names{{"}}"}}\t{{"{{"}}.Status{{"}}"}}\t{{"{{"}}.Image{{"}}"}}'
+
+  test:clean:
+    desc: Remove every e2e container, keeping the base images they build from
+    cmds:
+      - docker ps -aq --filter name=dotfiles-e2e | xargs -r docker rm -f
+
   # ================================================================
   # DOCUMENTATION
   # ================================================================

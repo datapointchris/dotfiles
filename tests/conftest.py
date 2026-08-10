@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import levels
 import pytest
 
 from dotfiles.privilege import Privilege
@@ -110,6 +111,11 @@ def pytest_addoption(parser):
     # `tests/e2e/conftest.py` does the deselecting; the option has to be declared
     # here for the same reason the tiers above do.
     parser.addoption('--environment', default='', help='e2e environments to run, comma-separated (default: all)')
+    # One knob for a rung of the ladder, because the rungs were addressed by a
+    # file path and a flag combination and so had to be remembered. It selects
+    # *and* sets the mode: `installed` and `full` are the same tests, and
+    # `--installed` is the whole difference between them.
+    parser.addoption('--level', default='', help='run one rung of the ladder: 0/unit, 1/container, 2/set, 3/installed, 4/full')
 
 
 INSTALLING = {
@@ -173,6 +179,27 @@ def no_installing_on_this_machine(request, monkeypatch):
 
     monkeypatch.setattr(subprocess, 'run', refuse_installs(subprocess.run))
     monkeypatch.setattr(subprocess, 'Popen', refuse_installs(subprocess.Popen))
+
+
+def pytest_configure(config):
+    """A level sets the modes it means, before anything is collected.
+
+    `--level full` has to imply `--docker` or the tier deselection below skips
+    every test it just asked for; `--level installed` has to imply `--installed`
+    or it runs the twenty-four-minute version of itself. Both are what makes one
+    knob a rung rather than a third thing to combine by hand.
+
+    Written onto the option values rather than checked at each use site, so
+    everything downstream keeps reading the flags it already read.
+    """
+    if not (wanted := str(config.getoption('--level')).strip()):
+        return
+
+    level = levels.resolve(wanted)
+    if level.docker:
+        config.option.docker = True
+    if level.installed:
+        config.option.installed = True
 
 
 def pytest_collection_modifyitems(config, items):
