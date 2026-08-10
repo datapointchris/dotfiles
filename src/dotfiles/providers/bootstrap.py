@@ -9,7 +9,7 @@ Each is a **precondition of a provider**, in the shape `cargo.binstall` took: it
 runs only when something needing it is planned, it is idempotent, and it answers
 with a `Result` its provider turns into a refusal rather than raising.
 
-That is what settles the inverted tier branch `apply.py` carried. Measured
+That is what settles the inverted tier branch the install phases carried. Measured
 2026-08-08: a manifest with no tier dropped `homebrew.sh` and still ran
 `casks.sh`, so `brew install` ran without the bootstrap that provides `brew`. It
 was unreachable only because every manifest happens to declare a tier. A

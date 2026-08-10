@@ -4,16 +4,16 @@ What the machine *should* have is `resolve.py`, and whether it has it is
 `evidence.py`. What is left here is the resource: which of the plan's items are
 this one's, and what a difference means.
 
-`perform` is provider by provider, and two have moved: `ghrelease` and `custom`
-install through `providers/`, which is also what the phase registry now calls, so
-the two front doors cannot install one tool differently. The rest still run
-through the phase registry in `apply.py`, which knows the PATH each one needs and
-the order they have to happen in.
+`perform` is provider by provider, and there is one path through it: every
+provider installs through `providers/`, in the order `Stage` declares, so the
+noun form and the composite verb cannot install one tool differently. The PATH
+each provider needs is `providers/toolchain.put_on_path`, called as each runtime
+lands rather than assembled by whatever is driving the run.
 
-This is the only path that acts on `STALE`. The phase registry installs what is
-absent, because that is all a phase knows; a tool that is present but behind is a
-verdict `check` measured against the release cache, and repairing it needs the
-Change that carries it.
+This is the only path that acts on `STALE`. A tool that is present but behind is
+a verdict measured against the release cache, and repairing it needs the `Change`
+that carries it — which is why the phase layer that returned booleans could only
+ever install what was absent.
 """
 
 from __future__ import annotations

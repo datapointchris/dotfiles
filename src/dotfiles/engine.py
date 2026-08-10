@@ -130,6 +130,25 @@ class Selection:
         owners = {provider.resource for provider in registry.PROVIDERS if provider.name in wanted}
         return cls(tuple(name for name in vocabulary.RESOURCES if name in owners), wanted)
 
+    def capped_at(self, ceiling: Stage | None) -> Selection:
+        """The same walk, stopping after this stage. None leaves it uncapped.
+
+        A method rather than a `through=` argument travelling beside the selection
+        through every layer that takes one: a ceiling is part of what a walk covers,
+        and two arguments that are only ever passed together are two chances for a
+        call site to carry one and drop the other.
+        """
+        return self if ceiling is None else dc.replace(self, through=ceiling)
+
+    def reaches(self, stage: Stage) -> bool:
+        """Whether the ceiling admits work at this stage.
+
+        The single comparison, so the plan filter and the callers that gate work on
+        a stage having been reached cannot come to different conclusions about
+        whether `through` is inclusive.
+        """
+        return self.through is None or stage <= self.through
+
     def wants(self, resource: str, item: DesiredItem) -> bool:
         """Whether one item survives both narrowings.
 
@@ -138,7 +157,7 @@ class Selection:
         a fact about the whole machine's ordering rather than about one resource's
         contents.
         """
-        if self.through is not None and item.stage > self.through:
+        if not self.reaches(item.stage):
             return False
         return self.providers is None or item.resource != resource or item.provider in self.providers
 

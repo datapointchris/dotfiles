@@ -28,7 +28,6 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import success
 from dotfiles.output import warn
-from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 repo_app = typer.Typer(no_args_is_help=True, help='The dotfiles repository itself')
@@ -127,13 +126,11 @@ def update(
         console.print(f'  {line}')
 
     if deployed:
-        from dotfiles import deploy
-        from dotfiles.commands import resources
+        from dotfiles import engine
+        from dotfiles import reconcile
 
         hint(f'{len(deployed)} deployed file(s) changed — rebuilding symlinks')
-        session = Session.resolve()
-        resources._reconcile_one('symlinks', session)
-        deploy.epilogue(session)
+        reconcile.apply_machine(engine.Selection.of('symlinks'), flags={'selection': 'symlinks'})
 
     if not dependencies:
         return

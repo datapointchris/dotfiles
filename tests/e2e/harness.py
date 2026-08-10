@@ -27,12 +27,12 @@ from dataclasses import field
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from dotfiles import apply
 from dotfiles import catalog
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles.providers import toolchain
 
 MARKERS = ('install.sh', 'tests/e2e/harness.py')
 """Files that together identify a dotfiles checkout and nothing else."""
@@ -87,7 +87,7 @@ SHADOW_LOG = '.dotfiles-shadow-calls'
 # same directories is how the npm prefix came to be on three of them and not the
 # fourth, which reported eleven installed tools as missing.
 SYSTEM_PATH_DIRS = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin')
-CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *apply.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
+CONTAINER_PATH_DIRS = ('$HOME/' + SHADOW_BIN, *toolchain.TOOL_PATH_DIRS, *SYSTEM_PATH_DIRS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

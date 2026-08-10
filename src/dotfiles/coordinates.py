@@ -138,6 +138,31 @@ never both, because two spellings of the same fact is the drift this exists to
 end.
 """
 
+
+def platform_label(declared: Coordinates) -> str:
+    """Which of the four labels these coordinates carry.
+
+    Keyed on the package manager, with apt split by host — which is the whole of
+    what the four labels ever distinguished.
+
+    It selects nothing any more. `install/{archlinux,macos,linux}/` went with the
+    package scripts and the difference between the apt overlays is `excludes_host`
+    in the declaration; what survives is the word in a run's header and the four
+    labels the shell overlays are still keyed by.
+
+    Derived rather than read off `Machine.platform_label`, because a manifest may
+    declare `coordinates:` *instead of* `platform:` and then has no label to read.
+    So Arch-on-WSL lands on the pacman answer — the one a fused `PLATFORM` string
+    had no row for, since it has no row of its own and every coordinate it needs
+    already exists.
+    """
+    if declared.package_manager is PackageManager.BREW:
+        return 'macos'
+    if declared.package_manager is PackageManager.PACMAN:
+        return 'archlinux'
+    return 'wsl' if declared.host is Host.WSL else 'linux'
+
+
 AXIS_TYPES: dict[str, type[enum.StrEnum]] = {
     'package_manager': PackageManager,
     'os_family': OSFamily,

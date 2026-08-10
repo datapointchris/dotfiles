@@ -39,8 +39,8 @@ def declared_machine() -> str:
     one of them had it. `Session.resolve` reads the *file* and not only the
     environment so that a run outside a login shell still knows what it is — a
     systemd user timer, a launchd agent, `docker exec` and cron all inherit no
-    `~/.env`. `apply.Run.resolve` was written before that and never learned it,
-    so `dotfiles apply` with no `--machine` failed with "MACHINE is not set in the
+    `~/.env`. `apply` had a second resolver of its own that never learned it, so
+    `dotfiles apply` with no `--machine` failed with "MACHINE is not set in the
     environment" on a machine whose `~/.env` said exactly what it was.
 
     Found by the wsl e2e run, whose second `apply` — the idempotence assertion —
@@ -56,14 +56,11 @@ def resolve_machine(machine: str | None = None) -> str:
     """The machine this run is about, from the argument, the environment or `~/.env`.
 
     One function raising one error, because the two front doors were saying
-    different things about the same failure: `Session.resolve` listed the known
-    machines and `apply.Run.resolve` named the two places it had looked — with
+    different things about the same failure: this one listed the known machines
+    and `apply`'s own resolver named the two places it had looked — with
     `dotfiles apply`, the more-used door, getting the less actionable half. Two
     messages kept in step by hand is the arrangement that produced the bug this
-    is the tail of, so the message has one home.
-
-    Raises `NoMachine`; `apply` catches it and re-raises as its own `Declaration`
-    for the exit code, which is a translation rather than a second opinion.
+    is the tail of, so the message has one home, and `apply` resolves through it.
     """
     name = machine or os.environ.get('MACHINE') or declared_machine()
     if not name:

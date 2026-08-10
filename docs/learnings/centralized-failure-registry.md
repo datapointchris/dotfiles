@@ -87,11 +87,18 @@ consumer had to filter for the other. The wrapper stripped `FAILURE_*` lines out
 displayed, captured output had to have markers stripped so it could not forge a record, and
 telling several failures apart needed an awk state machine.
 
-Records now go to a JSON file named by `$FAILURE_RECORDS`, which leaves stdout and stderr
-carrying only what a person reads — so they are merged, shown live, and kept whole for the
-report. `src/dotfiles/failure_report.py` writes and renders them; the shell wrappers are a line
-each. The stdout-versus-stderr trap that caused two of the rounds above cannot recur, because
-nothing decides anything based on which of the two a line arrived on.
+Records went to a JSON file named by `$FAILURE_RECORDS`, which left stdout and stderr carrying
+only what a person reads — so they were merged, shown live, and kept whole for the report. The
+stdout-versus-stderr trap that caused two of the rounds above could not recur, because nothing
+decided anything based on which of the two a line arrived on.
+
+**The whole mechanism is gone as of 2026-08-10**, and the lesson outlived it. Every record above
+described one bash installer's failure, and there are no bash installers: each is a provider
+returning an `Outcome`, and `apply` writes those to its run record like every other verb. The
+same rule holds in the new shape and is what made the old one necessary — a value returned is
+never a value parsed back out of a stream. `dotfiles report latest` is where the failures are
+read; `$FAILURE_RECORDS`, `failure-logging.sh`, `failure_report.py` and the `/tmp` failures log
+are all retired.
 
 ## Related
 

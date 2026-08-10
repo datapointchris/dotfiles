@@ -178,19 +178,19 @@ and none of them is a preference in disguise. A flag with no consumer is how
 
 ## Selective installs and updates
 
-There is one phase registry: `apply.REGISTRY`, which `dotfiles apply` walks. There were
-two while the conversion was half done — `install/phases.sh` held the same list for
-`update.sh`, and `tests/cli/test_phase_registry.py` sourced the bash one to assert they
-agreed on names, order and ownership. Both are gone, because reconcile has one verb.
-Order is still asserted rather than membership alone: registry order is a real dependency
-chain, and a registry that agreed on the set but not the sequence would install a machine
-wrongly and report success.
+There is no phase registry. `dotfiles apply` measures the whole plan once and acts on it
+in `Stage` order, so what a run covers is every provider that planned something and what
+a run does first is whatever sits at the lowest stage. There were three lists of that
+order at the worst of it — `install/phases.sh` for `update.sh`, `apply.REGISTRY` for
+`install.sh`, and the `Stage` enum the resolver already sorted on — and the first two are
+gone. Keeping a hand-written one is what let `system/manager`, the OS package upgrade,
+sit at a stage no phase named and never run at all.
 
 A selector is a resource, or one provider inside one — `dotfiles apply --help` lists
 what `--skip` takes and `dotfiles <noun> apply --source` narrows below that. The bash
 half had four hand-maintained groups (`system`, `languages`, `tools`, `plugins`) whose
 membership was a fifth list to keep in step; a resource and a provider are what the
-registry already knows, so there is nothing to maintain.
+provider registry already knows, so there is nothing to maintain.
 
 The one group worth its own name was `system`, because it needs sudo and dominates the
 runtime. `--skip system` is that, and it is derived rather than declared.
@@ -300,7 +300,7 @@ real type system, a test suite, and dependencies it can declare.
 | Concern | Owner |
 | --- | --- |
 | Machine bootstrap | `install.sh` — POSIX sh, up to the point uv installs the CLI |
-| Installing | `src/dotfiles/apply.py` — the phase registry and the walk |
+| Installing | `src/dotfiles/reconcile.py` — `apply_machine`, beside the two read verbs |
 | Updating the machine | `dotfiles apply` — one verb; a behind package is a `STALE` row |
 | Updating this installation | `src/dotfiles/commands/manage.py` — pull, relink, rebuild the venv |
 | Where the checkout sits | `src/dotfiles/checkout.py` — read from `.git`, never the network |

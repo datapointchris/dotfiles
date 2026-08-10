@@ -9,8 +9,6 @@ was nothing after this".
 
 from __future__ import annotations
 
-import dataclasses as dc
-
 import pytest
 
 from dotfiles import engine
@@ -309,7 +307,7 @@ def test_a_ceiling_keeps_everything_up_to_and_including_the_stage(session: Sessi
     """`Stage` is an IntEnum because execution order is a property of the work, so
     "everything through this" is a projection of an order that already exists
     rather than a second opinion about sequence."""
-    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+    ceiling = engine.Selection.everything().capped_at(Stage.SYMLINKS)
 
     for resource in vocabulary.RESOURCES:
         assert all(item.stage <= Stage.SYMLINKS for item in ceiling.plan_for(resource, session.plan).items)
@@ -319,7 +317,7 @@ def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: S
     """The difference from `Selection.at`, which is exactly-these-stages. A base a
     test installs over is everything *up to* a point, and saying that with `at`
     means enumerating every stage below — the list nothing should keep by hand."""
-    ceiling = dc.replace(engine.Selection.everything(), through=Stage.SYMLINKS)
+    ceiling = engine.Selection.everything().capped_at(Stage.SYMLINKS)
 
     stages = {item.stage for item in ceiling.plan_for('system', session.plan).for_resource('system')}
 
@@ -330,7 +328,7 @@ def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: S
 def test_a_ceiling_and_a_provider_narrowing_both_apply(session: Session) -> None:
     """They answer different questions — which mechanisms against how far — so a
     caller giving both means the intersection."""
-    both = dc.replace(engine.Selection.excluding(['packages/go']), through=Stage.TOOLS)
+    both = engine.Selection.excluding(['packages/go']).capped_at(Stage.TOOLS)
 
     kept = both.plan_for('packages', session.plan).for_resource('packages')
 
@@ -342,6 +340,25 @@ def test_no_ceiling_hands_back_the_very_same_plan(session: Session) -> None:
     """The property `providers is None` already had: a walk narrowing nothing must
     not pay to rebuild the plan, and identity is how that is asserted."""
     assert engine.Selection.everything().plan_for('packages', session.plan) is session.plan
+
+
+def test_an_absent_ceiling_leaves_the_selection_alone() -> None:
+    """`--through` is optional and the call site passes its result straight through,
+    so `None` has to be the identity rather than a ceiling at the lowest stage."""
+    selection = engine.Selection.everything()
+
+    assert selection.capped_at(None) is selection
+
+
+def test_the_ceiling_includes_the_stage_it_names() -> None:
+    """Asserted directly because two callers read it — the plan filter and the
+    epilogue gate — and an off-by-one between them means deploying files under a
+    ceiling that planned none, or the reverse."""
+    capped = engine.Selection.everything().capped_at(Stage.SYMLINKS)
+
+    assert capped.reaches(Stage.SYMLINKS)
+    assert not capped.reaches(Stage.TMUX_PLUGINS)
+    assert engine.Selection.everything().reaches(Stage.SYSTEM_CONFIG)
 
 
 def test_every_stage_is_spellable_by_the_name_that_gets_printed() -> None:

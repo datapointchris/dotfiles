@@ -10,11 +10,11 @@ the file does not exist yet, npm falls back to its built-in prefix (`/usr/local`
 on Debian, `/usr` on Arch), and every global install dies with EACCES. The
 environment variable outranks every config file, so it holds in both orders.
 
-The prefix is also the thing `apply.TOOL_PATH_DIRS` has to name. A phase
-installing into a directory no later phase can see is a silent failure, and it
-happened: eleven language servers installed correctly and every non-interactive
-check reported them missing. `tests/cli/test_phase_registry.py` reads `PREFIX`
-from here and asserts the two agree.
+The prefix is also the thing `toolchain.TOOL_PATH_DIRS` has to name. Installing
+into a directory no later stage can see is a silent failure, and it happened:
+eleven language servers installed correctly and every non-interactive check
+reported them missing. `tests/cli/test_apply.py` reads `PREFIX` from here and
+asserts the two agree.
 """
 
 from __future__ import annotations

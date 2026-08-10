@@ -49,6 +49,24 @@ def record(events: Iterable[Event], machine: str, verb: str, flags: dict | None 
     return runs.finish(written)
 
 
+def keep(events: Iterable[Event], machine: str, verb: str, flags: dict | None = None) -> None:
+    """Write the run record, or write nothing and say nothing.
+
+    Every run records. `runs.py` was complete and tested for months with no caller
+    because the walk printed instead of returning — recording is a reader of the
+    stream now rather than a feature something has to remember to call.
+
+    Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
+    the fleet and absent on a fresh machine, and neither is a reason for a verb to
+    exit non-zero when it answered the question it was asked. Same rule as
+    `status.record`.
+    """
+    try:
+        runs.write(record(events, machine, verb, flags))
+    except OSError:
+        return
+
+
 def _timing(event: Event) -> runs.Timing:
     """What the engine measured, or a zero for a decision that cost nothing.
 

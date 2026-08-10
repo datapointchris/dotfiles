@@ -62,10 +62,12 @@ across every record, which is the question that made timing a field. `path` exis
 so a record can be piped somewhere else in one word — `ifiles put "$(dotfiles
 report path)"` is the fleet-analysis loop.
 
-**`apply` does not record yet**, and the reason is the original diagnosis rather
-than an oversight: its phase layer returns booleans and prints, so there is no
-per-item value to record. The phases that go through the engine produce events;
-the ones still driving bash do not. It records when the phase registry goes.
+**`apply` records both halves**: a `Change` is what was decided and an `Outcome`
+is what was done, so a `plan` record carries verdicts with no action and an
+`apply` record carries the pair. It recorded nothing until the phase registry
+went, and the reason was the original diagnosis rather than an oversight — a
+phase layer returning booleans has no per-item value to keep. The `/tmp` failures
+log went with it: `dotfiles report latest` is where a failed install is read.
 
 **Records are kept indefinitely.** There is no retention bound and no prune verb:
 the value of the history is that it goes back, and "is this getting slower" cannot
