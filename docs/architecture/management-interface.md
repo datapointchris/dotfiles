@@ -264,8 +264,17 @@ the owner — so `--mine` ran cargo, uv and npm in full while claiming to filter
 
 ### Install and update are one act
 
-There is no update verb. `apply` installs what is missing and upgrades what is behind,
-and which of those a given row needs is the verdict's answer rather than the caller's.
+There is no update verb. `apply` installs what is missing and reinstalls what differs
+from the newest release, and which of those a given row needs is the verdict's answer
+rather than the caller's.
+
+*Differs*, not *is behind*. A version above the newest release is drift too — nothing
+upstream publishes it, so no install anything here performs would produce it. That is
+the state a repo leaves behind when it re-versions downwards, and reading it as
+comfortably current is how a machine kept a stranded `ifiles` 2.10 long after the
+verbs it called had been renamed. The comparison is only made against a figure
+measured this run, because against a *cached* one the same reading means the opposite:
+the tool self-updated and the cache has not caught up.
 
 That line used to be drawn by accident rather than intent. `go install @latest`, `cargo
 binstall` and the release installers all create as a side effect of upgrading, while `uv

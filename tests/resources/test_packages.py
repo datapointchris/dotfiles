@@ -274,6 +274,34 @@ def test_a_release_ahead_of_the_cache_is_not_stale(tmp_path: Path, fake_bin: Pat
     assert changes(live) == ()
 
 
+def test_a_tool_ahead_of_a_measured_release_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The `ifiles` case: a repo that went to 2.x and back to 1.x strands whatever
+    installed the high version, and `at_least` calls it current forever. Measured
+    against a figure established this run, above the newest release is drift —
+    there is no install anything here can perform that produces it."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 2.10.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+    measured = dc.replace(packages.RESOURCE.observe(live, live.plan), consulted_network=True)
+    item = live.plan.for_resource('packages')[0]
+
+    found = packages.currency_of(item, measured)
+
+    assert [(change.verdict, change.observed) for change in found] == [(Verdict.STALE, 'lazygit version 2.10.0')]
+    assert 'ahead of v0.45.0' in found[0].detail
+
+
+def test_a_tool_ahead_of_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    """A staged bundle holds the bytes a fresh install would use, so it is as
+    authoritative as a refresh — which is what carries this to the firewalled
+    machine, where the stranded version is and the network is not."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 2.10.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
 def test_an_expired_cache_reports_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """The rule the cache exists to keep: it may be out of date, it may not lie."""
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
@@ -552,6 +580,54 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
     observed = packages.RESOURCE.observe(live, live.plan)
 
     assert observed.consulted_network is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# --reinstall: installing again what measuring calls fine
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_named_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin: Path) -> None:
+    executable(fake_bin, 'task')
+    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'task'}))
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('go/task', Verdict.STALE)]
+    assert found[0].actionable
+
+
+def test_an_installed_tool_nobody_named_is_still_left_alone(tmp_path: Path, fake_bin: Path) -> None:
+    """The flag names entries because the alternative is a blanket force, which is
+    a fresh `go install` of every Go tool to repair one binary."""
+    executable(fake_bin, 'task')
+    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'something-else'}))
+
+    assert changes(live) == ()
+
+
+def test_a_reinstall_reaches_what_currency_cannot_measure(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The reason it is checked ahead of the comparison rather than after. A version
+    string nothing can parse is UNKNOWN and `Repair.NONE`, so measuring alone can
+    never repair it — and that is exactly the tool worth naming."""
+    reporting(fake_bin, 'lazygit', 'built from source')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), reinstall=frozenset({'lazygit'}))
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.AUTOMATIC)]
+
+
+def test_a_reinstall_of_something_absent_is_still_just_missing(tmp_path: Path, fake_bin: Path) -> None:
+    """Naming a tool that is not there changes nothing: it was already going to be
+    installed, and the detail should say why it is in the plan rather than
+    reporting a reinstall of something that was never installed."""
+    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'task'}))
+
+    found = changes(live)
+
+    assert [change.verdict for change in found] == [Verdict.MISSING]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

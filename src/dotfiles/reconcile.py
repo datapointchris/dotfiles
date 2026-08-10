@@ -344,6 +344,7 @@ def apply_machine(
     offline: bool = False,
     owner: str | None = None,
     force: bool = False,
+    reinstall: frozenset[str] = frozenset(),
     flags: dict | None = None,
 ) -> ExitCode:
     """Measure the machine once, then act on what was decided, in stage order.
@@ -370,7 +371,7 @@ def apply_machine(
         return ExitCode.ISSUE
 
     try:
-        session = Session.resolve(machine, offline=offline, owner=owner, refresh=not offline, force=force)
+        session = Session.resolve(machine, offline=offline, owner=owner, refresh=not offline, force=force, reinstall=reinstall)
         plan = session.plan
     except NoMachine as unnamed:
         warn(str(unnamed))
@@ -378,6 +379,14 @@ def apply_machine(
     except (catalog.CatalogError, machines.MachineError) as refused:
         warn(str(refused))
         return ExitCode.ISSUE
+
+    # Against the resolved plan rather than the whole declaration: a name this
+    # machine does not subscribe to would otherwise be accepted and then match
+    # nothing, which reads as a reinstall that ran and did nothing.
+    if unplanned := reinstall - {item.name for item in plan.items}:
+        warn(f'nothing this machine declares is named {", ".join(sorted(unplanned))}')
+        hint("'dotfiles packages list' names what it could be")
+        return ExitCode.USAGE
 
     # Here rather than at the top, because a run is filed under the machine it
     # ran on and nothing before this knows which that is. `began` is carried down

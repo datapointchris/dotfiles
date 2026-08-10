@@ -50,6 +50,20 @@ def at_least(current: str, floor: str) -> bool | None:
     return _padded(have, want) >= _padded(want, have)
 
 
+def exceeds(current: str, ceiling: str) -> bool:
+    """Whether `current` is strictly newer than `ceiling`.
+
+    `False` rather than `None` where either cannot be read, unlike everything else
+    here. The caller falls through to `at_least` with the same two strings, and
+    that already answers `None` for an unparseable one — returning `None` here as
+    well would report the same tool unmeasurable twice.
+    """
+    have, want = parse(current), parse(ceiling)
+    if have is None or want is None:
+        return False
+    return _padded(have, want) > _padded(want, have)
+
+
 def exactly(current: str, pinned: str) -> bool | None:
     """Whether `current` is `pinned`. A pin means that release and no other.
 

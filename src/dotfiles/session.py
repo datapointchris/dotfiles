@@ -100,6 +100,19 @@ class Session:
     already had dotfiles of its own.
     """
 
+    reinstall: frozenset[str] = frozenset()
+    """Entry names to install again whatever measuring them concludes.
+
+    Named rather than a blanket `--force`, because "install everything again"
+    is not a thing anyone wants: it is a fresh `go install` of every Go tool and a
+    re-download of every release to repair one binary. The names are validated
+    against the plan before the walk starts, so a typo is a usage error rather
+    than a run that quietly reinstalls nothing.
+
+    Distinct from `force` above, which authorises overwriting a *foreign* file and
+    decides nothing about what is installed.
+    """
+
     @classmethod
     def resolve(cls, machine: str | None = None, **kwargs: object) -> Session:
         """Name the machine from the argument, else the environment, else `~/.env`.

@@ -69,6 +69,26 @@ def available_sources() -> list[str]:
     return sorted(declared)
 
 
+def declared_names() -> list[str]:
+    """Every entry name `--reinstall` could take, from the parsed declaration.
+
+    Through the catalog rather than the YAML that `available_sources` reads,
+    because two of the sections nest their rows under editorial category keys and
+    a third is keyed by name — the flattening is `catalog.load`'s and repeating it
+    here would be a second parser to keep in step.
+
+    A broken declaration completes to nothing rather than raising. This runs in
+    the shell's completion process, where a traceback is printed over whatever the
+    user was typing, and `apply` refuses on an invalid declaration anyway.
+    """
+    from dotfiles import catalog
+
+    try:
+        return sorted({entry.name for entry in catalog.load().all_entries()})
+    except catalog.CatalogError:
+        return []
+
+
 def _validate_source(value: str | None) -> str | None:
     if value is None or value in available_sources():
         return value
@@ -88,6 +108,12 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OfflineOption = typer.Option(False, '--offline', help='Install from a staged offline bundle')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
+ReinstallOption = typer.Option(
+    None,
+    '--reinstall',
+    help='Install this entry again whatever measuring it concludes (repeatable)',
+    autocompletion=declared_names,
+)
 
 
 def _apply_resource(
@@ -98,6 +124,7 @@ def _apply_resource(
     owner: str | None = None,
     *,
     force: bool = False,
+    reinstall: frozenset[str] = frozenset(),
 ) -> None:
     """Converge this resource, or just what `--source` names and what that needs.
 
@@ -137,6 +164,7 @@ def _apply_resource(
             offline=offline,
             owner=owner,
             force=force,
+            reinstall=reinstall,
             flags={'selection': ', '.join(addresses)},
         )
     )
@@ -163,9 +191,21 @@ def packages_apply(
     source: str = SourceOption,
     offline: bool = OfflineOption,
     owner: str = OwnerOption,
+    reinstall: list[str] = ReinstallOption,
 ) -> None:
-    """Install every declared package that is missing."""
-    _apply_resource('packages', machine, offline, source, owner)
+    """Install every declared package that is missing.
+
+    `--reinstall NAME` additionally installs one that is already there, from
+    whichever source this run has — the proxy and the release API online, the
+    staged bundle under `--offline`. It is the answer to a tool whose installed
+    state is wrong in a way measuring cannot see: bytes that are corrupt, a
+    version string nothing can parse, or a section nobody asks upstream about.
+
+    A version that is merely *wrong* needs none of this. `apply` measures currency
+    against a live figure and repairs what differs in either direction, so a tool
+    stranded above its own newest release is already this command's to fix.
+    """
+    _apply_resource('packages', machine, offline, source, owner, reinstall=frozenset(reinstall or ()))
 
 
 @packages_app.command('list')
