@@ -66,16 +66,19 @@ RUNS_DIR = STATE_HOME / 'runs'
 
 
 def machine_id() -> str:
-    """Which machine wrote a file, for the three that the fleet shares a directory for.
+    """Which *box* wrote a file, for the three the fleet shares a directory for.
 
-    `$MACHINE` is what `~/.env` exports and every install path already reads. The
-    hostname is the fallback for the window before `~/.env` exists — bare and
-    lowercased per ~/dev/standards/data.md § "Machine identity is a bare
-    lowercased hostname", because the two spellings splitting one machine in two
-    is exactly what that rule was written after.
+    The bare lowercased hostname, per ~/dev/standards/data.md § "Machine identity
+    is a bare lowercased hostname".
+
+    Deliberately not `$MACHINE`, which was the first answer and is wrong: that
+    names the *manifest*, and two machines legitimately share one — macmini and
+    mbp are both `macos-personal-workstation`. Keying on it put their status and
+    nudge files at a single path in a directory the fleet now syncs, so the
+    second Mac to run silently overwrote the first, which is precisely the
+    collision the suffix was added to prevent.
     """
-    declared = os.environ.get('MACHINE')
-    return declared or socket.gethostname().split('.')[0].lower()
+    return socket.gethostname().split('.')[0].lower()
 
 
 MACHINE_ID = machine_id()

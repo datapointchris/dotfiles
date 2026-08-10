@@ -266,3 +266,21 @@ def test_the_agent_is_serialised_by_plistlib_on_both_sides(darwin: Path, fake_bi
     assert written['Label'] == schedule.LABEL
     assert written['StartInterval'] == schedule.INTERVAL_SECONDS
     assert written['ProgramArguments'][-1] == 'check'
+
+
+def test_the_nudge_path_keeps_its_longest_match_trim(state: Path) -> None:
+    """`SNIPPETS` is %-formatted for max_age, so a literal `%%` in the source
+    renders as one `%` — turning zsh's longest-match trim into the shortest, which
+    leaves `host.domain` from `host.domain.tld` and reads a file nothing writes."""
+    for shell in ('zsh', 'bash'):
+        line = next(line for line in status.snippet(shell).splitlines() if 'nudge=' in line)
+        assert '%%.*}' in line, f'{shell} lost the longest-match trim'
+
+
+def test_the_nudge_is_keyed_on_the_host_not_the_manifest(state: Path) -> None:
+    """Both Macs declare `macos-personal-workstation`, so keying on $MACHINE puts
+    their nudges at one path in a directory the fleet syncs — one box reporting
+    the other's failure, which is the collision the suffix exists to prevent."""
+    for shell in ('zsh', 'bash'):
+        line = next(line for line in status.snippet(shell).splitlines() if 'nudge=' in line)
+        assert 'MACHINE' not in line

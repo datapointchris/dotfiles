@@ -267,13 +267,25 @@ def list_runs(
     return found[:limit] if limit else found
 
 
-def latest(runs_dir: Path | None = None, *, machine: str | None = None) -> Path | None:
-    """The newest run on this machine, not the newest in the directory.
+def latest(runs_dir: Path | None = None) -> Path | None:
+    """The newest run on this box, followed from the link every run rewrites.
 
-    The fleet shares `runs/`, so an unnarrowed answer is whichever box ran most
-    recently — `dotfiles report latest` after an apply here would show a check
-    that happened on the Mac. Every other read stays fleet-wide, which is the
-    point of sharing it: `report list` and `report stats` see all four.
+    The fleet shares `runs/`, so the newest record in the directory is whichever
+    machine ran most recently — `report latest` after an apply here would show a
+    check that happened on a Mac. Narrowing on the record's machine does not fix
+    it either: that names the manifest, and both Macs declare the same one.
+
+    The link is the answer because it is per-host *and* deliberately not synced,
+    which is what makes it a statement about this box. Everything else stays
+    fleet-wide, which is the point of sharing the directory — `report list` and
+    `report stats` see all four.
+
+    Falls back to the newest record where the link is missing: a machine that has
+    never run under this scheme still has records, and answering nothing there
+    would be worse than answering approximately.
     """
-    found = list_runs(runs_dir, machine=machine or paths.MACHINE_ID, limit=1)
+    link = (runs_dir.parent if runs_dir else paths.STATE_HOME) / paths.LATEST_RUN.name
+    if link.is_symlink() and (target := link.resolve()).is_file():
+        return target
+    found = list_runs(runs_dir, limit=1)
     return found[0] if found else None

@@ -180,14 +180,28 @@ class TestListing:
         assert link.resolve() == newest.resolve()
         assert runs.latest(runs_dir) == newest
 
-    def test_latest_is_this_machines_run_and_not_the_fleets_newest(self, runs_dir, monkeypatch):
-        """The directory is shared, so an unnarrowed answer is whichever box ran
-        most recently — `report latest` after an apply here showing a check that
-        happened on the Mac."""
-        monkeypatch.setattr(paths, 'MACHINE_ID', 'archlinux-personal-workstation')
-        mine = a_run(machine='archlinux-personal-workstation')
+    def test_latest_is_this_boxs_run_and_not_the_fleets_newest(self, runs_dir, monkeypatch):
+        """The directory is shared, so the newest record in it is whichever box ran
+        most recently. Narrowing on the record's machine does not fix that either:
+        it names the manifest, and both Macs declare the same one — so the answer
+        is the per-host link, which is written here and deliberately not synced.
+        """
+        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
+        mine = a_run()
         mine.started_at = '2026-08-01T00:00:00Z'
         written = runs.write(mine, runs_dir)
-        runs.write(a_run(machine='macos-personal-workstation'), runs_dir)
+
+        # Another machine's record, newer, written without touching this box's link.
+        theirs = a_run(machine='macos-personal-workstation')
+        (runs_dir / f'{runs.record_filename(theirs)}.json').write_text('{}')
+
+        assert runs.latest(runs_dir) == written
+
+    def test_latest_falls_back_to_the_newest_record_when_the_link_is_absent(self, runs_dir, monkeypatch):
+        """A machine that has never run under this scheme still has records, and
+        answering nothing there is worse than answering approximately."""
+        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
+        written = runs.write(a_run(), runs_dir)
+        (runs_dir.parent / 'latest-thisbox').unlink()
 
         assert runs.latest(runs_dir) == written
