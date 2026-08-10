@@ -42,14 +42,6 @@ def _environment() -> dict[str, str]:
     }
 
 
-def wsl_script(name: str, *args: str) -> Completed:
-    return run(
-        ['bash', str(paths.INSTALL_DIR / 'wsl' / name), *args],
-        cwd=paths.REPO_ROOT,
-        env=_environment(),
-    )
-
-
 def git(*args: str, output: Output = Output.QUIET) -> Completed:
     """Run git against this repo.
 
