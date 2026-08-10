@@ -152,6 +152,18 @@ def run(
     never. Refused for STREAM, where minutes are a normal install rather than a
     hang, and where the reader loop would not observe a deadline anyway.
 
+    **Every child's stdin is closed, on every branch, rather than inherited.**
+    `yay -S --needed --noconfirm` still opens a menu when a name has several AUR
+    providers — `--noconfirm` bypasses pacman's "Are you sure?" questions and
+    nothing else, by pacman's own manual — and that menu reads its answer with
+    `fgets(stdin, ...)`, unlike sudo's password prompt, which opens `/dev/tty`
+    directly and so does not care what stdin is. Left inherited, the menu blocks
+    on whatever this process's stdin happens to be: a real terminal when a person
+    runs `dotfiles apply` by hand, which is a question nobody is watching for in
+    the middle of a package transaction. Closed here, the read is EOF every time,
+    which every caller observed to take the listed default — turning that from an
+    accident of how stdin was wired into a guarantee this module makes.
+
     A missing binary is exit 127, not an exception. Every caller here already
     branches on the exit code, and several run something a machine may legitimately
     not have — `hyprctl` on an Arch box with no compositor is the one that proved
@@ -226,7 +238,7 @@ def run(
 
     if output is Output.DATA:
         try:
-            completed = subprocess.run(argv, cwd=directory, env=environment, check=False, timeout=timeout)
+            completed = subprocess.run(argv, cwd=directory, env=environment, check=False, timeout=timeout, stdin=subprocess.DEVNULL)
         except OSError as problem:
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
@@ -235,7 +247,9 @@ def run(
 
     if output is Output.QUIET:
         try:
-            captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True, timeout=timeout)
+            captured = subprocess.run(
+                argv, cwd=directory, env=environment, check=False, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL
+            )
         except OSError as problem:
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
@@ -255,6 +269,7 @@ def run(
             argv,
             cwd=directory,
             env=environment,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

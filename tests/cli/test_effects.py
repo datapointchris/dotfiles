@@ -7,11 +7,13 @@ a command that cannot be executed is an exit code, not an exception.
 
 from __future__ import annotations
 
+import subprocess
 import time
 from pathlib import Path
 
 import pytest
 
+from dotfiles import effects
 from dotfiles.effects import NOT_FOUND
 from dotfiles.effects import TIMED_OUT
 from dotfiles.effects import Output
@@ -118,6 +120,39 @@ def test_streaming_refuses_a_deadline() -> None:
     not observe one anyway — so this is refused instead of silently ignored."""
     with pytest.raises(ValueError, match='no deadline'):
         run(['echo', 'hi'], output=Output.STREAM, timeout=1)
+
+
+@pytest.mark.parametrize('output', list(Output))
+def test_no_output_mode_leaves_a_childs_stdin_open_to_the_caller(output: Output, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`yay -S --needed --noconfirm` still opens a provider menu when a name has
+    several AUR candidates, and pacman's own manual scopes `--noconfirm` to "Are
+    you sure?" questions alone — the menu reads its answer from stdin regardless.
+
+    Whether that menu then hangs or takes the listed default depends entirely on
+    what this process's stdin happened to be wired to, which is exactly the
+    "luck of a closed stdin" a real terminal does not share. Asserted against the
+    kwargs actually handed to the OS call, not against blocking behaviour: a
+    behavioural test would inherit the same luck it exists to rule out, since
+    pytest's own stdin may already be closed in this environment.
+    """
+    captured: dict[str, object] = {}
+    real_popen = subprocess.Popen
+    real_run = subprocess.run
+
+    def recording_popen(*args, **kwargs):
+        captured.update(kwargs)
+        return real_popen(*args, **kwargs)
+
+    def recording_run(*args, **kwargs):
+        captured.update(kwargs)
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(effects.subprocess, 'Popen', recording_popen)
+    monkeypatch.setattr(effects.subprocess, 'run', recording_run)
+
+    run(['true'], output=output)
+
+    assert captured.get('stdin') is subprocess.DEVNULL
 
 
 # ─────────────────────────────────────────────────────────────────────────────
