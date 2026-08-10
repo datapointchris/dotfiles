@@ -27,9 +27,9 @@ from dotfiles.privilege import Privilege
 from dotfiles.providers import schedule
 from dotfiles.providers import steps
 from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import Verdict
+from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resources import Repair
-from dotfiles.resources import Verdict as ItemVerdict
+from dotfiles.resources import Verdict
 from dotfiles.vocabulary import ExitCode
 
 WHEN = dt.datetime(2026, 8, 8, 12, 0, tzinfo=dt.UTC)
@@ -67,13 +67,13 @@ def test_the_document_is_versioned(state: Path) -> None:
     """It crosses machines — the work box's output decides what the fleet builds
     into its next bundle — and an unversioned interchange document breaks
     silently when the two ends disagree about its shape."""
-    status.record(results(('system', Verdict.CONVERGED)), 'box', WHEN)
+    status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
 
     assert json.loads(paths.STATUS_FILE.read_text())['version'] == 1
 
 
 def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) -> None:
-    status.record(results(('system', Verdict.CONVERGED)), 'box', WHEN)
+    status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
     written = json.loads(paths.STATUS_FILE.read_text())
 
     assert written['machine'] == 'box'
@@ -83,13 +83,13 @@ def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) ->
 def test_drift_writes_no_nudge(state: Path) -> None:
     """Drift is the normal state of a machine between applies. Nudging about it
     at every prompt would train the nudge away inside a week."""
-    status.record(results(('packages', Verdict.DRIFT)), 'box', WHEN)
+    status.record(results(('packages', ResourceVerdict.DRIFT)), 'box', WHEN)
 
     assert not paths.NUDGE_FILE.exists()
 
 
 def test_an_issue_writes_one_line_naming_what_is_wrong(state: Path) -> None:
-    status.record(results(('packages', Verdict.DRIFT), ('system', Verdict.ISSUE)), 'box', WHEN)
+    status.record(results(('packages', ResourceVerdict.DRIFT), ('system', ResourceVerdict.ISSUE)), 'box', WHEN)
     line = paths.NUDGE_FILE.read_text()
 
     assert 'system' in line
@@ -101,8 +101,8 @@ def test_a_resolved_issue_removes_the_nudge_rather_than_emptying_it(state: Path)
     file would keep a fresh mtime saying the check ran and nothing to print,
     which is the same as removing it — until someone reads the directory and
     finds a nudge that has been there for weeks."""
-    status.record(results(('system', Verdict.ISSUE)), 'box', WHEN)
-    status.record(results(('system', Verdict.CONVERGED)), 'box', WHEN)
+    status.record(results(('system', ResourceVerdict.ISSUE)), 'box', WHEN)
+    status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
 
     assert not paths.NUDGE_FILE.exists()
 
@@ -113,7 +113,7 @@ def test_an_unwritable_state_directory_never_fails_the_check(tmp_path: Path, mon
     monkeypatch.setattr(paths, 'STATE_HOME', tmp_path / 'file' / 'below' / 'a' / 'file')
     (tmp_path / 'file').write_text('not a directory')
 
-    status.record(results(('system', Verdict.ISSUE)), 'box', WHEN)
+    status.record(results(('system', ResourceVerdict.ISSUE)), 'box', WHEN)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -167,17 +167,17 @@ def test_a_machine_with_no_systemd_is_unknown_rather_than_missing(linux: Path, m
     monkeypatch.setenv('PATH', str(tmp_path / 'nothing'))
     state = schedule.observe()
 
-    assert state.verdict is ItemVerdict.UNKNOWN
+    assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
 
 
 def test_a_fresh_machine_has_no_timer_and_gets_one(linux: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'systemctl')
 
-    assert schedule.observe().verdict is ItemVerdict.MISSING
+    assert schedule.observe().verdict is Verdict.MISSING
     assert steps.apply('check-schedule', Privilege()).ok
     assert (linux / 'dotfiles-check.timer').is_file()
-    assert schedule.observe().verdict is ItemVerdict.MATCHED
+    assert schedule.observe().verdict is Verdict.MATCHED
 
 
 def test_the_unit_names_the_installed_binary_not_whatever_is_on_path(linux: Path, fake_bin: Path, tmp_path: Path) -> None:
@@ -206,14 +206,14 @@ def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
     only because one verb answered both "what differs" and "what is wrong". The
     split removed the reason, so there is nothing left in the unit to assert.
     """
-    behind = [ResourceResult('packages', Verdict.CONVERGED, 'up to date', pending=3)]
+    behind = [ResourceResult('packages', ResourceVerdict.CONVERGED, 'up to date', pending=3)]
 
     assert reconcile.exit_code(behind) is ExitCode.CONVERGED
 
 
 def test_something_actually_wrong_does_fail_the_unit() -> None:
     """The other half: exit 3 is what should show up in `systemctl --user --failed`."""
-    broken = [ResourceResult('packages', Verdict.ISSUE, 'a checker could not run', attention=1)]
+    broken = [ResourceResult('packages', ResourceVerdict.ISSUE, 'a checker could not run', attention=1)]
 
     assert reconcile.exit_code(broken) is ExitCode.ISSUE
 
@@ -223,7 +223,7 @@ def test_a_unit_someone_edited_is_stale_rather_than_matched(linux: Path, fake_bi
     steps.apply('check-schedule', Privilege())
     (linux / 'dotfiles-check.timer').write_text('[Timer]\nOnUnitActiveSec=99h\n')
 
-    assert schedule.observe().verdict is ItemVerdict.STALE
+    assert schedule.observe().verdict is Verdict.STALE
 
 
 def test_an_installed_but_disabled_timer_is_stale(linux: Path, fake_bin: Path) -> None:
@@ -233,7 +233,7 @@ def test_an_installed_but_disabled_timer_is_stale(linux: Path, fake_bin: Path) -
     steps.apply('check-schedule', Privilege())
     executable(fake_bin, 'systemctl', '#!/bin/sh\n[ "$2" = "is-enabled" ] && exit 1\nexit 0\n')
 
-    assert schedule.observe().verdict is ItemVerdict.STALE
+    assert schedule.observe().verdict is Verdict.STALE
 
 
 @pytest.fixture
@@ -247,10 +247,10 @@ def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> P
 def test_a_mac_gets_a_launch_agent(darwin: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'launchctl')
 
-    assert schedule.observe().verdict is ItemVerdict.MISSING
+    assert schedule.observe().verdict is Verdict.MISSING
     assert steps.apply('check-schedule', Privilege()).ok
     assert darwin.is_file()
-    assert schedule.observe().verdict is ItemVerdict.MATCHED
+    assert schedule.observe().verdict is Verdict.MATCHED
 
 
 def test_the_agent_is_serialised_by_plistlib_on_both_sides(darwin: Path, fake_bin: Path) -> None:

@@ -28,7 +28,7 @@ from collections.abc import Sequence
 
 from dotfiles import paths
 from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import Verdict
+from dotfiles.reconcile import ResourceVerdict
 
 
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> None:
@@ -70,16 +70,16 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
 
 def _worst(results: Sequence[ResourceResult]) -> str:
     verdicts = {result.verdict for result in results}
-    if Verdict.ISSUE in verdicts:
-        return str(Verdict.ISSUE)
-    return str(Verdict.DRIFT if Verdict.DRIFT in verdicts else Verdict.CONVERGED)
+    if ResourceVerdict.ISSUE in verdicts:
+        return str(ResourceVerdict.ISSUE)
+    return str(ResourceVerdict.DRIFT if ResourceVerdict.DRIFT in verdicts else ResourceVerdict.CONVERGED)
 
 
 def _write_nudge(results: Sequence[ResourceResult]) -> None:
     """One line, or the file removed. Removed rather than emptied, because the
     shell tests for a non-empty file and a stale empty one is a file whose mtime
     keeps saying the check ran."""
-    issues = [result for result in results if result.verdict is Verdict.ISSUE]
+    issues = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
     if not issues:
         paths.NUDGE_FILE.unlink(missing_ok=True)
         return

@@ -44,7 +44,7 @@ from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
-from dotfiles.resources import Verdict as ItemVerdict
+from dotfiles.resources import Verdict
 from dotfiles.resources import privileged
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
@@ -52,7 +52,7 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-class Verdict(StrEnum):
+class ResourceVerdict(StrEnum):
     """What one resource had to say.
 
     `DRIFT` and `ISSUE` are different kinds, not degrees. Drift is expected and
@@ -74,7 +74,7 @@ class Verdict(StrEnum):
 @dataclass(frozen=True)
 class ResourceResult:
     address: str
-    verdict: Verdict
+    verdict: ResourceVerdict
     detail: str
 
     pending: int = 0
@@ -135,11 +135,11 @@ def check_declaration() -> ResourceResult:
     broken = validate.errors(findings)
     if not broken:
         warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
-        return ResourceResult('machines', Verdict.CONVERGED, f'the declaration is sound{warned}')
+        return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}')
 
     for finding in broken:
         render_finding(finding.section, finding.message)
-    return ResourceResult('machines', Verdict.ISSUE, f'{len(broken)} problem(s) in the declaration', attention=len(broken))
+    return ResourceResult('machines', ResourceVerdict.ISSUE, f'{len(broken)} problem(s) in the declaration', attention=len(broken))
 
 
 class Lens(StrEnum):
@@ -173,7 +173,7 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     is unmeasurable until something refreshes it, which would print a screen of
     rows and exit non-zero on a machine with nothing wrong with it.
     """
-    unmeasured = [change for change in changes if change.verdict is ItemVerdict.UNKNOWN and change.repair is Repair.NONE]
+    unmeasured = [change for change in changes if change.verdict is Verdict.UNKNOWN and change.repair is Repair.NONE]
     pending = [change for change in changes if change.actionable]
     attention = [change for change in changes if change.drifted and change not in unmeasured and change not in pending]
     return pending, attention, unmeasured
@@ -198,14 +198,14 @@ def from_changes(address: str, changes: Sequence[Change], converged: str, lens: 
     }
     gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
     if not kept:
-        return ResourceResult(address, Verdict.CONVERGED, converged + gap, **counts)
+        return ResourceResult(address, ResourceVerdict.CONVERGED, converged + gap, **counts)
 
     if lens is Lens.PLAN:
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {counts["privileged"]} needing root' if counts['privileged'] else ''
-        return ResourceResult(address, Verdict.DRIFT, f'{len(kept)} item(s) differ from the declaration{root}{gap}', **counts)
-    return ResourceResult(address, Verdict.ISSUE, f'{len(kept)} item(s) need attention that apply cannot give' + gap, **counts)
+        return ResourceResult(address, ResourceVerdict.DRIFT, f'{len(kept)} item(s) differ from the declaration{root}{gap}', **counts)
+    return ResourceResult(address, ResourceVerdict.ISSUE, f'{len(kept)} item(s) need attention that apply cannot give' + gap, **counts)
 
 
 def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult]:
@@ -228,7 +228,7 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
     for address, group in grouped.items():
         refusal = next((event.payload for event in group if isinstance(event.payload, Refusal)), None)
         if refusal is not None:
-            results.append(ResourceResult(address, Verdict.ISSUE, refusal.reason))
+            results.append(ResourceResult(address, ResourceVerdict.ISSUE, refusal.reason))
             continue
         changes = [event.payload for event in group if isinstance(event.payload, Change)]
         summary = next((event.payload.detail for event in group if isinstance(event.payload, Summary)), '')
@@ -286,9 +286,9 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
     `check` answers 0 or 3 and never 1, because drift is not its subject.
     """
     verdicts = {result.verdict for result in results}
-    if Verdict.ISSUE in verdicts:
+    if ResourceVerdict.ISSUE in verdicts:
         return ExitCode.ISSUE
-    if Verdict.DRIFT in verdicts:
+    if ResourceVerdict.DRIFT in verdicts:
         return ExitCode.DRIFT
     return ExitCode.CONVERGED
 
