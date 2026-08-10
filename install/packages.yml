@@ -1383,7 +1383,7 @@ go_tools:
     description: Smart tmux session manager with zoxide integration
 
   - name: todoui
-    package: github.com/datapointchris/todoui
+    package: github.com/datapointchris/todoui/v2
     github_repo: datapointchris/todoui
     binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
     description: Project organization and task management with local-first SQLite
@@ -1395,7 +1395,7 @@ go_tools:
     description: Run commands and dies across all git repos
 
   - name: bbkt
-    package: github.com/datapointchris/bbkt
+    package: github.com/datapointchris/bbkt/v2
     github_repo: datapointchris/bbkt
     binary_pattern: "bbkt_{version_num}_{os}_{go_arch}.tar.gz"
     description: Bitbucket Data Center pull request lifecycle from the terminal
@@ -1407,7 +1407,7 @@ go_tools:
     description: Jira issues, sprints, and transitions from the terminal
 
   - name: ifiles
-    package: github.com/datapointchris/ifiles
+    package: github.com/datapointchris/ifiles/v2
     github_repo: datapointchris/ifiles
     binary_pattern: "ifiles_{version_num}_{os}_{go_arch}.tar.gz"
     description: Chunked file transfer to and from files.ichrisbirch.com
@@ -1419,7 +1419,7 @@ go_tools:
     description: Secrets manager for config files (encrypts with age/GPG/KMS)
 
   - name: toolbox
-    package: github.com/datapointchris/toolbox
+    package: github.com/datapointchris/toolbox/v2
     github_repo: datapointchris/toolbox
     binary_pattern: "toolbox_{version_num}_{os}_{go_arch}.tar.gz"
     description: CLI for discovering installed development tools
