@@ -28,7 +28,7 @@ system_packages:
   #   (no tier)    -> workstation-only extras (the default). Kept off servers.
   # A manifest picks its tier via `system_packages: core|workstation`; a
   # workstation request installs everything, a core request only the tagged
-  # base. The tier is honoured in src/dotfiles/resolve.py.
+  # base. The tier is honoured by Subscription.wants in src/dotfiles/machine.py.
 
   # Essential Build Tools
   - name: build-essential

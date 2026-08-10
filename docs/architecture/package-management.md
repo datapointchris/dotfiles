@@ -132,8 +132,8 @@ untagged entries default to workstation-only. A manifest declares which set it
 wants via `system_packages: core | workstation` — a workstation installs
 everything, a minimal server (the `linux-lxc-server` manifest) installs only the
 core base. The multimedia and docker packages above are workstation-only; the
-shell/build/diagnostic essentials are `core`. `src/dotfiles/resolve.py` does the
-filtering, so there is still one list, not two. See
+shell/build/diagnostic essentials are `core`. `Subscription.wants` in
+`src/dotfiles/machine.py` does the filtering, so there is still one list, not two. See
 [Minimal Manifest for Servers](../learnings/minimal-manifest-for-servers.md).
 
 ## Shell Plugins (Git Clone)

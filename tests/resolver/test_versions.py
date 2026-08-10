@@ -53,7 +53,7 @@ def test_output_with_no_version_in_it_parses_to_nothing(output: str) -> None:
         # Release *tags*, not tool output. A monorepo component carries its prefix
         # on both sides of the comparison and a formula-style tag carries its name,
         # so the numbers have to be found inside the tag rather than at the front
-        # of it — the shapes `version-helpers.sh` was asked about before it went.
+        # of it.
         ('cli/v1.2.1', 'cli/v1.2.0', True),
         ('cli/v1.2.0', 'cli/v1.2.1', False),
         ('jq-1.8.3', 'jq-1.8.2', True),

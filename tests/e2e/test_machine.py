@@ -49,9 +49,9 @@ def test_the_cli_runs_from_outside_the_repo(machine: Machine) -> None:
 
 
 def test_the_interpreter_the_installers_get_can_import_the_package(machine: Machine) -> None:
-    """`$DOTFILES_PYTHON` is what replaced the system-python bootstrap. An
-    installer handed one that cannot import `dotfiles` is the exact failure that
-    the PyYAML-into-Apple's-python step existed to prevent."""
+    """The CLI carries its own interpreter with its dependencies declared, which is
+    what removed the system-python bootstrap. One that cannot import `dotfiles` is
+    the exact failure the PyYAML-into-Apple's-python step existed to prevent."""
     assert machine.succeeds('"$(uv tool dir)/dotfiles/bin/python" -c "import dotfiles, yaml"')
 
 
@@ -60,11 +60,11 @@ def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) ->
     and only uv is allowed to have found it.
 
     This is what replaced `pip install --user PyYAML` into Apple's interpreter:
-    scripts reach Python through `$DOTFILES_PYTHON`, which is the CLI's own
-    `sys.executable`, so a bare `python3` anywhere in a run is the old bootstrap
-    growing back. uv is exempt because scanning PATH for an interpreter is what it
-    is supposed to do — the offline path passes `--no-python-downloads` and needs
-    to find a real one, which it does after rejecting this stub.
+    the CLI runs on the interpreter uv installed it with, so nothing in a run has
+    a reason to look for another and a bare `python3` anywhere in one is the old
+    bootstrap growing back. uv is exempt because scanning PATH for an interpreter
+    is what it is supposed to do — the offline path passes `--no-python-downloads`
+    and needs to find a real one, which it does after rejecting this stub.
     """
     strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.by_uv]
     assert not strangers, strangers

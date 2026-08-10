@@ -1,27 +1,21 @@
 # Testing Bootstrap Dependencies
 
-## Context
-
-Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, `python3-pyyaml` was required before `parse_packages.py` could parse the package list.
-
-**The mechanism below is history.** `parse_packages.py` was deleted at the end of the
-Python conversion and there is no system-python bootstrap any more — the CLI installs
-with its dependencies declared, so nothing has to be true about the machine first (see
-*The bootstrap goes away on Ubuntu 26.04* and the closing note). The symptom and the
-environment lesson are why this page is kept; the fix it describes is not the current one.
-
 ## The Problem
 
-Installation failed on fresh WSL during Phase 1 (system packages) with:
+Installation failed on fresh WSL during system packages with:
 
 ```bash
-# wsl.yml:43 - Wrong package name
+# Wrong package name
 sudo apt install -y python3-yaml  # Package doesn't exist
 
-# wsl.yml:46 - Script tries to run immediately after
+# The script runs immediately after
 python3 parse_packages.py --type=system --manager=apt
 # ImportError: No module named 'yaml'
 ```
+
+A bootstrap dependency is a package that must be present before the thing that
+reads the package list can run at all — so getting it wrong fails before any of
+the machinery that would report it well exists.
 
 **The test suite passed but real installation failed** because:
 
@@ -32,17 +26,23 @@ python3 parse_packages.py --type=system --manager=apt
 
 ## The Solution
 
-**Root Fix at the time: Use System Python Explicitly** — superseded, kept for the shape of it.
+**The bootstrap is gone, and that is the fix.** The CLI installs as a uv tool with
+its dependencies declared, so there is no step that needs PyYAML to be true of the
+machine beforehand, and no interpreter to choose between. The reader that needed
+it — `parse_packages.py` — was deleted with the last installer bash.
 
-To ensure parse_packages.py worked across all platforms regardless of which Python was in PATH:
+What follows is the fix *as it stood*, because the shape of it is the reusable part
+and the "goes away on Ubuntu 26.04" section below is only legible against it: the
+answer at the time was to pin the interpreter and then guarantee the dependency on
+each platform, one platform at a time.
 
-**1. Use system Python via shebang** (then `src/dotfiles/parse_packages.py:1`):
+**1. Use system Python via shebang**:
 
 ```python
 #!/usr/bin/python3  # System Python, not #!/usr/bin/env python3
 ```
 
-This ensures the script always uses `/usr/bin/python3` even if uv-managed Python is in PATH.
+This ensured the script always used `/usr/bin/python3` even if uv-managed Python was in PATH.
 
 **2. Install PyYAML for system Python on each platform**:
 
@@ -94,10 +94,9 @@ This provides **100% accurate testing** - if it fails in the test, it will fail 
 assert machine.succeeds('"$(uv tool dir)/dotfiles/bin/python" -c "import dotfiles, yaml"')
 ```
 
-Defense in depth - catches issues even if test environment differs. This was a
-`parse_packages.py --type=system` call in the verification shell script; the
-property is the same and the subject is now the interpreter itself, which is what
-`$DOTFILES_PYTHON` hands every installer.
+Defense in depth - catches issues even if test environment differs. The property
+is the same one the verification shell script asserted; the subject is now the
+interpreter the CLI was installed with, which is the only one anything runs on.
 
 ## Key Learnings
 

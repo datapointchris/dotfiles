@@ -4,13 +4,11 @@ The one hand-rolled comparator in the package, and it is hand-rolled on purpose:
 the alternative is a dependency that has to be installed before the thing that
 checks whether anything is installed.
 
-It replaced a bash `version_compare` that shelled out to `sort -V`, and the reason
-the two never disagreed is worth keeping: `parse` reduces its input to dotted
-numbers first, so a suffix `sort -V` would have ordered differently never reaches
-a comparison at all. Release tags are the shapes that exercise it — a monorepo
-component carries its prefix on both sides and a formula-style tag carries its
-name, which is why the numbers are found inside the string rather than at the
-front of it.
+`parse` reduces its input to dotted numbers before anything is compared, so a
+suffix that would order differently never reaches a comparison at all. Release
+tags are the shapes that exercise it — a monorepo component carries its prefix on
+both sides and a formula-style tag carries its name, which is why the numbers are
+found inside the string rather than at the front of it.
 """
 
 from __future__ import annotations

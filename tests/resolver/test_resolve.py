@@ -1,11 +1,4 @@
-"""What each machine should have.
-
-This carried a second half until `parse_packages` was deleted: a parity gate
-asserting `resolve` selected exactly what the 28 bash call sites into that module
-selected, on every machine and every section. It went with the module it compared
-against, which is what it was written to make safe — a test measuring a deleted
-implementation measures nothing.
-"""
+"""What each machine should have."""
 
 from __future__ import annotations
 
@@ -44,9 +37,8 @@ def synthetic(tmp_path: Path, packages: dict[str, Any], manifest: dict[str, Any]
 
 
 def test_wsl_plans_none_of_the_docker_packages_its_apt_repo_does_not_carry(declaration: catalog.Catalog) -> None:
-    """Asserted against the declaration directly, which the retired parity gate
-    could not do — it read the same field the resolver does, so it would have
-    agreed with a resolver that had this wrong.
+    """The expectation is built from the declaration rather than from the field
+    the resolver reads, so a resolver that had this wrong could not agree with it.
 
     The docker family lives in Docker's own apt repository, which nothing in the
     installer configures — so on WSL `apt install docker-ce` fails, and `check`

@@ -19,6 +19,7 @@ import pytest
 import yaml
 
 from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import validate
 from dotfiles.validate import Severity
 
@@ -210,14 +211,41 @@ def test_the_real_declaration_is_sound() -> None:
 #
 # `catalog.load` refuses a key no reader consumes, which is a per-entry rule. Each
 # of these is a relation — between two fields, or between a manifest and the
-# declaration — and none is expressible as a dataclass field. They outlived
-# `parse_packages`, whose tests were their previous home, and are asserted against
-# the real files here for the reason that file did: a synthetic fixture proves the
-# check works, and only the real declaration proves the repo passes it.
+# declaration — and none is expressible as a dataclass field, which is why they
+# are asserted rather than loaded. Against the real files, because a synthetic
+# fixture proves a check works and only the shipped declaration proves the repo
+# passes it.
+#
+# Every read goes through the loader the tool reads with, never `yaml.safe_load`:
+# a manifest key is not always its section name and does not always take a list,
+# so a test with its own parser is a second copy of a grammar `machine.py` owns.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+MARKERS = ('install/packages.yml', 'src/dotfiles', 'pyproject.toml')
+"""Files that together identify a dotfiles checkout and nothing else."""
+
+
+def checkout() -> Path:
+    """The checkout these tests came from, found by what is in it.
+
+    Not `paths.REPO_ROOT`, which lets `$DOTFILES_DIR` win unconditionally: that is
+    right for the CLI, which must deploy the machine's repo from wherever it is
+    invoked, and wrong here. `.zshenv` pins that variable to ~/dotfiles, so a run
+    from a worktree would assert against main's declaration while reporting on the
+    branch — green against files the branch never touched.
+
+    Anchored on markers rather than counting parents, because a count is a claim
+    about where this file sits and moving it one directory changes the answer in
+    silence.
+    """
+    for candidate in Path(__file__).resolve().parents:
+        if all((candidate / marker).exists() for marker in MARKERS):
+            return candidate
+    raise RuntimeError(f'no dotfiles checkout above {__file__}: none of its parents holds {", ".join(MARKERS)}')
+
+
+CHECKOUT = checkout()
 
 
 def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
@@ -225,16 +253,23 @@ def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
     put a node on PATH at all — which is how a WSL offline install died with
     `fnm not found`.
 
-    Read off disk rather than from a list of machine names, so a manifest added
-    tomorrow is covered the day it is written.
+    Asked of every manifest on disk rather than a list of names, so one added
+    tomorrow is covered the day it is written, and asked through `subscription`
+    because that is the function production narrows with: whether a machine wants
+    an entry is a question about coverage, tier and spelling that only the loader
+    answers the same way twice.
     """
-    for manifest in sorted((REPO_ROOT / 'install' / 'manifests').glob('*.yml')):
-        declared = yaml.safe_load(manifest.read_text())
-        if not declared.get('npm_globals'):
+    declaration = catalog.load(CHECKOUT / 'install' / 'packages.yml')
+    fnm = declaration.find('cargo_packages', 'fnm')
+    assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
+
+    for name in machines.names(CHECKOUT):
+        machine = machines.load(name, CHECKOUT)
+        npm = machine.subscription('npm_globals')
+        if not any(npm.wants(entry) for entry in declaration.section('npm_globals')):
             continue
-        cargo = declared.get('cargo_packages')
-        assert cargo is True or 'fnm' in (cargo or ()), (
-            f'{manifest.name} installs npm globals but no fnm, so the node toolchain cannot resolve'
+        assert machine.subscription('cargo_packages').wants(fnm), (
+            f'{name} installs npm globals but not fnm, so the node toolchain cannot resolve'
         )
 
 
@@ -246,9 +281,9 @@ def test_fnm_overrides_both_target_triples() -> None:
     macOS bundle broken and vice versa, and one of the two going missing is the
     shape that survives a careless edit.
     """
-    fnm = catalog.load(REPO_ROOT / 'install' / 'packages.yml').find('cargo_packages', 'fnm')
+    fnm = catalog.load(CHECKOUT / 'install' / 'packages.yml').find('cargo_packages', 'fnm')
 
-    assert fnm is not None, 'fnm is the node toolchain; nothing else puts node on PATH'
+    assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
     assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
 
 
@@ -257,7 +292,7 @@ def test_a_cargo_binary_pattern_names_the_repo_it_builds_a_url_for() -> None:
     carrying one without a `github_repo` is dead configuration that reads as
     working — the same failure `install_script` was refused for, one relation up
     where the loader cannot see it."""
-    declaration = catalog.load(REPO_ROOT / 'install' / 'packages.yml')
+    declaration = catalog.load(CHECKOUT / 'install' / 'packages.yml')
 
     orphaned = [entry.name for entry in declaration.section('cargo_packages') if entry.binary_pattern and not entry.github_repo]
 
