@@ -71,14 +71,18 @@ import subprocess
 from collections.abc import Iterator
 
 import pytest
+from harness import ARCHLINUX
 from harness import ENVIRONMENTS
+from harness import UNDER_TEST
 from harness import Environment
 from harness import Machine
 from harness import authenticate_git
+from harness import build_base
 from harness import clear_shadow_calls
 from harness import copy_repo
 from harness import docker
 from harness import github_token
+from harness import github_token_args
 from harness import image_exists
 from harness import install_age
 from harness import install_command
@@ -86,8 +90,6 @@ from harness import install_record
 from harness import plant_python_shadow
 from harness import stage_bundle
 from harness import start
-
-from dotfiles import paths
 
 
 def reusing_containers(config: pytest.Config) -> bool:
@@ -163,7 +165,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
     if not image_exists(environment.image):
         if not environment.build_image:
             pytest.skip(f'image {environment.image} is absent and nothing here builds it')
-        subprocess.run(environment.build_image, check=True, cwd=paths.REPO_ROOT)
+        subprocess.run(environment.build_image, check=True, cwd=UNDER_TEST)
 
     name = f'dotfiles-e2e-{environment.name}'
     # `--reuse` keeps the OS state — an Arch container is 4.5GB of pacman
@@ -240,3 +242,71 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
         raise AssertionError('the install left no exit status behind, so nothing here can say what it did')
     container.install_status, container.install_log = recorded
     return container
+
+
+@pytest.fixture(scope='session')
+def base(request: pytest.FixtureRequest) -> str:
+    """The base image for this environment: system packages and nothing above them.
+
+    Built once and reused across runs while its digest and its age hold, because
+    the packages are the part that costs ten minutes and changes least. Everything
+    a set test then installs sits on top of a machine that already has curl, git,
+    unzip and a package manager — which is exactly the state a set's own
+    prerequisites are declared against.
+    """
+    environment: Environment = request.param if hasattr(request, 'param') else ARCHLINUX
+
+    if docker('info').returncode != 0:
+        pytest.skip('Docker is not running')
+    if not image_exists(environment.image):
+        pytest.skip(f'image {environment.image} is absent')
+
+    return build_base(environment)
+
+
+@pytest.fixture
+def over_base(base: str, container_environment: Environment) -> Iterator[Machine]:
+    """A throwaway machine from the base image, with this checkout's code in it.
+
+    Function-scoped and not session-scoped, unlike `container` and `machine`: a set
+    installs into the machine, so two sets sharing one would make the second's
+    result depend on the first's. Starting from an image costs about a second,
+    which is what makes per-test isolation affordable here and not there.
+    """
+    name = f'dotfiles-e2e-set-{container_environment.name}'
+    docker('rm', '-f', name)
+    docker(
+        'run',
+        '-d',
+        '--name',
+        name,
+        '--env',
+        'DOTFILES_DOCKER_TEST=true',
+        *github_token_args(),
+        '--mount',
+        f'type=bind,source={UNDER_TEST},target=/dotfiles-src,readonly',
+        base,
+        'sleep',
+        'infinity',
+        check=True,
+    )
+    subject = Machine(environment=container_environment, container=name)
+    try:
+        copy_repo(subject)
+        authenticate_git(subject)
+        yield subject
+    finally:
+        docker('rm', '-f', name)
+
+
+@pytest.fixture(scope='session')
+def container_environment(request: pytest.FixtureRequest) -> Environment:
+    """Which environment the set tier runs against.
+
+    One rather than all four: a set test asks whether a section installs, and the
+    answer is the same shape on every environment while the base costs multiple GB
+    each. `--environment` still picks it.
+    """
+    wanted = str(request.config.getoption('--environment')).strip()
+    named = {environment.name: environment for environment in ENVIRONMENTS}
+    return named.get(wanted.split(',')[0], ARCHLINUX)

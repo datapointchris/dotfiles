@@ -11,6 +11,7 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import harness
 import pytest
@@ -345,3 +346,23 @@ class TestGitCredential:
         harness.authenticate_git(harness.Machine(environment=ARCHLINUX, container='pretend'))
 
         assert ran == []
+
+
+def test_the_container_gets_the_checkout_the_tests_came_from() -> None:
+    """`paths.REPO_ROOT` honours `$DOTFILES_DIR`, which `.zshenv` exports to
+    ~/dotfiles — so an e2e run from a git worktree mounted the wrong repo and
+    installed main's code while reporting on the branch.
+
+    Both directions were wrong and neither was visible: a fix made on the branch
+    showed as still broken, and a break on main showed as the branch's.
+    """
+    assert Path(harness.__file__).resolve().parents[2] == harness.UNDER_TEST
+    assert (harness.UNDER_TEST / 'install.sh').is_file()
+    assert (harness.UNDER_TEST / 'tests' / 'e2e' / 'harness.py').is_file()
+
+
+def test_the_repo_under_test_ignores_the_environment_the_product_reads(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv('DOTFILES_DIR', str(tmp_path))
+    import importlib
+
+    assert tmp_path != importlib.reload(harness).UNDER_TEST
