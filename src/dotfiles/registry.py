@@ -1203,8 +1203,18 @@ def executable_of(entry: catalogs.Entry) -> str:
 
 
 def precondition_of(entry: catalogs.Entry) -> resolve.Precondition:
-    needs_auth = getattr(entry, 'requires_github_auth', False)
-    return resolve.Precondition.GITHUB_AUTH if needs_auth else resolve.Precondition.NONE
+    """The one state that stops this entry installing, or NONE.
+
+    One rather than a set, because no entry declares two and a set would be
+    machinery for a case that does not exist. The day one does, this returns the
+    set and `Preconditions.holds` takes it — both are two-line changes, and
+    guessing at the shape now would be one more thing to unpick.
+    """
+    if getattr(entry, 'requires_github_auth', False):
+        return resolve.Precondition.GITHUB_AUTH
+    if getattr(entry, 'requires_amd_gpu', False):
+        return resolve.Precondition.AMD_GPU
+    return resolve.Precondition.NONE
 
 
 def selector_of(section: str, subscription: machines.Subscription) -> str:

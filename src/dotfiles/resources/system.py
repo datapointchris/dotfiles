@@ -30,11 +30,12 @@ from dotfiles.privilege import Privilege
 from dotfiles.providers import sysconfig
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
+from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
-from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
 NAME = 'system'
@@ -49,6 +50,14 @@ class Observed:
 
     config: dict[str, sysconfig.State]
     """One state per `system.yml` row, keyed by address."""
+
+    met: Preconditions = Preconditions()
+    """Which declared preconditions this machine meets.
+
+    This resource ignored them entirely until a `system_packages` entry needed
+    one — a ROCm build must not be installed into a machine with no AMD device,
+    and the row that says so is here rather than in `packages`.
+    """
 
     packages: int = 0
     """How many of the observed rows are declared packages.
@@ -82,6 +91,7 @@ class SystemResource:
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
+            met=ev.measured_preconditions(),
             packages=sum(1 for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
         )
 
@@ -93,7 +103,7 @@ class SystemResource:
                 item.address,
                 observed.evidence[item.address].verdict,
                 detail=observed.evidence[item.address].detail,
-                repair=Repair.NONE if observed.evidence[item.address].verdict is Verdict.UNKNOWN else Repair.AUTOMATIC,
+                repair=repair_for(item, observed.evidence[item.address].verdict, observed.met),
                 desired=item,
                 privileged=registry.needs_root(item),
             )

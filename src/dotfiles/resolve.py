@@ -111,6 +111,46 @@ class Precondition(enum.StrEnum):
     NONE = ''
     GITHUB_AUTH = 'github_auth'
 
+    AMD_GPU = 'amd_gpu'
+    """A ROCm build, which is 12 GiB of runtime for a device that may not be there.
+
+    A precondition rather than a coordinate, and the distinction was argued rather
+    than assumed. A seventh axis fails the bar `.planning/machine-axes.md` sets —
+    each of the six is forced by dozens of consumers and this would be forced by
+    one package name, which is what got "offline / restricted egress" rejected as
+    n=1 and told to be a capability requirement instead. `coordinates.Arch` is the
+    same verdict reached independently: a hardware fact deliberately kept out of
+    the tuple because one consumer needed it.
+
+    It also *cannot* be a coordinate, whatever the evidence said. Resolution is
+    machine-independent by construction — `machines check` validates all four
+    manifests offline from any machine, and `machines show <other>` describes that
+    machine rather than this one — so a hardware probe inside `available()` would
+    make the Mac's view of the Arch plan differ from the Arch box's.
+    """
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Preconditions:
+    """Which of them this machine currently meets, measured once per observation.
+
+    A record rather than a probe per item: both are questions about the machine
+    and neither varies between two entries asking it, so one answer is carried to
+    every row that names it. `evidence.measured_preconditions` is what fills it,
+    and the default is the pessimistic reading — a caller that measured nothing
+    has not thereby satisfied anything.
+    """
+
+    github_auth: bool = False
+    amd_gpu: bool = False
+
+    def holds(self, precondition: Precondition) -> bool:
+        if precondition is Precondition.GITHUB_AUTH:
+            return self.github_auth
+        if precondition is Precondition.AMD_GPU:
+            return self.amd_gpu
+        return True
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Reason:

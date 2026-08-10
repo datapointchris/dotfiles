@@ -255,6 +255,20 @@ class SystemPackage(Entry):
     brew: str = ''
     aur: str = ''
 
+    requires_amd_gpu: bool = False
+    """Whether this entry is a ROCm build, useless without an AMD device.
+
+    Declared here and checked live, never filtered out of the plan: `available()`
+    reads coordinates and coordinates are what a *manifest* says a machine is, so
+    resolution stays the same answer from every machine. `resolve.Precondition.AMD_GPU`
+    carries the argument for why this is not a seventh coordinate axis.
+
+    One entry uses it — `ollama`, whose pacman name is `ollama-rocm` and whose
+    dependency closure is 12 GiB of ROCm. Untagged, that installs into any pacman
+    machine, which today means a GPU-less test container downloading a compute
+    stack it cannot execute.
+    """
+
     excludes_host: str = ''
     """One host whose package manager cannot resolve this entry, however it is named.
 

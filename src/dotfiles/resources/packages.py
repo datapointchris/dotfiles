@@ -29,11 +29,12 @@ from dotfiles import versions
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
-from dotfiles.resolve import Precondition
+from dotfiles.resolve import Preconditions
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
 NAME = 'packages'
@@ -55,7 +56,9 @@ manager already owns.
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
     evidence: dict[str, ev.Evidence]
-    have_github_credentials: bool
+    met: Preconditions
+    """Which declared preconditions this machine meets, measured once for the walk."""
+
     reported: dict[str, str] = dc.field(default_factory=dict)
     """Address → the version string an installed release binary printed."""
 
@@ -88,7 +91,7 @@ class PackagesResource:
 
         return Observed(
             evidence=evidence,
-            have_github_credentials=ev.have_github_credentials(),
+            met=ev.measured_preconditions(),
             reported={item.address: found for item in present if (found := ev.reported_version(item.executable))},
             latest=latest,
             consulted_network=consulted,
@@ -106,7 +109,7 @@ class PackagesResource:
                         item.address,
                         evidence.verdict,
                         detail=evidence.detail,
-                        repair=repair_for(item, evidence, observed.have_github_credentials),
+                        repair=repair_for(item, evidence.verdict, observed.met),
                         desired=item,
                     )
                 )
@@ -117,24 +120,6 @@ class PackagesResource:
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
-
-
-def repair_for(item: DesiredItem, evidence: ev.Evidence, credentials: bool) -> Repair:
-    """Whether `apply` could do anything about this.
-
-    A private repo without credentials cannot be installed here: attempting it
-    records a failure for something the machine was never able to have, and the
-    run exits non-zero for a reason no change to this repo can fix. Warned rather
-    than silent, because a `gh` login is state a machine can lose.
-
-    An unmeasurable item is nobody's to repair either — there is no verdict to act
-    on, only one to report.
-    """
-    if evidence.verdict is Verdict.UNKNOWN:
-        return Repair.NONE
-    if item.precondition is Precondition.GITHUB_AUTH and not credentials:
-        return Repair.BY_HAND
-    return Repair.AUTOMATIC
 
 
 def _has_currency(item: DesiredItem) -> bool:

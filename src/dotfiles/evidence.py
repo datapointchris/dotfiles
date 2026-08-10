@@ -32,6 +32,7 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
+from dotfiles.resolve import Preconditions
 from dotfiles.resources import Verdict
 
 
@@ -323,3 +324,32 @@ def have_github_credentials() -> bool:
     """The same question `github_token` in `version-helpers.sh` asks, so a check
     and the installers it gates cannot disagree about whether to try."""
     return bool(os.environ.get('GITHUB_TOKEN')) or run(['gh', 'auth', 'token'], output=Output.QUIET).ok
+
+
+AMD_KFD = Path('/dev/kfd')
+"""The kernel driver node ROCm talks to, and what a container has none of.
+
+The same shape as `bootstrap.SYSTEM_BUS`, and for the same reason: ask the real
+precondition rather than whether this is a test. A container without `--device`
+has no `/dev/kfd`, and so does a machine with an Nvidia card or no discrete GPU
+at all — one probe, right in all three cases, where `DOTFILES_DOCKER_TEST` would
+be a test harness telling production code it is being tested.
+
+`lspci` was the alternative and is worse: it answers "an AMD device exists"
+rather than "the compute stack can reach it", and it is one more binary to
+require on a machine deciding whether to install 12 GiB.
+"""
+
+
+def have_amd_gpu() -> bool:
+    return AMD_KFD.exists()
+
+
+def measured_preconditions() -> Preconditions:
+    """Every precondition, answered once for the whole observation.
+
+    Both probes here rather than one per resource, because a machine's credentials
+    and its GPU do not vary between two entries asking about them — and because
+    the `gh` call is the expensive one and was already being made per resource.
+    """
+    return Preconditions(github_auth=have_github_credentials(), amd_gpu=have_amd_gpu())

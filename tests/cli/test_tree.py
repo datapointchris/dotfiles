@@ -197,3 +197,16 @@ def test_report_list_on_an_empty_history_is_empty_not_an_error(empty_state: Path
 
 # What `apply` would do without doing it is `tests/cli/test_phase_registry.py`,
 # which is also where the Python registry is checked against the bash one.
+
+
+def test_a_precondition_is_visible_in_the_audit() -> None:
+    """It was not, for as long as it existed. `[amd_gpu]` is a rich style tag as
+    far as the console is concerned, so the annotation was parsed as markup and
+    swallowed — on every one of the entries that declared one, silently, since the
+    field was added. The escape is what makes it print.
+    """
+    result = runner.invoke(app, ['machines', 'show', 'archlinux-personal-workstation'], env={'COLUMNS': '160'})
+
+    assert result.exit_code == ExitCode.CONVERGED, result.output
+    assert '[amd_gpu]' in result.output, 'the ROCm precondition is invisible in the audit'
+    assert '[github_auth]' in result.output

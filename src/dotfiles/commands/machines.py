@@ -134,7 +134,10 @@ def _render(plan: resolver.Plan) -> None:
         console.print()
         console.print(f'[bold blue]{stage.name.lower()}[/]  {len(items)}')
         for item in items:
-            note = f'  [{item.precondition}]' if item.precondition else ''
+            # Escaped, because rich reads `[amd_gpu]` as a style tag and swallows
+            # it: the annotation has never once been visible, on any of the three
+            # entries that have declared a precondition since it was added.
+            note = rf'  \[{item.precondition}]' if item.precondition else ''
             console.print(f'  {item.provider:<14} {item.name:<28} {item.reason.selector}{note}')
 
     console.print()

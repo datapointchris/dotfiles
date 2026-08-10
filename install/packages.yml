@@ -709,9 +709,14 @@ system_packages:
     tags: [multimedia, webview]
 
   # Local AI
+  # The pacman name pulls 12 GiB of ROCm — rocm-llvm alone is 6.9 GiB — and every
+  # byte of it is inert without an AMD device. `requires_amd_gpu` is checked live
+  # against /dev/kfd rather than filtering the plan, so the row stays visible and
+  # a machine without the device is told what it skipped.
   - name: ollama
     pacman: ollama-rocm
     brew: ollama
+    requires_amd_gpu: true
     description: Local LLM server for embeddings — pacman uses ROCm variant for AMD RX 6600 GPU acceleration
 
 # ================================================================
