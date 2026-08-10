@@ -1407,7 +1407,7 @@ go_tools:
     description: Jira issues, sprints, and transitions from the terminal
 
   - name: ifiles
-    package: github.com/datapointchris/ifiles/v2
+    package: github.com/datapointchris/ifiles/v3
     github_repo: datapointchris/ifiles
     binary_pattern: "ifiles_{version_num}_{os}_{go_arch}.tar.gz"
     description: Chunked file transfer to and from files.ichrisbirch.com
