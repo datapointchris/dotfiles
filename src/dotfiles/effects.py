@@ -134,6 +134,17 @@ def run(
         raise ValueError('only a streaming command echoes anything, so there is nothing for `show` to filter')
 
     def missing(problem: OSError) -> Completed:
+        """A command the kernel would not start, reported as a shell reports one.
+
+        Every `OSError` and not only the not-found and permission cases. `Exec
+        format error` is a bare `OSError` — a PE32 binary reached on Linux, an
+        architecture mismatch, a script with no interpreter — and an escaping one
+        travels out of the provider, out of `observe`, and into a `Refusal` that
+        takes a whole resource's measurement with it. A WSL container is where
+        that is reachable: `win32yank` is a declared Windows executable with no
+        Windows under it, and one unrunnable binary makes every package
+        unmeasurable.
+        """
         return Completed(command=argv, returncode=NOT_FOUND, transcript=f'{argv[0]}: {problem.strerror}')
 
     def expired(problem: subprocess.TimeoutExpired) -> Completed:
@@ -147,7 +158,7 @@ def run(
     if output is Output.DATA:
         try:
             completed = subprocess.run(argv, cwd=directory, env=environment, check=False, timeout=timeout)
-        except (FileNotFoundError, PermissionError) as problem:
+        except OSError as problem:
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
             return expired(problem)
@@ -156,7 +167,7 @@ def run(
     if output is Output.QUIET:
         try:
             captured = subprocess.run(argv, cwd=directory, env=environment, check=False, capture_output=True, text=True, timeout=timeout)
-        except (FileNotFoundError, PermissionError) as problem:
+        except OSError as problem:
             return missing(problem)
         except subprocess.TimeoutExpired as problem:
             return expired(problem)
@@ -186,7 +197,7 @@ def run(
                         sys.stderr.write(line)
                     elif (visible := show(line)) is not None:
                         sys.stderr.write(visible)
-    except (FileNotFoundError, PermissionError) as problem:
+    except OSError as problem:
         return missing(problem)
 
     return Completed(command=argv, returncode=process.returncode, transcript=''.join(lines))
