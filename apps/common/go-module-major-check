@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Refuse a breaking commit that does not carry its go.mod major bump.
+#
+# Go serves a module at v2+ only when the module path ends in /vN matching the
+# tag. semantic-release cuts that tag AFTER the merge, from the tree as merged,
+# so the major can only be made to agree inside the commit that triggers it.
+# Miss it and the tag is permanently unservable: `go install ...@latest` then
+# succeeds and silently returns the newest version from the OLD major's line.
+# That is not hypothetical — bbkt served v1.0.2 against a v2.1.0 tag, todoui
+# v1.8.0 against v2.6.1, for as long as nobody thought to ask the proxy.
+#
+# commit-msg stage, because only the message says whether the commit is
+# breaking. Argument is the commit message file.
+
+set -euo pipefail
+
+msg_file="${1:-}"
+[[ -f $msg_file ]] || exit 0
+[[ -f go.mod ]] || exit 0
+
+# `!` before the colon, or a BREAKING CHANGE trailer. Both are what
+# semantic-release reads as a major.
+subject=$(head -1 "$msg_file")
+if [[ ! $subject =~ ^[a-z]+(\([^\)]*\))?!: ]] \
+  && ! grep -qE '^BREAKING[ -]CHANGE:' "$msg_file"; then
+  exit 0
+fi
+
+# Below v1 a breaking change is a minor, and Go wants no suffix under v2.
+# Reading local tags risks staleness, so this fails OPEN: an unfetched clone
+# skips the check rather than blocking a commit on a guess.
+latest=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+case $latest in
+  '' | v0.*) exit 0 ;;
+esac
+
+# No /vN suffix means v1 — that is the path Go expects below v2.
+module_major() {
+  local major
+  major=$(head -1 <<<"${1:-}" | sed -nE 's|^module .*/v([0-9]+)$|\1|p')
+  echo "${major:-1}"
+}
+
+head_major=$(module_major "$(git show HEAD:go.mod 2>/dev/null || true)")
+staged_major=$(module_major "$(git show :go.mod 2>/dev/null || true)")
+want=$((head_major + 1))
+
+if ((staged_major > head_major)); then
+  exit 0
+fi
+
+module_path=$(head -1 go.mod | sed 's/^module //')
+base=${module_path%/v*}
+[[ $module_path == */v[0-9]* ]] || base=$module_path
+
+cat >&2 <<EOF
+
+  This commit is breaking, so the release will cut v${want}.
+  go.mod still declares v${head_major}: ${module_path}
+
+  Go serves v2+ only when the module path carries the major. The tag is cut
+  from this tree, so a tag whose go.mod disagrees is unservable forever, and
+  \`go install ...@latest\` will quietly keep returning the old major's newest
+  version instead of failing.
+
+  Fix it in THIS commit:
+
+    sed -i -E 's@(^|[^/])${base//@/\\@}@\\1${base//@/\\@}/v${want}@g' \\
+      \$(git ls-files | grep -v '^go\.sum\$')
+    go mod tidy && go build ./... && go test ./...
+
+  That also catches the -X ldflags in Taskfile and .goreleaser: a version
+  stamp aimed at the old path is dropped silently by the linker.
+
+  A https:// URL must stay bare — the pattern above leaves those alone.
+
+EOF
+exit 1
