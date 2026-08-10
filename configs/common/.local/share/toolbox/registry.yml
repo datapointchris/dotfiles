@@ -1097,7 +1097,7 @@ tools:
         desc: "Open the picker pre-filtered to a term"
       - cmd: "menu review"
         desc: "Show what's due to revisit (cadence register)"
-    see_also: [toolbox, tool-usage, workflows, menu-review]
+    see_also: [toolbox, workflows, menu-review]
     tags: [dotfiles, discovery, tools, search]
 
 
@@ -1126,7 +1126,7 @@ tools:
         desc: "Show what's due now, most overdue first"
       - cmd: "menu review done brew-maintenance"
         desc: "Mark an item done, which advances its due date"
-    see_also: [menu, workflows, tool-usage]
+    see_also: [menu, workflows]
     tags: [dotfiles, discovery, review, cadence]
 
   menu-labs:
@@ -1478,18 +1478,6 @@ tools:
     see_also: [forge, git]
     tags: [git, sync, multi-machine, python]
     docs_url: "https://github.com/datapointchris/syncer"
-
-  tool-usage:
-    category: custom-tools
-    description: "Report personal CLI tool usage frequency from shell history"
-    installed_via: dotfiles
-    usage: "tool-usage"
-    why_use: "See which of your custom tools you actually use and which you have forgotten, ranked by frequency"
-    examples:
-      - cmd: "tool-usage"
-        desc: "Show usage counts for all custom tools and list unused ones"
-    see_also: [menu, toolbox, workflows]
-    tags: [dotfiles, discovery, history, usage]
 
   webviewrs:
     category: custom-tools

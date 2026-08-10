@@ -5,8 +5,9 @@
 # Beyond search, atuin records the per-command metadata the audit-flow analysis
 # needs — exit code, working directory, and session — in ~/.local/share/atuin/history.db.
 #
-# The flat ~/.local/state/zsh/history keeps being written too, so nothing that
-# reads it (tool-usage, toolbox remind) changes.
+# The flat ~/.local/state/zsh/history keeps being written too, so it stays the
+# fallback for anything reading history — `doit kit usage` and toolbox remind
+# both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
 # Fleet-wide history through the self-hosted server on atuin-lxc, reachable only
 # from the LAN. History is encrypted client-side, so the server holds ciphertext

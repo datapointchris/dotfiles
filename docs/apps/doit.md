@@ -40,6 +40,12 @@ Two couplings stayed here and were rewired rather than removed:
 `shell/common/completions.zsh` is gone entirely. It existed only to hand-write `_menu`, and `doit`
 generates its own completion.
 
+`apps/common/tool-usage` followed in August 2026, superseded by `doit kit usage` and `doit kit
+unused`. It ranked the registry's `custom-tools` entries by hits in the flat zsh history; `doit`
+folds the same question over everything you own — the registry, shell functions, aliases, git
+aliases and forgit shortcuts — and reads atuin first, so it carries recency as well as frequency and
+answers for the whole fleet rather than one box. Its registry entry went with it.
+
 ## Config and state
 
 Both moved to `doit`'s own XDG paths, and both are Syncthing folders declared in
