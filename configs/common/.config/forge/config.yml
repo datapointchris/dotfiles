@@ -1,0 +1,12 @@
+# forge's machine config: what this machine's layout is, as opposed to what the
+# portfolio is. Deployed rather than hand-written, because every answer in it is
+# the same on every machine that has forge.
+
+# The registry is maintained at ~/dev/repos.json and read by forge, fleet, indy
+# and syncer. Naming it here is what replaced a hand-made symlink from forge's
+# own data directory — one made on each machine, declared nowhere, and reported
+# by nothing. See ~/dev/standards/data.md § "A shared file is named in config".
+#
+# The path is uniform across the fleet and off it; only how the file arrives
+# differs, Syncthing here and safekeep on the work box.
+repos_file: ~/dev/repos.json

@@ -1,0 +1,7 @@
+# fleet's machine config. Its first: fleet carried ~/dev/repos.json compiled in
+# until the fleet settled on one resolution order for every reader of a shared
+# file, and this is the layer that replaced it.
+
+# See the note in ../forge/config.yml — same file, same reason, and the two are
+# deliberately separate because each tool resolves its own.
+repos_file: ~/dev/repos.json

@@ -1,5 +1,11 @@
 # syncer tool config. Every option, annotated: syncer config example config
 
+# The registry every reader shares, at one path on every machine — only how the
+# file arrives differs, Syncthing on the fleet and safekeep off it. Named here
+# rather than reached through a symlink, per ~/dev/standards/data.md § "A shared
+# file is named in config; only the tool's own default is compiled in".
+repos_file = "~/dev/repos.json"
+
 default_policy = "standard"
 
 # Prune a feature branch once its remote is gone and the merge target provably holds its work.
