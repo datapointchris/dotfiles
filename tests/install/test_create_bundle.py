@@ -23,6 +23,32 @@ from dotfiles.providers import bundle as bundle_manifest
 from dotfiles.providers import cargo
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
+from dotfiles.resolve import DesiredItem
+from dotfiles.resolve import Precondition
+from dotfiles.resolve import Reason
+from dotfiles.resolve import Stage
+
+
+def planned(entry, section):
+    """One row as the resolver would hand it to the bundler.
+
+    Built here rather than resolved from a manifest because the entry under test
+    is invented: what this fixes is the *shape* the bundler consumes, and the
+    resolver producing that shape from a real manifest is `tests/resolver/`'s
+    question rather than this file's.
+    """
+    return DesiredItem(
+        section=section,
+        provider='cargo',
+        resource='packages',
+        stage=Stage.TOOLS,
+        name=entry.name,
+        executable=entry.executable,
+        evidence_path='',
+        precondition=Precondition.NONE,
+        entry=entry,
+        reason=Reason(section, f'manifest:{section}'),
+    )
 
 
 class TestPlatform:
@@ -321,11 +347,9 @@ class TestBundleRoundTrip:
 
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: version)
         monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
-        monkeypatch.setattr(create_bundle.catalog, 'load', lambda: FakeCatalog(entry))
 
-        packages = {'cargo_packages': [{'name': entry.name}]}
-        manifest = {'cargo_packages': [entry.name]}
-        create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), packages, manifest)
+        items = (planned(entry, 'cargo_packages'),)
+        create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), items)
         bundle.write_metadata()
 
         monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
@@ -356,14 +380,3 @@ class TestBundleRoundTrip:
 
         assert staged is not None
         assert staged.filename == 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz'
-
-
-class FakeCatalog:
-    """Just enough Catalog for the bundler: one entry, findable by name."""
-
-    def __init__(self, entry):
-        self.entry = entry
-
-    def find(self, section, name):
-        assert name == self.entry.name
-        return self.entry
