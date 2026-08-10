@@ -11,6 +11,7 @@ import json
 
 import pytest
 
+from dotfiles import paths
 from dotfiles import runs
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
@@ -164,13 +165,29 @@ class TestListing:
 
         assert len(runs.list_runs(runs_dir, verb='check')) == 1
 
-    def test_latest_points_at_the_newest_record(self, runs_dir):
+    def test_latest_points_at_the_newest_record(self, runs_dir, monkeypatch):
+        """Both halves are per-machine now that the fleet shares runs/: the link
+        carries the name in it, and the lookup narrows to the machine asking."""
+        monkeypatch.setattr(paths, 'MACHINE_ID', 'macos-personal-workstation')
+        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-macos-personal-workstation')
         older = a_run()
         older.started_at = '2026-08-01T00:00:00Z'
         runs.write(older, runs_dir)
         newest = runs.write(a_run(), runs_dir)
 
-        link = runs_dir.parent / 'latest'
+        link = runs_dir.parent / 'latest-macos-personal-workstation'
         assert link.is_symlink()
         assert link.resolve() == newest.resolve()
         assert runs.latest(runs_dir) == newest
+
+    def test_latest_is_this_machines_run_and_not_the_fleets_newest(self, runs_dir, monkeypatch):
+        """The directory is shared, so an unnarrowed answer is whichever box ran
+        most recently — `report latest` after an apply here showing a check that
+        happened on the Mac."""
+        monkeypatch.setattr(paths, 'MACHINE_ID', 'archlinux-personal-workstation')
+        mine = a_run(machine='archlinux-personal-workstation')
+        mine.started_at = '2026-08-01T00:00:00Z'
+        written = runs.write(mine, runs_dir)
+        runs.write(a_run(machine='macos-personal-workstation'), runs_dir)
+
+        assert runs.latest(runs_dir) == written

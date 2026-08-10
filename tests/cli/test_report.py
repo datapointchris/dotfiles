@@ -36,6 +36,10 @@ BEGAN = dt.datetime(2026, 8, 10, 14, 30, 0, tzinfo=dt.UTC)
 def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory = tmp_path / 'runs'
     monkeypatch.setattr('dotfiles.paths.RUNS_DIR', directory)
+    # `latest` narrows to this machine now that the fleet shares runs/, so the
+    # identity has to be pinned here — otherwise the suite's answer depends on
+    # which box it runs on, which is the machine the records do not claim.
+    monkeypatch.setattr('dotfiles.paths.MACHINE_ID', MACHINE)
     return directory
 
 

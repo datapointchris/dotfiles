@@ -267,6 +267,13 @@ def list_runs(
     return found[:limit] if limit else found
 
 
-def latest(runs_dir: Path | None = None) -> Path | None:
-    found = list_runs(runs_dir, limit=1)
+def latest(runs_dir: Path | None = None, *, machine: str | None = None) -> Path | None:
+    """The newest run on this machine, not the newest in the directory.
+
+    The fleet shares `runs/`, so an unnarrowed answer is whichever box ran most
+    recently — `dotfiles report latest` after an apply here would show a check
+    that happened on the Mac. Every other read stays fleet-wide, which is the
+    point of sharing it: `report list` and `report stats` see all four.
+    """
+    found = list_runs(runs_dir, machine=machine or paths.MACHINE_ID, limit=1)
     return found[0] if found else None

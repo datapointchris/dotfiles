@@ -7,6 +7,7 @@ agreed only by the accident of the checkout being at ~/dotfiles.
 """
 
 import os
+import socket
 from pathlib import Path
 
 REPO_MARKER = Path('install') / 'packages.yml'
@@ -56,12 +57,33 @@ FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 # changes what the tool can answer rather than costing a recompute. Its own
 # Syncthing folder, so the fleet shares run history and the work box — which is
 # not on Syncthing — keeps its own by construction rather than by a rule.
+#
+# Run records already carry the machine in the filename. The three below did not,
+# and sharing the directory without them would have four machines overwriting one
+# another's "what happened last" and one box's nudge reporting another's failure.
 STATE_HOME = _xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
 RUNS_DIR = STATE_HOME / 'runs'
-LATEST_RUN = STATE_HOME / 'latest'
-STATUS_FILE = STATE_HOME / 'status.json'
 
-NUDGE_FILE = STATE_HOME / 'nudge'
+
+def machine_id() -> str:
+    """Which machine wrote a file, for the three that the fleet shares a directory for.
+
+    `$MACHINE` is what `~/.env` exports and every install path already reads. The
+    hostname is the fallback for the window before `~/.env` exists — bare and
+    lowercased per ~/dev/standards/data.md § "Machine identity is a bare
+    lowercased hostname", because the two spellings splitting one machine in two
+    is exactly what that rule was written after.
+    """
+    declared = os.environ.get('MACHINE')
+    return declared or socket.gethostname().split('.')[0].lower()
+
+
+MACHINE_ID = machine_id()
+
+LATEST_RUN = STATE_HOME / f'latest-{MACHINE_ID}'
+STATUS_FILE = STATE_HOME / f'status-{MACHINE_ID}.json'
+
+NUDGE_FILE = STATE_HOME / f'nudge-{MACHINE_ID}'
 """One line of human text, read by a shell snippet at every prompt.
 
 Beside `status.json` rather than derived from it, because the reader is zsh:
