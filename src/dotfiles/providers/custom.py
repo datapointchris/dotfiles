@@ -311,26 +311,23 @@ def _awscli_zip(entry: catalog.CustomInstaller, target: Target) -> str:
 
 
 def _awscli(request: Request) -> Result:
-    """AWS's own installer, which is already idempotent — but not free to ask.
+    """AWS's own installer, which is idempotent and expensive — so it is measured first.
 
-    `aws/install --update` converges by itself, so the ideal here is to run it
-    every time. It is 73MB every time (measured 2026-08-08), and `aws/aws-cli`
-    publishes no GitHub *release* — checked again 2026-08-10, `releases/latest`
-    answers 404 while `tags` lists `2.36.19` — so the declaration names no `repo`
-    and this is one of the two entries `_has_currency` cannot answer for. Presence
-    is the whole verdict, and the machine stays on whatever it installed.
+    `aws/install --update` converges by itself, so the ideal is to run it every
+    time; it is 73MB every time (measured 2026-08-08), which is why it was
+    presence-only and moved by a `--reinstall` flag that measured nothing.
 
-    That is a real gap and it is recorded rather than papered over: reading
-    "newest" off the tags endpoint means trusting an ordering GitHub does not
-    promise, and a max-by-version over a page of tags is a mechanism nothing else
-    here needs yet.
+    `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404,
+    rechecked 2026-08-10 — but it tags every build, and the entry declares
+    `version_source: tags` so `_has_currency` can compare against them. Reaching
+    here therefore means the machine is missing it or behind, and the 73MB is
+    being spent on a difference someone measured.
     """
     if request.target.is_darwin:
         return Result(True, 'awscli is a Homebrew package on macOS, installed with the system packages')
 
-    installed = evidence.reported_version(request.entry.executable)
-    if installed:
-        return Result(True, f'{installed.split()[0]} already installed')
+    if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
+        return offline
     if request.offline:
         return Result(False, f'awscli installs from {request.entry.url}, which the offline bundle does not stage')
 

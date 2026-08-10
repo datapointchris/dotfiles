@@ -63,10 +63,21 @@ class Cached:
 
 @dc.dataclass(frozen=True, slots=True)
 class Wanted:
-    """A repo to ask about, and the tag prefix that narrows the answer."""
+    """A repo to ask about, the tag prefix that narrows the answer, and which
+    endpoint holds it."""
 
     repo: str
     tag_prefix: str = ''
+
+    from_tags: bool = False
+    """Whether this repo's newest version is a tag rather than a release.
+
+    One project declares it — `aws/aws-cli` tags every build and publishes no
+    release — and `catalog.VERSION_SOURCES` is where that is stated. Deliberately
+    not part of `key`: a repo answers one way or the other, so two `Wanted` for one
+    repo disagreeing about which is a declaration bug rather than two cache
+    entries.
+    """
 
     @property
     def key(self) -> str:
@@ -127,13 +138,25 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
         return dict(existing)
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        fetched = list(pool.map(lambda item: (item, github_release.latest_version(item.repo, item.tag_prefix)), wanted))
+        fetched = list(pool.map(lambda item: (item, _newest(item)), wanted))
 
     entries = dict(existing)
     for item, version in fetched:
         if version:
             entries[item.key] = Cached(version=version, checked=now)
     return entries
+
+
+def _newest(wanted: Wanted) -> str | None:
+    """Whichever endpoint this repo publishes its newest version on.
+
+    Dispatched on the declaration rather than tried in turn: falling back to tags
+    when the release lookup fails would read a rate-limited minute as "this project
+    tags instead", and start answering a different question with no way to tell.
+    """
+    if wanted.from_tags:
+        return github_release.latest_tag(wanted.repo, wanted.tag_prefix)
+    return github_release.latest_version(wanted.repo, wanted.tag_prefix)
 
 
 def current(wanted: Wanted, entries: dict[str, Cached], now: dt.datetime) -> Cached | None:

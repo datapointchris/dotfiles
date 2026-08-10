@@ -52,15 +52,18 @@ from GitHub. The repo is where the *version* lives, which is a declarative fact
 even when the distribution is not — `mount-s3` adds `release_tag_prefix:` beside
 it, because its tags are `mountpoint-s3-1.23.0` in a repo that tags other things.
 
-**`awscli` is the one entry nothing can answer for.** AWS publishes no GitHub
-release for `aws/aws-cli` — `/releases/latest` 404s, rechecked 2026-08-10 — so
-the entry names no `repo`, `_has_currency` never asks, and presence is the whole
-verdict. The vendor's `aws/install --update` converges by itself, but running it
-on every `apply` spends 73MB (measured 2026-08-08) to answer a question with no
-cheaper form. The tags endpoint does list `2.36.19`, so a max-by-version over one
-page of tags would work; it is not built, because reading "newest" off that
-endpoint means trusting an ordering GitHub does not promise and nothing else here
-needs the mechanism.
+**`awscli` is measured against tags, because it has no releases.** AWS publishes
+no GitHub release for `aws/aws-cli` — `/releases/latest` 404s, rechecked
+2026-08-10 — but it tags every build, so the entry declares `repo:` beside
+`version_source: tags` and the lookup goes to `/tags`. That matters because the
+vendor's own `aws/install --update` converges by itself and costs 73MB every time
+(measured 2026-08-08): before this, presence was the whole verdict and the only
+way to move an installed awscli was a `--reinstall` flag that measured nothing.
+Reaching the installer now means the machine is missing it or behind.
+
+`claude-code` is the one entry left that nothing can answer for, and correctly so
+— it updates itself in the background, so presence really is the whole question
+and re-running the installer would fight the thing it is converging.
 
 **Offline leaves an installed tool alone rather than failing.** Every one of
 these updates over the network — a clone, a vendor script, a release API — so an

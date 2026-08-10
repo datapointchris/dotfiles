@@ -928,8 +928,14 @@ custom_installers:
   # nothing in common do not survive being flattened into a schema. What stays here
   # is what is declarative — the host, the repo a version comes from, and where a
   # tool that puts nothing on PATH lands.
+  # `version_source: tags` because aws/aws-cli tags every build and publishes no
+  # GitHub release at all — `releases/latest` answers 404. Without it the entry
+  # could name no repo, and the only way to move an installed awscli was a
+  # `--reinstall` flag that measured nothing.
   - name: awscli
     command: aws
+    repo: aws/aws-cli
+    version_source: tags
     url: https://awscli.amazonaws.com
     description: AWS Command Line Interface v2 (official installer, platform-specific archive)
 

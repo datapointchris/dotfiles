@@ -211,3 +211,54 @@ class TestLatestVersion:
 
         assert github_release.latest_version('owner/repo') is None
         assert github_release.latest_version('owner/repo', 'cli/') is None
+
+
+class TestLatestTag:
+    """For a project that tags every build and publishes no release.
+
+    `aws/aws-cli` is the only one, and it is why this exists at all: its
+    `releases/latest` answers 404 while `tags` lists `2.36.19`.
+    """
+
+    @staticmethod
+    def answering(monkeypatch, names: list[str]) -> None:
+        payload = ('[' + ', '.join(f'{{"name": "{name}"}}' for name in names) + ']').encode()
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+    def test_the_greatest_version_wins_whatever_order_the_page_arrives_in(self, monkeypatch):
+        """GitHub documents no ordering for this endpoint. It answers newest-first
+        in practice, and comparing rather than trusting that costs one pass over a
+        list already in memory."""
+        self.answering(monkeypatch, ['2.36.9', '2.36.19', '2.36.17'])
+
+        assert github_release.latest_tag('aws/aws-cli') == '2.36.19'
+
+    def test_a_major_version_still_maintained_does_not_win(self, monkeypatch):
+        """aws-cli tags v1 alongside v2, and 1.42.0 sorts above 2.36.19 as a
+        string. Compared as numbers, it does not."""
+        self.answering(monkeypatch, ['1.42.0', '2.36.19'])
+
+        assert github_release.latest_tag('aws/aws-cli') == '2.36.19'
+
+    def test_a_tag_holding_no_version_is_skipped_rather_than_guessed_at(self, monkeypatch):
+        self.answering(monkeypatch, ['nightly', '2.36.19', 'latest'])
+
+        assert github_release.latest_tag('aws/aws-cli') == '2.36.19'
+
+    def test_a_prefix_narrows_to_one_component_of_a_monorepo(self, monkeypatch):
+        self.answering(monkeypatch, ['api/9.0.0', 'cli/1.2.0', 'cli/1.10.0'])
+
+        assert github_release.latest_tag('owner/repo', 'cli/') == 'cli/1.10.0'
+
+    def test_nothing_parseable_answers_nothing(self, monkeypatch):
+        self.answering(monkeypatch, ['nightly', 'latest'])
+
+        assert github_release.latest_tag('owner/repo') is None
+
+    def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
+        def refuse(url, accept=None):
+            raise urllib.error.URLError('no route to host')
+
+        monkeypatch.setattr(github_release, 'request', refuse)
+
+        assert github_release.latest_tag('aws/aws-cli') is None

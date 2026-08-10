@@ -380,17 +380,34 @@ class TestAwscli:
         assert 'Homebrew' in result.detail
         assert fetches.urls == []
 
-    def test_an_installed_aws_is_left_alone(self, declared, home, bundle, effected, monkeypatch):
-        """AWS publishes no release to compare against and the installer is 73MB,
-        so the only way to ask is to download it. The declaration names no repo,
-        so `_has_currency` never asks and presence is the whole verdict."""
-        reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
-        _, fetches = effected()
+    def test_an_installed_aws_is_still_converged_because_presence_is_not_currency(self, declared, home, bundle, effected, monkeypatch):
+        """Presence used to end it here, which is what made `--reinstall` the only
+        way to move awscli. The resource compares against `aws/aws-cli`'s tags now,
+        so reaching this function means the machine is behind and the 73MB is being
+        spent on a measured difference."""
+        reports(monkeypatch, aws='aws-cli/2.36.18 Python/3.14.6')
+        stub_binary(home, 'aws')
+        zipped = io.BytesIO()
+        with zipfile.ZipFile(zipped, 'w') as archive:
+            archive.writestr('aws/install', '#!/bin/sh\n')
+        url = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
+        runs, _ = effected(fetches=Fetches({url: zipped.getvalue()}))
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
 
+        assert result.ok, result.detail
+        assert any('aws/install' in argv[0] for argv in runs.calls)
+
+    def test_an_installed_aws_is_left_alone_offline(self, declared, home, bundle, effected, monkeypatch):
+        """The one case that still ends without asking: there is no network to
+        compare against and nothing staged to install from."""
+        reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
+        _, fetches = effected()
+
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
+
         assert result.ok
-        assert 'already installed' in result.detail
+        assert 'offline' in result.detail
         assert fetches.urls == []
 
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):

@@ -149,7 +149,8 @@ def _has_currency(item: DesiredItem) -> bool:
 def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
     if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
-        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix)
+        from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
+        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags)
     if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)
     return releases.Wanted(repo='')

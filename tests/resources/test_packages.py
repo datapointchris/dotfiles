@@ -333,8 +333,21 @@ MOUNT_S3 = {
 }
 DECLARES_MOUNT_S3 = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['mount-s3']}
 
-AWSCLI = {'custom_installers': [{'name': 'awscli', 'command': 'aws', 'description': "AWS's CLI"}]}
+AWSCLI = {
+    'custom_installers': [
+        {
+            'name': 'awscli',
+            'command': 'aws',
+            'description': "AWS's CLI",
+            'repo': 'aws/aws-cli',
+            'version_source': 'tags',
+        }
+    ]
+}
 DECLARES_AWSCLI = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['awscli']}
+
+NO_REPO = {'custom_installers': [{'name': 'claude-code', 'command': 'claude', 'description': 'self-updating'}]}
+DECLARES_NO_REPO = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['claude-code']}
 
 
 def test_a_custom_installer_behind_its_repo_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
@@ -359,13 +372,35 @@ def test_a_custom_installer_at_its_repos_latest_reports_nothing(tmp_path: Path, 
 
 
 def test_a_custom_installer_naming_no_repo_is_not_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """awscli publishes no GitHub release, so the declaration names no repo and
-    there is nothing to compare against. Silence is the honest answer — an UNKNOWN
-    row on every plan for a question nobody can answer is noise, not a finding."""
-    reporting(fake_bin, 'aws', 'aws-cli/2.36.19 Python/3.14.6')
-    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+    """claude-code updates itself in the background and names no repo, so there is
+    nothing to compare against. Silence is the honest answer — an UNKNOWN row on
+    every plan for a question nobody can answer is noise, not a finding."""
+    reporting(fake_bin, 'claude', '2.1.226 (Claude Code)')
+    live = session(tmp_path, NO_REPO, DECLARES_NO_REPO)
 
     assert changes(live) == ()
+
+
+def test_an_entry_measured_against_tags_is_compared_like_any_other(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """aws/aws-cli tags every build and publishes no release, so `version_source:
+    tags` decides which endpoint fills the cache. Everything downstream of the
+    cache is unchanged, which is the point — a tag is a version like any other."""
+    reporting(fake_bin, 'aws', 'aws-cli/2.36.18 Python/3.14.6')
+    cached(release_cache, {'aws/aws-cli': '2.36.19'})
+    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('custom/awscli', Verdict.STALE)]
+
+
+def test_the_declared_source_decides_which_endpoint_is_asked(tmp_path: Path, fake_bin: Path) -> None:
+    """Declared rather than discovered. Falling back to tags when a release lookup
+    fails would read a rate-limited minute as "this project tags instead"."""
+    reporting(fake_bin, 'aws', 'aws-cli/2.36.18')
+    live = session(tmp_path, AWSCLI, DECLARES_AWSCLI)
+
+    item = next(item for item in live.plan.for_resource('packages') if item.name == 'awscli')
+
+    assert packages._wanted(item) == releases.Wanted(repo='aws/aws-cli', from_tags=True)
 
 
 def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
