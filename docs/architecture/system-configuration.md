@@ -65,34 +65,6 @@ friends were deliberately removed from `preferences.sh` before this conversion,
 with a note reading "changes take effect on next login/reboot", so the `restart:`
 field the design sketched is not here.
 
-## `links` points at files the repo will never hold
-
-The symlink resource cannot express one of these, and the reason is structural
-rather than an omission. It *derives* every link by walking `configs/`, `shell/`
-and `apps/` and pairing each file it finds with where that file belongs, so a
-link's source is a repo file by construction. `core.link_ownership` then calls
-anything resolving outside the repo `foreign`, which means a link to
-`~/dev/repos.json` would be refused as somebody else's file even after this
-manager made it.
-
-What earns a row is a file that is private on *both* sides of the trust split
-rather than on one. The fleet's repo registry and the work box's are different
-files; neither is committable, and no coordinate overlay can carry either,
-because an overlay is still repo content. Only the *wiring* is shareable — and
-it is identical on every machine that has a reader, which is why these rows
-narrow on capacity and nothing else.
-
-A row is checked against where the link points and never against whether the
-target is there. The file arrives on its own schedule — Syncthing mid-sync on the
-fleet, a safekeep restore off it — so a correct link to a file that has not
-landed yet is this row converged and `required_files`' problem. Conflating the
-two would fail this row for the entire window between an install and a restore,
-which is exactly the window a rebuild spends here.
-
-A real file at the path is `UNKNOWN` with no repair rather than stale. Replacing
-it means unlinking it, and it may be the only copy of something this repo cannot
-regenerate — the same refusal the symlink resource makes, for the same reason.
-
 ## `steps` is the name for no shared mechanism
 
 Six rows with nothing in common: the scheduled check, `~/Library`'s hidden flag

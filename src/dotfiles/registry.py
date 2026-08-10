@@ -1053,7 +1053,6 @@ PROVIDERS: tuple[Provider, ...] = (
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),
     SystemConfigProvider('login-shell', 'system', Stage.SYSTEM_CONFIG, 'login_shell'),
-    SystemConfigProvider('link', 'system', Stage.SYSTEM_CONFIG, 'links'),
     MacDefaultProvider('macos-default', 'system', Stage.SYSTEM_CONFIG, 'macos_defaults'),
     StepProvider('step', 'system', Stage.SYSTEM_CONFIG, 'steps'),
 )

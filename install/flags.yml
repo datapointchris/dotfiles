@@ -94,15 +94,20 @@ required_files:
   # keeps it out of the repo entirely: the fleet's registry and the work box's
   # are different files, so no overlay could carry either. The path is uniform so
   # that everything reading it is, and only the transport differs — Syncthing on
-  # the fleet, safekeep off it. The `links` rows in system.yml point every reader
-  # at this file; this entry is what says the file itself has to arrive.
+  # the fleet, safekeep off it.
+  #
+  # The deployed configs below name this path; each tool resolves it for itself,
+  # which is what keeps the registry a file they happen to share rather than a
+  # coupling between them.
   - name: repos.json
     path: ~/dev/repos.json
-    description: The repo registry forge and syncer read, hand-edited and never generated
+    description: The repo registry forge, fleet, indy and syncer read, hand-edited and never generated
     capacity: workstation
     tags: [rebuild]
     consumers:
-      - install/system.yml
+      - configs/common/.config/forge/config.yml
+      - configs/common/.config/fleet/config.yml
+      - configs/common/.config/syncer/config.toml
 
   # A machine-local file rather than a repo overlay, because the key that matters
   # is where the snapshots go and no two machines answer it the same way — a

@@ -300,7 +300,7 @@ def test_a_stage_selects_the_providers_that_run_at_it() -> None:
     selection = engine.Selection.at(Stage.SYSTEM_CONFIG)
 
     assert selection.resources == ('system',)
-    assert selection.providers == {'group', 'systemd', 'file', 'link', 'login-shell', 'macos-default', 'step'}
+    assert selection.providers == {'group', 'systemd', 'file', 'login-shell', 'macos-default', 'step'}
 
 
 def test_the_system_config_stage_leaves_the_package_half_out_of_the_plan(session: Session) -> None:

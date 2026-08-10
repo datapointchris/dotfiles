@@ -67,8 +67,6 @@ def observe(entry: catalog.SystemConfig) -> State:
         return _observe_unit(entry)
     if isinstance(entry, catalog.ManagedFile):
         return _observe_file(entry)
-    if isinstance(entry, catalog.ExternalLink):
-        return _observe_link(entry)
     assert isinstance(entry, catalog.LoginShell)
     return _observe_login_shell(entry)
 
@@ -81,8 +79,6 @@ def apply(entry: catalog.SystemConfig, privilege: Privilege) -> Result:
             return _apply_unit(entry, privilege)
         if isinstance(entry, catalog.ManagedFile):
             return _apply_file(entry, privilege)
-        if isinstance(entry, catalog.ExternalLink):
-            return _apply_link(entry)
         assert isinstance(entry, catalog.LoginShell)
         return _apply_login_shell(entry, privilege)
     except PrivilegeUnavailable:
@@ -240,57 +236,6 @@ def _apply_file(entry: catalog.ManagedFile, privilege: Privilege) -> Result:
     if not installed.ok:
         return Result(False, f'could not write {path}: {installed.transcript.strip()}')
     return Result(True, f'{path} written')
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# A link into a file this repo will never hold
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def _link_paths(entry: catalog.ExternalLink) -> tuple[Path, Path]:
-    return Path(entry.path).expanduser(), Path(entry.points_at).expanduser()
-
-
-def _observe_link(entry: catalog.ExternalLink) -> State:
-    """Where the link points, and never whether its target exists.
-
-    The target is supplied per machine and arrives on its own schedule — a
-    Syncthing folder that has not converged, a safekeep restore not yet run — so
-    a correct link to a file that is not there yet is this row converged and
-    somebody else's problem. `required_files` is what reports the file missing,
-    and conflating the two would have this row fail for the whole window between
-    an install and a restore.
-
-    A real file at the path is `foreign` rather than stale: it is the only copy
-    of something this repo cannot regenerate, and replacing it means deleting it.
-    """
-    link, target = _link_paths(entry)
-
-    if link.is_symlink():
-        pointing = Path(os.readlink(link)).expanduser()
-        if pointing == target:
-            return State(Verdict.MATCHED)
-        return State(Verdict.STALE, f'{link} points at {pointing}, not {target}')
-
-    if link.exists():
-        return State(Verdict.UNKNOWN, f'{link} is a real file, not a link — move it aside to let this row own the path', repair=Repair.NONE)
-
-    return State(Verdict.MISSING, f'{link} does not point at {target}')
-
-
-def _apply_link(entry: catalog.ExternalLink) -> Result:
-    """Replace a link, never a file. `_observe_link` refuses the file case
-    outright, and this re-checks rather than trusting it: a run repairs several
-    rows and the path may have gained a file since it was measured."""
-    link, target = _link_paths(entry)
-
-    if link.exists() and not link.is_symlink():
-        return Result(False, f'{link} is a real file; nothing was replaced')
-
-    link.parent.mkdir(parents=True, exist_ok=True)
-    link.unlink(missing_ok=True)
-    link.symlink_to(target)
-    return Result(True, f'{link} points at {target}')
 
 
 def _wanted_content(entry: catalog.ManagedFile, path: Path) -> str:
