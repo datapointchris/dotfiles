@@ -1,6 +1,0 @@
-# syncer tool config. Every option, annotated: syncer config example config
-#
-# Deliberately without the fleet variant's "*:gone" = delete_local rule — pruning a local
-# branch whose remote is gone stays a manual act here, so syncer only ever reports it.
-
-default_policy = "standard"
