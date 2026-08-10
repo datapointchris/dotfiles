@@ -157,7 +157,7 @@ def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
 
 
 @dataclass(frozen=True)
-class Asset:
+class BundleAsset:
     """One downloadable file, and what it *is* rather than where it came from.
 
     The cache used to key on the URL. That is the same thing only for as long as
@@ -181,11 +181,11 @@ class Asset:
         return (self.key[1], self.key[2]) if self.key[0] == 'github' else None
 
 
-def github_asset(repo: str, tag: str, name: str) -> Asset:
-    return Asset(url=f'https://github.com/{repo}/releases/download/{tag}/{name}', key=('github', repo, tag, name))
+def github_asset(repo: str, tag: str, name: str) -> BundleAsset:
+    return BundleAsset(url=f'https://github.com/{repo}/releases/download/{tag}/{name}', key=('github', repo, tag, name))
 
 
-def release_asset(url: str) -> Asset:
+def release_asset(url: str) -> BundleAsset:
     """Recover the release coordinate from a URL an installer script printed.
 
     The scripts emit a URL because that is what bash can pass through a pipe.
@@ -200,9 +200,9 @@ def release_asset(url: str) -> Asset:
     return github_asset(repo, tag, url.rsplit('/', 1)[-1])
 
 
-def url_asset(url: str) -> Asset:
+def url_asset(url: str) -> BundleAsset:
     """For a download whose identity really is its URL — a PyPI file, an install script."""
-    return Asset(url=url, key=('url', url.split('://', 1)[-1]))
+    return BundleAsset(url=url, key=('url', url.split('://', 1)[-1]))
 
 
 def cache_path_for(key: tuple[str, ...]) -> Path:
@@ -269,18 +269,18 @@ class DownloadCache:
         if enabled:
             CACHE_ROOT.mkdir(parents=True, exist_ok=True)
 
-    def digest_file(self, asset: Asset) -> Path:
+    def digest_file(self, asset: BundleAsset) -> Path:
         cached = cache_path_for(asset.key)
         return cached.with_name(cached.name + '.sha256')
 
-    def status_file(self, asset: Asset) -> Path:
+    def status_file(self, asset: BundleAsset) -> Path:
         """What asking upstream for a checksum returned. An answer about one
         immutable asset, so caching it is as safe as caching the asset.
         """
         cached = cache_path_for(asset.key)
         return cached.with_name(cached.name + '.checksum-status')
 
-    def fetch(self, asset: Asset, destination: Path, label: str) -> None:
+    def fetch(self, asset: BundleAsset, destination: Path, label: str) -> None:
         """Put an asset at `destination`, from the cache when it is there.
 
         Prints the per-asset progress line itself, because whether the bytes came
@@ -328,7 +328,7 @@ class DownloadCache:
         except OSError:
             log.warning('    could not cache %s', destination.name)
 
-    def remember_status(self, asset: Asset, status: str) -> None:
+    def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
         digest it refers to.
         """
@@ -336,15 +336,15 @@ class DownloadCache:
             return
         self.status_file(asset).write_text(status + '\n')
 
-    def status(self, asset: Asset) -> str | None:
+    def status(self, asset: BundleAsset) -> str | None:
         if not self.enabled or not self.status_file(asset).is_file():
             return None
         return self.status_file(asset).read_text().strip()
 
-    def recorded_digest(self, asset: Asset) -> str:
+    def recorded_digest(self, asset: BundleAsset) -> str:
         return self.digest_file(asset).read_text().strip()
 
-    def evict(self, asset: Asset) -> None:
+    def evict(self, asset: BundleAsset) -> None:
         cached = cache_path_for(asset.key)
         for path in (cached, self.digest_file(asset), self.status_file(asset)):
             path.unlink(missing_ok=True)
@@ -400,7 +400,7 @@ class Bundle:
         (self.staging / 'README.txt').write_text(BUNDLE_README)
 
 
-def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, asset: Asset) -> None:
+def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, asset: BundleAsset) -> None:
     """Check a downloaded asset against the checksum its release published.
 
     Verification has to happen here. The install machine cannot resolve which

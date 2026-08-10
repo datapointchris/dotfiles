@@ -23,7 +23,7 @@ fields to cover every shape upstream ships in:
 - `Archive.RAW` — the download is the binary (hadolint, terraformer, yq)
 - `Archive.GZIP` — a gzipped binary rather than an archive (tree-sitter alone)
 - `Archive.TARBALL` / `Archive.ZIP` — unpack, take `path`, plus any `extras`
-- `Asset.tree` — unpack under `~/.local` and symlink `path` out of it (neovim)
+- `ReleaseArtifact.tree` — unpack under `~/.local` and symlink `path` out of it (neovim)
 
 That last one exists because `nvim` will not start without the runtime files
 packaged beside it, so the thing being installed is a directory, not a file.

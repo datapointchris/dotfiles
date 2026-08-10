@@ -35,8 +35,8 @@ from dotfiles.coordinates import Target
 from dotfiles.providers import ghrelease
 from dotfiles.providers import releases
 from dotfiles.providers.releases import Archive
-from dotfiles.providers.releases import Asset
 from dotfiles.providers.releases import Companion
+from dotfiles.providers.releases import ReleaseArtifact
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 
@@ -104,7 +104,7 @@ class TestPlacement:
 
     def test_a_raw_binary_is_the_download_itself(self, home, bundle):
         stage(bundle, 'demo-linux-x86_64', 'demo', 'v1.2.3', PAYLOAD)
-        monkeyed = Asset('demo-linux-x86_64', Archive.RAW)
+        monkeyed = ReleaseArtifact('demo-linux-x86_64', Archive.RAW)
 
         result = install_one(monkeyed, entry(), offline=True)
 
@@ -117,7 +117,7 @@ class TestPlacement:
         compressed = gzip.compress(PAYLOAD)
         stage(bundle, 'demo-linux-x64.gz', 'demo', 'v1.2.3', compressed)
 
-        result = install_one(Asset('demo-linux-x64.gz', Archive.GZIP), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo-linux-x64.gz', Archive.GZIP), entry(), offline=True)
 
         assert result.ok, result.detail
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
@@ -127,7 +127,7 @@ class TestPlacement:
         tarball(archive, {'demo': PAYLOAD, 'proxy': b'proxy', 'nested/other': b'other'})
         stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
 
-        asset = Asset('demo.tar.gz', Archive.TARBALL, path='demo', extras=('proxy', 'nested/other', 'absent'))
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', extras=('proxy', 'nested/other', 'absent'))
         result = install_one(asset, entry(), offline=True)
 
         assert result.ok, result.detail
@@ -145,7 +145,7 @@ class TestPlacement:
         tarball(archive, {'demo': PAYLOAD})
         stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
 
-        result = install_one(Asset('demo.tar.gz', Archive.TARBALL, path='demo', extras=('tf', 'tofu')), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', extras=('tf', 'tofu')), entry(), offline=True)
 
         assert result.ok, result.detail
 
@@ -154,7 +154,7 @@ class TestPlacement:
         zipped(archive, {'demo-1.0/demo': PAYLOAD})
         stage(bundle, 'demo.zip', 'demo', 'v1.2.3', archive.read_bytes())
 
-        result = install_one(Asset('demo.zip', Archive.ZIP, path='demo-1.0/demo'), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo.zip', Archive.ZIP, path='demo-1.0/demo'), entry(), offline=True)
 
         assert result.ok, result.detail
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
@@ -164,7 +164,7 @@ class TestPlacement:
         tarball(archive, {'something-else': PAYLOAD})
         stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
 
-        result = install_one(Asset('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
 
         assert not result.ok
         assert 'contains no demo' in result.detail
@@ -178,7 +178,7 @@ class TestTreeInstall:
         tarball(archive, {'nvim-linux/bin/nvim': PAYLOAD, 'nvim-linux/share/runtime': b'runtime'})
         stage(bundle, 'nvim-linux.tar.gz', 'neovim', 'v0.11.0', archive.read_bytes())
 
-        asset = Asset('nvim-linux.tar.gz', Archive.TARBALL, path='nvim-linux/bin/nvim', tree=True)
+        asset = ReleaseArtifact('nvim-linux.tar.gz', Archive.TARBALL, path='nvim-linux/bin/nvim', tree=True)
         result = install_one(asset, entry('neovim', command='nvim'), offline=True)
 
         assert result.ok, result.detail
@@ -198,7 +198,7 @@ class TestTreeInstall:
         tarball(archive, {'nvim-linux/bin/nvim': PAYLOAD})
         stage(bundle, 'nvim-linux.tar.gz', 'neovim', 'v0.11.0', archive.read_bytes())
 
-        asset = Asset('nvim-linux.tar.gz', Archive.TARBALL, path='nvim-linux/bin/nvim', tree=True)
+        asset = ReleaseArtifact('nvim-linux.tar.gz', Archive.TARBALL, path='nvim-linux/bin/nvim', tree=True)
         result = install_one(asset, entry('neovim', command='nvim'), offline=True)
 
         assert result.ok, result.detail
@@ -212,7 +212,7 @@ class TestCompanions:
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
         (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
 
-        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert result.ok, result.detail
         placed = home / '.local' / 'bin' / 'demo-tmux'
@@ -224,7 +224,7 @@ class TestCompanions:
         which surfaces days later at a keystroke rather than here."""
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
 
-        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert not result.ok
         assert 'demo-tmux' in result.detail
@@ -284,7 +284,7 @@ class TestChecksumPolicy:
         (bundle / 'binaries' / 'demo').write_bytes(PAYLOAD)
         (bundle / 'manifest.txt').write_text('binary|demo|v1.2.3|demo\n')
 
-        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
         assert 'records no digest' in result.detail
@@ -299,7 +299,7 @@ class TestChecksumPolicy:
         (bundle / 'binaries' / 'demo').write_bytes(PAYLOAD)
         (bundle / 'manifest.txt').write_text('binary|demo|v1.2.3|demo\n')
 
-        result = install_one(Asset('demo', Archive.RAW), entry(checksum=declared), offline=True)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(checksum=declared), offline=True)
 
         assert result.ok, result.detail
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
@@ -308,7 +308,7 @@ class TestChecksumPolicy:
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
         (bundle / 'binaries' / 'demo').write_bytes(b'not what was digested')
 
-        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
         assert 'mismatch' in result.detail
@@ -363,14 +363,14 @@ class TestPreconditions:
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
         monkeypatch.setenv('PATH', str(home / 'somewhere-else'))
 
-        result = install_one(Asset('demo', Archive.RAW), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
         assert 'not on PATH' in result.detail
 
 
 def install_one(
-    asset: Asset,
+    asset: ReleaseArtifact,
     declared: catalog.GithubRelease,
     *,
     offline: bool,
@@ -382,7 +382,7 @@ def install_one(
 
 
 @contextlib.contextmanager
-def registered(asset: Asset, declared: catalog.GithubRelease, companions: tuple[Companion, ...] = ()):
+def registered(asset: ReleaseArtifact, declared: catalog.GithubRelease, companions: tuple[Companion, ...] = ()):
     """Put one synthetic asset and its companions in the tables for one test.
 
     The tables are keyed by `packages.yml` name and every real entry in them is

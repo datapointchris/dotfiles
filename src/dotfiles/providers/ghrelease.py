@@ -9,13 +9,13 @@ checksum verification silently, which is how `hadolint` and `tenv` came to
 install unverified from releases that publish perfectly good checksums.
 
 So the engine is not a translation of that library. It is the same sequence with
-the variation moved into `providers.releases.Asset`, where a bare binary is an
+the variation moved into `providers.releases.ReleaseArtifact`, where a bare binary is an
 `Archive` value rather than a reason to write the sequence again:
 
-    Archive.RAW      the download is the binary
-    Archive.GZIP     gunzip it and the result is the binary
-    TARBALL / ZIP    unpack, then take `path` out of it, plus any `extras`
-    Asset.tree       unpack into ~/.local and symlink `path` out of the tree
+    Archive.RAW           the download is the binary
+    Archive.GZIP          gunzip it and the result is the binary
+    TARBALL / ZIP         unpack, then take `path` out of it, plus any `extras`
+    ReleaseArtifact.tree  unpack into ~/.local and symlink `path` out of the tree
 
 Nothing here decides *whether* to install. Its caller does, from a `diff` it
 already computed. An engine deciding again would be a second opinion, free to
@@ -44,7 +44,7 @@ from dotfiles.providers import local_dir
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
 from dotfiles.providers.releases import Archive
-from dotfiles.providers.releases import Asset
+from dotfiles.providers.releases import ReleaseArtifact
 
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
@@ -248,7 +248,7 @@ def _permitted(entry: catalog.GithubRelease, because: str, *excused_by: str) -> 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _place(asset: Asset, executable: str, download: Path, staging: Path) -> Result:
+def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Path) -> Result:
     """Get binaries out of what was downloaded and into `~/.local/bin`."""
     target = bin_dir() / executable
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -288,7 +288,7 @@ def _place(asset: Asset, executable: str, download: Path, staging: Path) -> Resu
     return Result(True, str(target))
 
 
-def _place_tree(asset: Asset, download: Path, target: Path) -> Result:
+def _place_tree(asset: ReleaseArtifact, download: Path, target: Path) -> Result:
     """Unpack under `~/.local` and link the binary out of the tree.
 
     The old tree is removed first rather than unpacked over: an upgrade that

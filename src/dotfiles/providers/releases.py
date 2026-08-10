@@ -17,7 +17,7 @@ data twice, because no placeholder vocabulary survives contact with them:
 holds identically in Python: URL patterns vary enough that a template becomes
 complex, and inline keeps it explicit and traceable.
 
-Each function takes the resolved tag and a `Target`, and returns an `Asset`. It
+Each function takes the resolved tag and a `Target`, and returns an `ReleaseArtifact`. It
 does not build a URL: the repo lives in the catalog and the tag is resolved
 upstream, so a function that built its own URL would be a second place for the
 host and the path shape to be wrong.
@@ -68,7 +68,7 @@ class Companion:
 
 
 @dc.dataclass(frozen=True, slots=True)
-class Asset:
+class ReleaseArtifact:
     """One release asset, and how to get a binary out of it."""
 
     name: str
@@ -144,29 +144,29 @@ def expand_pattern(pattern: str, version: str, target: Target, *, asset_target: 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def atuin(tag: str, target: Target) -> Asset:
+def atuin(tag: str, target: Target) -> ReleaseArtifact:
     """musl for both architectures, and no darwin spelling: atuin is declared on
     Linux only, which is why the arm target is still a linux triple."""
     triple = 'aarch64-unknown-linux-musl' if target.is_arm else 'x86_64-unknown-linux-musl'
-    return Asset(f'atuin-{triple}.tar.gz', Archive.TARBALL, path=f'atuin-{triple}/atuin')
+    return ReleaseArtifact(f'atuin-{triple}.tar.gz', Archive.TARBALL, path=f'atuin-{triple}/atuin')
 
 
-def duf(tag: str, target: Target) -> Asset:
+def duf(tag: str, target: Target) -> ReleaseArtifact:
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_x86_64') if target.is_darwin else 'linux_x86_64'
-    return Asset(f'duf_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='duf')
+    return ReleaseArtifact(f'duf_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='duf')
 
 
-def fzf(tag: str, target: Target) -> Asset:
+def fzf(tag: str, target: Target) -> ReleaseArtifact:
     """arm64 on darwin against amd64 on linux, in one name.
 
     Its `fzf-tmux` companion is declared in `COMPANIONS` rather than here, because
     it is not part of the release this names.
     """
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
-    return Asset(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
+    return ReleaseArtifact(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
 
 
-def glow(tag: str, target: Target) -> Asset:
+def glow(tag: str, target: Target) -> ReleaseArtifact:
     """Nested under a directory named after the archive, on both platforms.
 
     It was flat until v2, and the entry read `path='glow'` until the tarball
@@ -177,52 +177,52 @@ def glow(tag: str, target: Target) -> Asset:
     """
     suffix = ('Darwin_arm64' if target.is_arm else 'Darwin_x86_64') if target.is_darwin else 'Linux_x86_64'
     stem = f'glow_{_bare(tag)}_{suffix}'
-    return Asset(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/glow')
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/glow')
 
 
-def hadolint(tag: str, target: Target) -> Asset:
+def hadolint(tag: str, target: Target) -> ReleaseArtifact:
     """Ships the binary itself, and is the one tool naming arm on Linux."""
     if target.is_darwin:
         suffix = 'macos-arm64' if target.is_arm else 'macos-x86_64'
     else:
         suffix = 'linux-arm64' if target.is_arm else 'linux-x86_64'
-    return Asset(f'hadolint-{suffix}', Archive.RAW)
+    return ReleaseArtifact(f'hadolint-{suffix}', Archive.RAW)
 
 
-def just(tag: str, target: Target) -> Asset:
+def just(tag: str, target: Target) -> ReleaseArtifact:
     """Named after the tag as published, `v` and all — unlike almost every other."""
     if target.is_darwin:
         triple = 'aarch64-apple-darwin' if target.is_arm else 'x86_64-apple-darwin'
     else:
         triple = 'x86_64-unknown-linux-musl'
-    return Asset(f'just-{tag}-{triple}.tar.gz', Archive.TARBALL, path='just')
+    return ReleaseArtifact(f'just-{tag}-{triple}.tar.gz', Archive.TARBALL, path='just')
 
 
-def lazygit(tag: str, target: Target) -> Asset:
+def lazygit(tag: str, target: Target) -> ReleaseArtifact:
     """Lowercase `linux_x86_64`. It was fetched as `Linux_x86_64` for a while and
     downloaded fine, because GitHub resolves asset paths case-insensitively —
     which then missed the checksum entry recorded under the real name."""
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_x86_64') if target.is_darwin else 'linux_x86_64'
-    return Asset(f'lazygit_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
+    return ReleaseArtifact(f'lazygit_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
 
 
-def neovim(tag: str, target: Target) -> Asset:
+def neovim(tag: str, target: Target) -> ReleaseArtifact:
     """Installs a tree rather than a binary: `bin/nvim` plus its runtime."""
     if target.is_darwin:
         stem = 'nvim-macos-arm64' if target.is_arm else 'nvim-macos-x86_64'
     else:
         stem = 'nvim-linux-x86_64'
-    return Asset(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/nvim', tree=True)
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/nvim', tree=True)
 
 
-def shellcheck(tag: str, target: Target) -> Asset:
+def shellcheck(tag: str, target: Target) -> ReleaseArtifact:
     """`aarch64` where everything else says arm64, dots where everything else
     says dashes, and the only `.tar.xz` in the set."""
     if target.is_darwin:
         suffix = 'darwin.aarch64' if target.is_arm else 'darwin.x86_64'
     else:
         suffix = 'linux.x86_64'
-    return Asset(f'shellcheck-{tag}.{suffix}.tar.xz', Archive.TARBALL, path=f'shellcheck-{tag}/shellcheck')
+    return ReleaseArtifact(f'shellcheck-{tag}.{suffix}.tar.xz', Archive.TARBALL, path=f'shellcheck-{tag}/shellcheck')
 
 
 TENV_PROXIES = ('terraform', 'tofu', 'terragrunt', 'terramate', 'atmos', 'tf')
@@ -233,58 +233,58 @@ is what makes a `.terraform-version` file decide which binary runs.
 """
 
 
-def tenv(tag: str, target: Target) -> Asset:
+def tenv(tag: str, target: Target) -> ReleaseArtifact:
     """Keeps the `v` in the asset name, and capitalises the platform."""
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
     arch = 'arm64' if target.is_arm else 'x86_64'
-    return Asset(f'tenv_{tag}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='tenv', extras=TENV_PROXIES)
+    return ReleaseArtifact(f'tenv_{tag}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='tenv', extras=TENV_PROXIES)
 
 
-def terraformer(tag: str, target: Target) -> Asset:
+def terraformer(tag: str, target: Target) -> ReleaseArtifact:
     """`all` is the provider bundle; the per-provider builds are not what is declared."""
     if target.is_darwin:
         suffix = 'darwin-arm64' if target.is_arm else 'darwin-amd64'
     else:
         suffix = 'linux-amd64'
-    return Asset(f'terraformer-all-{suffix}', Archive.RAW)
+    return ReleaseArtifact(f'terraformer-all-{suffix}', Archive.RAW)
 
 
-def terrascan(tag: str, target: Target) -> Asset:
+def terrascan(tag: str, target: Target) -> ReleaseArtifact:
     arch = ('arm64' if target.is_arm else 'x86_64') if target.is_darwin else 'x86_64'
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
-    return Asset(f'terrascan_{_bare(tag)}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='terrascan')
+    return ReleaseArtifact(f'terrascan_{_bare(tag)}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='terrascan')
 
 
-def tflint(tag: str, target: Target) -> Asset:
+def tflint(tag: str, target: Target) -> ReleaseArtifact:
     """The asset carries no version at all, so the tag appears only in the path."""
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
-    return Asset(f'tflint_{suffix}.zip', Archive.ZIP, path='tflint')
+    return ReleaseArtifact(f'tflint_{suffix}.zip', Archive.ZIP, path='tflint')
 
 
-def tree_sitter(tag: str, target: Target) -> Asset:
+def tree_sitter(tag: str, target: Target) -> ReleaseArtifact:
     """`x64`, not `x86_64` or `amd64`, and a bare gzip rather than a tarball."""
     if target.is_darwin:
         suffix = 'macos-arm64' if target.is_arm else 'macos-x64'
     else:
         suffix = 'linux-x64'
-    return Asset(f'tree-sitter-{suffix}.gz', Archive.GZIP)
+    return ReleaseArtifact(f'tree-sitter-{suffix}.gz', Archive.GZIP)
 
 
-def trivy(tag: str, target: Target) -> Asset:
+def trivy(tag: str, target: Target) -> ReleaseArtifact:
     """`macOS-ARM64` and `Linux-64bit`: capitalisation and a bit-width, unique here."""
     if target.is_darwin:
         suffix = 'macOS-ARM64' if target.is_arm else 'macOS-64bit'
     else:
         suffix = 'Linux-64bit'
-    return Asset(f'trivy_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='trivy')
+    return ReleaseArtifact(f'trivy_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='trivy')
 
 
-def win32yank(tag: str, target: Target) -> Asset:
+def win32yank(tag: str, target: Target) -> ReleaseArtifact:
     """One asset for every target, because it is a Windows binary reached from WSL."""
-    return Asset('win32yank-x64.zip', Archive.ZIP, path='win32yank.exe')
+    return ReleaseArtifact('win32yank-x64.zip', Archive.ZIP, path='win32yank.exe')
 
 
-def yazi(tag: str, target: Target) -> Asset:
+def yazi(tag: str, target: Target) -> ReleaseArtifact:
     """GNU triples like `just`, but a zip, and gnu rather than musl on Linux.
 
     `ya` is yazi's own package manager and ships beside the binary, but nothing
@@ -297,28 +297,28 @@ def yazi(tag: str, target: Target) -> Asset:
         triple = 'aarch64-apple-darwin' if target.is_arm else 'x86_64-apple-darwin'
     else:
         triple = 'x86_64-unknown-linux-gnu'
-    return Asset(f'yazi-{triple}.zip', Archive.ZIP, path=f'yazi-{triple}/yazi', extras=(f'yazi-{triple}/ya',))
+    return ReleaseArtifact(f'yazi-{triple}.zip', Archive.ZIP, path=f'yazi-{triple}/yazi', extras=(f'yazi-{triple}/ya',))
 
 
-def yq(tag: str, target: Target) -> Asset:
+def yq(tag: str, target: Target) -> ReleaseArtifact:
     """Go arch, a bare binary, and the one release publishing a checksums file its
     own asset cannot be found in — see `PUBLISHES_NO_CHECKSUM` in the corpus test."""
     arch = 'arm64' if target.is_arm else 'amd64'
     os_name = 'darwin' if target.is_darwin else 'linux'
-    return Asset(f'yq_{os_name}_{arch}', Archive.RAW)
+    return ReleaseArtifact(f'yq_{os_name}_{arch}', Archive.RAW)
 
 
-def zk(tag: str, target: Target) -> Asset:
+def zk(tag: str, target: Target) -> ReleaseArtifact:
     """Spells the same CPU two ways depending on the OS — `x86_64` on macOS and
     `amd64` on Linux. This is the entry that defeats a flat placeholder outright."""
     if target.is_darwin:
         platform_name, arch = 'macos', ('arm64' if target.is_arm else 'x86_64')
     else:
         platform_name, arch = 'linux', 'amd64'
-    return Asset(f'zk-{tag}-{platform_name}-{arch}.tar.gz', Archive.TARBALL, path='zk')
+    return ReleaseArtifact(f'zk-{tag}-{platform_name}-{arch}.tar.gz', Archive.TARBALL, path='zk')
 
 
-def _go_release_cli(binary: str) -> Callable[[str, Target], Asset]:
+def _go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
     """The four private data CLIs, which are goreleaser builds in monorepos.
 
     Their tag carries a `cli/` prefix because the same repo releases an API and a
@@ -326,16 +326,16 @@ def _go_release_cli(binary: str) -> Callable[[str, Target], Asset]:
     `v` both removed.
     """
 
-    def build(tag: str, target: Target) -> Asset:
+    def build(tag: str, target: Target) -> ReleaseArtifact:
         version = _bare(tag.rsplit('/', 1)[-1])
         os_name = 'darwin' if target.is_darwin else 'linux'
         arch = 'arm64' if target.is_arm else 'amd64'
-        return Asset(f'{binary}_{version}_{os_name}_{arch}.tar.gz', Archive.TARBALL, path=binary)
+        return ReleaseArtifact(f'{binary}_{version}_{os_name}_{arch}.tar.gz', Archive.TARBALL, path=binary)
 
     return build
 
 
-ASSETS: dict[str, Callable[[str, Target], Asset]] = {
+ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'atuin': atuin,
     'duf': duf,
     'fzf': fzf,
@@ -371,11 +371,11 @@ COMPANIONS: dict[str, tuple[Companion, ...]] = {
 }
 """Files that ship *with* a tool without being in its release, by entry name.
 
-Its own table rather than a field on `Asset`, because a companion is not part of
+Its own table rather than a field on `ReleaseArtifact`, because a companion is not part of
 the release the asset function describes and does not depend on the tag or the
 target the way an asset name does. Separating them is what makes a companion
 *observable*: `dotfiles check` can ask what fzf owes without resolving a release,
-where reading it off an `Asset` needed a tag and therefore a network call.
+where reading it off a `ReleaseArtifact` needed a tag and therefore a network call.
 
 Nothing else on disk says a companion is owed, which is why reading it from here
 is what lets `check` see one is gone: fzf installs cleanly without `fzf-tmux` and
@@ -384,7 +384,7 @@ keystroke rather than in any verdict.
 """
 
 
-def asset_url(repo: str, tag: str, asset: Asset) -> str:
+def asset_url(repo: str, tag: str, asset: ReleaseArtifact) -> str:
     """The browser download URL. Private repos need the asset-id endpoint instead,
     which `github_release.download_asset` falls back to on its own."""
     return f'https://github.com/{repo}/releases/download/{tag}/{asset.name}'

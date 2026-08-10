@@ -1,10 +1,11 @@
 """How each kind of thing gets installed, one module per provider.
 
 What lives here is only what every provider needs and none of them owns: the
-shape of an install's outcome, and the three directories they all write into. A
-provider that defined its own `Result` would be a second vocabulary for the same
-answer, and two spellings of `~/.local/bin` are two chances for one of them to
-stop matching what the symlink manager deploys.
+shape of an install's outcome, and the three directories they all write into.
+Every provider imports `Result` from here rather than defining its own — a
+second vocabulary for the same answer — and calls `bin_dir`/`local_dir` rather
+than spelling `~/.local/bin` again, which is a second chance for one spelling
+to stop matching what the symlink manager deploys.
 """
 
 from __future__ import annotations
