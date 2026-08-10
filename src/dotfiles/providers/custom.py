@@ -318,10 +318,12 @@ def _awscli(request: Request) -> Result:
     `version_source: tags` so `_has_currency` can compare against them. Reaching
     here therefore means the machine is missing it or behind, and the 73MB is
     being spent on a difference someone measured.
-    """
-    if request.target.is_darwin:
-        return Result(True, 'awscli is a Homebrew package on macOS, installed with the system packages')
 
+    macOS never reaches this at all: Homebrew has the formula, and the entry
+    declares `excludes_os_family: darwin` so the item is not planned there. That
+    was a branch here returning success without installing anything, which left
+    a Mac with nothing wrong printing a line about awscli on every run.
+    """
     if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
         return offline
     if request.offline:

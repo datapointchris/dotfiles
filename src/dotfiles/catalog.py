@@ -410,6 +410,17 @@ class CustomInstaller(Entry):
     installed_path: str = ''
     bundle_install_script: bool = False
 
+    excludes_os_family: str = ''
+    """An OS family this installer must never run on, because something else
+    already supplies the tool there.
+
+    Same shape as `excludes_host` on SystemPackage and for the same reason: the
+    entry is not *declined* on that machine, it cannot apply. awscli is the case
+    — a Homebrew formula on macOS and AWS's own 73MB installer everywhere else —
+    and without this the Mac planned it, ran the function, and had it report
+    success having done nothing, on every run of a converged machine.
+    """
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.repo) if self.repo else None

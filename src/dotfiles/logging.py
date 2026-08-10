@@ -52,6 +52,27 @@ def console_processor():
     return structlog.dev.ConsoleRenderer(colors=use_colors(), pad_level=True)
 
 
+HTTP_LOGGERS = ('httpx2', 'httpx', 'httpcore')
+"""Third-party loggers that narrate every request at INFO.
+
+Named rather than solved by lowering the root level: root is DEBUG on purpose, so
+the event log gets everything while the console filters. That means any library
+logging at INFO reaches the console by default, and httpx writes one
+`HTTP Request: GET https://api.github.com/... "200 OK"` per call — which on a
+release refresh is a line per declared tool, between the rows a person is
+actually reading.
+
+`httpx` and `httpcore` are here alongside the fork this repo uses because the
+cost of naming a logger that does not exist is nothing, and the cost of missing
+one is the noise coming back on a dependency swap.
+"""
+
+
+def _quiet_the_http_client() -> None:
+    for name in HTTP_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def configure(event_log: Path | None = None) -> None:
     """Point logging at stderr, and at `event_log` when a run is recording.
 
@@ -59,6 +80,7 @@ def configure(event_log: Path | None = None) -> None:
     so a second run in the same process cannot append to the first one's stream.
     """
     logging.basicConfig(format='%(message)s', stream=sys.stderr, level=logging.DEBUG, force=True)
+    _quiet_the_http_client()
 
     console = logging.root.handlers[0]
     console.setLevel(getattr(logging, CONSOLE_LEVEL, logging.INFO))

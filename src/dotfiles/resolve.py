@@ -314,4 +314,6 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
         return coordinates.os_family is axes.OSFamily.LINUX
     if isinstance(entry, catalog.GithubRelease) and entry.requires_wsl_host:
         return coordinates.host is axes.Host.WSL
+    if isinstance(entry, catalog.CustomInstaller) and entry.excludes_os_family:
+        return str(coordinates.os_family) != entry.excludes_os_family
     return True

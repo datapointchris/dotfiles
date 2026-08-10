@@ -65,7 +65,16 @@ def test_the_resolver_selects_what_the_old_filters_selected(declaration: catalog
         'git_uv_tools': lambda m: [row.split('|')[0] for row in parse_packages.filter_git_uv_packages_by_manifest(data, m)],
     }
 
-    expected = sorted(old[section](parse_packages.load_manifest(name)))
+    # `available()` is deliberately not a subscription — a Mac is not declining
+    # awscli, it cannot have it — and the old filter is handed a manifest with no
+    # coordinates in it, so it can express membership and nothing else. Narrowing
+    # the expectation the same way is what keeps this a parity check on the part
+    # the two halves both answer.
+    coordinates = machines.load(name).coordinates
+    subscribed = set(old[section](parse_packages.load_manifest(name)))
+    expected = sorted(
+        entry.name for entry in declaration.section(section) if entry.name in subscribed and resolve.available(entry, coordinates)
+    )
     actual = sorted(item.name for item in planned(declaration, name).for_section(section))
 
     assert actual == expected

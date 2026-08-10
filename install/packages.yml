@@ -936,6 +936,11 @@ custom_installers:
     command: aws
     repo: aws/aws-cli
     version_source: tags
+    # Homebrew has it on macOS, declared as a system package there. Excluded
+    # rather than handled inside the function: a no-op install that reports
+    # success is still a planned item, a measured row and a printed line on
+    # every run of a Mac with nothing wrong.
+    excludes_os_family: darwin
     url: https://awscli.amazonaws.com
     description: AWS Command Line Interface v2 (official installer, platform-specific archive)
 

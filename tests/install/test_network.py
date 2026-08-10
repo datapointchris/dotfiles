@@ -8,6 +8,8 @@ directions at once.
 
 from __future__ import annotations
 
+import pytest
+
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import network
@@ -166,14 +168,22 @@ def test_the_recorded_reach_survives_the_file() -> None:
     assert not row.split('|')[1].strip().endswith('clone'), 'the section cannot answer it, which is the point'
 
 
-def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped() -> None:
-    """`awscli` on a Mac installs from Homebrew and reaches nothing, so it gets no
-    row — and a reader cannot tell that from a machine where it was never
-    declared. The reason is carried instead of warned about and lost."""
+def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ "Nothing to probe" and "probed and fine" are different answers, and the
+    row's absence cannot tell them apart.
+
+    Driven through a stubbed `sources` rather than through whichever declared
+    installer happens to reach nothing today. awscli on a Mac was that example
+    until it stopped being planned there at all, which left this asserting a
+    coincidence of the declaration rather than the behaviour.
+    """
+    monkeypatch.setattr(network.custom, 'sources', lambda entry, target: ())
+
     derived = network.derive(machines.load('macos-personal-workstation'))
 
-    assert any('installs from nothing' in reason for reason in derived.unprobed)
-    assert not any(probe.name == 'awscli' for probe in derived.probes)
+    assert derived.unprobed
+    assert all('installs from nothing' in reason for reason in derived.unprobed)
+    assert not any(probe.section == 'custom_installer' for probe in derived.probes)
 
 
 def test_the_summary_counts_what_the_rows_say() -> None:

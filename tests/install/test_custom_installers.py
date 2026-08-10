@@ -24,7 +24,9 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import evidence
 from dotfiles import github_release
+from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import resolve
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -377,14 +379,14 @@ class TestClaudeCode:
 
 
 class TestAwscli:
-    def test_macos_defers_to_homebrew_without_touching_the_network(self, declared, home, bundle, effected):
-        _, fetches = effected()
+    def test_macos_never_plans_it_at_all_because_homebrew_has_the_formula(self, declared):
+        """The deferral used to be a branch in the installer returning success
+        having done nothing, which is still a planned item, a measured row and a
+        printed line on every run of a Mac with nothing wrong."""
+        entry = declared.find('custom_installers', 'awscli')
 
-        result = custom.install(declared.find('custom_installers', 'awscli'), DARWIN)
-
-        assert result.ok
-        assert 'Homebrew' in result.detail
-        assert fetches.urls == []
+        assert not resolve.available(entry, machines.load('macos-personal-workstation').coordinates)
+        assert resolve.available(entry, machines.load('archlinux-personal-workstation').coordinates)
 
     def test_an_installed_aws_is_still_converged_because_presence_is_not_currency(self, declared, home, bundle, effected, monkeypatch):
         """Currency for awscli is the resource's, against `aws/aws-cli`'s tags, so
