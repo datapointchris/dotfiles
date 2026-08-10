@@ -17,6 +17,7 @@ bootstrap, and both are what e2e covers.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import stat
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Result
 from dotfiles.providers import toolchain as installers
@@ -48,6 +50,33 @@ def bin_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory.mkdir()
     monkeypatch.setenv('PATH', str(directory))
     return directory
+
+
+@pytest.fixture(autouse=True)
+def go_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point the Go toolchain's fixed home somewhere this test controls.
+
+    Autouse because the alternative is a module whose answers depend on the
+    developer's machine: `/usr/local/go/bin/go` exists on any box that has run
+    `apply`, so every "go is absent" assertion would pass on CI and fail at a desk.
+
+    Pointed at the same directory `bin_dir` puts on PATH, so a test that stubs `go`
+    the ordinary way satisfies both questions. The one test that needs them to
+    disagree — a packaged copy on PATH beside the unpacked one — points it
+    elsewhere itself.
+
+    The provider is swapped rather than mutated: it is a frozen slotted dataclass,
+    and the three lookups are rebuilt together because `resolve` walks `PROVIDERS`
+    while the resources reach through `BY_NAME`.
+    """
+    path = tmp_path / 'bin' / 'go'
+    swapped = tuple(
+        dc.replace(provider, installed_at=str(path)) if provider.name == 'go-toolchain' else provider for provider in registry.PROVIDERS
+    )
+    monkeypatch.setattr(registry, 'PROVIDERS', swapped)
+    monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
+    monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
+    return path
 
 
 def stub(directory: Path, name: str, prints: str | None = None) -> Path:
@@ -130,12 +159,38 @@ def test_node_follows_the_npm_globals_that_need_it(tmp_path: Path, bin_dir: Path
 
 
 def test_an_absent_toolchain_is_missing(tmp_path: Path, bin_dir: Path) -> None:
+    """Go is answered by where it is unpacked, so the absent case is that path
+    being absent — pointed somewhere controlled, because `/usr/local/go/bin/go`
+    exists on a developer's own machine and a test that reads it is testing the
+    developer."""
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
 
     found = [change for change in changes(live) if change.item == 'go']
 
     assert found[0].verdict is Verdict.MISSING
-    assert 'not on PATH' in found[0].detail
+    assert found[0].detail.endswith('/bin/go')
+
+
+def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A package manager's copy on PATH is a different binary from the one this repo
+    unpacks, so a version read by name can describe a runtime the machine does not
+    run — which is exactly what let a transitively-installed `go` satisfy the
+    toolchain while `/usr/local/go` did not exist."""
+    unpacked = tmp_path / 'unpacked' / 'go'
+    unpacked.parent.mkdir(parents=True)
+    unpacked.write_text('#!/bin/sh\necho "go version go9.9.9 linux/amd64"\n')
+    unpacked.chmod(0o755)
+    stub(bin_dir, 'go', 'go version go1.0.0 linux/amd64')
+    swapped = tuple(
+        dc.replace(provider, installed_at=str(unpacked)) if provider.name == 'go-toolchain' else provider for provider in registry.PROVIDERS
+    )
+    monkeypatch.setattr(registry, 'PROVIDERS', swapped)
+    monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
+
+    live = session(tmp_path, {**BARE, 'go_tools': ['task']})
+    observed = toolchains.RESOURCE.observe(live, live.plan)
+
+    assert 'go9.9.9' in observed.reported['go'], 'the version came from PATH, not from where the toolchain lives'
 
 
 def test_a_toolchain_meeting_its_floor_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:
@@ -196,7 +251,8 @@ def test_a_toolchain_that_fails_to_answer_counts_as_absent(tmp_path: Path, bin_d
     found = changes(live)
 
     assert [change.verdict for change in found] == [Verdict.MISSING]
-    assert found[0].detail == 'go is on PATH but would not report a version'
+    assert found[0].detail.endswith('would not report a version')
+    assert str(broken) in found[0].detail, 'the message names the binary that was probed'
 
 
 def test_the_floor_comes_from_the_plan_not_from_this_module(tmp_path: Path, bin_dir: Path) -> None:

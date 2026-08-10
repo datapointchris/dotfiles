@@ -6,8 +6,10 @@ tool providers resolved, so the table that used to sit in this file — name, pr
 stage, the section that pulls it in — is the registry's. It was the fifth keying
 of the provider concept and the one the A3 collapse did not reach.
 
-What is left is the resource: run the probes, compare what they said against the
-floors the plan carries, and say what differs. uv is ungated and always planned,
+What is left is the resource: ask the provider whether each one is there, compare
+the versions against the floors the plan carries, and say what differs. Presence
+is the provider's answer and never a second `which` here — that duplicate is what
+let a packaged `go` satisfy a toolchain unpacked to a path nothing checked. uv is ungated and always planned,
 because everything installed later resolves through it — before the CLI existed
 the symlink phase itself shelled out to `uv run` and died with exit 127 on
 `linux-lxc-server`.
@@ -16,7 +18,6 @@ the symlink phase itself shelled out to `uv run` and died with exit 127 on
 from __future__ import annotations
 
 import dataclasses as dc
-import shutil
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
@@ -64,10 +65,23 @@ class ToolchainsResource:
         absent: dict[str, str] = {}
 
         for item in plan.for_resource(NAME):
-            if not shutil.which(item.executable):
-                absent[item.name] = f'{item.executable} is not on PATH'
-            elif (version := ev.reported_version(item.executable)) is None:
-                absent[item.name] = f'{item.executable} is on PATH but would not report a version'
+            # Asked of the provider rather than of PATH. A runtime with a fixed
+            # home is answered by that path, and `which` is a different question:
+            # Arch's `go` package arrived transitively in a container, `which go`
+            # found /usr/sbin/go, and this reported the toolchain present while
+            # /usr/local/go did not exist — so every Go tool built against a
+            # runtime this repo had not installed. `registry.evidence_for` already
+            # knew; only this second measurement did not ask it.
+            found = registry.evidence_for(item, session.inventories)
+            probe = item.evidence_path or item.executable
+            if found.verdict is not Verdict.MATCHED:
+                absent[item.name] = found.detail
+            elif (version := ev.reported_version(probe)) is None:
+                # Probed where it was found, not by name. For a runtime with a
+                # fixed home those are different binaries the moment a package
+                # manager put one on PATH, and asking the wrong one is how this
+                # came to report a version the machine does not run.
+                absent[item.name] = f'{probe} would not report a version'
             else:
                 reported[item.name] = version
 
