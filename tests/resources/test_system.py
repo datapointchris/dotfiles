@@ -164,14 +164,20 @@ def test_a_real_inventory_query_is_parsed(tmp_path: Path, fake_bin: Path) -> Non
     assert changes(live) == []
 
 
-def test_every_installer_maps_to_a_query_or_is_deliberately_unqueryable() -> None:
+def test_every_installer_maps_to_a_query_that_exists() -> None:
     """A missing key and a deliberately empty one looked the same, and `flatpak`
     was exactly that — reporting UNKNOWN on a machine where the query works and
-    both apps are installed."""
+    both apps are installed.
+
+    The last assertion is what an empty value costs. `mas` carried one, so every
+    App Store row fell past its inventory to a PATH probe no `.app` can satisfy,
+    and read MISSING on a machine where `mas list` showed it.
+    """
     installers = {installer for bundle in axes.PLATFORM_BUNDLES.values() for installer in bundle.installers}
 
     assert installers <= set(ev.INSTALLER_QUERIES)
-    assert {'cask', 'flatpak'} <= set(ev.INSTALLER_QUERIES)
+    assert {'cask', 'flatpak', 'mas'} <= set(ev.INSTALLER_QUERIES)
+    assert all(ev.QUERIES.get(query) for query in ev.INSTALLER_QUERIES.values()), ev.INSTALLER_QUERIES
 
 
 def test_the_system_resource_takes_only_its_own_items(tmp_path: Path, fake_bin: Path) -> None:
@@ -508,6 +514,66 @@ def test_an_app_store_app_is_installed_by_its_numeric_id(tmp_path: Path, fake_bi
     registry.BY_NAME['mas'].install_all(live, changes(live), Privilege(offer=False))
 
     assert recorder.calls == [('mas', ('497799835',))]
+
+
+def app_store_item(tmp_path: Path, name: str, identifier: int):
+    live = session(tmp_path, {'mas_apps': [{'name': name, 'id': identifier}]}, MAC)
+    return live.plan.for_resource('system')[0]
+
+
+def test_an_app_store_app_whose_bundle_is_not_its_store_title_is_found_by_mas(tmp_path: Path) -> None:
+    """446243721 is `Disk Space Analyzer` in the store and `Disk Inspector.app` on
+    disk, so no name-derived path finds it. Before mas was asked, this fell through
+    to `by_command` — and a GUI app is never on PATH, so the row read
+    `Disk Space Analyzer is not on PATH` on a machine where `mas list` shows it,
+    permanently, and `apply` re-ran `mas install` for it every run."""
+    item = app_store_item(tmp_path, 'Disk Space Analyzer', 446243721)
+
+    found = ev.by_app_store(item, {'mas': frozenset({'446243721'})})
+
+    assert found.verdict is Verdict.MATCHED
+    assert '446243721' in found.detail
+
+
+def test_a_bundle_mas_never_installed_is_still_present(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An app restored by Migration Assistant works and is absent from `mas list`,
+    which is why the bundle is asked first rather than replaced by the inventory."""
+    home = tmp_path / 'home'
+    (home / 'Applications' / 'Dato.app').mkdir(parents=True)
+    monkeypatch.setenv('HOME', str(home))
+    item = app_store_item(tmp_path, 'Dato', 1470584107)
+
+    found = ev.by_app_store(item, {'mas': frozenset()})
+
+    assert found.verdict is Verdict.MATCHED
+    assert 'Dato.app' in found.detail
+
+
+def test_an_app_store_app_nobody_can_confirm_is_missing_rather_than_off_PATH(tmp_path: Path) -> None:
+    """The message names both reads. `is not on PATH` was the old one and described
+    a question that cannot be asked of a `.app`."""
+    item = app_store_item(tmp_path, 'Absent', 1)
+
+    found = ev.by_app_store(item, {'mas': frozenset()})
+
+    assert found.verdict is Verdict.MISSING
+    assert 'not on PATH' not in found.detail
+
+
+def test_an_app_store_app_is_unknown_when_mas_cannot_be_asked(tmp_path: Path) -> None:
+    """A Mac without mas installed yet. UNKNOWN, never MISSING: unverified is not
+    permission, and a fresh machine would otherwise reinstall every declared app."""
+    item = app_store_item(tmp_path, 'Absent', 1)
+
+    assert ev.by_app_store(item, {}).verdict is Verdict.UNKNOWN
+
+
+def test_mas_list_is_read_as_ids_not_whole_lines(tmp_path: Path, fake_bin: Path) -> None:
+    """`mas list` prints `<id>  <Name>  (<version>)`, unlike every other query here,
+    which prints a bare name per line. Taking the line whole matches nothing."""
+    executable(fake_bin, 'mas', '#!/bin/sh\nprintf "446243721  Disk Space Analyzer  (6.0.2)\\n"\n')
+
+    assert ev.query('mas') == frozenset({'446243721'})
 
 
 def test_a_flatpak_app_is_installed_by_its_reverse_dns_id(tmp_path: Path, fake_bin: Path, manager, bootstraps) -> None:

@@ -75,6 +75,7 @@ QUERIES: dict[str, list[str]] = {
     'brew': ['brew', 'list', '--formula', '-1'],
     'cask': ['brew', 'list', '--cask', '-1'],
     'flatpak': ['flatpak', 'list', '--app', '--columns=application'],
+    'mas': ['mas', 'list'],
 }
 """The unprivileged read behind each privileged write.
 
@@ -90,16 +91,15 @@ INSTALLER_QUERIES = {
     'brew': 'brew',
     'cask': 'cask',
     'flatpak': 'flatpak',
-    'mas': '',
+    'mas': 'mas',
 }
 """Which query answers for an installer.
 
 `aur` shares pacman's, because an AUR package is a pacman package once it is
-installed. `mas` has none — an App Store app is judged by its bundle — and that
-empty string is why every installer needs an entry here rather than a `.get`
-default: a missing key and a deliberately unqueryable one would look the same,
-and `flatpak` was exactly that, reporting UNKNOWN on a machine where the query
-works and both apps are installed.
+installed. Every installer needs an entry here rather than a `.get` default: a
+missing key and an unqueryable one would look the same, and `flatpak` was exactly
+that, reporting UNKNOWN on a machine where the query works and both apps are
+installed.
 """
 
 
@@ -135,13 +135,41 @@ def by_uv_tool(item: DesiredItem) -> Evidence:
 
 
 def by_app_bundle(item: DesiredItem) -> Evidence:
-    """A cask or App Store app. Its CLI, where it has one, is a second question."""
+    """A cask. Its CLI, where it has one, is a second question."""
     bundle = macos_app(item.name)
     if bundle:
         return Evidence(Verdict.MATCHED, str(bundle))
     if item.executable:
         return by_command(item)
     return Evidence(Verdict.MISSING, f'no {item.name}.app in /Applications')
+
+
+def by_app_store(item: DesiredItem, installed: Inventory) -> Evidence:
+    """An App Store app: its bundle first, then what `mas` says it installed.
+
+    Two sources because neither alone is the truth. The bundle catches an app
+    restored by Migration Assistant — present and working, and absent from `mas
+    list` because mas never installed it here. `mas` catches an app whose bundle
+    name is not its store title, which no name-derived path can find: 446243721
+    is `Disk Space Analyzer` in the store and `Disk Inspector.app` on disk.
+
+    What was here before asked the bundle and then fell through to `by_command`,
+    which is `shutil.which`. A GUI app is never on PATH, so every app the bundle
+    name missed was permanently MISSING — and `apply` re-ran `mas install` for it
+    on every run, which is the unconditional re-run standing in for a measurement
+    that this engine is built to not have.
+    """
+    bundle = macos_app(item.name)
+    if bundle:
+        return Evidence(Verdict.MATCHED, str(bundle))
+
+    identifier = item.entry.id if isinstance(item.entry, catalog.MasApp) else None
+    inventory = installed.get(INSTALLER_QUERIES['mas'])
+    if inventory is None:
+        return Evidence(Verdict.UNKNOWN, f'no {item.name}.app in /Applications, and mas could not be asked')
+    if identifier is not None and str(identifier) in inventory:
+        return Evidence(Verdict.MATCHED, f'mas: {identifier}')
+    return Evidence(Verdict.MISSING, f'no {item.name}.app in /Applications, and mas has not installed {identifier}')
 
 
 OUTDATED_PREFIX = 'outdated:'
@@ -172,7 +200,14 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     result = run(command, output=Output.QUIET)
     if not result.ok:
         return None
-    return frozenset(line.strip() for line in result.transcript.splitlines() if line.strip())
+    lines = [line.strip() for line in result.transcript.splitlines() if line.strip()]
+    if name == 'mas':
+        # `mas list` prints `<id>  <Name>  (<version>)`, and the id is the only
+        # field an entry can be matched on: the App Store title and the bundle
+        # name are free to differ, and for 446243721 they do — the store calls it
+        # `Disk Space Analyzer` and it installs as `Disk Inspector.app`.
+        return frozenset(line.split()[0] for line in lines)
+    return frozenset(lines)
 
 
 class Inventory(Protocol):
