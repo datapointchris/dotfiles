@@ -34,8 +34,8 @@ A first-class `linux` platform plus a tiered system-package model:
 
 - **System-package tiers, one list.** Each entry in `system_packages`
   (`install/packages.yml`) may carry `tier: core`; untagged entries default to
-  workstation-only. `parse_packages.py --tier core|workstation` filters the
-  single list — a server installs only the tagged base, a workstation installs
+  workstation-only. `src/dotfiles/resolve.py` filters the single list against the
+  tier — a server installs only the tagged base, a workstation installs
   everything. There is no parallel list to drift. Manifests declare their tier
   via `system_packages: core|workstation`.
 
@@ -76,7 +76,7 @@ writes from the manifest rather than leaving to be typed by hand — see
 
 - `install/manifests/linux-lxc-server.yml` — the minimal profile
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
-- `src/dotfiles/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
+- `src/dotfiles/resolve.py` — where the tier narrows the single `system_packages` list
 - `install.sh` — `linux` platform branch; the tier is a subscription `src/dotfiles/machine.py` reads
 - `shell/pkg/apt/apt.sh` — the apt overlay these helpers moved to
 - `src/dotfiles/resources/symlinks.py` — `layers()`, where an overlay is optional

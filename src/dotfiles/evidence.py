@@ -398,8 +398,8 @@ def reported_version(executable: str) -> str | None:
 
 
 def have_github_credentials() -> bool:
-    """The same question `github_token` in `version-helpers.sh` asks, so a check
-    and the installers it gates cannot disagree about whether to try."""
+    """Whether a credential exists at all, asked once so a check and the installs
+    it gates cannot disagree about whether reaching GitHub is worth trying."""
     return bool(os.environ.get('GITHUB_TOKEN')) or run(['gh', 'auth', 'token'], output=Output.QUIET).ok
 
 

@@ -2,7 +2,13 @@
 
 ## Context
 
-Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, `python3-pyyaml` is required before `parse_packages.py` can parse the package list.
+Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, `python3-pyyaml` was required before `parse_packages.py` could parse the package list.
+
+**The mechanism below is history.** `parse_packages.py` was deleted at the end of the
+Python conversion and there is no system-python bootstrap any more — the CLI installs
+with its dependencies declared, so nothing has to be true about the machine first (see
+*The bootstrap goes away on Ubuntu 26.04* and the closing note). The symptom and the
+environment lesson are why this page is kept; the fix it describes is not the current one.
 
 ## The Problem
 
@@ -26,11 +32,11 @@ python3 parse_packages.py --type=system --manager=apt
 
 ## The Solution
 
-**Root Fix: Use System Python Explicitly**
+**Root Fix at the time: Use System Python Explicitly** — superseded, kept for the shape of it.
 
-To ensure parse_packages.py works across all platforms regardless of which Python is in PATH:
+To ensure parse_packages.py worked across all platforms regardless of which Python was in PATH:
 
-**1. Use system Python via shebang** (`src/dotfiles/parse_packages.py:1`):
+**1. Use system Python via shebang** (then `src/dotfiles/parse_packages.py:1`):
 
 ```python
 #!/usr/bin/python3  # System Python, not #!/usr/bin/env python3

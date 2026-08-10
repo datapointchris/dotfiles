@@ -258,9 +258,9 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     would report the CLI outdated every time the API released, and current every
     time the API released after it.
 
-    Mirrors `fetch_github_latest_version_prefixed` in `version-helpers.sh`,
-    including its two assumptions: releases come back newest-first, so the first
-    match is the latest, and a draft is not a release anyone can install.
+    Two assumptions, inherited from the bash this replaced and still load-bearing:
+    releases come back newest-first, so the first match is the latest, and a draft
+    is not a release anyone can install.
     """
     if not tag_prefix:
         try:

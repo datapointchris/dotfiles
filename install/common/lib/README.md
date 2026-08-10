@@ -3,23 +3,13 @@
 Shared bash sourced by the installer scripts that are left. Everything here exists
 because two or more of them needed the same thing and a copy in each was drifting.
 
+One library is left, and that is the shape the conversion was aiming at rather
+than an accident: what remains in bash is what a human runs by hand, and a
+sequence of `wsl.exe` calls has no Python worth writing around it.
+
 `rg '^[a-z_]+\(\)' <file>` lists what a library defines; each file's header
 comment says what the function is for. This page is the *why each library exists*,
 which is the part a reader cannot recover from the code.
-
-## version-helpers.sh
-
-Version comparison and the GitHub releases lookup, for the two scripts that still
-ask those questions in bash — the offline connectivity probe and the installed
-package verification. `src/dotfiles/versions.py` is the same logic for everything
-that has converted, and `tests/shell/test_version_helpers_sh.py` pins the two to
-the same answers.
-
-## python.sh
-
-Defines `dotfiles_python` as the CLI's own `sys.executable`, never the system
-interpreter. The one thing a bash installer needs in order to read `packages.yml`
-at all.
 
 ## wsl-rootfs.sh
 
@@ -27,6 +17,15 @@ Building a WSL distribution image, which is a sequence of `wsl.exe` calls with
 nothing in common with an installer.
 
 ## What is not here any more
+
+`version-helpers.sh` compared two versions and looked up the newest GitHub
+release, and `python.sh` defined `dotfiles_python` so a bash installer could read
+`packages.yml` at all. Both went when the last caller did: `src/dotfiles/versions.py`
+and `github_release.py` answer those questions now, and nothing sources bash to ask
+them. The properties their tests asserted were moved onto the Python first — the
+bundle-category read, the offline-versus-online upstream, and the release-tag
+comparison shapes are in `tests/resources/test_packages.py` and
+`tests/resolver/test_versions.py`.
 
 `failure-logging.sh` appended a JSON record per failure to `$FAILURE_RECORDS` for
 the wrapper to render when an installer exited. It went with the last two

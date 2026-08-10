@@ -108,7 +108,7 @@ had to resolve one first would fail for the wrong reason.
 Read them for any tool with:
 
 ```bash
-packages_query --sources theme     # python -m dotfiles.parse_packages --sources
+dotfiles packages show theme
 ```
 
 ## Verification

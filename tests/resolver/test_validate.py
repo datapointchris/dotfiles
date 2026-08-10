@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import catalog
 from dotfiles import validate
 from dotfiles.validate import Severity
 
@@ -202,3 +203,62 @@ def test_the_real_declaration_is_sound() -> None:
     """The gate the pre-commit hook is. Every synthetic test above proves a check
     fires; this proves the repo passes all of them at once."""
     assert validate.errors(validate.declaration()) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariants the loader cannot express
+#
+# `catalog.load` refuses a key no reader consumes, which is a per-entry rule. Each
+# of these is a relation — between two fields, or between a manifest and the
+# declaration — and none is expressible as a dataclass field. They outlived
+# `parse_packages`, whose tests were their previous home, and are asserted against
+# the real files here for the reason that file did: a synthetic fixture proves the
+# check works, and only the real declaration proves the repo passes it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_a_manifest_installing_npm_globals_also_installs_fnm() -> None:
+    """The node toolchain is planned because npm globals are, and it needs fnm to
+    put a node on PATH at all — which is how a WSL offline install died with
+    `fnm not found`.
+
+    Read off disk rather than from a list of machine names, so a manifest added
+    tomorrow is covered the day it is written.
+    """
+    for manifest in sorted((REPO_ROOT / 'install' / 'manifests').glob('*.yml')):
+        declared = yaml.safe_load(manifest.read_text())
+        if not declared.get('npm_globals'):
+            continue
+        cargo = declared.get('cargo_packages')
+        assert cargo is True or 'fnm' in (cargo or ()), (
+            f'{manifest.name} installs npm globals but no fnm, so the node toolchain cannot resolve'
+        )
+
+
+def test_fnm_overrides_both_target_triples() -> None:
+    """fnm names its assets after the OS word — `fnm-linux.zip`, `fnm-macos.zip` —
+    so the bare `{target}` triple 404s on every bundle build.
+
+    Both overrides or neither is the assertion: a linux-only override leaves the
+    macOS bundle broken and vice versa, and one of the two going missing is the
+    shape that survives a careless edit.
+    """
+    fnm = catalog.load(REPO_ROOT / 'install' / 'packages.yml').find('cargo_packages', 'fnm')
+
+    assert fnm is not None, 'fnm is the node toolchain; nothing else puts node on PATH'
+    assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
+
+
+def test_a_cargo_binary_pattern_names_the_repo_it_builds_a_url_for() -> None:
+    """`binary_pattern` exists only to construct a GitHub release URL, so an entry
+    carrying one without a `github_repo` is dead configuration that reads as
+    working — the same failure `install_script` was refused for, one relation up
+    where the loader cannot see it."""
+    declaration = catalog.load(REPO_ROOT / 'install' / 'packages.yml')
+
+    orphaned = [entry.name for entry in declaration.section('cargo_packages') if entry.binary_pattern and not entry.github_repo]
+
+    assert orphaned == []

@@ -552,14 +552,77 @@ def test_offline_never_writes_what_the_bundle_holds_into_the_release_cache(
 ) -> None:
     """A bundle's versions are what one tarball happens to hold, not what upstream
     published. Persisting them would have the next online run read a bundle's
-    contents as the release cache."""
+    contents as the release cache.
+
+    `--refresh` is set deliberately: it is the flag that means "spend the network
+    on being current", and offline is the state where there is no network to
+    spend. An unwritten cache alone would not prove the request never went out,
+    so `consulted_network` is asserted beside it.
+    """
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
 
-    packages.RESOURCE.observe(live, live.plan)
+    observed = packages.RESOURCE.observe(live, live.plan)
 
     assert not release_cache.exists()
+    assert observed.consulted_network is False
+
+
+@pytest.mark.parametrize('category', ['binary', 'extra', 'go-binary', 'cargo', 'script'])
+def test_offline_the_bundle_answers_under_whichever_category_staged_the_tool(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch, category: str
+) -> None:
+    """A tool declared as a GitHub release here is a cargo package or a Go tool on
+    another machine, and the bundler files it under whichever section staged it.
+
+    A reader that understood only its own category would answer for `binary` and
+    send the rest of the plan to a network the offline machine does not have —
+    which is the whole failure the bundle exists to prevent.
+    """
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'}, category=category)
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('ghrelease/lazygit', Verdict.STALE)]
+
+
+def test_offline_with_no_bundle_at_all_is_a_miss_never_a_stale_answer(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch
+) -> None:
+    """A machine that never had a bundle extracted is the case a *missing manifest*
+    reaches, which no other test here takes: every one of them stages one first.
+
+    `BUNDLE_DIR` is pointed at a path that does not exist rather than left alone,
+    because the real one may exist on the machine running this and the test would
+    then read whatever it holds.
+    """
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-extracted')
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.UNKNOWN, Repair.NONE)]
+    assert 'bundle' in found[0].detail, 'offline the advice must not be `check --refresh`, which offline cannot do'
+
+
+def test_an_online_run_ignores_a_staged_bundle(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    """Staging a bundle must not pin an online machine to whatever it captured.
+
+    The two upstreams answer different versions here on purpose: agreeing would
+    let the bundle answer and still pass. What is asserted is *which* one was
+    read, not that the verdict came out stale.
+    """
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.46.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('ghrelease/lazygit', Verdict.STALE)]
+    assert 'v0.46.0' in found[0].detail, 'the release cache is the upstream online, never the bundle'
 
 
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:

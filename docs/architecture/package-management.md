@@ -132,7 +132,7 @@ untagged entries default to workstation-only. A manifest declares which set it
 wants via `system_packages: core | workstation` — a workstation installs
 everything, a minimal server (the `linux-lxc-server` manifest) installs only the
 core base. The multimedia and docker packages above are workstation-only; the
-shell/build/diagnostic essentials are `core`. `parse_packages.py --tier` does the
+shell/build/diagnostic essentials are `core`. `src/dotfiles/resolve.py` does the
 filtering, so there is still one list, not two. See
 [Minimal Manifest for Servers](../learnings/minimal-manifest-for-servers.md).
 
@@ -145,7 +145,7 @@ filtering, so there is still one list, not two. See
 **Method**: Git clone from upstream repositories
 
 **Plugins**: the `shell_plugins` section of `install/packages.yml` is the list, each entry carrying
-its own description. Read it with `parse_packages --type=shell-plugins --format=names` rather than
+its own description. Read it with `dotfiles packages list --source shell_plugins` rather than
 copying the names here, where they only go stale.
 
 Load order is not arbitrary and lives in `.zshrc`, not in the manifest: `zsh-syntax-highlighting`
