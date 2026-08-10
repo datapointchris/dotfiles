@@ -100,7 +100,14 @@ def executables_on_path(checkout: Path, search: str | None = None) -> dict[str, 
         except OSError:
             continue
         for entry in entries:
-            if not entry.is_file() or not os.access(entry.path, os.X_OK):
+            # Per entry as well as per directory. macOS ships `/usr/sbin/weakpass_edit`
+            # as a symlink into SIP-protected `authserver/`, and `is_file` follows it
+            # and is denied — which took the whole `packages` resource down as "could
+            # not be examined" on both Macs, while no Linux box has ever seen it.
+            try:
+                if not entry.is_file() or not os.access(entry.path, os.X_OK):
+                    continue
+            except OSError:
                 continue
             real = os.path.realpath(entry.path)
             if real in seen.setdefault(entry.name, set()):

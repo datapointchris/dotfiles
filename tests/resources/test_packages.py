@@ -116,6 +116,28 @@ def test_the_command_field_is_what_gets_looked_up(tmp_path: Path, fake_bin: Path
     assert verdicts(live) == {'cargo/ripgrep': Verdict.MATCHED}
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason='root is refused nothing, so the entry under test stays readable')
+def test_an_unreadable_entry_does_not_take_out_the_whole_scan(tmp_path: Path) -> None:
+    """macOS ships `/usr/sbin/weakpass_edit` pointing into SIP-protected
+    `authserver/`, so following it is denied. One such entry made the whole
+    `packages` resource report "could not be examined" on both Macs."""
+    forbidden = tmp_path / 'forbidden'
+    forbidden.mkdir()
+    (forbidden / 'target').write_text('')
+    searched = tmp_path / 'bin'
+    searched.mkdir()
+    executable(searched, 'reachable')
+    (searched / 'denied').symlink_to(forbidden / 'target')
+    forbidden.chmod(0o000)
+
+    try:
+        found = ev.executables_on_path(tmp_path / 'checkout', search=str(searched))
+    finally:
+        forbidden.chmod(0o700)
+
+    assert 'reachable' in found
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # A declared path, for an entry that installs no binary
 # ─────────────────────────────────────────────────────────────────────────────
