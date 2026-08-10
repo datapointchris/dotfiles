@@ -179,7 +179,13 @@ def report(cells: list[Cell], into: Path, wall: float) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     known = ', '.join(f'{level.number}/{level.name}' for level in levels.LEVELS)
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    # `allow_abbrev=False` is load-bearing, not tidiness. Everything this does not
+    # recognise is forwarded to pytest, and argparse's prefix matching claims any
+    # unambiguous abbreviation of an option defined here — so `--keep`, meant for
+    # pytest, was silently consumed as `--keep-going` and never forwarded. A whole
+    # level-4 run's containers were then destroyed at teardown, and the rung that
+    # asserts against them recreated four empty ones and errored on all 31 tests.
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, allow_abbrev=False)
     parser.add_argument('--through', default=levels.LAST, help=f'stop after this level, top of the ladder by default ({known})')
     parser.add_argument('--level', default='', help='run exactly one level instead of a ladder')
     parser.add_argument('--environment', default='', help='comma-separated environments (default: all)')

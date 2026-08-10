@@ -336,6 +336,24 @@ def fresh_container(container: Machine, request: pytest.FixtureRequest) -> Machi
 
 
 @pytest.fixture
+def converged_machine(machine: Machine, request: pytest.FixtureRequest) -> Machine:
+    """`machine` narrowed to an environment whose install is meant to succeed.
+
+    `restricted` is a firewall carrying no bundle, and its downloads failing is
+    the point — `test_the_firewall_actually_broke_something` asserts exit 3 and
+    says a run where nothing failed leaves the reporting untested. So the four
+    assertions that presume a converged machine were red there forever, naming
+    thirty-six tools that could not possibly have installed.
+
+    A permanent red is the same disease as a false one: it makes a level
+    unreadable, and an unreadable level is one nobody runs.
+    """
+    if not machine.environment.converges:
+        pytest.skip(f'{machine.environment.name} is arranged so downloads fail; convergence is not its question')
+    return machine
+
+
+@pytest.fixture
 def fresh_install(machine: Machine, request: pytest.FixtureRequest) -> Machine:
     """`machine` narrowed to a run that performed the install itself.
 

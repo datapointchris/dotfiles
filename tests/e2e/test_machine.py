@@ -103,23 +103,26 @@ def test_the_run_reports_its_own_outcome(machine: Machine) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_machine_converged(machine: Machine) -> None:
+def test_the_machine_converged(converged_machine: Machine) -> None:
     """The whole install, judged as the machine judges it.
 
     Deliberately not softened to "converged or has known failures": a red line
     here is the accurate state, and the addresses it names are the work. They come
     off the run record, so the assertion message is the diagnosis.
     """
-    if machine.install_status == 0:
+    if converged_machine.install_status == 0:
         return
-    pytest.fail(f'{machine.environment.name} did not converge: {failed_outcomes(machine) or machine.install_log[-2000:]}')
+    pytest.fail(
+        f'{converged_machine.environment.name} did not converge: '
+        f'{failed_outcomes(converged_machine) or converged_machine.install_log[-2000:]}'
+    )
 
 
-def test_every_declared_tool_is_installed(machine: Machine) -> None:
+def test_every_declared_tool_is_installed(converged_machine: Machine) -> None:
     """The manifest is the checklist, so a tool added or removed changes what is
     verified with no list here to update."""
-    home = machine.environment.home
-    result = machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
+    home = converged_machine.environment.home
+    result = converged_machine.exec(f'bash {home}/dotfiles/tests/install/verification/verify-installed-packages.sh')
     assert result.returncode == 0, result.stdout[-4000:]
 
 
@@ -131,9 +134,9 @@ def test_nothing_is_installed_twice(machine: Machine) -> None:
     assert result.returncode == 0, result.stdout[-4000:]
 
 
-def test_the_apps_work(machine: Machine) -> None:
-    home = machine.environment.home
-    result = machine.exec(f'bash {home}/dotfiles/tests/apps/all-apps.sh')
+def test_the_apps_work(converged_machine: Machine) -> None:
+    home = converged_machine.environment.home
+    result = converged_machine.exec(f'bash {home}/dotfiles/tests/apps/all-apps.sh')
     assert result.returncode == 0, result.stdout[-4000:]
 
 
@@ -144,15 +147,15 @@ def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
     assert machine.succeeds('grep -rq ZDOTDIR /etc/zshenv /etc/zsh/zshenv 2>/dev/null')
 
 
-def test_a_second_apply_over_a_converged_machine_changes_nothing(machine: Machine) -> None:
+def test_a_second_apply_over_a_converged_machine_changes_nothing(converged_machine: Machine) -> None:
     """Idempotence, against the machine the first apply just produced.
 
     This ran `update.sh` until reconcile collapsed to one verb. `apply` is that
     verb — it installs what is missing and upgrades what is behind — so running it
     twice is both the update path and the assertion that the first run converged.
     """
-    home = machine.environment.home
-    result = machine.exec(f'cd {home}/dotfiles && uv run dotfiles apply')
+    home = converged_machine.environment.home
+    result = converged_machine.exec(f'cd {home}/dotfiles && uv run dotfiles apply')
     assert result.returncode == 0, result.stdout[-4000:]
 
 

@@ -269,6 +269,24 @@ class Environment:
     offline: bool = False
     """Stage a bundle and pass `--offline`. Implies `firewalled`."""
 
+    converges: bool = True
+    """Whether a finished install here is expected to have installed everything.
+
+    False for the firewalled environment carrying no bundle, whose downloads are
+    *meant* to fail — `test_the_firewall_actually_broke_something` asserts exit 3
+    and says a run where nothing failed leaves the reporting untested.
+
+    Declared rather than inferred from `firewalled and not offline`, because the
+    two facts are separable: an environment could be arranged to fail for some
+    other reason, and a reader of `test_machine.py` should not have to reconstruct
+    the intent from a pair of unrelated flags.
+
+    Without it, the four assertions that presume a converged machine were red on
+    `restricted` forever, for the reason the environment exists — which is the
+    same disease as a false red at any other rung: it makes the level unreadable,
+    and an unreadable level is one nobody runs.
+    """
+
     build_image: tuple[str, ...] = field(default_factory=tuple)
     """How to produce the image when it is absent, rather than failing."""
 
@@ -323,6 +341,7 @@ RESTRICTED = Environment(
     manifest='wsl-work-workstation',
     env_file='PLATFORM=wsl\n',
     firewalled=True,
+    converges=False,
     build_image=('bash', str(DOCKER_DIR / 'build-base.sh')),
 )
 
