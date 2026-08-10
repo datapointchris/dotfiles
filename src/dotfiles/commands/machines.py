@@ -29,6 +29,20 @@ from dotfiles.vocabulary import ExitCode
 app = typer.Typer(no_args_is_help=True, help='Machine manifests: what each machine declares')
 
 
+def precondition_note(precondition: resolver.Precondition) -> str:
+    """The `[amd_gpu]` suffix on a row, or '' where the item has no precondition.
+
+    A named function rather than an f-string inside the render loop, because the
+    escape is the whole content and it was wrong: rich reads `[amd_gpu]` as a
+    style tag and swallows it, so the annotation had never once been visible on
+    any entry that declared one. A value that exists only inside a printed
+    sentence cannot be asserted without asserting the sentence — and asserting
+    the row means pinning a terminal width, which belongs to whoever ran the
+    command rather than to us.
+    """
+    return rf'  \[{precondition}]' if precondition else ''
+
+
 def manifest_names() -> list[str]:
     """Every manifest in the repo, by name. Read from disk, never listed anywhere."""
     if not paths.MANIFESTS_DIR.is_dir():
@@ -134,11 +148,7 @@ def _render(plan: resolver.Plan) -> None:
         console.print()
         console.print(f'[bold blue]{stage.name.lower()}[/]  {len(items)}')
         for item in items:
-            # Escaped, because rich reads `[amd_gpu]` as a style tag and swallows
-            # it: the annotation has never once been visible, on any of the three
-            # entries that have declared a precondition since it was added.
-            note = rf'  \[{item.precondition}]' if item.precondition else ''
-            console.print(f'  {item.provider:<14} {item.name:<28} {item.reason.selector}{note}')
+            console.print(f'  {item.provider:<14} {item.name:<28} {item.reason.selector}{precondition_note(item.precondition)}')
 
     console.print()
     console.print(f'{len(plan.items)} items')
