@@ -248,14 +248,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 7/7: Testing Update Script"
-  echo "Running update.sh to verify update functionality..."
+  log_section "STEP 7/7: Testing a second apply"
+  echo "Running dotfiles apply again to verify the first run converged..."
   echo ""
 
   sudo -u "$TEST_USER" bash -c "
     cd /Users/$TEST_USER/dotfiles
-    bash update.sh
-  " || log_warning "Update script failed"
+    uv run dotfiles apply
+  " || log_warning "Second apply failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

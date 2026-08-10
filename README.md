@@ -126,8 +126,8 @@ theme preview                           # Preview themes with fzf
 
 # Updates
 dotfiles update                         # Pull the repo and repair what the pull invalidated
-task update                             # Update the machine's packages, tools and plugins
-task update -- --mine                   # Only my own tools
+task update                             # Alias for install: apply is the update
+dotfiles apply --owner datapointchris   # Only my own tools
 
 # Symlinks
 dotfiles symlinks apply                 # Deploy configs (also: check, show, unlink)

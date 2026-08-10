@@ -1,27 +1,25 @@
-"""The Python registry and the bash one must name the same phases, in the same order.
+"""`apply.REGISTRY`: what a run covers, in what order, and what selects a subset.
 
-`apply.REGISTRY` is what `dotfiles apply` walks; `install/phases.sh` is what
-`update.sh` still walks. Two registries for one machine is exactly the drift this
-migration exists to remove, and it survives only until update converts — so while
-both exist, something has to assert they agree. Nothing about editing one brings
-you into contact with the other.
+There is one registry now. This file used to assert that it agreed with
+`install/phases.sh`, phase for phase and in order, because `update.sh` walked
+that one — two registries for one machine, where nothing about editing either
+brought you into contact with the other. Both are gone: `apply` installs what is
+missing and upgrades what is behind, so there is no second verb needing a second
+list.
 
-Order is asserted, not just membership. Registry order is a real dependency chain:
-symlinks must land after the tools that provide `task` and before tpm reads the
+Order is still asserted rather than membership alone. It is a real dependency
+chain: symlinks land after the tools that provide `task` and before tpm reads the
 tmux config it deploys, and the node toolchain sits between the cargo phase that
-ships fnm and the npm globals that install against what it pins. A registry that
-agreed on the set and disagreed on the order would install a machine wrongly and
-report success.
-
-The bash side is read by *sourcing* phases.sh and asking bash to print the array,
-never by parsing the file. Regex over structured data is how two things drift
-apart a second time.
+ships fnm and the npm globals installed against what it pins. A registry agreeing
+on the set and disagreeing on the order installs a machine wrongly and reports
+success.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import subprocess
+from collections import Counter
 from collections.abc import Callable
 
 import pytest
@@ -40,83 +38,21 @@ from dotfiles.resolve import Stage
 LINUX = coordinates.PLATFORM_BUNDLES['linux']
 
 
-def sourced(*expressions: str) -> list[str]:
-    """Ask bash to print something after sourcing phases.sh, never parse the file."""
-    script = f'source "{paths.INSTALL_DIR}/phases.sh"; ' + '; '.join(expressions)
-    result = subprocess.run(
-        ['bash', '-c', script],
-        capture_output=True,
-        text=True,
-        env={'DOTFILES_DIR': str(paths.REPO_ROOT), 'PATH': '/usr/bin:/bin', 'TERM': 'dumb'},
-        check=True,
-    )
-    return result.stdout.splitlines()
+def busiest_owner() -> str:
+    """The owner the declaration names most, read rather than typed here.
 
-
-def bash_registry() -> list[tuple[str, str]]:
-    """Every (phase, owner_aware) bash declares, straight from the sourced array."""
-    entries = []
-    for line in sourced('printf "%s\\n" "${PHASE_REGISTRY[@]}"'):
-        name, _group, owner_aware, *_ = line.split('|')
-        entries.append((name, owner_aware))
-    return entries
-
-
-REGISTERED = bash_registry()
-BASH_OWNER = sourced('printf "%s\\n" "$OWNER"')[0]
-"""Read rather than typed here: a second copy of the name would be one more
-thing that can disagree with the file it is asserting about."""
-
-
-def test_the_bash_registry_was_actually_read() -> None:
-    """Sourcing a script that failed silently would make every test below vacuous."""
-    assert len(REGISTERED) > 10
-
-
-def test_both_registries_name_the_same_phases_in_the_same_order() -> None:
-    assert [phase.name for phase in apply.REGISTRY] == [name for name, _ in REGISTERED]
-
-
-def test_the_bash_owner_column_says_what_the_catalog_says() -> None:
-    """Bash cannot resolve a plan, so it keeps a hand-written column. This is what
-    stops that column being a third opinion.
-
-    Python derives the answer now — `Plan.providers` after an owner-narrowed
-    resolve — and bash's `yes`/`no` has to be the same answer for the same reason:
-    does any entry this phase installs belong to `$OWNER`. It caught the column
-    marking `shell-plugins` ownerless when all five of its plugins have owners,
-    none of them Chris's; the boolean was right by accident.
+    `install/phases.sh` carried an `OWNER` constant this file used to source. With
+    the bash gone there is no such constant anywhere in the repo, and writing one
+    in would be a name that rots the day a repo moves — what these tests need is
+    an owner with entries behind it, not a particular one.
     """
     declaration = catalog.load()
-    derived = {phase.name: _installs_something_owned_by(phase, BASH_OWNER, declaration) for phase in apply.REGISTRY}
-    assert {name: flag == 'yes' for name, flag in REGISTERED} == derived
+    owners = Counter(entry.owner for section in catalog.SECTIONS for entry in declaration.section(section) if entry.owner)
+    assert owners, 'no entry declares an owner, so --owner narrowing cannot be asserted'
+    return owners.most_common(1)[0][0]
 
 
-def _installs_something_owned_by(phase: apply.Phase, owner: str, declaration: catalog.Catalog) -> bool:
-    """A provider with no section subscribes to nothing, so it installs nothing
-    anyone owns — which is the honest answer for a runtime a machine gets because
-    of the tools that need it, and the same `no` the bash column carries."""
-    sections = [provider.section for provider in registry.PROVIDERS if provider.name in phase.providers and provider.section]
-    return any(entry.owner == owner for section in sections for entry in declaration.section(section))
-
-
-def test_the_tool_path_matches_what_update_puts_on_path() -> None:
-    """A phase must resolve the same binary under either verb.
-
-    `install/tool-path.sh` is what `update.sh` sources; `apply.TOOL_PATH_DIRS` is
-    the same list for the walk that replaced install.sh. A phase that found `go`
-    under one and not the other would fail for reasons nothing in the run explains.
-    """
-    script = f'source "{paths.INSTALL_DIR}/tool-path.sh"; printf "%s" "$PATH"'
-    result = subprocess.run(
-        ['bash', '-c', script],
-        capture_output=True,
-        text=True,
-        env={'HOME': '/home/probe', 'PATH': '/usr/bin:/bin'},
-        check=True,
-    )
-    prepended = result.stdout.split(':')[: len(apply.TOOL_PATH_DIRS)]
-    assert prepended == [entry.replace('$HOME', '/home/probe') for entry in apply.TOOL_PATH_DIRS]
+OWNER = busiest_owner()
 
 
 def test_every_phase_belongs_to_a_resource_the_cli_exposes() -> None:
@@ -155,7 +91,7 @@ def test_every_phase_names_providers_the_resolver_knows() -> None:
 
 @pytest.mark.parametrize('name', machines.names())
 def test_owner_narrowing_keeps_only_the_phases_with_something_to_install(name: str) -> None:
-    plan = resolve.resolve(catalog.load(), machines.load(name), owner=BASH_OWNER)
+    plan = resolve.resolve(catalog.load(), machines.load(name), owner=OWNER)
     selected = apply.select(providers=plan.providers)
     assert all(set(phase.providers) & plan.providers for phase in selected)
     assert {phase.name for phase in selected} <= {phase.name for phase in apply.select()}
@@ -370,7 +306,7 @@ def test_the_declaration_is_read_once_per_run_however_many_phases_ask(monkeypatc
 
         monkeypatch.setattr(module, name, counted)
 
-    run = apply.Run.resolve('linux-lxc-server', owner=BASH_OWNER)
+    run = apply.Run.resolve('linux-lxc-server', owner=OWNER)
     for _ in range(len(apply.REGISTRY)):
         _ = run.session.plan
     _ = run.declaration

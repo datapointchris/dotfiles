@@ -77,6 +77,6 @@ writes from the manifest rather than leaving to be typed by hand — see
 - `install/manifests/linux-lxc-server.yml` — the minimal profile
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
 - `src/dotfiles/parse_packages.py` — `get_system_packages(..., tier)` and `--tier`
-- `install.sh` / `update.sh` — `linux` platform branch and tier gating
+- `install.sh` — `linux` platform branch; the tier is a subscription `src/dotfiles/machine.py` reads
 - `shell/pkg/apt/apt.sh` — the apt overlay these helpers moved to
 - `src/dotfiles/resources/symlinks.py` — `layers()`, where an overlay is optional

@@ -77,8 +77,9 @@ class Stage(enum.IntEnum):
     YAZI_PLUGINS = 105
     """Both after SYMLINKS, because each program reads the config that pass just
     deployed. Two stages rather than one so each is a phase a caller can select,
-    and because only one of them has a bash half left: `update.sh` still runs
-    tpm, and nothing in bash has ever installed a yazi plugin."""
+    and because only one of them still shells out at all: TPM owns a plugin list
+    this repo does not declare, and nothing has ever installed a yazi plugin that
+    way."""
 
     SYSTEM_CONFIG = 110
     """Last, where `install.sh` put the two halves of it that existed.

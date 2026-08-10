@@ -14,7 +14,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 
 **Shell Script Patterns**:
 
-- ALWAYS use `DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"` to get repo root. The exported value must win: `install.sh` and `update.sh` export it, and the `dotfiles` CLI runs from any directory, so a bare `git rev-parse` resolves to whatever repo the user happens to be standing in — or aborts outright outside one.
+- ALWAYS use `DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"` to get repo root. The exported value must win: `install.sh` exports it, and the `dotfiles` CLI runs from any directory, so a bare `git rev-parse` resolves to whatever repo the user happens to be standing in — or aborts outright outside one.
 - NEVER use relative path navigation like `$(cd "$(dirname ...)/../.." && pwd)`
 
 **App Installation Patterns** (⚠️ CRITICAL - Four distinct patterns):
@@ -37,7 +37,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 
 4. **Python Tools from git** (safekeep, refcheck, syncer, indy, …): `uv tool install` from a git repo
    - Defined in `packages.yml` under `git_uv_tools` with `name`, `repo`, `description`
-   - Installer: `install/common/lib/uv-git-tools.sh`; binary lands in `~/.local/bin/`
+   - Installer: `src/dotfiles/providers/uvtool.py`; binary lands in `~/.local/bin/`
    - **Each machine's manifest also lists it** — unlike a symlinked app, which every machine
      with `apps/` symlinks gets automatically, a git uv tool reaches only the machines naming it
    - This is where a Python app goes once it outgrows being a single file in `apps/`

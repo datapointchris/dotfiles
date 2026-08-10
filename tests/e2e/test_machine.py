@@ -138,11 +138,15 @@ def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
     assert machine.succeeds('grep -rq ZDOTDIR /etc/zshenv /etc/zsh/zshenv 2>/dev/null')
 
 
-def test_update_runs_against_the_installed_machine(machine: Machine) -> None:
-    """`update.sh` is the half of the phase registry still in bash, and it reads
-    the machine `apply` just produced."""
+def test_a_second_apply_over_a_converged_machine_changes_nothing(machine: Machine) -> None:
+    """Idempotence, against the machine the first apply just produced.
+
+    This ran `update.sh` until reconcile collapsed to one verb. `apply` is that
+    verb — it installs what is missing and upgrades what is behind — so running it
+    twice is both the update path and the assertion that the first run converged.
+    """
     home = machine.environment.home
-    result = machine.exec(f'cd {home}/dotfiles && bash update.sh')
+    result = machine.exec(f'cd {home}/dotfiles && uv run dotfiles apply')
     assert result.returncode == 0, result.stdout[-4000:]
 
 

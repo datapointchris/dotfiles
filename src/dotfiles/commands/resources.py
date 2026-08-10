@@ -147,10 +147,11 @@ def _apply_phases(
     Narrowing *below* a section — one tool out of `github_releases` — is still
     the resolver's, and still absent.
 
-    `--owner` is here because `update.sh --mine` reaches the converted phases
-    through this: `install/phases.sh` filters the phase list by its `owner_aware`
-    column, but a phase that runs Python and cannot be told whose entries were
-    asked for narrows nothing and updates the lot.
+    `--owner` is here because a phase that cannot be told whose entries were asked
+    for narrows nothing and updates the lot. It arrived to serve `update.sh --mine`
+    against `install/phases.sh`'s hand-maintained `owner_aware` column; the column
+    and the script are gone and the flag is the survivor, because ownership is a
+    fact about the entries and `Plan.providers` derives it.
     """
     from dotfiles import apply
     from dotfiles import registry

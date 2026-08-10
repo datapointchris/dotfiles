@@ -163,7 +163,7 @@ from `zvm_after_init`.
 **Management**:
 
 - Install: `dotfiles plugins apply` — the clone is `src/dotfiles/resources/plugins.py`
-- Update: `task update -- plugins`
+- Update: `dotfiles plugins apply`
 
 ## Installation Location Strategy
 
@@ -275,7 +275,7 @@ upstream by a major version goes to GitHub releases or `cargo-binstall` instead.
 
 All package versions, repositories, and configurations are centralized in `install/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong.
 
-**Every installation type is catalogued in packages.yml, including custom installers.** There is no auto-detection anywhere: `install.sh`, `update.sh`, and `src/dotfiles/create_bundle.py` all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see [Drift Detection](#drift-detection) below.
+**Every installation type is catalogued in packages.yml, including custom installers.** There is no auto-detection anywhere: `install.sh`, `dotfiles apply` and `src/dotfiles/create_bundle.py` all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see [Drift Detection](#drift-detection) below.
 
 Read the file for the entries; the header comment on each section states what its fields mean. What
 is worth stating here is the part that is not obvious from any single entry.
@@ -354,7 +354,7 @@ The declaration carries `command` where the binary name differs from the entry n
 ### Installation Scripts
 
 What is left in `install/common/` is `plugins/` — the editor and terminal plugin
-installers — and `lib/`, the libraries `update.sh` still sources.
+installers — and `lib/`, the libraries those installers source.
 
 Every tool section installs through a provider now. uv, rustup, the Go tarball and
 fnm's default Node alias are `src/dotfiles/providers/toolchain.py`; `go install`,

@@ -17,9 +17,10 @@ tools that provide `task` and before tpm reads the tmux config it deploys, and t
 node toolchain sits between the cargo phase that ships fnm and the npm globals
 that install against what it pins.
 
-`install/phases.sh` still holds the same registry for `update.sh`, and
-`tests/cli/test_phase_registry.py` asserts the two name the same phases — the one
-thing that keeps the halves from drifting while both exist.
+This is the only registry. `install/phases.sh` held a second one for `update.sh`
+and `tests/cli/test_phase_registry.py` existed to assert the two agreed; both are
+gone, because reconcile has one verb and `apply` installs what is missing and
+upgrades what is behind.
 """
 
 from __future__ import annotations
@@ -80,8 +81,8 @@ Node that fnm links as its default alias. The converged providers put what they
 install on this process's PATH as well — see `providers/toolchain.put_on_path` —
 so this is what the phases that still shell out get, and the two agree.
 Order mirrors `.zshenv` so a phase resolves the same binary an interactive shell
-would. `install/tool-path.sh` says the same thing to `update.sh`, and
-`tests/cli/test_phase_registry.py` asserts the two agree.
+would. `install/tool-path.sh` said the same thing to `update.sh` and went with it;
+this is the one list now.
 """
 
 
@@ -502,8 +503,7 @@ def _run_custom_installer(context: Run, declaration: catalog.Catalog, tool: str,
 
 def _cargo_packages(context: Run) -> bool:
     """cargo-binstall is not installed here. It is a precondition of the provider,
-    which is what makes `packages apply --source cargo_packages` — the door
-    `update.sh` uses — get it too."""
+    which is what makes `packages apply --source cargo_packages` get it too."""
     heading('Rust/cargo tools')
     return _converge(context, engine.Selection.of('packages/cargo'))
 
