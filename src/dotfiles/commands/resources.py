@@ -38,22 +38,69 @@ def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
     raise typer.Exit(reconcile.exit_code([result]))
 
 
-def _survey(address: str, machine: str | None, lens: reconcile.Lens, as_json: bool) -> None:
+def _survey(
+    address: str,
+    machine: str | None,
+    lens: reconcile.Lens,
+    as_json: bool,
+    *,
+    source: str | None = None,
+    owner: str | None = None,
+) -> None:
     """One resource, through the same engine and the same fold the composite uses.
 
     Narrowed by address rather than by a per-resource function, so a resource
     cannot answer one way here and another way under `dotfiles plan` — which is
     what seven parallel `check_*` functions made possible and eventually true.
+
+    The selectors are the same two `apply` takes, resolved the same way, because a
+    read that cannot express the write's scope is not a rehearsal of it. Narrowing
+    to a section with no read-only preview was the one case where a preview is
+    worth most.
     """
-    results = reconcile.fold(engine.assess(_session(machine), engine.Selection.of(address)), lens)
-    _report(results[0], as_json)
+    session = _session(machine, owner=owner)
+    selection = engine.Selection.of(*_selected(address, source))
+    if owner is not None:
+        selection = selection.narrowed_to(session.plan.providers)
+    if not selection.resources:
+        error(f'nothing selected for owner {owner}')
+        raise typer.Exit(ExitCode.USAGE)
+    _report(reconcile.fold(engine.assess(session, selection), lens)[0], as_json)
 
 
-def _session(machine: str | None) -> Session:
+def _session(machine: str | None, owner: str | None = None) -> Session:
     try:
-        return Session.resolve(machine)
+        return Session.resolve(machine, owner=owner)
     except NoMachine as unresolved:
         raise typer.BadParameter(str(unresolved)) from unresolved
+
+
+def _selected(resource: str, source: str | None) -> tuple[str, ...]:
+    """The addresses one `--source` names, or the whole resource when it names none.
+
+    A section names a provider and an address is `resource/provider`, so `--source`
+    is a set of addresses rather than the intersection of a section against a
+    hand-written phase-to-provider column.
+
+    Every provider `serving` names, not only the one that owns the section:
+    `needed_by` says a runtime is wanted *because* this section resolved, so
+    narrowing to the section and dropping the runtime asks for something that
+    cannot install. The addresses carry their own resources, which is what lets a
+    `packages` selection reach `toolchains` without naming it here.
+
+    Narrowing *below* a section — one tool out of `github_releases` — is still the
+    resolver's, and still absent.
+    """
+    if not source:
+        return (resource,)
+    provider = registry.for_section(source)
+    if provider is None:
+        error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
+        raise typer.Exit(ExitCode.USAGE)
+    if provider.resource != resource:
+        error(f'{source} belongs to {provider.resource}, not {resource}')
+        raise typer.Exit(ExitCode.USAGE)
+    return tuple(addressed(one.resource, one.name) for one in registry.serving(source))
 
 
 def available_sources() -> list[str]:
@@ -129,33 +176,16 @@ def _apply_resource(
     """Converge this resource, or just what `--source` names and what that needs.
 
     The same call `dotfiles apply` makes, narrowed by addresses rather than by a
-    resource sub-app of its own. A section names a provider and an address is
-    `resource/provider`, so `--source` is a set of addresses rather than the
-    intersection of a section against a hand-written phase-to-provider column.
-
-    Narrowing *below* a section — one tool out of `github_releases` — is still the
-    resolver's, and still absent.
+    resource sub-app of its own — and by the same `_selected` the read verbs use,
+    so a preview and the write it rehearses cannot disagree about what a section
+    covers.
 
     `--owner` narrows the plan rather than the selection, because ownership is a
     fact about the entries. It arrived to serve `update.sh --mine` against
     `install/phases.sh`'s hand-maintained `owner_aware` column; the column and the
     script are gone and the flag is the survivor.
     """
-    addresses = (resource,)
-    if source:
-        provider = registry.for_section(source)
-        if provider is None:
-            error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
-            raise typer.Exit(ExitCode.USAGE)
-        if provider.resource != resource:
-            error(f'{source} belongs to {provider.resource}, not {resource}')
-            raise typer.Exit(ExitCode.USAGE)
-        # Every provider `serving` names, not only the one that owns the section:
-        # `needed_by` says a runtime is wanted *because* this section resolved, so
-        # narrowing to the section and dropping the runtime asks for something that
-        # cannot install. The addresses carry their own resources, which is what
-        # lets a `packages` selection reach `toolchains` without naming it here.
-        addresses = tuple(addressed(one.resource, one.name) for one in registry.serving(source))
+    addresses = _selected(resource, source)
 
     raise typer.Exit(
         reconcile.apply_machine(
@@ -174,9 +204,19 @@ packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from
 
 
 @packages_app.command('plan')
-def packages_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
-    """Show which declared packages `apply` would install or upgrade."""
-    _survey('packages', machine, reconcile.Lens.PLAN, as_json)
+def packages_plan(
+    machine: str = MachineOption,
+    source: str = SourceOption,
+    owner: str = OwnerOption,
+    as_json: bool = JsonOption,
+) -> None:
+    """Show which declared packages `apply` would install or upgrade.
+
+    `--source` and `--owner` are `apply`'s, and mean the same here: this is the
+    rehearsal of the write those two narrow, which is the one case where a preview
+    is worth most.
+    """
+    _survey('packages', machine, reconcile.Lens.PLAN, as_json, source=source, owner=owner)
 
 
 @packages_app.command('check')
@@ -380,9 +420,13 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 
 
 @system_app.command('plan')
-def system_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
-    """Show which system packages and configuration rows `apply` would change."""
-    _survey('system', machine, reconcile.Lens.PLAN, as_json)
+def system_plan(machine: str = MachineOption, source: str = SourceOption, as_json: bool = JsonOption) -> None:
+    """Show which system packages and configuration rows `apply` would change.
+
+    `--source` is `apply`'s, and the narrow write it names — the package payload
+    without the configuration rows — is the one most worth rehearsing here.
+    """
+    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source)
 
 
 @system_app.command('check')

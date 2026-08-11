@@ -260,7 +260,13 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
     return results
 
 
-def survey(skip: frozenset[str] = frozenset(), machine: str | None = None, *, refresh: bool = False) -> list[Event]:
+def survey(
+    skip: frozenset[str] = frozenset(),
+    machine: str | None = None,
+    *,
+    refresh: bool = False,
+    owner: str | None = None,
+) -> list[Event]:
     """Measure the machine once. Both verbs and the run record read this list.
 
     Returned rather than folded here because there is more than one reader: the
@@ -273,9 +279,17 @@ def survey(skip: frozenset[str] = frozenset(), machine: str | None = None, *, re
     something in `--json` that no checker produced. A skip naming one provider
     leaves the resource in the walk with that provider gone, so the row is still
     there and is honest about the narrower thing it measured.
+
+    `owner` narrows the walk exactly as it does in `apply_machine`, and for the
+    same reason: a resource with no provider has no entry to narrow, so an
+    owner-narrowed plan would otherwise still report every symlink and `~/.env` as
+    part of what one person's tools cover.
     """
-    session = Session.resolve(machine, refresh=refresh)
-    return list(engine.assess(session, engine.Selection.excluding(skip)))
+    session = Session.resolve(machine, refresh=refresh, owner=owner)
+    selection = engine.Selection.excluding(skip)
+    if owner is not None:
+        selection = selection.narrowed_to(session.plan.providers)
+    return list(engine.assess(session, selection))
 
 
 def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:

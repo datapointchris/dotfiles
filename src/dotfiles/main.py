@@ -83,6 +83,7 @@ def root(
 SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
+OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 
 
 def _skipped(addresses: list[str] | None) -> frozenset[str]:
@@ -114,6 +115,7 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
 def plan(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
+    owner: str = OwnerOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
 ) -> None:
@@ -125,12 +127,15 @@ def plan(
 
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
+
+    `--owner` is `apply`'s and means the same, because a scope the write accepts
+    and the read cannot express is not a narrower preview but no preview at all.
     """
     skipped = _skipped(skip)
     named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
-    events = reconcile.survey(skipped, machine, refresh=refresh)
+    events = reconcile.survey(skipped, machine, refresh=refresh, owner=owner)
     results = reconcile.plan_machine(events)
     sinks.keep(events, identity, {'skip': sorted(skipped)})
 
@@ -201,7 +206,7 @@ def check(
 def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
-    owner: str = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner'),
+    owner: str = OwnerOption,
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
 ) -> None:

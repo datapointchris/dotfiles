@@ -216,6 +216,15 @@ dotfiles apply --owner datapointchris # only tools traceable to that owner
 dotfiles apply --through system_upgrade           # stop after that stage
 ```
 
+Every selector reads as well as it writes. `plan` answers "what would `apply` change", so
+a scope the write accepts and the read cannot express is not a narrower preview but no
+preview at all — for a while `apply` could be narrowed to one section and there was no way
+to rehearse it, which is the case a preview is worth most in. What stays write-only is
+what describes *how* to write rather than what to cover: installing from a staged bundle,
+or forcing an entry past what measuring concluded. `tests/cli/test_conformance.py` asserts
+the split across the whole tree, because the gap opened by adding a selector to one verb
+and forgetting its sibling, and nothing else notices.
+
 `--through` is the one selector that is not a selection of parts. `--skip` and the
 resource sub-apps say *which mechanisms*; neither can say *how far*, because the stages a
 resource's providers sit at are spread across the run — expressing "the system half and

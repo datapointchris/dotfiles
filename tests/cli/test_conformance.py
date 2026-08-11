@@ -97,6 +97,33 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
         assert '--offline' not in names, f'{"/".join(path) or "root"} declares --offline on the group'
 
 
+SELECTORS = ('--machine', '--source', '--owner')
+"""Options that narrow *what* a verb covers, rather than how it writes.
+
+`--offline` and `--reinstall` are deliberately absent: both describe how to
+perform a write and have no meaning for a read, which is why their absence from
+`plan` is correct rather than the same gap.
+"""
+
+
+def test_plan_accepts_every_selector_its_apply_does() -> None:
+    """`plan` answers "what would `apply` change", so a scope the write accepts and
+    the read cannot express is not a narrower preview — it is no preview at all.
+
+    Measured before this held: `packages apply` took `--source` and `--owner` while
+    `packages plan` took neither, so the narrow write most worth rehearsing was the
+    one with no rehearsal available. Asserted across the tree rather than for that
+    pair, because the gap opened by adding a selector to one verb and forgetting
+    the other, and nothing but this notices.
+    """
+    accepted = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
+    for path, options in accepted.items():
+        if path[-1] != 'apply' or (preview := accepted.get((*path[:-1], 'plan'))) is None:
+            continue
+        missing = {selector for selector in SELECTORS if selector in options} - preview
+        assert not missing, f'{"/".join(path)} accepts {sorted(missing)}, which its plan cannot express'
+
+
 def test_no_leaf_offers_dry_run() -> None:
     """`check` is `apply` with the last step not run, so there is no code path a
     flag could switch off. A `--dry-run` would have to be a second implementation."""
