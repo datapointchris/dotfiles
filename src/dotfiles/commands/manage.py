@@ -20,9 +20,7 @@ import typer
 
 from dotfiles import bridge
 from dotfiles import checkout
-from dotfiles import engine
 from dotfiles import paths
-from dotfiles import reconcile
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import console
@@ -91,10 +89,15 @@ def update(
 
     Two things a pull can invalidate, repaired in the order they have to happen.
     Deployed files that moved leave the machine linked to paths that no longer
-    exist, so the symlinks are rebuilt while this process is still whole. A
-    changed dependency set leaves the tool venv resolved against the old one, so
-    it is reinstalled — last, because it replaces the virtualenv this interpreter
-    is running from.
+    exist, so the symlinks are rebuilt. A changed dependency set leaves the tool
+    venv resolved against the old one, so it is reinstalled — last, because it
+    replaces the virtualenv this interpreter is running from.
+
+    Neither repair happens in this process, and an earlier draft of this
+    docstring claiming the symlink pass ran "while this process is still whole"
+    is what the crash on macmini disproved: after the pull, nothing about this
+    interpreter is whole. It holds modules imported from the old source and will
+    load any not yet imported from the new.
     """
     if check_only:
         raise typer.Exit(report_position(fetch_first=True))
@@ -128,7 +131,16 @@ def update(
 
     if deployed:
         hint(f'{len(deployed)} deployed file(s) changed — rebuilding symlinks')
-        reconcile.apply_machine(engine.Selection.of('symlinks'), flags={'selection': 'symlinks'})
+        # A separate process, because this one is no longer whole. The pull
+        # replaced the source under a running interpreter, and `engine.resources`
+        # imports the resource modules lazily to keep `--help` fast — so the
+        # repair loads a *new* `resources/packages.py` against the *old*
+        # `dotfiles.resources` this process imported before the pull. Measured on
+        # macmini 2026-08-10: `ImportError: cannot import name 'advice_for'`, for
+        # a name that was present in the file on disk. Any update adding a name to
+        # an eagerly-imported module and using it from a lazily-imported one does
+        # this, so the fix is a fresh interpreter rather than an import order.
+        run(['dotfiles', 'symlinks', 'apply'], output=Output.STREAM)
 
     if not dependencies:
         return
