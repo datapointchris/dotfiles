@@ -312,7 +312,10 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
-        return Evidence(Verdict.UNKNOWN, f'nothing asked {item.name} what is behind — it is a network call, so pass --refresh')
+        return Evidence(
+            Verdict.UNKNOWN,
+            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles check --refresh` or `dotfiles plan --refresh`',
+        )
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')
     named = ', '.join(sorted(behind)[:3])

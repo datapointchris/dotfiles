@@ -95,7 +95,7 @@ class ToolchainsResource:
                     Change(
                         NAME,
                         item.stage,
-                        item.name,
+                        item.address,
                         Verdict.MISSING,
                         detail=observed.absent[item.name],
                         desired=item,
@@ -115,7 +115,7 @@ class ToolchainsResource:
                     Change(
                         NAME,
                         item.stage,
-                        item.name,
+                        item.address,
                         Verdict.UNKNOWN,
                         detail=f'declares a floor of {floor} and reported {reported!r}, which has no version in it',
                         repair=Repair.NONE,
@@ -128,7 +128,7 @@ class ToolchainsResource:
                     Change(
                         NAME,
                         item.stage,
-                        item.name,
+                        item.address,
                         Verdict.STALE,
                         detail=f'below the declared floor of {floor}',
                         desired=item,

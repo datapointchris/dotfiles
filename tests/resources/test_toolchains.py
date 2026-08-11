@@ -123,7 +123,7 @@ def test_uv_is_needed_even_by_a_machine_declaring_nothing(tmp_path: Path, bin_di
     linux-lxc-server."""
     live = session(tmp_path, BARE)
 
-    assert [change.item for change in changes(live)] == ['uv']
+    assert [change.item for change in changes(live)] == ['uv-toolchain/uv']
 
 
 def test_go_is_needed_because_go_tools_was_declared(tmp_path: Path, bin_dir: Path) -> None:
@@ -132,7 +132,7 @@ def test_go_is_needed_because_go_tools_was_declared(tmp_path: Path, bin_dir: Pat
     stub(bin_dir, 'uv')
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
 
-    assert [change.item for change in changes(live)] == ['go']
+    assert [change.item for change in changes(live)] == ['go-toolchain/go']
 
 
 def test_a_machine_with_no_cargo_packages_does_not_need_rust(tmp_path: Path, bin_dir: Path) -> None:
@@ -149,7 +149,7 @@ def test_node_follows_the_npm_globals_that_need_it(tmp_path: Path, bin_dir: Path
     live = session(tmp_path, {**BARE, 'npm_globals': ['bash-language-server']})
 
     found = changes(live)
-    assert [change.item for change in found] == ['node']
+    assert [change.item for change in found] == ['node-toolchain/node']
     assert found[0].stage is Stage.NODE
 
 
@@ -165,7 +165,7 @@ def test_an_absent_toolchain_is_missing(tmp_path: Path, bin_dir: Path) -> None:
     developer."""
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
 
-    found = [change for change in changes(live) if change.item == 'go']
+    found = [change for change in changes(live) if change.item == 'go-toolchain/go']
 
     assert found[0].verdict is Verdict.MISSING
     assert found[0].detail.endswith('/bin/go')

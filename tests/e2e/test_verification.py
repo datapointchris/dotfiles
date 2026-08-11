@@ -87,8 +87,8 @@ def test_the_machine_carries_what_it_declares(
     """
     item = declared_item.item
 
-    if excused := refused.keys() & recorded_as(item):
-        pytest.skip(f'the install refused it: {refused[next(iter(excused))]}')
+    if (excused := recorded_as(item)) in refused:
+        pytest.skip(f'the install refused it: {refused[excused]}')
 
     observed = present.observed(item)
     if observed is None:

@@ -121,6 +121,8 @@ class Change:
         signature cannot express."""
         if self.repair is Repair.BY_HAND and not self.advice:
             raise ValueError(f'{self.resource}/{self.item}: repair=BY_HAND with no advice — apply cannot fix this, so a reader must')
+        if self.desired is not None and self.item != self.desired.address:
+            raise ValueError(f'{self.resource}: item {self.item!r} is not the plan address {self.desired.address!r}')
 
     @property
     def drifted(self) -> bool:

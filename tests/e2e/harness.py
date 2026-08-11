@@ -691,20 +691,20 @@ def refused_outcomes(machine: Machine) -> list[str]:
     return [outcome['address'] for outcome in run_record(machine)['outcomes'] if outcome['action'] == 'refused']
 
 
-def recorded_as(item: DesiredItem) -> frozenset[str]:
-    """Every spelling a run record may carry for one item.
+def recorded_as(item: DesiredItem) -> str:
+    """How a run record spells one item.
 
-    `sinks.py` writes `f'{event.resource}/{change.item}'`, and `change.item` is
-    each resource's own choice: `packages` and `plugins` pass `item.address`, so a
-    row reads `packages/custom/awscli`, while `toolchains` passes `item.name` and
-    writes `toolchains/go` for an item addressed `go-toolchain/go`. Both are
-    matched rather than one being guessed at.
+    `sinks.py` writes `f'{event.resource}/{change.item}'`, and every resource
+    passes `item.address`. This matched two spellings until `toolchains` was the
+    last one passing `item.name` — an item addressed `go-toolchain/go` recorded as
+    `toolchains/go`, so a caller holding a resolved plan could not look it up
+    without knowing which resource had written it.
 
     Deliberately not the shell script's answer, which keyed on the address's last
     segment because it had no `resource` to hand — and so let anything named
     `awscli` excuse every absent `aws`, whichever provider had refused.
     """
-    return frozenset({f'{item.resource}/{item.address}', f'{item.resource}/{item.name}'})
+    return f'{item.resource}/{item.address}'
 
 
 def refusals(machine: Machine) -> dict[str, str]:
