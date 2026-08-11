@@ -1,6 +1,9 @@
-# Homelab hosts
-# NOTE: Manually copy to /etc/hosts (requires sudo). Not for WSL.
-# sudo cp ~/dotfiles/configs/common/etc.hosts /etc/hosts
+# Homelab and workstation hosts. Lives under the fleet trust overlay because it
+# names the trusted VLAN and every homelab service: on an employer machine that
+# is a map of the home network sitting in $HOME, which is what deploying it from
+# configs/common/ did.
+# NOTE: Manually copy to /etc/hosts (requires sudo).
+# sudo cp ~/etc.hosts /etc/hosts
 
 127.0.0.1       localhost
 255.255.255.255 broadcasthost
