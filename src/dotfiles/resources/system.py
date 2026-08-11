@@ -35,6 +35,7 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import Verdict
+from dotfiles.resources import advice_for
 from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
@@ -97,16 +98,7 @@ class SystemResource:
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         packages = tuple(
-            Change(
-                NAME,
-                item.stage,
-                item.address,
-                observed.evidence[item.address].verdict,
-                detail=observed.evidence[item.address].detail,
-                repair=repair_for(item, observed.evidence[item.address].verdict, observed.met),
-                desired=item,
-                privileged=registry.needs_root(item),
-            )
+            _package_change(item, observed)
             for item in plan.for_resource(NAME)
             if item.stage is not Stage.SYSTEM_CONFIG and observed.evidence[item.address].verdict is not Verdict.MATCHED
         )
@@ -140,6 +132,22 @@ class SystemResource:
         beside them the base implementation loops, unchanged.
         """
         return registry.install_all(session, changes, privilege)
+
+
+def _package_change(item: DesiredItem, observed: Observed) -> Change:
+    evidence = observed.evidence[item.address]
+    repair = repair_for(item, evidence.verdict, observed.met)
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        evidence.verdict,
+        detail=evidence.detail,
+        repair=repair,
+        advice=advice_for(item, repair),
+        desired=item,
+        privileged=registry.needs_root(item),
+    )
 
 
 def _config_items(plan: Plan) -> list[DesiredItem]:

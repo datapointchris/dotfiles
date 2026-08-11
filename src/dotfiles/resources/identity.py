@@ -88,8 +88,9 @@ class IdentityResource:
                 Stage.IDENTITY,
                 field,
                 Verdict.MISSING,
-                detail=f"commits will be refused; set one with 'git config --global {field} <value>'",
+                detail='commits will be refused',
                 repair=Repair.BY_HAND,
+                advice=f'set it with `git config --global {field} <value>`',
             )
             for field in FIELDS
             if not observed.values[field]
@@ -102,6 +103,9 @@ class IdentityResource:
                 Verdict.STALE,
                 detail=f"this checkout commits under a local override, not the machine's {observed.values[field]!r}",
                 repair=Repair.BY_HAND,
+                advice=(
+                    f'remove it with `git config --local --unset {field}` from inside this checkout, or update it to match if intentional'
+                ),
                 observed=observed.local[field],
             )
             for field in FIELDS

@@ -248,8 +248,9 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
             Stage.SYMLINKS,
             link.address,
             Verdict.STALE,
-            detail=f'{link.target} was not created by this manager; {FOREIGN_ADVICE}',
+            detail=f'{link.target} was not created by this manager',
             repair=Repair.BY_HAND,
+            advice=FOREIGN_ADVICE,
         )
 
     destination = observed.pointing_at.get(link.target)

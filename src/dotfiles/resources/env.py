@@ -150,8 +150,9 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                     Stage.ENVIRONMENT,
                     entry.name,
                     Verdict.MISSING,
-                    detail=f'set it below the marker in {observed.path} — {entry.description or "machine-local value"}',
+                    detail=f'not set — {entry.description or "a machine-local value"}',
                     repair=Repair.BY_HAND,
+                    advice=f'set it below the marker in {observed.path}',
                 )
             )
     for entry in machine.required_files:
@@ -162,8 +163,9 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                     Stage.ENVIRONMENT,
                     entry.path,
                     Verdict.MISSING,
-                    detail=f'{entry.restore or RESTORE} — {entry.description or "machine-local file"}',
+                    detail=f'absent — {entry.description or "a machine-local file"}',
                     repair=Repair.BY_HAND,
+                    advice=entry.restore or RESTORE,
                 )
             )
     return changes

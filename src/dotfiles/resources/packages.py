@@ -37,6 +37,7 @@ from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.resources import advice_for
 from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
@@ -164,6 +165,7 @@ class PackagesResource:
         for item in plan.for_resource(NAME):
             evidence = observed.evidence[item.address]
             if evidence.verdict is not Verdict.MATCHED:
+                repair = repair_for(item, evidence.verdict, observed.met)
                 changes.append(
                     Change(
                         NAME,
@@ -171,11 +173,13 @@ class PackagesResource:
                         item.address,
                         evidence.verdict,
                         detail=evidence.detail,
-                        repair=repair_for(item, evidence.verdict, observed.met),
+                        repair=repair,
+                        advice=advice_for(item, repair),
                         desired=item,
                     )
                 )
             elif item.name in observed.reinstall:
+                repair = repair_for(item, Verdict.STALE, observed.met)
                 changes.append(
                     Change(
                         NAME,
@@ -183,7 +187,8 @@ class PackagesResource:
                         item.address,
                         Verdict.STALE,
                         detail='named by --reinstall, so it is installed again whatever it reports',
-                        repair=repair_for(item, Verdict.STALE, observed.met),
+                        repair=repair,
+                        advice=advice_for(item, repair),
                         desired=item,
                         observed=observed.reported.get(item.address, ''),
                     )
@@ -200,6 +205,8 @@ class PackagesResource:
                         Verdict.UNDECLARED,
                         detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
                         repair=Repair.BY_HAND,
+                        advice='this is a judgement apply cannot make: remove the undeclared copy yourself, '
+                        'or if you prefer it, drop this entry from packages.yml and keep that copy instead',
                         desired=item,
                         observed=', '.join(stray),
                     )
@@ -387,6 +394,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 detail=_unmeasurable(item, observed),
                 repair=Repair.NONE,
+                advice=_unmeasurable_advice(observed),
                 desired=item,
                 observed=reported,
             ),
@@ -415,7 +423,21 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     if observed.from_bundle:
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
-    return f'no cached release for {_wanted(item).repo} within the TTL ({reason}); check --refresh to measure'
+    return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'
+
+
+def _unmeasurable_advice(observed: Observed) -> str:
+    """The fix for `_unmeasurable`, which is not always a command.
+
+    `--refresh` is a flag of the two composite verbs (`dotfiles plan`, `dotfiles
+    check`), never of the resource-scoped `dotfiles packages check` this row can
+    just as easily be read from — naming the bare flag there would be advice that
+    does not run. Offline has no such command at all: what is missing is a newer
+    bundle, not a network call this run could make instead.
+    """
+    if observed.from_bundle:
+        return 'extract a newer offline bundle; this one has nothing to compare against'
+    return 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`'
 
 
 def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str) -> tuple[Change, ...]:

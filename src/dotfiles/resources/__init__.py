@@ -37,6 +37,7 @@ from dotfiles import providers
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
+from dotfiles.resolve import Precondition
 from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.session import Session
@@ -90,6 +91,20 @@ class Change:
     desired: DesiredItem | None = None
     observed: str = ''
 
+    advice: str = ''
+    """The next step, kept apart from `detail` on purpose.
+
+    `detail` answers what is wrong; `advice` answers what to do about it — a
+    command to run, or a place to look. Splitting them is what lets a renderer
+    show one as diagnosis and the other as an instruction, and what lets a
+    `--json` consumer read the next step as a field instead of parsing it back
+    out of a sentence built for a terminal.
+
+    Required, not just welcome, when `repair` is `BY_HAND`: that is the one case
+    `apply` cannot act on, so a reader is the whole plan for it, and a refusal
+    with nothing to do about it is a dead end rather than a finding.
+    """
+
     privileged: bool = False
     """Whether repairing this needs root, declared here rather than discovered
     when the write is attempted. The plan is complete before anything runs, so
@@ -115,6 +130,7 @@ class Change:
             'verdict': str(self.verdict),
             'repair': str(self.repair),
             'detail': self.detail,
+            'advice': self.advice,
             'observed': self.observed,
             'privileged': str(self.privileged).lower(),
         }
@@ -243,6 +259,26 @@ def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions) -> Repai
     if not met.holds(item.precondition):
         return Repair.BY_HAND
     return Repair.AUTOMATIC
+
+
+def advice_for(item: DesiredItem, repair: Repair) -> str:
+    """The next step for a `repair_for` verdict of `BY_HAND`, or '' otherwise.
+
+    `repair_for` reaches `BY_HAND` through exactly one branch — an unmet
+    precondition — so the precondition on the item is enough to name the fix.
+    Every member of `Precondition` but `NONE` has to answer here: `repair_for`
+    returning `BY_HAND` for one this does not name would build a `Change` whose
+    constructor refuses it, which is what stops the two from drifting apart
+    silently the way `precondition_of` and `Preconditions.holds` were called out
+    for risking.
+    """
+    if repair is not Repair.BY_HAND:
+        return ''
+    if item.precondition is Precondition.GITHUB_AUTH:
+        return 'log in with `gh auth login`, or export GITHUB_TOKEN, then re-run'
+    if item.precondition is Precondition.AMD_GPU:
+        return 'this machine has no AMD GPU; there is nothing to install it for here'
+    return ''
 
 
 def privileged(changes: Sequence[Change]) -> tuple[Change, ...]:

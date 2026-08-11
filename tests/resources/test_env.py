@@ -346,7 +346,7 @@ def test_a_missing_required_file_is_reported_with_its_remedy(tmp_path: Path) -> 
 
     found = [change for change in changes(tmp_path, flags=REQUIRED_FILES) if 'local.sh' in change.item]
 
-    assert 'restore it with safekeep' in found[0].detail
+    assert 'restore it with safekeep' in found[0].advice
     assert found[0].repair is Repair.BY_HAND
 
 

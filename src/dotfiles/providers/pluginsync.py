@@ -122,16 +122,24 @@ def blocked(home: Path, plugins_dir: Path) -> str:
     arrive one `apply` later.
     """
     if not shutil.which('tmux'):
-        return 'tmux is not installed, so there is nothing for TPM to install into'
+        return (
+            'tmux is not installed, so there is nothing for TPM to install into; '
+            'run `dotfiles system apply` (or the full `dotfiles apply`) to install it first'
+        )
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
     if not installer.is_file():
-        return f'TPM is not at {installer}, so its plugins cannot be installed'
+        return f'TPM is not at {installer}; it clones one stage before this — run `dotfiles plugins apply` again and it resolves itself'
 
     # TPM reads the plugin list out of this file directly rather than out of tmux,
     # so without it TPM installs nothing and exits 0 — a success that deploys no
     # plugins, on a machine whose symlink pass has not run.
     config = user_config(home)
-    return '' if config.is_file() else f'no tmux config at {config}, so TPM has no plugin list to read'
+    if config.is_file():
+        return ''
+    return (
+        f'no tmux config at {config}, so TPM has no plugin list to read; '
+        'run `dotfiles symlinks apply` (or the full `dotfiles apply`) to deploy it first'
+    )
 
 
 def sync_tmux(home: Path, plugins_dir: Path) -> Result:
@@ -248,7 +256,11 @@ def sync_nvim() -> Result:
     lazy waits, and without the quit nvim never exits.
     """
     if not shutil.which('nvim'):
-        return Result(False, 'neovim is not installed, so lazy has nothing to sync into')
+        return Result(
+            False,
+            'neovim is not installed, so lazy has nothing to sync into; '
+            'run `dotfiles packages apply` (or the full `dotfiles apply`) to install it first',
+        )
 
     synced = run(['nvim', '--headless', '-c', 'Lazy! sync', '-c', 'qa'], show=_lazy_line)
     if not synced.ok:
