@@ -26,6 +26,8 @@ kilobytes of JSON and its event log a few tens, and the directory is its own
 Syncthing folder — so the fleet manages what accumulates there, not this module.
 """
 
+from __future__ import annotations
+
 import dataclasses
 import datetime as dt
 import json
@@ -38,11 +40,15 @@ from pathlib import Path
 from dotfiles import paths
 from dotfiles.resources import Verdict
 
-SCHEMA = 3
+SCHEMA = 4
 
-# The phases an item passes through. Named here so a report can total the same
+# The steps an item passes through. Named here so a report can total the same
 # set every resource reports, rather than whatever keys happened to be written.
-PHASES = ('observe', 'fetch', 'verify', 'extract', 'act')
+#
+# "Step" rather than "phase": `Stage` already names the ordering across the run,
+# and one codebase carrying two ordering words is what made every mention of
+# either ambiguous. These sit *inside* one provider's `perform`, below a stage.
+STEPS = ('observe', 'fetch', 'verify', 'extract', 'act')
 
 
 def _now() -> dt.datetime:
@@ -116,7 +122,23 @@ class Timing:
 
     started_at: str
     duration_seconds: float
-    phases: dict[str, float] = dataclasses.field(default_factory=dict)
+    steps: dict[str, float] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def from_record(cls, payload: dict) -> Timing:
+        """Read a timing written by any schema.
+
+        Pre-4 records spell this breakdown `phases`, and the rename is the one
+        kind of schema change a default cannot absorb: `host` was *absent* on old
+        records so an empty default answered for it, whereas an unexpected
+        `phases=` reaches the constructor and raises. Translating here rather than
+        in `read` keeps the knowledge of what this type used to look like on the
+        type itself.
+        """
+        carried = dict(payload)
+        if 'phases' in carried:
+            carried['steps'] = carried.pop('phases')
+        return cls(**carried)
 
 
 @dataclasses.dataclass
@@ -195,9 +217,9 @@ class RunRecord:
 
 
 class Stopwatch:
-    """Accumulates an item's phase durations, then hands back a Timing.
+    """Accumulates an item's step durations, then hands back a Timing.
 
-    A phase entered twice adds to the same total rather than replacing it: a
+    A step entered twice adds to the same total rather than replacing it: a
     resource that fetches several assets for one item should report the fetching
     as one number.
     """
@@ -205,23 +227,23 @@ class Stopwatch:
     def __init__(self) -> None:
         self.started = _now()
         self._began = time.perf_counter()
-        self.phases: dict[str, float] = {}
+        self.steps: dict[str, float] = {}
 
     @contextmanager
-    def phase(self, name: str) -> Iterator[None]:
-        if name not in PHASES:
-            raise ValueError(f'unknown phase {name!r}; expected one of {PHASES}')
+    def step(self, name: str) -> Iterator[None]:
+        if name not in STEPS:
+            raise ValueError(f'unknown step {name!r}; expected one of {STEPS}')
         began = time.perf_counter()
         try:
             yield
         finally:
-            self.phases[name] = self.phases.get(name, 0.0) + (time.perf_counter() - began)
+            self.steps[name] = self.steps.get(name, 0.0) + (time.perf_counter() - began)
 
     def finish(self) -> Timing:
         return Timing(
             started_at=_stamp(self.started),
             duration_seconds=time.perf_counter() - self._began,
-            phases=dict(self.phases),
+            steps=dict(self.steps),
         )
 
 
@@ -278,7 +300,7 @@ def write(record: RunRecord, runs_dir: Path | None = None) -> Path:
 
 def read(path: Path) -> RunRecord:
     payload = json.loads(path.read_text())
-    outcomes = [Outcome(**{**outcome, 'timing': Timing(**outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
+    outcomes = [Outcome(**{**outcome, 'timing': Timing.from_record(outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
     issues = [Issue(**issue) for issue in payload.pop('issues', [])]
     return RunRecord(**payload, outcomes=outcomes, issues=issues)
 

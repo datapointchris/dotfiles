@@ -24,10 +24,10 @@ def runs_dir(tmp_path):
     return directory
 
 
-def timed(**phases) -> runs.Timing:
+def timed(**steps) -> runs.Timing:
     stopwatch = runs.Stopwatch()
-    for name in phases:
-        with stopwatch.phase(name):
+    for name in steps:
+        with stopwatch.step(name):
             pass
     return stopwatch.finish()
 
@@ -61,17 +61,33 @@ class TestRoundTrip:
         payload = json.loads(path.read_text())
 
         assert payload['schema'] == runs.SCHEMA
-        assert payload['outcomes'][0]['timing']['phases']['fetch'] >= 0
+        assert payload['outcomes'][0]['timing']['steps']['fetch'] >= 0
 
-    def test_every_outcome_carries_a_phase_breakdown(self, runs_dir):
+    def test_a_pre_4_record_is_read_through_its_old_spelling(self, runs_dir):
+        """`phases` became `steps` at schema 4, and a rename is the one schema
+        change a default cannot absorb: the old key reaches the constructor and
+        raises, where a merely-absent field would have taken its default. 68 of
+        the fleet's records were written at schema 1 and must stay readable.
+        """
+        path = runs.write(a_run(), runs_dir)
+        payload = json.loads(path.read_text())
+        payload['schema'] = 3
+        payload['outcomes'][0]['timing']['phases'] = payload['outcomes'][0]['timing'].pop('steps')
+        path.write_text(json.dumps(payload))
+
+        recovered = runs.read(path)
+
+        assert recovered.outcomes[0].timing.steps['fetch'] >= 0
+
+    def test_every_outcome_carries_a_step_breakdown(self, runs_dir):
         """A resource that lands untimed drops silently out of every duration
         report, so the record is the place to catch it."""
         recovered = runs.read(runs.write(a_run(), runs_dir))
 
         for outcome in recovered.outcomes:
             assert outcome.timing.started_at
-            assert outcome.timing.phases, f'{outcome.address} recorded no phases'
-            assert set(outcome.timing.phases) <= set(runs.PHASES)
+            assert outcome.timing.steps, f'{outcome.address} recorded no steps'
+            assert set(outcome.timing.steps) <= set(runs.STEPS)
 
     def test_an_outcome_cannot_be_recorded_without_a_timing(self):
         record = runs.start(runs.begin('m', 'apply'))
@@ -94,21 +110,21 @@ class TestRoundTrip:
         recovered = runs.read(runs.write(runs.finish(record), runs_dir))
         assert recovered.outcomes[0].message == 'checksum mismatch'
 
-    def test_an_unknown_phase_is_refused_rather_than_recorded(self):
-        with pytest.raises(ValueError, match='unknown phase'), runs.Stopwatch().phase('sprint'):
+    def test_an_unknown_step_is_refused_rather_than_recorded(self):
+        with pytest.raises(ValueError, match='unknown step'), runs.Stopwatch().step('sprint'):
             pass
 
-    def test_re_entering_a_phase_adds_to_it(self):
+    def test_re_entering_a_step_adds_to_it(self):
         """One item fetching several assets should report fetching once."""
         stopwatch = runs.Stopwatch()
-        with stopwatch.phase('fetch'):
+        with stopwatch.step('fetch'):
             pass
-        first = stopwatch.phases['fetch']
-        with stopwatch.phase('fetch'):
+        first = stopwatch.steps['fetch']
+        with stopwatch.step('fetch'):
             pass
 
-        assert stopwatch.phases['fetch'] > first
-        assert list(stopwatch.finish().phases) == ['fetch']
+        assert stopwatch.steps['fetch'] > first
+        assert list(stopwatch.finish().steps) == ['fetch']
 
 
 class TestConvergence:

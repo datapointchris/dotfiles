@@ -75,9 +75,9 @@ it was.
 
 **Timing is a field, not something grepped back out of the log.** A statistic
 that has to parse a log stream is a statistic nobody computes, so every outcome
-carries its own phase breakdown and the recorder will not accept one without it.
+carries its own step breakdown and the recorder will not accept one without it.
 The split earns its place because "the install was slow" and "the *downloads*
-were slow" are different findings, and only a per-phase number tells them apart.
+were slow" are different findings, and only a per-step number tells them apart.
 
 **What is measured today is `observe` per resource and `act` per item.** The
 engine holds the clock, because it is the only thing that knows when observing
@@ -99,7 +99,7 @@ it. So everything is emitted at debug and the file sink keeps all of it whatever
 a line in `run`, `fetch`, `unpack` and `gunzip` covers every subprocess, download
 and extraction there is. The record says an item took nine seconds; only these
 lines say which of the four commands behind it did. Logging the walk instead would
-restate the record — address, verdict, action and per-phase timings are already
+restate the record — address, verdict, action and per-step timings are already
 there — in a second format that then has to agree with the first.
 
 **A command's transcript is kept only when it failed.** A successful `apt-get
