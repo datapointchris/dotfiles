@@ -791,23 +791,22 @@ function doshell() {
   fi
 }
 
-# One TSV row per *live* session: pid, name, status, waitingFor, cwd, tmux.
-# The registry keeps one file per process, written at startup and removed on a
-# clean exit, so a killed session leaves a file behind with a stale `status` —
-# hence the liveness check on the pid rather than trusting that field.
-#
-# `claude agents --json` is the supported interface for this and was measured
-# against it: ~356ms per call versus ~12ms here, because it boots a full node
-# process, and it omits the tmux pane that makes a row worth jumping to. Too
-# slow for something typed this often, so this reads the registry directly and
-# accepts that the file layout is not a public contract.
-_cc_sessions() {
-  local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
-  [[ -d $dir ]] || return 1
-  fd -HI -e json . "$dir" -X jq -r '[.pid, .name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv' 2>/dev/null \
-    | while IFS=$'\t' read -r pid rest; do
-      kill -0 "$pid" 2>/dev/null && printf '%s\t%s\n' "$pid" "$rest"
-    done
+# Every fleet machine but this one, skipping any that declares no ssh.
+# ~/dev/machines.json is the roster. It does not repeat the addresses, which
+# configs/trust/fleet/etc.hosts already declares — a machine's name is its ssh
+# target and resolves through there, so there is one place an address can be
+# wrong.
+_cc_fleet_hosts() {
+  local registry="${FLEET_MACHINES:-$HOME/dev/machines.json}" self
+  [[ -r $registry ]] || return 0
+  self=$(uname -n)
+  jq -r --arg self "${self%%.*}" '
+    .machines[]
+    | select(.ssh != false)
+    | select((.status // "active") == "active")
+    | select(.name != $self)
+    | .name
+  ' "$registry" 2>/dev/null
 }
 
 # Bypass is the permission mode for every session, set once as
@@ -856,17 +855,39 @@ ccr() {
 }
 
 # NAME is the address other sessions message — the same list `/list-agents`
-# shows from inside Claude.
+# shows from inside Claude. HOST says which desk to attach to.
+#
+# Every box runs the same `claude-sessions`, reached over ssh, rather than this
+# reading a synced copy of their registries: a descriptor names a pid and a
+# $XDG_RUNTIME_DIR socket, and the liveness test is kill -0, so it is only true
+# on the machine that wrote it. Asking each box means the test runs where the
+# pid means something, and the host is which machine answered rather than a
+# field that can go stale.
+#
+# A box that is asleep, or has not deployed the app yet, contributes no rows and
+# no error — a laptop being shut is the normal case, not a failure worth saying.
 #@cca
-#--> cca — list the claude sessions running on this machine, by the name peers address them with
+#--> cca — list every live claude session across the fleet, by the name peers address them with
 cca() {
-  local rows
-  rows=$(_cc_sessions | cut -f2- | sort)
+  local rows self tmp host
+  self=$(uname -n)
+  self=${self%%.*}
+  tmp=$(mktemp -d) || return 1
+  (
+    claude-sessions | awk -v h="$self" 'BEGIN { FS = OFS = "\t" } { print h, $0 }' >"$tmp/$self" &
+    while IFS= read -r host; do
+      ssh -o ConnectTimeout=3 -o BatchMode=yes "$host" claude-sessions 2>/dev/null \
+        | awk -v h="$host" 'BEGIN { FS = OFS = "\t" } { print h, $0 }' >"$tmp/$host" &
+    done < <(_cc_fleet_hosts)
+    wait
+  ) 2>/dev/null
+  rows=$(cat "$tmp"/* 2>/dev/null | sort)
+  rm -rf "$tmp"
   [[ -n $rows ]] || {
     echo "no claude sessions running"
     return 0
   }
-  printf 'NAME\tSTATUS\tWAITING\tDIR\tPANE\n%s\n' "$rows" | column -t -s$'\t'
+  printf 'HOST\tNAME\tSTATUS\tWAITING\tDIR\tPANE\n%s\n' "$rows" | column -t -s$'\t'
 }
 
 #@find-commit

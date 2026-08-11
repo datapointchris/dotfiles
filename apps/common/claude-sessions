@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# ================================================================
+# claude-sessions - Live Claude Code sessions on this machine
+# ================================================================
+# Reads the session registry directly. `claude agents --json` is the
+# supported interface and was measured against it: ~356ms per call versus
+# ~12ms here, because it boots a full node process, and it omits the tmux
+# pane that makes a row worth jumping to.
+#
+# This is the per-machine half of a fleet-wide listing: `cca` and
+# `fleet claude sessions list` both reach other boxes by running this over
+# ssh, so the registry read has one implementation and the liveness test
+# runs where the pid means something.
+# ================================================================
+
+set -euo pipefail
+
+REGISTRY_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
+
+# formatting.sh is sourced here rather than at the top because the hot path
+# runs over ssh from another machine, and every file this needs is another
+# way for a row to go missing from the fleet listing.
+show_help() {
+  SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+  source "$SHELL_DIR/formatting.sh"
+  help_header "claude-sessions" "Live Claude Code sessions on this machine."
+  help_usage "claude-sessions [--json]"
+
+  help_section "Output"
+  help_row "claude-sessions" "" "TSV: name, status, waiting, dir, pane"
+  help_row "claude-sessions --json" "" "The same rows as a JSON array"
+
+  help_section "Notes"
+  help_row "" "" "NAME is the address peers message, as /list-agents shows it"
+  help_row "" "" "Use cca for every machine in the fleet, not just this one"
+}
+
+# One compact descriptor per *live* session. The registry keeps one file per
+# process, written at startup and removed on a clean exit, so a killed session
+# leaves a file behind with a stale `status`. Trusting that field would report
+# the dead as idle; the pid is the only honest liveness test, and it is only
+# honest on the box that owns it.
+#
+# jq writes the pid and the descriptor on one line so the filter never has to
+# take the JSON apart by hand — the blob is passed through untouched and handed
+# back to jq to render.
+live_descriptors() {
+  fd -HI -e json . "$REGISTRY_DIR" -X jq -r '"\(.pid) \(tojson)"' 2>/dev/null \
+    | while read -r pid descriptor; do
+      kill -0 "$pid" 2>/dev/null && printf '%s\n' "$descriptor"
+    done
+}
+
+main() {
+  case "${1:-}" in
+    -h | --help | help)
+      show_help
+      return 0
+      ;;
+  esac
+
+  if [[ ! -d $REGISTRY_DIR ]]; then
+    [[ ${1:-} == --json ]] && printf '[]\n'
+    return 0
+  fi
+
+  if [[ ${1:-} == --json ]]; then
+    live_descriptors | jq -s 'map({name, sessionId, status, waiting: .waitingFor, cwd, tmux, pid})'
+    return 0
+  fi
+
+  live_descriptors | jq -r '[.name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
+}
+
+main "$@"
