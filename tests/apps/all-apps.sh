@@ -141,7 +141,14 @@ test_symlink "tmux.conf symlinked" "$HOME/.config/tmux/tmux.conf"
 echo ""
 echo "Config Files:"
 test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
-test_cmd "git identity resolves" "git config --global --includes --get user.email"
+# Only where the repo actually ships one. A fleet machine includes the personal
+# identity; an employer machine deliberately defaults to an address this repo does
+# not hold, so asserting it there failed every employer-trust container for a file
+# nothing is designed to write. `dotfiles check`'s identity row is what reports a
+# genuinely missing one, on the machines where that is a fault.
+if [[ "${DOTFILES_TRUST:-}" == "fleet" ]]; then
+  test_cmd "git identity resolves" "git config --global --includes --get user.email"
+fi
 test_file "tmux config exists" "$HOME/.config/tmux/tmux.conf"
 test_file "nvim config exists" "$HOME/.config/nvim/init.lua"
 

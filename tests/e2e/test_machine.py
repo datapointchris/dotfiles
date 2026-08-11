@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import pytest
 from harness import Machine
+from harness import declared_items
 from harness import failed_outcomes
 from harness import run_record
 from harness import shadow_calls
@@ -141,9 +142,16 @@ def test_yazi_starts_without_errors(converged_machine: Machine) -> None:
 def test_docker_compose_is_the_v2_plugin(converged_machine: Machine) -> None:
     """`docker compose`, not `docker-compose`. The binary being present says
     nothing about the subcommand resolving, which is what every compose file here
-    is written against."""
-    if converged_machine.environment.name == 'wsl':
-        pytest.skip('WSL uses Docker Desktop on the Windows host, which a container is not')
+    is written against.
+
+    Skipped from the *declaration*, not from the environment's name. The skip used
+    to read `name == 'wsl'`, and `offline` and `restricted` also run the
+    `wsl-work-workstation` manifest — where every docker entry carries
+    `excludes_host: wsl`, because WSL uses Docker Desktop on the Windows host.
+    So this failed on two environments for a package they correctly do not install.
+    """
+    if not any(item.name == 'docker-compose-plugin' for item in declared_items(converged_machine.environment)):
+        pytest.skip('this machine does not declare the compose plugin')
     assert converged_machine.succeeds('docker compose version')
 
 
