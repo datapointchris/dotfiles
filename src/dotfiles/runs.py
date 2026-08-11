@@ -142,7 +142,7 @@ class Timing:
 
 
 @dataclasses.dataclass
-class Outcome:
+class RunOutcome:
     """One item, what was decided about it, and what that cost."""
 
     address: str
@@ -186,7 +186,7 @@ class RunRecord:
     """Empty on a record written before schema 3, which is why every reader takes
     `host or machine` rather than `host` — a bare `host` would pool the entire
     pre-3 history of all four boxes into one nameless bucket."""
-    outcomes: list[Outcome] = dataclasses.field(default_factory=list)
+    outcomes: list[RunOutcome] = dataclasses.field(default_factory=list)
     issues: list[Issue] = dataclasses.field(default_factory=list)
 
     @property
@@ -202,7 +202,7 @@ class RunRecord:
     def record_outcome(self, address: str, verdict: str, action: str, timing: Timing, message: str = '') -> None:
         """Timing is required, so an untimed resource cannot ship and then drop
         silently out of every report that aggregates duration."""
-        self.outcomes.append(Outcome(address=address, verdict=verdict, action=action, timing=timing, message=message))
+        self.outcomes.append(RunOutcome(address=address, verdict=verdict, action=action, timing=timing, message=message))
 
     def record_issue(self, address: str, kind: str, message: str) -> None:
         self.issues.append(Issue(address=address, kind=kind, message=message))
@@ -300,7 +300,7 @@ def write(record: RunRecord, runs_dir: Path | None = None) -> Path:
 
 def read(path: Path) -> RunRecord:
     payload = json.loads(path.read_text())
-    outcomes = [Outcome(**{**outcome, 'timing': Timing.from_record(outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
+    outcomes = [RunOutcome(**{**outcome, 'timing': Timing.from_record(outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
     issues = [Issue(**issue) for issue in payload.pop('issues', [])]
     return RunRecord(**payload, outcomes=outcomes, issues=issues)
 
