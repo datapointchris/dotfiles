@@ -96,6 +96,7 @@ from harness import image_exists
 from harness import install_age
 from harness import install_command
 from harness import install_record
+from harness import install_record_gap
 from harness import plant_python_shadow
 from harness import stage_bundle
 from harness import start
@@ -368,7 +369,7 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
     container.exec(install_command(environment))
     recorded = install_record(container)
     if recorded is None:
-        raise AssertionError('the install left no exit status behind, so nothing here can say what it did')
+        raise AssertionError(f'the install left no usable record behind: {install_record_gap(container)}')
     container.install_status, container.install_log = recorded
     return container
 

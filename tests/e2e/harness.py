@@ -380,7 +380,6 @@ ARCHLINUX = Environment(
         'useradd -m -G wheel -s /bin/bash archlinuxuser',
         "printf '%s\\n' 'archlinuxuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
     ),
-    env_file='PLATFORM=archlinux\nDOTFILES_DOCKER_TEST=true\n',
 )
 
 WSL = Environment(
@@ -559,8 +558,16 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest'
-"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container."""
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-*'
+"""`paths.LATEST_RUN`, spelled for a shell because it is read inside the container.
+
+Globbed on the suffix rather than naming it. `paths.LATEST_RUN` gained a
+`-{machine_id}` suffix when the state directory became fleet-shared, and this
+constant kept naming the old path — so the `cp` in `install_command` matched
+nothing, silently, and every test taking the `machine` fixture errored at setup
+instead. A container holds exactly one box, so the glob is unambiguous, and it
+survives the next change to how that name is built rather than duplicating the
+derivation a second time."""
 
 INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
@@ -622,6 +629,21 @@ def install_record(machine: Machine) -> tuple[int, str] | None:
     if not machine.succeeds(f'test -s {machine.environment.home}/{INSTALL_RECORD}'):
         return None
     return int(status), machine.exec(f'cat {machine.environment.home}/{INSTALL_LOG} 2>/dev/null').stdout
+
+
+def install_record_gap(machine: Machine) -> str:
+    """Which of the artifacts is missing, for a caller that has to say why.
+
+    `install_record` collapses two unrelated failures into one `None`: an install
+    that never finished, and a finished install whose record was not copied out.
+    Reporting the first for the second cost an afternoon — the `LATEST_RECORD`
+    path had moved, the `cp` matched nothing, and 249 tests blamed an install
+    that had in fact converged.
+    """
+    home = machine.environment.home
+    if not machine.read(f'cat {home}/{INSTALL_STATUS} 2>/dev/null').strip().isdigit():
+        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command'
+    return f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, so {LATEST_RECORD} matched nothing'
 
 
 def install_age(machine: Machine) -> str:
@@ -1367,7 +1389,7 @@ def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
         # is named after.
         recorded = install_record(machine)
         if recorded is None or recorded[0] != 0:
-            detail = recorded[1][-2000:] if recorded else 'the install left no status behind'
+            detail = recorded[1][-2000:] if recorded else install_record_gap(machine)
             raise RuntimeError(f'base install for {environment.name} did not converge:\n{detail}')
 
         # Committed after the repo is removed, so nothing downstream can read a
