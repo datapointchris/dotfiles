@@ -37,7 +37,7 @@ from dotfiles import paths
 
 
 @dc.dataclass(frozen=True, slots=True)
-class Issue:
+class DeclarationIssue:
     """One thing wrong with the declaration, named where it is."""
 
     section: str
@@ -50,13 +50,13 @@ class Issue:
 class CatalogError(Exception):
     """`packages.yml` declares something no reader can consume."""
 
-    def __init__(self, issues: tuple[Issue, ...]) -> None:
+    def __init__(self, issues: tuple[DeclarationIssue, ...]) -> None:
         self.issues = issues
         super().__init__('\n'.join(str(issue) for issue in issues))
 
 
 class EntryError(ValueError):
-    """One row cannot be built. Caught by `load`, which reports it as an Issue."""
+    """One row cannot be built. Caught by `load`, which reports it as a DeclarationIssue."""
 
 
 class Structure(enum.Enum):
@@ -900,7 +900,7 @@ class Catalog:
         for entry in self.entries[section]:
             if entry.name == name:
                 return entry
-        raise CatalogError((Issue(section, f'no entry named {name!r} in {self.file_for(section)}'),))
+        raise CatalogError((DeclarationIssue(section, f'no entry named {name!r} in {self.file_for(section)}'),))
 
     def runtime(self, name: str) -> Runtime:
         found = self.find('runtimes', name)
@@ -927,7 +927,7 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
         system_source: (yaml.safe_load(system_source.read_text()) or {}) if system_source.is_file() else {},
     }
 
-    issues: list[Issue] = []
+    issues: list[DeclarationIssue] = []
     entries: dict[str, tuple[Entry, ...]] = {}
 
     for section, cls in ALL_SECTIONS.items():
@@ -939,7 +939,7 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
         known = set(SYSTEM_SECTIONS) if file == system_source else set(SECTIONS) | BARE_SECTIONS
         for unknown in sorted(set(raw) - known):
             where = 'system.yml' if file == system_source else 'packages.yml'
-            issues.append(Issue(unknown, f'is not a section any reader knows, so nothing reads it out of {where}'))
+            issues.append(DeclarationIssue(unknown, f'is not a section any reader knows, so nothing reads it out of {where}'))
 
     if issues:
         raise CatalogError(tuple(issues))
@@ -956,31 +956,31 @@ def _file_for(cls: type[Entry], packages: Path, system: Path) -> Path:
     return system if cls.declared_in == 'system.yml' else packages
 
 
-def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[Issue]]:
+def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[DeclarationIssue]]:
     """One section's rows, plus everything wrong with them."""
-    issues: list[Issue] = []
+    issues: list[DeclarationIssue] = []
     rows: list[Entry] = []
     seen: set[str] = set()
 
     if declared is not None and not isinstance(declared, _CONTAINER[cls.structure]):
         wanted = 'a list of entries' if cls.structure is Structure.LIST else 'a mapping'
-        return (), [Issue(cls.section, f'is a {type(declared).__name__} where every reader expects {wanted}')]
+        return (), [DeclarationIssue(cls.section, f'is a {type(declared).__name__} where every reader expects {wanted}')]
 
     for label, raw in _raw_rows(declared, cls):
         if not isinstance(raw, Mapping):
-            issues.append(Issue(cls.section, f'{label} is {type(raw).__name__}, not a mapping'))
+            issues.append(DeclarationIssue(cls.section, f'{label} is {type(raw).__name__}, not a mapping'))
             continue
         try:
             entry = cls.from_mapping(raw)
         except EntryError as problem:
             # The name where there is one: a positional label is the fallback for
             # the row that is broken *because* it has no name.
-            issues.append(Issue(cls.section, f'{raw.get("name") or label} {problem}'))
+            issues.append(DeclarationIssue(cls.section, f'{raw.get("name") or label} {problem}'))
             continue
 
-        issues.extend(Issue(cls.section, f'{entry.name} {problem}') for problem in entry.problems())
+        issues.extend(DeclarationIssue(cls.section, f'{entry.name} {problem}') for problem in entry.problems())
         if entry.name in seen:
-            issues.append(Issue(cls.section, f'{entry.name} is declared more than once'))
+            issues.append(DeclarationIssue(cls.section, f'{entry.name} is declared more than once'))
         seen.add(entry.name)
         rows.append(entry)
 
@@ -993,7 +993,7 @@ _CONTAINER: dict[Structure, type] = {Structure.LIST: list, Structure.GROUPED: di
 def _raw_rows(declared: Any, cls: type[Entry]) -> Iterator[tuple[str, Any]]:
     """Yield `(label, mapping)` for each row, flattening whichever shape the section uses.
 
-    The label is what an Issue names the row by before it is known to have a
+    The label is what a DeclarationIssue names the row by before it is known to have a
     name — an entry missing its `name` still has to be findable in the file.
     """
     if declared is None:

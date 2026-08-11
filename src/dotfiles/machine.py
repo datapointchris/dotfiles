@@ -30,13 +30,13 @@ import yaml
 from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import paths
-from dotfiles.catalog import Issue
+from dotfiles.catalog import DeclarationIssue
 
 
 class MachineError(Exception):
     """A manifest declares something no reader can consume, or omits something one needs."""
 
-    def __init__(self, issues: tuple[Issue, ...]) -> None:
+    def __init__(self, issues: tuple[DeclarationIssue, ...]) -> None:
         self.issues = issues
         super().__init__('\n'.join(str(issue) for issue in issues))
 
@@ -224,15 +224,15 @@ def load(name: str, root: Path | None = None) -> Machine:
     source = install / 'manifests' / f'{name}.yml'
     if not source.is_file():
         available = ', '.join(names(root)) or 'none found'
-        raise MachineError((Issue(name, f'has no manifest at {source}. Available: {available}'),))
+        raise MachineError((DeclarationIssue(name, f'has no manifest at {source}. Available: {available}'),))
 
     declared = yaml.safe_load(source.read_text()) or {}
     flags_file = install / 'flags.yml'
     flag_data = yaml.safe_load(flags_file.read_text()) if flags_file.is_file() else {}
 
-    issues: list[Issue] = []
+    issues: list[DeclarationIssue] = []
     if not isinstance(declared, Mapping):
-        raise MachineError((Issue(name, f'is a {type(declared).__name__} where a mapping is expected'),))
+        raise MachineError((DeclarationIssue(name, f'is a {type(declared).__name__} where a mapping is expected'),))
 
     issues.extend(_unknown_keys(name, declared))
     coordinates, label = _coordinates(name, declared, issues)
@@ -271,15 +271,17 @@ def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axe
     return narrowing.get('platform', platform_label) == platform_label
 
 
-def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[Issue]:
+def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
     known = {'machine', 'platform', 'coordinates', 'flags', *FEATURES, *(key for _, key in SUBSCRIPTIONS.values() if key)}
     return [
-        Issue(name, f'declares {key} — {RETIRED_KEYS[key]}' if key in RETIRED_KEYS else f'declares {key}, which no reader consumes')
+        DeclarationIssue(
+            name, f'declares {key} — {RETIRED_KEYS[key]}' if key in RETIRED_KEYS else f'declares {key}, which no reader consumes'
+        )
         for key in sorted(set(declared) - known)
     ]
 
 
-def _coordinates(name: str, declared: Mapping[str, Any], issues: list[Issue]) -> tuple[axes.Coordinates, str]:
+def _coordinates(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[axes.Coordinates, str]:
     """Resolve the platform bundle, or the axes a manifest names directly.
 
     Never both: two spellings of the same fact is the drift the split exists to
@@ -290,11 +292,11 @@ def _coordinates(name: str, declared: Mapping[str, Any], issues: list[Issue]) ->
     overrides = declared.get('coordinates') or {}
 
     if label is None and not overrides:
-        issues.append(Issue(name, 'declares neither a platform nor coordinates, so nothing knows what kind of machine it is'))
+        issues.append(DeclarationIssue(name, 'declares neither a platform nor coordinates, so nothing knows what kind of machine it is'))
         return axes.PLATFORM_BUNDLES['linux'], ''
 
     if label is not None and label not in axes.PLATFORM_BUNDLES:
-        issues.append(Issue(name, f'declares platform {label!r}. Known: {", ".join(axes.PLATFORM_BUNDLES)}'))
+        issues.append(DeclarationIssue(name, f'declares platform {label!r}. Known: {", ".join(axes.PLATFORM_BUNDLES)}'))
         return axes.PLATFORM_BUNDLES['linux'], str(label)
 
     base = axes.PLATFORM_BUNDLES[label] if label else None
@@ -302,13 +304,13 @@ def _coordinates(name: str, declared: Mapping[str, Any], issues: list[Issue]) ->
         return base, str(label)
 
     if base is not None and overrides:
-        issues.append(Issue(name, 'declares both a platform and coordinates; a fact spelled twice is a fact that can disagree'))
+        issues.append(DeclarationIssue(name, 'declares both a platform and coordinates; a fact spelled twice is a fact that can disagree'))
         return base, str(label)
 
     return _from_axes(name, overrides, issues), ''
 
 
-def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[Issue]) -> axes.Coordinates:
+def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
     """Build coordinates a manifest names directly, one axis at a time.
 
     A rejected value still yields *something*, because the caller raises on the
@@ -319,21 +321,21 @@ def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[Issue]) -> 
     for axis, enum_type in axes.AXIS_TYPES.items():
         raw = overrides.get(axis)
         if raw is None:
-            issues.append(Issue(name, f'declares coordinates without {axis}; every axis is required once one is named'))
+            issues.append(DeclarationIssue(name, f'declares coordinates without {axis}; every axis is required once one is named'))
         elif raw not in set(enum_type):
-            issues.append(Issue(name, f'declares {axis} {raw!r}. Known: {", ".join(enum_type)}'))
+            issues.append(DeclarationIssue(name, f'declares {axis} {raw!r}. Known: {", ".join(enum_type)}'))
         substituted = substituted or raw not in set(enum_type)
         values[axis] = enum_type(raw) if raw in set(enum_type) else next(iter(enum_type))
 
     for unknown in sorted(set(overrides) - set(axes.AXES)):
-        issues.append(Issue(name, f'declares coordinate {unknown!r}, which is not one of the axes'))
+        issues.append(DeclarationIssue(name, f'declares coordinate {unknown!r}, which is not one of the axes'))
 
     # Only where the manifest named every axis: a substituted placeholder makes
     # an arbitrary tuple, and reporting that it cannot exist would bury the real
     # problem under a contradiction the manifest never wrote.
     point = axes.Coordinates(**values)
     if not substituted:
-        issues.extend(Issue(name, f'declares a machine that cannot exist: {problem}') for problem in axes.incoherent(point))
+        issues.extend(DeclarationIssue(name, f'declares a machine that cannot exist: {problem}') for problem in axes.incoherent(point))
     return point
 
 
@@ -368,7 +370,7 @@ def _subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
     return Subscription(section, Coverage.NAMED, declared=True, names=frozenset(value))
 
 
-def _flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: list[Issue]) -> dict[str, str]:
+def _flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: list[DeclarationIssue]) -> dict[str, str]:
     """Every declared flag's value for this machine: its override, else its default.
 
     Rendered as the shell reads it, because `~/.env` is the only consumer and a
@@ -379,7 +381,7 @@ def _flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: li
     for flag in _declared_flags(flag_data):
         resolved[flag.name] = _shell_value(overrides.get(flag.name, flag.default))
     for unknown in sorted(set(overrides) - set(resolved)):
-        issues.append(Issue(declared.get('machine', ''), f'overrides {unknown}, which flags.yml does not declare'))
+        issues.append(DeclarationIssue(declared.get('machine', ''), f'overrides {unknown}, which flags.yml does not declare'))
     return resolved
 
 
