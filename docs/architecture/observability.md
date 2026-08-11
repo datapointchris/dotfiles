@@ -179,6 +179,16 @@ the way its needs reach the fleet is its check output travelling as a file. What
 it says is missing or outdated is what the fleet builds into the next offline
 bundle for it.
 
+**`apply --json` is not this document, and deliberately so.** The two answer
+different questions and unifying them would cost the bundle loop its input. `plan`
+and `check` emit the versioned interchange document above — what a machine *needs*,
+which is what travels to a machine that can reach the network and build a bundle
+from it. `apply --json` is the run record: what a run actually *did*, for piping
+into whatever wants it. It is emitted by reading back the record just written, so
+it and `dotfiles report show --json` cannot give different answers about one run,
+which building the same document twice would allow. Everything a run narrates goes
+to stderr, so stdout stays a stream.
+
 **The loop that consumes it is not built.** `bundle create --since <status.json>`
 would diff the document to carry only what that machine is missing, and
 `bundle check <status.json>` would answer whether it needs a new bundle at all.

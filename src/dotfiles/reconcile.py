@@ -14,6 +14,7 @@ the run reports success.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import datetime as dt
 from collections.abc import Iterable
 from collections.abc import Sequence
@@ -37,6 +38,7 @@ from dotfiles import validate
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
@@ -379,6 +381,7 @@ def apply_machine(
     force: bool = False,
     reinstall: frozenset[str] = frozenset(),
     flags: dict | None = None,
+    as_json: bool = False,
 ) -> ExitCode:
     """Measure the machine once, then act on what was decided, in stage order.
 
@@ -479,6 +482,18 @@ def apply_machine(
     # was decided and an `Outcome` is what was done, so a record of an `apply`
     # carries the pair where a record of a `plan` carries verdicts alone.
     recorded = sinks.keep([*planned, *performed], identity, flags or {})
+
+    # The record just written, read back rather than assembled again here. What
+    # gets piped and what `dotfiles report show --json` prints for the same run
+    # are then the same bytes by construction, which two builders of one document
+    # could not promise.
+    #
+    # Deliberately not the document `plan --json` emits: that one is the versioned
+    # interchange artifact a network-blocked machine hands to one that can reach
+    # the network, so a partial bundle can be built from it. This is an execution
+    # transcript. Everything human already goes to stderr, so stdout is a stream.
+    if as_json and recorded:
+        emit_json(dc.asdict(runs.read(recorded)))
 
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
     if unsuccessful:

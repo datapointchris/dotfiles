@@ -209,6 +209,7 @@ def apply_command(
     owner: str = OwnerOption,
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
+    as_json: bool = JsonOption,
 ) -> None:
     """Make this machine match what it declares.
 
@@ -221,6 +222,11 @@ def apply_command(
     the run. Saying "the system half and no further" with `--skip` means knowing
     which providers live below the line, which is the registry's knowledge and not
     a caller's.
+
+    `--json` is the run record: what this run *did*, for piping. Deliberately not
+    the document `plan --json` emits — that one is the versioned interchange
+    artifact a network-blocked machine hands to one that can reach the network, so
+    a partial bundle can be built from it.
     """
     try:
         ceiling = engine.stage_named(through) if through else None
@@ -235,6 +241,7 @@ def apply_command(
             offline=offline,
             owner=owner,
             flags={'skip': sorted(skipped), 'through': through} if through else {'skip': sorted(skipped)},
+            as_json=as_json,
         )
     )
 

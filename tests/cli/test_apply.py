@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -225,6 +226,43 @@ def test_a_run_that_repaired_everything_converges(quiet: None, monkeypatch: pyte
     walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
     assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
+
+
+def test_apply_json_is_the_record_the_run_wrote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    """`apply --json` is an execution transcript, and `plan --json` is the versioned
+    interchange document a network-blocked machine hands over to have a bundle built
+    from it. Two different artifacts, which is why this is the stored record rather
+    than `status.document` with a third verb.
+
+    Asserted as equality with the file rather than against a shape typed here: the
+    record is emitted by reading back what was just written, so a caller piping this
+    and one reading `dotfiles report show --json` later cannot be given different
+    answers about one run. Building the document twice is what would allow that.
+
+    `quiet` is deliberately not used — it stubs `sinks.keep` out, and writing the
+    record is the thing under test.
+    """
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
+    monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
+    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
+    walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+    reconcile.apply_machine(engine.Selection.everything(), as_json=True)
+
+    emitted = json.loads(capsys.readouterr().out)
+    stored = json.loads(next((tmp_path / 'runs').glob('*.json')).read_text())
+    assert emitted == stored
+    assert emitted['verb'] == 'apply'
+
+
+def test_apply_says_nothing_on_stdout_unless_asked(quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    """Everything a run narrates goes to stderr, so stdout is a stream a caller can
+    pipe. A progress line landing there would corrupt whatever reads it."""
+    walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+    reconcile.apply_machine(engine.Selection.everything())
+
+    assert capsys.readouterr().out == ''
 
 
 def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:

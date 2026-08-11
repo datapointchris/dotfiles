@@ -172,6 +172,7 @@ def _apply_resource(
     *,
     force: bool = False,
     reinstall: frozenset[str] = frozenset(),
+    as_json: bool = False,
 ) -> None:
     """Converge this resource, or just what `--source` names and what that needs.
 
@@ -195,6 +196,7 @@ def _apply_resource(
             owner=owner,
             force=force,
             reinstall=reinstall,
+            as_json=as_json,
             flags={'selection': ', '.join(addresses)},
         )
     )
@@ -232,6 +234,7 @@ def packages_apply(
     offline: bool = OfflineOption,
     owner: str = OwnerOption,
     reinstall: list[str] = ReinstallOption,
+    as_json: bool = JsonOption,
 ) -> None:
     """Install every declared package that is missing.
 
@@ -245,7 +248,7 @@ def packages_apply(
     against a live figure and repairs what differs in either direction, so a tool
     stranded above its own newest release is already this command's to fix.
     """
-    _apply_resource('packages', machine, offline, source, owner, reinstall=frozenset(reinstall or ()))
+    _apply_resource('packages', machine, offline, source, owner, reinstall=frozenset(reinstall or ()), as_json=as_json)
 
 
 @packages_app.command('list')
@@ -283,9 +286,9 @@ def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -
 
 
 @toolchains_app.command('apply')
-def toolchains_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
+def toolchains_apply(machine: str = MachineOption, offline: bool = OfflineOption, as_json: bool = JsonOption) -> None:
     """Install or update the language toolchains."""
-    _apply_resource('toolchains', machine, offline, None)
+    _apply_resource('toolchains', machine, offline, None, as_json=as_json)
 
 
 @toolchains_app.command('list')
@@ -317,9 +320,9 @@ def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> N
 
 
 @plugins_app.command('apply')
-def plugins_apply(machine: str = MachineOption, offline: bool = OfflineOption) -> None:
+def plugins_apply(machine: str = MachineOption, offline: bool = OfflineOption, as_json: bool = JsonOption) -> None:
     """Install or update the declared plugins."""
-    _apply_resource('plugins', machine, offline, None)
+    _apply_resource('plugins', machine, offline, None, as_json=as_json)
 
 
 @plugins_app.command('list')
@@ -348,6 +351,7 @@ def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> 
 def symlinks_apply(
     machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Replace targets this manager did not create'),
+    as_json: bool = JsonOption,
 ) -> None:
     """Deploy every declared symlink, pruning the ones whose source is gone.
 
@@ -360,7 +364,7 @@ def symlinks_apply(
     checked-out branch into `$HOME` — and it does, because the walk reports it
     before measuring anything.
     """
-    _apply_resource('symlinks', machine, False, None, force=force)
+    _apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 
 @symlinks_app.command('show')
@@ -403,9 +407,9 @@ def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
 
 
 @env_app.command('apply')
-def env_apply(machine: str = MachineOption) -> None:
+def env_apply(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
-    _apply_resource('env', machine, False, None)
+    _apply_resource('env', machine, False, None, as_json=as_json)
 
 
 @env_app.command('show')
@@ -436,7 +440,9 @@ def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> No
 
 
 @system_app.command('apply')
-def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, source: str = SourceOption) -> None:
+def system_apply(
+    machine: str = MachineOption, offline: bool = OfflineOption, source: str = SourceOption, as_json: bool = JsonOption
+) -> None:
     """Install the declared system packages and apply the system configuration.
 
     `--source` is worth having here now that this resource installs four package
@@ -444,7 +450,7 @@ def system_apply(machine: str = MachineOption, offline: bool = OfflineOption, so
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
     """
-    _apply_resource('system', machine, offline, source)
+    _apply_resource('system', machine, offline, source, as_json=as_json)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")
