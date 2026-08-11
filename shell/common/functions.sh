@@ -840,10 +840,10 @@ cc() {
   claude "${name[@]}" "$@"
 }
 
-# Resume leaves the old name behind and derives a fresh one, which is why a name
-# used to be re-applied here — at the cost of overwriting the conversation's
-# title with a new word on every resume, on conversations old enough that the
-# title was the only way back to them.
+# Resume derives a fresh address rather than restoring the old one, so a session
+# is addressed by whatever `cca` prints for it now, never by what it was called
+# before. Naming a resume retitles the conversation for good, which on one old
+# enough to have forgotten costs the only way back to it.
 #@ccr
 #--> ccr [name] — resume a claude session by picker; naming it retitles the conversation
 ccr() {
