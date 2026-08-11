@@ -112,8 +112,9 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def change(verdict: Verdict, repair: Repair = Repair.AUTOMATIC, item: str = 'ghrelease/lazygit') -> Change:
-    return Change('packages', Stage.TOOLS, item, verdict, repair=repair)
+def change(verdict: Verdict, repair: Repair = Repair.AUTOMATIC, item: str = 'ghrelease/lazygit', advice: str = '') -> Change:
+    filled = advice or ('do it by hand' if repair is Repair.BY_HAND else '')
+    return Change('packages', Stage.TOOLS, item, verdict, repair=repair, advice=filled)
 
 
 def test_an_item_nobody_could_measure_is_counted_not_rendered_as_drift() -> None:

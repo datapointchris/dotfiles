@@ -228,7 +228,9 @@ def test_execute_acts_in_stage_order_rather_than_in_walk_order(session: Session,
 def test_execute_skips_what_apply_cannot_repair(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     """A required machine-local value is real drift and not apply's to fix. It must
     reach `check`, never `perform`."""
-    by_hand = Change('packages', Stage.TOOLS, 'WINDOWS_USER', Verdict.MISSING, repair=Repair.BY_HAND)
+    by_hand = Change(
+        'packages', Stage.TOOLS, 'WINDOWS_USER', Verdict.MISSING, repair=Repair.BY_HAND, advice='set it below the marker in ~/.env'
+    )
     writer = Writer('packages', changes=(change('a'), by_hand))
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': writer})
 

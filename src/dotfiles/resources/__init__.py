@@ -112,6 +112,16 @@ class Change:
     for one — which is the half of the front-loaded design worth keeping now that
     root is acquired at the write."""
 
+    def __post_init__(self) -> None:
+        """A `BY_HAND` change with nothing to do about it is refused twice: once
+        by `apply`, which cannot act on it, and once by this, which will not let
+        it exist. `record_outcome` makes the same bet on `Timing` — the untimed
+        case there is a required parameter rather than a `__post_init__`, because
+        every caller needs it; this one is conditional on `repair`, which a plain
+        signature cannot express."""
+        if self.repair is Repair.BY_HAND and not self.advice:
+            raise ValueError(f'{self.resource}/{self.item}: repair=BY_HAND with no advice — apply cannot fix this, so a reader must')
+
     @property
     def drifted(self) -> bool:
         """Whether the machine differs from its declaration at all."""

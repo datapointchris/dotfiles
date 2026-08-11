@@ -205,7 +205,8 @@ class Walk:
 
 
 def drift(item: str, repair: Repair = Repair.AUTOMATIC) -> Event:
-    return Event('packages', Change('packages', Stage.TOOLS, item, Verdict.MISSING, repair=repair), stage=Stage.TOOLS)
+    advice = 'do it by hand' if repair is Repair.BY_HAND else ''
+    return Event('packages', Change('packages', Stage.TOOLS, item, Verdict.MISSING, repair=repair, advice=advice), stage=Stage.TOOLS)
 
 
 def done(item: str, status: OutcomeStatus = OutcomeStatus.DONE) -> Event:
