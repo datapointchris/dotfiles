@@ -53,6 +53,16 @@ it never reached. Readers take `RunRecord.box`, never `host`, because a record
 written before schema 3 carries no host and a bare read would pool the entire
 earlier history of all four boxes under one empty name.
 
+**The timing breakdown is `steps`, and a rename is the schema change a default
+cannot absorb.** `Stage` already names the ordering across a run, so `phase`
+meaning the breakdown inside one provider's `perform` left two ordering words in
+one codebase; at schema 4 the constant is `runs.STEPS` and the stored key is
+`steps`. Unlike `host` at schema 3, no default could carry this: an absent field
+takes its default, while a renamed key reaches the constructor and raises, so
+every record written before 4 would have become unreadable. `Timing.from_record`
+accepts either spelling, which keeps what the type used to look like on the type
+rather than in `read` — and is the pattern to copy for the next one.
+
 **Both ends swallow an `OSError` on purpose.** `$XDG_STATE_HOME` is a Syncthing
 folder on the fleet, absent on a fresh machine and read-only in more containers
 than it should be; a verb that cannot open a log has still been asked a question
