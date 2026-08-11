@@ -810,32 +810,6 @@ _cc_sessions() {
     done
 }
 
-# One short word, no hyphens, chosen from the words no live session is using.
-# The name is an address you type to message a session, so it is optimised for
-# typing and saying rather than for describing — `cc` is meant to be run bare.
-# Slice syntax `${a[@]:i:1}` is the one indexing form that means the same thing
-# in bash and zsh, whose arrays disagree about whether the first element is 0.
-_cc_pick_name() {
-  local -a pool=(ash bolt cedar clay dune ember flint fox grove hazel iris jade
-    kite lark moss nova oak onyx pike quill reed sage slate teal vale wren
-    yarrow zephyr)
-  local taken word
-  taken=$(_cc_sessions | cut -f2)
-  local -a free=()
-  for word in "${pool[@]}"; do
-    [[ $'\n'$taken$'\n' == *$'\n'$word$'\n'* ]] || free+=("$word")
-  done
-  ((${#free[@]})) || {
-    printf 'cc%s\n' "$$"
-    return
-  }
-  # Not $RANDOM: zsh reseeds it identically in every command-substitution
-  # subshell, so `$(_cc_pick_name)` would hand back the same word every call.
-  local rand
-  rand=$(od -An -N2 -tu2 </dev/urandom | tr -d ' ')
-  printf '%s\n' "${free[@]:$((rand % ${#free[@]})):1}"
-}
-
 # Bypass is the permission mode for every session, set once as
 # permissions.defaultMode in ~/.claude/settings.json rather than repeated as a
 # flag here — a session started any other way (an editor, a resume, a scheduled
@@ -847,31 +821,36 @@ _cc_pick_name() {
 # falls through untouched, which keeps `cc -p '...'` working. The array form is
 # deliberate: zsh does not word-split an unquoted `${x:+--name $x}`, so the flag
 # and its value would arrive as one argument.
+#
+# Never auto-generate that name. `--name` is one field wearing two hats: claude
+# writes it as the peer address *and* as the conversation's title, and a title
+# set by hand suppresses the generated one outright — so a session named from a
+# word pool is unfindable in /resume forever after, showing `frito` where the
+# subject should be. Bare `cc` passes nothing and claude derives
+# `<dirname>-<hex>` for the address, which `cca` prints; pass a name only when
+# the name is also the title you want.
 #@cc
-#--> cc [name] — start claude; names itself from a short word pool when you don't
+#--> cc [name] — start claude; unnamed, it takes an address from the directory and keeps a real title
 cc() {
   local -a name=()
   if [[ -n $1 && $1 != -* ]]; then
     name=(--name "$1")
     shift
-  elif [[ " $* " != *" --name "* && " $* " != *" -n "* ]]; then
-    name=(--name "$(_cc_pick_name)")
   fi
   claude "${name[@]}" "$@"
 }
 
-# Resume derives a fresh name from the directory no matter what the session was
-# called before, so the name has to be passed again every time or peers lose the
-# address they were messaging.
+# Resume leaves the old name behind and derives a fresh one, which is why a name
+# used to be re-applied here — at the cost of overwriting the conversation's
+# title with a new word on every resume, on conversations old enough that the
+# title was the only way back to them.
 #@ccr
-#--> ccr [name] — resume a claude session by picker; re-applies the name, which resume always drops
+#--> ccr [name] — resume a claude session by picker; naming it retitles the conversation
 ccr() {
   local -a name=()
   if [[ -n $1 && $1 != -* ]]; then
     name=(--name "$1")
     shift
-  elif [[ " $* " != *" --name "* && " $* " != *" -n "* ]]; then
-    name=(--name "$(_cc_pick_name)")
   fi
   claude --resume "${name[@]}" "$@"
 }
