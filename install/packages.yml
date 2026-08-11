@@ -209,6 +209,13 @@ system_packages:
     description: Resource monitor with themeable UI
     tags: [cli, tui]
 
+  - name: lnav
+    apt: lnav
+    pacman: lnav
+    brew: lnav
+    description: Log file navigator with format auto-detection, SQL queries, and live tail
+    tags: [cli, tui, search]
+
   # Shell
   - name: zsh
     tier: core
@@ -321,9 +328,11 @@ system_packages:
 
   # FUSE runtime dependency for mount-s3 (see custom_installers). Linux only —
   # mount-s3 has no macOS build, so no brew entry. libfuse2 is the FUSE 2 API the
-  # AWS binary links against (fuse2 on Arch).
+  # AWS binary links against (fuse2 on Arch). apt name is libfuse2t64: Debian's
+  # 64-bit time_t transition renamed the package on Ubuntu 24.04+, and libfuse2
+  # has no candidate there.
   - name: libfuse2
-    apt: libfuse2
+    apt: libfuse2t64
     pacman: fuse2
     description: FUSE 2 library (required by mount-s3 to mount S3 buckets)
 
@@ -357,7 +366,11 @@ system_packages:
     brew: age
     description: Modern file encryption tool (used by sops)
 
-
+  # macOS has Keychain; this is the Secret Service provider Linux CLIs
+  # (icb, learning, nomad, meso) store their Authelia bearer token in.
+  - name: gnome-keyring
+    pacman: gnome-keyring
+    description: Secret Service provider for storing credentials
 
   # Media Processing
   - name: ffmpeg

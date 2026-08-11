@@ -29,6 +29,23 @@ tools:
     tags: [cli, productivity, git, syntax-highlighting]
     docs_url: "https://github.com/sharkdp/bat"
 
+  lnav:
+    category: file-viewer
+    description: "Log file navigator with format auto-detection, SQL queries, and live tail"
+    installed_via: brew
+    usage: "lnav [options] [logfile...]"
+    why_use: "Auto-detects log formats, merges multiple logs by timestamp, SQL queries over log lines, live tail"
+    examples:
+      - cmd: "lnav /var/log/syslog"
+        desc: "Open a single log file"
+      - cmd: "lnav /var/log/*.log"
+        desc: "Merge multiple logs by timestamp"
+      - cmd: "lnav -c ';SELECT * FROM syslog_log WHERE log_level = \"error\"'"
+        desc: "Query log lines with SQL"
+    see_also: [bat, colored-log]
+    tags: [cli, tui, logs, monitoring]
+    docs_url: "https://lnav.org"
+
   eza:
     category: file-management
     description: "Modern ls replacement with git integration, colors, and icons"
