@@ -199,3 +199,60 @@ def test_the_binary_lands_where_the_declaration_says_it_is_called(home, bundle, 
 
     assert result.ok
     assert (home / 'go' / 'bin' / 'gdu').read_bytes() == BINARY
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reading the version back from the binary
+# ─────────────────────────────────────────────────────────────────────────────
+
+MOD_INFO = (
+    '/home/chris/go/bin/gdu: go1.26.5\n'
+    '\tpath\tgithub.com/dundee/gdu/v5/cmd/gdu\n'
+    '\tmod\tgithub.com/dundee/gdu/v5\tv5.36.1\th1:4O9hn+qOiVL2ltDTqLOUszTx/ov78nMeBgyZ6c7Wh0g=\n'
+    '\tdep\tgithub.com/spf13/cobra\tv1.10.2\th1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=\n'
+)
+
+
+def stub_go(monkeypatch, *, on_path: bool = True, stdout: str = '', returncode: int = 0) -> list[list[str]]:
+    monkeypatch.setattr(gotool.shutil, 'which', lambda name: '/usr/local/go/bin/go' if on_path and name == 'go' else None)
+    calls: list[list[str]] = []
+
+    def fake_run(command, **_kwargs) -> Completed:
+        argv = [str(part) for part in command]
+        calls.append(argv)
+        return Completed(tuple(argv), returncode, stdout, stdout=stdout)
+
+    monkeypatch.setattr(effects, 'run', fake_run)
+    return calls
+
+
+def test_module_version_reads_the_mod_line_not_the_path_suffix(monkeypatch) -> None:
+    """`path` carries the same `/v5` gdu's module lives under, and reading the
+    version off that line instead would answer `v5` forever."""
+    stub_go(monkeypatch, stdout=MOD_INFO)
+
+    assert gotool.module_version(Path('/home/chris/go/bin/gdu')) == 'v5.36.1'
+
+
+def test_module_version_is_none_without_go_on_path(monkeypatch) -> None:
+    """A binary with no `go` to ask is the same "cannot say" a missing probe is."""
+    calls = stub_go(monkeypatch, on_path=False, stdout=MOD_INFO)
+
+    assert gotool.module_version(Path('/home/chris/go/bin/gdu')) is None
+    assert calls == []
+
+
+def test_module_version_is_none_when_go_does_not_recognise_the_binary(monkeypatch) -> None:
+    """Not every binary on the machine is one `go` built — `go version -m` exits
+    non-zero on one it does not recognise, and that failure is not a version."""
+    stub_go(monkeypatch, returncode=1)
+
+    assert gotool.module_version(Path('/usr/bin/rg')) is None
+
+
+def test_module_version_is_none_when_there_is_no_mod_line(monkeypatch) -> None:
+    """A `go version -m` with a `path` line and nothing else names no module, so
+    there is nothing to read back."""
+    stub_go(monkeypatch, stdout='/home/chris/go/bin/oldtool: go1.12\n\tpath\tsome/old/tool\n')
+
+    assert gotool.module_version(Path('/home/chris/go/bin/oldtool')) is None

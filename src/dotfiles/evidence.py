@@ -28,8 +28,10 @@ from pathlib import Path
 from typing import Protocol
 
 from dotfiles import catalog
+from dotfiles import versions
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Preconditions
@@ -393,15 +395,28 @@ def reported_version(executable: str) -> str | None:
     not recognise the probe prints its usage, and usage text is full of numbers
     `versions.parse` would otherwise read as a version and report as behind. A
     probe that runs past `PROBE_SECONDS` is one more way of not saying.
+
+    A probe that exits 0 and prints nothing `versions.parse` can read is the same
+    problem wearing a passing exit code, and it is the every-time case for a
+    `go install`-ed binary: `go install` never runs the `-ldflags -X` a release
+    build uses to stamp a real one in, so the banner prints whatever placeholder
+    the source hardcodes instead. Only there — `found` sitting in `gotool.gobin()`
+    is what "a `go install`-ed binary" means — is `gotool.module_version` worth
+    asking, because it is the one case where the toolchain that built the binary
+    knows better than the binary's own banner does. Everywhere else this is
+    unchanged: whatever the first probe printed, read or not.
     """
     found = shutil.which(executable)
     if not found:
         return None
+    go_installed = Path(found).resolve().parent == gotool.gobin().resolve()
     for probe in VERSION_PROBES:
         result = run([found, probe], output=Output.QUIET, timeout=PROBE_SECONDS)
         if result.ok and result.stdout.strip():
-            return result.stdout.strip()
-    return None
+            reported = result.stdout.strip()
+            if not go_installed or versions.parse(reported) is not None:
+                return reported
+    return gotool.module_version(Path(found)) if go_installed else None
 
 
 def have_github_credentials() -> bool:

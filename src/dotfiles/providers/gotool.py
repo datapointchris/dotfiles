@@ -20,6 +20,7 @@ that needs it.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from dotfiles import catalog
@@ -43,6 +44,44 @@ def gobin() -> Path:
     into every test in the process.
     """
     return Path.home() / 'go' / 'bin'
+
+
+MODULE_INFO_SECONDS = 10.0
+"""`go version -m` reads one binary's embedded build info off disk — no proxy,
+no network — so this bounds a stuck subprocess, not a slow download."""
+
+
+def module_version(binary: Path) -> str | None:
+    """The module version `go install` actually resolved, read back from the
+    binary rather than asked of it.
+
+    Exact where `--version` is not: the toolchain has stamped this into every
+    binary it links since 1.18, using the same module-and-version pair `go
+    install <module>@latest` resolved, while a vendor's own banner is whatever
+    `-ldflags -X` a *release* build stamped it with — a flag `go install` never
+    passes, which is why `gdu --version` says `development` for every copy this
+    machine has ever built.
+
+    The `mod` line is the one to read, not `path`: `path` carries the module
+    below its command directory and, for gdu and sesh, a `/v5` or `/v2` major
+    version suffix that is part of the import path and not a version at all.
+    `mod` names the same module once more and follows it with the version on its
+    own, so nothing here has to strip a suffix to tell the two apart.
+
+    None where `go` cannot answer this — missing from PATH, or a binary it does
+    not recognise as one it built — same as a probe that would not say.
+    """
+    go = shutil.which('go')
+    if not go:
+        return None
+    result = effects.run([go, 'version', '-m', str(binary)], output=Output.QUIET, timeout=MODULE_INFO_SECONDS)
+    if not result.ok:
+        return None
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 3 and fields[0] == 'mod':
+            return fields[2]
+    return None
 
 
 def bundled(entry: catalog.GoTool) -> Path:
