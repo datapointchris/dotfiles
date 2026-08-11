@@ -12,9 +12,9 @@ an id. Neither end is allowed to invent one.
 
 **Timing is a field, not something parsed back out of the logs.** A statistic
 that has to grep a log stream is a statistic nobody computes, so every outcome
-carries its phase breakdown and `record_outcome` will not accept one without it.
+carries its step breakdown and `record_outcome` will not accept one without it.
 The split matters because "the install was slow" and "the *downloads* were slow"
-are different findings, and only a per-phase number tells them apart.
+are different findings, and only a per-step number tells them apart.
 
 Reading a record needs no special tooling — it is JSON, and the fleet shares one
 directory over Syncthing.
