@@ -141,8 +141,8 @@ def test_the_results_file_is_the_shape_the_harness_parses() -> None:
     machine = machines.load(WSL)
     measurement = network.Measurement(
         (
-            network.Verdict(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True),
-            network.Verdict(network.Probe('git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', Reach.CLONE), False),
+            network.ProbeResult(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True),
+            network.ProbeResult(network.Probe('git_clone', 'forgit', 'https://github.com/wfxr/forgit.git', Reach.CLONE), False),
         ),
         (),
     )
@@ -169,7 +169,7 @@ def test_the_recorded_reach_survives_the_file() -> None:
     reachable.
     """
     cloned = network.Probe('custom_installer', 'theme', 'https://github.com/datapointchris/theme.git', Reach.CLONE)
-    measurement = network.Measurement((network.Verdict(cloned, True),), ())
+    measurement = network.Measurement((network.ProbeResult(cloned, True),), ())
 
     written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
     row = next(line for line in written.splitlines() if line.startswith('YES'))
@@ -178,7 +178,7 @@ def test_the_recorded_reach_survives_the_file() -> None:
     assert not row.split('|')[1].strip().endswith('clone'), 'the section cannot answer it, which is the point'
 
 
-def measured_through(monkeypatch: pytest.MonkeyPatch, probe: network.Probe, *, ok: bool, written: str) -> network.Verdict:
+def measured_through(monkeypatch: pytest.MonkeyPatch, probe: network.Probe, *, ok: bool, written: str) -> network.ProbeResult:
     """`measure` with curl replaced by what a real run would have printed.
 
     Both attempts answer the same way, because what is under test is the reading of
@@ -239,12 +239,12 @@ def test_a_landing_reaches_the_results_file_and_an_absent_one_adds_no_column() -
     The absent case is why `records_landings` reads the header: these two rows are
     indistinguishable from a file written before the column existed.
     """
-    moved = network.Verdict(
+    moved = network.ProbeResult(
         network.Probe('language_manager', 'uv installer', 'https://astral.sh/uv/install.sh'),
         True,
         'releases.astral.sh',
     )
-    stayed = network.Verdict(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True)
+    stayed = network.ProbeResult(network.Probe('registry', 'crates.io', 'https://crates.io/api/v1/crates/bat'), True)
 
     rows = rendered_rows(network.Measurement((moved, stayed), ()))
 
@@ -274,7 +274,7 @@ def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeyp
 def test_the_summary_counts_what_the_rows_say() -> None:
     """A summary line derived from a second walk is a second chance to disagree
     with the table under it."""
-    verdicts = tuple(network.Verdict(network.Probe('registry', str(index), f'https://h/{index}'), index % 2 == 0) for index in range(5))
+    verdicts = tuple(network.ProbeResult(network.Probe('registry', str(index), f'https://h/{index}'), index % 2 == 0) for index in range(5))
 
     written = network.render(machines.load(WSL), network.Measurement(verdicts, ()), host='h', when='w', user='u', system='s')
 

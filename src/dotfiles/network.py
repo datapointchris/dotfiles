@@ -114,7 +114,7 @@ class Probe:
 
 
 @dc.dataclass(frozen=True, slots=True)
-class Verdict:
+class ProbeResult:
     probe: Probe
     reachable: bool
 
@@ -143,7 +143,7 @@ class Derived:
 
 @dc.dataclass(frozen=True, slots=True)
 class Measurement:
-    verdicts: tuple[Verdict, ...]
+    verdicts: tuple[ProbeResult, ...]
     unprobed: tuple[str, ...]
 
 
@@ -296,7 +296,7 @@ def _registry_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
     return tuple(found.values())
 
 
-def measure(probe: Probe) -> Verdict:
+def measure(probe: Probe) -> ProbeResult:
     """Whether this source answered, and which host answered, through `effects`.
 
     The range GET runs only when HEAD fails, so a host that accepts HEAD costs one
@@ -311,13 +311,13 @@ def measure(probe: Probe) -> Verdict:
     environment = {'GIT_TERMINAL_PROMPT': '0'} if probe.cloned else None
     answered = effects.run(probe.command(), env=environment, output=effects.Output.QUIET)
     if answered.ok:
-        return Verdict(probe, True, _landing(probe, answered.stdout))
+        return ProbeResult(probe, True, _landing(probe, answered.stdout))
 
     fallback = probe.fallback_command()
     if fallback is None:
-        return Verdict(probe, False, _landing(probe, answered.stdout))
+        return ProbeResult(probe, False, _landing(probe, answered.stdout))
     retried = effects.run(fallback, output=effects.Output.QUIET)
-    return Verdict(probe, retried.ok, _landing(probe, retried.stdout or answered.stdout))
+    return ProbeResult(probe, retried.ok, _landing(probe, retried.stdout or answered.stdout))
 
 
 def _landing(probe: Probe, written: str) -> str:
@@ -392,7 +392,7 @@ because the file that writes the column is the one that should say what identifi
 it."""
 
 
-def _row(verdict: Verdict) -> str:
+def _row(verdict: ProbeResult) -> str:
     """One measured row, ending at REACH unless there is a landing to add.
 
     The trailing separator is omitted rather than emitted empty, so a row carries a

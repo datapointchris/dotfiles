@@ -115,12 +115,12 @@ def test_a_file_with_the_landed_column_derives_the_cdn_instead(monkeypatch: pyte
     """Rendered rather than hand-written, because the header is the format marker and
     only `network.render` writes it — a hand-built file here would keep passing after
     the real one stopped saying what this reads."""
-    asset = network.Verdict(
+    asset = network.ProbeResult(
         network.Probe('github_asset', 'release asset download', 'https://github.com/o/r/releases/download/v1/x'),
         False,
         'release-assets.githubusercontent.com',
     )
-    clone = network.Verdict(network.Probe('git_clone', 'dotfiles', network.DOTFILES_REPO, network.Reach.CLONE), True)
+    clone = network.ProbeResult(network.Probe('git_clone', 'dotfiles', network.DOTFILES_REPO, network.Reach.CLONE), True)
     written = network.render(
         machines.load('wsl-work-workstation'),
         network.Measurement((asset, clone), ()),
