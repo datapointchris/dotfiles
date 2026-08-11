@@ -269,6 +269,17 @@ The install method chosen for each tool is declared in `install/packages.yml` â€
 source of truth, not a list here. The rule behind the choices: a distro package that trails
 upstream by a major version goes to GitHub releases or `cargo-binstall` instead.
 
+**Go, cargo, release and custom-installer entries carry currency; npm and uv do not.** That is not
+an inconsistency to even up. `go install @latest` and `cargo binstall` *are* the upgrade and
+nothing else moves them, so being behind the repo the declaration names is drift `plan` reports.
+npm and PyPI decide what latest means and upgrade in bulk, so asking per package is asking their
+own question back.
+
+**A GUI declares `reports_version: false` and is not currency-checked.** The probe runs whatever
+binary the declaration names, and `webviewrs` takes its first argument as a URL: it opened a window
+titled `version` and blocked three `dotfiles plan` runs on its event loop. Do not fix that by
+dropping the bare `version` probe, which is the read `terrascan` needs.
+
 ## Implementation
 
 ### Single Source of Truth: packages.yml

@@ -219,6 +219,12 @@ asked at the moment.
 `observe` is never handed a `Privilege`, so "the read-only verbs do not escalate"
 is structural rather than promised, and it covers `plan` and `check` alike.
 
+**Probe with `sudo -n true`, never `sudo -v`.** `-v` authenticates, so it wants a
+terminal and fails on a `NOPASSWD` box where sudo works perfectly — and the answer
+is cached for the run, so one failed probe declined root for every write after it,
+on every headless caller there is. Passwordless is checked before prompting is
+offered, because `offer` governs whether to *ask*, not whether to escalate.
+
 **This reverses the design that stood here.** One authorization at the front,
 held open by a keepalive timer, was the rule until it was measured: keeping a
 sudo timestamp alive **does not work on macOS**, repeatedly. So the front prompt

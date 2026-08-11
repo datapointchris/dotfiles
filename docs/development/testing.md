@@ -121,6 +121,48 @@ parameters: `tests/e2e/harness.py` holds the definitions, each pointed at the
 matching machine manifest. `eza -1 tests/install/e2e/` is what a container cannot
 be — a real macOS account, or the current machine.
 
+## What the container rig must not do
+
+**The firewall is derived from the measurement, never hand-listed.** The offline
+and restricted environments parse
+`install/offline/connectivity-results.txt`, which is why `github.com` stays
+*reachable*: its block on the real network is path-scoped, and blackholing the
+host took every clone-based installer down with it. The three asset CDNs express
+that path scoping as host rules. Probes replay the recorded request, user agent
+included — a synthesized one reported crates.io blocked on what was really a 403.
+
+**The container is authenticated from the host's `gh`.** Sixty anonymous API calls
+an hour are shared with the host's public IP and one full install spends most of
+them, so an unauthenticated second run inside the hour is indistinguishable from a
+broken installer. The token is passed by name so it stays out of an argument list,
+`pytest_report_header` prints whether the run got a credential, and a check at the
+cheapest tier asserts the *container's* own rate limit is 5000 rather than 60 —
+the header reads the host and proves only that a credential was found.
+
+**The base image lives in docker's store; the ledger lives in the cache dir.** The
+image is the artifact, and `docker save`/`load` of 14 GB duplicates storage docker
+already manages. What docker cannot say is which plan produced a tag, so
+`$XDG_CACHE_HOME/dotfiles/e2e-bases.json` says it: tagged by a digest of the
+*resolved plan* at or below the stage plus the source image id, so a comment edit
+does not rebuild and a dropped package does. Rebuilt after two weeks regardless,
+because the digest cannot see which versions the distro shipped.
+
+**Select an environment with `--environment`, never `-k`.** `-k` matches test names
+too, so `-k offline` selected all four environments, started a container over a
+name another process was installing into, and the `docker rm -f` killed that
+install at 137 — which reads as an OOM.
+
+**The harness never reads the product's environment.** It mounted
+`paths.REPO_ROOT`, which honours `$DOTFILES_DIR`, so every run launched from a
+worktree installed `main`'s code while reporting on the branch. Anchor on marker
+files, not on the product's own configuration and not on `parents[n]`.
+
+**Production code never asks whether it is under test.** A resource probes the
+real precondition — the D-Bus socket flatpak needs, the kernel node ROCm talks to
+— rather than reading `DOTFILES_DOCKER_TEST`, which is a harness telling
+production code it is being tested. `bootstrap.SYSTEM_BUS` and `evidence.AMD_KFD`
+carry the reasoning at the constants themselves, including what was tried instead.
+
 ## Verification
 
 On a real machine, ask the machine:

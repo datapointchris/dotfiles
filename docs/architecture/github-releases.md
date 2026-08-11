@@ -141,6 +141,22 @@ the asset-id lookup and the checksum entry recorded under the real name. lazygit
 was fetched as `Linux_x86_64` against a published `linux_x86_64` for exactly that
 reason, invisibly, because the download succeeded anyway.
 
+## The token goes to GitHub hosts and nowhere else
+
+`request` attached `Authorization: Bearer` to whatever URL it was handed, so a PAT
+reached `s3.amazonaws.com`, `awscli.amazonaws.com`, `releases.hashicorp.com` and
+`pypi.org` on any machine with `gh` logged in. The header is scoped by hostname
+**equality** — a suffix match hands the token to whoever registers
+`notgithub.com` — and the asset CDNs are excluded deliberately: they serve a
+pre-signed URL and S3 answers an unrecognised bearer token with a 400, which is
+how the leak surfaced in the first place.
+
+The client is `httpx2`, not `urllib.request`, for the same reason: httpx2 strips
+`Authorization` across a redirect on its own, so the hand-rolled redirect handler
+was a security mechanism maintained here against one the client's authors already
+maintain. Redirects are off by default and the timeout is 5s, both stated at the
+call site.
+
 ## Checksum verification
 
 Every download is checked against the SHA-256 the release published, **before
