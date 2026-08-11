@@ -24,6 +24,7 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import shutil
+import tomllib
 from pathlib import Path
 from typing import Protocol
 
@@ -53,6 +54,31 @@ def uv_tool_dir() -> Path:
     also what lets a test point it somewhere without patching anything.
     """
     return Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools')
+
+
+def uv_tool_pin(name: str) -> str | None:
+    """The revision `uv tool install` recorded for a tool, or None if unpinned.
+
+    uv writes the requirement it resolved into the tool's own receipt, so the
+    pinned tag is readable without running the tool or asking GitHub. That matters
+    beyond saving a subprocess per tool: several of these CLIs cannot report their
+    own version at all, and one that answers with a hardcoded placeholder is worse
+    than silence because it parses.
+
+    None means unpinned, which is not the same as absent. A repo publishing no
+    release installs from its default branch and records no `?rev=`, and that set
+    is larger than the one `tracks_branch` declares — so the receipt, not the
+    declaration, is what decides whether a version can be compared at all.
+    """
+    try:
+        recorded = tomllib.loads((uv_tool_dir() / name / 'uv-receipt.toml').read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    for requirement in recorded.get('tool', {}).get('requirements', ()):
+        _, pinned, revision = str(requirement.get('git', '')).partition('?rev=')
+        if pinned and requirement.get('name') == name:
+            return revision
+    return None
 
 
 def macos_app(name: str) -> Path | None:

@@ -34,6 +34,15 @@ release is newest.
 `tracks_branch: true` in packages.yml marks the exception — a repo publishing no releases has no tag
 to pin, so it follows its default branch and is upgraded with `uv tool upgrade`.
 
+Measuring the pin is the other half, and it landed much later. Until it did, `dotfiles` reported
+every `git_uv_tools` entry converged for as long as its directory existed, so four tools sat months
+behind while `plan` said there was nothing to do — the same blindness the receipt caused in the
+updater, reproduced in the checker. These entries are compared against the releases cache like every
+other section that installs from a named repo, and the *installed* side is read back from the
+receipt rather than by running the tool: `uv tool install` does none of the version stamping a
+release build does, so a tool that answers `--version` answers with whatever its source hardcodes,
+and several of them cannot answer at all.
+
 ## Key Learnings
 
 - **An unpinned git install is not the neutral default; it is a distinct, degraded state.**

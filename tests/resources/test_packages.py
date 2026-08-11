@@ -182,6 +182,101 @@ def test_a_library_only_tool_with_no_directory_is_missing_not_unknown(tmp_path: 
     assert verdicts(live) == {'uv/numpy': Verdict.MISSING}
 
 
+def receipt(directory: Path, name: str, requirement: str) -> None:
+    (directory / name).mkdir(exist_ok=True)
+    (directory / name / 'uv-receipt.toml').write_text(f'[tool]\nrequirements = [{requirement}]\n')
+
+
+def test_a_git_installed_tool_reports_the_revision_uv_recorded(uv_tools: Path) -> None:
+    receipt(uv_tools, 'doit', '{ name = "doit", git = "https://github.com/datapointchris/doit.git?rev=v1.0.0" }')
+
+    assert ev.uv_tool_pin('doit') == 'v1.0.0'
+
+
+def test_a_tool_installed_from_its_default_branch_has_no_pin(uv_tools: Path) -> None:
+    """A repo publishing no release records no `?rev=`, so there is no version to
+    compare against. That is a measured answer rather than a failure to look."""
+    receipt(uv_tools, 'typos', '{ name = "typos", git = "https://github.com/datapointchris/typos.git" }')
+
+    assert ev.uv_tool_pin('typos') is None
+
+
+def test_a_tool_with_no_receipt_has_no_pin(uv_tools: Path) -> None:
+    (uv_tools / 'ripgrep').mkdir()
+
+    assert ev.uv_tool_pin('ripgrep') is None
+
+
+def test_a_receipt_pinning_something_other_than_the_tool_does_not_answer(uv_tools: Path) -> None:
+    """uv records the requirement under the tool's own name, and a receipt can
+    carry a dependency's pin as readily as the tool's own."""
+    receipt(uv_tools, 'indy', '{ name = "a-dependency", git = "https://github.com/other/dep.git?rev=v9.9.9" }')
+
+    assert ev.uv_tool_pin('indy') is None
+
+
+GIT_UV = {'git_uv_tools': [{'name': 'doit', 'repo': 'https://github.com/datapointchris/doit.git'}]}
+DECLARES_GIT_UV = {'machine': 'box', 'platform': 'linux', 'git_uv_tools': ['doit']}
+PINNED = '{{ name = "doit", git = "https://github.com/datapointchris/doit.git?rev={tag}" }}'
+UNPINNED = '{ name = "doit", git = "https://github.com/datapointchris/doit.git" }'
+
+
+def test_a_git_uv_tool_behind_its_newest_release_is_stale(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
+    """The whole point: this section reported converged for as long as the tool
+    directory existed, so one eight releases behind read as current."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.0.0'))
+    cached(release_cache, {'datapointchris/doit': 'v1.1.0'})
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('uv-git/doit', Verdict.STALE)]
+
+
+def test_a_git_uv_tool_at_its_newest_release_reports_nothing(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.1.0'))
+    cached(release_cache, {'datapointchris/doit': 'v1.1.0'})
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert changes(live) == ()
+
+
+def test_an_unpinned_git_uv_tool_is_stale_against_a_published_release(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """`catalog.GitUvTool` calls an unpinned install "the degraded state rather than
+    the flexible one", so it is drift `apply` repairs rather than a version nobody
+    could read."""
+    receipt(uv_tools, 'doit', UNPINNED)
+    cached(release_cache, {'datapointchris/doit': 'v1.1.0'})
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('uv-git/doit', Verdict.STALE)]
+    assert 'default branch' in found[0].detail
+
+
+def test_a_git_uv_tool_with_a_cold_cache_is_unmeasured_not_current(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """Nothing asked upstream, so nothing can say. Reading that as converged is the
+    exact failure `Verdict.UNKNOWN` exists for."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.0.0'))
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('uv-git/doit', Verdict.UNKNOWN)]
+
+
+def test_a_branch_tracking_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
+    """It publishes no release, so there is no tag it could be behind. An UNKNOWN
+    row on every plan for something unanswerable by construction is noise, not a
+    finding."""
+    declared = {'git_uv_tools': [{'name': 'doit', 'repo': 'https://github.com/datapointchris/doit.git', 'tracks_branch': True}]}
+    receipt(uv_tools, 'doit', UNPINNED)
+    live = session(tmp_path, declared, DECLARES_GIT_UV)
+
+    assert changes(live) == ()
+
+
 def test_a_uv_tool_on_path_without_its_directory_still_counts(tmp_path: Path, fake_bin: Path, uv_tools: Path) -> None:
     """A tool installed some other way is still installed. The check reports the
     machine, not the mechanism."""

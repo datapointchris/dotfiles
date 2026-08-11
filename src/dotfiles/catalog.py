@@ -135,20 +135,40 @@ which tags every build and publishes no release.
 """
 
 
-def owner_of(value: str) -> str | None:
-    """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
+def _repo_segments(value: str) -> list[str]:
+    """A `repo`, `github_repo` or `package` field reduced to its path segments.
 
-    Derived rather than tagged, per `data.md` § "Ownership is derived from data,
-    never from a tag" — it is what `--owner` filters on, and it caught an entry
-    the four hand-written tags had missed. The shapes disagree: `owner/name`, a
-    clone URL, and a Go import path all appear.
+    The shapes disagree: `owner/name`, a clone URL, and a Go import path all
+    appear, which is why this is a parse rather than a split.
     """
     path = value.split('://', 1)[-1].removesuffix('.git').strip('/')
     segments = [segment for segment in path.split('/') if segment]
     # A leading host (github.com) appears only in the URL and Go-import forms.
     if segments and '.' in segments[0]:
         segments = segments[1:]
+    return segments
+
+
+def owner_of(value: str) -> str | None:
+    """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
+
+    Derived rather than tagged, per `data.md` § "Ownership is derived from data,
+    never from a tag" — it is what `--owner` filters on, and it caught an entry
+    the four hand-written tags had missed.
+    """
+    segments = _repo_segments(value)
     return segments[0] if segments else None
+
+
+def repo_slug_of(value: str) -> str:
+    """`owner/name`, which is what a GitHub API path and the release cache key on.
+
+    Empty when the value names no repository. A caller cannot ask GitHub about a
+    Go import path that carries only a host and an owner, and an empty answer is
+    already how `_has_currency` reads "not a question this entry can be asked".
+    """
+    segments = _repo_segments(value)
+    return '/'.join(segments[:2]) if len(segments) >= 2 else ''
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

@@ -43,7 +43,7 @@ from dotfiles.session import Session
 
 NAME = 'packages'
 
-CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller)
+CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.GitUvTool)
 """The entries whose currency is a question with an upstream answer.
 
 All four install from a repo this declaration names, so "what should be
@@ -143,7 +143,7 @@ class PackagesResource:
         return Observed(
             evidence=evidence,
             met=ev.measured_preconditions(),
-            reported={item.address: found for item in present if (found := ev.reported_version(item.executable))},
+            reported={item.address: found for item in present if (found := _installed_version(item))},
             shadowed=_shadowing(mine, evidence, plan, session.repo),
             latest=latest,
             consulted_network=consulted,
@@ -287,6 +287,23 @@ def _has_currency(item: DesiredItem) -> bool:
     return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
 
 
+def _installed_version(item: DesiredItem) -> str | None:
+    """What is actually installed, from whichever source can say it exactly.
+
+    A git uv tool is asked through uv's receipt rather than by running it, and that
+    *replaces* the probe rather than supplementing it, because the probe's answer
+    for these is worse than no answer. `uv tool install` builds from a checkout
+    without the `-ldflags`-equivalent stamping a release build does, so a tool that
+    answers `--version` at all answers with whatever its source hardcodes — a
+    plausible number, unrelated to the revision on disk, that `versions.parse` reads
+    happily and compares wrongly. Item 191 records the several that cannot answer
+    at all. The receipt is what uv resolved, so it is exact for both.
+    """
+    if isinstance(item.entry, catalog.GitUvTool):
+        return ev.uv_tool_pin(item.name)
+    return ev.reported_version(item.executable)
+
+
 def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
     if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
@@ -294,6 +311,16 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
         return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags)
     if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)
+    if isinstance(entry, catalog.GitUvTool):
+        # A `tracks_branch` repo publishes no release, so there is no tag it could
+        # be behind and no upstream to consult. Naming no repo is how that reaches
+        # `_has_currency`, which already reads an empty one as "not a question this
+        # entry can be asked" — the same answer a Go tool declared by module path
+        # alone gets, rather than a second exception written beside it.
+        # Through `repo_slug_of` because this section carries a clone URL where
+        # every other one carries a bare `owner/name` — uv is handed the URL
+        # verbatim at install time — and the cache keys on what the API path wants.
+        return releases.Wanted(repo='' if entry.tracks_branch else catalog.repo_slug_of(entry.repo))
     return releases.Wanted(repo='')
 
 
@@ -368,6 +395,8 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     """
     reported = observed.reported.get(item.address)
     if reported is None:
+        if isinstance(item.entry, catalog.GitUvTool):
+            return _unpinned_git(item, observed)
         return (
             Change(
                 NAME,
@@ -414,6 +443,44 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     return _compared(item, reported, cached.version, versions.at_least(reported, cached.version), f'{cached.version} is the latest release')
+
+
+def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
+    """A git tool whose receipt records no revision, so it came from a default branch.
+
+    `catalog.GitUvTool` calls that "the degraded state rather than the flexible
+    one", which makes it drift `apply` repairs by reinstalling against the newest
+    release rather than a version nobody could read. Its own updater refuses to run
+    in this state, so nothing else is coming to fix it either.
+
+    Only once something has confirmed there *is* a release, though: a cold cache
+    cannot tell "this repo publishes none" from "nobody asked yet", and calling the
+    first drift would report a permanently unrepairable row on every plan.
+    """
+    cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
+    if cached is None:
+        return (
+            Change(
+                NAME,
+                item.stage,
+                item.address,
+                Verdict.UNKNOWN,
+                detail=_unmeasurable(item, observed),
+                repair=Repair.NONE,
+                advice=_unmeasurable_advice(observed),
+                desired=item,
+            ),
+        )
+    return (
+        Change(
+            NAME,
+            item.stage,
+            item.address,
+            Verdict.STALE,
+            detail=f'installed from the default branch, not a release; {cached.version} is the newest',
+            desired=item,
+        ),
+    )
 
 
 def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
