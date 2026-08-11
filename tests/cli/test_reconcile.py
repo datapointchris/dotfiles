@@ -167,6 +167,57 @@ def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
     assert checked.attention == 1
 
 
+def test_the_issue_line_names_the_item_and_its_fix() -> None:
+    """The summary used to say only a count, and by the time a reader reaches it
+    the rows that explained the problem have scrolled past `render_change`.
+    Naming the item and its advice here makes this line the whole answer on its
+    own."""
+    changes = [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER', advice='set it in ~/.env')]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert folded.detail == '1 item(s) need attention that apply cannot give: env/WINDOWS_USER — set it in ~/.env'
+
+
+def test_the_issue_line_names_every_item_and_the_shared_fix_once() -> None:
+    changes = [
+        change(Verdict.UNDECLARED, Repair.BY_HAND, item='ghrelease/shellcheck', advice='remove the stray copy'),
+        change(Verdict.STALE, Repair.BY_HAND, item='symlinks/.config/git/ignore', advice='remove the stray copy'),
+    ]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert 'ghrelease/shellcheck' in folded.detail
+    assert 'symlinks/.config/git/ignore' in folded.detail
+    assert folded.detail.count('remove the stray copy') == 1
+
+
+def test_the_issue_line_names_items_without_a_fix_when_their_advice_differs() -> None:
+    """Two different next steps cannot both be "the" fix, so the line names what
+    to look at and leaves the instructions to the rows above rather than picking
+    one arbitrarily."""
+    changes = [
+        change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER', advice='set it in ~/.env'),
+        change(Verdict.MISSING, Repair.BY_HAND, item='identity/user.name', advice='git config --global user.name ...'),
+    ]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert 'env/WINDOWS_USER' in folded.detail
+    assert 'identity/user.name' in folded.detail
+    assert 'set it in ~/.env' not in folded.detail
+
+
+def test_the_issue_line_caps_how_many_items_it_names() -> None:
+    """A resource with dozens of stray binaries must not turn the summary line
+    into the screen of rows it exists to summarize."""
+    changes = [change(Verdict.MISSING, Repair.BY_HAND, item=f'ghrelease/tool{n}', advice='fix it') for n in range(6)]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+
+    assert '2 more' in folded.detail
+
+
 def test_a_package_a_version_behind_is_not_something_wrong() -> None:
     """The case that made the split necessary. Drift is the normal state of a
     machine between applies; reporting it as an Issue is what trained the nudge

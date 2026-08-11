@@ -63,16 +63,23 @@ def render_result(result: ResourceResult) -> None:
 
 
 def render_change(change: Change) -> None:
-    """One item's verdict, on stderr.
+    """One item's verdict, on stderr — and, where there is one, the next step.
 
     Below a composite `check`, these are the evidence for the row that follows,
     not the answer a caller parses — which is `--json`. Keyed on the verdict's
     string value for the same reason `render_result` is: presentation should not
     be a reason to import the logic.
+
+    `advice` prints as its own line rather than appended to `detail`, aligned
+    under it: the two answer different questions — what is wrong, and what to do
+    about it — and a reader scanning a screen of rows for the instruction wants
+    it in one column, not folded into a sentence of varying length.
     """
     colour = CHANGE_COLOURS[str(change.verdict)]
     observed = f' (is {change.observed!r})' if change.observed else ''
     err_console.print(f'  [{colour}]{change.verdict:<11}[/] {change.item:<28} {change.detail}{observed}')
+    if change.advice:
+        err_console.print(f'  {"":<11} {"":<28} [blue]→[/] {change.advice}')
 
 
 def render_finding(section: str, message: str) -> None:

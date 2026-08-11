@@ -210,7 +210,26 @@ def from_changes(address: str, changes: Sequence[Change], converged: str, lens: 
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {counts["privileged"]} needing root' if counts['privileged'] else ''
         return ResourceResult(address, ResourceVerdict.DRIFT, f'{len(kept)} item(s) differ from the declaration{root}{gap}', **counts)
-    return ResourceResult(address, ResourceVerdict.ISSUE, f'{len(kept)} item(s) need attention that apply cannot give' + gap, **counts)
+    detail = f'{len(kept)} item(s) need attention that apply cannot give{_lead(kept)}{gap}'
+    return ResourceResult(address, ResourceVerdict.ISSUE, detail, **counts)
+
+
+def _lead(kept: Sequence[Change]) -> str:
+    """Which items, and the fix if every one of them takes the same one.
+
+    A bare count answers nothing once the reader is at this line, having already
+    scrolled past the rows `render_change` printed for it — this is the line a
+    shell nudge or a scheduled-run summary carries on its own, with those rows
+    long gone. Naming the items makes a scrollback search find them again; naming
+    the fix too, when it is the one fix, means this line alone is the answer.
+    """
+    if not kept:
+        return ''
+    shown = ', '.join(change.item for change in kept[:4])
+    names = shown if len(kept) <= 4 else f'{shown} and {len(kept) - 4} more'
+    distinct_fixes = {change.advice for change in kept if change.advice}
+    fix = f' — {next(iter(distinct_fixes))}' if len(distinct_fixes) == 1 else ''
+    return f': {names}{fix}'
 
 
 def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult]:
