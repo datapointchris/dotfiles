@@ -2,7 +2,7 @@
 # System Configuration
 # ================================================================
 # The half of system state that is configuration rather than payload:
-# group memberships, unit enablement, files under /etc, and the login shell.
+# group memberships, unit enablement, root-owned config files, and the login shell.
 # `install/packages.yml` says what a machine installs; this says what a machine
 # *is* once the packages are on it.
 #
@@ -66,6 +66,68 @@ managed_files:
     path: /etc/zshenv
     alternate_path: /etc/zsh/zshenv
     append_line: export ZDOTDIR="$HOME/.config/zsh"
+
+  # `/etc/vivaldi/policies`, not `/etc/opt/vivaldi/policies`. Every guide online
+  # says the latter, because that is where Google-branded Chrome reads; Vivaldi
+  # is an unbranded Chromium build and compiles in the former, so the file at the
+  # documented path is read by nothing and nothing says so. The binary settles
+  # it: `strings -a /opt/vivaldi/vivaldi-bin | rg '^/etc/'`.
+  #
+  # Forcelist because Chromium has no policy for "install it but let me remove
+  # it". Both extensions that would want one carry their own off switch, which
+  # is the toggle actually wanted.
+  #
+  # Dark Reader, Bitwarden, uBlock Origin Lite — the three of Safari's `mas_apps`
+  # and `zen_extensions` with a Chromium build. Hush and UnTrap are Safari
+  # content blockers with no Chromium equivalent, and Zen's full uBlock Origin is
+  # MV2, which Chromium 152 dropped and Vivaldi with it.
+  - name: vivaldi-extensions
+    description: Extensions Vivaldi force-installs, matching Safari and Zen
+    requires_package: vivaldi
+    path: /etc/vivaldi/policies/managed/extensions.json
+    content: |
+      {
+        "ExtensionInstallForcelist": [
+          "eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx",
+          "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx",
+          "ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx"
+        ]
+      }
+
+  # The same three, said the way macOS makes a policy binding. Chromium reads
+  # this through CFPreferences and only treats a value as mandatory when the
+  # domain is *forced*, which is what `/Library/Managed Preferences` means — a
+  # `defaults write` into the user domain arrives as merely recommended, and
+  # ExtensionInstallForcelist has no recommended level, so it is discarded in
+  # silence. That is why this is not a `macos_defaults` row.
+  #
+  # Device scope, not `/Library/Managed Preferences/<user>/`: the per-user
+  # directory is rebuilt from installed configuration profiles, so a file left
+  # there is another process's to delete.
+  #
+  # Narrowed on the coordinate rather than `requires_package`, which reads the
+  # first pass's `system_packages` only — on a Mac Vivaldi is a cask, and a cask
+  # is invisible to it.
+  #
+  # cfprefsd caches the domain, so the extensions appear at the next login rather
+  # than the moment this lands.
+  - name: vivaldi-extensions-macos
+    description: Extensions Vivaldi force-installs, matching Safari and Zen
+    os_family: darwin
+    path: /Library/Managed Preferences/com.vivaldi.Vivaldi.plist
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>ExtensionInstallForcelist</key>
+        <array>
+          <string>eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx</string>
+          <string>nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx</string>
+          <string>ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx</string>
+        </array>
+      </dict>
+      </plist>
 
 login_shell:
   - name: zsh

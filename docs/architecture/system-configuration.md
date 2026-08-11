@@ -233,7 +233,47 @@ prompt on machines that turn out to need nothing. `authorize()`, `Escalation`,
 `stop()` and the self-re-arming `threading.Timer` are gone, and with them the
 generator-finalization hazard of a background thread outliving a run.
 
-## Two things worth not rediscovering
+## A browser's extensions are configuration where the browser has a policy
+
+Safari's extensions are App Store apps and Zen's are installed by hand from
+addons.mozilla.org, so both are `packages.yml` rows — payload, fetched and
+versioned. Vivaldi's are neither. Chromium reads an enterprise policy file and
+installs what it names, which makes the *file* the declared state and the
+extensions a consequence of it. So the whole set is a `managed_files` row rather
+than a `vivaldi_extensions` section with a provider behind it: there is nothing
+per-extension for a provider to do that writing one file does not already do,
+and the row converges through machinery that exists.
+
+It is two rows, because the two platforms disagree about what a policy *is*
+rather than about where it lives. Linux is a JSON file in a directory Chromium
+scans. macOS is a preference domain read through CFPreferences, binding only
+when the domain is **forced** — which is what `/Library/Managed Preferences`
+means, and why this cannot be a `macos_defaults` row: a `defaults write` into
+the user domain arrives as merely *recommended*, `ExtensionInstallForcelist` has
+no recommended level, and the value is discarded with nothing said. The Mac row
+is device-scope rather than `/Library/Managed Preferences/<user>/`, which is
+rebuilt from installed configuration profiles and so is another process's to
+delete. cfprefsd caches the domain, so the extensions arrive at the next login.
+
+The Linux row narrows on `requires_package: vivaldi`; the Mac row narrows on
+`os_family`, because `requires_package` is resolved against the first pass's
+`system_packages` alone and on a Mac Vivaldi is a cask, which that set cannot
+see.
+
+The trade is that `packages list` cannot see the three extensions, because they
+are inside a policy document rather than rows, and that the two documents restate
+one list in two syntaxes. That is the point at which a section and a provider
+would earn themselves; a list of three does not.
+
+## Three things worth not rediscovering
+
+**Vivaldi reads `/etc/vivaldi/policies`, not `/etc/opt/vivaldi/policies`.** The
+`/etc/opt/<vendor>` form is where Google-*branded* Chrome reads, and it is what
+every guide and forum answer repeats. Vivaldi ships an unbranded Chromium build,
+which compiles in the shorter path, so a policy file at the documented location
+is read by nothing and reports no error — the extensions simply never appear.
+`strings -a /opt/vivaldi/vivaldi-bin | rg '^/etc/'` settles it in one command,
+and is worth preferring to any amount of documentation.
 
 **The system zshenv is `/etc/zsh/zshenv` on Debian.** Debian builds zsh with
 `--enable-etcdir=/etc/zsh`; everyone else's is `/etc/zshenv`. Writing to the

@@ -702,12 +702,16 @@ class SystemdUnit(SystemConfig):
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class ManagedFile(SystemConfig):
-    """A file under `/etc` this repo owns some or all of.
+    """A root-owned configuration file this repo owns some or all of.
 
     `content` means the whole file is ours and is compared exactly; `append_line`
     means the file is the OS's and only the presence of one line is ours. Exactly
     one of them, because a file that is both wholly ours and only partly ours is
     not a state anything can converge on.
+
+    Mostly `/etc`, and not defined as `/etc`: macOS keeps the equivalent under
+    `/Library/Managed Preferences`, and both are the same question — a
+    world-readable file a root write repairs.
     """
 
     section: ClassVar[str] = 'managed_files'

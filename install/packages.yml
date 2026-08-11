@@ -1589,6 +1589,10 @@ mas_apps:
 # Manual install from addons.mozilla.org (no automation available)
 # Platform: Arch Linux (Zen browser), any Firefox-based browser
 # Zen is Firefox-based and supports all Firefox Add-ons
+#
+# Vivaldi's are NOT here. Chromium reads an enterprise policy file, so they are
+# real converged state rather than a list to install by hand — declared as the
+# `vivaldi-extensions` managed file in install/system.yml.
 
 zen_extensions:
   - name: Bitwarden
