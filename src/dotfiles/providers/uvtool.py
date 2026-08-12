@@ -17,6 +17,13 @@ cannot disagree about which release that is.
 `tracks_branch` is the declared exception: a repo publishing no releases has no
 tag to pin to.
 
+**A repair that does not move the requirement needs `--reinstall`.** `uv tool
+install` is a no-op against an unchanged requirement, which is every PyPI entry
+and every git entry whose pin has not moved. A currency-driven repair does move
+it — a new release changes the tag in the requirement — so the flag matters
+exactly where no comparison could have seen the fault: corrupt bytes, a
+half-written venv, a version string nobody can parse.
+
 What is *not* here is the credentials check the bash carried. A private repo with
 no `gh` login resolves to `Repair.BY_HAND` in `resources/packages.repair_for`, so
 the engine never offers the change to a provider at all — one rule for every
@@ -44,7 +51,7 @@ as though it were a repo.
 """
 
 
-def install(entry: catalog.UvTool, *, offline: bool) -> Result:
+def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Result:
     """One PyPI tool.
 
     Offline is not refused: the bundle stages wheels for this CLI's own closure
@@ -52,11 +59,11 @@ def install(entry: catalog.UvTool, *, offline: bool) -> Result:
     tools — so refusing would install none of them on the box the offline path
     exists for.
     """
-    return _uv_tool_install(entry.name, entry.name, offline=offline)
+    return _uv_tool_install(entry.name, entry.name, offline=offline, again=again)
 
 
-def install_git(entry: catalog.GitUvTool, *, offline: bool) -> Result:
-    return _uv_tool_install(entry.name, requirement(entry), offline=offline)
+def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:
+    return _uv_tool_install(entry.name, requirement(entry), offline=offline, again=again)
 
 
 def requirement(entry: catalog.GitUvTool) -> str:
@@ -91,8 +98,16 @@ def latest_release(repo: str) -> str | None:
     return github_release.latest_version(found.group(1)) if found else None
 
 
-def _uv_tool_install(name: str, target: str, *, offline: bool) -> Result:
-    completed = effects.run(['uv', 'tool', 'install', target], output=Output.QUIET)
+def _uv_tool_install(name: str, target: str, *, offline: bool, again: bool) -> Result:
+    """`again` is what makes a repair of an already-present tool do anything.
+
+    uv compares the requirement against its receipt and exits 0 printing
+    "already installed" when the two match, and this reads that exit code as
+    success — so without the flag a PyPI tool and an already-pinned git tool both
+    record DONE having installed nothing.
+    """
+    command = ['uv', 'tool', 'install', '--reinstall', target] if again else ['uv', 'tool', 'install', target]
+    completed = effects.run(command, output=Output.QUIET)
     if completed.ok:
         return Result(True, f'{name} installed from {target}')
 

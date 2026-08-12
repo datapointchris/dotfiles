@@ -80,6 +80,38 @@ def test_a_pypi_tool_is_installed_by_name(uv) -> None:
     assert reached.calls == [('uv', 'tool', 'install', 'ruff')]
 
 
+def test_a_repair_that_would_not_move_the_requirement_forces_the_install(uv) -> None:
+    """`uv tool install ruff` against an installed ruff prints "already installed"
+    and exits 0, which this reads as success — so a repair recorded DONE having
+    done nothing. That defeats the whole of what `--reinstall` exists for: the
+    fault no comparison can see."""
+    reached = uv()
+
+    uvtool.install(RUFF, offline=False, again=True)
+
+    assert reached.calls == [('uv', 'tool', 'install', '--reinstall', 'ruff')]
+
+
+def test_an_ordinary_install_does_not_force_anything(uv) -> None:
+    reached = uv()
+
+    uvtool.install(RUFF, offline=False)
+
+    assert '--reinstall' not in reached.calls[0]
+
+
+def test_a_git_tool_repaired_again_is_forced_at_its_pin(uv, released) -> None:
+    """The git half needs it for the case its pin cannot express: measured stale
+    while the newest release is the tag it is already pinned to, which leaves the
+    requirement unchanged and uv declining to move it forever."""
+    released('v6.0.0')
+    reached = uv()
+
+    uvtool.install_git(SYNCER, offline=False, again=True)
+
+    assert reached.calls == [('uv', 'tool', 'install', '--reinstall', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
+
+
 def test_a_failure_reports_what_uv_said(uv) -> None:
     uv(ok=False, said='error: distribution not found for: nosuchtool')
 

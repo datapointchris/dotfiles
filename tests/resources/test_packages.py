@@ -867,7 +867,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False):
+    def record(entry, target=None, *, offline=False, again=False):
         attempted.append(entry.name)
         return ghrelease.Result(True, f'{entry.name} installed')
 

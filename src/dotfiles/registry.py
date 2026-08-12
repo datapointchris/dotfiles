@@ -395,7 +395,15 @@ class SystemPackageProvider(RegistryProvider):
 
 @dc.dataclass(frozen=True, slots=True)
 class UvToolProvider(CatalogProvider):
-    """uv installs a tool per directory, and some are libraries with no script."""
+    """uv installs a tool per directory, and some are libraries with no script.
+
+    `STALE` is what asks uv to install again rather than `session.reinstall`,
+    though `--reinstall` is the reason this is needed at all. The Change already
+    carries that decision — `packages.diff` gives a named entry the `STALE`
+    verdict — so reading the session for a second copy of it would let the two
+    disagree. It also reaches the git tool that measured stale while its pin did
+    not move, which is the one uv would otherwise decline to repair forever.
+    """
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_uv_tool(item)
@@ -404,7 +412,7 @@ class UvToolProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.UvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
-        result = uvtool.install(entry, offline=session.offline)
+        result = uvtool.install(entry, offline=session.offline, again=change.verdict is Verdict.STALE)
         return Outcome.from_result(change, result)
 
 
@@ -421,7 +429,7 @@ class GitUvToolProvider(UvToolProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.GitUvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
-        result = uvtool.install_git(entry, offline=session.offline)
+        result = uvtool.install_git(entry, offline=session.offline, again=change.verdict is Verdict.STALE)
         return Outcome.from_result(change, result)
 
 

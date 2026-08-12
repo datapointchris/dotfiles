@@ -11,17 +11,24 @@ from __future__ import annotations
 import pytest
 
 from dotfiles import catalog
+from dotfiles import effects
 from dotfiles import evidence as ev
+from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import registry
 from dotfiles import vocabulary
+from dotfiles.effects import Completed
+from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
 from dotfiles.providers import releases
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Precondition
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
+from dotfiles.resources import Change
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
+from dotfiles.session import Session
 
 
 def item(provider: str, name: str, entry: catalog.Entry, *, executable: str = '', evidence_path: str = '') -> DesiredItem:
@@ -215,6 +222,55 @@ def test_every_runtime_can_actually_install_itself() -> None:
     """
     for provider in registry.for_resource('toolchains'):
         assert type(provider).converge is not registry.ToolchainProvider.converge, provider.name
+
+
+class TestUvToolRepair:
+    """A uv repair has to reach uv as something uv will act on.
+
+    `uv tool install <target>` exits 0 printing "already installed" when the
+    requirement matches its receipt, and the provider reads that exit code as
+    success. So a `STALE` uv tool — which is every entry `--reinstall` names, and
+    the git tool whose pin did not move — recorded DONE while nothing happened.
+    """
+
+    RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
+    SYNCER = catalog.GitUvTool.from_mapping({'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'})
+
+    def repair(self, monkeypatch, provider: str, name: str, entry: catalog.Entry, verdict: Verdict) -> tuple[str, ...]:
+        """One change through its provider, returning the argv uv was handed."""
+        calls: list[tuple[str, ...]] = []
+
+        def uv(command, **_kwargs):
+            calls.append(tuple(str(part) for part in command))
+            return Completed(tuple(str(part) for part in command), 0, '')
+
+        monkeypatch.setattr(effects, 'run', uv)
+        monkeypatch.setattr(github_release, 'latest_version', lambda repo, tag_prefix='': 'v6.0.0')
+
+        planned = item(provider, name, entry)
+        change = Change('packages', planned.stage, planned.address, verdict, desired=planned)
+        found = registry.named(provider)
+        assert found is not None
+        outcome = found.install(Session(machine_name='box'), change, planned, Privilege(offer=False))
+
+        assert outcome.status is OutcomeStatus.DONE
+        return calls[0]
+
+    def test_a_stale_pypi_tool_is_installed_again_rather_than_no_opped(self, monkeypatch) -> None:
+        argv = self.repair(monkeypatch, 'uv', 'ruff', self.RUFF, Verdict.STALE)
+
+        assert '--reinstall' in argv
+
+    def test_a_stale_git_tool_is_installed_again_at_its_pin(self, monkeypatch) -> None:
+        argv = self.repair(monkeypatch, 'uv-git', 'syncer', self.SYNCER, Verdict.STALE)
+
+        assert '--reinstall' in argv
+
+    def test_a_missing_tool_has_nothing_to_install_over(self, monkeypatch) -> None:
+        """MISSING is the only other verdict `apply` acts on, and there is no
+        installed copy for the flag to replace."""
+        assert '--reinstall' not in self.repair(monkeypatch, 'uv', 'ruff', self.RUFF, Verdict.MISSING)
+        assert '--reinstall' not in self.repair(monkeypatch, 'uv-git', 'syncer', self.SYNCER, Verdict.MISSING)
 
 
 def test_every_packages_provider_can_install_what_it_plans() -> None:
