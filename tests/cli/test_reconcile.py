@@ -24,6 +24,7 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.runs import Timing
 from dotfiles.vocabulary import ExitCode
 
 MACHINE = 'linux-lxc-server'
@@ -105,6 +106,30 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
 
     assert walked['packages'] is ResourceVerdict.ISSUE
     assert walked['symlinks'] is ResourceVerdict.CONVERGED
+
+
+def test_a_row_carries_what_measuring_it_cost() -> None:
+    """The number was in every run record and on no screen, which is how a check
+    that took five minutes printed seven converged rows and said nothing about
+    where the five minutes went."""
+    measured = [Event('symlinks', Summary('all fine'), timing=Timing(started_at='', duration_seconds=4.25))]
+
+    (folded,) = reconcile.fold(measured)
+
+    assert folded.seconds == 4.25
+    assert folded.as_dict()['seconds'] == 4.25
+
+
+def test_a_refused_resource_still_reports_what_the_attempt_cost() -> None:
+    """A measurement that failed slowly is the one worth timing: the refusal says
+    what went wrong and only the duration says whether it went wrong immediately
+    or after four minutes of waiting."""
+    measured = [Event('packages', Refusal('boom'), timing=Timing(started_at='', duration_seconds=9.0))]
+
+    (folded,) = reconcile.fold(measured)
+
+    assert folded.verdict is ResourceVerdict.ISSUE
+    assert folded.seconds == 9.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────

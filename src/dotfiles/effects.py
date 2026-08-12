@@ -80,6 +80,26 @@ transcript. The cut is by length rather than by naming which commands count,
 because the caller that would have to declare it is every provider.
 """
 
+SLOW_SECONDS = 5.0
+"""How long a single command may take before the run says so unasked.
+
+Everything here is already timed and written to the run's event stream at debug,
+where it answers the question perfectly and only for somebody who already knew to
+look. That is the gap this closes: on the work box a `check` took five minutes,
+printed nothing while it did, and the one file that could say which command ate
+them was a `.jsonl` nobody opens. A command over this threshold is now an `info`
+record, which reaches the console at the default level.
+
+Five seconds because it has to sit above the slowest *legitimate* probe and below
+anything a person would call a stall. Measured across this fleet's records, the
+slowest ordinary command is `aws --version` at ~0.5s — a Python interpreter start
+— so five is an order of magnitude clear of normal and still names a stall long
+before the five minutes that prompted it.
+
+Deliberately not applied to `Output.STREAM`. A streaming command is an install,
+minutes are its normal cost, and it is already narrating itself on screen.
+"""
+
 NOT_FOUND = 127
 """A command that does not exist, as a shell reports it rather than as a crash."""
 
@@ -201,10 +221,11 @@ def run(
         is why the toolbox drift on one Mac could not be read from the shared run
         history and needed an ssh to answer.
         """
+        seconds = round(time.perf_counter() - began, 3)
         fields = {
             'argv': list(argv),
             'returncode': completed.returncode,
-            'seconds': round(time.perf_counter() - began, 3),
+            'seconds': seconds,
             'cwd': directory,
         }
         if not completed.ok:
@@ -212,6 +233,12 @@ def run(
         elif (answer := completed.stdout.strip()) and len(answer) <= ANSWER_LIMIT:
             fields['answer'] = answer
         log.debug('ran', **fields)
+
+        # A second record rather than the first one promoted, so the debug stream
+        # keeps one line per command whatever its duration and nothing reading it
+        # has to know that slow commands are spelled differently.
+        if seconds >= SLOW_SECONDS and output is not Output.STREAM:
+            log.info('slow command', command=' '.join(argv), seconds=seconds)
         return completed
 
     def missing(problem: OSError) -> Completed:

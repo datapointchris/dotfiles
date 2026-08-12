@@ -14,6 +14,7 @@ import pytest
 from dotfiles import engine
 from dotfiles import vocabulary
 from dotfiles.event import Refusal
+from dotfiles.event import Started
 from dotfiles.event import Summary
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
@@ -103,10 +104,44 @@ def test_no_two_resources_share_a_stage() -> None:
     assert not shared, f'these stages are claimed by more than one resource: {shared}'
 
 
+def findings(events: list) -> list:
+    """The walk minus its announcements, which is what most of these assert on.
+
+    A `Started` is the statement that a resource is about to be measured, so it
+    carries no verdict and sits in front of every other event a resource produces.
+    Filtering it here rather than in each test keeps the assertions about what was
+    *found*, and leaves the two tests below to pin the announcement itself.
+    """
+    return [event for event in events if not isinstance(event.payload, Started)]
+
+
+def test_a_resource_announces_itself_before_it_is_measured(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The property the payload exists for. A reader that hears from a resource
+    only once it has an answer cannot say which resource a long silence belongs
+    to, and the silence is exactly when somebody asks."""
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', changes=(change('a'),))})
+
+    events = list(engine.assess(session))
+
+    assert isinstance(events[0].payload, Started)
+    assert events[0].resource == 'packages'
+    assert events[0].timing is None
+
+
+def test_a_resource_that_cannot_be_measured_still_announced_itself(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Announced before the `try`, so the resource whose measurement crashed is
+    named by the stream rather than only by the refusal it turned into."""
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', raises=RuntimeError('pacman is not installed'))})
+
+    events = list(engine.assess(session))
+
+    assert [type(event.payload).__name__ for event in events] == ['Started', 'Refusal']
+
+
 def test_a_resource_yields_its_changes_then_its_summary(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', changes=(change('a'), change('b')))})
 
-    events = list(engine.assess(session))
+    events = findings(list(engine.assess(session)))
 
     assert [type(event.payload).__name__ for event in events] == ['Change', 'Change', 'Summary']
     assert events[-1].payload == Summary('packages examined')
@@ -116,7 +151,7 @@ def test_a_resource_yields_its_changes_then_its_summary(session: Session, monkey
 def test_a_converged_resource_yields_only_its_summary(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages')})
 
-    assert [event.payload for event in engine.assess(session)] == [Summary('packages examined')]
+    assert [event.payload for event in findings(list(engine.assess(session)))] == [Summary('packages examined')]
 
 
 def test_a_resource_that_raises_becomes_a_refusal_and_the_walk_continues(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -131,7 +166,7 @@ def test_a_resource_that_raises_becomes_a_refusal_and_the_walk_continues(session
         },
     )
 
-    events = list(engine.assess(session))
+    events = findings(list(engine.assess(session)))
 
     assert isinstance(events[0].payload, Refusal)
     assert 'pacman is not installed' in events[0].payload.reason
@@ -143,7 +178,8 @@ def test_a_resource_that_raises_becomes_a_refusal_and_the_walk_continues(session
 def test_selecting_addresses_walks_only_those(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(engine, 'resources', lambda: {name: Fake(name) for name in ('packages', 'symlinks', 'env')})
 
-    assert [event.resource for event in engine.assess(session, engine.Selection.of('symlinks', 'env'))] == ['symlinks', 'env']
+    walked = findings(list(engine.assess(session, engine.Selection.of('symlinks', 'env'))))
+    assert [event.resource for event in walked] == ['symlinks', 'env']
 
 
 def test_selection_keeps_convergence_order_not_the_caller_s(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -151,7 +187,8 @@ def test_selection_keeps_convergence_order_not_the_caller_s(session: Session, mo
     not reorder the walk — the order is a dependency chain, not a preference."""
     monkeypatch.setattr(engine, 'resources', lambda: {name: Fake(name) for name in ('packages', 'symlinks', 'env')})
 
-    assert [event.resource for event in engine.assess(session, engine.Selection.of('env', 'packages'))] == ['packages', 'env']
+    walked = findings(list(engine.assess(session, engine.Selection.of('env', 'packages'))))
+    assert [event.resource for event in walked] == ['packages', 'env']
 
 
 def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -160,7 +197,7 @@ def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, mon
     items it is summarising."""
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', changes=(change('a'),))})
 
-    events = list(engine.assess(session))
+    events = findings(list(engine.assess(session)))
 
     assert events[0].stage is Stage.TOOLS
     assert events[1].stage is None

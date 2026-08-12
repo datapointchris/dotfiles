@@ -21,6 +21,7 @@ from dotfiles import logging
 from dotfiles import runs
 from dotfiles.event import Event
 from dotfiles.event import Refusal
+from dotfiles.event import Started
 from dotfiles.event import Summary
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
@@ -70,6 +71,12 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # package, so the time belongs to the resource and attributing a
                 # share of it to each item would be inventing a number.
                 written.record_outcome(event.resource, 'examined', 'observed', _timing(event))
+            case Started():
+                # A record is what was found, and this is the announcement that
+                # nothing has been found yet. Named rather than left to fall
+                # through the match, so a payload added later cannot be dropped
+                # here by accident the way this one would have been.
+                pass
     return runs.finish(written)
 
 
