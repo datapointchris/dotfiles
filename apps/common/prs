@@ -40,15 +40,31 @@ case "${1:-}" in
     # one unbounded field: anything after it either misaligns when a title runs
     # long or forces an arbitrary clip width, and the columns before it are the
     # ones you retype, which must never be the truncated end of a row.
+    #
+    # A stack shows as `branch ← #parent` inside the branch cell rather than as a
+    # sixth column, which would cost every row width to say something about a
+    # handful. The parent is its number: two long branch names in one cell is the
+    # unreadable version. What counts as stacked is read out of the listing — a
+    # base that is some other open PR's head — because pr-list reports no default
+    # branch, so testing base against a literal "main" would mark every row of a
+    # repo that defaults to master. The space inside the cell is only safe
+    # because `-s` is a tab; drop it and column splits the marker into columns.
     pr-list | jq -r '
       if length == 0 then "No open PRs."
       else
-        ["REPO", "PR", "AGE", "BRANCH", "TITLE"],
+        (reduce (.[] | select((.branch // "") != "")) as $p
+          ({}; .[$p.repo][$p.branch] = $p.number)) as $heads
+        | ["REPO", "PR", "AGE", "BRANCH", "TITLE"],
         (.[] | [
           .repo,
           "#\(.number)",
           "\(.age_days)d",
-          (if (.branch // "") == "" then "-" else .branch end),
+          (
+            (if (.branch // "") == "" then "-" else .branch end) as $cell
+            | ($heads[.repo][.base // ""] // null) as $parent
+            | if $parent == null or $parent == .number then $cell
+              else "\($cell) ← #\($parent)" end
+          ),
           (if .draft then "\(.title) (draft)" else .title end)
         ])
       end

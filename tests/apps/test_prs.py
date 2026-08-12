@@ -18,6 +18,7 @@ import os
 import re
 import stat
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,12 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 PRS = REPO / 'apps' / 'common' / 'prs'
+
+# `column` renders the stack marker's arrow as a literal `\xe2\x86\x90` escape
+# unless the locale is UTF-8, so an env without one measures that escaping rather
+# than the row. Named per platform because there is no portable spelling: glibc
+# has C.UTF-8 built in and macOS does not ship it.
+UTF8_LOCALE = 'en_US.UTF-8' if sys.platform == 'darwin' else 'C.UTF-8'
 
 
 def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
@@ -50,7 +57,9 @@ def listing(tmp_path: Path):
 
     PATH inherits rather than naming /usr/bin, because the pipeline needs the
     real jq and jq is a brew package on macOS. `bin_dir` first is what shadows
-    `pr-list`.
+    `pr-list`. The locale is set because this listing is only ever read from a
+    terminal that has one, and `column` measures a non-ASCII cell differently
+    without it.
     """
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
@@ -63,7 +72,11 @@ def listing(tmp_path: Path):
             [str(PRS), '--list'],
             capture_output=True,
             text=True,
-            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:{os.environ["PATH"]}'},
+            env={
+                'HOME': str(tmp_path),
+                'PATH': f'{bin_dir}:{os.environ["PATH"]}',
+                'LC_ALL': UTF8_LOCALE,
+            },
         )
         assert result.returncode == 0, result.stderr
         return result.stdout.splitlines()
@@ -105,6 +118,66 @@ def test_a_draft_is_marked_the_way_fleet_marks_it(listing) -> None:
     is the listing disagreeing with itself about what is open."""
     lines = listing(pr('doit', 7, 'wip', draft=True))
     assert cells(lines[1])[4] == 'a change in doit (draft)'
+
+
+def test_a_stacked_pr_names_its_parent_by_number(listing) -> None:
+    """A stack is invisible in a flat listing: the child reads as ordinary work
+    against the default branch, and reviewing it that way shows the parent's
+    commits as its own. The parent goes in the cell as a number because two long
+    branch names side by side is the version nobody reads."""
+    lines = listing(
+        pr('dotfiles', 1, 'split-plan-check-verbs'),
+        pr('dotfiles', 2, 'language-toolchains', base='split-plan-check-verbs'),
+        pr('doit', 3, 'a-branch'),
+    )
+    assert re.fullmatch(r'language-toolchains \S+ #1', cells(lines[2])[3])
+    assert 'split-plan-check-verbs' not in cells(lines[2])[3]
+    assert cells(lines[1])[3] == 'split-plan-check-verbs'
+    assert cells(lines[3]) == ['doit', '#3', '3d', 'a-branch', 'a change in doit']
+
+
+def test_the_stack_marker_does_not_break_the_columns(listing) -> None:
+    """The marker is the first cell that contains a space, and the first
+    non-ASCII byte this listing has ever printed. It rides inside the branch cell
+    only because `column -s` is a tab — delete that flag and the space becomes a
+    column break, which this catches and nothing else does."""
+    lines = listing(
+        pr('dotfiles', 1, 'split-plan-check-verbs'),
+        pr('dotfiles', 2, 'language-toolchains', base='split-plan-check-verbs'),
+    )
+    assert len(cells(lines[2])) == 5
+    assert lines[1].index('a change in') == lines[2].index('a change in')
+    assert lines[0].index('TITLE') == lines[2].index('a change in')
+
+
+def test_a_base_matching_another_repos_branch_is_not_a_stack(listing) -> None:
+    """A base only ever names a branch in its own repo, and `develop`, `wip` and
+    `staging` recur across the registry. Keying the lookup on the branch alone
+    passes every other test here and marks those rows as stacked on a stranger."""
+    lines = listing(
+        pr('doit', 1, 'shared-name'),
+        pr('dotfiles', 2, 'other', base='shared-name'),
+    )
+    assert cells(lines[1])[3] == 'shared-name'
+    assert cells(lines[2])[3] == 'other'
+
+
+def test_a_repo_whose_default_branch_is_master_is_not_marked_stacked(listing) -> None:
+    """What makes a row stacked is that its base is some other open PR's head, not
+    that its base is spelled something other than `main`. pr-list reports no
+    default branch, so the literal comparison has nothing true to compare against
+    and would mark every row of a repo that still defaults to master."""
+    lines = listing(pr('dotfiles', 1, 'a-branch', base='master'), pr('doit', 2, 'b-branch', base='master'))
+    assert cells(lines[1])[3] == 'a-branch'
+    assert cells(lines[2])[3] == 'b-branch'
+
+
+def test_a_pr_is_never_marked_as_stacked_on_itself(listing) -> None:
+    """A row heading the branch it also targets would point at its own number. No
+    forge can create one, but the marker is built from a lookup that would find
+    it, and a provider reporting a degenerate base gets a sane row instead."""
+    lines = listing(pr('dotfiles', 1, 'self', base='self'))
+    assert cells(lines[1])[3] == 'self'
 
 
 def test_an_empty_backlog_says_so_rather_than_printing_a_bare_header(listing) -> None:
