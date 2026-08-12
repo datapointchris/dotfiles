@@ -26,6 +26,7 @@ brew.
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Sequence
 
 from dotfiles import effects
@@ -113,11 +114,28 @@ workstation `ripgrep` and `fzf` are there for the same kind of reason.
 """
 
 
+@functools.cache
+def _answers(binary: str) -> bool:
+    """Whether a package manager is here and will run, asked once per process.
+
+    A manager does not appear or stop working part way through a run, so the
+    probe behind this is the same fork repeated. `owner_of` is called once per
+    stray copy and asked twice each time — once for the manager that answers and
+    once for the one that is not installed — which on a machine with several
+    strays is dozens of forks to re-establish a constant.
+
+    Still a probe rather than `shutil.which`, because the question is whether the
+    manager *runs*: a `dpkg-query` present but broken and one absent are the same
+    answer to this caller and different answers to `which`.
+    """
+    return effects.run([binary, '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok
+
+
 def unchosen() -> frozenset[str]:
     """Every package installed as a dependency rather than asked for by name."""
     found: set[str] = set()
     for manager, command in UNCHOSEN.items():
-        if not effects.run([INSTALL[manager][0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
+        if not _answers(INSTALL[manager][0]):
             continue
         listed = effects.run(list(command), output=Output.QUIET, timeout=PROBE_SECONDS)
         if listed.ok:
@@ -136,7 +154,7 @@ def owner_of(path: str) -> str:
     The first manager that answers wins, and no machine here has two of them.
     """
     for manager, command in OWNER.items():
-        if not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
+        if not _answers(command[0]):
             continue
         found = effects.run([*command, path], output=Output.QUIET, timeout=PROBE_SECONDS)
         if not found.ok or not found.stdout.strip():

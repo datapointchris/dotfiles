@@ -138,6 +138,39 @@ def test_an_unreadable_entry_does_not_take_out_the_whole_scan(tmp_path: Path) ->
     assert 'reachable' in found
 
 
+def test_narrowing_the_scan_answers_the_same_for_the_names_asked_about(tmp_path: Path) -> None:
+    """The whole basis for narrowing it: fewer syscalls, identical answer.
+
+    Every entry costs three round trips to resolve and the caller asks about the
+    hundred binaries a machine declares, not the three thousand names a PATH
+    holds. On WSL with Windows interop left on those round trips cross drvfs and
+    the untouched names are in the tens of thousands.
+    """
+    searched = tmp_path / 'bin'
+    searched.mkdir()
+    for name in ('wanted', 'ignored'):
+        executable(searched, name)
+
+    whole = ev.executables_on_path(tmp_path / 'checkout', search=str(searched))
+    narrowed = ev.executables_on_path(tmp_path / 'checkout', search=str(searched), wanted=frozenset({'wanted'}))
+
+    assert set(whole) == {'wanted', 'ignored'}
+    assert narrowed == {'wanted': whole['wanted']}
+
+
+def test_two_copies_of_one_declared_binary_are_both_found_when_narrowed(tmp_path: Path) -> None:
+    """Narrowing must not cost the second copy, which is the only thing the index
+    is built to see — one copy is never a finding."""
+    first, second = tmp_path / 'a', tmp_path / 'b'
+    for directory in (first, second):
+        directory.mkdir()
+        executable(directory, 'rg')
+
+    found = ev.executables_on_path(tmp_path / 'checkout', search=f'{first}{os.pathsep}{second}', wanted=frozenset({'rg'}))
+
+    assert found['rg'] == (str(first / 'rg'), str(second / 'rg'))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # A declared path, for an entry that installs no binary
 # ─────────────────────────────────────────────────────────────────────────────

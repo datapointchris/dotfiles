@@ -21,6 +21,8 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from pathlib import Path
 
 from dotfiles import catalog
@@ -156,7 +158,7 @@ class PackagesResource:
         return Observed(
             evidence=evidence,
             met=ev.measured_preconditions(),
-            reported={item.address: found for item in present if (found := _installed_version(item))},
+            reported=_reported_versions(present),
             shadowed=_shadowing(mine, evidence, plan, session.repo),
             undeclared=_undeclared_own_tools(plan, session.home),
             latest=latest,
@@ -309,7 +311,10 @@ def _shadowing(
     declaration says what should be there and cannot say what else is safe to
     uninstall.
     """
-    index = ev.executables_on_path(checkout)
+    # Only the names this resource can have a finding about. A second copy of
+    # something nothing declares is not shadowing — there is no declared item for
+    # it to shadow — so every other name on PATH is measured and then discarded.
+    index = ev.executables_on_path(checkout, wanted=frozenset(item.executable for item in mine if item.executable))
     declared: set[str] = set()
     for item in plan.items:
         if isinstance(item.entry, catalog.SystemPackage):
@@ -343,6 +348,56 @@ def _has_currency(item: DesiredItem) -> bool:
     no version to report.
     """
     return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
+
+
+PROBE_WORKERS = 8
+"""How many version probes are in flight at once.
+
+Enough to hide the latency of a process start, small enough that a machine is not
+running dozens of unrelated binaries at the same moment. Every one of these is a
+tool answering `--version`, so the cost is almost entirely waiting on `fork`,
+`exec` and the child's own startup — which is why concurrency helps at all and why
+more workers than this buys nothing.
+
+Threads rather than processes: `subprocess.run` releases the GIL for the whole of
+the wait, so the work being overlapped is exactly the part Python is not doing.
+"""
+
+
+def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
+    """What every installed tool says it is, asked concurrently.
+
+    The dominant cost of measuring this resource, and the one that made a `check`
+    unusable on the work box: 69 probes, each its own process start, strictly one
+    after another. Serial, that is 1.4s on a fast Linux box and minutes on WSL,
+    where a process start costs an order of magnitude more.
+
+    Safe to overlap because a probe is a *read* that shares nothing: each runs one
+    binary the declaration names, keeps its own answer, and reaches no state this
+    resource holds. `effects.run` builds its own environment per call and
+    `evidence.reported_version` has no globals, so two probes cannot observe each
+    other. The result is a dict keyed by address, so the order they finish in
+    cannot change what is measured.
+
+    Failures stay per item, not per batch. A probe that raises would otherwise
+    surface out of the pool and take the whole resource down as unmeasurable —
+    which is the opposite of what the timeout inside it exists to guarantee.
+    """
+    if not present:
+        return {}
+
+    found: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=min(PROBE_WORKERS, len(present))) as pool:
+        probes = {pool.submit(_installed_version, item): item for item in present}
+        for probe in as_completed(probes):
+            item = probes[probe]
+            try:
+                reported = probe.result()
+            except Exception:  # noqa: BLE001 — a probe runs whatever a declaration names
+                continue
+            if reported:
+                found[item.address] = reported
+    return found
 
 
 def _installed_version(item: DesiredItem) -> str | None:
