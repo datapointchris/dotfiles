@@ -770,3 +770,40 @@ def test_every_item_node_is_paired_with_the_container_that_declares_it() -> None
         assert address in declared[declaring], f'{declaring} does not declare {address}'
 
     assert len(nodes) == sum(len(addresses) for addresses in declared.values())
+
+
+def test_the_replayed_probe_carries_the_fallback_the_measurement_used() -> None:
+    """A replay that drops the fallback blames the container for a refusal that
+    happens on any network.
+
+    `network.measure` tries HEAD and then a ranged GET, because S3 and some CDNs
+    reject HEAD. This replayed only the first, so `terraform-ls` — recorded
+    reachable through the fallback — came back unreachable in every container and
+    read as a firewall that was stricter than work's.
+
+    `releases.hashicorp.com` answers HEAD with 405 for a named agent and 200 for
+    curl's default, which is why the agent is part of the recorded request too.
+    """
+    from dotfiles import network
+
+    downloads = [probe for probe in harness.measured_probes() if not probe.cloned]
+    assert downloads, 'no download probe recorded, so this would pass vacuously'
+
+    for probe in downloads:
+        replayed = probe.command()
+        assert '--head' in replayed, f'{probe.name} no longer replays the method the measurement tried first'
+        assert '-r 0-0' in replayed, f'{probe.name} drops the fallback that recorded it reachable'
+
+    recorded = network.Probe(section='github_releases', name='x', target='https://example.invalid/')
+    assert '-r' in (recorded.fallback_command() or ()), 'the measurement no longer has a fallback to mirror'
+
+
+def test_a_clone_probe_has_no_fallback_to_replay() -> None:
+    """`git ls-remote` is the only way to ask the question, so there is no second
+    method — which is why `network.Probe.fallback_command` answers None for one."""
+    clones = [probe for probe in harness.measured_probes() if probe.cloned]
+    assert clones
+
+    for probe in clones:
+        assert 'ls-remote' in probe.command()
+        assert '||' not in probe.command()

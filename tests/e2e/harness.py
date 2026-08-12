@@ -210,10 +210,27 @@ class Probe:
         point: the method, the URL and the agent all changed a verdict at least
         once, and a probe that differs from the recorded one is measuring a
         different question and calling the answer a firewall.
+
+        **Including the fallback, which this dropped and which cost exactly what
+        the paragraph above predicts.** `network.measure` tries HEAD and then a
+        ranged GET, because S3 and some CDNs reject HEAD; this replayed only the
+        first. `releases.hashicorp.com` answers HEAD with 405 — but only for a
+        named agent, since curl's default gets a 200 — so `terraform-ls` was
+        recorded reachable through the fallback and then re-probed without it.
+        The container was blamed for a refusal that happens on any network,
+        including this desk's.
+
+        A shell `||` rather than two argv, which is the one place that is right:
+        `network.measure` keeps them separate so each lands in the event stream
+        on its own, and this is a single command string handed to a container.
         """
         if self.cloned:
             return f'GIT_TERMINAL_PROMPT=0 git ls-remote --quiet {shlex.quote(self.target)} HEAD'
-        return f'curl -fsSL --head -A {shlex.quote(PROBE_AGENT)} --connect-timeout 10 {shlex.quote(self.target)}'
+        agent = shlex.quote(PROBE_AGENT)
+        target = shlex.quote(self.target)
+        head = f'curl -fsSL --head -A {agent} --connect-timeout 10 {target}'
+        ranged = f'curl -fsSL -A {agent} --connect-timeout 10 -r 0-0 {target}'
+        return f'{head} || {ranged}'
 
 
 def measured_probes() -> tuple[Probe, ...]:
