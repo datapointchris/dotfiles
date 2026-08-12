@@ -119,7 +119,7 @@ toolbox search git        # Find git-related tools
 toolbox random            # Discover something you forgot existed
 ```
 
-Tools documented in the registry with usage examples and tips. See `configs/common/.config/toolbox/registry.yml` for the full list.
+Tools are documented in the registry with usage examples and tips, deployed from `configs/common/.local/share/toolbox/registry.yml`.
 
 ## Common Tasks
 

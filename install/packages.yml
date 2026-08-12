@@ -1331,7 +1331,7 @@ uv_tools:
 # Python tools installed from GitHub repositories
 #
 # Pinned to a release tag, because each tool's own updater refuses to touch an
-# install that tracks a branch — see install/common/lib/uv-git-tools.sh.
+# install that tracks a branch — see src/dotfiles/providers/uvtool.py.
 # `tracks_branch: true` marks a repo that publishes no releases, and so has no
 # tag to pin.
 

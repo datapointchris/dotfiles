@@ -81,8 +81,14 @@ content of its own. Three rules keep it that way:
 - **Tags are the discovery contract.** Search is biased to name and tags. A missing result
   means a missing tag, not a change to the search tool.
 
-`doit` reads `$XDG_DATA_HOME/toolbox/registry.yml` directly. That is the whole coupling: the
+`doit` reads `$XDG_DATA_HOME/terminal-library/tools/registry.yml` directly, resolved by
+`library_dir()` and overridable with `DOIT_TOOLS_REGISTRY`. That is the whole coupling: the
 registry is a file with a documented shape, so neither tool has to know the other exists.
+
+The registry moved to `terminal-library` because the collection outlives any one tool that parses
+it. `toolbox` still reads its own copy, deployed from `configs/common/.local/share/toolbox/`, so a
+tool added to one is absent from the other until both are edited. That duplicate is deliberate and
+temporary — item 310 deletes the dotfiles copy once `toolbox` itself is retired.
 
 ## Related
 
