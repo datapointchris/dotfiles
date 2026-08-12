@@ -31,6 +31,26 @@ VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
 CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
 
 
+def showing_evidence() -> bool:
+    """Whether the per-item rows below a verdict are worth printing.
+
+    Read from the console threshold rather than held as a second switch, so `-q`
+    and `LOG_LEVEL=warning` cannot disagree about how much this run says. The
+    rows are not log records — they go through Rich — so without this `-q` moved
+    the log threshold and changed nothing a reader could see.
+
+    The verdict itself is never suppressed. It goes to stdout because it is the
+    answer to the question asked, and a `check` that printed nothing at all would
+    be reporting by exit code alone.
+    """
+    import logging as stdlib
+
+    from dotfiles import logging
+
+    level, _ = logging.resolved_console()
+    return stdlib.getLevelNamesMapping().get(level, stdlib.INFO) <= stdlib.INFO
+
+
 def emit_json(data: Any) -> None:
     """Write machine-readable output to stdout, bypassing Rich entirely.
 
@@ -75,6 +95,8 @@ def render_change(change: Change) -> None:
     about it — and a reader scanning a screen of rows for the instruction wants
     it in one column, not folded into a sentence of varying length.
     """
+    if not showing_evidence():
+        return
     colour = CHANGE_COLOURS[str(change.verdict)]
     observed = f' (is {change.observed!r})' if change.observed else ''
     err_console.print(f'  [{colour}]{change.verdict:<11}[/] {change.item:<28} {change.detail}{observed}')
@@ -89,11 +111,15 @@ def render_finding(section: str, message: str) -> None:
     a resource's, so it reads as one list rather than two — and it goes to stderr
     for the reason every diagnostic here does: `--json` is what a caller parses.
     """
+    if not showing_evidence():
+        return
     err_console.print(f'  [red]{"invalid":<11}[/] {section:<28} {message}')
 
 
 def heading(text: str) -> None:
     """Announce an address. On stderr, because a banner is progress, not data."""
+    if not showing_evidence():
+        return
     err_console.print()
     err_console.print(f'[bold blue]{text}[/]')
 

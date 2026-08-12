@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import typer
 
+from dotfiles import commands
 from dotfiles import engine
 from dotfiles import logging
 from dotfiles import reconcile
@@ -84,6 +85,8 @@ SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatab
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
+VerboseOption = commands.VerboseOption
+QuietOption = commands.QuietOption
 
 
 def _skipped(addresses: list[str] | None) -> frozenset[str]:
@@ -118,6 +121,8 @@ def plan(
     owner: str = OwnerOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Show what `apply` would change. Never writes.
 
@@ -131,6 +136,7 @@ def plan(
     `--owner` is `apply`'s and means the same, because a scope the write accepts
     and the read cannot express is not a narrower preview but no preview at all.
     """
+    commands.verbosity(verbose, quiet)
     skipped = _skipped(skip)
     named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
@@ -154,6 +160,8 @@ def check(
     machine: str = MachineOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Report what is wrong with this machine. Never writes.
 
@@ -165,6 +173,7 @@ def check(
 
     Exits 3 when it finds something, and never 1.
     """
+    commands.verbosity(verbose, quiet)
     skipped = _skipped(skip)
     checked_machine = Session.resolve(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
@@ -210,6 +219,8 @@ def apply_command(
     offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
     as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Make this machine match what it declares.
 
@@ -228,6 +239,7 @@ def apply_command(
     artifact a network-blocked machine hands to one that can reach the network, so
     a partial bundle can be built from it.
     """
+    commands.verbosity(verbose, quiet)
     try:
         ceiling = engine.stage_named(through) if through else None
     except engine.UnknownAddress as unknown:

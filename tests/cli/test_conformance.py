@@ -35,10 +35,36 @@ LEAVES = [(path, cmd) for path, cmd in TREE if not isinstance(cmd, click.Group)]
 GROUPS = [(path, cmd) for path, cmd in TREE if isinstance(cmd, click.Group)]
 
 
+RECONCILING = [
+    (path, command)
+    for path, command in LEAVES
+    if path[-1] in {'plan', 'check', 'apply'} and (len(path) == 1 or path[0] in vocabulary.RESOURCES)
+]
+"""The root three and the same three under each resource — every leaf that walks
+the engine, and so every leaf with a debug stream worth turning up.
+
+`machines check`, `network check`, `bundle check` and the two under `windows` are
+deliberately outside it. They answer a question about a declaration, a network or
+an archive rather than converging a part of this machine, and none of them emits
+through `effects`, so a verbosity flag there would promise detail that does not
+exist."""
+
+
 def test_the_tree_is_not_empty() -> None:
     """Guards every other test here: a walk that finds nothing passes vacuously."""
     assert len(LEAVES) > 20
     assert len(GROUPS) == len(vocabulary.NOUNS)
+    assert len(RECONCILING) > 15
+
+
+@pytest.mark.parametrize(('path', 'command'), RECONCILING, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
+def test_every_reconciling_leaf_takes_the_verbosity_pair(path: tuple[str, ...], command: click.Command) -> None:
+    """A flag that works on `dotfiles apply` and not on `dotfiles packages apply`
+    is the drift this file exists to catch — the same asymmetry `--dry-run` and
+    `--force` had, one subcommand at a time."""
+    flags = {name for param in command.params for name in param.opts}
+    assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
+    assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
 
 
 @pytest.mark.parametrize(('path', 'command'), LEAVES, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')

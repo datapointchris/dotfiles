@@ -8,9 +8,10 @@ what is useful at the time, which today's output already gets right and is the
 bar to hold rather than to change for its own sake.
 
 `LOG_FORMAT=json` sends the console sink to JSON too, for a caller parsing
-stderr. `LOG_LEVEL` moves the console threshold; the file sink stays at debug
-whatever it says, since a record that respected it would be missing exactly the
-detail it exists to keep.
+stderr. `LOG_LEVEL` moves the console threshold, and `-v`/`-vv`/`-q` on a
+reconcile verb beat it. The file sink stays at debug whatever any of them says,
+since a record that respected them would be missing exactly the detail it exists
+to keep.
 
 **All three are read when they are used, never at import.** As module constants
 they were fixed by whatever the environment held when `dotfiles.logging` was
@@ -41,6 +42,48 @@ def console_format() -> str:
 
 def color_choice() -> str:
     return os.environ.get('LOG_COLORS', DEFAULT_COLORS)
+
+
+QUIET_LEVEL = 'WARNING'
+VERBOSE_LEVEL = 'DEBUG'
+
+_CONSOLE_CHOICE: tuple[str, bool] | None = None
+"""What the flags asked for, as (level, http_noise), or None to leave LOG_LEVEL
+in charge. Module state rather than an argument threaded through `sinks.open_log`
+and `reconcile.apply_machine`: `configure` runs twice in a recording verb — once
+from the root callback before a verb is known, once when the run opens its event
+log — and the second call must not undo what the first resolved. Threading it
+would also put a presentation argument on two functions that have no other reason
+to know a flag exists."""
+
+
+def choose_console(verbose: int = 0, quiet: bool = False) -> None:
+    """Record what `-v`/`-q` asked for, so every later `configure` honours it.
+
+    `-q` is WARNING rather than silence, because a run that printed nothing at
+    all would hide the one thing the scheduled check exists to surface.
+
+    The second `-v` un-silences the HTTP client rather than moving the level
+    again: DEBUG is already the bottom, and the only detail still withheld there
+    is the per-request line `_quiet_the_http_client` pins to WARNING.
+
+    Called with neither flag it clears the choice, so the default restores
+    `LOG_LEVEL` instead of leaving a previous verb's answer in place.
+    """
+    global _CONSOLE_CHOICE
+    if quiet:
+        _CONSOLE_CHOICE = (QUIET_LEVEL, False)
+    elif verbose:
+        _CONSOLE_CHOICE = (VERBOSE_LEVEL, verbose >= 2)
+    else:
+        _CONSOLE_CHOICE = None
+
+
+def resolved_console() -> tuple[str, bool]:
+    """The console level and whether the HTTP client may speak. Flag beats env."""
+    if _CONSOLE_CHOICE is not None:
+        return _CONSOLE_CHOICE
+    return console_level(), False
 
 
 EVENT_LOG_HANDLER_NAME = 'dotfiles_event_log'
@@ -88,9 +131,15 @@ one is the noise coming back on a dependency swap.
 """
 
 
-def _quiet_the_http_client() -> None:
+def _http_client_level(noisy: bool) -> None:
+    """WARNING, or NOTSET when a second `-v` asked for the request lines.
+
+    Set both ways rather than only pinned, because `configure` runs more than
+    once in a process: a level left from an earlier call would otherwise survive
+    a later one that wanted the opposite.
+    """
     for name in HTTP_LOGGERS:
-        logging.getLogger(name).setLevel(logging.WARNING)
+        logging.getLogger(name).setLevel(logging.NOTSET if noisy else logging.WARNING)
 
 
 def configure(event_log: Path | None = None) -> None:
@@ -100,14 +149,15 @@ def configure(event_log: Path | None = None) -> None:
     so a second run in the same process cannot append to the first one's stream.
     """
     logging.basicConfig(format='%(message)s', stream=sys.stderr, level=logging.DEBUG, force=True)
-    _quiet_the_http_client()
+    level, http_noise = resolved_console()
+    _http_client_level(http_noise)
 
     console = logging.root.handlers[0]
     # Through the name mapping rather than `getattr(logging, ...)`, which answers
     # for any attribute the module happens to have: `LOG_LEVEL=basic_format` fetched
     # the format string and `setLevel` raised ValueError on it. WARN and FATAL are
     # in the mapping too, so the aliases still resolve.
-    console.setLevel(logging.getLevelNamesMapping().get(console_level(), logging.INFO))
+    console.setLevel(logging.getLevelNamesMapping().get(level, logging.INFO))
     console.setFormatter(structlog.stdlib.ProcessorFormatter(processor=console_processor()))
 
     for handler in list(logging.root.handlers):

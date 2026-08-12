@@ -77,6 +77,8 @@ def nameless(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ['plan', '--skip', 'plugins/tmux'],
         ['plan', '--skip', 'plugins/'],
         ['apply', '--skip', 'no-such-resource'],
+        ['check', '-v', '-q'],
+        ['packages', 'apply', '-v', '-q'],
         ['nonsense-command'],
     ],
 )

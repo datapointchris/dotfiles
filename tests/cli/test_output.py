@@ -146,6 +146,32 @@ def test_a_finding_shares_the_column_a_change_uses(capsys: pytest.CaptureFixture
     assert change_row.index('ripgrep') == finding_row.index('go_tools')
 
 
+def test_quiet_drops_the_evidence_and_keeps_the_verdict(capsys: pytest.CaptureFixture) -> None:
+    """What `-q` actually buys. The rows are not log records, so before this the
+    flag moved the log threshold and changed nothing a reader could see."""
+    from dotfiles import logging
+
+    logging.choose_console(quiet=True)
+
+    output.render_change(a_change())
+    output.render_finding('go_tools', 'no such section')
+    output.heading('packages')
+    assert capsys.readouterr().err == ''
+
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'))
+    assert 'packages' in capsys.readouterr().out
+
+    logging.choose_console()
+
+
+def test_the_evidence_returns_when_the_flag_is_cleared(capsys: pytest.CaptureFixture) -> None:
+    """Guards the test above: one that suppressed permanently would pass it and
+    silence every later run in the same process."""
+    output.render_change(a_change())
+
+    assert 'ripgrep' in capsys.readouterr().err
+
+
 @pytest.mark.parametrize('render', [output.heading, output.error, output.success, output.warn, output.hint])
 def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) -> None:
     """The whole reason there are two consoles. A diagnostic on stdout is

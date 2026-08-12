@@ -102,7 +102,37 @@ to write and no consumer reads it yet.
 The questions asked after a failed install — what did it actually download, which
 step was slow — are answerable only if the detail was recorded while nobody wanted
 it. So everything is emitted at debug and the file sink keeps all of it whatever
-`LOG_LEVEL` says; that variable moves the console threshold and nothing else.
+`LOG_LEVEL` and the verbosity flags say. Those move the console threshold and
+nothing else, which is the property that lets a run be quiet and still be
+answerable afterwards.
+
+## `-v`, `-vv` and `-q` on every reconciling leaf
+
+A counted `-v` with a `-q` beside it, because that is what the neighbours on the
+same machine take — uv, ruff, cargo, rsync and curl all ship that pair, and none
+of them takes a `--verbosity` naming a log level. Passing both is a usage error
+rather than a precedence rule: either order of resolution is defensible, which is
+the tell that a caller passing both meant neither.
+
+The second `-v` un-silences the HTTP client rather than moving the level again.
+Debug is already the bottom, and the only detail still withheld there is the
+per-request line `_quiet_the_http_client` pins to WARNING — one line per declared
+tool on a refresh, between the rows a person is actually reading. Measured on a
+refreshing `plan`: 1240 lines at `-v` with none of them HTTP, and 69 request
+lines on top at `-vv`.
+
+**`-q` suppresses the evidence, never the verdict.** The per-item rows go through
+Rich rather than through a logger, so a flag that only moved the log threshold
+changed nothing a reader could see. The resource verdict stays on stdout because
+it is the answer to the question asked, and a `check` reporting by exit code alone
+would be a worse command, not a quieter one.
+
+The flags bind on the leaves — all three root verbs and the same three under each
+resource — for the reason `--machine` does, which `main.py` records: Click parses
+group options before the subcommand name, so a flag declared on the group turns
+`dotfiles apply -v` into `No such option`. `tests/cli/test_conformance.py` walks
+the tree and fails when a reconciling leaf is missing either one, which is what
+stops the asymmetry `--dry-run` and `--force` each had.
 
 **Both are below the record, which is why the walk is not instrumented.**
 `effects` is already the one module that touches the world outside the process, so

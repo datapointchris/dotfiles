@@ -139,3 +139,85 @@ def test_log_colors_overrides_what_the_terminal_says(monkeypatch):
 
     monkeypatch.setenv('LOG_COLORS', 'false')
     assert dotfiles_logging.use_colors() is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# -v / -vv / -q, which beat LOG_LEVEL and never reach the file
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_one_v_shows_every_step(capsys):
+    dotfiles_logging.choose_console(verbose=1)
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' in capsys.readouterr().err
+
+
+def test_quiet_keeps_warnings_and_drops_the_rest(capsys):
+    """WARNING rather than silence: a run printing nothing at all would hide the
+    one thing the scheduled check exists to surface."""
+    dotfiles_logging.choose_console(quiet=True)
+    dotfiles_logging.configure()
+
+    log = dotfiles_logging.get_logger('test')
+    log.info('tool_installed', tool='fzf')
+    log.warning('release_cache_cold')
+
+    console = capsys.readouterr().err
+    assert 'tool_installed' not in console
+    assert 'release_cache_cold' in console
+
+
+def test_the_second_v_is_what_un_silences_the_http_client():
+    """DEBUG is already the bottom, so `-vv` has to mean something other than a
+    lower level. The request lines `_quiet_the_http_client` pins to WARNING are
+    the only detail still withheld there."""
+    import logging as stdlib
+
+    dotfiles_logging.choose_console(verbose=1)
+    dotfiles_logging.configure()
+    assert stdlib.getLogger('httpx').level == stdlib.WARNING
+
+    dotfiles_logging.choose_console(verbose=2)
+    dotfiles_logging.configure()
+    assert stdlib.getLogger('httpx').level == stdlib.NOTSET
+
+
+def test_a_flag_beats_log_level(monkeypatch, capsys):
+    """The precedence the whole pair exists for. Env is the machine's standing
+    answer and the flag is this invocation's, so the flag wins."""
+    monkeypatch.setenv('LOG_LEVEL', 'ERROR')
+    dotfiles_logging.choose_console(verbose=1)
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' in capsys.readouterr().err
+
+
+def test_no_flag_hands_the_answer_back_to_log_level(monkeypatch, capsys):
+    """The clearing case. Without it a verb that ran quiet would leave the next
+    one quiet, since the choice is module state."""
+    dotfiles_logging.choose_console(quiet=True)
+    monkeypatch.setenv('LOG_LEVEL', 'DEBUG')
+    dotfiles_logging.choose_console()
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' in capsys.readouterr().err
+
+
+def test_quiet_never_reaches_the_file(tmp_path, capsys):
+    """The property the two sinks exist for, asserted against the flag most
+    likely to be blamed for an empty record later."""
+    event_log = tmp_path / 'run.jsonl'
+    dotfiles_logging.choose_console(quiet=True)
+    dotfiles_logging.configure(event_log=event_log)
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' not in capsys.readouterr().err
+    assert [event['event'] for event in events_in(event_log)] == ['asset_cache_hit']

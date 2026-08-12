@@ -18,6 +18,9 @@ from dotfiles import engine
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
+from dotfiles.commands import QuietOption
+from dotfiles.commands import VerboseOption
+from dotfiles.commands import verbosity
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
 from dotfiles.output import error
@@ -211,6 +214,8 @@ def packages_plan(
     source: str = SourceOption,
     owner: str = OwnerOption,
     as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Show which declared packages `apply` would install or upgrade.
 
@@ -218,12 +223,16 @@ def packages_plan(
     rehearsal of the write those two narrow, which is the one case where a preview
     is worth most.
     """
+    verbosity(verbose, quiet)
     _survey('packages', machine, reconcile.Lens.PLAN, as_json, source=source, owner=owner)
 
 
 @packages_app.command('check')
-def packages_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def packages_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Report packages this machine declares but has not installed."""
+    verbosity(verbose, quiet)
     _survey('packages', machine, reconcile.Lens.CHECK, as_json)
 
 
@@ -235,6 +244,8 @@ def packages_apply(
     owner: str = OwnerOption,
     reinstall: list[str] = ReinstallOption,
     as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Install every declared package that is missing.
 
@@ -248,6 +259,7 @@ def packages_apply(
     against a live figure and repairs what differs in either direction, so a tool
     stranded above its own newest release is already this command's to fix.
     """
+    verbosity(verbose, quiet)
     _apply_resource('packages', machine, offline, source, owner, reinstall=frozenset(reinstall or ()), as_json=as_json)
 
 
@@ -274,20 +286,33 @@ toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and t
 
 
 @toolchains_app.command('plan')
-def toolchains_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def toolchains_plan(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Show which language runtimes `apply` would install or raise."""
+    verbosity(verbose, quiet)
     _survey('toolchains', machine, reconcile.Lens.PLAN, as_json)
 
 
 @toolchains_app.command('check')
-def toolchains_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def toolchains_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Report toolchain drift."""
+    verbosity(verbose, quiet)
     _survey('toolchains', machine, reconcile.Lens.CHECK, as_json)
 
 
 @toolchains_app.command('apply')
-def toolchains_apply(machine: str = MachineOption, offline: bool = OfflineOption, as_json: bool = JsonOption) -> None:
+def toolchains_apply(
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Install or update the language toolchains."""
+    verbosity(verbose, quiet)
     _apply_resource('toolchains', machine, offline, None, as_json=as_json)
 
 
@@ -308,20 +333,31 @@ plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plu
 
 
 @plugins_app.command('plan')
-def plugins_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def plugins_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show which declared plugins `apply` would clone."""
+    verbosity(verbose, quiet)
     _survey('plugins', machine, reconcile.Lens.PLAN, as_json)
 
 
 @plugins_app.command('check')
-def plugins_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def plugins_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Report plugin drift."""
+    verbosity(verbose, quiet)
     _survey('plugins', machine, reconcile.Lens.CHECK, as_json)
 
 
 @plugins_app.command('apply')
-def plugins_apply(machine: str = MachineOption, offline: bool = OfflineOption, as_json: bool = JsonOption) -> None:
+def plugins_apply(
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Install or update the declared plugins."""
+    verbosity(verbose, quiet)
     _apply_resource('plugins', machine, offline, None, as_json=as_json)
 
 
@@ -336,14 +372,20 @@ symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the re
 
 
 @symlinks_app.command('plan')
-def symlinks_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def symlinks_plan(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Show which declared links `apply` would deploy or prune."""
+    verbosity(verbose, quiet)
     _survey('symlinks', machine, reconcile.Lens.PLAN, as_json)
 
 
 @symlinks_app.command('check')
-def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def symlinks_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Report broken or missing symlinks without touching any."""
+    verbosity(verbose, quiet)
     _survey('symlinks', machine, reconcile.Lens.CHECK, as_json)
 
 
@@ -352,6 +394,8 @@ def symlinks_apply(
     machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Replace targets this manager did not create'),
     as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Deploy every declared symlink, pruning the ones whose source is gone.
 
@@ -364,6 +408,7 @@ def symlinks_apply(
     checked-out branch into `$HOME` — and it does, because the walk reports it
     before measuring anything.
     """
+    verbosity(verbose, quiet)
     _apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 
@@ -395,20 +440,23 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 
 
 @env_app.command('plan')
-def env_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
+    verbosity(verbose, quiet)
     _survey('env', machine, reconcile.Lens.PLAN, as_json)
 
 
 @env_app.command('check')
-def env_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
+    verbosity(verbose, quiet)
     _survey('env', machine, reconcile.Lens.CHECK, as_json)
 
 
 @env_app.command('apply')
-def env_apply(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def env_apply(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
+    verbosity(verbose, quiet)
     _apply_resource('env', machine, False, None, as_json=as_json)
 
 
@@ -424,24 +472,37 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 
 
 @system_app.command('plan')
-def system_plan(machine: str = MachineOption, source: str = SourceOption, as_json: bool = JsonOption) -> None:
+def system_plan(
+    machine: str = MachineOption,
+    source: str = SourceOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Show which system packages and configuration rows `apply` would change.
 
     `--source` is `apply`'s, and the narrow write it names — the package payload
     without the configuration rows — is the one most worth rehearsing here.
     """
+    verbosity(verbose, quiet)
     _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source)
 
 
 @system_app.command('check')
-def system_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def system_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report system configuration drift."""
+    verbosity(verbose, quiet)
     _survey('system', machine, reconcile.Lens.CHECK, as_json)
 
 
 @system_app.command('apply')
 def system_apply(
-    machine: str = MachineOption, offline: bool = OfflineOption, source: str = SourceOption, as_json: bool = JsonOption
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    source: str = SourceOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Install the declared system packages and apply the system configuration.
 
@@ -450,6 +511,7 @@ def system_apply(
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
     """
+    verbosity(verbose, quiet)
     _apply_resource('system', machine, offline, source, as_json=as_json)
 
 
@@ -457,17 +519,23 @@ identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identi
 
 
 @identity_app.command('plan')
-def identity_plan(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def identity_plan(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Show whether `apply` would set this machine’s git identity."""
+    verbosity(verbose, quiet)
     _survey('identity', machine, reconcile.Lens.PLAN, as_json)
 
 
 @identity_app.command('check')
-def identity_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+def identity_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
     """Report whether this machine has a git identity.
 
     Check only, and deliberately: an identity is per-machine and personal, so
     there is nothing in the repo for `apply` to write. It lives in `~/.gitconfig`
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
+    verbosity(verbose, quiet)
     _survey('identity', machine, reconcile.Lens.CHECK, as_json)

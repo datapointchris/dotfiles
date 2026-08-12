@@ -163,6 +163,7 @@ def logging_is_configured():
     """
     from dotfiles import logging as dotfiles_logging
 
+    dotfiles_logging.choose_console()
     dotfiles_logging.configure()
     dotfiles_logging.clear_run()
 
