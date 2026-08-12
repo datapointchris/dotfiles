@@ -23,11 +23,13 @@ import dataclasses as dc
 from collections.abc import Iterable
 from collections.abc import Iterator
 
+from dotfiles import logging
 from dotfiles import registry
 from dotfiles import runs
 from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
+from dotfiles.event import Started
 from dotfiles.event import Summary
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
@@ -38,6 +40,8 @@ from dotfiles.resources import Change
 from dotfiles.resources import Resource
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
+
+log = logging.get_logger('engine')
 
 
 class UnknownAddress(ValueError):
@@ -439,6 +443,12 @@ def _act_together(session: Session, resource: Batched, group: list[Event], chang
 
 
 def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> Iterator[Event]:
+    # Before the clock starts, and before anything reaches the world. A reader
+    # that only ever hears from a resource once it has finished cannot say which
+    # one a long silence belongs to, and the silence is where the question gets
+    # asked.
+    yield Event(address, Started(resource.help))
+
     clock = runs.Stopwatch()
     try:
         with clock.step('observe'):
@@ -452,6 +462,7 @@ def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> 
     # not per package — so the cost is attributed to the resource's summary and the
     # per-item rows carry what deciding them cost, which is nothing.
     timing = clock.finish()
+    log.debug('measured', resource=address, seconds=round(timing.duration_seconds, 3), changes=len(changes))
     for change in changes:
         yield Event(address, change, stage=change.stage)
     yield Event(address, Summary(observed.summary), timing=timing)

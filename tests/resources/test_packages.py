@@ -31,6 +31,7 @@ from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import npm
+from dotfiles.providers import syspkg
 from dotfiles.providers import uvtool
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -136,6 +137,39 @@ def test_an_unreadable_entry_does_not_take_out_the_whole_scan(tmp_path: Path) ->
         forbidden.chmod(0o700)
 
     assert 'reachable' in found
+
+
+def test_narrowing_the_scan_answers_the_same_for_the_names_asked_about(tmp_path: Path) -> None:
+    """The whole basis for narrowing it: fewer syscalls, identical answer.
+
+    Every entry costs three round trips to resolve and the caller asks about the
+    hundred binaries a machine declares, not the three thousand names a PATH
+    holds. On WSL with Windows interop left on those round trips cross drvfs and
+    the untouched names are in the tens of thousands.
+    """
+    searched = tmp_path / 'bin'
+    searched.mkdir()
+    for name in ('wanted', 'ignored'):
+        executable(searched, name)
+
+    whole = ev.executables_on_path(tmp_path / 'checkout', search=str(searched))
+    narrowed = ev.executables_on_path(tmp_path / 'checkout', search=str(searched), wanted=frozenset({'wanted'}))
+
+    assert set(whole) == {'wanted', 'ignored'}
+    assert narrowed == {'wanted': whole['wanted']}
+
+
+def test_two_copies_of_one_declared_binary_are_both_found_when_narrowed(tmp_path: Path) -> None:
+    """Narrowing must not cost the second copy, which is the only thing the index
+    is built to see — one copy is never a finding."""
+    first, second = tmp_path / 'a', tmp_path / 'b'
+    for directory in (first, second):
+        directory.mkdir()
+        executable(directory, 'rg')
+
+    found = ev.executables_on_path(tmp_path / 'checkout', search=f'{first}{os.pathsep}{second}', wanted=frozenset({'rg'}))
+
+    assert found['rg'] == (str(first / 'rg'), str(second / 'rg'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1079,6 +1113,28 @@ def test_a_copy_a_declared_package_owns_is_explained(tmp_path: Path, fake_bin: P
     assert shadow_changes(live) == []
 
 
+def test_asking_whether_a_manager_answers_follows_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe behind `owner_of` is cached, and PATH is not fixed for the life of
+    a process — `toolchain.put_on_path` extends it as each runtime lands, and every
+    test here hands the resource a PATH of its own.
+
+    Cached under the bare name, the first answer answered for every later one. On
+    a runner with no real pacman that meant one test's "there is no pacman" stood
+    while the next test's fake pacman sat on PATH being ignored, so a copy the
+    declaration explains was reported as a stray.
+    """
+    absent, present = tmp_path / 'absent', tmp_path / 'present'
+    absent.mkdir()
+    present.mkdir()
+    executable(present, 'pacman')
+
+    monkeypatch.setenv('PATH', str(absent))
+    assert not syspkg._answers('pacman')
+
+    monkeypatch.setenv('PATH', f'{present}{os.pathsep}{absent}')
+    assert syspkg._answers('pacman')
+
+
 def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The inverse, and the direction that must not fail open: a package manager
     answering at all is not an explanation, or every `/usr/bin` copy on a Linux
@@ -1203,3 +1259,27 @@ def test_a_go_that_cannot_answer_reports_nothing_rather_than_failing(tmp_path: P
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert undeclared_own(live) == []
+
+
+def test_a_probe_that_raises_is_recorded_rather_than_dropped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Serially a raising probe propagated and the resource refused, so the
+    failure had somewhere to be read. Caught and dropped by the pool it is
+    indistinguishable from a tool that answered and reported no version — which is
+    a row saying nothing is wrong.
+
+    Dropped is still the right outcome: one unaskable binary must not take the
+    whole resource down. What this pins is that it leaves a trace."""
+
+    def raises(item: object) -> str:
+        raise RuntimeError('the binary is a directory')
+
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+    (item,) = live.plan.for_resource('packages')
+    monkeypatch.setattr(packages, '_installed_version', raises)
+
+    with caplog.at_level('DEBUG'):
+        assert packages._reported_versions((item,)) == {}
+
+    assert any('probe failed' in record.getMessage() for record in caplog.records)

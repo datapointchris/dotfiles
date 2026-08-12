@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import dataclasses
 import dataclasses as dc
+import json
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -75,6 +76,45 @@ def _find(identifier: str | None) -> Path:
     return matches[0]
 
 
+SLOW_COMMANDS_SHOWN = 10
+"""How many of a run's slowest commands `show` names.
+
+A cap rather than a threshold, because the question this answers is "where did
+the time go" and the answer is always the top of a sorted list. A threshold would
+print nothing at all on the run that was merely slower than usual, which is the
+one worth comparing against the run that was not.
+"""
+
+
+def _slow_commands(record_path: Path) -> list[tuple[float, str]]:
+    """The commands a run spent longest in, from the event log beside its record.
+
+    Read here rather than accumulated into the record, because it already exists:
+    `effects.run` writes one `ran` line per command with its duration, and has for
+    as long as there has been a debug stream. What was missing was any reader —
+    the file answered "which command took the five minutes" perfectly and only
+    for somebody who already suspected a command was the answer.
+
+    Silent about a missing or malformed log. The stream is written best-effort on
+    a machine whose `$XDG_STATE_HOME` may be read-only, and a run record that
+    refused to render because its optional companion was absent would be trading
+    the answer for the footnote.
+    """
+    log = record_path.with_suffix('.jsonl')
+    found: list[tuple[float, str]] = []
+    try:
+        for line in log.read_text().splitlines():
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if entry.get('event') == 'ran' and (argv := entry.get('argv')):
+                found.append((float(entry.get('seconds', 0.0)), ' '.join(str(word) for word in argv)))
+    except OSError:
+        return []
+    return sorted(found, reverse=True)[:SLOW_COMMANDS_SHOWN]
+
+
 def _render(path: Path, record: runs.RunRecord) -> None:
     # `[{verdict}]` reads as a Rich style tag, so the word this line exists to say
     # was parsed as markup and dropped — every header printed a trailing blank.
@@ -98,6 +138,16 @@ def _render(path: Path, record: runs.RunRecord) -> None:
             table.add_row(outcome.address, outcome.verdict, outcome.action, f'{outcome.timing.duration_seconds:.2f}')
         console.print(table)
 
+    if slow := _slow_commands(path):
+        console.print()
+        console.print('[bold]slowest commands[/]')
+        commands = Table(box=None, pad_edge=False)
+        commands.add_column('seconds', justify='right')
+        commands.add_column('command')
+        for seconds, command in slow:
+            commands.add_row(f'{seconds:.2f}', command)
+        console.print(commands)
+
     # Only where it went wrong: a provider hands back a detail line for a success
     # too, and 112 of "installed zk" buries the four that say why nothing was.
     for outcome in record.outcomes:
@@ -109,6 +159,24 @@ def _render(path: Path, record: runs.RunRecord) -> None:
 
 
 def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
+    """The record itself for a machine, and a reading of it for a person.
+
+    **`--json` is the record and nothing else**, which is why the slowest
+    commands appear only in the rendering. `reconcile.apply_machine` emits its
+    `--json` by reading back the file it just wrote, precisely so that a piped
+    apply and a later `report show --json` are the same bytes for one run.
+    Synthesising a field into one of them ends that, and the field would be
+    derived rather than recorded — a second document assembled from two sources,
+    which is the arrangement that property exists to refuse.
+
+    The asymmetry is between a derived view and its source rather than between a
+    person and a machine. What `_slow_commands` reads is the run's own `.jsonl`,
+    which is machine-readable, sits beside this file, and holds one line per
+    command with its duration:
+
+        jq -r 'select(.event == "ran") | "\\(.seconds)\\t\\(.argv | join(" "))"' \\
+          "$(dotfiles report path | sed 's/.json$/.jsonl/')" | sort -rn | head
+    """
     if as_json:
         emit_json(dataclasses.asdict(record))
     else:

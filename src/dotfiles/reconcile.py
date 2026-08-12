@@ -37,11 +37,14 @@ from dotfiles import sinks
 from dotfiles import validate
 from dotfiles.event import Event
 from dotfiles.event import Refusal
+from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.output import announce
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
+from dotfiles.output import measured
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
 from dotfiles.output import success
@@ -106,7 +109,17 @@ class ResourceResult:
     prompted for.
     """
 
-    def as_dict(self) -> dict[str, str | int]:
+    seconds: float = 0.0
+    """What measuring this resource cost, off the engine's own clock.
+
+    Already in every run record and never once on screen, which is how a check
+    that took five minutes could be reported as seven converged rows with nothing
+    saying where the five minutes went. Carried on the result rather than looked
+    up from the record afterwards, because the reader who needs it is the one
+    watching the run rather than the one reading it back.
+    """
+
+    def as_dict(self) -> dict[str, str | int | float]:
         """Counts beside the sentence, not only inside it.
 
         `detail` is prose and will be reworded; the numbers are the answer. A
@@ -122,6 +135,7 @@ class ResourceResult:
             'attention': self.attention,
             'unmeasured': self.unmeasured,
             'privileged': self.privileged,
+            'seconds': round(self.seconds, 3),
         }
 
 
@@ -186,7 +200,7 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     return pending, attention, unmeasured
 
 
-def from_changes(address: str, changes: Sequence[Change], converged: str, lens: Lens = Lens.PLAN) -> ResourceResult:
+def from_changes(address: str, changes: Sequence[Change], converged: str, lens: Lens = Lens.PLAN, seconds: float = 0.0) -> ResourceResult:
     """Fold one resource's per-item changes into the row its verb prints.
 
     Each kept change is rendered as it is folded, so the reader sees what was
@@ -197,6 +211,10 @@ def from_changes(address: str, changes: Sequence[Change], converged: str, lens: 
     for change in kept:
         render_change(change)
 
+    # `seconds` stays out of this dict. Every entry in it is a count of items and
+    # this is a duration, which is not a distinction worth losing to save an
+    # argument — spread in with the rest it widens the whole mapping to
+    # `int | float` and the four genuine counts stop being typed as counts.
     counts = {
         'pending': len(pending),
         'attention': len(attention),
@@ -205,15 +223,16 @@ def from_changes(address: str, changes: Sequence[Change], converged: str, lens: 
     }
     gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
     if not kept:
-        return ResourceResult(address, ResourceVerdict.CONVERGED, converged + gap, **counts)
+        return ResourceResult(address, ResourceVerdict.CONVERGED, converged + gap, **counts, seconds=seconds)
 
     if lens is Lens.PLAN:
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {counts["privileged"]} needing root' if counts['privileged'] else ''
-        return ResourceResult(address, ResourceVerdict.DRIFT, f'{len(kept)} item(s) differ from the declaration{root}{gap}', **counts)
+        detail = f'{len(kept)} item(s) differ from the declaration{root}{gap}'
+        return ResourceResult(address, ResourceVerdict.DRIFT, detail, **counts, seconds=seconds)
     detail = f'{len(kept)} item(s) need attention that apply cannot give{_lead(kept)}{gap}'
-    return ResourceResult(address, ResourceVerdict.ISSUE, detail, **counts)
+    return ResourceResult(address, ResourceVerdict.ISSUE, detail, **counts, seconds=seconds)
 
 
 def _lead(kept: Sequence[Change]) -> str:
@@ -252,13 +271,17 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
 
     results = []
     for address, group in grouped.items():
+        # The engine clocks a whole resource and hangs the timing off its summary,
+        # so a refused one has none — the measurement that would have carried it is
+        # the thing that failed. Zero rather than absent, for `elapsed`'s sake.
+        seconds = next((event.timing.duration_seconds for event in group if event.timing is not None), 0.0)
         refusal = next((event.payload for event in group if isinstance(event.payload, Refusal)), None)
         if refusal is not None:
-            results.append(ResourceResult(address, ResourceVerdict.ISSUE, refusal.reason))
+            results.append(ResourceResult(address, ResourceVerdict.ISSUE, refusal.reason, seconds=seconds))
             continue
         changes = [event.payload for event in group if isinstance(event.payload, Change)]
         summary = next((event.payload.detail for event in group if isinstance(event.payload, Summary)), '')
-        results.append(from_changes(address, changes, summary, lens))
+        results.append(from_changes(address, changes, summary, lens, seconds))
     return results
 
 
@@ -286,12 +309,24 @@ def survey(
     same reason: a resource with no provider has no entry to narrow, so an
     owner-narrowed plan would otherwise still report every symlink and `~/.env` as
     part of what one person's tools cover.
+
+    **Consumed one event at a time, not with `list()`.** The walk is a generator
+    and materialising it is what made a slow resource indistinguishable from a
+    hung one: every announcement it yields arrived after the last measurement had
+    finished, so the whole point of announcing was lost to the collection. The
+    list still comes back whole, because the readers below want it whole.
     """
     session = Session.resolve(machine, refresh=refresh, owner=owner)
     selection = engine.Selection.excluding(skip)
     if owner is not None:
         selection = selection.narrowed_to(session.plan.providers)
-    return list(engine.assess(session, selection))
+
+    collected = []
+    for event in engine.assess(session, selection):
+        if isinstance(event.payload, Started):
+            announce(event.resource, event.payload.detail)
+        collected.append(event)
+    return collected
 
 
 def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:
@@ -451,7 +486,17 @@ def apply_machine(
     label = axes.platform_label(session.machine.coordinates)
     err_console.rule(f'[bold]dotfiles apply[/]  {session.machine_name} ({label})', align='left')
 
-    planned = list(engine.assess(session, selection))
+    # Streamed rather than collected, for the reason `survey` is: an `apply`
+    # prints its rule and then measures the whole machine before it writes
+    # anything, and on the work box that stretch is minutes of blank screen with
+    # the rule already scrolled past.
+    planned = []
+    for event in engine.assess(session, selection):
+        if isinstance(event.payload, Started):
+            announce(event.resource, event.payload.detail)
+        elif isinstance(event.payload, Summary) and event.timing is not None:
+            measured(event.resource, event.payload.detail, event.timing.duration_seconds)
+        planned.append(event)
 
     # Before acting, because a resource nothing could examine is a part of the
     # machine this run is about to skip without touching.

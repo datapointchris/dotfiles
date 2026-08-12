@@ -97,7 +97,7 @@ def macos_app(name: str) -> Path | None:
     return None
 
 
-def executables_on_path(checkout: Path, search: str | None = None) -> dict[str, tuple[str, ...]]:
+def executables_on_path(checkout: Path, search: str | None = None, wanted: frozenset[str] | None = None) -> dict[str, tuple[str, ...]]:
     """Every name PATH can resolve, to every location that answers for it.
 
     `shutil.which` answers with the winner alone, which is the right answer to
@@ -115,6 +115,23 @@ def executables_on_path(checkout: Path, search: str | None = None) -> dict[str, 
     development command is not machine state. Taken as an argument rather than
     read from `paths` because the run's own checkout is the one that matters — the
     same reason `Session` carries `repo`.
+
+    **`wanted` bounds the three syscalls per entry, not the walk.** The directory
+    listing is one read whatever is asked for, while `is_file`, `access` and
+    `realpath` are three round trips *each*, and the only caller wants an answer
+    about the hundred-odd binaries a machine declares — never about the three
+    thousand names a PATH resolves. Unbounded, this paid 3400 realpaths to answer
+    96 questions.
+
+    That is a rounding error on ext4 and is not one on WSL, which is the machine
+    this was measured on: with Windows PATH interop left on, `$PATH` carries
+    `/mnt/c/Windows/System32` and its neighbours, every syscall against them
+    crosses drvfs, and the count is in the tens of thousands. None of those names
+    is ever asked about.
+
+    None keeps the whole index, because "every name on PATH" is a legitimate
+    question and a default that silently answered a narrower one would be a trap
+    for the next caller.
     """
     found: dict[str, list[str]] = {}
     seen: dict[str, set[str]] = {}
@@ -128,6 +145,8 @@ def executables_on_path(checkout: Path, search: str | None = None) -> dict[str, 
         except OSError:
             continue
         for entry in entries:
+            if wanted is not None and entry.name not in wanted:
+                continue
             # Per entry as well as per directory. macOS ships `/usr/sbin/weakpass_edit`
             # as a symlink into SIP-protected `authserver/`, and `is_file` follows it
             # and is denied — which took the whole `packages` resource down as "could

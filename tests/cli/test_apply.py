@@ -31,6 +31,7 @@ from dotfiles import sinks
 from dotfiles.effects import Completed
 from dotfiles.event import Event
 from dotfiles.event import Refusal
+from dotfiles.event import Summary
 from dotfiles.providers import npm
 from dotfiles.providers import toolchain
 from dotfiles.resolve import Stage
@@ -39,6 +40,7 @@ from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.runs import Timing
 from dotfiles.vocabulary import ExitCode
 
 MACHINE = 'linux-lxc-server'
@@ -610,3 +612,30 @@ def test_the_non_interactive_shell_sees_what_the_run_installed() -> None:
         if directory.startswith('/usr'):
             continue
         assert directory in exported[0], f'{directory} is on the run PATH but not on a non-interactive shell PATH'
+
+
+def test_apply_reports_what_each_resource_cost_before_it_acts(
+    quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """An apply prints its rule and then measures the whole machine before writing
+    anything, so on the work box that stretch was minutes of blank screen with the
+    rule already scrolled past. The summary row is the only thing that says which
+    part of the machine the wait belonged to."""
+    measured = Event('packages', Summary('all 96 declared packages are installed'), timing=Timing('', 291.4))
+    walked(monkeypatch, Walk(measured, drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+    reconcile.apply_machine(engine.Selection.everything())
+
+    narrated = capsys.readouterr().err
+    assert 'all 96 declared packages are installed' in narrated
+    assert '4m51.4s' in narrated
+
+
+def test_a_streamed_walk_is_still_handed_over_whole(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Consumed one event at a time so the announcements arrive during the wait,
+    and collected all the same — everything below still reads the list whole."""
+    walk = Walk(drift('ripgrep'), drift('fd'), outcomes=(done('ripgrep'), done('fd')))
+    walked(monkeypatch, walk)
+
+    assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
+    assert walk.acted

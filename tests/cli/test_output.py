@@ -15,10 +15,13 @@ Neither is visible in a green suite otherwise, and both are cheap to assert.
 
 from __future__ import annotations
 
+import io
 import json
 
 import pytest
+from rich.console import Console
 
+from dotfiles import logging
 from dotfiles import output
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
@@ -225,3 +228,49 @@ def test_an_issue_row_does_not_repeat_its_own_attention_count(capsys: pytest.Cap
     written = capsys.readouterr().out
     assert '4 need attention' not in written
     assert '1 unmeasured' in written
+
+
+def narrated(monkeypatch: pytest.MonkeyPatch, *, quiet: bool) -> str:
+    """What the progress lines write, with a console that says it is a terminal.
+
+    Forced, because `announce` has a second gate for whether anyone is watching
+    and pytest's captured stderr is not a tty. Without this the quiet assertion
+    passes on the wrong gate and would keep passing with `-q` ignored entirely.
+    """
+    written = io.StringIO()
+    monkeypatch.setattr(output, 'err_console', Console(file=written, force_terminal=True, highlight=False))
+    logging.choose_console(quiet=quiet)
+    try:
+        output.announce('packages', 'everything installed from a package manager')
+        output.measured('packages', 'all 96 declared packages are installed', 1.0)
+    finally:
+        logging.choose_console()
+    return written.getvalue()
+
+
+def test_quiet_removes_the_progress_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    """cli-design.md § "Quieten the evidence, never the answer" names the progress
+    headings as exactly what `-q` removes. Ungated, `dotfiles apply -q` was louder
+    after these lines were added than before them."""
+    assert narrated(monkeypatch, quiet=True) == ''
+
+
+def test_the_progress_line_is_there_without_quiet(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other half, so the assertion above cannot pass by the lines never
+    printing at all."""
+    written = narrated(monkeypatch, quiet=False)
+
+    assert 'packages' in written
+    assert 'all 96 declared packages are installed' in written
+
+
+def test_the_verdict_survives_quiet(capsys: pytest.CaptureFixture) -> None:
+    """The answer keeps its channel whatever the flags say — a check reporting by
+    exit code alone is a worse command rather than a quieter one."""
+    logging.choose_console(quiet=True)
+    try:
+        output.render_result(ResourceResult('packages', ResourceVerdict.CONVERGED, 'all installed'))
+    finally:
+        logging.choose_console()
+
+    assert 'all installed' in capsys.readouterr().out

@@ -24,6 +24,28 @@ from dotfiles.vocabulary import ExitCode
 
 
 @dc.dataclass(frozen=True, slots=True)
+class Started:
+    """A resource is about to be measured, and nothing about it is known yet.
+
+    The one payload that carries no finding. It exists because every other event
+    a resource produces arrives *after* the measurement, so a reader watching the
+    stream learns a resource's name at the moment it already has its answer —
+    which on a fast machine is invisible and on a slow one is a blank screen for
+    the whole of the wait. Measured on the work box: `check` printed nothing for
+    five minutes and then everything at once, and nothing in the output or the
+    record said which resource the five minutes went to.
+
+    Carried in the stream rather than printed from the walk, for the reason the
+    walk yields values at all: what a reader does with it — render it, drop it,
+    time from it — is that reader's business. `sinks.record` drops it, because a
+    run record is what was found and this is the statement that nothing has been
+    found yet.
+    """
+
+    detail: str = ''
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Summary:
     """What a resource examined, in its own terms.
 
@@ -56,7 +78,7 @@ class Event:
     """One thing that happened, and where."""
 
     resource: str
-    payload: Change | Outcome | Summary | Refusal
+    payload: Change | Outcome | Summary | Refusal | Started
     stage: Stage | None = None
     """Where in the convergence order this happened, for the payloads that have a
     place in it. A summary and a refusal are about the resource rather than about

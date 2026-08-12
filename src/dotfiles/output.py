@@ -123,7 +123,80 @@ def render_result(result: ResourceResult) -> None:
     should not be a reason for the logic to be loaded.
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
-    console.print(f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}{tallies(result)}')
+    console.print(
+        f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}{tallies(result)}{elapsed(result.seconds)}'
+    )
+
+
+SLOW_RESOURCE_SECONDS = 2.0
+"""Above this, a resource's own measurement is worth colouring rather than stating.
+
+The number is a reading threshold, not a performance one: a row that takes long
+enough to be *waited on* is the row a reader is looking for when they come back
+to a screen that sat still, and everything under it is noise in a list of seven.
+"""
+
+
+def elapsed(seconds: float) -> str:
+    """What one measurement cost, in the units a person compares.
+
+    Minutes once past sixty, because "294.1s" is a number that has to be divided
+    before it means anything, and the whole reason this is printed is that
+    somebody sat watching it.
+
+    Nothing at all under a tenth of a second. Seven resources each reporting
+    `0.0s` is a column of noughts that makes the one row worth reading harder to
+    find, which is the opposite of what a timing is for.
+
+    A slow one is coloured and an ordinary one is plain, rather than the pair
+    being coloured against faint. Faint is unreadable on half the terminal themes
+    this fleet uses, so the row it was hiding is the row somebody came back to
+    the screen to find.
+    """
+    if seconds < 0.1:
+        return ''
+    rendered = f'{seconds:.1f}s' if seconds < 60 else f'{int(seconds // 60)}m{seconds % 60:04.1f}s'
+    return f'  [yellow]{rendered}[/]' if seconds >= SLOW_RESOURCE_SECONDS else f'  {rendered}'
+
+
+def announce(address: str, detail: str) -> None:
+    """Say what is being measured, before it is.
+
+    Two gates, answering different questions. `showing_evidence` is `-q`, and
+    cli-design.md § "Quieten the evidence, never the answer" names the progress
+    headings as exactly what it removes. `heading` beside it is gated the same
+    way, and a progress line outranking the heading it announces would be the odd
+    one out.
+
+    The terminal test is the second, and it is not about volume: this exists to
+    be read *during* the wait, and a wait nobody is sitting through does not need
+    narrating. The scheduled check writes into the journal and a `--json` run is
+    parsed, so in both this is a second row per resource carrying nothing the
+    verdict row does not.
+    """
+    if not showing_evidence() or not err_console.is_terminal:
+        return
+    # Cropped rather than wrapped. A resource's help runs to a sentence, and a
+    # transient line that takes two rows on a narrow terminal doubles the height
+    # of the progress block it is trying to keep small.
+    err_console.print(f'[blue]⋯[/] {address:<11} {detail}', no_wrap=True, overflow='ellipsis')
+
+
+def measured(address: str, detail: str, seconds: float) -> None:
+    """What one resource turned out to hold, and what asking cost.
+
+    `apply`'s counterpart to the verdict row `check` and `plan` print. It renders
+    no verdict, because an apply is about to act on what was found and a row
+    saying "drift" immediately above the repair for it is a fact that expires as
+    the reader looks at it. What does not expire is which part of the machine the
+    wait belonged to.
+
+    Gated with the rest of the narration: this is the working an apply shows, not
+    the answer it was asked for, and `-q` is a request for less of exactly this.
+    """
+    if not showing_evidence():
+        return
+    err_console.print(f'[green]✓[/] [bold]{address:<11}[/] {detail}{elapsed(seconds)}')
 
 
 def render_change(change: Change) -> None:
