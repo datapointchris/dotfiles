@@ -96,8 +96,15 @@ def test_every_probe_is_declared_by_some_manifest() -> None:
     assert set(auth.PROBES) <= named, f'probes nothing declares: {sorted(set(auth.PROBES) - named)}'
 
 
-LOCAL_PROBES = {'auth status', 'config path token'}
-"""Every subprocess this resource is allowed to run, as the arguments it passes.
+LOCAL_PROBES = {f'{tool} auth status' for tool in KEYCHAIN_CLIS} | {'bbkt config path token'}
+"""Every subprocess this resource is allowed to run, named as `<tool> <arguments>`.
+
+**The tool is half the whitelist, and it is the discriminating half.** The cheap
+spelling inverts between binaries: `auth status` is the 4ms keychain read for the
+personal data CLIs and the 333ms networked validation for `gh`. Whitelisting the
+arguments alone therefore permits `gh auth status` — the one alternative this
+module's own docstring rejects by name — because it is spelled like the four that
+are allowed. Measured: a probe swapped to `gh auth status` passed this test.
 
 A whitelist rather than a list of forbidden spellings, because the forbidden ones
 are unbounded and each of them appears in this module already — in the docstring
@@ -112,7 +119,9 @@ def test_every_subprocess_a_probe_runs_is_a_local_one(xdg: Path, fake_bin: Path)
     prompt, in a pre-commit hook and on a six-hourly timer."""
     log = xdg / 'argv'
     for tool in auth.PROBES:
-        executable(fake_bin, tool, f'#!/bin/sh\necho "$@" >> {log}\nexit 0\n')
+        # The name is echoed rather than left to `$0`, which is the absolute path
+        # the fixture wrote and so differs per run.
+        executable(fake_bin, tool, f'#!/bin/sh\necho "{tool} $@" >> {log}\nexit 0\n')
     session = build(xdg, *auth.PROBES)
     session.__dict__['preconditions'] = Preconditions(github_auth=True)
 
@@ -162,6 +171,39 @@ def test_a_keychain_cli_is_asked_with_status_rather_than_token(xdg: Path, fake_b
     changes(build(xdg, 'icb'))
 
     assert log.read_text().split() == ['auth', 'status']
+
+
+@pytest.mark.parametrize('tool', ['nomad', 'bbkt'])
+def test_a_probe_that_never_answered_is_not_evidence_about_a_credential(
+    xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch, tool: str
+) -> None:
+    """`effects.run` reports a deadline as an exit code rather than an exception, so
+    a hung keychain daemon arrives looking exactly like a clean "logged out" — and
+    the deadline is per tool, over as many as a manifest declares. Read as logged
+    out it advises a login on a machine that may well have one."""
+    executable(fake_bin, tool, '#!/bin/sh\nsleep 30\n')
+    monkeypatch.setattr(auth.evidence, 'PROBE_SECONDS', 0.2)
+
+    (found,) = changes(build(xdg, tool))
+
+    assert found.verdict is Verdict.UNKNOWN
+    assert found.repair is Repair.NONE
+    assert not found.advice
+    assert '0.2s' in found.detail
+
+
+@pytest.mark.parametrize('tool', ['nomad', 'bbkt'])
+def test_a_binary_on_path_that_cannot_run_is_unmeasured_rather_than_logged_out(xdg: Path, fake_bin: Path, tool: str) -> None:
+    """A shared library the loader cannot find exits 127, which `shutil.which` has
+    already passed. Claiming the keychain is empty is a diagnosis of something that
+    was never asked."""
+    executable(fake_bin, tool, '#!/nonexistent/interpreter\n')
+
+    (found,) = changes(build(xdg, tool))
+
+    assert found.verdict is Verdict.UNKNOWN
+    assert found.repair is Repair.NONE
+    assert 'could not be executed' in found.detail
 
 
 def test_a_tool_that_is_not_installed_is_unmeasured_rather_than_an_issue(xdg: Path, fake_bin: Path) -> None:
@@ -317,18 +359,36 @@ def test_a_missing_atuin_session_names_the_login_command(xdg: Path, fake_bin: Pa
     assert 'atuin login' in found.advice
 
 
-@pytest.mark.parametrize('written', ['', '   \n'])
-def test_an_empty_aws_credentials_file_is_not_a_credential(xdg: Path, fake_bin: Path, written: str) -> None:
+@pytest.mark.parametrize('written', [b'', b'   \n'])
+def test_an_empty_aws_credentials_file_is_not_a_credential(xdg: Path, fake_bin: Path, written: bytes) -> None:
     """`aws configure` leaves the file behind when the profile it wrote is removed,
     so existence alone reads as logged in on a machine that is not."""
     executable(fake_bin, 'aws')
     credentials = xdg / '.aws' / 'credentials'
     credentials.parent.mkdir(parents=True)
-    credentials.write_text(written)
+    credentials.write_bytes(written)
 
     (found,) = changes(build(xdg, 'aws'))
 
-    assert found.verdict is (Verdict.MATCHED if written.strip() else Verdict.MISSING)
+    assert found.verdict is Verdict.MISSING
+
+
+def test_a_credential_file_that_does_not_decode_costs_no_row_at_all(xdg: Path, fake_bin: Path) -> None:
+    """One stray byte took the whole resource's measurement, not one row.
+
+    `read_text` raises `UnicodeDecodeError`, which is a `ValueError` and so walks
+    straight through the `OSError` guard in `_asked`, out of `observe` and into
+    `auth could not be examined` — nine measured tools lost to a file nothing here
+    interprets. `apply` then exits 3 on a machine whose only fault is that file.
+    Reading bytes answers the question actually being asked, and the file counts
+    as a credential because it holds more than whitespace.
+    """
+    executable(fake_bin, 'aws')
+    credentials = xdg / '.aws' / 'credentials'
+    credentials.parent.mkdir(parents=True)
+    credentials.write_bytes(b'\xff\xfe\x00\x80not utf-8')
+
+    assert changes(build(xdg, 'aws')) == ()
 
 
 def test_a_populated_aws_credentials_file_is_a_credential(xdg: Path, fake_bin: Path) -> None:

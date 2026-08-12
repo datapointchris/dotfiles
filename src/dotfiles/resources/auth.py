@@ -45,6 +45,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 from dotfiles import evidence
+from dotfiles.effects import NOT_FOUND
+from dotfiles.effects import TIMED_OUT
+from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.privilege import Privilege
@@ -176,6 +179,33 @@ def _uninstalled(tool: str) -> Credential:
     return Credential(Verdict.UNKNOWN, f'{tool} is not on PATH, so there is nothing to log in to')
 
 
+def _unanswered(tool: str, answer: Completed) -> Credential | None:
+    """A probe that never ran is not evidence about a credential, so it says so.
+
+    `effects.run` reports both a deadline and a binary the kernel would not start
+    as exit codes rather than exceptions — deliberately, so no caller needs its own
+    `which` guard — which leaves a `PROBE_SECONDS` timeout arriving at a probe
+    looking exactly like a clean "logged out". Read as one, a hung keychain daemon
+    prints `the OS keychain holds no token` and advises a login on a machine that
+    may well be logged in. The deadline is per tool and `PROBES` holds several
+    sharing this closure, so the cost multiplies on a resource whose whole
+    constraint is being cheap enough to run unattended.
+
+    `UNKNOWN` rather than `MISSING`, which is where `_uninstalled` and `_asked`'s
+    unreadable-path guard already put a question that could not be asked: `sift`
+    counts it unmeasured and keeps it out of the exit code. `diagnose.probed` splits
+    the same two codes off the same `run` for the same reason.
+
+    None where the command answered, whatever it answered — a non-zero exit from a
+    binary that ran is the probe working.
+    """
+    if answer.returncode == TIMED_OUT:
+        return Credential(Verdict.UNKNOWN, f'{tool} did not answer within {evidence.PROBE_SECONDS:g}s')
+    if answer.returncode == NOT_FOUND:
+        return Credential(Verdict.UNKNOWN, f'{tool} is on PATH but could not be executed')
+    return None
+
+
 def _data_home(session: Session) -> Path:
     """`$XDG_DATA_HOME`, or this session's home with the default under it.
 
@@ -203,8 +233,15 @@ def _holds_something(path: Path) -> bool:
     Stripped rather than sized, which is `bbkt`'s own rule for the same file — it
     trims what it reads and refuses an empty result — so a file holding a bare
     newline reads the same way here as it does to the tool that owns it.
+
+    Bytes rather than text. Decoding raises `UnicodeDecodeError`, which is a
+    `ValueError` and so travels straight through the `OSError` guard in `_asked`,
+    out of `observe` and into `auth could not be examined` — one stray byte in
+    `~/.aws/credentials` costing every other tool its measurement. Three of the
+    probes reach this call, and none of them interprets what it finds: the
+    question is whether the file holds more than whitespace, which bytes answer.
     """
-    return path.is_file() and bool(path.read_text().strip())
+    return path.is_file() and bool(path.read_bytes().strip())
 
 
 def _github(session: Session) -> Credential:
@@ -245,6 +282,8 @@ def _keychain_cli(tool: str) -> Probe:
         answer = run([tool, 'auth', 'status'], output=Output.QUIET, timeout=evidence.PROBE_SECONDS)
         if answer.ok:
             return Credential(Verdict.MATCHED, answer.stdout.strip().splitlines()[0] if answer.stdout.strip() else 'logged in')
+        if (unanswered := _unanswered(tool, answer)) is not None:
+            return unanswered
         return Credential(Verdict.MISSING, 'the OS keychain holds no token', advice=f'log in with `{tool} auth login`')
 
     return probe
@@ -316,6 +355,8 @@ def _bbkt(session: Session) -> Credential:
         return Credential(Verdict.MATCHED, 'BBKT_TOKEN is set')
 
     located = run(['bbkt', 'config', 'path', 'token'], output=Output.QUIET, timeout=evidence.PROBE_SECONDS)
+    if (unanswered := _unanswered('bbkt', located)) is not None:
+        return unanswered
     token = Path(located.stdout.strip()) if located.ok and located.stdout.strip() else None
     if token is not None and _holds_something(token):
         return Credential(Verdict.MATCHED, f'{token} holds a token')
