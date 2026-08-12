@@ -3,9 +3,9 @@
 System-wide shell libraries in `configs/common/.local/shell/`, deployed to
 `~/.local/shell/`. Each serves a distinct purpose and can be used alone or
 combined. The roster is
-`rg '^[a-z_]+\(\)' configs/common/.local/shell/*.sh` — this page explains the
-ones with a design decision behind them rather than listing every function,
-because a hand-copied roster drifts and this one had.
+`rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/*.sh` — this page
+explains the ones with a design decision behind them rather than listing every
+function, because a hand-copied roster drifts and this one had.
 
 ## Sourcing Rules
 
@@ -35,17 +35,18 @@ incident that produced the test.
 - Any script whose output might be piped to log files
 - Scripts that need parseable output for tools like logsift
 
-**Functions**:
+**Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/logging.sh`
 
-- `log_info(message)` - [INFO] + cyan + ● icon
-- `log_success(message)` - [INFO] + green + ✓ icon
-- `log_warning(message)` - [WARNING] + yellow + ▲ icon → stderr
-- `log_error(message, [file], [line])` - [ERROR] + red + ✗ icon → stderr
-- `log_debug(message)` - [DEBUG] → stderr (only if DEBUG=true)
-- `log_fatal(message, [file], [line])` - [FATAL] + red + ✗ icon → stderr, **exits 1**
-- `die(message)` - Calls log_error then exit 1
+**Output format**: every one of them emits a `[LEVEL]` prefix a log parser can key
+on, ahead of the color and the unicode icon a human reads. That prefix is the
+whole difference from `formatting.sh` below, and it is why a script that might be
+piped to a log file writes here instead.
 
-**Output format**: Always includes [LEVEL] prefix for log parsers while remaining visually beautiful with colors and unicode icons.
+Two contracts the names do not carry. **Everything goes to stderr**, success and
+info included, so a script's stdout stays whatever the script is actually
+producing. And `log_fatal` and `die` exit 1 rather than returning, which makes
+either one unusable inside a command substitution or a pipeline the caller means
+to survive.
 
 **Example**:
 
@@ -71,29 +72,21 @@ log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
 - Menu systems and interactive tools
 - Scripts that prioritize visual appeal over parseability
 
-**Structural Functions**:
+**Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/formatting.sh`
 
-- `print_header(text, [color])` - Thick borders, left-aligned
-- `print_section(text, [color])` - Thin underline
-- `print_banner(text, [color])` - Double bars (═)
-- `print_title(text, [color])` - Centered, full-width
-- Variants: `_success`, `_error`, `_warning`, `_info` with emojis
+Four families come out of that command, and the shape is what makes them
+predictable rather than the individual names. The **structural** ones take
+`(text, [color])` and draw a rule around it — a thick border, a thin underline,
+double bars, a centered full-width line — and each carries `_success`, `_error`,
+`_warning` and `_info` variants that add an emoji. The **status** ones take a
+message and prefix an icon, using the same icons as `logging.sh` and
+deliberately omitting the `[LEVEL]` prefix; picking between the two libraries is
+picking whether the output will be parsed. The **help** ones are the grammar
+below. The rest are separators, colour helpers and a `has_command` test.
 
-**Status Functions** (for visual-only scripts):
-
-- `print_success(message)` - Green + ✓ icon (no [LEVEL] prefix)
-- `print_error(message)` - Red + ✗ icon (no [LEVEL] prefix)
-- `print_warning(message)` - Yellow + ▲ icon (no [LEVEL] prefix)
-- `print_info(message)` - Cyan + ● icon (no [LEVEL] prefix)
-
-**Help Screen Grammar**:
-
-- `help_header(name, [tagline])` - Opens a screen
-- `help_usage(line...)` - Usage lines; the `Usage:` label is the library's
-- `help_section(title)` - Section heading
-- `help_row(name, [args], [description])` - One row
-- `help_text(line...)` - Verbatim prose inside a screen
-- `help_end()` - Closes the screen
+**Help Screen Grammar**: `help_header`, `help_usage`, `help_section`, `help_row`,
+`help_text`, `help_end` — a closed set, listed here because it is a spec rather
+than a roster.
 
 Build every `usage()` / `show_help()` from these and nothing else. One `help_row` per line, in the
 order it prints, so the source shows the shape of the screen:
@@ -130,19 +123,16 @@ The `pytermstyle` package mirrors all six functions for the Python apps, and `go
 same for the Go CLIs; all three render byte-identical screens. `pytermstyle` was extracted from this
 repo in August 2026 — it lived here as `appcore/formatting.py` for as long as every consumer was a
 script in `apps/`, and left when one stopped being: `safekeep` moved to its own repo and could
-not take the help grammar with it through a `sys.path` hack. Each app now declares `pytermstyle` in
-its PEP 723 header, resolved from a git tag. The packaged Python CLIs on the fleet use Typer and get
-their help from Rich instead.
+not take the help grammar with it through a `sys.path` hack. A consumer declares `pytermstyle` in
+its PEP 723 header, resolved from a git tag; nothing left in this repo's `apps/` does, because the
+Python scripts still here are stdlib-only. The packaged Python CLIs use Typer and get their help
+from Rich instead.
 
 The underlying `print_help_row(width, name, [description], [color])` and
 `print_example_row(width, command, [comment])` remain available for a one-off row outside a help
 screen. They emit the colour escape *outside* the padded field — `printf` counts escape bytes
 toward a field width — and *before* the two-space indent, so the indent stays contiguous with the
 name for anything grepping the output for it.
-
-**Utility**:
-
-- `has_command(cmd)` - Check if single command exists (returns 0/1)
 
 **Example**:
 
@@ -172,10 +162,13 @@ print_header_success "Backup Complete"
 - Any code that asks whether a feature is wanted on this machine
 - Never for whether a tool is *installed* — that stays a `command -v` check
 
-**Core Functions**:
+**Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/flags.sh`
 
-- `flag_enabled(NAME, [default])` - True when `$NAME` is truthy. `default` applies when the variable is unset, empty, or holds an unrecognized value, and itself defaults to enabled
-- `flag_classify(value)` - Returns 0 on, 1 off, 2 unrecognized. Used by `dotfiles check` to report typos, which are something wrong rather than something `apply` can fix
+`flag_enabled NAME [default]` is the one every caller wants: true when `$NAME` is truthy, with
+`default` applying when the variable is unset, empty, or holds an unrecognized value, and itself
+defaulting to enabled. `flag_classify` is the finer-grained sibling — 0 on, 1 off, 2 unrecognized —
+and exists because `dotfiles check` has to report a typo as *something wrong* rather than as
+something `apply` can fix.
 
 Truthy is `1`/`true`/`yes`/`on` and falsey is `0`/`false`/`no`/`off`, each case-insensitive.
 
@@ -206,32 +199,15 @@ The flag list and its per-machine defaults live in `install/flags.yml`; this lib
 - Complex scripts needing stack traces for debugging
 - Any script where errors must be trapped and logged
 
-**Core Functions**:
+**Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/error-handling.sh`
 
-*Cleanup & Traps*:
-
-- `enable_error_traps()` - Set up ERR and EXIT signal handlers
-- `register_cleanup(cmd)` - Register cleanup commands for exit
-- `run_cleanup()` - Execute all registered cleanups
-
-*Verification Helpers*:
-
-- `require_commands(cmd1 cmd2...)` - Verify commands exist, fatal if missing
-- `verify_file(path, desc)` - Check file exists and not empty
-- `verify_directory(path, desc)` - Check directory exists
-- `create_directory(path, desc)` - Create dir with error handling
-
-*Advanced Helpers*:
-
-- `run_with_context(desc, cmd...)` - Run command with logged description
-- `download_file_with_retry(url, output, desc, [retries])` - Download with retry
-- `safe_move(src, dest, desc)` - Move file with verification
-
-*Exit & Debug*:
-
-- `exit_success()` - Clean exit after running cleanup
-- `exit_error(message)` - Error exit with cleanup
-- `enable_debug()` / `disable_debug()` - Toggle debug mode
+They fall into cleanup and traps, verification helpers, and the exit and debug pair, and the names
+say which is which. Three things the names do not say. `enable_error_traps` arms the ERR and EXIT
+handlers and is an explicit call rather than something the source does for you, per the sourcing
+rule above. The `verify_*` and `require_*` helpers are fatal rather than falsy — they call
+`log_fatal`, so a caller cannot branch on the result. And `download_file_with_retry` is the only
+thing here that retries, for the reason in
+[Why Downloads Retry but Scripts Do Not](#why-downloads-retry-but-scripts-do-not).
 
 **Example**:
 
