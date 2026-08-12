@@ -107,3 +107,18 @@ tmux_plugins: true
 yazi_plugins: true
 nvim_plugins: true
 configure_zsh: true
+
+# Tools this machine has to be able to log in to. Naming one is what makes an
+# unauthenticated machine report itself; `src/dotfiles/resources/auth.py` says
+# how each is asked, and never repairs one — a login is interactive and personal.
+#
+# atuin is here without a github_releases entry above it: macOS is the one
+# platform that takes it from brew instead, which packages.yml records.
+auth:
+  - gh
+  - icb
+  - learning
+  - meso
+  - nomad
+  - atuin
+  - aws

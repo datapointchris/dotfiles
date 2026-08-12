@@ -222,6 +222,43 @@ def test_a_key_no_reader_consumes_is_refused(tmp_path: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Logins — which tools this machine has to be able to log in to
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_declared_auth_list_is_read_in_order(tmp_path: Path) -> None:
+    loaded = load(tmp_path, {**LINUX, 'auth': ['gh', 'atuin']})
+
+    assert loaded.logins == ('gh', 'atuin')
+
+
+def test_a_machine_that_names_no_logins_has_none(tmp_path: Path) -> None:
+    """Absent is the ordinary case, not a fault: a box nothing asks about is the
+    right answer for one whose whole job is to be SSHed into."""
+    assert load(tmp_path, LINUX).logins == ()
+
+
+def test_auth_declared_as_anything_but_a_list_of_names_is_refused(tmp_path: Path) -> None:
+    """A bare `auth: true` reads as "every tool" to a person and as nothing to the
+    loader, so it is refused rather than silently emptied."""
+    found = issues(tmp_path, {**LINUX, 'auth': True})
+
+    assert any('declares auth as a bool' in issue for issue in found), found
+
+
+def test_the_logins_reach_the_json_a_machine_shows(tmp_path: Path) -> None:
+    assert load(tmp_path, {**LINUX, 'auth': ['gh']}).as_dict()['logins'] == ['gh']
+
+
+def test_a_misspelt_auth_key_is_still_refused(tmp_path: Path) -> None:
+    """`auth` joins the known set by name rather than through SUBSCRIPTIONS, so
+    the refuse-unknown-keys guard has to be shown still holding around it."""
+    found = issues(tmp_path, {**LINUX, 'auths': ['gh']})
+
+    assert any('auths, which no reader consumes' in issue for issue in found), found
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Flags
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -220,6 +220,18 @@ class Machine:
     requirements: tuple[Requirement, ...]
     source: Path
 
+    logins: tuple[str, ...] = ()
+    """The tools this machine has to be able to log in to.
+
+    Its own field rather than a `SUBSCRIPTIONS` entry, because there is no catalog
+    section behind it — the same shape as `FEATURES`. Half the roster is installed
+    outside this repo entirely (`aws` through a custom installer, `bbkt` by hand on
+    the work box), so a field on a `packages.yml` row could never reach them.
+
+    Which tools, and nothing about how each is asked: `resources/auth.py` holds the
+    probes and a test asserts the two sets match in both directions.
+    """
+
     def wants(self, feature: str) -> bool:
         return feature in self.features
 
@@ -241,6 +253,7 @@ class Machine:
             'coordinates': self.coordinates.as_dict(),
             'features': sorted(self.features),
             'flags': dict(self.flags),
+            'logins': list(self.logins),
         }
 
 
@@ -269,6 +282,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     issues.extend(_unknown_keys(name, declared))
     coordinates, label = _coordinates(name, declared, issues)
     flags = _flags(declared, flag_data or {}, issues)
+    logins = _logins(name, declared, issues)
 
     if issues:
         raise MachineError(tuple(issues))
@@ -282,6 +296,7 @@ def load(name: str, root: Path | None = None) -> Machine:
         flags=flags,
         requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates, label),
         source=source,
+        logins=logins,
     )
 
 
@@ -303,8 +318,24 @@ def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axe
     return narrowing.get('platform', platform_label) == platform_label
 
 
+def _logins(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
+    """The tools this machine names in `auth:`, or none where it names none.
+
+    Absent is the ordinary case rather than a fault. A machine that declares no
+    login is a machine nothing asks about, which is the right answer for a box
+    whose whole job is to be SSHed into.
+    """
+    value = declared.get('auth')
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not all(isinstance(tool, str) for tool in value):
+        issues.append(DeclarationIssue(name, f'declares auth as a {type(value).__name__}, where a list of tool names is expected'))
+        return ()
+    return tuple(value)
+
+
 def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
-    known = {'machine', 'platform', 'coordinates', 'flags', *FEATURES, *(key for _, key in SUBSCRIPTIONS.values() if key)}
+    known = {'machine', 'platform', 'coordinates', 'flags', 'auth', *FEATURES, *(key for _, key in SUBSCRIPTIONS.values() if key)}
     return [
         DeclarationIssue(
             name, f'declares {key} — {RETIRED_KEYS[key]}' if key in RETIRED_KEYS else f'declares {key}, which no reader consumes'

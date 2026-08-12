@@ -89,13 +89,25 @@ class Stage(enum.IntEnum):
     """
 
     SYSTEM_CONFIG = 110
-    """Last, where `install.sh` put the two halves of it that existed.
+    """Last of the stages that write, where `install.sh` put the two halves of it
+    that existed.
 
     Not beside SYSTEM, despite the name. Every row needs the package it
     configures to be installed first — the docker group, the unit that serves the
     socket, zsh before it can be the login shell — and nothing installed later
     needs any of them. `apply` ending on the one stage that asks for a password
     is a property worth keeping rather than an accident of where it landed.
+    """
+
+    AUTH = 120
+    """Above every stage that installs something, because a login can only be
+    asked about once the tool exists.
+
+    Nothing here is ever written, so `apply` still ends on SYSTEM_CONFIG: a
+    credential is personal and interactive, and this stage exists to order the
+    *question* rather than any work. Ordering it last is what stops `check`
+    reporting a machine as unauthenticated for a CLI the same run was about to
+    install.
     """
 
 

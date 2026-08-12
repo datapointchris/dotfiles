@@ -53,3 +53,10 @@ tmux_plugins: true
 yazi_plugins: true
 nvim_plugins: true
 configure_zsh: true
+
+# Tools this machine has to be able to log in to. Only atuin: history sync is the
+# whole reason it is installed here rather than left to zsh, and a box that exists
+# to be SSHed into has nothing to do with a GitHub or an AWS credential. Naming a
+# tool is what makes this machine report the login as missing until it is done.
+auth:
+  - atuin
