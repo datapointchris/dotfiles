@@ -7,44 +7,79 @@
 -- colorscheme-manager below (kept eager) drives that selection at startup and
 -- via the theme-tool file watcher.
 return {
-  {
-    'projekt0n/github-nvim-theme',
-    name = 'github-theme',
-    lazy = true,
-    config = function() require('github-theme').setup() end,
-  },
-  {
-    'rose-pine/neovim',
-    name = 'rose-pine',
-    lazy = true,
-    config = function()
-      require('rose-pine').setup({
-        variant = 'auto',
-        dark_variant = 'main',
-      })
-    end,
-  },
-  { 'rebelot/kanagawa.nvim', lazy = true },
-  { 'ellisonleao/gruvbox.nvim', lazy = true },
-  { 'AlexvZyl/nordic.nvim', lazy = true },
-  { 'EdenEast/nightfox.nvim', lazy = true },
-  { 'craftzdog/solarized-osaka.nvim', lazy = true },
-  { 'mhartington/oceanic-next', lazy = true },
-  { 'datapointchris/flexoki-moon-nvim', lazy = true },
-  { 'Aejkatappaja/cendre', lazy = true },
-  { 'Aejkatappaja/sora', lazy = true },
-  {
-    'neanias/everforest-nvim',
-    version = false,
-    lazy = true,
-    config = function()
-      vim.o.background = 'dark'
-      require('everforest').setup({
-        background = 'hard',
-        colours_override = function(palette) palette.bg0 = palette.bg_dim end,
-      })
-    end,
-  },
+  -- Colorscheme plugins, read out of the theme library rather than listed here.
+  --
+  -- Every theme.yml already names the repo its colorscheme comes from, so a copy
+  -- of that list in this file was a second place to forget — and forgetting is
+  -- silent: :colorscheme finds nothing and the apply leaves the previous theme up
+  -- with no error. Only the setup options below are knowledge theme.yml does not
+  -- carry; everything else is derived.
+  (function()
+    local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
+
+    -- Plugins whose look is a setup call rather than a colorscheme name.
+    local options = {
+      ['projekt0n/github-nvim-theme'] = {
+        name = 'github-theme',
+        config = function() require('github-theme').setup() end,
+      },
+      ['rose-pine/neovim'] = {
+        name = 'rose-pine',
+        config = function()
+          require('rose-pine').setup({
+            variant = 'auto',
+            dark_variant = 'main',
+          })
+        end,
+      },
+      ['neanias/everforest-nvim'] = {
+        version = false,
+        config = function()
+          vim.o.background = 'dark'
+          require('everforest').setup({
+            background = 'hard',
+            colours_override = function(palette) palette.bg0 = palette.bg_dim end,
+          })
+        end,
+      },
+    }
+
+    -- Quoted first, then bare: one theme.yml writes the repo unquoted, and a
+    -- quoted-only match would drop it — which is everforest, one of the three
+    -- that needs its options above.
+    local function plugin_repo(line)
+      local repo = line:match('^%s*plugin:%s*"([^"]+)"') or line:match("^%s*plugin:%s*'([^']+)'")
+      if repo then return repo end
+      local bare = line:match('^%s*plugin:%s*([^%s#]+)')
+      if bare and bare ~= 'null' and bare ~= '~' then return bare end
+      return nil
+    end
+
+    local specs, seen = {}, {}
+    local handle = vim.loop.fs_scandir(themes_dir)
+    if not handle then return specs end
+
+    while true do
+      local name, type = vim.loop.fs_scandir_next(handle)
+      if not name then break end
+      if type == 'directory' then
+        local yml = themes_dir .. '/' .. name .. '/theme.yml'
+        if vim.fn.filereadable(yml) == 1 then
+          for _, line in ipairs(vim.fn.readfile(yml)) do
+            local repo = plugin_repo(line)
+            -- Several themes share one plugin — cendre has three depths and
+            -- flexoki-moon four variants — so the spec is emitted once.
+            if repo and not seen[repo] then
+              seen[repo] = true
+              table.insert(specs, vim.tbl_extend('force', { repo, lazy = true }, options[repo] or {}))
+            end
+          end
+        end
+      end
+    end
+
+    return specs
+  end)(),
 
   -- Generated themes from theme system (~/.local/share/theme)
   -- Dynamically load all themes that have a neovim/ directory
