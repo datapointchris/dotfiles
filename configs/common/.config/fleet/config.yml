@@ -11,3 +11,15 @@ repos_file: ~/dev/repos.json
 # holds symlinks into a clone on a fleet machine and nothing at all elsewhere —
 # the same set that has fleet installed at all.
 machines_file: ~/dev/machines.json
+
+# The standards `fleet audit` grades against. A directory rather than a file,
+# and named separately again for the same reason as the two above: a third
+# shared thing with its own lifetime. Without this the audit falls back to
+# fleet's own data directory, finds nothing, and says so.
+standards_dir: ~/dev/standards
+
+# What the fleet runs unattended. A declaration — which machine owns a job and
+# how often it runs — so it sits with the registries rather than in state. What
+# each machine actually ran is per-machine state under $XDG_STATE_HOME, and
+# deliberately not here.
+schedule_file: ~/dev/schedule.json
