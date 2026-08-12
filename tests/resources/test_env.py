@@ -337,7 +337,48 @@ def test_identity_drift_from_the_manifest_is_stale(tmp_path: Path) -> None:
     live = session(tmp_path, {**MANIFEST, 'platform': 'linux'})
     envfile.write(live.env_file, live.machine)
 
-    assert items(changes(tmp_path))['PLATFORM'] is Verdict.STALE
+    found = [change for change in changes(tmp_path) if change.item == 'PLATFORM']
+
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].actionable
+
+
+def test_an_overridden_coordinate_is_named_but_is_not_ours_to_write(tmp_path: Path) -> None:
+    """A coordinate selects which overlay directories every shell sources, so an
+    override is the machine saying it is a different machine than its manifest —
+    worth naming, unlike the flag override a marker exists to allow. Not
+    repairable: the assignment is below the marker and `apply` owns only what is
+    above it."""
+    live = session(tmp_path)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export PLATFORM=linux\n')
+
+    found = [change for change in changes(tmp_path) if change.item == 'PLATFORM']
+
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].observed == 'linux'
+    assert found[0].repair is Repair.BY_HAND
+    assert not found[0].actionable
+    assert str(live.env_file) in found[0].advice
+
+
+def test_an_overridden_coordinate_settles_rather_than_being_rewritten_each_run(tmp_path: Path, unprivileged: Privilege) -> None:
+    """The loop a whole-file comparison produces: STALE, apply, DONE, STALE again,
+    with a fresh `.env.bak` taken over the last one every round until the backup is
+    of nothing. `perform`'s re-observation guard never fires, because the finding
+    stays actionable however many times it is repaired."""
+    live = session(tmp_path)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export PLATFORM=linux\n')
+
+    for _ in range(3):
+        for change in [found for found in changes(tmp_path) if found.actionable]:
+            env_resource.RESOURCE.perform(session(tmp_path), change, unprivileged)
+
+    assert not (tmp_path / '.env.bak').exists()
+    assert envfile.read(live.env_file)['PLATFORM'] == 'linux'
 
 
 def test_a_flag_nothing_declares_is_undeclared_and_unrepairable(tmp_path: Path, env_file: Path) -> None:

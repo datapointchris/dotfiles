@@ -44,7 +44,7 @@ class Observed:
     values: dict[str, str]
     present_files: frozenset[str]
 
-    generated: dict[str, str] = dc.field(default_factory=dict)
+    generated: dict[str, str]
     """What the section above the OVERRIDES marker sets, on its own.
 
     Carried beside `values` rather than replacing it, because the two answer
@@ -52,6 +52,10 @@ class Observed:
     whether a flag arrived at all and what a required value was set to — both of
     which are answered below the marker. `generated` is the half a regeneration
     owns, and so the only half whose value can be held to the declaration.
+
+    Required rather than defaulted, because an empty mapping is a valid reading of
+    a markerless file: defaulted, an `Observed` built without it would report no
+    value drift anywhere and call the machine converged.
     """
 
     @property
@@ -119,30 +123,57 @@ def _identity(machine, observed: Observed) -> list[Change]:
 
     The coordinates are identity rather than configuration: they select which
     overlays every shell sources, so one of them missing or stale is a machine
-    loading someone else's files, not a preference that drifted.
+    loading someone else's files, not a preference that drifted. That is the
+    whole of why an override below the marker is named here and stays silent in
+    `_flags` — the marker exists to let a machine hold a preference of its own,
+    and a coordinate is not a preference.
+
+    Which half disagrees decides who can repair it. A generated value that no
+    longer matches the manifest is one rewrite away and `apply` makes it. An
+    override below the marker is the last assignment in the file, so the shell
+    takes it whatever the section above says: `apply` owns only the section above,
+    so offering it as repairable buys a `check` that finds it, an `apply` that
+    reports DONE, a fresh `.env.bak` over the last one, and a machine that has not
+    moved.
     """
     expected_values = {'MACHINE': machine.name, 'PLATFORM': machine.platform_label, **envfile.coordinate_exports(machine)}
 
     changes = []
     for key, expected in expected_values.items():
         actual = observed.values.get(key)
+        written = observed.generated.get(key)
         if actual is None:
             changes.append(Change(NAME, Stage.ENVIRONMENT, key, Verdict.MISSING, detail=f'the manifest declares {expected}'))
+        elif written is not None and written != expected:
+            changes.append(
+                Change(NAME, Stage.ENVIRONMENT, key, Verdict.STALE, detail=f'the manifest declares {expected}', observed=written)
+            )
         elif actual != expected:
-            changes.append(Change(NAME, Stage.ENVIRONMENT, key, Verdict.STALE, detail=f'the manifest declares {expected}', observed=actual))
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    key,
+                    Verdict.STALE,
+                    detail=f'the manifest declares {expected}, and an assignment below the marker overrides it',
+                    observed=actual,
+                    repair=Repair.BY_HAND,
+                    advice=f'drop that assignment from {observed.path}, or declare {actual} in the manifest',
+                )
+            )
     return changes
 
 
 def _flags(machine, observed: Observed) -> list[Change]:
     """Whether every declared flag arrived, parses, and still says what it should.
 
-    The third question is asked of the generated half alone. A flag the manifest
-    moved reaches an existing machine only through a regeneration, and until this
-    compared values nothing reported that it had not — the file kept the old
-    answer and `check` called the machine converged because `true` and `false`
-    are both perfectly parseable. A hand-edited override below the marker stays
-    quiet for the reason `read_generated` records: it wins at runtime, so it is
-    not drift, and no rewrite of the section above it could repair it anyway.
+    The third question is asked of the generated half alone. A flag whose default
+    moves in the repo reaches an existing machine only through a regeneration, and
+    `true` and `false` both parse perfectly — so a machine that never regenerated
+    holds the old answer, and nothing but this comparison can tell it from the new
+    one. A hand-edited override below the marker stays quiet for the reason
+    `read_generated` records: it wins at runtime, so it is not drift, and no
+    rewrite of the section above it could repair it anyway.
     """
     changes = []
     for name, expected in machine.flags.items():
