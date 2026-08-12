@@ -82,7 +82,9 @@ double bars, a centered full-width line — and each carries `_success`, `_error
 message and prefix an icon, using the same icons as `logging.sh` and
 deliberately omitting the `[LEVEL]` prefix; picking between the two libraries is
 picking whether the output will be parsed. The **help** ones are the grammar
-below. The rest are separators, colour helpers and a `has_command` test.
+below. The rest are separators, colour helpers, a `has_command` test, a
+`center_text` that pads to `tput cols`, and a `formatting_demo` that prints a
+sample of the whole library.
 
 **Help Screen Grammar**: `help_header`, `help_usage`, `help_section`, `help_row`,
 `help_text`, `help_end` — a closed set, listed here because it is a spec rather
@@ -188,24 +190,22 @@ The flag list and its per-machine defaults live in `install/flags.yml`; this lib
 ### error-handling.sh - Robust Error Management
 
 **Location**: `~/.local/shell/error-handling.sh`
-**Purpose**: Error trapping, cleanup handlers, and verification utilities
+**Purpose**: Cleanup registration, verification helpers, and download retry
 **Dependencies**: Sources logging.sh
 
 **When to use**:
 
 - Scripts that create temporary files/directories
 - Download/installation scripts needing retry logic
-- Scripts requiring cleanup on exit (success or failure)
-- Complex scripts needing stack traces for debugging
-- Any script where errors must be trapped and logged
+- Scripts that must undo their own mess on the way out
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/error-handling.sh`
 
-They fall into cleanup and traps, verification helpers, and the exit and debug pair, and the names
-say which is which. Three things the names do not say. `enable_error_traps` arms the ERR and EXIT
-handlers and is an explicit call rather than something the source does for you, per the sourcing
-rule above. The `verify_*` and `require_*` helpers are fatal rather than falsy — they call
-`log_fatal`, so a caller cannot branch on the result. And `download_file_with_retry` is the only
+Three things those names do not carry. `enable_error_traps` installs no handler — its whole body is
+`set -euo pipefail`, run in the caller's shell — so the cleanup a script registers runs only if that
+script also writes `trap run_cleanup EXIT`, which is the line the library's own usage block at the
+foot of the file shows. The `verify_*` and `require_*` helpers are fatal rather than falsy — they
+call `log_fatal`, so a caller cannot branch on the result. And `download_file_with_retry` is the only
 thing here that retries, for the reason in
 [Why Downloads Retry but Scripts Do Not](#why-downloads-retry-but-scripts-do-not).
 
@@ -220,6 +220,7 @@ enable_error_traps
 # Register cleanup
 TMP_DIR=$(mktemp -d)
 register_cleanup "rm -rf $TMP_DIR"
+trap run_cleanup EXIT
 
 # Verify prerequisites
 require_commands curl tar jq
@@ -235,7 +236,6 @@ download_file_with_retry \
 verify_file "$TMP_DIR/package.tar.gz" "Downloaded package"
 safe_move "$TMP_DIR/binary" "$HOME/.local/bin/binary" "Binary"
 
-# Cleanup runs automatically on exit
 exit_success
 ```
 
