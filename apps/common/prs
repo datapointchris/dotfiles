@@ -34,7 +34,26 @@ case "${1:-}" in
     exit 0
     ;;
   --list)
-    pr-list | jq -r '.[] | "\(.repo)\t#\(.number)\t\(.age_days)d\t\(.title)"' | column -t -s $'\t'
+    # Labelled, and the branch before the title, because this is the shape
+    # `gh pr list` and `bbkt pr list` both already print — five unlabelled
+    # columns read as a log line rather than a table. The title goes last as the
+    # one unbounded field: anything after it either misaligns when a title runs
+    # long or forces an arbitrary clip width, and the columns before it are the
+    # ones you retype, which must never be the truncated end of a row.
+    pr-list | jq -r '
+      if length == 0 then "No open PRs."
+      else
+        ["REPO", "PR", "AGE", "BRANCH", "TITLE"],
+        (.[] | [
+          .repo,
+          "#\(.number)",
+          "\(.age_days)d",
+          (if (.branch // "") == "" then "-" else .branch end),
+          (if .draft then "\(.title) (draft)" else .title end)
+        ])
+      end
+      | if type == "array" then @tsv else . end
+    ' | column -t -s $'\t'
     exit 0
     ;;
   "") ;;
@@ -51,7 +70,11 @@ prs_json=$(pr-list)
 
 # The index leads and is hidden (--with-nth=2..), so the choice survives a title
 # containing a tab or a leading number.
-chosen=$(jq -r 'to_entries[] | [.key, .value.repo, "#\(.value.number)", "\(.value.age_days)d", .value.title] | @tsv' <<<"$prs_json" \
+#
+# The branch rides in the displayed line because fzf can only match what it
+# shows: without it, typing the branch you are working on finds nothing, and the
+# branch is the one thing you know for certain about the PR you came to read.
+chosen=$(jq -r 'to_entries[] | [.key, .value.repo, "#\(.value.number)", "\(.value.age_days)d", (.value.branch // "-"), .value.title] | @tsv' <<<"$prs_json" \
   | fzf --delimiter=$'\t' --with-nth='2..' --no-sort --prompt='pr > ' --height=40% --reverse) || exit 0
 [ -n "$chosen" ] || exit 0
 
@@ -60,18 +83,16 @@ pr=$(jq --argjson i "$idx" '.[$i]' <<<"$prs_json")
 
 repo=$(jq -r '.repo' <<<"$pr")
 number=$(jq -r '.number' <<<"$pr")
-slug=$(jq -r '.slug' <<<"$pr")
 path=$(jq -r '.path' <<<"$pr")
 
 [ -n "$path" ] || die "$repo is not checked out on this machine"
 [ -d "$path" ] || die "$repo is registered at $path, which does not exist"
 
-# Ask for the base rather than assuming the default branch: a PR stacked on
-# another targets its parent, and diffing that against main shows both as one.
-base=""
-if command -v gh >/dev/null 2>&1 && [[ $slug == */* ]]; then
-  base=$(gh pr view "$number" --repo "$slug" --json baseRefName -q .baseRefName 2>/dev/null || true)
-fi
+# Take the base from the listing rather than assuming the default branch: a PR
+# stacked on another targets its parent, and diffing that against main shows both
+# as one. pr-list carries it, so the round trip a `gh pr view` per PR cost is
+# gone; the local fallback stays for a provider whose listing does not report it.
+base=$(jq -r '.base // ""' <<<"$pr")
 [ -n "$base" ] || base=$(git -C "$path" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
 [ -n "$base" ] || die "could not work out what PR #$number is based on"
 
