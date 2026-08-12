@@ -98,7 +98,11 @@ cmd_search() {
 # Create new note (select section first)
 cmd_new() {
   local section="$1"
-  mapfile -t sections < <(discover_sections)
+  local sections=()
+  # mapfile is bash 4; macOS ships 3.2.
+  while IFS= read -r discovered; do
+    sections+=("$discovered")
+  done < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
     print_warning "No sections found in: $NOTES_DIR"
@@ -169,7 +173,11 @@ cmd_recent() {
 
 # Browse notes by section
 cmd_browse() {
-  mapfile -t sections < <(discover_sections)
+  local sections=()
+  # mapfile is bash 4; macOS ships 3.2.
+  while IFS= read -r discovered; do
+    sections+=("$discovered")
+  done < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
     print_warning "No sections found in: $NOTES_DIR"
