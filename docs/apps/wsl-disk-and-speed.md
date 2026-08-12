@@ -1,8 +1,25 @@
 # WSL disk and speed
 
-Two apps, deployed only where `host: wsl`. `wsl-reclaim` is about the disk that
-never shrinks; `wsl-doctor` is about everything else that makes WSL feel slow.
-Neither exists on Arch or macOS, because neither question does.
+One app, `wsl-tools`, deployed only where `host: wsl`. It does not exist on Arch
+or macOS, because the questions it answers do not.
+
+## One binary, because this gets reached for a few times a year
+
+It began as `wsl-tools` and `wsl-tools doctor` side by side, which reads better at
+the point of use — `wsl-tools compact` beats `wsl-tools compact`. That is the
+wrong thing to optimise at this frequency. The cost of a rarely-used tool is not
+typing the verb; it is remembering that the tool exists and what it was called,
+and then having to go and find what the *other* ones were named. One name that
+lists its own verbs is findable. A family is something you go looking for.
+
+So a bare `wsl-tools` prints the verb list rather than doing any work, and the
+verbs are flat — `status`, `doctor`, `clean`, `compact`, `rebuild`, `bench` —
+because two levels of subcommand is where this would get unwieldy.
+
+It is one *file* as well as one binary. The shell overlay at
+`~/.local/shell/host/wsl` is sourced by every interactive shell, so splitting
+the implementation into a library there would put `clean` and `report` into the
+shell's namespace and pay to parse them at every prompt.
 
 ## Deleting files inside WSL never shrinks the disk
 
@@ -16,14 +33,14 @@ one is what the C: drive is short of.
 Reclaiming space is therefore two separate acts, and doing only one of them
 accomplishes nothing:
 
-1. Free the blocks inside the guest — `wsl-reclaim clean`
-2. Shrink the file on the host — `wsl-reclaim compact` or `wsl-reclaim rebuild`
+1. Free the blocks inside the guest — `wsl-tools clean`
+2. Shrink the file on the host — `wsl-tools compact` or `wsl-tools rebuild`
 
 The second step has two routes and which one is available is not a preference.
-`wsl-reclaim report` probes the account and says which.
+`wsl-tools status` probes the account and says which.
 
 The compaction is the part that has to happen on Windows, with administrator
-rights, while WSL is shut down. `compact` writes a PowerShell script into the
+rights, while WSL is shut down. `wsl-tools compact` writes a PowerShell script into the
 Windows temp directory and launches it elevated and **detached**. Detached
 because the script's second instruction is `wsl --shutdown`, which kills every
 process in the distro — including, if it were a child, the thing doing the
@@ -42,7 +59,7 @@ diskpart requires elevation, and so does `Optimize-VHD` and so does adding a
 Defender exclusion. On a managed machine where UAC asks for somebody else's
 password, all three are closed and nothing shrinks the file in place.
 
-`wsl-reclaim rebuild` is the way through. It does not compact the disk; it
+`wsl-tools rebuild` is the way through. It does not compact the disk; it
 throws it away and writes a new one from a tar of the filesystem, so the result
 is the size of the data rather than of the high-water mark the old disk once
 reached. `wsl --export`, `wsl --unregister` and `wsl --import` are all
@@ -68,7 +85,7 @@ the distro, install a fresh one, run `dotfiles apply`, restore, and carry on.
 It reclaims the same space and needs no administrator either.
 
 The two are not competing, because they answer different questions.
-`wsl-reclaim rebuild` preserves the filesystem exactly and takes about as long
+`wsl-tools rebuild` preserves the filesystem exactly and takes about as long
 as copying the data twice. Deleting and reinstalling preserves only what
 safekeep covers, takes as long as a full machine setup — and **proves the
 machine is reproducible**, which is the entire premise of this repo and of
@@ -106,7 +123,7 @@ comment that explains it.
 absent on Windows Home and on any managed machine that never enabled the
 feature. diskpart does the same job everywhere.
 
-## Why WSL feels slow, and what `wsl-doctor` measures
+## Why WSL feels slow, and what `wsl-tools doctor` measures
 
 The causes are few and specific, and none of them announce themselves. Each
 check ends in a named change rather than a number, because a number the reader
@@ -117,7 +134,7 @@ every Windows PATH entry is appended to the guest's. A command that *exists* is
 found and cached; a command that does **not** stats every directory in turn, and
 each `/mnt` entry is a 9p round trip. Every typo pays it, and so does every
 `command -v` guard in every shell library and prompt — which is why the shell
-feels slow rather than any one program. `wsl-doctor` counts the entries and
+feels slow rather than any one program. `wsl-tools doctor` counts the entries and
 times a miss.
 
 Turning it off is a genuine tradeoff and the tool reports it rather than making
@@ -128,7 +145,7 @@ handful of `.exe` files actually used into `~/.local/bin`.
 
 **Files on `/mnt/c`.** drvfs crosses a protocol boundary per operation, so
 anything that walks a tree — `git status` above all — is an order of magnitude
-slower than the same repo under `~`. `wsl-doctor bench` writes 64MB to each
+slower than the same repo under `~`. `wsl-tools bench` writes 64MB to each
 filesystem so the gap is a measured number rather than folklore.
 
 **The page cache being dropped.** `autoMemoryReclaim` defaults to `dropCache`,
@@ -139,11 +156,11 @@ worth reclaiming.
 
 **Defender scanning the vhdx.** Every read and write inside the guest is scanned
 on the host unless the disk is excluded. Adding an exclusion needs an
-administrator, so `wsl-doctor` words the finding by what the account can
+administrator, so `wsl-tools doctor` words the finding by what the account can
 actually do — an action where it can be taken, context where it cannot. A fix
 nobody on this machine can apply is noise in a list of things to change.
 
-`wsl-doctor` also reports where the distro is installed. Anything outside
+`wsl-tools doctor` also reports where the distro is installed. Anything outside
 `Packages\<PackageFamilyName>` arrived through `wsl --import`, which means the
 disk has been rebuilt before — the machine remembers the procedure even when
 nobody does.

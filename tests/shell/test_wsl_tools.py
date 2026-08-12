@@ -1,6 +1,6 @@
-"""wsl-reclaim and wsl-doctor, driven on a machine that is not WSL.
+"""wsl-tools, driven on a machine that is not WSL.
 
-Neither tool can be exercised where it runs. The fleet's WSL box is the work
+It cannot be exercised where it runs. The fleet's WSL box is the work
 machine, and a mistake in either is expensive in a way a normal app is not:
 `compact` shuts down every distro and hands an elevated diskpart a path, and
 `rebuild` unregisters the distro outright and imports it back from a tar.
@@ -28,9 +28,7 @@ from shells import SHELL_DIR
 from shells import Shell
 from shells import shell_out
 
-RECLAIM = str(REPO / 'apps' / 'host' / 'wsl' / 'wsl-reclaim')
-DOCTOR = str(REPO / 'apps' / 'host' / 'wsl' / 'wsl-doctor')
-INTEROP = REPO / 'shell' / 'host' / 'wsl'
+TOOL = str(REPO / 'apps' / 'host' / 'wsl' / 'wsl-tools')
 WSLCONFIG = str(REPO / 'install' / 'wsl' / 'install-wslconfig.sh')
 TEMPLATE = REPO / 'install' / 'wsl' / 'wslconfig.template'
 
@@ -82,11 +80,8 @@ def uncommented(path: str) -> list[str]:
 class Windows:
     """A stubbed Windows side, plus the deployed shell tree the apps read.
 
-    `shell_dir` is assembled rather than pointed at the repo: on a real machine
-    `~/.local/shell` is two trees merged — `configs/common/.local/shell`
-    flattened into it and `shell/host/wsl` nested below it — and the apps
-    resolve their library through that merge. A test pointed at either half
-    alone would not catch an app looking in the wrong one.
+    The tool sources only `formatting.sh`, so the repo's own shell directory is
+    the whole of what it needs.
     """
 
     path: Path
@@ -113,14 +108,7 @@ def windows(tmp_path: Path) -> Windows:
         stub.write_text(body)
         stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
 
-    shell_dir = tmp_path / 'shell'
-    shell_dir.mkdir()
-    for library in SHELL_DIR.iterdir():
-        (shell_dir / library.name).symlink_to(library)
-    (shell_dir / 'host').mkdir()
-    (shell_dir / 'host' / 'wsl').symlink_to(INTEROP)
-
-    return Windows(path=binaries, argv_log=tmp_path / 'argv.log', shell_dir=shell_dir)
+    return Windows(path=binaries, argv_log=tmp_path / 'argv.log', shell_dir=SHELL_DIR)
 
 
 def run(script: str, snippet: str, windows: Windows, *args: str, **environment: str) -> Shell:
@@ -146,14 +134,15 @@ def run(script: str, snippet: str, windows: Windows, *args: str, **environment: 
 
 
 def test_utf16_reply_reaches_bash_as_a_plain_string(windows: Windows) -> None:
-    result = run(RECLAIM, 'powershell_out "anything"', windows, STUB_REPLY='hello')
+    result = run(TOOL, 'powershell_out "anything"', windows, STUB_REPLY='hello')
     assert result.stdout.strip() == 'hello'
 
 
-def test_the_app_finds_its_library_through_the_deployed_tree(windows: Windows) -> None:
-    """The library lives in the `shell/` tree and the app in `apps/`, and only
-    the deployed `~/.local/shell` puts them in reach of each other."""
-    result = run(RECLAIM, 'declare -F windows_can_elevate >/dev/null && echo found', windows)
+def test_the_windows_helpers_are_self_contained(windows: Windows) -> None:
+    """They were briefly a library under `shell/host/wsl`, which every
+    interactive shell sources — so `clean` and `report` would have landed in
+    the shell's namespace and been parsed at every prompt."""
+    result = run(TOOL, 'declare -F windows_can_elevate >/dev/null && echo found', windows)
     assert result.stdout.strip() == 'found'
 
 
@@ -164,7 +153,7 @@ def test_registry_query_carries_the_distro_and_the_pipeline_variable(windows: Wi
     distribution, and returns an empty BasePath — which every caller here reads
     as "not on WSL" rather than as a bug.
     """
-    run(RECLAIM, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu-Work')
+    run(TOOL, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu-Work')
 
     registry = windows.matching('Lxss')
     assert registry, 'the registry lookup never reached powershell.exe'
@@ -174,24 +163,24 @@ def test_registry_query_carries_the_distro_and_the_pipeline_variable(windows: Wi
 
 def test_extended_length_prefix_is_stripped(windows: Windows) -> None:
     """The registry answers `\\\\?\\C:\\...` and wslpath returns nothing for one."""
-    result = run(RECLAIM, 'vhdx_windows_path', windows, STUB_BASE_PATH=DEVICE_PREFIX + BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
+    result = run(TOOL, 'vhdx_windows_path', windows, STUB_BASE_PATH=DEVICE_PREFIX + BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
     assert result.stdout.strip() == BASE_PATH + r'\ext4.vhdx'
 
 
 def test_a_plain_base_path_is_left_alone(windows: Windows) -> None:
-    result = run(RECLAIM, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
+    result = run(TOOL, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
     assert result.stdout.strip() == BASE_PATH + r'\ext4.vhdx'
 
 
 def test_no_distro_name_is_a_failure_not_an_empty_path(windows: Windows) -> None:
     """An empty answer would be handed to diskpart as `select vdisk file=""`."""
-    result = run(RECLAIM, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='')
+    result = run(TOOL, 'vhdx_windows_path', windows, STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='')
     assert not result.ok
     assert result.stdout.strip() == ''
 
 
 def test_an_unregistered_distro_is_a_failure(windows: Windows) -> None:
-    result = run(RECLAIM, 'vhdx_windows_path', windows, STUB_BASE_PATH='', WSL_DISTRO_NAME='Ubuntu')
+    result = run(TOOL, 'vhdx_windows_path', windows, STUB_BASE_PATH='', WSL_DISTRO_NAME='Ubuntu')
     assert not result.ok
 
 
@@ -201,19 +190,19 @@ def test_an_unregistered_distro_is_a_failure(windows: Windows) -> None:
 
 
 def test_an_account_in_the_administrators_group_can_elevate(windows: Windows) -> None:
-    result = run(RECLAIM, 'windows_can_elevate && echo yes', windows, STUB_ELEVATE='yes')
+    result = run(TOOL, 'windows_can_elevate && echo yes', windows, STUB_ELEVATE='yes')
     assert result.stdout.strip() == 'yes'
 
 
 def test_a_standard_account_cannot(windows: Windows) -> None:
-    result = run(RECLAIM, 'windows_can_elevate || echo no', windows, STUB_ELEVATE='no')
+    result = run(TOOL, 'windows_can_elevate || echo no', windows, STUB_ELEVATE='no')
     assert result.stdout.strip() == 'no'
 
 
 def test_the_probe_asks_for_group_membership_not_the_current_token(windows: Windows) -> None:
     """IsInRole answers false for an admin running unelevated, which is every
     admin, so a probe built on it reports every machine as unable to elevate."""
-    run(RECLAIM, 'windows_can_elevate || true', windows, STUB_ELEVATE='no')
+    run(TOOL, 'windows_can_elevate || true', windows, STUB_ELEVATE='no')
 
     probe = windows.matching('S-1-5-32-544')
     assert probe, 'the elevation probe never ran'
@@ -223,7 +212,7 @@ def test_the_probe_asks_for_group_membership_not_the_current_token(windows: Wind
 def test_compact_refuses_before_prompting_an_account_that_cannot_elevate(windows: Windows) -> None:
     """Start-Process -Verb RunAs on a standard account raises a UAC box asking
     for somebody else's password, which is a worse answer than saying so."""
-    result = run(RECLAIM, 'compact', windows, STUB_ELEVATE='no', STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
+    result = run(TOOL, 'compact', windows, STUB_ELEVATE='no', STUB_BASE_PATH=BASE_PATH, WSL_DISTRO_NAME='Ubuntu')
 
     assert not result.ok
     assert 'rebuild' in result.stdout
@@ -236,7 +225,7 @@ def test_compact_refuses_before_prompting_an_account_that_cannot_elevate(windows
 
 
 def test_the_elevated_launch_asks_for_runas(windows: Windows) -> None:
-    run(RECLAIM, 'launch_detached "C:\\\\tmp\\\\x.ps1" RunAs -Vhdx "C:\\\\d.vhdx"', windows)
+    run(TOOL, 'launch_detached "C:\\\\tmp\\\\x.ps1" RunAs -Vhdx "C:\\\\d.vhdx"', windows)
 
     launch = windows.matching('Start-Process')
     assert launch
@@ -246,7 +235,7 @@ def test_the_elevated_launch_asks_for_runas(windows: Windows) -> None:
 def test_the_unelevated_launch_does_not(windows: Windows) -> None:
     """rebuild needs no administrator, and asking for one anyway would put a UAC
     prompt in front of the only route a standard account has."""
-    run(RECLAIM, 'launch_detached "C:\\\\tmp\\\\x.ps1" "" -Distro Ubuntu', windows)
+    run(TOOL, 'launch_detached "C:\\\\tmp\\\\x.ps1" "" -Distro Ubuntu', windows)
 
     launch = windows.matching('Start-Process')
     assert launch
@@ -256,7 +245,7 @@ def test_the_unelevated_launch_does_not(windows: Windows) -> None:
 def test_values_reach_the_script_as_quoted_parameters(windows: Windows) -> None:
     """A Windows path is backslashes and braces. PowerShell single-quoted
     literals take it as written, which is why nothing here escapes them."""
-    run(RECLAIM, 'launch_detached "C:\\\\tmp\\\\x.ps1" "" -Archive "D:\\\\my backups\\\\U.tar"', windows)
+    run(TOOL, 'launch_detached "C:\\\\tmp\\\\x.ps1" "" -Archive "D:\\\\my backups\\\\U.tar"', windows)
 
     launch = windows.matching('Start-Process')[0]
     assert "'-Archive','D:\\my backups\\U.tar'" in launch
@@ -265,7 +254,7 @@ def test_values_reach_the_script_as_quoted_parameters(windows: Windows) -> None:
 def test_an_embedded_quote_is_doubled_not_dropped(windows: Windows) -> None:
     """A single quote would otherwise close the literal and turn the rest of the
     path into PowerShell code."""
-    run(RECLAIM, """launch_detached "C:\\\\x.ps1" "" -Archive "D:\\\\O'Brien\\\\U.tar" """, windows)
+    run(TOOL, """launch_detached "C:\\\\x.ps1" "" -Archive "D:\\\\O'Brien\\\\U.tar" """, windows)
 
     launch = windows.matching('Start-Process')[0]
     assert "D:\\O''Brien\\U.tar" in launch
@@ -278,7 +267,7 @@ def test_an_embedded_quote_is_doubled_not_dropped(windows: Windows) -> None:
 
 def generated(tmp_path: Path, windows: Windows, writer: str) -> str:
     destination = tmp_path / 'generated.ps1'
-    run(RECLAIM, f'{writer} "$2"', windows, str(destination))
+    run(TOOL, f'{writer} "$2"', windows, str(destination))
     return destination.read_text(encoding='utf-8')
 
 
@@ -372,7 +361,7 @@ def test_the_default_user_is_pinned_when_wsl_conf_does_not_say(tmp_path: Path, w
     conf = tmp_path / 'wsl.conf'
     conf.write_text('[boot]\nsystemd=true\n')
 
-    run(RECLAIM, 'pin_default_user', windows, WSL_CONF=str(conf))
+    run(TOOL, 'pin_default_user', windows, WSL_CONF=str(conf))
 
     written = conf.read_text(encoding='utf-8')
     assert '[user]' in written
@@ -383,7 +372,7 @@ def test_an_existing_default_user_is_left_alone(tmp_path: Path, windows: Windows
     conf = tmp_path / 'wsl.conf'
     conf.write_text('[user]\ndefault=chris\n')
 
-    run(RECLAIM, 'pin_default_user', windows, WSL_CONF=str(conf))
+    run(TOOL, 'pin_default_user', windows, WSL_CONF=str(conf))
 
     assert conf.read_text(encoding='utf-8').count('default=') == 1
 
@@ -393,13 +382,12 @@ def test_an_existing_default_user_is_left_alone(tmp_path: Path, windows: Windows
 # ================================================================
 
 
-@pytest.mark.parametrize('tool', [RECLAIM, DOCTOR])
-def test_no_tool_offers_to_enable_sparse_mode(tool: str) -> None:
+def test_the_tool_does_not_offer_to_enable_sparse_mode() -> None:
     """`--set-sparse true` has been gated behind --allow-unsafe since WSL 2.5.6
     after ext4 corruption reports, and a sparse vhdx cannot be compacted at all.
     It is the obvious-looking fix for exactly this problem, so the refusal is
     pinned rather than left to the comment explaining it."""
-    code = uncommented(tool)
+    code = uncommented(TOOL)
     assert not [line for line in code if '--set-sparse' in line]
     assert not [line for line in code if '--allow-unsafe' in line]
 
@@ -485,19 +473,17 @@ def test_a_converged_wslconfig_is_not_backed_up_every_run(windows: Windows, prof
 # ================================================================
 
 
-@pytest.mark.parametrize('tool', [RECLAIM, DOCTOR])
-def test_help_works_off_wsl(tool: str, windows: Windows) -> None:
+def test_help_works_off_wsl(windows: Windows) -> None:
     """The WSL guard sits after help, so `--help` answers on any machine. A tool
     that refuses to describe itself where it does not run is undiscoverable from
     the machine you would read about it on."""
-    result = shell_out('bash "$1" --help', tool, SHELL_DIR=str(windows.shell_dir))
+    result = shell_out('bash "$1" --help', TOOL, SHELL_DIR=str(windows.shell_dir))
     assert result.ok
     assert 'Usage:' in result.stdout
 
 
-@pytest.mark.parametrize('tool', [RECLAIM, DOCTOR])
-def test_the_report_refuses_off_wsl(tool: str, windows: Windows) -> None:
-    result = shell_out('bash "$1"', tool, SHELL_DIR=str(windows.shell_dir))
+def test_a_verb_refuses_off_wsl(windows: Windows) -> None:
+    result = shell_out('bash "$1" status', TOOL, SHELL_DIR=str(windows.shell_dir))
     assert not result.ok
 
 
@@ -515,3 +501,28 @@ def test_the_wslconfig_installer_skips_off_wsl(windows: Windows, profile: Path) 
     assert result.ok
     assert 'Not in WSL' in result.stdout
     assert not (profile / '.wslconfig').exists()
+
+
+def test_a_bare_invocation_lists_the_verbs(windows: Windows) -> None:
+    """The reason this is one binary instead of a wsl-* family. It is reached for
+    a few times a year, so the common case is not knowing what it can do — and a
+    bare run that did the work, or errored, would answer the wrong question."""
+    result = shell_out('bash "$1"', TOOL, SHELL_DIR=str(windows.shell_dir))
+
+    assert result.ok
+    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench'):
+        assert verb in result.stdout
+
+
+def test_every_listed_verb_is_dispatchable(windows: Windows) -> None:
+    """A verb in the help that main does not accept is the failure this file
+    exists to catch, and it is invisible until someone types it."""
+    listed = shell_out('bash "$1"', TOOL, SHELL_DIR=str(windows.shell_dir)).stdout
+    accepted = uncommented(TOOL)
+
+    dispatch = [line for line in accepted if line.strip().startswith('status | doctor')]
+    assert dispatch, 'the verb allowlist moved'
+
+    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench'):
+        assert verb in listed
+        assert verb in dispatch[0]

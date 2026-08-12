@@ -44,4 +44,4 @@ autoMemoryReclaim=gradual
 # must be uncompressed and unencrypted and must not be sparse". Turning it back
 # off re-materialises every hole and costs a full compact cycle to undo.
 #
-# `wsl-reclaim compact` is the supported path and reclaims the same space.
+# `wsl-tools compact` is the supported path and reclaims the same space.

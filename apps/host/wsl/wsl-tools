@@ -1,24 +1,110 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deleting files inside WSL does not shrink ext4.vhdx. The virtual disk grows to
-# its high-water mark and stays there, so a distro that once held a 40GB Docker
-# cache keeps charging Windows for it forever. Reclaiming the space is two
-# separate acts: free the blocks inside the guest, then shrink the file on the
-# host. This script does the first and hands off the second.
+# Everything this machine needs to answer for WSL: what the disk weighs, why it
+# is slow, and how to get the space back.
 #
-# There are two ways to do the second and which one is available is not a
-# preference. `compact` is cheap and needs a Windows administrator; `rebuild`
-# needs none and is the only route on a machine where UAC asks for somebody
-# else's password.
+# One binary rather than a wsl-reclaim and a wsl-doctor beside each other. These
+# get reached for a few times a year, and at that interval the cost is not typing
+# the verb — it is remembering that the tool exists and what it was called. One
+# name that lists its own verbs is findable; a family of them is a thing you go
+# looking for.
+#
+# One *file*, too. The shell overlay at ~/.local/shell/host/wsl is sourced by
+# every interactive shell, so an implementation library there would put `clean`
+# and `report` in the shell's namespace and pay for parsing them at every prompt.
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/host/wsl/wsl-interop.sh"
 
 AGGRESSIVE=false
 ASSUME_YES=false
 BACKUP_DIR=""
+FINDINGS=()
+
+note() {
+  FINDINGS+=("$1"$'\x1f'"$2")
+}
+
+# ================================================================
+# THE WINDOWS SIDE
+# ================================================================
+
+powershell_out() {
+  powershell.exe -NoProfile -NonInteractive -Command "$1" </dev/null 2>/dev/null | tr -d '\r\0'
+}
+
+windows_userprofile() {
+  local profile
+  profile=$(powershell_out "Write-Output \$env:USERPROFILE" | tr -d '\n')
+  [[ -n "$profile" ]] || return 1
+  wslpath -u "$profile" 2>/dev/null
+}
+
+windows_temp_dir() {
+  local temp
+  temp=$(powershell_out "Write-Output \$env:TEMP" | tr -d '\n')
+  [[ -n "$temp" ]] || return 1
+  wslpath -u "$temp" 2>/dev/null
+}
+
+# Whether this Windows account can elevate at all — not whether it is elevated
+# now, which unelevated is always no and answers nothing.
+#
+# Group membership rather than IsInRole(Administrator). Under UAC an admin
+# account runs on a filtered token where IsInRole answers false, so a probe built
+# on it reports every machine as unable to elevate. The Administrators SID is
+# still listed on the filtered token, which is the question actually being asked:
+# will UAC prompt this user for consent, or for somebody else's password.
+windows_can_elevate() {
+  local answer
+  answer=$(powershell_out "
+    \$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    \$administrators = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
+    if (\$identity.Groups -contains \$administrators) { Write-Output 'yes' } else { Write-Output 'no' }
+  " | tr -d '\n ')
+
+  [[ "$answer" == "yes" ]]
+}
+
+# The registry is the only reliable answer. Distros installed before WSL 2.4 sit
+# under %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState and newer ones
+# under %LOCALAPPDATA%\wsl\{guid}, so a hardcoded path is wrong on about half the
+# machines that have one.
+wsl_base_path() {
+  local distro="${WSL_DISTRO_NAME:-}" query base backslash device_prefix
+  [[ -n "$distro" ]] || return 1
+
+  # PowerShell string literals are single-quoted so the whole query survives one
+  # round of bash double-quoting. \$_ is the pipeline variable and must reach
+  # PowerShell unexpanded.
+  query="(Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss"
+  query+=" | Where-Object { \$_.GetValue('DistributionName') -eq '$distro' }).GetValue('BasePath')"
+
+  base=$(powershell_out "$query" | tr -d '\n')
+  [[ -n "$base" ]] || return 1
+
+  # BasePath comes back as an extended-length path. wslpath does not understand
+  # the \\?\ device prefix and returns nothing at all for one. Assembled from a
+  # variable because a literal backslash before a closing quote is unreadable
+  # and reads to shellcheck as a botched escape.
+  backslash=$'\\'
+  device_prefix="${backslash}${backslash}?${backslash}"
+  printf '%s\n' "${base#"$device_prefix"}"
+}
+
+vhdx_windows_path() {
+  local base backslash
+  base=$(wsl_base_path) || return 1
+  backslash=$'\\'
+  printf '%s%sext4.vhdx\n' "$base" "$backslash"
+}
+
+vhdx_linux_path() {
+  local windows_path
+  windows_path=$(vhdx_windows_path) || return 1
+  wslpath -u "$windows_path" 2>/dev/null
+}
 
 # ================================================================
 # MEASUREMENT
@@ -127,21 +213,21 @@ report_route() {
   print_section "How this machine can shrink it" "brightmagenta"
 
   if windows_can_elevate; then
-    print_success "This account can elevate — 'wsl-reclaim compact' is the cheap route"
-    print_info "'wsl-reclaim rebuild' also works and needs no administrator"
+    print_success "This account can elevate — 'wsl-tools compact' is the cheap route"
+    print_info "'wsl-tools rebuild' also works and needs no administrator"
   else
     print_warning "This account cannot elevate, so diskpart and Optimize-VHD are both closed"
-    print_info "'wsl-reclaim rebuild' is the route that does not need one"
+    print_info "'wsl-tools rebuild' is the route that does not need one"
   fi
 }
 
 report() {
-  print_header "wsl-reclaim" "brightcyan"
+  print_header "wsl-tools" "brightcyan"
   report_disk
   report_caches
   report_route
   echo ""
-  print_info "Free the blocks first, either way: wsl-reclaim clean"
+  print_info "Free the blocks first, either way: wsl-tools clean"
 }
 
 # ================================================================
@@ -159,7 +245,7 @@ run_step() {
 }
 
 clean() {
-  print_header "wsl-reclaim clean" "brightcyan"
+  print_header "wsl-tools clean" "brightcyan"
   print_section "Purging caches" "brightblue"
 
   has_command apt-get && run_step "apt archives" sudo apt-get clean
@@ -392,7 +478,7 @@ compact() {
   # which is a worse answer than saying so.
   if ! windows_can_elevate; then
     print_error "This Windows account cannot elevate, and diskpart will not run without it."
-    print_info "Use 'wsl-reclaim rebuild' instead — it reclaims the same space with no administrator."
+    print_info "Use 'wsl-tools rebuild' instead — it reclaims the same space with no administrator."
     return 1
   fi
 
@@ -406,7 +492,7 @@ compact() {
     return 1
   }
 
-  print_header "wsl-reclaim compact" "brightcyan"
+  print_header "wsl-tools compact" "brightcyan"
   print_info "Target: $vhdx"
   echo ""
   print_warning "This shuts down every WSL distro, including this shell."
@@ -485,7 +571,7 @@ rebuild() {
     archive="$(wslpath -w "$profile")\\wsl-backups\\$distro.tar"
   fi
 
-  print_header "wsl-reclaim rebuild" "brightcyan"
+  print_header "wsl-tools rebuild" "brightcyan"
   printf '  %-14s %s\n' "distro" "$distro"
   printf '  %-14s %s\n' "used now" "$(human "$used")"
   printf '  %-14s %s\n' "disk today" "$(human "$(vhdx_bytes)")"
@@ -512,29 +598,308 @@ rebuild() {
 }
 
 # ================================================================
+# CHECKS
+# ================================================================
+
+check_version() {
+  print_section "Version" "brightgreen"
+
+  local version
+  version=$(powershell_out 'wsl.exe --version' | head -1)
+  printf '  %-22s %s\n' "wsl" "${version:-unknown}"
+  printf '  %-22s %s\n' "distro" "${WSL_DISTRO_NAME:-unknown}"
+  printf '  %-22s %s\n' "kernel" "$(uname -r)"
+
+  # An inbox WSL has no --version at all. It also has no mirrored networking, no
+  # autoMemoryReclaim and no --manage, so half of what follows silently does
+  # nothing until it is updated.
+  if [[ -z "$version" ]]; then
+    note "WSL does not report a version" "It is the inbox build. Update it: wsl.exe --update"
+  fi
+
+  local state
+  state=$(powershell_out "wsl.exe -l -v" | grep -F "${WSL_DISTRO_NAME:-}" | head -1)
+  if [[ "$state" == *" 1"* ]]; then
+    note "This distro runs on WSL 1" "WSL 1 has no real kernel and much slower Linux file IO. Convert: wsl.exe --set-version ${WSL_DISTRO_NAME:-<distro>} 2"
+  fi
+}
+
+check_privilege() {
+  print_section "Privilege" "brightyellow"
+
+  if windows_can_elevate; then
+    print_success "This Windows account can elevate"
+    return 0
+  fi
+
+  print_warning "This Windows account cannot elevate"
+  print_info "Defender exclusions and 'wsl-tools compact' are both closed off"
+  print_info "'wsl-tools rebuild' shrinks the disk without one"
+}
+
+# A distro installed from the Store lives under Packages\<PackageFamilyName>.
+# Anywhere else means it arrived through `wsl --import`, which is what a previous
+# rebuild leaves behind — the machine remembers the procedure even when nobody
+# does.
+check_install_origin() {
+  local base store_marker backslash
+  base=$(wsl_base_path) || return 0
+
+  print_section "Origin" "brightblue"
+  printf '  %-22s %s\n' "installed at" "$base"
+
+  backslash=$'\\'
+  store_marker="${backslash}Packages${backslash}"
+  if [[ "$base" == *"$store_marker"* ]]; then
+    print_info "Registered by the Store package — never rebuilt"
+  else
+    print_success "Imported, not Store-installed — this distro has been rebuilt before"
+  fi
+}
+
+check_memory() {
+  print_section "Memory" "brightblue"
+
+  local vm_total host_total swap_total
+  vm_total=$(awk '/^MemTotal:/ {print $2 * 1024}' /proc/meminfo)
+  swap_total=$(awk '/^SwapTotal:/ {print $2 * 1024}' /proc/meminfo)
+  host_total=$(powershell_out '(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory' | tr -d '\n')
+
+  printf '  %-22s %s\n' "assigned to the VM" "$(human "$vm_total")"
+  printf '  %-22s %s\n' "swap" "$(human "$swap_total")"
+  [[ -n "$host_total" ]] && printf '  %-22s %s\n' "installed on Windows" "$(human "$host_total")"
+
+  local available
+  available=$(awk '/^MemAvailable:/ {print $2 * 1024}' /proc/meminfo)
+  printf '  %-22s %s\n' "available" "$(human "$available")"
+
+  # Under 15% available is where a build starts swapping against a disk that is
+  # itself a file on the host disk, which is the worst case WSL has.
+  if [[ "$vm_total" -gt 0 ]] && [[ $((available * 100 / vm_total)) -lt 15 ]]; then
+    note "Under 15% of the VM's memory is available" "Raise memory= in .wslconfig, or close what is holding it"
+  fi
+}
+
+check_wslconfig() {
+  print_section ".wslconfig" "brightmagenta"
+
+  local profile config
+  if ! profile=$(windows_userprofile); then
+    print_warning "Could not resolve %USERPROFILE% — interop may be disabled"
+    return 0
+  fi
+
+  config="$profile/.wslconfig"
+  if [[ ! -f "$config" ]]; then
+    print_warning "No .wslconfig — every setting is at its default"
+    note "No .wslconfig exists" "Install the annotated one: task wsl:tune"
+    return 0
+  fi
+
+  print_success "Present at $config"
+  grep -vE '^\s*(#|;|$)' "$config" | sed 's/^/  /'
+
+  # dropCache is the shipped default and it throws away the guest's page cache
+  # wholesale, so the next build re-reads every file it just read. gradual
+  # returns memory to Windows without that cliff.
+  if ! grep -qE '^\s*autoMemoryReclaim' "$config"; then
+    note "autoMemoryReclaim is unset, so it is dropCache" "Set autoMemoryReclaim=gradual under [experimental]"
+  fi
+}
+
+check_wsl_conf() {
+  print_section "/etc/wsl.conf" "brightgreen"
+
+  if [[ ! -f /etc/wsl.conf ]]; then
+    print_warning "No /etc/wsl.conf — every per-distro setting is at its default"
+    return 0
+  fi
+
+  grep -vE '^\s*(#|;|$)' /etc/wsl.conf | sed 's/^/  /'
+}
+
+check_interop_path() {
+  print_section "Interop" "brightblue"
+
+  local windows_entries total_entries
+  windows_entries=$(tr ':' '\n' <<<"$PATH" | grep -c '^/mnt/' || true)
+  total_entries=$(tr ':' '\n' <<<"$PATH" | grep -c . || true)
+  printf '  %-22s %s of %s\n' "PATH entries on /mnt" "$windows_entries" "$total_entries"
+
+  # A command that exists is found and cached. A command that does not exist —
+  # every typo, and every `command -v` guard in every shell library and prompt —
+  # stats every directory on PATH, and each /mnt entry is a 9p round trip.
+  local start end microseconds
+  start=$(date +%s%N)
+  for _ in $(seq 1 20); do
+    command -v wsl-tools-probe-does-not-exist >/dev/null 2>&1 || true
+  done
+  end=$(date +%s%N)
+  microseconds=$(((end - start) / 20 / 1000))
+  printf '  %-22s %s µs\n' "cost of a PATH miss" "$microseconds"
+
+  if [[ "$windows_entries" -gt 10 ]]; then
+    note "$windows_entries Windows directories are on PATH, at ${microseconds}µs per lookup" \
+      "Set appendWindowsPath=false under [interop] in /etc/wsl.conf, then symlink the .exe files you actually use into ~/.local/bin"
+  fi
+}
+
+check_filesystem() {
+  print_section "Filesystem" "brightmagenta"
+
+  local home_fs
+  home_fs=$(findmnt -no FSTYPE --target "$HOME" 2>/dev/null || echo unknown)
+  printf '  %-22s %s (%s)\n' "\$HOME" "$HOME" "$home_fs"
+
+  if [[ "$HOME" == /mnt/* ]]; then
+    note "\$HOME is on the Windows filesystem" "Every file open crosses 9p. Move the home directory onto ext4."
+  fi
+
+  # Anything git touches is the worst case: status walks every file, and on drvfs
+  # each stat is a round trip rather than a page-cache hit.
+  #
+  # Bounded by depth, by the profile directory and by a timeout, because the scan
+  # is itself a drvfs walk. Unbounded across /mnt/c it takes long enough to read
+  # as a hang, which in a tool about things being slow is its own bug report.
+  local repos profile
+  profile=$(windows_userprofile) || return 0
+  repos=$(timeout 10 fd -HI -t d -d 3 '^\.git$' "$profile" 2>/dev/null | head -5 || true)
+  if [[ -n "$repos" ]]; then
+    print_warning "Git repos on the Windows filesystem:"
+    while IFS= read -r repo; do
+      printf '    %s\n' "$repo"
+    done <<<"$repos"
+    note "Git repos are living on /mnt/c" "Move them under ~ — git on drvfs is an order of magnitude slower"
+  fi
+}
+
+check_systemd() {
+  systemctl is-system-running >/dev/null 2>&1 || return 0
+
+  print_section "Boot" "brightgreen"
+  systemd-analyze blame 2>/dev/null | head -5 | sed 's/^/  /' || true
+}
+
+check_defender() {
+  print_section "Defender" "brightblue"
+
+  local exclusions
+  exclusions=$(powershell_out 'Get-MpPreference -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ExclusionPath')
+  if [[ -z "$exclusions" ]]; then
+    print_info "No exclusions readable — Defender is off, or policy hides them"
+    return 0
+  fi
+
+  if grep -qiF 'ext4.vhdx' <<<"$exclusions" || grep -qiE 'LocalState|\\wsl' <<<"$exclusions"; then
+    print_success "The WSL disk is excluded from real-time scanning"
+    return 0
+  fi
+
+  # Worded by what this account can do about it. A fix nobody here can apply is
+  # context, not an action, and listing it as one is noise on every run.
+  if windows_can_elevate; then
+    note "The ext4.vhdx is not excluded from Defender" \
+      "Every read and write inside WSL is scanned on the host. Add an exclusion for the disk as an administrator."
+  else
+    print_warning "The ext4.vhdx is not excluded from Defender, and this account cannot add one"
+    print_info "Every read and write inside WSL is scanned on the host. It needs an administrator."
+  fi
+}
+
+# ================================================================
+# BENCH
+# ================================================================
+
+# Timed here rather than read off dd's own summary: GNU time is not installed
+# everywhere, and dd's throughput line is localised and formatted differently
+# across coreutils versions.
+write_speed() {
+  local target="$1" start end nanoseconds
+  start=$(date +%s%N)
+  dd if=/dev/zero of="$target" bs=1M count=64 conv=fdatasync >/dev/null 2>&1 || {
+    echo "n/a"
+    return 0
+  }
+  end=$(date +%s%N)
+  rm -f "$target"
+
+  nanoseconds=$((end - start))
+  awk -v n="$nanoseconds" 'BEGIN { if (n > 0) printf "%.0f MB/s", 64 / (n / 1000000000); else print "n/a" }'
+}
+
+bench() {
+  print_header "wsl-tools bench" "brightcyan"
+  print_info "Writing 64MB to each filesystem."
+  echo ""
+
+  printf '  %-22s %s\n' "ext4 (inside WSL)" "$(write_speed /tmp/wsl-tools-bench)"
+
+  local profile
+  if profile=$(windows_userprofile); then
+    printf '  %-22s %s\n' "drvfs (/mnt/c)" "$(write_speed "$profile/wsl-tools-bench")"
+  fi
+
+  echo ""
+  print_info "A large gap is why repos belong under ~ and not under /mnt/c."
+}
+
+report_findings() {
+  echo ""
+  if [[ ${#FINDINGS[@]} -eq 0 ]]; then
+    print_section_success "Nothing to fix"
+    return 0
+  fi
+
+  print_section "What to change" "brightyellow"
+  local finding problem fix
+  for finding in "${FINDINGS[@]}"; do
+    IFS=$'\x1f' read -r problem fix <<<"$finding"
+    print_warning "$problem"
+    printf '    %s\n' "$fix"
+  done
+}
+
+# ================================================================
 # ENTRY
 # ================================================================
 
+doctor() {
+  print_header "wsl-tools doctor" "brightcyan"
+  check_version
+  check_privilege
+  check_install_origin
+  check_memory
+  check_wslconfig
+  check_wsl_conf
+  check_interop_path
+  check_filesystem
+  check_systemd
+  check_defender
+  report_findings
+}
+
 show_help() {
-  help_header "wsl-reclaim" "Shrink the ext4.vhdx that WSL grows and never gives back."
-  help_usage "wsl-reclaim [verb] [options]"
+  help_header "wsl-tools" "What the WSL disk weighs, why it is slow, and how to get the space back."
+  help_usage "wsl-tools <verb> [options]"
 
   help_section "Verbs"
-  help_row "report" "" "What the disk and each cache weigh, and which route is open (default)"
+  help_row "status" "" "What the disk and each cache weigh, and which shrink route is open"
+  help_row "doctor" "" "Why WSL is sluggish, measured, with the change that fixes each one"
   help_row "clean" "" "Purge caches, then release the freed blocks"
   help_row "compact" "" "Shrink the vhdx in place. Needs a Windows administrator."
   help_row "rebuild" "" "Export, unregister and re-import. Needs no administrator."
+  help_row "bench" "" "Compare ext4 and drvfs write throughput"
 
   help_section "Options"
   help_row "-a, --aggressive" "" "With clean: also drop the go module cache, docker volumes, trash"
-  help_row "--to" "<win-path>" "With rebuild: where to write the archive, e.g. D:\\\\backups"
+  help_row "--to" "<win-path>" "With rebuild: where to write the archive, e.g. D:\\backups"
   help_row "-y, --yes" "" "Skip the confirmation"
   help_row "-h, --help" "" "Show this help message"
 
   help_section "Examples"
-  help_row "wsl-reclaim"
-  help_row "wsl-reclaim clean --aggressive"
-  help_row "wsl-reclaim rebuild --to D:\\\\backups"
+  help_row "wsl-tools status"
+  help_row "wsl-tools clean --aggressive"
+  help_row "wsl-tools rebuild --to D:\\backups"
 
   help_end
   print_info "Freeing space inside the distro never shrinks the file. Both steps are needed."
@@ -559,7 +924,7 @@ main() {
         show_help
         return 0
         ;;
-      report | clean | compact | rebuild) verb="$1" ;;
+      status | doctor | clean | compact | rebuild | bench) verb="$1" ;;
       *)
         print_error "Unknown argument: $1"
         return 1
@@ -568,16 +933,25 @@ main() {
     shift
   done
 
+  # A bare invocation lists the verbs rather than picking one. This is reached
+  # for a few times a year, so the common case is not knowing what it can do.
+  if [[ -z "$verb" ]]; then
+    show_help
+    return 0
+  fi
+
   if ! grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
-    print_error "wsl-reclaim only means anything inside WSL."
+    print_error "wsl-tools only means anything inside WSL."
     return 1
   fi
 
-  case "${verb:-report}" in
-    report) report ;;
+  case "$verb" in
+    status) report ;;
+    doctor) doctor ;;
     clean) clean ;;
     compact) compact ;;
     rebuild) rebuild ;;
+    bench) bench ;;
   esac
 }
 
