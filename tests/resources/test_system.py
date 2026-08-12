@@ -279,9 +279,16 @@ class Manager:
     that let it run would install packages on the machine running the suite.
     """
 
-    def __init__(self, *, fails: frozenset[str] = frozenset(), refuses: bool = False) -> None:
+    def __init__(self, *, inventory: Path, fails: frozenset[str] = frozenset(), refuses: bool = False) -> None:
         self.calls: list[tuple[str, tuple[str, ...]]] = []
         self.refreshed: list[str] = []
+        self._inventory = inventory
+        """Where a successful install leaves its names, for the query to find.
+
+        A recorder that only records is a manager whose installs never land, and
+        `apply` re-observes now — so without this every outcome here is ABSENT and
+        the tests assert against a machine no manager behaves like.
+        """
         self._fails = fails
         self._refuses = refuses
 
@@ -290,6 +297,8 @@ class Manager:
         broken = sorted(self._fails.intersection(names))
         if broken:
             return providers.Result(False, f'{manager} could not install {broken[0]}')
+        with self._inventory.open('a') as landed:
+            landed.writelines(f'{name}\n' for name in names)
         return providers.Result(True, f'{manager}: {" ".join(names)}')
 
     def refresh(self, manager: str, privilege) -> providers.Result:
@@ -298,9 +307,9 @@ class Manager:
 
 
 @pytest.fixture
-def manager(monkeypatch: pytest.MonkeyPatch):
+def manager(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     def install(**kwargs) -> Manager:
-        recorder = Manager(**kwargs)
+        recorder = Manager(inventory=tmp_path / INVENTORY, **kwargs)
         monkeypatch.setattr(syspkg, 'install', recorder.install)
         monkeypatch.setattr(syspkg, 'refresh', recorder.refresh)
         return recorder
@@ -378,9 +387,30 @@ def answers_empty(fake_bin: Path, *managers: str) -> None:
         executable(fake_bin, manager, '#!/bin/sh\nprintf "" \n')
 
 
+INVENTORY = 'installed'
+"""The file a `Manager` writes its successful installs to, under `tmp_path`.
+
+A path rather than an argument threaded through every call site: the recorder and
+the query are created by two fixtures that do not see each other, and both see
+`tmp_path`.
+"""
+
+
+def answers_with_what_landed(fake_bin: Path, *managers: str) -> None:
+    """Shadow each manager's query with one that reports what `Manager` installed.
+
+    The pair to `answers_empty`, for a test that installs and then asserts on the
+    result. `apply` re-observes, so a query that keeps saying "nothing" after a
+    successful install describes a manager whose installs do not land — which is
+    the defect under test elsewhere, not the premise wanted here.
+    """
+    for manager in managers:
+        executable(fake_bin, manager, f'#!/bin/sh\ncat "$(dirname "$0")/../{INVENTORY}" 2>/dev/null || true\n')
+
+
 def missing(tmp_path: Path, fake_bin: Path) -> Session:
     """A machine whose manager answers, with none of the three installed."""
-    answers_empty(fake_bin, 'dpkg-query')
+    answers_with_what_landed(fake_bin, 'dpkg-query')
     return session(tmp_path, DECLARED, WORKSTATION)
 
 
@@ -495,7 +525,7 @@ def test_casks_install_in_one_brew_call(tmp_path: Path, fake_bin: Path, manager,
     the same reason and through the same code."""
     recorder = manager()
     bootstraps()
-    answers_empty(fake_bin, 'brew')
+    answers_with_what_landed(fake_bin, 'brew')
     live = session(tmp_path, {'macos_casks': [{'name': 'ghostty'}, {'name': 'orbstack'}]}, MAC)
 
     outcomes = registry.BY_NAME['cask'].install_all(live, changes(live), Privilege(offer=False))

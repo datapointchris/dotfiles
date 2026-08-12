@@ -1208,6 +1208,32 @@ def _through(
     return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, undeclared)) for change in changes]
 
 
+def _arrived(manager: str) -> frozenset[str] | None:
+    """What the manager has, asked fresh after acting. `None` if it cannot say.
+
+    A new `Inventories` rather than the one the observe pass built: that one is a
+    cache of what was true *before* the write, and reusing it would confirm every
+    install against the world that made it necessary.
+
+    One query per manager, not per package, which is the whole reason this is
+    affordable — `Inventories` already answers at most once per manager and
+    replaced a per-entry check that spent 195 subprocesses.
+    """
+    return ev.Inventories().get(ev.INSTALLER_QUERIES[manager])
+
+
+def _settled(manager: str, name: str, arrived: frozenset[str] | None) -> tuple[OutcomeStatus, str]:
+    """What a zero exit code actually left behind.
+
+    A manager that cannot be asked stays DONE. Not verifying is the state this
+    replaced, and reporting ABSENT for it would name a fault in the declaration on
+    the strength of no evidence at all.
+    """
+    if arrived is None or name in arrived:
+        return OutcomeStatus.DONE, f'{manager}: {name}'
+    return OutcomeStatus.ABSENT, f'{manager} exited 0 for {name} and reports nothing by that name'
+
+
 def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privilege) -> dict[str, Outcome]:
     """One manager's whole batch, falling back to one call per package on failure.
 
@@ -1215,6 +1241,12 @@ def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privile
     install a b c` exiting 1 says nothing about which of the three is at fault, and
     the machine still wants the other two. Paid only when something is already
     wrong.
+
+    A zero exit code is not the evidence. Both managers here exit 0 on having done
+    nothing — `yay -S --needed` on "up to date -- skipping" for a name that
+    resolves to no package, `brew install` on a formula renamed underneath the
+    declaration — so every success is re-observed against the manager's inventory
+    and one that did not arrive is ABSENT rather than DONE.
     """
     refreshed = syspkg.refresh(manager, privilege)
     if not refreshed.ok:
@@ -1223,13 +1255,23 @@ def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privile
 
     together = syspkg.install(manager, [name for _, name in wanted], privilege)
     if together.ok:
-        return {change.item: Outcome(change, OutcomeStatus.DONE, f'{manager}: {name}') for change, name in wanted}
+        arrived = _arrived(manager)
+        return {change.item: Outcome(change, *_settled(manager, name, arrived)) for change, name in wanted}
 
     isolated: dict[str, Outcome] = {}
+    installed: list[tuple[Change, str]] = []
     for change, name in wanted:
         alone = syspkg.install(manager, [name], privilege)
-        status = OutcomeStatus.DONE if alone.ok else OutcomeStatus.FAILED
-        isolated[change.item] = Outcome(change, status, f'{manager}: {name}' if alone.ok else alone.detail)
+        if alone.ok:
+            installed.append((change, name))
+        else:
+            isolated[change.item] = Outcome(change, OutcomeStatus.FAILED, alone.detail)
+
+    # Asked once after the loop rather than after each install: a per-package
+    # query would spend one subprocess per name to answer the same question.
+    arrived = _arrived(manager) if installed else None
+    for change, name in installed:
+        isolated[change.item] = Outcome(change, *_settled(manager, name, arrived))
     return isolated
 
 

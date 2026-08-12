@@ -156,6 +156,21 @@ class OutcomeStatus(enum.StrEnum):
     FAILED = 'failed'
     """A write was attempted and the world said no."""
 
+    ABSENT = 'absent'
+    """The command succeeded and the thing is still not there.
+
+    Distinct from FAILED, which is the manager itself saying no, and the
+    distinction is which half to go and look at: FAILED means read the command,
+    ABSENT means read the declaration. Both cases that produced this exit 0 —
+    `brew install pkg-config` installing a formula renamed to `pkgconf`, and
+    `yay -S --needed` printing "up to date -- skipping" for a name that resolves
+    to no package at all.
+
+    Only a provider that can re-measure cheaply reports this. A registry package
+    can be asked for by name; a release binary and a go tool are answered by PATH
+    and already verified that way.
+    """
+
     SKIPPED = 'skipped'
     """Already true by the time it was reached — usually because an earlier
     change in the same batch repaired it."""
@@ -169,7 +184,7 @@ class Outcome:
 
     @property
     def ok(self) -> bool:
-        return self.status is not OutcomeStatus.FAILED
+        return self.status not in (OutcomeStatus.FAILED, OutcomeStatus.ABSENT)
 
     @classmethod
     def from_result(cls, change: Change, result: providers.Result) -> Outcome:
