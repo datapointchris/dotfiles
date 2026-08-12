@@ -161,6 +161,13 @@ the reverse puts a personal address into employer history. `hasconfig` keys on t
 than the checkout path, so it holds wherever a repo is cloned; it takes two blocks because the
 condition matches the URL literally and HTTPS and SSH spell the same remote differently.
 
+Four levels of include is more than prose can keep anyone oriented in, so
+`dotfiles identity show` draws the chain this machine actually resolved — which file
+contributed what, which overlay is legitimately absent, and which conditional include did not fire
+here. `dotfiles check` reports the two ways the arrangement fails silently: a `~/.gitconfig`, which
+git prefers over the entry point for reads and writes both, and one key given different values by
+two different files, where nothing on screen says which one won.
+
 `local.gitconfig` is the one identity the repo does not ship, so `install/flags.yml` declares it
 and `dotfiles check` fails while it is missing. That declaration is load-bearing: git ignores an
 absent include silently, and `user.useConfigOnly = true` would then refuse every commit while
