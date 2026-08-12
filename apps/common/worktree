@@ -5,7 +5,7 @@
 # its untracked files, and the tree pre-commit assembles to run hooks against —
 # so a second session commits the first one's staged work, and whole-repo hooks
 # lint a tree that neither session ever had. See
-# ~/dev/standards/git-workflow.md § "Concurrent sessions isolate with a worktree".
+# standards/git-workflow.md § "Concurrent sessions isolate with a worktree".
 #
 # The branch this creates is not a proposal. `land` pushes it straight onto main
 # as a fast-forward, so a single commit stays a single commit and the resulting

@@ -5,7 +5,7 @@
 # The registry is maintained at ~/dev/repos.json and read by forge, fleet, indy
 # and syncer. Naming it here is what replaced a hand-made symlink from forge's
 # own data directory — one made on each machine, declared nowhere, and reported
-# by nothing. See ~/dev/standards/data.md § "A shared file is named in config".
+# by nothing. See standards/data.md § "A shared file is named in config".
 #
 # The path is uniform across the fleet and off it; only how the file arrives
 # differs. Here it is a symlink into a git clone, so the registry has a history

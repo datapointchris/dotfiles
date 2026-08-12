@@ -2,7 +2,7 @@
 
 Universal rules — git safety and commit conventions, testing, code comments, environment and tool
 preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
-`~/dev/standards/`. Neither is restated here.
+`standards/`. Neither is restated here.
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
@@ -206,7 +206,7 @@ at `~/dotfiles/src`). Switching branches therefore changes both the config this 
 the tool that deploys it — a coupling almost no other repo has, and one nothing announces.
 
 - **`~/dotfiles` stays on `main`.** Most work commits straight to `main` here and never needs a
-  branch at all (`~/dev/standards/git-workflow.md` § "The default is a commit to main"). Work that
+  branch at all (`standards/git-workflow.md` § "The default is a commit to main"). Work that
   does earn one goes in a git worktree — `worktree new <slug>` — so the branch cannot reach the
   machine until it lands. That is the same command a second concurrent session runs here for the
   unrelated reason that a checkout's index is shared, and `worktree land` catches this checkout back

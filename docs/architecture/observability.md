@@ -39,7 +39,7 @@ it, and what stopped the record from timing the loop over an already-collected
 list and naming its file after the moment the run finished.
 
 **The stem names the box, the record names both.** `machine` is the manifest and
-`host` is the bare lowercased hostname, per `~/dev/standards/data.md` § "Machine
+`host` is the bare lowercased hostname, per `standards/data.md` § "Machine
 identity is a bare lowercased hostname" — two boxes legitimately share a manifest,
 and macmini and mbp both declare `macos-personal-workstation`. Keyed on the
 manifest alone, as it was through schema 2, their records were one

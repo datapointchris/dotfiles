@@ -68,7 +68,7 @@ RUNS_DIR = STATE_HOME / 'runs'
 def machine_id() -> str:
     """Which *box* wrote a file, for the three the fleet shares a directory for.
 
-    The bare lowercased hostname, per ~/dev/standards/data.md § "Machine identity
+    The bare lowercased hostname, per standards/data.md § "Machine identity
     is a bare lowercased hostname".
 
     Deliberately not `$MACHINE`, which was the first answer and is wrong: that

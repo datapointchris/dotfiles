@@ -8,7 +8,7 @@ linear, that a stale one rebases itself rather than failing, and that no refusal
 path ever discards commits the session has not landed anywhere else.
 
 The git history is asserted directly rather than through the tool's own output,
-per `~/dev/standards/testing.md`: a tool reporting that it landed something is
+per `standards/testing.md`: a tool reporting that it landed something is
 not evidence that origin has it.
 
 Run with: pytest tests/apps/test_worktree.py

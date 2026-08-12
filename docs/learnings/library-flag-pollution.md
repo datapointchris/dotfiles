@@ -40,4 +40,4 @@ coverage over nothing.
 ## Related
 
 - [Shell Libraries](../architecture/shell-libraries.md)
-- `~/dev/standards/shell.md` § "`set -euo pipefail` in every script and every sourced library"
+- `standards/shell.md` § "`set -euo pipefail` in every script and every sourced library"

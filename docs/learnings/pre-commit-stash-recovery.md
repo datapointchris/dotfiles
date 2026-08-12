@@ -53,5 +53,5 @@ reaching for `Ctrl-C` when a slow hook looks hung.
 
 ## Related
 
-- `~/dev/standards/shell.md` § "A script that works at the top level guards on `BASH_SOURCE`, and
+- `standards/shell.md` § "A script that works at the top level guards on `BASH_SOURCE`, and
   the guard is never opt-in" — the root cause of the hang that led here

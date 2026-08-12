@@ -2,7 +2,7 @@
 
 # The registry every reader shares, at one path on every machine — only how the
 # file arrives differs, Syncthing on the fleet and safekeep off it. Named here
-# rather than reached through a symlink, per ~/dev/standards/data.md § "A shared
+# rather than reached through a symlink, per standards/data.md § "A shared
 # file is named in config; only the tool's own default is compiled in".
 repos_file = "~/dev/repos.json"
 
