@@ -250,6 +250,10 @@ def _safekeep_block(machine: machines.Machine) -> str:
 
     for entry in machine.required_files:
         tags = ', '.join(f'"{tag}"' for tag in (SAFEKEEP_TAG, *entry.tags))
+        # The declaration verbatim, variable and all. This block is generated *for* a
+        # named machine and pasted *on* it, so expanding here would bake the generating
+        # machine's answer into another machine's config — and $REPOS_JSON is per-machine
+        # precisely because those differ. safekeep expands it at the point of use.
         lines += ['', f'# {entry.description}', '[[back_up_paths]]', f'path = "{entry.path}"', f'tags = [{tags}]']
 
     if values := machine.required_values:

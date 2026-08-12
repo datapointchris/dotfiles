@@ -2,13 +2,18 @@
 # portfolio is. Deployed rather than hand-written, because every answer in it is
 # the same on every machine that has forge.
 
-# The registry is maintained at ~/dev/repos.json and read by forge, fleet, indy
-# and syncer. Naming it here is what replaced a hand-made symlink from forge's
-# own data directory — one made on each machine, declared nowhere, and reported
-# by nothing. See standards/data.md § "A shared file is named in config".
+# The registry is deliberately NOT named here. $REPOS_JSON carries it, declared
+# once in install/flags.yml under `required:` and set per machine in ~/.env, and
+# forge resolves it below this file's repos_file and above its own data
+# directory. See standards/data.md § "A shared file is named in config".
 #
-# The path is uniform across the fleet and off it; only how the file arrives
-# differs. Here it is a symlink into a git clone, so the registry has a history
-# and a message saying why an entry changed; on the work box safekeep restores
-# that machine's own file to the same path.
-repos_file: ~/dev/repos.json
+# Naming it here was what replaced a hand-made symlink from forge's own data
+# directory, and that was the right move. The literal was the part that did not
+# hold: ~/.env already set REPOS_JSON to the clone while three deployed configs
+# said ~/dev/repos.json, so the declared value and the literals pointed at
+# different files and only the symlink between them hid the disagreement. A
+# clobbered symlink forked the registry with both copies still parsing.
+#
+# Set repos_file here only to point forge at a different registry from every
+# other reader on this machine. Nothing does today.
+{}

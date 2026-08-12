@@ -1,9 +1,14 @@
 # indy — machine config. Everything here is a property of this fleet, not of the tool,
 # which is why none of it ships as an indy default.
 
-# forge and syncer read the same two registries, so the shared location is named here
-# rather than assumed by any of the three.
-repos_file = "~/dev/repos.json"
+# The repo registry is deliberately NOT named here. $REPOS_JSON carries it, declared once
+# in install/flags.yml under `required:`, and indy resolves it below this file's repos_file
+# and above its own data directory — the same order every other reader now uses.
+#
+# The exemplar registry stays named here, and the asymmetry is deliberate. Only REPOS_JSON
+# is declared; a config naming an undeclared variable would resolve to nothing and drop
+# silently to indy's own directory. The exemplar clones are fleet-only, so this
+# fleet-scoped file is where that path belongs anyway.
 exemplar_repos_file = "~/dev/exemplar-repos.json"
 
 # data_dir is deliberately unset: the index is derived state and belongs in

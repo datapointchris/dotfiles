@@ -59,7 +59,7 @@ class EnvResource:
             path=path,
             exists=path.exists(),
             values=envfile.read(path),
-            present_files=frozenset(entry.path for entry in plan.machine.required_files if Path(entry.path).expanduser().exists()),
+            present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:

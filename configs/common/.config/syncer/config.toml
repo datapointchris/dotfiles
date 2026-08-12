@@ -1,10 +1,17 @@
 # syncer tool config. Every option, annotated: syncer config example config
 
-# The registry every reader shares, at one path on every machine — only how the
-# file arrives differs, Syncthing on the fleet and safekeep off it. Named here
-# rather than reached through a symlink, per standards/data.md § "A shared
-# file is named in config; only the tool's own default is compiled in".
-repos_file = "~/dev/repos.json"
+# The registry is deliberately NOT named here. $REPOS_JSON carries it, declared
+# once in install/flags.yml under `required:` and set per machine in ~/.env, and
+# syncer resolves it below this file's repos_file and above its own default. Per
+# standards/data.md § "A shared file is named in config; only the tool's own
+# default is compiled in" — the variable is that naming, done once rather than
+# once per tool.
+#
+# This file deploys off the fleet too, and the work box has no ~/dev at all, so
+# the literal was wrong there in a way the variable is not.
+#
+# Set repos_file only to point syncer at a different registry from every other
+# reader on this machine.
 
 default_policy = "standard"
 

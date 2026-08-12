@@ -121,18 +121,22 @@ required_files:
   # that everything reading it is, and only the transport differs — Syncthing on
   # the fleet, safekeep off it.
   #
-  # The deployed configs below name this path; each tool resolves it for itself,
-  # which is what keeps the registry a file they happen to share rather than a
-  # coupling between them.
+  # Declared through $REPOS_JSON rather than as a literal, and it is the same
+  # value REPOS_JSON above carries — the repo names the variable twice and the
+  # path never. A literal disagreed with the declaration the moment the two
+  # pointed at different files, which is exactly what happened: ~/.env set
+  # REPOS_JSON to the clone while this said ~/dev/repos.json, and only an intact
+  # symlink between them hid it.
+  #
+  # No deployed config names the path any more. Each tool resolves $REPOS_JSON
+  # for itself, below its own config key and above its own compiled default,
+  # which keeps the registry a file they happen to share rather than a coupling
+  # between them.
   - name: repos.json
-    path: ~/dev/repos.json
-    description: The repo registry forge, fleet, indy and syncer read, hand-edited and never generated
+    path: $REPOS_JSON
+    description: The repo registry forge, fleet, indy, syncer, icb, todoui and relate read, hand-edited and never generated
     capacity: workstation
     tags: [rebuild]
-    consumers:
-      - configs/common/.config/forge/config.yml
-      - configs/common/.config/fleet/config.yml
-      - configs/common/.config/syncer/config.toml
 
   # Off the fleet only, which is the axis that actually decides it. safekeep is
   # how a machine outside Syncthing gets the files above back; on the fleet the

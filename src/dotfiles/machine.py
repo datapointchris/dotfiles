@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -173,6 +174,37 @@ class Requirement:
     @property
     def is_file(self) -> bool:
         return bool(self.path)
+
+    @property
+    def resolved_path(self) -> str:
+        """`path` with $VARIABLES and ~ resolved, for touching the filesystem here.
+
+        A declared entry may name its own location through a variable this repo also
+        declares — `$REPOS_JSON` is the registry, whose path differs per machine and
+        which the repo must never carry. Read as a literal, `check` reports a missing
+        file named `$REPOS_JSON`, which is the failure this exists to avoid.
+
+        Only for *this* machine, and only where the filesystem is actually touched.
+        Everything that shows the path shows the declaration instead: a listing and the
+        ~/.env comment block are more useful naming the variable, and the safekeep block
+        is generated for a named machine and pasted on it — expanding there would write
+        the generating machine's answer into another machine's config.
+        """
+        return os.path.expanduser(os.path.expandvars(self.path))
+
+    @property
+    def is_present(self) -> bool:
+        """Whether the declared file is actually on this machine.
+
+        Empty is checked before the filesystem is, because `Path('')` is `.` and a
+        current directory always exists — so a variable that is *set but empty* would
+        report the registry present while nothing had been declared at all. That is the
+        precise failure this register exists to catch, arriving through the fix for it.
+
+        An unset variable needs no special case: expandvars leaves `$REPOS_JSON`
+        literal, and no file is named that.
+        """
+        return bool(self.resolved_path) and Path(self.resolved_path).exists()
 
 
 @dc.dataclass(frozen=True, slots=True)

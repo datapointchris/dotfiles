@@ -360,6 +360,33 @@ def test_a_present_required_file_reports_nothing(tmp_path: Path) -> None:
     assert changes(tmp_path, flags=declared) == ()
 
 
+def test_a_required_file_declared_through_a_variable_resolves(tmp_path: Path, monkeypatch) -> None:
+    """A file whose location differs per machine is declared as a variable this repo also
+    declares, never as a literal. The registry is the case: ~/.env set REPOS_JSON to one
+    file while the register named another, and only a symlink between them hid it."""
+    present = tmp_path / 'repos.json'
+    present.write_text('{"repos": []}\n')
+    monkeypatch.setenv('DECLARED_REGISTRY', str(present))
+    declared = {**FLAGS, 'required_files': [{'name': 'repos.json', 'path': '$DECLARED_REGISTRY', 'machine': 'box'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
+def test_a_required_file_whose_variable_is_empty_is_reported_missing(tmp_path: Path, monkeypatch) -> None:
+    """Path('') is '.', and a current directory always exists — so a set-but-empty variable
+    would report the file present while nothing had been declared. Loud is the whole point
+    of the register; this is the one input that could have made it silent."""
+    monkeypatch.setenv('DECLARED_REGISTRY', '')
+    declared = {**FLAGS, 'required_files': [{'name': 'repos.json', 'path': '$DECLARED_REGISTRY', 'machine': 'box'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=declared) if change.verdict is Verdict.MISSING]
+    assert found, 'an empty variable must report the file missing, not converged'
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Applying
 # ─────────────────────────────────────────────────────────────────────────────

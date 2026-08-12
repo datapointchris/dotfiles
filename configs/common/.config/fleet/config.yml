@@ -2,14 +2,15 @@
 # until the fleet settled on one resolution order for every reader of a shared
 # file, and this is the layer that replaced it.
 
-# See the note in ../forge/config.yml — same file, same reason, and the two are
-# deliberately separate because each tool resolves its own.
-repos_file: ~/dev/repos.json
+# The registry is deliberately NOT named here — see the note in
+# ../forge/config.yml. $REPOS_JSON carries it, and fleet resolves it below this
+# file's repos_file and above its own data directory. Set repos_file only to
+# point fleet at a different registry from every other reader on this machine.
 
 # The fleet's machines, named separately from its repos because the two are
-# different files with different lifetimes. Both resolve through ~/dev, which
-# holds symlinks into a clone on a fleet machine and nothing at all elsewhere —
-# the same set that has fleet installed at all.
+# different files with different lifetimes. Named here rather than left to
+# $FLEET_MACHINES because this file is the fleet-scoped layer and the roster is
+# fleet-only, where the registry is a file every workstation has.
 machines_file: ~/dev/machines.json
 
 # The standards `fleet audit` grades against. Named here and not left to
