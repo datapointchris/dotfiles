@@ -183,8 +183,10 @@ the tool that deploys it — a coupling almost no other repo has, and one nothin
 
 - **`~/dotfiles` stays on `main`.** Most work commits straight to `main` here and never needs a
   branch at all (`~/dev/standards/git-workflow.md` § "The default is a commit to main"). Work that
-  does earn one goes in a git worktree, so the branch cannot reach the machine until it merges.
-  `git worktree add ~/.dotfiles-wt/<branch> <branch>`
+  does earn one goes in a git worktree — `worktree new <slug>` — so the branch cannot reach the
+  machine until it lands. That is the same command a second concurrent session runs here for the
+  unrelated reason that a checkout's index is shared, and `worktree land` catches this checkout back
+  up afterwards, which in this repo is a redeploy rather than a formality.
 - **One worktree per stack, at its top.** A stacked branch checked out in a second worktree is
   skipped silently by `rebase.updateRefs`, leaving that ref on pre-rebase commits.
 - **Always run `dotfiles` from `~/dotfiles`, never from inside a worktree.** `DOTFILES_DIR` is
