@@ -4,7 +4,7 @@ Cross-platform dotfiles that work across macOS, WSL Ubuntu, and Arch Linux. Beca
 
 ## What This Is
 
-A dotfiles setup that prioritizes shared configuration with platform-specific overrides only when absolutely necessary. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
+A dotfiles setup that prioritizes shared configuration, with a per-coordinate overlay only where a machine genuinely needs a different file. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
 
 Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`toolbox`) so you can actually remember what you installed.
 
@@ -23,12 +23,13 @@ dotfiles apply --machine archlinux-personal-workstation
 commands back; `dotfiles plan` says what `apply` would change before it changes
 anything.
 
-Available manifests are in `install/manifests/`: full workstation profiles for
-Arch Linux, macOS, and WSL, plus `linux-lxc-server` — a minimal profile for
-headless LXCs and small Debian/Ubuntu boxes that installs only the lean `core`
-system-package tier.
+`./install.sh` with no arguments names the manifests this checkout carries.
+Once the CLI is on the box, `dotfiles machines list` names them and
+`dotfiles machines show <name>` says what one declares.
 
-**Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
+A blocked download does not stop the run — the common case behind a corporate
+firewall. `apply` names what failed when it ends, and `dotfiles report latest`
+re-reads that run afterwards.
 
 See the [full documentation](https://datapointchris.github.io/dotfiles/) for details.
 
@@ -41,21 +42,19 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 - `toolbox`: Go app via `go install github.com/datapointchris/...`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
-The core philosophy: write configs once in `configs/common/`, override only what's platform-specific.
+The core rule: a deployed path lives in exactly one layer. `declared()` in `src/dotfiles/resources/symlinks.py` walks each layer and appends without deduplicating, so the same relative path in `common/` and an overlay is a collision producing two links at one target — never an override. There is no merge step, which is why a config that differs on one coordinate moves out of `common/` whole rather than being patched on top of it.
 
 ## Dotfiles Philosophy
 
 This setup follows some opinionated principles that make maintenance easier:
 
-**Fail Fast and Loud (But Keep Going)**: Individual installers exit immediately on errors with clear messages. But the wrapper catches failures and continues installing everything else. You get the full error context for what broke AND a working system with just a few missing pieces. No silent failures, no broken partial installations.
+**Nothing Is Detected**: a manifest declares where a machine sits on each of the six axes in `src/dotfiles/coordinates.py`, and `dotfiles env apply` writes them into `~/.env` for every shell and overlay to read. OS detection was the earlier design and it could not answer the questions that actually decide a config — whether a box is on a trusted network, or whether it is meant to be a workstation or a server.
 
-**Explicit Over Hidden**: Platform-specific logic lives at the top level (bootstrap scripts, main Taskfile), not buried deep in install scripts. If there are OS conditionals, you see them upfront.
+**Fail Fast in the Provider, Keep Going in the Engine**: a provider returns a result rather than raising, so one blocked download costs that row and nothing else. `src/dotfiles/engine.py` turns a provider that does raise into a refusal and finishes the plan. You get the full error context for what broke AND a working system with just a few missing pieces.
 
-**Straightforward and Simple**: Prefer some duplication over complex abstractions. Three similar install scripts (one per platform) are clearer than one script with conditional maze. The small amount of repeated code is worth the reduced cognitive load.
+**Linear and Predictable**: stages run in the order `src/dotfiles/resolve.py` declares, and `--through STAGE` stops part way. Ordering is a property of the work rather than of a command, which is why it lives on the stage and not on either resource it constrains.
 
-**Linear and Predictable**: Installation follows clear phases in order. No surprises, no hidden dependencies being installed behind the scenes. You can follow exactly what's happening at each step.
-
-**Universal Tools**: Install scripts work on any platform with no OS detection. Platform logic stays in the taskfiles that call them.
+**Reconcile, Don't Script**: `plan` says what `apply` would change, `apply` changes it, and `check` reports what is *wrong* — which a machine merely behind on versions is not. `dotfiles --help` shows where those three verbs sit.
 
 This means when something breaks (and it will), you can quickly find and fix it. When you come back six months later, the code still makes sense.
 
@@ -116,7 +115,7 @@ Installed something six months ago and forgot about it? The `toolbox` command ha
 toolbox list              # See everything
 toolbox show ripgrep      # Details, examples, why you installed it
 toolbox search git        # Find git-related tools
-toolbox random            # Discover something you forgot existed
+toolbox remind            # Surface something you forgot existed
 ```
 
 Tools are documented in the registry with usage examples and tips, deployed from `configs/common/.local/share/toolbox/registry.yml`.
@@ -127,7 +126,7 @@ Tools are documented in the registry with usage examples and tips, deployed from
 # Themes
 theme list                              # List available themes
 theme apply rose-pine                   # Apply theme across terminal apps
-theme preview                           # Preview themes with fzf
+theme change                            # Interactive picker with color preview
 
 # Updates
 dotfiles update                         # Pull the repo and repair what the pull invalidated
@@ -135,31 +134,25 @@ task update                             # Alias for install: apply is the update
 dotfiles apply --owner datapointchris   # Only my own tools
 
 # Symlinks
-dotfiles symlinks apply                 # Deploy configs (also: check, show, unlink)
+dotfiles symlinks apply                 # Deploy configs (also: plan, check, show, unlink)
 
 # Discovery
 toolbox search python                   # Find Python tools
 ```
 
-Run `dotfiles` for all commands, or `task --list` when working inside the repo.
+Run `dotfiles` for all commands, or `task --list-all` when working inside the repo.
 
 ## Symlink Management
 
-The `symlinks` tool manages deploying configs from the repo to their actual locations. Written in Python because shell scripts for path manipulation are a recipe for sadness.
+`dotfiles symlinks` deploys configs from the repo to their actual locations. Written in Python because shell scripts for path manipulation are a recipe for sadness.
 
 **Important**: After adding or removing files in the repo, run `dotfiles symlinks apply` to update symlinks. Otherwise Neovim will complain about missing modules and you'll spend 20 minutes debugging before remembering this note.
 
 ## Theme System
 
-Unified theme generation from `theme.yml` source files. The `theme` CLI applies themes consistently across ghostty, tmux, btop, and more:
+One `theme.yml` palette per theme generates every app's colors, so ghostty, tmux, btop and Neovim cannot drift apart. `theme --help` is the command surface.
 
-- `theme list` - See available themes
-- `theme apply <name>` - Apply theme across all apps
-- `theme preview` - Interactive preview with fzf
-- `theme current` - Show current theme and stats
-- `theme like/dislike` - Track preferences
-
-Theme persists across sessions. Neovim uses either generated colorschemes or original plugins based on theme configuration.
+The generated config for each app lands under that theme's own id, with a stable `current` symlink pointed at it — which is why the configs in this repo name `current` and never a theme. The choice persists across sessions, and Neovim uses either a generated colorscheme or the theme's original plugin, whichever the theme declares.
 
 ## Documentation
 
@@ -173,13 +166,13 @@ There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/)
 
 ## Some Highlights
 
-**Neovim**: Native LSP with 10+ language servers, CodeCompanion for Claude integration, custom colorscheme manager with generated and plugin themes.
+**Neovim**: Native LSP — one file per server in `configs/common/.config/nvim/lsp/`, which `eza -1` will list — plus CodeCompanion for Claude integration and a custom colorscheme manager spanning generated and plugin themes.
 
 **Shell**: Custom ZSH prompt with git status, zoxide for smart directory jumping, fzf with preview, syntax highlighting, vi-mode.
 
 **Modern CLI replacements**: bat (cat with syntax highlighting), eza (ls with git integration), fd (find that respects .gitignore), ripgrep (grep but faster), yazi (terminal file manager).
 
-**Task automation**: Modular Taskfile system with separate files for brew, npm, uv, symlinks, etc. Makes it easy to add new automation without creating a monolithic mess.
+**Task automation**: one `Taskfile.yml` of namespaced entry points, listed by `task --list-all`. Composite operations live in `install/ops/` so the Taskfile and the `dotfiles` CLI share one implementation instead of drifting into two.
 
 ## Contributing
 
@@ -195,4 +188,4 @@ MIT - do whatever you want with it
 
 ---
 
-**Tip**: Running `toolbox random` occasionally is a good way to rediscover tools you installed and immediately forgot about.
+**Tip**: Running `toolbox remind` occasionally is a good way to rediscover tools you installed and immediately forgot about.
