@@ -37,9 +37,12 @@ EOF
 # What counts as stacked is read out of the listing — a base that is some other
 # open PR's head — because pr-list reports no default branch, so testing base
 # against a literal "main" would mark every row of a repo that defaults to
-# master. The lookup is keyed on repo and branch together because branch names
-# recur across the registry. `open_pr_heads` reads the whole listing, so it is
-# built once and passed in rather than rebuilt per row.
+# master. The lookup is keyed on slug and branch together. Branch names recur
+# across the registry, and `repo` is a bare basename — pr-list searches all of
+# GitHub and filters to the registry by name alone, so a PR authored upstream in
+# someone else's `typos` arrives under the same `repo` as your own and would be
+# paired with it. `open_pr_heads` reads the whole listing, so it is built once
+# and passed in rather than rebuilt per row.
 #
 # A quoted heredoc rather than a single-quoted string: shellcheck reads jq's own
 # `$heads` and `$p` in a bare assignment as shell expansions it should warn about
@@ -48,10 +51,10 @@ branch_cell_jq=$(
   cat <<'JQ'
 def open_pr_heads:
   reduce (.[] | select((.branch // "") != "")) as $p
-    ({}; .[$p.repo][$p.branch] = $p.number);
+    ({}; .[$p.slug][$p.branch] = $p.number);
 def branch_cell($heads):
   (if (.branch // "") == "" then "-" else .branch end) as $cell
-  | ($heads[.repo][.base // ""] // null) as $parent
+  | ($heads[.slug][.base // ""] // null) as $parent
   | if $parent == null or $parent == .number then $cell
     else "\($cell) ← #\($parent)" end;
 JQ

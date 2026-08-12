@@ -210,6 +210,19 @@ def test_a_base_matching_another_repos_branch_is_not_a_stack(listing) -> None:
     assert cells(lines[2])[3] == 'other'
 
 
+def test_a_fork_sharing_a_basename_is_not_a_stack(listing) -> None:
+    """`repo` is a bare basename. pr-list searches all of GitHub and filters to the
+    registry by name, so a PR authored in someone else's `typos` arrives under the
+    same `repo` as your own — and keying on it pairs two unrelated repositories,
+    asserting a review order that does not exist."""
+    lines = listing(
+        pr('typos', 4, 'align-config'),
+        pr('typos', 1188, 'other-work', slug='crate-ci/typos', base='align-config'),
+    )
+    assert cells(lines[1])[3] == 'align-config'
+    assert cells(lines[2])[3] == 'other-work'
+
+
 def test_a_repo_whose_default_branch_is_master_is_not_marked_stacked(listing) -> None:
     """What makes a row stacked is that its base is some other open PR's head, not
     that its base is spelled something other than `main`. pr-list reports no
