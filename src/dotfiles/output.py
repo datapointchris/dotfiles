@@ -169,7 +169,10 @@ def announce(address: str, detail: str) -> None:
     hung is not a finding.
     """
     if err_console.is_terminal:
-        err_console.print(f'[dim]⋯ {address:<11} {detail}[/]')
+        # Cropped rather than wrapped. A resource's help runs to a sentence, and a
+        # transient line that takes two rows on a narrow terminal doubles the
+        # height of the progress block it is trying to keep small.
+        err_console.print(f'[dim]⋯ {address:<11} {detail}[/]', no_wrap=True, overflow='ellipsis')
 
 
 def measured(address: str, detail: str, seconds: float) -> None:
