@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +107,54 @@ def test_a_tool_requiring_a_wsl_host_resolves_only_there(declaration: catalog.Ca
 
     assert 'win32yank' in on_wsl
     assert 'win32yank' not in on_arch
+
+
+DEPLOYED_TREES = ('apps', 'configs', 'shell')
+"""The three trees that get symlinked into `$HOME`, and so the only places a
+caller can invoke a binary from."""
+
+WIN32YANK_CALL = re.compile(r'win32yank(\S*)[ \t]+-')
+"""`win32yank` followed by a flag on the same line, which is what invoking it
+looks like in shell, lua and tmux alike.
+
+Prose naming the tool is a mention rather than a call, and so is the nvim
+provider named `win32yank-wsl` — neither may be read as a caller. Matched per
+line because a mention ending a comment would otherwise join the `--` opening
+the next one.
+"""
+
+
+def test_every_caller_invokes_the_win32yank_filename_the_entry_installs(declaration: catalog.Catalog) -> None:
+    """The name is declared in one file and typed in three others, and nothing
+    else compares them.
+
+    `providers/ghrelease` writes `bin_dir() / entry.executable` and then asks
+    `which` for that same name, so the check is a mirror: a machine whose
+    clipboard is dead reports converged. Deleting the twenty-three bash
+    installers (5d3714a2) took with it the `.exe` this entry had always installed
+    under, because `packages.yml` never carried it — and every call site went on
+    asking for a suffix that Linux, having no PATHEXT, will not supply.
+
+    Asserted against whatever the callers say rather than against a literal, so
+    the pairing has to be broken on purpose from either side.
+    """
+    declared = declaration.find('github_releases', 'win32yank').executable
+
+    called: dict[str, list[str]] = {}
+    for tree in DEPLOYED_TREES:
+        for path in sorted((REPO_ROOT / tree).rglob('*')):
+            if not path.is_file():
+                continue
+            for number, line in enumerate(path.read_text(errors='ignore').splitlines(), start=1):
+                for match in WIN32YANK_CALL.finditer(line):
+                    called.setdefault(f'win32yank{match.group(1)}', []).append(f'{path.relative_to(REPO_ROOT)}:{number}')
+
+    assert called, 'nothing invokes win32yank, so this asserts nothing'
+
+    wrong = {name: sites for name, sites in called.items() if name != declared}
+    assert not wrong, 'packages.yml installs {}; these ask for something else: {}'.format(
+        declared, '; '.join(f'{name} at {", ".join(sites)}' for name, sites in sorted(wrong.items()))
+    )
 
 
 def test_a_system_package_with_no_name_under_this_manager_is_not_planned(tmp_path: Path) -> None:
