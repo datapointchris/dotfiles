@@ -84,6 +84,46 @@ def module_version(binary: Path) -> str | None:
     return None
 
 
+def installed_modules(directory: Path) -> dict[str, str]:
+    """Every binary in `directory`, to the module it was built from.
+
+    One `go version -m` over the whole directory rather than one per binary: the
+    toolchain accepts a directory and answers for everything in it, which is the
+    difference between one subprocess and one per tool every time a check runs.
+
+    Reads the `mod` line for the reason `module_version` records — `path` carries
+    a command subdirectory and a major-version suffix, while `mod` names the
+    module once and cleanly.
+
+    Takes the directory rather than calling `gobin()`, for the reason
+    `evidence.executables_on_path` takes the checkout: a caller measuring a run's
+    own home must not be answered about the home of the process doing the
+    measuring. Reading `Path.home()` here made every test in the packages suite
+    read the machine it ran on.
+
+    Empty where `go` is absent or the directory has never been created, which is
+    a machine with no Go tools rather than a failure.
+    """
+    go = shutil.which('go')
+    if not go or not directory.is_dir():
+        return {}
+    result = effects.run([go, 'version', '-m', str(directory)], output=Output.QUIET, timeout=MODULE_INFO_SECONDS)
+    if not result.ok:
+        return {}
+
+    modules: dict[str, str] = {}
+    binary = ''
+    for line in result.stdout.splitlines():
+        if not line.startswith('\t'):
+            binary = Path(line.split(':', 1)[0]).name
+            continue
+        fields = line.split()
+        if binary and len(fields) >= 3 and fields[0] == 'mod':
+            modules[binary] = fields[1]
+            binary = ''
+    return modules
+
+
 def bundled(entry: catalog.GoTool) -> Path:
     return bundle_file(BUNDLE_BINARIES) / entry.executable
 

@@ -29,10 +29,12 @@ from dotfiles import releases
 from dotfiles import versions
 from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
+from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
@@ -81,6 +83,14 @@ class Observed:
 
     Only populated for an item that has more than one copy on PATH, so the common
     case carries an empty dict and costs nothing to fold.
+    """
+
+    undeclared: dict[str, str] = dc.field(default_factory=dict)
+    """Binary name → the module it was built from, for an own tool nothing declares.
+
+    Separate from `shadowed`, which is about a *declared* item having a second
+    copy. This is the item that is not declared at all, and the two cannot be
+    folded: one is keyed by address and the other has no address to be keyed by.
     """
 
     latest: dict[str, releases.Cached] = dc.field(default_factory=dict)
@@ -145,6 +155,7 @@ class PackagesResource:
             met=ev.measured_preconditions(),
             reported={item.address: found for item in present if (found := _installed_version(item))},
             shadowed=_shadowing(mine, evidence, plan, session.repo),
+            undeclared=_undeclared_own_tools(plan, session.home),
             latest=latest,
             consulted_network=consulted,
             from_bundle=session.offline,
@@ -211,11 +222,56 @@ class PackagesResource:
                         observed=', '.join(stray),
                     )
                 )
+
+        for binary, module in sorted(observed.undeclared.items()):
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.TOOLS,
+                    binary,
+                    Verdict.UNDECLARED,
+                    detail=f'built from {module}, which nothing this machine declares asks for',
+                    repair=Repair.BY_HAND,
+                    advice='declare it in install/packages.yml and this machine’s manifest, '
+                    'or remove the binary if it was installed by hand and is not wanted',
+                )
+            )
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
+
+
+def _undeclared_own_tools(plan: Plan, home: Path) -> dict[str, str]:
+    """Go binaries built from an owner this machine declares tools from, and does
+    not declare.
+
+    The mirror of `_shadowing`, and the direction nothing else here looks. Every
+    other measurement reads down from the declaration and asks whether the
+    machine matches it; this one reads up from the machine and asks whether the
+    declaration explains what is there. `fleet` sat installed on two workstations
+    with no entry in `packages.yml` at all, and no verb could have said so —
+    every one of them was looking the other way.
+
+    Go only, deliberately. `go version -m` reads the module out of the binary
+    itself, so "this is one of ours" is measured rather than guessed from a name.
+    A uv tool does not record where it came from once installed, and matching on
+    the name alone would report every coincidence.
+
+    Scoped to owners the plan already names, because that is the whole of this
+    repo's basis for calling a module ours. A machine declaring nothing of an
+    owner's reports nothing of theirs, which is correct and not merely cautious.
+    """
+    owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
+    if not owners:
+        return {}
+    declared = {item.executable for item in plan.items if item.executable}
+    return {
+        binary: module
+        for binary, module in gotool.installed_modules(home / 'go' / 'bin').items()
+        if binary not in declared and catalog.owner_of(module) in owners
+    }
 
 
 def _shadowing(
