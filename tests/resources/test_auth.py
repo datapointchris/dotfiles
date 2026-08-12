@@ -115,8 +115,8 @@ that says why it was rejected. `gh` is absent because it runs nothing at all.
 def test_every_subprocess_a_probe_runs_is_a_local_one(xdg: Path, fake_bin: Path) -> None:
     """The mechanical guard against a later edit reaching for the networked
     spelling. Each rejected alternative is the honest answer to "is this login
-    usable" and each is a round trip, from a resource that runs at every shell
-    prompt, in a pre-commit hook and on a six-hourly timer."""
+    usable" and each is a round trip, from a resource that runs unattended on a
+    timer, where nobody is watching to discount an offline machine's answer."""
     log = xdg / 'argv'
     for tool in auth.PROBES:
         # The name is echoed rather than left to `$0`, which is the absolute path

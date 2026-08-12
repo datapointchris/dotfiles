@@ -339,9 +339,11 @@ a `packages.yml` row could not reach either of them. Putting the roster in code 
 would be the one place this repo keeps a machine's declaration out of.
 
 **Every probe is local, and each one carries the measurement that picked it.** `check`
-runs at every shell prompt through the nudge, in a pre-commit hook and on a six-hourly
-timer, so a network round trip per declared tool is unaffordable and would report a
-working login as broken on any machine that is offline. The cheap probe is per tool and
+runs unattended on the timer `src/dotfiles/providers/schedule.py` installs, so a network
+round trip per declared tool is unaffordable and would report a working login as broken
+on any machine that is offline — with nobody at the desk to discount it. The nudge is not
+a second caller: it prints a line a previous run left in a file, which is why it costs a
+shell prompt nothing. The cheap probe is per tool and
 it inverts between them, which is the part worth writing down: `gh auth token` is 30ms
 where `gh auth status` validates against the API at 333ms, while for the personal data
 CLIs `auth status` is the 4ms one — it reads the keychain and makes no HTTP call — and

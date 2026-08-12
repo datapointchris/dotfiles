@@ -597,7 +597,7 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     Check only, and deliberately: a login is interactive and personal — a browser
     flow, a password, a device code — so there is nothing in the repo for `apply`
     to write, the same call `identity` makes. Every probe is local, because this
-    runs at a shell prompt and on a timer.
+    runs unattended on a timer.
     """
     verbosity(verbose, quiet)
     _survey('auth', machine, reconcile.Lens.CHECK, as_json)

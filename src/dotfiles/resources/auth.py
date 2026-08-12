@@ -15,9 +15,10 @@ a field on a `packages.yml` row could not reach them. A table of tools in code
 would put the roster where every other resource keeps it out of.
 
 **Every probe is local, and that is a constraint rather than a preference.**
-`check` runs at every shell prompt through the nudge, in a pre-commit hook and on
-a six-hourly timer, so a network round trip per declared tool is not affordable
-and would report a working login as broken the moment a machine is offline. The
+`check` runs unattended on the timer `providers/schedule.py` installs, whose
+interval is `INTERVAL_SECONDS` there, so a network round trip per declared tool is
+not affordable and would report a working login as broken the moment a machine is
+offline — on a schedule, with nobody watching to discount it. The
 cheap probe is per tool and it *inverts* between them, which is why each one
 carries the measurement that picked it: `gh auth token` is 30ms where
 `gh auth status` is 333ms, while for the personal data CLIs `auth status` is the
@@ -314,7 +315,7 @@ def _aws(session: Session) -> Credential:
 
     `aws sts get-caller-identity` is the real answer and is 698ms and networked;
     `aws configure list` is 415ms of Python interpreter startup for something two
-    stats decide. Neither is affordable at a shell prompt.
+    stats decide. Neither is affordable on a scheduled check.
 
     Static keys, an SSO cache and the environment are genuinely three ways to be
     logged in rather than one fact spelled three ways, so all three are asked.
@@ -344,10 +345,10 @@ def _bbkt(session: Session) -> Credential:
 
     `bbkt config check` is the honest answer to "does this work" and says so in its
     own help — *connect to the instance and report who you are*. That makes it a
-    round trip to an employer's Bitbucket from a check that runs at every shell
-    prompt. `config path token` reads the config file and prints where the token
-    would be, which honours a `token_file` override this repo has no business
-    guessing at.
+    round trip to an employer's Bitbucket from a check that runs on a timer,
+    whether or not anyone is at the desk. `config path token` reads the config
+    file and prints where the token would be, which honours a `token_file`
+    override this repo has no business guessing at.
     """
     if not shutil.which('bbkt'):
         return _uninstalled('bbkt')

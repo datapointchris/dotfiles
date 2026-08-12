@@ -100,14 +100,20 @@ class Stage(enum.IntEnum):
     """
 
     AUTH = 120
-    """Above every stage that installs something, because a login can only be
-    asked about once the tool exists.
+    """A label rather than an ordering, and the only stage that is.
 
-    Nothing here is ever written, so `apply` still ends on SYSTEM_CONFIG: a
-    credential is personal and interactive, and this stage exists to order the
-    *question* rather than any work. Ordering it last is what stops `check`
-    reporting a machine as unauthenticated for a CLI the same run was about to
-    install.
+    Every other value here sequences work. This one cannot: no auth change is
+    `actionable`, so `_in_stage_order` filters all of them out before the number is
+    ever compared, and `apply` still ends on SYSTEM_CONFIG. It exists so an auth row
+    carries a stage like every other row and so `test_no_two_resources_share_a_stage`
+    stays total over the resources.
+
+    Sorting above the installing stages is therefore cosmetic, and it is not what
+    keeps a not-yet-installed CLI from being reported unauthenticated —
+    `reconcile.apply_machine` materialises the whole of `engine.assess` before it
+    performs anything, so every probe has already run whatever this number says.
+    `auth._uninstalled` is what answers that, with `UNKNOWN` for a tool that is not
+    on PATH.
     """
 
 
