@@ -33,6 +33,7 @@ from collections.abc import Sequence
 from typing import Protocol
 from typing import runtime_checkable
 
+from dotfiles import diagnose
 from dotfiles import providers
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
@@ -201,7 +202,13 @@ class Outcome:
         """
         if result.refused:
             return cls(change, OutcomeStatus.REFUSED, result.detail)
-        return cls(change, OutcomeStatus.DONE if result.ok else OutcomeStatus.FAILED, result.detail)
+        if result.ok:
+            return cls(change, OutcomeStatus.DONE, result.detail)
+        # Only a failure is diagnosed, and only here. A refusal wrote nothing
+        # because a precondition was unmet, which the provider already states in
+        # its own terms; a success has nothing to ask about. Probing on either
+        # would spend I/O on every item of every run.
+        return cls(change, OutcomeStatus.FAILED, diagnose.explain(change.item, result.detail))
 
 
 class Observation(Protocol):

@@ -553,7 +553,13 @@ def _render(event: Event) -> None:
     elif isinstance(payload, Outcome) and payload.ok:
         err_console.print(f'[green]✓[/] {payload.message or payload.change.item}')
     elif isinstance(payload, Outcome):
-        err_console.print(f'[red]✗[/] {payload.change.item}: {payload.message}')
+        # One row per line: a diagnosed failure carries the cause and the command
+        # that fixes it under the provider's own message, and the command wants a
+        # line of its own rather than a place inside a paragraph.
+        cause, *diagnosed = payload.message.splitlines() or ['']
+        err_console.print(f'[red]✗[/] {payload.change.item}: {cause}')
+        for line in diagnosed:
+            err_console.print(f'  [blue]→[/] {line}')
 
 
 def _unrepairable(planned: Iterable[Event]) -> list[Change]:

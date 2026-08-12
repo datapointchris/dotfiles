@@ -153,3 +153,53 @@ def test_nothing_holding_a_file_is_an_answer_too(tmp_path: Path) -> None:
     holder, why = diagnose.process_holding(idle)
 
     assert (holder, why) == ('', '')
+
+
+def test_an_unrecognised_failure_is_returned_untouched() -> None:
+    """The common case, and it must stay free: no probe runs until a known
+    failure is matched, so an unfamiliar message costs one regex."""
+    message = 'go: module example.com/x@latest found, but does not contain package'
+
+    assert diagnose.explain('go/x', message) == message
+
+
+def test_a_known_failure_with_no_path_is_returned_untouched() -> None:
+    """Every probe here takes a path. Matching the words and then guessing at a
+    subject would produce a confident answer about the wrong file."""
+    message = 'Permission denied'
+
+    assert diagnose.explain('ghrelease/x', message) == message
+
+
+def test_a_busy_binary_is_explained_and_the_unit_named(tmp_path: Path) -> None:
+    """The ntfy case end to end. The provider's message is kept as the first
+    line, because it is what the run actually reported."""
+    if not diagnose.shutil.which('lsof'):
+        pytest.skip('lsof is what this probe uses, and it is not installed here')
+
+    held = tmp_path / 'held'
+    held.write_bytes(Path('/bin/sleep').read_bytes())
+    held.chmod(0o755)
+    child = subprocess.Popen([str(held), '60'])
+    time.sleep(0.2)
+    try:
+        message = f"[Errno 26] Text file busy: '{held}'"
+        explained = diagnose.explain('ghrelease/held', message).splitlines()
+
+        assert explained[0] == message
+        assert 'is being executed by' in explained[1]
+        assert str(child.pid) in explained[1]
+    finally:
+        child.kill()
+        child.wait()
+
+
+def test_a_permission_failure_names_who_owns_the_path(tmp_path: Path) -> None:
+    """`stat` answers in one bounded call what otherwise sends a reader to `ls -l`."""
+    target = tmp_path / 'owned'
+    target.write_text('x')
+
+    explained = diagnose.explain('ghrelease/x', f"[Errno 13] Permission denied: '{target}'").splitlines()
+
+    assert len(explained) > 1
+    assert 'may not write it' in explained[1]

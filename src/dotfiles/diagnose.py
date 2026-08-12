@@ -30,6 +30,7 @@ explained with its own, which is the one outcome worse than saying nothing.
 from __future__ import annotations
 
 import dataclasses as dc
+import re
 import shutil
 from pathlib import Path
 
@@ -178,3 +179,101 @@ def removal_command(package: str, manager: PackageManager) -> str:
         PackageManager.APT: f'sudo apt-get remove {package}',
         PackageManager.BREW: f'brew uninstall {package}',
     }[manager]
+
+
+QUOTED_PATH = re.compile(r"'([^']+)'|\"([^\"]+)\"")
+"""The path an OSError puts in its string. `strerror: 'path'` is what
+`shutil`, `open` and `os.replace` all produce, so one reader covers every
+provider that writes a file."""
+
+
+def _path_in(message: str) -> Path | None:
+    """The first quoted absolute path in a message, which is the subject of it."""
+    for found in QUOTED_PATH.finditer(message):
+        candidate = found.group(1) or found.group(2)
+        if candidate.startswith('/'):
+            return Path(candidate)
+    return None
+
+
+def _busy(path: Path) -> Diagnosis:
+    """ETXTBSY: the kernel refused to write a file that is being executed.
+
+    Worth keeping even though `effects.install` made this impossible for a
+    release binary, because it is the shape every other writer can still hit and
+    the message alone is unreadable — `[Errno 26]` names a condition rather than
+    a cause.
+    """
+    holder, why = process_holding(path)
+    unavailable = (why,) if why else ()
+    if not holder:
+        return Diagnosis(cause=f'{path} was being executed, so it could not be written', unavailable=unavailable)
+
+    pid = holder.rsplit('pid ', 1)[-1].rstrip(')')
+    unit, unit_why = unit_running(pid)
+    if unit_why:
+        unavailable = (*unavailable, unit_why)
+    if unit:
+        return Diagnosis(
+            cause=f'{path} is being executed by {holder}, under {unit}',
+            fix=f'systemctl --user stop {unit}  # then apply again',
+            unavailable=unavailable,
+        )
+    return Diagnosis(cause=f'{path} is being executed by {holder}', unavailable=unavailable)
+
+
+def _permission(path: Path) -> Diagnosis:
+    """EACCES: the path exists and this user may not write it."""
+    owner, why = _ask(('stat', '-c', '%U:%G %a', str(path)), f'who owns {path}')
+    if why:
+        return Diagnosis(cause=f'{path} could not be written by this user', unavailable=(why,))
+    return Diagnosis(cause=f'{path} is owned {owner} and this user may not write it')
+
+
+def _no_space(path: Path) -> Diagnosis:
+    """ENOSPC: the filesystem is full, and which one is the useful half."""
+    where, why = _ask(('df', '-h', '--output=target,avail', str(path)), f'which filesystem holds {path}')
+    if why:
+        return Diagnosis(cause=f'the filesystem holding {path} is full', unavailable=(why,))
+    tail = where.splitlines()[-1].split() if where.splitlines() else []
+    if len(tail) == 2:
+        return Diagnosis(cause=f'{tail[0]} is full ({tail[1]} available), so {path.name} could not be written')
+    return Diagnosis(cause=f'the filesystem holding {path} is full')
+
+
+WRITE_FAILURES = (
+    ('Text file busy', _busy),
+    ('Permission denied', _permission),
+    ('No space left', _no_space),
+)
+"""What a message has to contain for a probe to be worth running.
+
+Matched on the strerror text rather than on an errno number, because these
+arrive as the `str()` of an exception a provider caught, and the number is not
+always in it. Ordered, and the first match wins.
+"""
+
+
+def explain(item: str, message: str) -> str:
+    """A provider's failure message, plus what the machine says about it.
+
+    Returns the message unchanged when nothing here recognises it. That is the
+    common case and it must stay cheap: no probe runs until a known failure is
+    matched *and* a path was found to ask about, so an unrecognised failure costs
+    one regex.
+
+    `item` is the address, whose first segment names the provider — which is what
+    makes this granular rather than one table for everything. Today every entry
+    is a file-write failure and so applies to any provider that writes one; a
+    provider needing its own reading adds a branch here rather than a new call
+    site.
+    """
+    for marker, interpret in WRITE_FAILURES:
+        if marker not in message:
+            continue
+        path = _path_in(message)
+        if path is None:
+            return message
+        found = interpret(path)
+        return '\n'.join((message, *found.lines())) if found else message
+    return message
