@@ -204,6 +204,39 @@ def no_installing_on_this_machine(request, monkeypatch):
     monkeypatch.setattr(subprocess, 'Popen', refuse_installs(subprocess.Popen))
 
 
+@pytest.fixture(scope='session', autouse=True)
+def no_run_artefacts_on_this_machine(request):
+    """Fail the session if it left a run artefact in the real state directory.
+
+    The counterpart to `no_installing_on_this_machine`, covering the other thing
+    a verb writes to the box it runs on. `sinks.open_log` swallows its own errors
+    by design, so a test that reaches it leaves a file and reports nothing. 1372
+    empty `.jsonl` accumulated beside 143 real runs before anything counted, in a
+    directory Syncthing shares with the rest of the fleet — and each looked like
+    an apply that had died on the spot, because the stubbed `keep` left no record
+    next to it.
+
+    Session-scoped: listing the directory once per test costs more than the leak
+    does, and one filename at the end is enough to find whoever wrote it.
+
+    Skipped under `--docker`, where an install writes its records inside the
+    container and the host's directory is not the subject.
+    """
+    from dotfiles import paths
+
+    def artefacts() -> set[str]:
+        return {path.name for path in paths.RUNS_DIR.iterdir()} if paths.RUNS_DIR.is_dir() else set()
+
+    if request.config.getoption('docker'):
+        yield
+        return
+
+    before = artefacts()
+    yield
+    leaked = sorted(artefacts() - before)
+    assert not leaked, f'the suite wrote {len(leaked)} run artefact(s) into {paths.RUNS_DIR}, starting {leaked[:4]}'
+
+
 def pytest_configure(config):
     """A level sets the modes it means, before anything is collected.
 

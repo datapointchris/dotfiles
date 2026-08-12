@@ -28,6 +28,22 @@ from dotfiles.vocabulary import ExitCode
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def no_event_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the run's `.jsonl` out of the real state directory.
+
+    `reconcile.apply_machine` opens the log itself rather than leaving it to the
+    command, so a test calling the walk directly writes one under the real
+    `$XDG_STATE_HOME`. `open_log` swallows its own errors, so nothing said so.
+
+    The same fixture guards `test_apply.py`, and `tests/conftest.py` has the
+    session-wide backstop that fails a run which leaks one anyway.
+    """
+    from dotfiles import sinks
+
+    monkeypatch.setattr(sinks, 'open_log', lambda identity: None)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Usage errors are 2, so a caller can tell "typed it wrong" from "ran and failed"
 # ─────────────────────────────────────────────────────────────────────────────
