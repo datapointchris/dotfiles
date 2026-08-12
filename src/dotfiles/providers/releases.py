@@ -215,6 +215,16 @@ def neovim(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/nvim', tree=True)
 
 
+def ntfy(tag: str, target: Target) -> ReleaseArtifact:
+    """One universal `darwin_all` asset, so darwin is the only entry here that does
+    not branch on `is_arm` — an Apple Silicon box and an Intel one fetch the same
+    file. Linux still splits, and the binary sits under a stem directory.
+    """
+    suffix = 'darwin_all' if target.is_darwin else ('linux_arm64' if target.is_arm else 'linux_amd64')
+    stem = f'ntfy_{_bare(tag)}_{suffix}'
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/ntfy')
+
+
 def shellcheck(tag: str, target: Target) -> ReleaseArtifact:
     """`aarch64` where everything else says arm64, dots where everything else
     says dashes, and the only `.tar.xz` in the set."""
@@ -348,6 +358,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'meso': _go_release_cli('meso'),
     'neovim': neovim,
     'nomad': _go_release_cli('nomad'),
+    'ntfy': ntfy,
     'shellcheck': shellcheck,
     'tenv': tenv,
     'terraformer': terraformer,

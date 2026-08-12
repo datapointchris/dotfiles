@@ -895,6 +895,14 @@ github_releases:
     description: SQLite-backed shell history capturing command, exit, cwd, and session
     tags: [cli, shell, history]
 
+  # One release covers every workstation, which is why this is not a brew/pacman
+  # split: ntfy publishes a universal darwin build and is absent from the pacman
+  # repos entirely, so the hand-dropped binary it replaces was the only option.
+  - name: ntfy
+    repo: binwiederhier/ntfy
+    description: Pub-sub notification client, subscribing a desktop to the homelab topics
+    tags: [cli, notifications]
+
   - name: tree-sitter
     repo: tree-sitter/tree-sitter
     checksum: unpublished

@@ -45,6 +45,7 @@ github_releases:
   - atuin
   - tenv
   - yq
+  - ntfy
   # Personal data CLIs — released by their own app repos under a cli/v* tag
   - icb
   - learning
