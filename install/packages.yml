@@ -704,8 +704,15 @@ system_packages:
     description: RSS/Atom feed reader for the terminal
     tags: [cli, communication]
 
+  # `-git` rather than `sioyek`, which resolves to nothing in either pacman or the
+  # AUR: upstream's last tag is v2.0.0 from 2022 and the package tracking it was
+  # deleted, while the project itself is still developed. sioyek-appimage packages
+  # that same 2022 build and was last touched in 2023; sioyek-dev is an older
+  # revision and conflicts with this one. The source build happens once, because a
+  # VCS package's version only moves when yay's devel check runs and nothing here
+  # passes --devel.
   - name: sioyek
-    aur: sioyek
+    aur: sioyek-git
     description: Keyboard-driven PDF viewer for technical documents
     tags: [gui]
 
