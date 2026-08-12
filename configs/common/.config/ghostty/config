@@ -1,11 +1,10 @@
-# Theme colors (imported)
-config-file = themes/current.conf
-
-# Font settings (imported - use 'font apply' to change)
-config-file = fonts/current.conf
-
-# Opacity (imported - use 'theme opacity-up/down' to change)
-config-file = opacity/current.conf
+# Written by `theme` and `font`, so none of them exists until one has been run.
+# The leading ? is ghostty's own "suppress errors if the file does not exist",
+# which is what keeps a fresh machine from opening on a config error for three
+# files whose absence is the normal state before the first apply.
+config-file = ?themes/current.conf
+config-file = ?fonts/current.conf
+config-file = ?opacity/current.conf
 
 macos-titlebar-style = hidden
 
@@ -14,8 +13,8 @@ macos-titlebar-style = hidden
 window-theme = ghostty
 gtk-toolbar-style = flat
 gtk-wide-tabs = true
-gtk-custom-css = themes/current.css
-gtk-custom-css = fonts/current.css
+gtk-custom-css = ?themes/current.css
+gtk-custom-css = ?fonts/current.css
 
 window-padding-x = 16
 window-padding-y = 4,4
