@@ -33,6 +33,7 @@ show_help() {
   help_section "Notes"
   help_row "" "" "NAME is the address peers message, as /list-agents shows it"
   help_row "" "" "Use cca for every machine in the fleet, not just this one"
+  help_end
 }
 
 # One compact descriptor per *live* session. The registry keeps one file per
