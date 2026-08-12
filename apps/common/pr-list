@@ -39,8 +39,12 @@ Usage: pr-list [--registry PATH] [--lane]
 
 Prints every open PR across the registry's repos as a JSON array, oldest first.
 
-Each object: repo, slug, number, title, url, draft, created_at, age_days, path.
-`path` is empty when the repo is not checked out on this machine.
+Each object: repo, slug, number, title, url, branch, base, draft, created_at,
+age_days, path. `branch` is the identifier to type — a number is a per-repo
+counter and collides across the registry, whereas `gh` and `bbkt` both accept a
+branch anywhere they accept a number. `base` is what the PR targets, so a PR
+stacked on another names its parent rather than the default branch. `path` is
+empty when the repo is not checked out on this machine.
 
 --lane emits doit's lane document instead, so `doit dashboard` can read this
 directly and no consumer has to carry a copy of the shape.
@@ -94,6 +98,29 @@ paths_json() {
   ' "$REGISTRY"
 }
 
+# GraphQL rather than `gh search prs`, whose field set has no headRefName or
+# baseRefName — the branch is simply unreachable through it, and appending the
+# flag fails with "Unknown JSON field". The alternative was `gh pr list --json
+# headRefName` per repo, which reads better and costs one request per repo; that
+# is the fan-out the bulk search exists to avoid. This keeps the single call.
+GITHUB_SEARCH='
+{
+  search(query: "author:@me is:pr is:open", type: ISSUE, first: 100) {
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        url
+        headRefName
+        baseRefName
+        isDraft
+        createdAt
+        repository { name nameWithOwner }
+      }
+    }
+  }
+}'
+
 # GitHub: one search for everything you authored, then keep what the registry
 # names. Searching by author rather than per repo is what makes this one call;
 # filtering afterwards is what keeps it honest about scope.
@@ -108,15 +135,19 @@ from_github() {
   }
 
   local raw
-  if ! raw=$(gh search prs --author=@me --state=open --limit=100 \
-    --json=number,title,url,isDraft,createdAt,repository 2>&1); then
+  if ! raw=$(gh api graphql -f query="$GITHUB_SEARCH" 2>&1); then
     echo "pr-list: gh could not list PRs (check 'gh auth status'): ${raw%%$'\n'*}" >&2
     return 0
   fi
 
+  # `type: ISSUE` searches issues and PRs from one index, so a node the inline
+  # fragment does not match arrives as `{}`. `is:pr` should prevent it; without
+  # the guard one would emit a row of nulls, and a null number is a hard
+  # unmarshal failure in fleet rather than a visibly empty row.
   jq -n --argjson prs "$raw" --arg names "$names" '
     ($names | split("\n") | map(select(length > 0))) as $wanted
-    | $prs[]
+    | $prs.data.search.nodes[]
+    | select(.number != null)
     | select(.repository.name as $n | $wanted | index($n))
     | {
         repo: .repository.name,
@@ -124,6 +155,8 @@ from_github() {
         number: .number,
         title: .title,
         url: .url,
+        branch: .headRefName,
+        base: .baseRefName,
         draft: .isDraft,
         created_at: .createdAt,
       }
@@ -160,6 +193,8 @@ from_bitbucket() {
           number: (.id // .number),
           title: .title,
           url: (.links.self[0].href // .url // ""),
+          branch: (.fromRef.displayId // .source.branch.name // ""),
+          base: (.toRef.displayId // .destination.branch.name // ""),
           draft: (.draft // false),
           created_at: (
             if (.createdDate | type) == "number" then (.createdDate / 1000 | todate)
