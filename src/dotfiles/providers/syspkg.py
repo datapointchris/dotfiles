@@ -27,6 +27,7 @@ brew.
 from __future__ import annotations
 
 import functools
+import shutil
 from collections.abc import Sequence
 
 from dotfiles import effects
@@ -114,21 +115,33 @@ workstation `ripgrep` and `fzf` are there for the same kind of reason.
 """
 
 
-@functools.cache
 def _answers(binary: str) -> bool:
-    """Whether a package manager is here and will run, asked once per process.
+    """Whether a package manager is here and will run.
 
-    A manager does not appear or stop working part way through a run, so the
-    probe behind this is the same fork repeated. `owner_of` is called once per
-    stray copy and asked twice each time — once for the manager that answers and
-    once for the one that is not installed — which on a machine with several
-    strays is dozens of forks to re-establish a constant.
+    `owner_of` is called once per stray copy and asks two managers each time, so a
+    machine with several strays spent dozens of forks re-establishing a constant.
+    What is cached is the probe, and the fix for that is one `shutil.which` — a
+    stat rather than a fork — in front of it.
 
-    Still a probe rather than `shutil.which`, because the question is whether the
+    **Keyed on the resolved path, never on the name.** PATH is not fixed for the
+    life of a process: `providers/toolchain.put_on_path` extends it as each
+    runtime lands, and a test hands the resource a PATH of its own. Cached under
+    the bare name, one test's fake `pacman` answered for the next test's — which
+    is how this reached CI green locally and failed on a runner with no real
+    pacman to make the two agree.
+
+    Still a probe rather than `which` alone, because the question is whether the
     manager *runs*: a `dpkg-query` present but broken and one absent are the same
-    answer to this caller and different answers to `which`.
+    answer to this caller and different answers to `which`. `which` only decides
+    *which* binary is being asked about, and answers the absent case for free.
     """
-    return effects.run([binary, '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok
+    found = shutil.which(binary)
+    return bool(found) and _probe(found)
+
+
+@functools.cache
+def _probe(path: str) -> bool:
+    return effects.run([path, '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok
 
 
 def unchosen() -> frozenset[str]:

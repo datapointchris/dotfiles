@@ -31,6 +31,7 @@ from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import npm
+from dotfiles.providers import syspkg
 from dotfiles.providers import uvtool
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
@@ -1110,6 +1111,28 @@ def test_a_copy_a_declared_package_owns_is_explained(tmp_path: Path, fake_bin: P
     live = session(tmp_path, declared, {**DECLARES_FROB, 'system_packages': 'workstation'})
 
     assert shadow_changes(live) == []
+
+
+def test_asking_whether_a_manager_answers_follows_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe behind `owner_of` is cached, and PATH is not fixed for the life of
+    a process — `toolchain.put_on_path` extends it as each runtime lands, and every
+    test here hands the resource a PATH of its own.
+
+    Cached under the bare name, the first answer answered for every later one. On
+    a runner with no real pacman that meant one test's "there is no pacman" stood
+    while the next test's fake pacman sat on PATH being ignored, so a copy the
+    declaration explains was reported as a stray.
+    """
+    absent, present = tmp_path / 'absent', tmp_path / 'present'
+    absent.mkdir()
+    present.mkdir()
+    executable(present, 'pacman')
+
+    monkeypatch.setenv('PATH', str(absent))
+    assert not syspkg._answers('pacman')
+
+    monkeypatch.setenv('PATH', f'{present}{os.pathsep}{absent}')
+    assert syspkg._answers('pacman')
 
 
 def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
