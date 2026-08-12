@@ -586,6 +586,7 @@ zsh_vi_mode_file="$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
 forgit_file="$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
 forgit_completions="$ZSH_PLUGINS_DIR/forgit/completions"
 autosuggestions_file="$ZSH_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+you_should_use_file="$ZSH_PLUGINS_DIR/zsh-you-should-use/you-should-use.plugin.zsh"
 syntax_highlighting_file="$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # git-open
@@ -765,6 +766,26 @@ if flag_enabled SHELL_CLISTENO; then
   log "Setup" "clisteno hint"
 else
   log "Skip" "clisteno hint (SHELL_CLISTENO)"
+fi
+
+# zsh-you-should-use — the alias that already existed for what was just typed.
+#
+# Distinct from clisteno above rather than a second copy of it: clisteno indexes
+# a *tool's* own subcommand short forms from its TSV, while this reads the shell's
+# alias table. `git status` earns the `gst` reminder here precisely because
+# clisteno has no index for it.
+#
+# `after` buffers the reminder and flushes it from precmd instead of writing it
+# during preexec, so the nudge lands once the command has already run and never
+# delays or interrupts what was typed.
+YSU_MESSAGE_POSITION=after
+if ! flag_enabled SHELL_YOU_SHOULD_USE; then
+  log "Skip" "zsh-you-should-use (SHELL_YOU_SHOULD_USE)"
+elif [[ -f "$you_should_use_file" ]]; then
+  source "$you_should_use_file"
+  log "Load" "$you_should_use_file"
+else
+  log_error "Load" "$you_should_use_file"
 fi
 
 # zsh-syntax-highlighting (MUST load last)

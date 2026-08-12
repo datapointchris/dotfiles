@@ -1538,6 +1538,10 @@ shell_plugins:
     repo: https://github.com/zsh-users/zsh-autosuggestions.git
     description: Fish-like inline suggestion from history as you type
 
+  - name: zsh-you-should-use
+    repo: https://github.com/MichaelAquilina/zsh-you-should-use.git
+    description: Report the alias that already existed for the command just run
+
   - name: zsh-syntax-highlighting
     repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
     description: Fish-like syntax highlighting for ZSH

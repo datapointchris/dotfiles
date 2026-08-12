@@ -200,6 +200,12 @@ flags:
     consumers:
       - configs/common/.config/zsh/.zshrc
 
+  - name: SHELL_YOU_SHOULD_USE
+    description: After a command runs, name the alias that already covered it
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
   - name: SHELL_SYNTAX_HIGHLIGHTING
     description: Colour the command line as it is typed
     default: true
