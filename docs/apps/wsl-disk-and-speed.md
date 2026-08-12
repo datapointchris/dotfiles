@@ -17,7 +17,10 @@ Reclaiming space is therefore two separate acts, and doing only one of them
 accomplishes nothing:
 
 1. Free the blocks inside the guest — `wsl-reclaim clean`
-2. Compact the file on the host — `wsl-reclaim compact`
+2. Shrink the file on the host — `wsl-reclaim compact` or `wsl-reclaim rebuild`
+
+The second step has two routes and which one is available is not a preference.
+`wsl-reclaim report` probes the account and says which.
 
 The compaction is the part that has to happen on Windows, with administrator
 rights, while WSL is shut down. `compact` writes a PowerShell script into the
@@ -32,6 +35,56 @@ Distributions installed before WSL 2.4 sit under
 `%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState` and newer ones under
 `%LOCALAPPDATA%\wsl\{guid}`, so a hardcoded path is wrong on about half the
 machines that have one.
+
+## Without a Windows administrator, the only route is to rebuild the disk
+
+diskpart requires elevation, and so does `Optimize-VHD` and so does adding a
+Defender exclusion. On a managed machine where UAC asks for somebody else's
+password, all three are closed and nothing shrinks the file in place.
+
+`wsl-reclaim rebuild` is the way through. It does not compact the disk; it
+throws it away and writes a new one from a tar of the filesystem, so the result
+is the size of the data rather than of the high-water mark the old disk once
+reached. `wsl --export`, `wsl --unregister` and `wsl --import` are all
+user-scope operations.
+
+The window between unregister and import is the whole risk, and three things
+narrow it. Free space is checked before anything is shut down, so the common
+failure never starts. The archive is read back with `tar -tf` before the distro
+is destroyed, because an export that exits 0 and leaves an unreadable file is
+the failure that matters. The archive is kept afterwards and the re-import
+command is printed *before* the step that might need it.
+
+One thing the rebuild does that a compaction does not: it writes `[user]
+default=` into `/etc/wsl.conf` first. The default user is a property of the
+Store launcher's registration and an imported distro has no launcher, so
+without it the rebuilt distro starts as root — which reads as a broken rebuild
+rather than a missing setting.
+
+## Rebuilding the disk, versus rebuilding the machine
+
+There is a third option that is not in this tool: back up with safekeep, delete
+the distro, install a fresh one, run `dotfiles apply`, restore, and carry on.
+It reclaims the same space and needs no administrator either.
+
+The two are not competing, because they answer different questions.
+`wsl-reclaim rebuild` preserves the filesystem exactly and takes about as long
+as copying the data twice. Deleting and reinstalling preserves only what
+safekeep covers, takes as long as a full machine setup — and **proves the
+machine is reproducible**, which is the entire premise of this repo and of
+safekeep. It also drops the accumulated drift that a byte-exact rebuild
+faithfully carries across.
+
+So: `rebuild` for the routine reclaim, where the disk is the only problem.
+Delete and reinstall when it is worth finding out — deliberately, with time in
+hand — whether the rebuild path still works. A reproducibility claim that is
+never exercised is a claim, and the moment it is discovered to be false is
+otherwise an emergency rather than an afternoon.
+
+The one asymmetry worth naming: safekeep writes to the network drive, while
+`rebuild` writes its archive to a local disk it has to fit on. When the disk
+being reclaimed is the full one, the backup that leaves the machine is the
+safer of the two.
 
 ## Sparse mode is deliberately not offered
 
@@ -85,9 +138,15 @@ The next build then re-reads from disk every file the last one just read.
 worth reclaiming.
 
 **Defender scanning the vhdx.** Every read and write inside the guest is scanned
-on the host unless the disk is excluded. `wsl-doctor` reports whether it is;
-adding the exclusion needs an administrator and is often blocked by policy on a
-managed machine, so the tool names it and stops.
+on the host unless the disk is excluded. Adding an exclusion needs an
+administrator, so `wsl-doctor` words the finding by what the account can
+actually do — an action where it can be taken, context where it cannot. A fix
+nobody on this machine can apply is noise in a list of things to change.
+
+`wsl-doctor` also reports where the distro is installed. Anything outside
+`Packages\<PackageFamilyName>` arrived through `wsl --import`, which means the
+disk has been rebuilt before — the machine remembers the procedure even when
+nobody does.
 
 ## `.wslconfig` is installed, not symlinked
 

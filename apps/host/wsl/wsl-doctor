@@ -9,27 +9,12 @@ set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
+source "$SHELL_DIR/host/wsl/wsl-interop.sh"
 
 FINDINGS=()
 
 note() {
   FINDINGS+=("$1"$'\x1f'"$2")
-}
-
-# ================================================================
-# WINDOWS SIDE
-# ================================================================
-
-# See wsl-reclaim for why the NULs are stripped and why stdin is closed.
-powershell_out() {
-  powershell.exe -NoProfile -NonInteractive -Command "$1" </dev/null 2>/dev/null | tr -d '\r\0'
-}
-
-windows_userprofile() {
-  local profile
-  profile=$(powershell_out "Write-Output \$env:USERPROFILE" | tr -d '\n')
-  [[ -n "$profile" ]] || return 1
-  wslpath -u "$profile" 2>/dev/null
 }
 
 human() {
@@ -60,6 +45,39 @@ check_version() {
   state=$(powershell_out "wsl.exe -l -v" | grep -F "${WSL_DISTRO_NAME:-}" | head -1)
   if [[ "$state" == *" 1"* ]]; then
     note "This distro runs on WSL 1" "WSL 1 has no real kernel and much slower Linux file IO. Convert: wsl.exe --set-version ${WSL_DISTRO_NAME:-<distro>} 2"
+  fi
+}
+
+check_privilege() {
+  print_section "Privilege" "brightyellow"
+
+  if windows_can_elevate; then
+    print_success "This Windows account can elevate"
+    return 0
+  fi
+
+  print_warning "This Windows account cannot elevate"
+  print_info "Defender exclusions and 'wsl-reclaim compact' are both closed off"
+  print_info "'wsl-reclaim rebuild' shrinks the disk without one"
+}
+
+# A distro installed from the Store lives under Packages\<PackageFamilyName>.
+# Anywhere else means it arrived through `wsl --import`, which is what a previous
+# rebuild leaves behind — the machine remembers the procedure even when nobody
+# does.
+check_install_origin() {
+  local base store_marker backslash
+  base=$(wsl_base_path) || return 0
+
+  print_section "Origin" "brightblue"
+  printf '  %-22s %s\n' "installed at" "$base"
+
+  backslash=$'\\'
+  store_marker="${backslash}Packages${backslash}"
+  if [[ "$base" == *"$store_marker"* ]]; then
+    print_info "Registered by the Store package — never rebuilt"
+  else
+    print_success "Imported, not Store-installed — this distro has been rebuilt before"
   fi
 }
 
@@ -198,9 +216,17 @@ check_defender() {
 
   if grep -qiF 'ext4.vhdx' <<<"$exclusions" || grep -qiE 'LocalState|\\wsl' <<<"$exclusions"; then
     print_success "The WSL disk is excluded from real-time scanning"
-  else
+    return 0
+  fi
+
+  # Worded by what this account can do about it. A fix nobody here can apply is
+  # context, not an action, and listing it as one is noise on every run.
+  if windows_can_elevate; then
     note "The ext4.vhdx is not excluded from Defender" \
-      "Every read and write inside WSL is scanned on the host. Adding an exclusion needs an administrator and may be blocked by policy."
+      "Every read and write inside WSL is scanned on the host. Add an exclusion for the disk as an administrator."
+  else
+    print_warning "The ext4.vhdx is not excluded from Defender, and this account cannot add one"
+    print_info "Every read and write inside WSL is scanned on the host. It needs an administrator."
   fi
 }
 
@@ -296,6 +322,8 @@ main() {
     report)
       print_header "wsl-doctor" "brightcyan"
       check_version
+      check_privilege
+      check_install_origin
       check_memory
       check_wslconfig
       check_wsl_conf

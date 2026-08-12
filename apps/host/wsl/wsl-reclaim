@@ -4,67 +4,21 @@ set -euo pipefail
 # Deleting files inside WSL does not shrink ext4.vhdx. The virtual disk grows to
 # its high-water mark and stays there, so a distro that once held a 40GB Docker
 # cache keeps charging Windows for it forever. Reclaiming the space is two
-# separate acts: free the blocks inside the guest, then compact the file on the
+# separate acts: free the blocks inside the guest, then shrink the file on the
 # host. This script does the first and hands off the second.
+#
+# There are two ways to do the second and which one is available is not a
+# preference. `compact` is cheap and needs a Windows administrator; `rebuild`
+# needs none and is the only route on a machine where UAC asks for somebody
+# else's password.
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
+source "$SHELL_DIR/host/wsl/wsl-interop.sh"
 
 AGGRESSIVE=false
 ASSUME_YES=false
-
-# ================================================================
-# WINDOWS SIDE
-# ================================================================
-
-# Windows console tools emit UTF-16LE, which reaches bash as ASCII interleaved
-# with NULs and reads as an empty string to every test here. Stripping NUL and CR
-# is what makes the output comparable.
-#
-# </dev/null because PowerShell inherits stdin and will eat a caller's loop input
-# — see docs/learnings/wsl-powershell-stdin-consumption.md.
-powershell_out() {
-  powershell.exe -NoProfile -NonInteractive -Command "$1" </dev/null 2>/dev/null | tr -d '\r\0'
-}
-
-# The registry is the only reliable answer. Older distros live under
-# %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState and ones installed by
-# WSL 2.4+ under %LOCALAPPDATA%\wsl\{guid}, so a hardcoded path finds nothing on
-# half the machines that have one.
-vhdx_windows_path() {
-  local distro="${WSL_DISTRO_NAME:-}" query base backslash device_prefix
-  [[ -n "$distro" ]] || return 1
-
-  # PowerShell string literals are single-quoted so the whole query survives one
-  # round of bash double-quoting. \$_ is the pipeline variable and must reach
-  # PowerShell unexpanded.
-  query="(Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss"
-  query+=" | Where-Object { \$_.GetValue('DistributionName') -eq '$distro' }).GetValue('BasePath')"
-
-  base=$(powershell_out "$query" | tr -d '\n')
-  [[ -n "$base" ]] || return 1
-
-  # BasePath comes back as an extended-length path. wslpath does not understand
-  # the \\?\ device prefix and returns nothing at all for one. Assembled from a
-  # variable because a literal backslash before a closing quote is unreadable
-  # and reads to shellcheck as a botched escape.
-  backslash=$'\\'
-  device_prefix="${backslash}${backslash}?${backslash}"
-  printf '%s%sext4.vhdx\n' "${base#"$device_prefix"}" "$backslash"
-}
-
-vhdx_linux_path() {
-  local windows_path
-  windows_path=$(vhdx_windows_path) || return 1
-  wslpath -u "$windows_path" 2>/dev/null
-}
-
-windows_temp_dir() {
-  local temp
-  temp=$(powershell_out "Write-Output \$env:TEMP" | tr -d '\n')
-  [[ -n "$temp" ]] || return 1
-  wslpath -u "$temp" 2>/dev/null
-}
+BACKUP_DIR=""
 
 # ================================================================
 # MEASUREMENT
@@ -82,6 +36,19 @@ dir_bytes() {
   }
   total=$(du -sb "$path" 2>/dev/null | cut -f1)
   echo "${total:-0}"
+}
+
+used_bytes() {
+  df -B1 --output=used / | tail -1 | tr -d ' '
+}
+
+vhdx_bytes() {
+  local vhdx
+  if ! vhdx=$(vhdx_linux_path) || [[ ! -f "$vhdx" ]]; then
+    echo 0
+    return 0
+  fi
+  stat -c %s "$vhdx" 2>/dev/null || echo 0
 }
 
 # Where a cache lives is the owning tool's answer, not a path this script knows.
@@ -116,14 +83,19 @@ report_disk() {
   read -r used avail percent < <(df -h --output=used,avail,pcent / | tail -1)
   printf '  %-22s %s used, %s free (%s)\n' "inside the distro" "$used" "$avail" "$percent"
 
-  local vhdx bytes
-  if vhdx=$(vhdx_linux_path) && [[ -f "$vhdx" ]]; then
-    bytes=$(stat -c %s "$vhdx" 2>/dev/null || echo 0)
+  local bytes wasted
+  bytes=$(vhdx_bytes)
+  if [[ "$bytes" -gt 0 ]]; then
     printf '  %-22s %s\n' "ext4.vhdx on Windows" "$(human "$bytes")"
     printf '  %-22s %s\n' "" "$(vhdx_windows_path)"
+
+    # The gap is the whole subject. Everything else here is context for it.
+    wasted=$((bytes - $(used_bytes)))
+    [[ "$wasted" -gt 0 ]] && printf '  %-22s %s\n' "never given back" "$(human "$wasted")"
   else
     print_warning "Could not locate ext4.vhdx — is \$WSL_DISTRO_NAME set and interop enabled?"
   fi
+  return 0
 }
 
 report_caches() {
@@ -151,16 +123,15 @@ report_caches() {
   return 0
 }
 
-report_trim() {
-  print_section "Trim" "brightmagenta"
+report_route() {
+  print_section "How this machine can shrink it" "brightmagenta"
 
-  # Current WSL mounts the root ext4 with `discard`, so freed blocks are released
-  # to the host as they are freed and a manual fstrim finds nothing to do. On an
-  # older kernel it is the step that makes compaction worth anything.
-  if findmnt -no OPTIONS / 2>/dev/null | tr ',' '\n' | grep -qx discard; then
-    print_success "Root mounted with discard — blocks are released as they are freed"
+  if windows_can_elevate; then
+    print_success "This account can elevate — 'wsl-reclaim compact' is the cheap route"
+    print_info "'wsl-reclaim rebuild' also works and needs no administrator"
   else
-    print_warning "Root has no discard option — run 'wsl-reclaim clean' before compacting"
+    print_warning "This account cannot elevate, so diskpart and Optimize-VHD are both closed"
+    print_info "'wsl-reclaim rebuild' is the route that does not need one"
   fi
 }
 
@@ -168,10 +139,9 @@ report() {
   print_header "wsl-reclaim" "brightcyan"
   report_disk
   report_caches
-  report_trim
+  report_route
   echo ""
-  print_info "Free the blocks:   wsl-reclaim clean"
-  print_info "Shrink the file:   wsl-reclaim compact"
+  print_info "Free the blocks first, either way: wsl-reclaim clean"
 }
 
 # ================================================================
@@ -227,12 +197,22 @@ clean() {
   fi
 
   echo ""
-  print_info "The vhdx does not shrink until it is compacted: wsl-reclaim compact"
+  print_info "The vhdx does not shrink until it is compacted or rebuilt."
 }
 
 # ================================================================
-# COMPACT
+# GENERATED POWERSHELL
 # ================================================================
+
+# Both scripts take their values as PowerShell parameters, and both heredocs are
+# quoted so bash expands nothing inside them.
+#
+# An unquoted heredoc interpolating a Windows path is two footguns at once and
+# both fired while this was being written: `$installDir` expanded to nothing
+# because the local was named `install_dir`, and PowerShell's backtick escapes
+# became bash command substitution. Neither shows up in the output — the
+# generated script is just quietly wrong. With no expansion in the body there is
+# nothing left to get wrong.
 
 # Sparse mode is deliberately not offered. `--set-sparse true` has been gated
 # behind --allow-unsafe since WSL 2.5.6 after reports of ext4 corruption, and a
@@ -243,17 +223,16 @@ clean() {
 #
 # Optimize-VHD is not offered either. It needs the Hyper-V PowerShell module,
 # which is absent on Windows Home and on any managed box that never enabled the
-# feature, and diskpart does the same job everywhere.
+# feature, and diskpart does the same job everywhere it is allowed to run.
 write_compact_script() {
-  local destination="$1" vhdx="$2"
+  cat >"$1" <<'POWERSHELL'
+param([Parameter(Mandatory = $true)][string]$Vhdx)
 
-  cat >"$destination" <<POWERSHELL
-\$ErrorActionPreference = 'Stop'
-\$vhdx = '$vhdx'
+$ErrorActionPreference = 'Stop'
 
-function Show-Size(\$label) {
-  \$size = (Get-Item -LiteralPath \$vhdx -Force).Length / 1GB
-  Write-Host ("{0,-8} {1:N2} GB" -f \$label, \$size)
+function Show-Size($label) {
+  $size = (Get-Item -LiteralPath $Vhdx -Force).Length / 1GB
+  Write-Host ("{0,-8} {1:N2} GB" -f $label, $size)
 }
 
 Show-Size 'Before:'
@@ -264,26 +243,158 @@ Write-Host 'Shutting WSL down...'
 wsl.exe --shutdown
 Start-Sleep -Seconds 10
 
-\$commands = @"
-select vdisk file="\$vhdx"
+$commands = @"
+select vdisk file="$Vhdx"
 attach vdisk readonly
 compact vdisk
 detach vdisk
 exit
 "@
 
-\$scriptFile = [System.IO.Path]::GetTempFileName()
-Set-Content -LiteralPath \$scriptFile -Value \$commands -Encoding ASCII
-diskpart.exe /s \$scriptFile
-Remove-Item -LiteralPath \$scriptFile -Force
+$scriptFile = [System.IO.Path]::GetTempFileName()
+Set-Content -LiteralPath $scriptFile -Value $commands -Encoding ASCII
+diskpart.exe /s $scriptFile
+Remove-Item -LiteralPath $scriptFile -Force
 
 Show-Size 'After:'
 Read-Host 'Done. Press Enter to close'
 POWERSHELL
 }
 
+# The only route that reclaims everything without elevation. The disk is not
+# compacted; it is thrown away and written again from a tar of the filesystem,
+# so the new one is the size of the data rather than of the high-water mark it
+# once reached.
+#
+# The window between --unregister and --import is the whole risk. The archive is
+# verified readable before anything is destroyed, is deliberately kept
+# afterwards, and the re-import command is printed before the step that needs it.
+write_rebuild_script() {
+  cat >"$1" <<'POWERSHELL'
+param(
+  [Parameter(Mandatory = $true)][string]$Distro,
+  [Parameter(Mandatory = $true)][string]$Archive,
+  [Parameter(Mandatory = $true)][string]$InstallDir,
+  [Parameter(Mandatory = $true)][long]$Needed
+)
+
+$ErrorActionPreference = 'Stop'
+
+$backupDir = Split-Path -Parent $Archive
+if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
+
+# Checked before the shutdown rather than after the export has already spent the
+# time and left a truncated archive for the verification below to reject.
+$drive = (Get-Item $backupDir).PSDrive
+if ($drive.Free -lt $Needed) {
+  Write-Host ("Not enough room on {0}: {1:N1} GB free, {2:N1} GB needed." -f $drive.Name, ($drive.Free / 1GB), ($Needed / 1GB))
+  Write-Host 'Re-run with --to <path> on a drive with more room. Nothing has been changed.'
+  Read-Host 'Press Enter to close'
+  exit 1
+}
+
+Write-Host 'Shutting WSL down...'
+wsl.exe --shutdown
+Start-Sleep -Seconds 10
+
+Write-Host ('Exporting ' + $Distro + ' to ' + $Archive + ' - this takes a while.')
+wsl.exe --export $Distro $Archive
+if ($LASTEXITCODE -ne 0) {
+  Write-Host 'Export failed. Nothing has been changed.'
+  Read-Host 'Press Enter to close'
+  exit 1
+}
+
+# An export that exits 0 and leaves an unreadable archive is the failure that
+# matters, because the next step cannot be undone. Read it back before trusting.
+Write-Host 'Verifying the archive...'
+$listed = & tar.exe -tf $Archive 2>$null | Select-Object -First 1
+if (-not $listed) {
+  Write-Host 'The archive could not be read back. Nothing has been changed.'
+  Read-Host 'Press Enter to close'
+  exit 1
+}
+Write-Host ("Archive is readable: {0:N1} GB" -f ((Get-Item $Archive).Length / 1GB))
+
+Write-Host ''
+Write-Host 'Unregistering and re-importing. If anything fails from here, recover with:'
+Write-Host ('  wsl --import ' + $Distro + ' "' + $InstallDir + '" "' + $Archive + '"')
+Write-Host ''
+
+wsl.exe --unregister $Distro
+wsl.exe --import $Distro $InstallDir $Archive
+if ($LASTEXITCODE -ne 0) {
+  Write-Host 'IMPORT FAILED. The archive is intact. Run the command above to recover.'
+  Read-Host 'Press Enter to close'
+  exit 1
+}
+
+$rebuilt = Join-Path $InstallDir 'ext4.vhdx'
+Write-Host ''
+Write-Host ("New disk: {0:N2} GB" -f ((Get-Item -LiteralPath $rebuilt -Force).Length / 1GB))
+Write-Host ('The archive is kept at ' + $Archive + '. Delete it once the distro is verified.')
+Read-Host 'Done. Press Enter to close'
+POWERSHELL
+}
+
+# ================================================================
+# HANDOFF
+# ================================================================
+
+# PowerShell single-quoted literals take everything as written, so a Windows path
+# needs no backslash escaping here — only an embedded quote, which doubles.
+ps_quote() {
+  printf "'%s'" "${1//\'/\'\'}"
+}
+
+# Detached and never a child of this shell: `wsl --shutdown` kills every process
+# in the distro, and a compactor or an exporter that dies with its caller leaves
+# the disk attached read-only, or the distro unregistered with no import.
+launch_detached() {
+  local windows_script="$1" verb="$2" arguments argument
+  shift 2
+
+  arguments="'-NoProfile','-ExecutionPolicy','Bypass','-File',$(ps_quote "$windows_script")"
+  for argument in "$@"; do
+    arguments+=",$(ps_quote "$argument")"
+  done
+
+  if [[ -n "$verb" ]]; then
+    powershell_out "Start-Process -FilePath powershell.exe -Verb $verb -ArgumentList $arguments"
+  else
+    powershell_out "Start-Process -FilePath powershell.exe -ArgumentList $arguments"
+  fi
+}
+
+# A destructive verb asks for the thing being destroyed, not for a keystroke. `y`
+# is muscle memory; typing the distro name is not, and rebuild unregisters it.
+confirm_with() {
+  local expected="$1" answer
+
+  $ASSUME_YES && return 0
+
+  read -r -p "Type '$expected' to continue: " answer
+  [[ "$answer" == "$expected" ]] && return 0
+
+  print_info "Nothing done."
+  return 1
+}
+
+# ================================================================
+# COMPACT — cheap, needs an administrator
+# ================================================================
+
 compact() {
   local vhdx temp script_path windows_script
+
+  # Probed before anything else. Firing Start-Process -Verb RunAs at an account
+  # that cannot elevate produces a UAC box demanding another user's password,
+  # which is a worse answer than saying so.
+  if ! windows_can_elevate; then
+    print_error "This Windows account cannot elevate, and diskpart will not run without it."
+    print_info "Use 'wsl-reclaim rebuild' instead — it reclaims the same space with no administrator."
+    return 1
+  fi
 
   vhdx=$(vhdx_windows_path) || {
     print_error "Could not locate ext4.vhdx for \$WSL_DISTRO_NAME"
@@ -301,31 +412,103 @@ compact() {
   print_warning "This shuts down every WSL distro, including this shell."
   print_warning "diskpart needs administrator rights, so Windows will prompt via UAC."
 
-  if ! $ASSUME_YES; then
-    local answer
-    read -r -p "Continue? [y/N] " answer
-    [[ "$answer" =~ ^[Yy]$ ]] || {
-      print_info "Nothing done."
-      return 0
-    }
-  fi
+  confirm_with "yes" || return 0
 
   # The script has to live on the Windows filesystem. Anything under \\wsl$
   # becomes unreachable the instant `wsl --shutdown` runs, which is the second
-  # line of the script itself.
+  # instruction in the script itself.
   script_path="$temp/wsl-compact.ps1"
-  write_compact_script "$script_path" "$vhdx"
+  write_compact_script "$script_path"
   windows_script=$(wslpath -w "$script_path")
 
-  # Detached and elevated, not a child of this shell: `wsl --shutdown` kills
-  # every process in the distro, and a compactor that dies with its caller
-  # leaves the vhdx attached read-only.
-  powershell.exe -NoProfile -NonInteractive -Command \
-    "Start-Process -FilePath powershell.exe -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$windows_script'" \
-    </dev/null
+  launch_detached "$windows_script" RunAs -Vhdx "$vhdx"
 
   print_success "Handed off to an elevated PowerShell window."
   print_info "This distro will stop within a few seconds. Reopen the terminal when it finishes."
+}
+
+# ================================================================
+# REBUILD — no administrator, and irreversible in the middle
+# ================================================================
+
+# The default user is a property of the Store launcher's registration, and an
+# imported distro has no launcher. Without this the rebuilt distro starts as
+# root, which reads as a broken rebuild rather than a missing setting.
+pin_default_user() {
+  local conf="${WSL_CONF:-/etc/wsl.conf}"
+
+  grep -qE '^\s*default\s*=' "$conf" 2>/dev/null && return 0
+
+  print_info "Pinning the default user in $conf — an imported distro has no launcher to remember it."
+
+  # sudo only where it is actually needed. /etc/wsl.conf is root-owned on a real
+  # machine and the tests point this at a file they own.
+  if [[ -w "$conf" ]] || { [[ ! -e "$conf" ]] && [[ -w "$(dirname "$conf")" ]]; }; then
+    printf '\n[user]\ndefault=%s\n' "$(whoami)" >>"$conf"
+  else
+    printf '\n[user]\ndefault=%s\n' "$(whoami)" | sudo tee -a "$conf" >/dev/null
+  fi
+}
+
+rebuild() {
+  local distro="${WSL_DISTRO_NAME:-}" base temp script_path windows_script
+  local archive install_dir needed used profile
+
+  [[ -n "$distro" ]] || {
+    print_error "\$WSL_DISTRO_NAME is unset — cannot tell Windows which distro to rebuild."
+    return 1
+  }
+
+  base=$(wsl_base_path) || {
+    print_error "Could not locate the install directory for $distro"
+    return 1
+  }
+
+  temp=$(windows_temp_dir) || {
+    print_error "Could not resolve the Windows temp directory"
+    return 1
+  }
+
+  used=$(used_bytes)
+  # The archive and the new disk both have to fit alongside the old one. 1.2x the
+  # used bytes covers the archive plus the headroom the import needs.
+  needed=$((used * 12 / 10))
+  install_dir="$base"
+
+  if [[ -n "$BACKUP_DIR" ]]; then
+    archive="$BACKUP_DIR\\$distro.tar"
+  else
+    profile=$(windows_userprofile) || {
+      print_error "Could not resolve %USERPROFILE% for the default archive location"
+      return 1
+    }
+    archive="$(wslpath -w "$profile")\\wsl-backups\\$distro.tar"
+  fi
+
+  print_header "wsl-reclaim rebuild" "brightcyan"
+  printf '  %-14s %s\n' "distro" "$distro"
+  printf '  %-14s %s\n' "used now" "$(human "$used")"
+  printf '  %-14s %s\n' "disk today" "$(human "$(vhdx_bytes)")"
+  printf '  %-14s %s\n' "archive" "$archive"
+  printf '  %-14s %s\n' "reinstall to" "$install_dir"
+  echo ""
+  print_warning "This exports the distro, unregisters it, and imports it back."
+  print_warning "Between those steps the distro exists only as that archive."
+  print_info "No administrator is needed. The archive is verified first and kept afterwards."
+
+  confirm_with "$distro" || return 0
+
+  pin_default_user
+
+  script_path="$temp/wsl-rebuild.ps1"
+  write_rebuild_script "$script_path"
+  windows_script=$(wslpath -w "$script_path")
+
+  launch_detached "$windows_script" "" \
+    -Distro "$distro" -Archive "$archive" -InstallDir "$install_dir" -Needed "$needed"
+
+  print_success "Handed off to a PowerShell window."
+  print_info "This distro will stop within a few seconds. Watch that window for the result."
 }
 
 # ================================================================
@@ -337,19 +520,21 @@ show_help() {
   help_usage "wsl-reclaim [verb] [options]"
 
   help_section "Verbs"
-  help_row "report" "" "What the disk and each cache weigh (default)"
+  help_row "report" "" "What the disk and each cache weigh, and which route is open (default)"
   help_row "clean" "" "Purge caches, then release the freed blocks"
-  help_row "compact" "" "Shrink the vhdx itself, via an elevated Windows process"
+  help_row "compact" "" "Shrink the vhdx in place. Needs a Windows administrator."
+  help_row "rebuild" "" "Export, unregister and re-import. Needs no administrator."
 
   help_section "Options"
   help_row "-a, --aggressive" "" "With clean: also drop the go module cache, docker volumes, trash"
-  help_row "-y, --yes" "" "With compact: skip the confirmation"
+  help_row "--to" "<win-path>" "With rebuild: where to write the archive, e.g. D:\\\\backups"
+  help_row "-y, --yes" "" "Skip the confirmation"
   help_row "-h, --help" "" "Show this help message"
 
   help_section "Examples"
   help_row "wsl-reclaim"
   help_row "wsl-reclaim clean --aggressive"
-  help_row "wsl-reclaim compact"
+  help_row "wsl-reclaim rebuild --to D:\\\\backups"
 
   help_end
   print_info "Freeing space inside the distro never shrinks the file. Both steps are needed."
@@ -362,11 +547,19 @@ main() {
     case "$1" in
       -a | --aggressive) AGGRESSIVE=true ;;
       -y | --yes) ASSUME_YES=true ;;
+      --to)
+        shift
+        BACKUP_DIR="${1:-}"
+        [[ -n "$BACKUP_DIR" ]] || {
+          print_error "--to needs a Windows path"
+          return 1
+        }
+        ;;
       -h | --help | help)
         show_help
         return 0
         ;;
-      report | clean | compact) verb="$1" ;;
+      report | clean | compact | rebuild) verb="$1" ;;
       *)
         print_error "Unknown argument: $1"
         return 1
@@ -384,12 +577,13 @@ main() {
     report) report ;;
     clean) clean ;;
     compact) compact ;;
+    rebuild) rebuild ;;
   esac
 }
 
-# Sourced by tests/shell/test_wsl_tools.py, which drives the path resolution and
-# the generated diskpart script directly. Neither can be exercised any other way:
-# the machine running the tests is not the machine that has a vhdx.
+# Sourced by tests/shell/test_wsl_tools.py, which drives the generated PowerShell
+# directly. It cannot be exercised any other way: the machine running the tests
+# is not the machine that has a vhdx.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   main "$@"
 fi
