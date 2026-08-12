@@ -97,7 +97,7 @@ cmd_new() {
   primary=$(primary_checkout)
   repo=$(basename "$primary")
   path="$WORKTREE_ROOT/$repo/$slug"
-  branch="wip/$slug"
+  branch="$slug"
   base=$(default_branch)
 
   [[ -e "$path" ]] && {

@@ -153,7 +153,7 @@ class TestLanding:
         run(alpha, 'land')
 
         assert not alpha.exists()
-        assert 'wip/alpha' not in git(fleet['primary'], 'branch', '--list')
+        assert 'alpha' not in git(fleet['primary'], 'branch', '--list')
 
     def test_the_primary_checkout_catches_up(self, fleet, run):
         """In dotfiles the checkout is deployed machine state, so a stale primary
@@ -185,7 +185,7 @@ class TestNothingIsDestroyed:
 
         assert result.returncode != 0
         assert (beta / 'f.txt').exists(), 'the conflicted tree is the only copy of the resolution in progress'
-        assert git(beta, 'rev-list', '--count', 'wip/beta') != '0'
+        assert git(beta, 'rev-list', '--count', 'beta') != '0'
 
     def test_a_dirty_worktree_is_refused(self, fleet, run):
         run(fleet['primary'], 'new', 'alpha')
