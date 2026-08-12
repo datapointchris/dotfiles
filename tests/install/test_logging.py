@@ -141,6 +141,41 @@ def test_log_colors_overrides_what_the_terminal_says(monkeypatch):
     assert dotfiles_logging.use_colors() is False
 
 
+def test_every_http_logger_the_client_registers_is_pinned():
+    """`HTTP_LOGGERS` named `httpcore`, and the fork vendors its transport as
+    `httpcore2`, so the noisiest logger in the process was never pinned. Its
+    DEBUG records carry whole response-header tuples as the event text: 1008 of
+    1359 events in the apply of 2026-08-12, 74% of a 265KB log that Syncthing
+    copies to every machine.
+
+    Both modules are imported here because the loggers are registered on import
+    and would otherwise not exist to be counted. No request is made, so this stays
+    in the offline tier.
+    """
+    import httpcore2  # noqa: F401
+    import httpx2  # noqa: F401
+
+    registered = {name for name in stdlib_logging.Logger.manager.loggerDict if 'http' in name}
+    pinned = dotfiles_logging.HTTP_LOGGERS
+    unpinned = {name for name in registered if not any(name == p or name.startswith(f'{p}.') for p in pinned)}
+
+    assert not unpinned, f'{sorted(unpinned)} narrate every request and nothing filters them'
+
+
+def test_a_library_record_carries_the_name_of_what_wrote_it(tmp_path):
+    """Why the miss above went unnoticed for the life of the log. Every event was
+    anonymous, so finding which library filled a stream meant recognising its
+    prose."""
+    event_log = tmp_path / 'run.jsonl'
+    dotfiles_logging.configure(event_log=event_log)
+
+    stdlib_logging.getLogger('some_library.transport').warning('connect_tcp.started')
+
+    event = events_in(event_log)[0]
+    assert event['logger'] == 'some_library.transport'
+    assert event['level'] == 'warning'
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # -v / -vv / -q, which beat LOG_LEVEL and never reach the file
 # ─────────────────────────────────────────────────────────────────────────────

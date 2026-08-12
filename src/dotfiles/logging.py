@@ -90,11 +90,20 @@ EVENT_LOG_HANDLER_NAME = 'dotfiles_event_log'
 
 SHARED_PROCESSORS: list[structlog.typing.Processor] = [
     structlog.contextvars.merge_contextvars,
+    structlog.stdlib.add_logger_name,
     structlog.processors.add_log_level,
     structlog.processors.TimeStamper(fmt='iso', utc=True),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
 ]
+"""Applied to this package's own events and, through `foreign_pre_chain`, to
+records from libraries too.
+
+`add_logger_name` is what makes a stream answerable about itself. Without it
+every event was anonymous, so the only way to find out which library was filling
+a 265KB apply log was to recognise the text — and nobody did, for as long as the
+log existed. A stream that cannot say who wrote a line cannot be filtered by
+anyone reading it either."""
 
 
 def use_colors() -> bool:
@@ -115,8 +124,8 @@ def console_processor():
     return structlog.dev.ConsoleRenderer(colors=use_colors(), pad_level=True)
 
 
-HTTP_LOGGERS = ('httpx2', 'httpx', 'httpcore')
-"""Third-party loggers that narrate every request at INFO.
+HTTP_LOGGERS = ('httpx2', 'httpcore2', 'httpx', 'httpcore')
+"""Third-party loggers that narrate every request.
 
 Named rather than solved by lowering the root level: root is DEBUG on purpose, so
 the event log gets everything while the console filters. That means any library
@@ -125,9 +134,17 @@ logging at INFO reaches the console by default, and httpx writes one
 release refresh is a line per declared tool, between the rows a person is
 actually reading.
 
-`httpx` and `httpcore` are here alongside the fork this repo uses because the
-cost of naming a logger that does not exist is nothing, and the cost of missing
-one is the noise coming back on a dependency swap.
+**`httpcore2` is the one that was missing, and it was the expensive one.** The
+fork vendors its transport under that name, not `httpcore`, so it was never
+pinned. Its DEBUG records carry whole response-header tuples as the event text
+and they went straight into the file sink. Measured on the apply of 2026-08-12:
+1008 of 1359 events were `httpcore2`, 74% of a 265KB log that Syncthing copies to
+every machine — and the failure the run actually had is not in there at all.
+
+The unprefixed pair stays, on the reasoning the miss disproved only half of:
+naming a logger that does not exist really is free. What it does not buy is
+cover for a name nobody thought of, which is what a `logger` field in the stream
+now makes visible.
 """
 
 
@@ -158,7 +175,10 @@ def configure(event_log: Path | None = None) -> None:
     # the format string and `setLevel` raised ValueError on it. WARN and FATAL are
     # in the mapping too, so the aliases still resolve.
     console.setLevel(logging.getLevelNamesMapping().get(level, logging.INFO))
-    console.setFormatter(structlog.stdlib.ProcessorFormatter(processor=console_processor()))
+    # `foreign_pre_chain` is what gives a library's record the same level, timestamp
+    # and logger name as one of ours. Without it they arrived with `level: null`
+    # and no name, which is what made a flood of them unattributable.
+    console.setFormatter(structlog.stdlib.ProcessorFormatter(processor=console_processor(), foreign_pre_chain=SHARED_PROCESSORS))
 
     for handler in list(logging.root.handlers):
         if handler.name == EVENT_LOG_HANDLER_NAME:
@@ -170,7 +190,9 @@ def configure(event_log: Path | None = None) -> None:
         to_file = logging.FileHandler(event_log)
         to_file.name = EVENT_LOG_HANDLER_NAME
         to_file.setLevel(logging.DEBUG)
-        to_file.setFormatter(structlog.stdlib.ProcessorFormatter(processor=structlog.processors.JSONRenderer()))
+        to_file.setFormatter(
+            structlog.stdlib.ProcessorFormatter(processor=structlog.processors.JSONRenderer(), foreign_pre_chain=SHARED_PROCESSORS)
+        )
         logging.root.addHandler(to_file)
 
     structlog.configure(
