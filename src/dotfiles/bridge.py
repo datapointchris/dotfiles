@@ -37,7 +37,7 @@ def declaration(*args: str, output: Output = Output.DATA) -> int:
     """Query the declaration, in-process, returning its exit status.
 
     A call rather than a subprocess because it is already part of this package.
-    `install/ops/doctor.sh` reaches it as `uv run packages`, which needs a uv
+    A subprocess would have to reach it as `uv run packages`, which needs a uv
     project on disk — true in the repo, false for the installed tool this CLI is
     becoming.
 
