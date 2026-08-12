@@ -26,6 +26,11 @@
 10.0.20.23  auth
 10.0.20.24  logging
 10.0.20.26  chris-birch
+10.0.20.27  budget
+10.0.20.28  docs
+10.0.20.29  ntfy
+10.0.20.30  meso
+10.0.20.31  atuin
 10.0.20.50  nas
 
 # Docker local development (ichrisbirch)
