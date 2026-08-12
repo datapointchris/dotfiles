@@ -12,12 +12,20 @@ repos_file: ~/dev/repos.json
 # the same set that has fleet installed at all.
 machines_file: ~/dev/machines.json
 
-# The standards `fleet audit` grades against are deliberately NOT named here.
-# $STANDARDS_DIR already answers this for every other reader, and naming the
-# path a second time is what let the two drift: the ~/dev/standards symlink was
-# retired on 2026-08-12, this line went on pointing at it, and every grade
-# failed on a missing file while `fleet audit plan` still reported 16 standards.
-# Declare it only on a machine where $STANDARDS_DIR is not set.
+# The standards `fleet audit` grades against. Named here and not left to
+# $STANDARDS_DIR, per standards/data.md § "A shared file is named in config;
+# only the tool's own default is compiled in" — the same reason repos_file is
+# above it. $STANDARDS_DIR is set in interactive shells only: measured
+# 2026-08-12, a clean `zsh -lic` reports it empty, and a systemd timer inherits
+# nothing, so resolving through it would leave every unattended sweep broken
+# while a hand-run one worked.
+#
+# This pointed at ~/dev/standards until that symlink was retired on 2026-08-12,
+# and every grade then failed on a missing file while `fleet audit plan` went on
+# reporting 16 standards — the plan counts them from the registry and never
+# opens the directory. The lesson is that the value went stale, not that naming
+# it here was wrong.
+standards_dir: ~/.local/share/terminal-library-fleet/standards
 
 # What the fleet runs unattended. A declaration — which machine owns a job and
 # how often it runs — so it sits with the registries rather than in state. What
