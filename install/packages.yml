@@ -711,8 +711,14 @@ system_packages:
   # revision and conflicts with this one. The source build happens once, because a
   # VCS package's version only moves when yay's devel check runs and nothing here
   # passes --devel.
+  #
+  # `supersedes` because sioyek-git declares `Conflicts With: sioyek`, and a
+  # machine that installed the old name before this entry moved still carries it.
+  # yay runs --noconfirm, pacman's conflict prompt defaults to no, and the
+  # transaction is then refused every run — after the source build, each time.
   - name: sioyek
     aur: sioyek-git
+    supersedes: [sioyek]
     description: Keyboard-driven PDF viewer for technical documents
     tags: [gui]
 

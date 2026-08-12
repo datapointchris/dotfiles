@@ -25,6 +25,7 @@ import dataclasses as dc
 import os
 import shutil
 import tomllib
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
 
@@ -36,6 +37,7 @@ from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Preconditions
+from dotfiles.resources import Blocker
 from dotfiles.resources import Verdict
 
 
@@ -45,6 +47,15 @@ class Evidence:
 
     verdict: Verdict
     detail: str = ''
+
+    blocked_by: Blocker | None = None
+    """An installed package that stands between this item and being installed.
+
+    Kept apart from `detail` because the two answer different questions and are
+    read by different code. `detail` says what was found, for a person. This says
+    the finding cannot be repaired by `apply`, for `repair_for` — which is what
+    moves the item out of the plan and into what `check` reports.
+    """
 
 
 def uv_tool_dir() -> Path:
@@ -359,7 +370,29 @@ def by_registry(item: DesiredItem, installed: Inventory) -> Evidence:
     answered = [installer for installer in declared_names(item) if installed.get(INSTALLER_QUERIES[installer]) is not None]
     if not answered:
         return Evidence(Verdict.UNKNOWN, 'no package manager on this machine could be asked')
-    return Evidence(Verdict.MISSING, f'not installed by {", ".join(answered)}')
+    return Evidence(Verdict.MISSING, f'not installed by {", ".join(answered)}', blocked_by=blocker(item, installed, answered))
+
+
+def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str]) -> Blocker | None:
+    """A package this entry supersedes that the machine still has, or None.
+
+    Only over the installers that answered. An entry superseded on Arch says
+    nothing about the same entry on a Mac, and a manager that could not be asked
+    has not thereby reported the old package absent — reading silence as "gone"
+    would clear a blocker on the strength of a query that failed.
+
+    Asked only where the item is already `MISSING`. A package that is installed
+    has nothing standing in its way by definition, and the superseded name being
+    present beside it is then a fact about the machine that no longer decides
+    anything.
+    """
+    superseded = getattr(item.entry, 'supersedes', ())
+    for installer in answered:
+        inventory = installed.get(INSTALLER_QUERIES[installer]) or frozenset()
+        for name in superseded:
+            if name in inventory:
+                return Blocker(name, f'{syspkg.REMOVE[installer]} {name}')
+    return None
 
 
 def declared_names(item: DesiredItem) -> dict[str, list[str]]:

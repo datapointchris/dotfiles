@@ -136,7 +136,7 @@ class SystemResource:
 
 def _package_change(item: DesiredItem, observed: Observed) -> Change:
     evidence = observed.evidence[item.address]
-    repair = repair_for(item, evidence.verdict, observed.met)
+    repair = repair_for(item, evidence.verdict, observed.met, evidence.blocked_by)
     return Change(
         NAME,
         item.stage,
@@ -144,7 +144,7 @@ def _package_change(item: DesiredItem, observed: Observed) -> Change:
         evidence.verdict,
         detail=evidence.detail,
         repair=repair,
-        advice=advice_for(item, repair),
+        advice=advice_for(item, repair, evidence.blocked_by),
         desired=item,
         privileged=registry.needs_root(item),
     )

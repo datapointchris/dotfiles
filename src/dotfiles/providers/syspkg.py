@@ -37,6 +37,31 @@ from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import Result
 
+REMOVE: dict[str, str] = {
+    'pacman': 'sudo pacman -R',
+    'aur': 'sudo pacman -R',
+    'apt': 'sudo apt-get remove',
+    'brew': 'brew uninstall',
+    'cask': 'brew uninstall --cask',
+    'flatpak': 'flatpak uninstall',
+}
+"""How a person is told to remove a package, which nothing here ever runs.
+
+Strings for a human to read and paste, not argv for `run`. Removal is the one
+act this repo deliberately does not automate: a declaration names what a machine
+should have, an uninstall is inferred from what it does not name, and a typo in
+that inference takes a package off the machine. So the engine measures the need
+and stops, and the sentence it stops with is built from here.
+
+`aur` removes as `pacman`, because an AUR package is a pacman package once it is
+installed. `mas` has no entry at all — the App Store ships no uninstall verb, so
+there is no command to offer and a wrong one would be worse than none. Nothing
+looks one up for it either: `evidence.blocker` indexes this directly, over the
+installers `evidence.declared_names` returns, and an App Store app is measured by
+`by_app_store` instead. An installer added to that function and not to this
+mapping raises here rather than offering a blank command.
+"""
+
 INSTALL: dict[str, tuple[str, ...]] = {
     'pacman': ('pacman', '-S', '--needed', '--noconfirm'),
     'aur': ('yay', '-S', '--needed', '--noconfirm'),

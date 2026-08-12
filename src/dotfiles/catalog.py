@@ -356,6 +356,22 @@ class SystemPackage(Entry):
     missing on a machine that was deliberately never going to have them.
     """
 
+    supersedes: tuple[str, ...] = ()
+    """Package names this entry took over from, which may still be installed.
+
+    Declared rather than discovered, and the alternative was weighed. A package
+    manager can be asked what a candidate conflicts with — `yay -Si` answers it
+    for the AUR — but asking costs a subprocess per missing package and, for the
+    AUR, a call to a remote RPC. `check` runs at a prompt, in a pre-commit hook,
+    on a timer and under `--offline`, and its verdicts come from unprivileged
+    local reads for exactly that reason. Putting a network round-trip behind it
+    to learn a fact that changed once, in a commit, is the wrong trade.
+
+    The moment the fact is known is the moment the entry is renamed, which is the
+    moment someone is editing this file. That is what makes it cheap to declare
+    and expensive to detect.
+    """
+
     def package_for(self, manager: str) -> str:
         """This package's name under one manager, or '' where it has none."""
         return getattr(self, manager, '')
@@ -370,6 +386,12 @@ class SystemPackage(Entry):
             found.append(f'names no package under any of {", ".join(managers)}, so no machine can install it')
         if self.excludes_host and self.excludes_host not in set(axes.AXIS_TYPES['host']):
             found.append(f'excludes host {self.excludes_host!r}, which is not a host. Known: {", ".join(axes.AXIS_TYPES["host"])}')
+        installs_as = {name for manager in managers if (name := self.package_for(manager))}
+        if own := sorted(installs_as & set(self.supersedes)):
+            found.append(
+                f'supersedes {", ".join(own)}, which is a name it installs under. An entry that supersedes itself '
+                f'reports itself blocked by its own installation, and never converges.'
+            )
         return (*found, *Entry.problems(self))
 
 

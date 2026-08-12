@@ -75,6 +75,24 @@ class Repair(enum.StrEnum):
 
 
 @dc.dataclass(frozen=True, slots=True)
+class Blocker:
+    """An installed package standing in the way of a declared one.
+
+    Here beside `Verdict` rather than in `evidence`, which is where it is
+    measured: `evidence` imports this module for `Verdict`, so the type both of
+    them need has to sit on this side of that edge.
+
+    `removal` is carried rather than derived, because deriving it means knowing
+    which manager to phrase it for, and that knowledge belongs to the package
+    backends. This module would need a second mapping of manager to command,
+    kept in step with the one `syspkg` already has.
+    """
+
+    package: str
+    removal: str
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Change:
     """One unit of work, decided but not performed.
 
@@ -270,7 +288,7 @@ class Batched(Protocol):
         ...
 
 
-def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions) -> Repair:
+def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions, blocked_by: Blocker | None = None) -> Repair:
     """Whether `apply` could do anything about this one.
 
     Shared, because the two resources that plan installable items were deciding it
@@ -287,27 +305,42 @@ def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions) -> Repai
     repo can fix. Reported rather than dropped, because both preconditions are
     states a machine can be in and neither is permanent from the repo's side — a
     `gh` login is lost and restored, and the box with the GPU is a different box.
+
+    A blocker is the third branch, and the only one measured per item rather than
+    per machine. A package this entry supersedes, still installed, makes the
+    install impossible for as long as it is there: the backends run
+    `--noconfirm`, and a package manager asked to resolve a conflict unattended
+    takes the default answer, which is to refuse. Attempting it regardless costs
+    a build, a failure and a non-zero exit, once per run, for an outcome that was
+    decided before the run began.
     """
     if verdict is Verdict.UNKNOWN:
         return Repair.NONE
     if not met.holds(item.precondition):
         return Repair.BY_HAND
+    if blocked_by is not None:
+        return Repair.BY_HAND
     return Repair.AUTOMATIC
 
 
-def advice_for(item: DesiredItem, repair: Repair) -> str:
+def advice_for(item: DesiredItem, repair: Repair, blocked_by: Blocker | None = None) -> str:
     """The next step for a `repair_for` verdict of `BY_HAND`, or '' otherwise.
 
-    `repair_for` reaches `BY_HAND` through exactly one branch — an unmet
-    precondition — so the precondition on the item is enough to name the fix.
+    Two branches reach `BY_HAND`, and each names its own fix. A precondition is a
+    fact about the machine, so the precondition on the item is enough. A blocker
+    is a fact about one package, so the blocker carries the name and the command.
+
     Every member of `Precondition` but `NONE` has to answer here: `repair_for`
     returning `BY_HAND` for one this does not name would build a `Change` whose
     constructor refuses it, which is what stops the two from drifting apart
     silently the way `precondition_of` and `Preconditions.holds` were called out
-    for risking.
+    for risking. A blocker cannot drift the same way, because it arrives carrying
+    the sentence rather than a key to look one up by.
     """
     if repair is not Repair.BY_HAND:
         return ''
+    if blocked_by is not None:
+        return f'{blocked_by.package} is installed and conflicts with this; remove it first: {blocked_by.removal}'
     if item.precondition is Precondition.GITHUB_AUTH:
         return 'log in with `gh auth login`, or export GITHUB_TOKEN, then re-run'
     if item.precondition is Precondition.AMD_GPU:

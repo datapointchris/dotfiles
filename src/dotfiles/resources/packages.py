@@ -184,7 +184,7 @@ class PackagesResource:
         for item in plan.for_resource(NAME):
             evidence = observed.evidence[item.address]
             if evidence.verdict is not Verdict.MATCHED:
-                repair = repair_for(item, evidence.verdict, observed.met)
+                repair = repair_for(item, evidence.verdict, observed.met, evidence.blocked_by)
                 changes.append(
                     Change(
                         NAME,
@@ -193,7 +193,7 @@ class PackagesResource:
                         evidence.verdict,
                         detail=evidence.detail,
                         repair=repair,
-                        advice=advice_for(item, repair),
+                        advice=advice_for(item, repair, evidence.blocked_by),
                         desired=item,
                     )
                 )
