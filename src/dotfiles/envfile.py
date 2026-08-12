@@ -168,6 +168,27 @@ def read(path: Path) -> dict[str, str]:
     return parse_env_assignments(path.read_text()) if path.exists() else {}
 
 
+def read_generated(path: Path) -> dict[str, str]:
+    """Only what the generated section sets, ignoring everything below the marker.
+
+    The half a regeneration owns, and so the only half a value can be *compared*
+    against. A hand-edited assignment below the marker is later in the file, and
+    both the shell and `parse_env_assignments` take the last one — so it wins at
+    runtime, and rewriting the section above it would not change what the machine
+    reads. Comparing the whole file would report that intentional override as
+    drift on every run and `apply` would answer with a write that converged
+    nothing.
+
+    Empty for a markerless file, which `split_existing` treats as hand-written in
+    full: none of it was generated, so there is nothing here to hold to the
+    declaration.
+    """
+    if not path.exists():
+        return {}
+    text = path.read_text()
+    return parse_env_assignments(text.split(MARKER, 1)[0]) if MARKER in text else {}
+
+
 def write(path: Path, machine: Machine) -> bool:
     """Rewrite the generated section, preserving everything below the marker.
 

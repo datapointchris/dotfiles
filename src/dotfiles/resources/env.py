@@ -44,6 +44,16 @@ class Observed:
     values: dict[str, str]
     present_files: frozenset[str]
 
+    generated: dict[str, str] = dc.field(default_factory=dict)
+    """What the section above the OVERRIDES marker sets, on its own.
+
+    Carried beside `values` rather than replacing it, because the two answer
+    different questions. `values` is what the machine reads, which is what says
+    whether a flag arrived at all and what a required value was set to — both of
+    which are answered below the marker. `generated` is the half a regeneration
+    owns, and so the only half whose value can be held to the declaration.
+    """
+
     @property
     def summary(self) -> str:
         return '~/.env matches the manifest and the declared flags'
@@ -60,6 +70,7 @@ class EnvResource:
             exists=path.exists(),
             values=envfile.read(path),
             present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present),
+            generated=envfile.read_generated(path),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -123,13 +134,28 @@ def _identity(machine, observed: Observed) -> list[Change]:
 
 
 def _flags(machine, observed: Observed) -> list[Change]:
+    """Whether every declared flag arrived, parses, and still says what it should.
+
+    The third question is asked of the generated half alone. A flag the manifest
+    moved reaches an existing machine only through a regeneration, and until this
+    compared values nothing reported that it had not — the file kept the old
+    answer and `check` called the machine converged because `true` and `false`
+    are both perfectly parseable. A hand-edited override below the marker stays
+    quiet for the reason `read_generated` records: it wins at runtime, so it is
+    not drift, and no rewrite of the section above it could repair it anyway.
+    """
     changes = []
     for name, expected in machine.flags.items():
         actual = observed.values.get(name)
+        written = observed.generated.get(name)
         if actual is None:
             changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.MISSING, detail=f'would be {expected}'))
         elif actual.lower() not in envfile.TRUTHY | envfile.FALSEY:
             changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.STALE, detail='is neither truthy nor falsey', observed=actual))
+        elif written is not None and written != expected:
+            changes.append(
+                Change(NAME, Stage.ENVIRONMENT, name, Verdict.STALE, detail=f'the manifest declares {expected}', observed=written)
+            )
     return changes
 
 

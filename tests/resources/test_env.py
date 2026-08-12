@@ -288,6 +288,51 @@ def test_a_value_that_is_neither_truthy_nor_falsey_is_stale(tmp_path: Path, env_
     assert found[0].observed == 'maybe'
 
 
+WAS_OFF: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'default': False}]}
+NOW_ON: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'default': True}]}
+
+
+def test_a_generated_flag_that_no_longer_says_what_the_manifest_says_is_stale(tmp_path: Path) -> None:
+    """The drift nothing reported. A default that moves in the repo reaches an
+    existing machine only through a regeneration, and `true` and `false` are both
+    perfectly parseable — so the file kept the old answer and `check` called the
+    machine converged."""
+    stale = session(tmp_path, MANIFEST, WAS_OFF)
+    envfile.write(stale.env_file, stale.machine)
+
+    found = [change for change in changes(tmp_path, flags=NOW_ON) if change.item == 'ALPHA_FLAG']
+
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].observed == 'false'
+    assert found[0].actionable
+
+
+def test_applying_converges_a_flag_whose_value_drifted(tmp_path: Path, unprivileged: Privilege) -> None:
+    """Reporting it is only half. A finding `apply` cannot settle is one `check`
+    repeats forever, which is why the comparison is made against the half a
+    regeneration actually rewrites."""
+    stale = session(tmp_path, MANIFEST, WAS_OFF)
+    envfile.write(stale.env_file, stale.machine)
+    live = session(tmp_path, MANIFEST, NOW_ON)
+    drifted = [change for change in changes(tmp_path, flags=NOW_ON) if change.item == 'ALPHA_FLAG']
+
+    env_resource.RESOURCE.perform(live, drifted[0], unprivileged)
+
+    assert changes(tmp_path, flags=NOW_ON) == ()
+
+
+def test_a_hand_edited_override_below_the_marker_is_not_drift(tmp_path: Path) -> None:
+    """It is the last assignment in the file, so the shell takes it — rewriting
+    the generated section above it changes nothing the machine reads. Reported as
+    drift it would be a finding on every run that `apply` could never settle."""
+    live = session(tmp_path)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export ALPHA_FLAG=false\n')
+
+    assert changes(tmp_path) == ()
+
+
 def test_identity_drift_from_the_manifest_is_stale(tmp_path: Path) -> None:
     live = session(tmp_path, {**MANIFEST, 'platform': 'linux'})
     envfile.write(live.env_file, live.machine)
