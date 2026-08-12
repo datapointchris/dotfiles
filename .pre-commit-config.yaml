@@ -1,4 +1,4 @@
-# forge-toolchain: 11
+# forge-toolchain: 14
 fail_fast: true
 default_stages: [pre-commit]
 repos:
@@ -125,6 +125,35 @@ repos:
         # *.enc.env convention.
         exclude: '(^|/)(.*-lock\.json|.*\.lock|uv\.lock|package-lock\.json|go\.sum|secrets?[^/]*\.(ya?ml|env|json)|.*\.enc\.[^/]+)$'
 
+# generated:refcheck - Reference checking
+  #
+  # `--moves` is what earns this a place on every commit, and running without
+  # it would be close to running nothing. Measured across all 49 active repos:
+  # the whole-tree half — every `source` and `bash` target — found zero real
+  # errors, because the portfolio is already clean. The moves half asks the
+  # question a rename actually leaves behind, for each one in the changeset,
+  # and that is where the findings were: three live `uv run` call sites in
+  # ichrisbirch's ops tool naming a log viewer that had moved months earlier,
+  # and a documented build command in shadows pointing into a directory the
+  # repo no longer has.
+  #
+  # Deliberately no path spelled out above. A comment naming a real old path
+  # is itself a hit for it, in every repo this block is deployed to.
+  #
+  # Generic rather than shell-gated, because a pattern is language-agnostic:
+  # the hits landed in Go, Vue and Python repos as readily as in dotfiles, in
+  # YAML and prose as readily as in scripts. The compiled languages catch their
+  # own broken *imports*, which is a different question from what a doc, a
+  # Dockerfile or a shell wrapper still says.
+  #
+  # No --strict: one advisory warning across the whole fleet, and a warning is
+  # about fragility rather than breakage.
+  - repo: https://github.com/datapointchris/refcheck
+    rev: v0.5.0
+    hooks:
+      - id: refcheck
+        args: [--moves]
+
 # generated:python-format - Python: dependency lock
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.8.3
@@ -168,14 +197,6 @@ repos:
         args: ["-color", "-shellcheck="]
 
 # > custom:after:all - Drift checks and test suites specific to dotfiles
-  # Scans the whole repo, not the staged files: a `source` breaks in the file
-  # that was not edited. rev is pinned by hand — forge's toolchain.yml manages
-  # block repos, and this is a custom section.
-  - repo: https://github.com/datapointchris/refcheck
-    rev: v0.2.1
-    hooks:
-      - id: refcheck
-
   - repo: local
     hooks:
       # Test all user-facing apps can be invoked
