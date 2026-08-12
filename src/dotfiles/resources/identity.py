@@ -218,7 +218,7 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
             Stage.IDENTITY,
             conflict.key,
             Verdict.UNDECLARED,
-            detail=f'set in {len(conflict.losers) + 1} files; {conflict.winner.origin.name} is read last and wins',
+            detail=f'set in {conflict.files} files; {conflict.winner.origin.name} is read last and wins',
             repair=Repair.BY_HAND,
             advice='\n'.join(
                 [

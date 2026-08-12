@@ -104,13 +104,32 @@ class Conflict:
     Both files are named because the finding is the *pair*: either alone is a
     legitimate setting, and what a reader cannot see is that the second one is
     silently deciding.
+
+    **One setting per file, never one per occurrence.** Git resolves a key set
+    twice inside one file to that file's last word, so a file has exactly one
+    answer however many times it says it — and this carried the occurrences.
+    `core.pager` set twice in the entry point and once in a leaf read as `set in
+    3 files` across two, and named the entry point twice in the advice. Holding
+    the collapsed list rather than counting around it makes the wrong shape
+    unrepresentable instead of leaving every reader to remember the difference.
     """
 
     key: str
-    winner: Setting
-    """The one git resolves to, which is the last file to set it."""
+    settings: tuple[Setting, ...]
+    """Each file's last word on this key, in the order git read them."""
 
-    losers: tuple[Setting, ...]
+    @property
+    def winner(self) -> Setting:
+        """The one git resolves to, which is the last file to set it."""
+        return self.settings[-1]
+
+    @property
+    def losers(self) -> tuple[Setting, ...]:
+        return self.settings[:-1]
+
+    @property
+    def files(self) -> int:
+        return len(self.settings)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -168,11 +187,15 @@ class Layering:
 
         found = []
         for key, settings in by_key.items():
-            if len({setting.origin for setting in settings}) < 2 or len({setting.value for setting in settings}) < 2:
+            # Collapsed to each file's last word before anything is compared. A
+            # dict keyed on the origin keeps the final occurrence and, because it
+            # preserves insertion order, keeps the order git read the files in —
+            # so the last entry is still the value in effect.
+            per_file = {setting.origin: setting for setting in settings}
+            decided = tuple(per_file.values())
+            if len(decided) < 2 or len({setting.value for setting in decided}) < 2:
                 continue
-            # Last wins, which is how git resolves a key set more than once and
-            # therefore which one the reader is actually running with.
-            found.append(Conflict(key, settings[-1], tuple(settings[:-1])))
+            found.append(Conflict(key, decided))
         return tuple(found)
 
 

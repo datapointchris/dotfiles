@@ -119,3 +119,33 @@ def test_a_git_that_will_not_answer_reports_nothing_rather_than_raising(tmp_path
     assert not layering.read
     assert layering.conflicts == ()
     assert layering.files == ()
+
+
+def test_a_file_setting_one_key_twice_counts_once(tmp_path: Path) -> None:
+    """The two counts only diverge when both shapes are present at once, which is
+    why neither of the tests above caught it: git resolves a key set twice inside
+    one file to that file's last word, so a file has one answer however many times
+    it says it.
+
+    Three settings across two files read as `set in 3 files`, and the advice named
+    the entry point twice — once per occurrence rather than once per file.
+    """
+    (tmp_path / 'entry.cfg').write_text('[core]\n\tpager = delta\n\tpager = bat\n[include]\n\tpath = leaf.cfg\n')
+    (tmp_path / 'leaf.cfg').write_text('[core]\n\tpager = less\n')
+
+    (conflict,) = read(tmp_path / 'entry.cfg').conflicts
+
+    assert conflict.files == 2
+    assert [setting.origin.name for setting in conflict.losers] == ['entry.cfg']
+    assert conflict.winner.origin.name == 'leaf.cfg'
+
+
+def test_a_file_repeating_a_key_speaks_with_its_last_word(tmp_path: Path) -> None:
+    """Which value a file contributes is its last, so the row must not report an
+    overridden one as what that file says."""
+    (tmp_path / 'entry.cfg').write_text('[core]\n\tpager = delta\n\tpager = bat\n[include]\n\tpath = leaf.cfg\n')
+    (tmp_path / 'leaf.cfg').write_text('[core]\n\tpager = less\n')
+
+    (conflict,) = read(tmp_path / 'entry.cfg').conflicts
+
+    assert [setting.value for setting in conflict.losers] == ['bat']
