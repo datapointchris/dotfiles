@@ -6,6 +6,29 @@
 -- `:colorscheme <name>` runs, so only the active theme is ever loaded. The
 -- colorscheme-manager below (kept eager) drives that selection at startup and
 -- via the theme-tool file watcher.
+
+local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
+
+-- The colorscheme a theme's generated tree provides, read off disk rather than
+-- rebuilt from theme.yml.
+--
+-- The name is not the theme id: a theme whose colours come from a plugin gets a
+-- `theme-` prefix, because most of those ids are the plugin's own colorscheme
+-- name and two colors/kanagawa.lua on the runtimepath is a coin toss. That rule
+-- belongs to the generator, and reading the filename means it can change there
+-- without this file learning about it.
+local function generated_colorscheme(theme)
+  local colors_dir = themes_dir .. '/' .. theme .. '/neovim/colors'
+  local handle = vim.loop.fs_scandir(colors_dir)
+  if not handle then return nil end
+
+  while true do
+    local name, type = vim.loop.fs_scandir_next(handle)
+    if not name then return nil end
+    if type == 'file' and name:sub(-4) == '.lua' then return name:sub(1, -5) end
+  end
+end
+
 return {
   -- Colorscheme plugins, read out of the theme library rather than listed here.
   --
@@ -15,8 +38,6 @@ return {
   -- with no error. Only the setup options below are knowledge theme.yml does not
   -- carry; everything else is derived.
   (function()
-    local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
-
     -- Plugins whose look is a setup call rather than a colorscheme name.
     local options = {
       ['projekt0n/github-nvim-theme'] = {
@@ -81,10 +102,12 @@ return {
     return specs
   end)(),
 
-  -- Generated themes from theme system (~/.local/share/theme)
-  -- Dynamically load all themes that have a neovim/ directory
+  -- Generated colorschemes from the theme tool (~/.local/share/theme).
+  --
+  -- Every theme ships one. For a theme with no upstream plugin it is the
+  -- colorscheme; for the rest it is the fallback the manager reaches for when
+  -- the plugin is not on this machine.
   (function()
-    local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
     local generated_themes = {}
     local handle = vim.loop.fs_scandir(themes_dir)
     if handle then
@@ -92,11 +115,14 @@ return {
         local name, type = vim.loop.fs_scandir_next(handle)
         if not name then break end
         if type == 'directory' then
-          local neovim_dir = themes_dir .. '/' .. name .. '/neovim'
-          if vim.fn.isdirectory(neovim_dir) == 1 then
+          local colorscheme = generated_colorscheme(name)
+          -- Named after the colorscheme, not the theme directory. lazy.nvim
+          -- errors on two plugins sharing a name, and the rose-pine theme
+          -- directory collides with the rose-pine plugin's own spec.
+          if colorscheme then
             table.insert(generated_themes, {
-              dir = neovim_dir,
-              name = name,
+              dir = themes_dir .. '/' .. name .. '/neovim',
+              name = colorscheme,
               lazy = true,
               cond = function() return require('core.profiles').is_full end,
             })
@@ -115,7 +141,6 @@ return {
     lazy = false,
     priority = 999, -- Load after colorscheme plugins but before other plugins
     config = function()
-      local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
       local history_file = vim.fn.expand('~/.local/state/theme/history.jsonl')
 
       -- Manually curated plugin colorschemes (plugins expose variants, only include good ones)
@@ -327,20 +352,42 @@ return {
           end
         end
 
-        -- A plugin theme whose lazy.nvim entry was never added fails here, and
-        -- silently: the terminal moves and the editor keeps the old colorscheme
-        -- with nothing to say why. Startup falls back to a random theme, but the
-        -- watcher path has no fallback, so report it.
         local ok, err = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
         if ok then
           require('fidget').notify('Theme: ' .. colorscheme)
-        else
-          vim.notify(
-            'colorscheme-manager: ' .. colorscheme .. ' failed to load (plugin registered?): ' .. tostring(err),
-            vim.log.levels.WARN
-          )
+          return true
         end
-        return ok
+
+        -- The plugin is not on this machine — never synced, no network, or a
+        -- locked-down box. Every theme ships a colorscheme generated from its
+        -- own palette for exactly this, so the editor moves with the terminal
+        -- instead of silently keeping the previous theme.
+        --
+        -- Loudly, though. A generated colorscheme is derived from the palette
+        -- where the plugin was tuned by hand, so it is close rather than right,
+        -- and a fallback nobody is told about is indistinguishable from the
+        -- theme having applied.
+        local fallback = generated_colorscheme(theme_name)
+        if fallback and fallback ~= colorscheme then
+          local fell_back = pcall(vim.cmd, 'colorscheme ' .. fallback)
+          if fell_back then
+            vim.notify(
+              'colorscheme-manager: '
+                .. colorscheme
+                .. ' is not installed — using '
+                .. fallback
+                .. ', generated from this palette rather than tuned by the theme author.',
+              vim.log.levels.WARN
+            )
+            return true
+          end
+        end
+
+        vim.notify(
+          'colorscheme-manager: ' .. colorscheme .. ' failed to load and has no usable fallback: ' .. tostring(err),
+          vim.log.levels.WARN
+        )
+        return false
       end
 
       local function setup_theme_file_watcher()
