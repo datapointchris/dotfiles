@@ -8,10 +8,10 @@ asserted as "the flag set is unchanged", which costs nothing more and catches
 
 Globbed, never listed. The bats version carried a hardcoded list, and its own
 comment records that the list named `install/common/lib/platform-detection.sh`
-for months after no such file existed: it reported seven libraries covered and
-checked six. The directories were then a hardcoded list of their own, which is
-the same failure one level up — and it cost the whole `shell/` tree, seven
-libraries the property was never asked of.
+for months after no such file existed: it reported one more library covered than
+it checked. The directories were then a hardcoded list of their own, which is the
+same failure one level up — and it cost the whole `shell/` tree, every library in
+which the property was never asked of.
 """
 
 from __future__ import annotations
@@ -38,9 +38,10 @@ by name for the same reason."""
 def library_directories() -> tuple[str, ...]:
     """Every directory under a root that actually holds a `*.sh`.
 
-    `shell/` is one root carrying seven of these across four axes, and an eighth
-    arrives the day a coordinate needs one — which is exactly the growth a list
-    of directories does not track.
+    `shell/` is one root, and it carries a directory per coordinate that needed
+    its own file plus the `common` every machine gets — with another arriving the
+    day a coordinate needs one, which is exactly the growth a list of directories
+    does not track.
     """
     return tuple(
         sorted(
