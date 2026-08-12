@@ -27,22 +27,29 @@ import json
 from collections.abc import Sequence
 
 from dotfiles import paths
+from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
 
 
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> None:
-    """Write both files, or neither. A check must never fail because of this.
+    """Write both files, or neither, and say so when neither.
 
     The state directory is on Syncthing for the fleet and absent on a fresh
     machine, and neither is a reason for `dotfiles check` to exit non-zero — it
-    answered the question it was asked.
+    answered the question it was asked. Degrading is right here; degrading
+    silently is not. An unwritable directory is indistinguishable from a
+    successful write to everything downstream, and what it produces is a prompt
+    nudge that never fires again — which reads as a converged machine.
+
+    The warning goes to stderr so it cannot corrupt a `--json` run.
     """
     try:
         paths.STATE_HOME.mkdir(parents=True, exist_ok=True)
         paths.STATUS_FILE.write_text(json.dumps(document(results, machine, when), indent=2) + '\n')
         _write_nudge(results)
-    except OSError:
+    except OSError as unwritable:
+        warn(f'could not record this check under {paths.STATE_HOME}: {unwritable}')
         return
 
 
