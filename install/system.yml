@@ -67,6 +67,18 @@ managed_files:
     alternate_path: /etc/zsh/zshenv
     append_line: export ZDOTDIR="$HOME/.config/zsh"
 
+  # pam_faillock ships this file as comments alone, so its built-in deny=3 is what
+  # runs. Three is low enough that one tool retrying sudo without a tty spends the
+  # whole budget before a human is ever prompted, and locks the account for the
+  # ten minutes `unlock_time` defaults to. Appending is the whole override: every
+  # other setting stays on the built-in default because every other line is a
+  # comment.
+  - name: faillock-deny
+    description: Failed authentications tolerated before the account locks
+    os_family: linux
+    path: /etc/security/faillock.conf
+    append_line: deny = 10
+
   # `/etc/vivaldi/policies`, not `/etc/opt/vivaldi/policies`. Every guide online
   # says the latter, because that is where Google-branded Chrome reads; Vivaldi
   # is an unbranded Chromium build and compiles in the former, so the file at the
