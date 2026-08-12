@@ -117,15 +117,15 @@ def run(script: str, snippet: str, windows: Windows, *args: str, **environment: 
     Sourcing runs neither `main` nor the WSL guard, which is what lets these run
     on Arch and macOS.
     """
-    return shell_out(
-        f'source "$1"; {snippet}',
-        script,
-        *args,
-        PATH=f'{windows.path}{os.pathsep}{os.environ["PATH"]}',
-        ARGV_LOG=str(windows.argv_log),
-        SHELL_DIR=str(windows.shell_dir),
-        **environment,
-    )
+    # environment last, so a test that needs to control PATH itself can.
+    settings = {
+        'PATH': f'{windows.path}{os.pathsep}{os.environ["PATH"]}',
+        'ARGV_LOG': str(windows.argv_log),
+        'SHELL_DIR': str(windows.shell_dir),
+    }
+    settings.update(environment)
+
+    return shell_out(f'source "$1"; {snippet}', script, *args, **settings)
 
 
 # ================================================================
@@ -510,7 +510,7 @@ def test_a_bare_invocation_lists_the_verbs(windows: Windows) -> None:
     result = shell_out('bash "$1"', TOOL, SHELL_DIR=str(windows.shell_dir))
 
     assert result.ok
-    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench'):
+    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench', 'processes', 'mounts', 'startup'):
         assert verb in result.stdout
 
 
@@ -520,9 +520,86 @@ def test_every_listed_verb_is_dispatchable(windows: Windows) -> None:
     listed = shell_out('bash "$1"', TOOL, SHELL_DIR=str(windows.shell_dir)).stdout
     accepted = uncommented(TOOL)
 
-    dispatch = [line for line in accepted if line.strip().startswith('status | doctor')]
+    # The allowlist is spread over more than one case line, so match on the arm
+    # rather than on where it happens to be split today.
+    dispatch = ' '.join(line for line in accepted if 'verb="$1"' in line)
     assert dispatch, 'the verb allowlist moved'
 
-    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench'):
-        assert verb in listed
-        assert verb in dispatch[0]
+    for verb in ('status', 'doctor', 'clean', 'compact', 'rebuild', 'bench', 'processes', 'mounts', 'startup'):
+        assert verb in listed, f'{verb} is dispatchable but unlisted'
+        assert verb in dispatch, f'{verb} is listed but not dispatchable'
+
+
+# ================================================================
+# The diagnostics
+# ================================================================
+
+
+def note_for(windows: Windows, fstype: str) -> Shell:
+    return run(TOOL, f'mount_note {fstype}', windows)
+
+
+def test_a_native_filesystem_reads_as_fast(windows: Windows) -> None:
+    assert 'native' in note_for(windows, 'ext4').stdout
+
+
+def test_every_windows_backed_filesystem_reads_as_slow(windows: Windows) -> None:
+    """drvfs is the name on older builds, virtiofs on newer ones, and 9p is what
+    mount reports for both on some. Classifying one and missing the others would
+    report the interop mount as native on exactly the machines that have it."""
+    for fstype in ('9p', 'drvfs', 'virtiofs'):
+        assert 'crosses to Windows' in note_for(windows, fstype).stdout
+
+
+def test_an_unrecognised_filesystem_is_skipped_not_guessed(windows: Windows) -> None:
+    """proc, sysfs, cgroup and tmpfs are most of the mount table and none of them
+    answer where a file lives. A default arm would print thirty rows of noise."""
+    result = note_for(windows, 'proc')
+    assert not result.ok
+    assert result.stdout.strip() == ''
+
+
+def test_the_note_column_holds_no_multibyte_characters(windows: Windows) -> None:
+    """printf pads by bytes. An em-dash inside a width-padded column shifts every
+    row that contains one, which is how this table first rendered."""
+    for fstype in ('ext4', '9p', 'cifs', 'overlay'):
+        note = note_for(windows, fstype).stdout.strip()
+        assert note.isascii(), f'{fstype} note is not ascii: {note!r}'
+
+
+def test_the_interop_entries_are_stripped_from_a_path(windows: Windows) -> None:
+    result = run(
+        TOOL,
+        'path_without_windows',
+        windows,
+        PATH=f'/usr/bin:/mnt/c/Windows:/home/me/.local/bin:/mnt/c/Program Files{os.pathsep}{os.environ["PATH"]}',
+    )
+
+    assert '/mnt/c/Windows' not in result.stdout
+    assert '/mnt/c/Program Files' not in result.stdout
+    assert '/usr/bin' in result.stdout
+    assert '/home/me/.local/bin' in result.stdout
+
+
+def test_stripping_keeps_the_path_a_colon_list(windows: Windows) -> None:
+    """paste -sd re-joins the lines. Without the trailing `-` it reads a file
+    named for the delimiter instead, and the result is empty."""
+    result = run(TOOL, 'path_without_windows', windows, PATH='/usr/bin:/mnt/c/Windows:/bin')
+    assert result.stdout.strip() == '/usr/bin:/bin'
+
+
+def test_a_path_with_no_interop_entries_survives_intact(windows: Windows) -> None:
+    result = run(TOOL, 'path_without_windows', windows, PATH='/usr/bin:/bin')
+    assert result.stdout.strip() == '/usr/bin:/bin'
+
+
+def test_the_timer_answers_in_whole_milliseconds(windows: Windows) -> None:
+    result = run(TOOL, 'median_ms true', windows)
+    assert result.stdout.strip().isdigit()
+
+
+def test_the_timer_takes_the_median_of_three(windows: Windows) -> None:
+    """A single sample is whatever else the machine was doing, and a mean is
+    whatever the worst sample was."""
+    result = run(TOOL, 'median_ms sleep 0.05', windows)
+    assert 40 <= int(result.stdout.strip()) <= 200

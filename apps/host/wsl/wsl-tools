@@ -860,6 +860,191 @@ report_findings() {
 }
 
 # ================================================================
+# TIMING
+# ================================================================
+
+# Median of three rather than one run or a mean. A shell startup is dominated by
+# whatever else the machine was doing during it, so a single sample is noise and
+# a mean is whatever the worst sample was.
+median_ms() {
+  local runs=() start end
+  for _ in 1 2 3; do
+    start=$(date +%s%N)
+    "$@" >/dev/null 2>&1 || true
+    end=$(date +%s%N)
+    runs+=($(((end - start) / 1000000)))
+  done
+  printf '%s\n' "${runs[@]}" | sort -n | sed -n '2p'
+}
+
+# The interop entries, which is what `appendWindowsPath` adds and what a PATH
+# miss pays for one at a time.
+path_without_windows() {
+  tr ':' '\n' <<<"$PATH" | grep -v '^/mnt/' | paste -sd: -
+}
+
+# ================================================================
+# PROCESSES
+# ================================================================
+
+# What a filesystem type costs, said once so the table and the summary agree.
+mount_note() {
+  case "$1" in
+    ext4 | btrfs | xfs) echo "native, page-cache speed" ;;
+    9p | drvfs | virtiofs | drvfs2) echo "crosses to Windows, a round trip per op" ;;
+    cifs | nfs | smb3) echo "network share" ;;
+    overlay) echo "container layer" ;;
+    *) return 1 ;;
+  esac
+}
+
+processes() {
+  print_header "wsl-tools processes" "brightcyan"
+
+  print_section "Holding memory inside the VM" "brightgreen"
+  printf '  %10s %7s  %s\n' "RSS" "CPU" "COMMAND"
+
+  local rss cpu comm
+  while read -r rss cpu comm; do
+    [[ -n "$comm" ]] || continue
+    printf '  %10s %6s%%  %s\n' "$(human $((rss * 1024)))" "$cpu" "$comm"
+  done < <(ps -eo rss=,pcpu=,comm= --sort=-rss 2>/dev/null | head -8)
+
+  local resident charged gap
+  resident=$(ps -eo rss= 2>/dev/null | awk '{total += $1} END {print total * 1024}')
+
+  print_section "What Windows is charged for the VM" "brightblue"
+
+  # vmmemWSL on current builds, vmmem on older ones. Asking for both and taking
+  # the first hit is cheaper than working out which build this is.
+  charged=$(powershell_out "Get-Process -Name vmmemWSL,vmmem -ErrorAction SilentlyContinue | ForEach-Object { \$_.WorkingSet64 }" | head -1 | tr -d ' ')
+
+  if [[ -z "$charged" || ! "$charged" =~ ^[0-9]+$ ]]; then
+    print_warning "Could not read the VM's working set from Windows"
+    return 0
+  fi
+
+  printf '  %-24s %s\n' "vmmem working set" "$(human "$charged")"
+  printf '  %-24s %s\n' "resident in processes" "$(human "${resident:-0}")"
+
+  # The gap is the guest's page cache, and it is the whole subject of
+  # autoMemoryReclaim. Windows is charged for it; nothing inside reports it as
+  # used, which is why WSL looks like it leaks and does not.
+  gap=$((charged - ${resident:-0}))
+  if [[ "$gap" -gt 0 ]]; then
+    printf '  %-24s %s\n' "page cache and slack" "$(human "$gap")"
+    print_info "That gap is cache Windows pays for and Linux reports as free."
+    print_info "autoMemoryReclaim decides whether it is returned gradually or dropped outright."
+  fi
+
+  print_section "WSL processes on the Windows side" "brightmagenta"
+  local helpers
+  helpers=$(powershell_out "Get-Process -ErrorAction SilentlyContinue | Where-Object { \$_.Name -match 'wsl|docker' } | ForEach-Object { \$_.Name + ' ' + [math]::Round(\$_.WorkingSet64 / 1MB) + ' MB' }")
+
+  if [[ -z "$helpers" ]]; then
+    print_info "None found."
+    return 0
+  fi
+
+  while IFS= read -r helper; do
+    [[ -n "$helper" ]] && printf '  %s\n' "$helper"
+  done <<<"$helpers"
+}
+
+# ================================================================
+# MOUNTS
+# ================================================================
+
+mounts() {
+  print_header "wsl-tools mounts" "brightcyan"
+
+  print_section "Where each path actually lives" "brightgreen"
+
+  # The target goes last in every row here. A container layer path is 70-odd
+  # characters of hash and a fixed-width column for it wraps every other row.
+  local target fstype note layers=0
+  while read -r target fstype; do
+    note=$(mount_note "$fstype") || continue
+
+    # Docker's layers are one mount each and there is a mount per image on the
+    # machine. They answer no question this verb is asked, and unsummarised they
+    # are the entire output on any box that runs containers.
+    if [[ "$fstype" == "overlay" ]]; then
+      layers=$((layers + 1))
+      continue
+    fi
+
+    printf '  %-9s %-42s %s\n' "$fstype" "$note" "$target"
+  done < <(findmnt -rno TARGET,FSTYPE 2>/dev/null | sort -k2)
+
+  [[ "$layers" -gt 0 ]] && printf '  %-9s %-42s %s\n' "overlay" "container layer" "$layers mounts"
+
+  print_section "The paths you work in" "brightblue"
+  local path label
+  for label in "\$HOME:$HOME" "cwd:$PWD"; do
+    path="${label#*:}"
+    fstype=$(findmnt -no FSTYPE --target "$path" 2>/dev/null || echo unknown)
+    printf '  %-9s %-42s %s\n' "${label%%:*}" "$(mount_note "$fstype" || echo "$fstype")" "$path"
+  done
+
+  # Every Windows drive is mounted whether or not anything uses it, so the count
+  # says nothing on its own. What matters is whether work is happening on one.
+  if [[ "$PWD" == /mnt/* ]]; then
+    print_warning "You are working on the Windows filesystem right now."
+    print_info "git, node_modules and anything that walks a tree pay a round trip per file here."
+  fi
+}
+
+# ================================================================
+# STARTUP
+# ================================================================
+
+startup() {
+  print_header "wsl-tools startup" "brightcyan"
+  print_info "Median of three runs each."
+
+  print_section "Shell startup" "brightgreen"
+  printf '  %-26s %s ms\n' "bash, no rc" "$(median_ms bash --norc --noprofile -c true)"
+
+  if ! has_command zsh; then
+    print_warning "zsh is not installed, so there is no interactive startup to measure."
+    return 0
+  fi
+
+  printf '  %-26s %s ms\n' "zsh, no rc" "$(median_ms zsh -f -c true)"
+
+  local full
+  full=$(median_ms zsh -i -c true)
+  printf '  %-26s %s ms\n' "zsh, interactive" "$full"
+
+  print_section "What the Windows PATH costs" "brightblue"
+
+  local windows_entries stripped delta
+  windows_entries=$(tr ':' '\n' <<<"$PATH" | grep -c '^/mnt/' || true)
+  printf '  %-26s %s\n' "interop PATH entries" "$windows_entries"
+
+  if [[ "$windows_entries" -eq 0 ]]; then
+    print_success "No Windows directories on PATH — appendWindowsPath is already off."
+    return 0
+  fi
+
+  # The same interactive startup with the interop entries removed. It measures
+  # what turning appendWindowsPath off would buy, which is otherwise a change you
+  # can only evaluate by living with it.
+  stripped=$(PATH="$(path_without_windows)" median_ms zsh -i -c true)
+  printf '  %-26s %s ms\n' "same, without them" "$stripped"
+
+  delta=$((full - stripped))
+  if [[ "$delta" -gt 0 ]]; then
+    printf '  %-26s %s ms\n' "cost per new shell" "$delta"
+    print_info "Set appendWindowsPath=false under [interop] in /etc/wsl.conf to keep it,"
+    print_info "then symlink the .exe files you actually use into ~/.local/bin."
+  else
+    print_success "The interop entries are not measurably costing startup time."
+  fi
+}
+
+# ================================================================
 # ENTRY
 # ================================================================
 
@@ -889,6 +1074,11 @@ show_help() {
   help_row "compact" "" "Shrink the vhdx in place. Needs a Windows administrator."
   help_row "rebuild" "" "Export, unregister and re-import. Needs no administrator."
   help_row "bench" "" "Compare ext4 and drvfs write throughput"
+
+  help_section "Looking closer"
+  help_row "processes" "" "What holds memory and CPU inside, against what Windows is charged"
+  help_row "mounts" "" "Which paths are native ext4 and which cross to Windows"
+  help_row "startup" "" "Shell startup cost, and how much of it is the Windows PATH"
 
   help_section "Options"
   help_row "-a, --aggressive" "" "With clean: also drop the go module cache, docker volumes, trash"
@@ -925,6 +1115,7 @@ main() {
         return 0
         ;;
       status | doctor | clean | compact | rebuild | bench) verb="$1" ;;
+      processes | mounts | startup) verb="$1" ;;
       *)
         print_error "Unknown argument: $1"
         return 1
@@ -952,6 +1143,9 @@ main() {
     compact) compact ;;
     rebuild) rebuild ;;
     bench) bench ;;
+    processes) processes ;;
+    mounts) mounts ;;
+    startup) startup ;;
   esac
 }
 

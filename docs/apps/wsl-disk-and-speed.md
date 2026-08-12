@@ -165,6 +165,33 @@ nobody on this machine can apply is noise in a list of things to change.
 disk has been rebuilt before — the machine remembers the procedure even when
 nobody does.
 
+## Three verbs for looking closer, when `doctor` is not enough
+
+`doctor` answers "what should I change". These answer "what is actually going
+on", which is the question you have when the answer is not on the list.
+
+**`processes`** shows what holds memory and CPU inside the VM, then what Windows
+is charged for the whole thing. The gap between those two numbers is the point.
+Linux reports page cache as free, Windows charges for it as resident, and that
+difference is why WSL looks like it leaks memory when it does not. It is also
+exactly what `autoMemoryReclaim` governs, so the number tells you whether that
+setting is worth touching on this machine.
+
+**`mounts`** says which paths are native ext4 and which cross to Windows. The
+filesystem name for the crossing is not stable — `drvfs` on older builds,
+`virtiofs` on newer, `9p` as what mount reports for both in some versions — so
+all three are classified. Missing one would report the interop mount as native
+on exactly the machines that have it. Docker's overlay layers collapse to a
+count: there is one mount per image, and unsummarised they are the entire output
+on any box that runs containers.
+
+**`startup`** times shell startup, then times it again with the interop PATH
+entries removed. The delta is what turning `appendWindowsPath` off would buy,
+per new shell. That change has a real cost — `win32yank.exe` is how the
+clipboard works here, and `explorer.exe` and `code` stop resolving — so it is
+worth knowing the size of the prize before paying it. Without this you can only
+evaluate the change by living with it for a week.
+
 ## `.wslconfig` is installed, not symlinked
 
 `.wslconfig` configures the VM that hosts every distro, so it lives in
