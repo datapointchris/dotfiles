@@ -138,10 +138,16 @@ feels slow rather than any one program. `wsl-tools doctor` counts the entries an
 times a miss.
 
 Turning it off is a genuine tradeoff and the tool reports it rather than making
-it. `win32yank.exe` is how this repo's WSL clipboard works, and `explorer.exe`,
-`code` and `powershell.exe` all stop resolving. The fix is to set
-`appendWindowsPath=false` under `[interop]` in `/etc/wsl.conf` *and* symlink the
-handful of `.exe` files actually used into `~/.local/bin`.
+it. `explorer.exe`, `code` and `powershell.exe` all stop resolving. The fix is to
+set `appendWindowsPath=false` under `[interop]` in `/etc/wsl.conf` *and* symlink
+the handful of `.exe` files actually used into `~/.local/bin`.
+
+The clipboard is not one of them, though it reads like one. `win32yank.exe` is a
+`github_releases` entry this repo installs into `~/.local/bin` itself, and
+`.zshenv` puts that directory on PATH whatever `appendWindowsPath` says — it is
+already in the state the fix above describes. What it does need is `[interop]
+enabled`, the separate key that lets a PE binary run at all, and no measurement
+here bears on that one.
 
 **Files on `/mnt/c`.** drvfs crosses a protocol boundary per operation, so
 anything that walks a tree — `git status` above all — is an order of magnitude
@@ -187,10 +193,9 @@ on any box that runs containers.
 
 **`startup`** times shell startup, then times it again with the interop PATH
 entries removed. The delta is what turning `appendWindowsPath` off would buy,
-per new shell. That change has a real cost — `win32yank.exe` is how the
-clipboard works here, and `explorer.exe` and `code` stop resolving — so it is
-worth knowing the size of the prize before paying it. Without this you can only
-evaluate the change by living with it for a week.
+per new shell. That change has a real cost — `explorer.exe` and `code` stop
+resolving — so it is worth knowing the size of the prize before paying it.
+Without this you can only evaluate the change by living with it for a week.
 
 ## `.wslconfig` is installed, not symlinked
 
