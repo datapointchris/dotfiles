@@ -779,6 +779,13 @@ fi
 # during preexec, so the nudge lands once the command has already run and never
 # delays or interrupts what was typed.
 YSU_MESSAGE_POSITION=after
+
+# `gp` and `gl` were never adopted rather than being missed, so a reminder about
+# them teaches a habit instead of enforcing one. Measured over August 2026:
+# `git pull` typed 10 times and `git push` 4, against zero uses of either alias,
+# while `gst` won 17 to 2 and needs no help. Ignoring the two keeps the nudge for
+# aliases added later, which is the only thing it is any use for here.
+YSU_IGNORED_ALIASES=(gp gl)
 if ! flag_enabled SHELL_YOU_SHOULD_USE; then
   log "Skip" "zsh-you-should-use (SHELL_YOU_SHOULD_USE)"
 elif [[ -f "$you_should_use_file" ]]; then
