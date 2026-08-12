@@ -35,6 +35,19 @@ def stub(directory: Path, name: str, script: str) -> None:
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
 
 
+def registry(provider: str, *repos: tuple[str, str]) -> dict[str, Any]:
+    """A registry with an explicit status on every entry, as a real one has.
+
+    `status` is required rather than defaulted, and defaulting it here would test
+    a shape the file cannot take — the registry repo rejects an entry without one
+    at commit time, and each reader matches it plainly for the same reason.
+    """
+    return {
+        'provider': provider,
+        'repos': [{'name': name, 'path': path, 'status': 'active'} for name, path in repos],
+    }
+
+
 def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **overrides: Any) -> dict[str, Any]:
     """One node as GitHub's GraphQL search returns it, in GitHub's own spelling."""
     node = {
@@ -60,11 +73,11 @@ def run(tmp_path: Path):
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
 
-    def _run(registry: dict[str, Any], **stubs: str) -> subprocess.CompletedProcess[str]:
+    def _run(repos: dict[str, Any], **stubs: str) -> subprocess.CompletedProcess[str]:
         for name, script in stubs.items():
             stub(bin_dir, name, script)
         path = tmp_path / 'repos.json'
-        path.write_text(json.dumps(registry))
+        path.write_text(json.dumps(repos))
         return subprocess.run(
             [str(PR_LIST), '--registry', str(path)],
             capture_output=True,
@@ -82,7 +95,7 @@ def github_stub(*nodes: dict[str, Any]) -> str:
 
 def test_a_github_pr_carries_the_branch_it_would_be_typed_as(run) -> None:
     result = run(
-        {'provider': 'github', 'repos': [{'name': 'dotfiles', 'path': '~/dotfiles'}]},
+        registry('github', ('dotfiles', '~/dotfiles')),
         gh=github_stub(graphql_node('dotfiles', 1, 'split-plan-check-verbs')),
     )
     assert result.returncode == 0, result.stderr
@@ -96,7 +109,7 @@ def test_a_stacked_pr_names_its_parent_rather_than_the_default_branch(run) -> No
     only thing distinguishing a stack from two independent branches is that one's
     base is the other's head."""
     result = run(
-        {'provider': 'github', 'repos': [{'name': 'dotfiles', 'path': '~/dotfiles'}]},
+        registry('github', ('dotfiles', '~/dotfiles')),
         gh=github_stub(
             graphql_node('dotfiles', 1, 'split-plan-check-verbs'),
             graphql_node('dotfiles', 2, 'language-toolchains', base='split-plan-check-verbs'),
@@ -113,7 +126,7 @@ def test_a_search_node_that_is_not_a_pull_request_is_dropped(run) -> None:
     number is null, which fleet cannot unmarshal into an int — the listing fails
     wholesale rather than showing one empty line."""
     result = run(
-        {'provider': 'github', 'repos': [{'name': 'dotfiles', 'path': '~/dotfiles'}]},
+        registry('github', ('dotfiles', '~/dotfiles')),
         gh=github_stub(graphql_node('dotfiles', 1, 'a-branch'), {}),
     )
     assert result.returncode == 0, result.stderr
@@ -124,7 +137,7 @@ def test_a_repo_the_registry_does_not_name_is_left_out(run) -> None:
     """Searching by author is what makes this one call for any registry size; the
     filter afterwards is the only thing keeping it honest about scope."""
     result = run(
-        {'provider': 'github', 'repos': [{'name': 'dotfiles', 'path': '~/dotfiles'}]},
+        registry('github', ('dotfiles', '~/dotfiles')),
         gh=github_stub(
             graphql_node('dotfiles', 1, 'mine'),
             graphql_node('someone-elses', 4, 'theirs'),
@@ -152,7 +165,7 @@ def test_a_bitbucket_pr_reports_its_branch_under_the_same_key(run, tmp_path: Pat
         ]
     )
     result = run(
-        {'provider': 'bitbucket', 'repos': [{'name': 'service', 'path': str(checkout)}]},
+        registry('bitbucket', ('service', str(checkout))),
         bbkt=f"#!/bin/sh\ncat <<'JSON'\n{payload}\nJSON\n",
     )
     assert result.returncode == 0, result.stderr
@@ -165,7 +178,7 @@ def test_an_unauthenticated_gh_skips_github_rather_than_failing_the_run(run) -> 
     """A registry can span forges, so one provider being unreachable must not take
     the whole listing with it — and the message has to name the fix."""
     result = run(
-        {'provider': 'github', 'repos': [{'name': 'dotfiles', 'path': '~/dotfiles'}]},
+        registry('github', ('dotfiles', '~/dotfiles')),
         gh='#!/bin/sh\necho "gh: You are not logged into any GitHub hosts" >&2\nexit 1\n',
     )
     assert result.returncode == 0, result.stderr
