@@ -1,0 +1,318 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# WSL is slow in a small number of specific ways, and none of them announce
+# themselves. The VM is capped at half the host's RAM, every PATH miss walks
+# dozens of drvfs directories over 9p, a repo living on /mnt/c pays that cost on
+# every file open, and the page cache is dropped out from under the guest by
+# default. This measures each one and names the change that fixes it.
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
+FINDINGS=()
+
+note() {
+  FINDINGS+=("$1"$'\x1f'"$2")
+}
+
+# ================================================================
+# WINDOWS SIDE
+# ================================================================
+
+# See wsl-reclaim for why the NULs are stripped and why stdin is closed.
+powershell_out() {
+  powershell.exe -NoProfile -NonInteractive -Command "$1" </dev/null 2>/dev/null | tr -d '\r\0'
+}
+
+windows_userprofile() {
+  local profile
+  profile=$(powershell_out "Write-Output \$env:USERPROFILE" | tr -d '\n')
+  [[ -n "$profile" ]] || return 1
+  wslpath -u "$profile" 2>/dev/null
+}
+
+human() {
+  numfmt --to=iec --suffix=B --format='%.1f' "${1:-0}" 2>/dev/null || echo "${1:-0}"
+}
+
+# ================================================================
+# CHECKS
+# ================================================================
+
+check_version() {
+  print_section "Version" "brightgreen"
+
+  local version
+  version=$(powershell_out 'wsl.exe --version' | head -1)
+  printf '  %-22s %s\n' "wsl" "${version:-unknown}"
+  printf '  %-22s %s\n' "distro" "${WSL_DISTRO_NAME:-unknown}"
+  printf '  %-22s %s\n' "kernel" "$(uname -r)"
+
+  # An inbox WSL has no --version at all. It also has no mirrored networking, no
+  # autoMemoryReclaim and no --manage, so half of what follows silently does
+  # nothing until it is updated.
+  if [[ -z "$version" ]]; then
+    note "WSL does not report a version" "It is the inbox build. Update it: wsl.exe --update"
+  fi
+
+  local state
+  state=$(powershell_out "wsl.exe -l -v" | grep -F "${WSL_DISTRO_NAME:-}" | head -1)
+  if [[ "$state" == *" 1"* ]]; then
+    note "This distro runs on WSL 1" "WSL 1 has no real kernel and much slower Linux file IO. Convert: wsl.exe --set-version ${WSL_DISTRO_NAME:-<distro>} 2"
+  fi
+}
+
+check_memory() {
+  print_section "Memory" "brightblue"
+
+  local vm_total host_total swap_total
+  vm_total=$(awk '/^MemTotal:/ {print $2 * 1024}' /proc/meminfo)
+  swap_total=$(awk '/^SwapTotal:/ {print $2 * 1024}' /proc/meminfo)
+  host_total=$(powershell_out '(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory' | tr -d '\n')
+
+  printf '  %-22s %s\n' "assigned to the VM" "$(human "$vm_total")"
+  printf '  %-22s %s\n' "swap" "$(human "$swap_total")"
+  [[ -n "$host_total" ]] && printf '  %-22s %s\n' "installed on Windows" "$(human "$host_total")"
+
+  local available
+  available=$(awk '/^MemAvailable:/ {print $2 * 1024}' /proc/meminfo)
+  printf '  %-22s %s\n' "available" "$(human "$available")"
+
+  # Under 15% available is where a build starts swapping against a disk that is
+  # itself a file on the host disk, which is the worst case WSL has.
+  if [[ "$vm_total" -gt 0 ]] && [[ $((available * 100 / vm_total)) -lt 15 ]]; then
+    note "Under 15% of the VM's memory is available" "Raise memory= in .wslconfig, or close what is holding it"
+  fi
+}
+
+check_wslconfig() {
+  print_section ".wslconfig" "brightmagenta"
+
+  local profile config
+  if ! profile=$(windows_userprofile); then
+    print_warning "Could not resolve %USERPROFILE% — interop may be disabled"
+    return 0
+  fi
+
+  config="$profile/.wslconfig"
+  if [[ ! -f "$config" ]]; then
+    print_warning "No .wslconfig — every setting is at its default"
+    note "No .wslconfig exists" "Install the annotated one: task wsl:tune"
+    return 0
+  fi
+
+  print_success "Present at $config"
+  grep -vE '^\s*(#|;|$)' "$config" | sed 's/^/  /'
+
+  # dropCache is the shipped default and it throws away the guest's page cache
+  # wholesale, so the next build re-reads every file it just read. gradual
+  # returns memory to Windows without that cliff.
+  if ! grep -qE '^\s*autoMemoryReclaim' "$config"; then
+    note "autoMemoryReclaim is unset, so it is dropCache" "Set autoMemoryReclaim=gradual under [experimental]"
+  fi
+}
+
+check_wsl_conf() {
+  print_section "/etc/wsl.conf" "brightgreen"
+
+  if [[ ! -f /etc/wsl.conf ]]; then
+    print_warning "No /etc/wsl.conf — every per-distro setting is at its default"
+    return 0
+  fi
+
+  grep -vE '^\s*(#|;|$)' /etc/wsl.conf | sed 's/^/  /'
+}
+
+check_interop_path() {
+  print_section "Interop" "brightblue"
+
+  local windows_entries total_entries
+  windows_entries=$(tr ':' '\n' <<<"$PATH" | grep -c '^/mnt/' || true)
+  total_entries=$(tr ':' '\n' <<<"$PATH" | grep -c . || true)
+  printf '  %-22s %s of %s\n' "PATH entries on /mnt" "$windows_entries" "$total_entries"
+
+  # A command that exists is found and cached. A command that does not exist —
+  # every typo, and every `command -v` guard in every shell library and prompt —
+  # stats every directory on PATH, and each /mnt entry is a 9p round trip.
+  local start end microseconds
+  start=$(date +%s%N)
+  for _ in $(seq 1 20); do
+    command -v wsl-doctor-probe-does-not-exist >/dev/null 2>&1 || true
+  done
+  end=$(date +%s%N)
+  microseconds=$(((end - start) / 20 / 1000))
+  printf '  %-22s %s µs\n' "cost of a PATH miss" "$microseconds"
+
+  if [[ "$windows_entries" -gt 10 ]]; then
+    note "$windows_entries Windows directories are on PATH, at ${microseconds}µs per lookup" \
+      "Set appendWindowsPath=false under [interop] in /etc/wsl.conf, then symlink the .exe files you actually use into ~/.local/bin"
+  fi
+}
+
+check_filesystem() {
+  print_section "Filesystem" "brightmagenta"
+
+  local home_fs
+  home_fs=$(findmnt -no FSTYPE --target "$HOME" 2>/dev/null || echo unknown)
+  printf '  %-22s %s (%s)\n' "\$HOME" "$HOME" "$home_fs"
+
+  if [[ "$HOME" == /mnt/* ]]; then
+    note "\$HOME is on the Windows filesystem" "Every file open crosses 9p. Move the home directory onto ext4."
+  fi
+
+  # Anything git touches is the worst case: status walks every file, and on drvfs
+  # each stat is a round trip rather than a page-cache hit.
+  #
+  # Bounded by depth, by the profile directory and by a timeout, because the scan
+  # is itself a drvfs walk. Unbounded across /mnt/c it takes long enough to read
+  # as a hang, which in a tool about things being slow is its own bug report.
+  local repos profile
+  profile=$(windows_userprofile) || return 0
+  repos=$(timeout 10 fd -HI -t d -d 3 '^\.git$' "$profile" 2>/dev/null | head -5 || true)
+  if [[ -n "$repos" ]]; then
+    print_warning "Git repos on the Windows filesystem:"
+    while IFS= read -r repo; do
+      printf '    %s\n' "$repo"
+    done <<<"$repos"
+    note "Git repos are living on /mnt/c" "Move them under ~ — git on drvfs is an order of magnitude slower"
+  fi
+}
+
+check_systemd() {
+  systemctl is-system-running >/dev/null 2>&1 || return 0
+
+  print_section "Boot" "brightgreen"
+  systemd-analyze blame 2>/dev/null | head -5 | sed 's/^/  /' || true
+}
+
+check_defender() {
+  print_section "Defender" "brightblue"
+
+  local exclusions
+  exclusions=$(powershell_out 'Get-MpPreference -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ExclusionPath')
+  if [[ -z "$exclusions" ]]; then
+    print_info "No exclusions readable — Defender is off, or policy hides them"
+    return 0
+  fi
+
+  if grep -qiF 'ext4.vhdx' <<<"$exclusions" || grep -qiE 'LocalState|\\wsl' <<<"$exclusions"; then
+    print_success "The WSL disk is excluded from real-time scanning"
+  else
+    note "The ext4.vhdx is not excluded from Defender" \
+      "Every read and write inside WSL is scanned on the host. Adding an exclusion needs an administrator and may be blocked by policy."
+  fi
+}
+
+# ================================================================
+# BENCH
+# ================================================================
+
+# Timed here rather than read off dd's own summary: GNU time is not installed
+# everywhere, and dd's throughput line is localised and formatted differently
+# across coreutils versions.
+write_speed() {
+  local target="$1" start end nanoseconds
+  start=$(date +%s%N)
+  dd if=/dev/zero of="$target" bs=1M count=64 conv=fdatasync >/dev/null 2>&1 || {
+    echo "n/a"
+    return 0
+  }
+  end=$(date +%s%N)
+  rm -f "$target"
+
+  nanoseconds=$((end - start))
+  awk -v n="$nanoseconds" 'BEGIN { if (n > 0) printf "%.0f MB/s", 64 / (n / 1000000000); else print "n/a" }'
+}
+
+bench() {
+  print_header "wsl-doctor bench" "brightcyan"
+  print_info "Writing 64MB to each filesystem."
+  echo ""
+
+  printf '  %-22s %s\n' "ext4 (inside WSL)" "$(write_speed /tmp/wsl-doctor-bench)"
+
+  local profile
+  if profile=$(windows_userprofile); then
+    printf '  %-22s %s\n' "drvfs (/mnt/c)" "$(write_speed "$profile/wsl-doctor-bench")"
+  fi
+
+  echo ""
+  print_info "A large gap is why repos belong under ~ and not under /mnt/c."
+}
+
+# ================================================================
+# ENTRY
+# ================================================================
+
+report_findings() {
+  echo ""
+  if [[ ${#FINDINGS[@]} -eq 0 ]]; then
+    print_section_success "Nothing to fix"
+    return 0
+  fi
+
+  print_section "What to change" "brightyellow"
+  local finding problem fix
+  for finding in "${FINDINGS[@]}"; do
+    IFS=$'\x1f' read -r problem fix <<<"$finding"
+    print_warning "$problem"
+    printf '    %s\n' "$fix"
+  done
+}
+
+show_help() {
+  help_header "wsl-doctor" "Why WSL is sluggish, measured, with the change that fixes each one."
+  help_usage "wsl-doctor [verb]"
+
+  help_section "Verbs"
+  help_row "report" "" "Measure the VM, its config, interop and disk (default)"
+  help_row "bench" "" "Compare ext4 and drvfs write throughput"
+
+  help_section "Examples"
+  help_row "wsl-doctor"
+  help_row "wsl-doctor bench"
+
+  help_end
+  print_info "Disk size is a separate tool: wsl-reclaim"
+}
+
+main() {
+  local verb="${1:-report}"
+
+  case "$verb" in
+    -h | --help | help)
+      show_help
+      return 0
+      ;;
+  esac
+
+  if ! grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+    print_error "wsl-doctor only means anything inside WSL."
+    return 1
+  fi
+
+  case "$verb" in
+    report)
+      print_header "wsl-doctor" "brightcyan"
+      check_version
+      check_memory
+      check_wslconfig
+      check_wsl_conf
+      check_interop_path
+      check_filesystem
+      check_systemd
+      check_defender
+      report_findings
+      ;;
+    bench) bench ;;
+    *)
+      print_error "Unknown verb: $verb"
+      return 1
+      ;;
+  esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

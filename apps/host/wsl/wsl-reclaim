@@ -1,0 +1,395 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Deleting files inside WSL does not shrink ext4.vhdx. The virtual disk grows to
+# its high-water mark and stays there, so a distro that once held a 40GB Docker
+# cache keeps charging Windows for it forever. Reclaiming the space is two
+# separate acts: free the blocks inside the guest, then compact the file on the
+# host. This script does the first and hands off the second.
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
+AGGRESSIVE=false
+ASSUME_YES=false
+
+# ================================================================
+# WINDOWS SIDE
+# ================================================================
+
+# Windows console tools emit UTF-16LE, which reaches bash as ASCII interleaved
+# with NULs and reads as an empty string to every test here. Stripping NUL and CR
+# is what makes the output comparable.
+#
+# </dev/null because PowerShell inherits stdin and will eat a caller's loop input
+# — see docs/learnings/wsl-powershell-stdin-consumption.md.
+powershell_out() {
+  powershell.exe -NoProfile -NonInteractive -Command "$1" </dev/null 2>/dev/null | tr -d '\r\0'
+}
+
+# The registry is the only reliable answer. Older distros live under
+# %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState and ones installed by
+# WSL 2.4+ under %LOCALAPPDATA%\wsl\{guid}, so a hardcoded path finds nothing on
+# half the machines that have one.
+vhdx_windows_path() {
+  local distro="${WSL_DISTRO_NAME:-}" query base backslash device_prefix
+  [[ -n "$distro" ]] || return 1
+
+  # PowerShell string literals are single-quoted so the whole query survives one
+  # round of bash double-quoting. \$_ is the pipeline variable and must reach
+  # PowerShell unexpanded.
+  query="(Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss"
+  query+=" | Where-Object { \$_.GetValue('DistributionName') -eq '$distro' }).GetValue('BasePath')"
+
+  base=$(powershell_out "$query" | tr -d '\n')
+  [[ -n "$base" ]] || return 1
+
+  # BasePath comes back as an extended-length path. wslpath does not understand
+  # the \\?\ device prefix and returns nothing at all for one. Assembled from a
+  # variable because a literal backslash before a closing quote is unreadable
+  # and reads to shellcheck as a botched escape.
+  backslash=$'\\'
+  device_prefix="${backslash}${backslash}?${backslash}"
+  printf '%s%sext4.vhdx\n' "${base#"$device_prefix"}" "$backslash"
+}
+
+vhdx_linux_path() {
+  local windows_path
+  windows_path=$(vhdx_windows_path) || return 1
+  wslpath -u "$windows_path" 2>/dev/null
+}
+
+windows_temp_dir() {
+  local temp
+  temp=$(powershell_out "Write-Output \$env:TEMP" | tr -d '\n')
+  [[ -n "$temp" ]] || return 1
+  wslpath -u "$temp" 2>/dev/null
+}
+
+# ================================================================
+# MEASUREMENT
+# ================================================================
+
+human() {
+  numfmt --to=iec --suffix=B --format='%.1f' "${1:-0}" 2>/dev/null || echo "${1:-0}"
+}
+
+dir_bytes() {
+  local path="$1" total
+  [[ -e "$path" ]] || {
+    echo 0
+    return 0
+  }
+  total=$(du -sb "$path" 2>/dev/null | cut -f1)
+  echo "${total:-0}"
+}
+
+# Where a cache lives is the owning tool's answer, not a path this script knows.
+# go and npm both relocate theirs on a whim, and uv's moves with XDG_CACHE_HOME.
+cache_path() {
+  case "$1" in
+    apt) echo /var/cache/apt/archives ;;
+    pacman) echo /var/cache/pacman/pkg ;;
+    uv) has_command uv && uv cache dir 2>/dev/null ;;
+    go-build) has_command go && go env GOCACHE 2>/dev/null ;;
+    go-modules) has_command go && go env GOMODCACHE 2>/dev/null ;;
+    npm) has_command npm && npm config get cache 2>/dev/null ;;
+    cargo) echo "${CARGO_HOME:-$HOME/.cargo}/registry" ;;
+    pip) has_command pip && pip cache dir 2>/dev/null ;;
+    journal) echo /var/log/journal ;;
+    trash) echo "${XDG_DATA_HOME:-$HOME/.local/share}/Trash" ;;
+    user-cache) echo "${XDG_CACHE_HOME:-$HOME/.cache}" ;;
+  esac
+  return 0
+}
+
+CACHES=(apt pacman uv go-build go-modules npm cargo pip journal trash user-cache)
+
+# ================================================================
+# REPORT
+# ================================================================
+
+report_disk() {
+  print_section "Disk" "brightgreen"
+
+  local used avail percent
+  read -r used avail percent < <(df -h --output=used,avail,pcent / | tail -1)
+  printf '  %-22s %s used, %s free (%s)\n' "inside the distro" "$used" "$avail" "$percent"
+
+  local vhdx bytes
+  if vhdx=$(vhdx_linux_path) && [[ -f "$vhdx" ]]; then
+    bytes=$(stat -c %s "$vhdx" 2>/dev/null || echo 0)
+    printf '  %-22s %s\n' "ext4.vhdx on Windows" "$(human "$bytes")"
+    printf '  %-22s %s\n' "" "$(vhdx_windows_path)"
+  else
+    print_warning "Could not locate ext4.vhdx — is \$WSL_DISTRO_NAME set and interop enabled?"
+  fi
+}
+
+report_caches() {
+  print_section "Caches" "brightblue"
+
+  local name path bytes total=0 found=false
+  for name in "${CACHES[@]}"; do
+    path=$(cache_path "$name")
+    [[ -n "$path" && -e "$path" ]] || continue
+    bytes=$(dir_bytes "$path")
+    [[ "$bytes" -gt 0 ]] || continue
+    found=true
+    printf '  %-14s %10s  %s\n' "$name" "$(human "$bytes")" "$path"
+    # user-cache overlaps uv, npm and pip, so counting it would double-count.
+    [[ "$name" == "user-cache" ]] || total=$((total + bytes))
+  done
+
+  if has_command docker && docker info >/dev/null 2>&1; then
+    found=true
+    printf '  %-14s %10s  %s\n' "docker" "$(docker system df --format '{{.Size}}' 2>/dev/null | head -1)" "docker system df"
+  fi
+
+  $found || print_info "No caches worth reporting."
+  [[ "$total" -gt 0 ]] && printf '\n  %-14s %10s  (excludes the overlapping user cache)\n' "reclaimable" "$(human "$total")"
+  return 0
+}
+
+report_trim() {
+  print_section "Trim" "brightmagenta"
+
+  # Current WSL mounts the root ext4 with `discard`, so freed blocks are released
+  # to the host as they are freed and a manual fstrim finds nothing to do. On an
+  # older kernel it is the step that makes compaction worth anything.
+  if findmnt -no OPTIONS / 2>/dev/null | tr ',' '\n' | grep -qx discard; then
+    print_success "Root mounted with discard — blocks are released as they are freed"
+  else
+    print_warning "Root has no discard option — run 'wsl-reclaim clean' before compacting"
+  fi
+}
+
+report() {
+  print_header "wsl-reclaim" "brightcyan"
+  report_disk
+  report_caches
+  report_trim
+  echo ""
+  print_info "Free the blocks:   wsl-reclaim clean"
+  print_info "Shrink the file:   wsl-reclaim compact"
+}
+
+# ================================================================
+# CLEAN
+# ================================================================
+
+run_step() {
+  local label="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    print_success "$label"
+  else
+    print_warning "$label — skipped or failed"
+  fi
+}
+
+clean() {
+  print_header "wsl-reclaim clean" "brightcyan"
+  print_section "Purging caches" "brightblue"
+
+  has_command apt-get && run_step "apt archives" sudo apt-get clean
+  has_command apt-get && run_step "apt orphans" sudo apt-get -y autoremove --purge
+  has_command pacman && run_step "pacman packages" sudo pacman -Scc --noconfirm
+  has_command uv && run_step "uv cache" uv cache prune
+  has_command go && run_step "go build and test cache" go clean -cache -testcache
+  has_command npm && run_step "npm cache" npm cache clean --force
+  has_command pip && run_step "pip cache" pip cache purge
+  has_command journalctl && run_step "journal over 100M" sudo journalctl --vacuum-size=100M
+
+  if has_command docker && docker info >/dev/null 2>&1; then
+    if $AGGRESSIVE; then
+      run_step "docker images, build cache and volumes" docker system prune -af --volumes
+    else
+      run_step "docker dangling images and build cache" docker system prune -f
+    fi
+  fi
+
+  if $AGGRESSIVE; then
+    # The module cache is every dependency of every Go project on the machine.
+    # Clearing it costs a full re-download on the next build, which on a
+    # throttled corporate network is minutes, so it is never the default.
+    has_command go && run_step "go module cache" go clean -modcache
+    local trash
+    trash=$(cache_path trash)
+    [[ -d "$trash" ]] && run_step "trash" find "$trash" -mindepth 1 -delete
+  fi
+
+  print_section "Releasing blocks" "brightmagenta"
+  if sudo fstrim -av 2>&1 | grep -q trimmed; then
+    print_success "fstrim released free blocks to the host"
+  else
+    print_info "fstrim had nothing to release — the root mount already discards"
+  fi
+
+  echo ""
+  print_info "The vhdx does not shrink until it is compacted: wsl-reclaim compact"
+}
+
+# ================================================================
+# COMPACT
+# ================================================================
+
+# Sparse mode is deliberately not offered. `--set-sparse true` has been gated
+# behind --allow-unsafe since WSL 2.5.6 after reports of ext4 corruption, and a
+# sparse vhdx cannot be compacted at all: diskpart refuses with "Virtual hard
+# disk files must be uncompressed and unencrypted and must not be sparse."
+# Turning it back off re-materialises every hole, so the escape hatch costs a
+# full compact cycle.
+#
+# Optimize-VHD is not offered either. It needs the Hyper-V PowerShell module,
+# which is absent on Windows Home and on any managed box that never enabled the
+# feature, and diskpart does the same job everywhere.
+write_compact_script() {
+  local destination="$1" vhdx="$2"
+
+  cat >"$destination" <<POWERSHELL
+\$ErrorActionPreference = 'Stop'
+\$vhdx = '$vhdx'
+
+function Show-Size(\$label) {
+  \$size = (Get-Item -LiteralPath \$vhdx -Force).Length / 1GB
+  Write-Host ("{0,-8} {1:N2} GB" -f \$label, \$size)
+}
+
+Show-Size 'Before:'
+
+# The 8 second rule: WSL keeps the VM alive briefly after the last shell exits,
+# and diskpart cannot attach a vhdx the utility VM still holds open.
+Write-Host 'Shutting WSL down...'
+wsl.exe --shutdown
+Start-Sleep -Seconds 10
+
+\$commands = @"
+select vdisk file="\$vhdx"
+attach vdisk readonly
+compact vdisk
+detach vdisk
+exit
+"@
+
+\$scriptFile = [System.IO.Path]::GetTempFileName()
+Set-Content -LiteralPath \$scriptFile -Value \$commands -Encoding ASCII
+diskpart.exe /s \$scriptFile
+Remove-Item -LiteralPath \$scriptFile -Force
+
+Show-Size 'After:'
+Read-Host 'Done. Press Enter to close'
+POWERSHELL
+}
+
+compact() {
+  local vhdx temp script_path windows_script
+
+  vhdx=$(vhdx_windows_path) || {
+    print_error "Could not locate ext4.vhdx for \$WSL_DISTRO_NAME"
+    return 1
+  }
+
+  temp=$(windows_temp_dir) || {
+    print_error "Could not resolve the Windows temp directory"
+    return 1
+  }
+
+  print_header "wsl-reclaim compact" "brightcyan"
+  print_info "Target: $vhdx"
+  echo ""
+  print_warning "This shuts down every WSL distro, including this shell."
+  print_warning "diskpart needs administrator rights, so Windows will prompt via UAC."
+
+  if ! $ASSUME_YES; then
+    local answer
+    read -r -p "Continue? [y/N] " answer
+    [[ "$answer" =~ ^[Yy]$ ]] || {
+      print_info "Nothing done."
+      return 0
+    }
+  fi
+
+  # The script has to live on the Windows filesystem. Anything under \\wsl$
+  # becomes unreachable the instant `wsl --shutdown` runs, which is the second
+  # line of the script itself.
+  script_path="$temp/wsl-compact.ps1"
+  write_compact_script "$script_path" "$vhdx"
+  windows_script=$(wslpath -w "$script_path")
+
+  # Detached and elevated, not a child of this shell: `wsl --shutdown` kills
+  # every process in the distro, and a compactor that dies with its caller
+  # leaves the vhdx attached read-only.
+  powershell.exe -NoProfile -NonInteractive -Command \
+    "Start-Process -FilePath powershell.exe -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$windows_script'" \
+    </dev/null
+
+  print_success "Handed off to an elevated PowerShell window."
+  print_info "This distro will stop within a few seconds. Reopen the terminal when it finishes."
+}
+
+# ================================================================
+# ENTRY
+# ================================================================
+
+show_help() {
+  help_header "wsl-reclaim" "Shrink the ext4.vhdx that WSL grows and never gives back."
+  help_usage "wsl-reclaim [verb] [options]"
+
+  help_section "Verbs"
+  help_row "report" "" "What the disk and each cache weigh (default)"
+  help_row "clean" "" "Purge caches, then release the freed blocks"
+  help_row "compact" "" "Shrink the vhdx itself, via an elevated Windows process"
+
+  help_section "Options"
+  help_row "-a, --aggressive" "" "With clean: also drop the go module cache, docker volumes, trash"
+  help_row "-y, --yes" "" "With compact: skip the confirmation"
+  help_row "-h, --help" "" "Show this help message"
+
+  help_section "Examples"
+  help_row "wsl-reclaim"
+  help_row "wsl-reclaim clean --aggressive"
+  help_row "wsl-reclaim compact"
+
+  help_end
+  print_info "Freeing space inside the distro never shrinks the file. Both steps are needed."
+}
+
+main() {
+  local verb=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -a | --aggressive) AGGRESSIVE=true ;;
+      -y | --yes) ASSUME_YES=true ;;
+      -h | --help | help)
+        show_help
+        return 0
+        ;;
+      report | clean | compact) verb="$1" ;;
+      *)
+        print_error "Unknown argument: $1"
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  if ! grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+    print_error "wsl-reclaim only means anything inside WSL."
+    return 1
+  fi
+
+  case "${verb:-report}" in
+    report) report ;;
+    clean) clean ;;
+    compact) compact ;;
+  esac
+}
+
+# Sourced by tests/shell/test_wsl_tools.py, which drives the path resolution and
+# the generated diskpart script directly. Neither can be exercised any other way:
+# the machine running the tests is not the machine that has a vhdx.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

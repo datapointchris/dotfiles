@@ -219,3 +219,8 @@ tasks:
     desc: Sync shell files to Windows Git Bash (run from WSL)
     cmds:
       - bash "{{.DOTFILES_DIR}}/install/wsl/sync-windows-shell.sh"
+
+  wsl:tune:
+    desc: Install .wslconfig to the Windows user profile (run from WSL)
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/wsl/install-wslconfig.sh" {{.CLI_ARGS}}

@@ -1,0 +1,47 @@
+# %UserProfile%\.wslconfig — global settings for every WSL 2 distro.
+#
+# Installed by install/wsl/install-wslconfig.sh (task wsl:tune). Changes need
+# `wsl.exe --shutdown` and about eight seconds before WSL picks them up.
+#
+# Only settings that are an actual decision are written here. Everything WSL
+# already defaults to correctly is left out rather than restated, so a line in
+# this file always means "we chose differently, and here is why".
+
+[wsl2]
+
+# WSL defaults to 50% of host RAM and every logical processor, which is right on
+# a machine whose job is running WSL. Set these only to hold memory back for
+# something on the Windows side that needs it.
+# memory=8GB
+# processors=4
+
+# Mirrored networking makes the VM share the host's interfaces, which is what
+# fixes DNS and routing behind a corporate VPN. Left off because it is a real
+# behaviour change and not a tuning knob: ports bound in Linux start colliding
+# with ports bound in Windows, and localhost forwarding stops applying. Turn it
+# on to solve a named networking problem, not speculatively.
+# networkingMode=mirrored
+
+# Crash dumps are written into the user profile and default to ten retained.
+# Three is enough to debug a repeating fault and saves gigabytes on a machine
+# that has one.
+maxCrashDumpCount=3
+
+[experimental]
+
+# The shipped default is dropCache, which hands memory back to Windows by
+# discarding the guest's page cache outright — so the next build re-reads from
+# disk every file the last one just read. gradual reclaims idle memory without
+# that cliff, and idle memory is what was actually worth reclaiming.
+autoMemoryReclaim=gradual
+
+# sparseVhd is deliberately absent.
+#
+# It makes the vhdx release blocks continuously, which sounds exactly like what
+# a disk that never shrinks needs. It has been gated behind --allow-unsafe since
+# WSL 2.5.6 after reports of ext4 corruption, and a sparse vhdx cannot be
+# compacted by any other means: diskpart refuses with "Virtual hard disk files
+# must be uncompressed and unencrypted and must not be sparse". Turning it back
+# off re-materialises every hole and costs a full compact cycle to undo.
+#
+# `wsl-reclaim compact` is the supported path and reclaims the same space.

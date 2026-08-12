@@ -118,6 +118,7 @@ nav:
       - Backup: apps/backup.md
       - Safekeep: apps/safekeep.md
       - Work Monitor: apps/work-monitor.md
+      - WSL Disk and Speed: apps/wsl-disk-and-speed.md
   - Architecture:
       - architecture/index.md
       - Management Interface: architecture/management-interface.md
