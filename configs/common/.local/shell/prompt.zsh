@@ -20,49 +20,71 @@ export VIRTUAL_ENV_DISABLE_PROMPT=1
 # ================================================================
 # PROMPT COMPONENT FUNCTIONS
 # ================================================================
+#
+# Every segment is *assigned to a variable*, never printed from inside PROMPT.
+#
+# A `$(...)` in a prompt is a forked subshell on every redraw, and this prompt
+# had nine of them — five in PROMPT, four in RPROMPT — on top of the one `git`
+# call. Eight of the nine were computing something that had not changed: the
+# caret depends on $USER, the user@host segment on $SSH_CONNECTION, the two
+# echotc sequences on the terminal, and the exit-status segment was a subshell
+# wrapped around a `%(?..)` that zsh expands by itself. A fork is cheap on Arch
+# and is not cheap on WSL, where this was measured as a prompt that lagged.
+#
+# What is left is one `git status` per prompt, in precmd, where it was already.
 
-function current_venv() {
-  local venv_name
-  venv_name=$(prompt_venv_name)
-  if [[ -n "$venv_name" ]]; then
-    echo "%F{yellow}($venv_name)%f"
-  fi
-}
+# Constant for the life of the shell, so they are computed once here rather than
+# per keystroke. `%m` and `%F` stay unexpanded — they are prompt escapes, which
+# zsh expands at render time whatever built the string.
+case "$(prompt_user_context)" in
+  root|root-ssh) PROMPT_USER_SEGMENT="%F{red}$USER@%m%f:" ;;
+  ssh)           PROMPT_USER_SEGMENT="%F{cyan}$USER@%m%f:" ;;
+  *)             PROMPT_USER_SEGMENT="" ;; # Hide user@host for local sessions
+esac
 
-function user_info() {
-  local context
-  context=$(prompt_user_context)
+if [[ "$USER" == "root" ]]; then
+  PROMPT_CARET_SEGMENT="%F{red}# %f"
+else
+  PROMPT_CARET_SEGMENT="%F{green}${PROMPT_ICON_CARET} %f"
+fi
 
-  case "$context" in
-    root|root-ssh) echo "%F{red}$USER@%m%f:" ;;
-    ssh)           echo "%F{cyan}$USER@%m%f:" ;;
-    *)             ;; # Hide user@host for local sessions
-  esac
-}
+# The two cursor moves RPROMPT uses to paint itself a line up. Captured once:
+# they are a property of the terminal, and re-asking termcap on every redraw was
+# two of the nine forks.
+PROMPT_CURSOR_UP="$(echotc UP 1)"
+PROMPT_CURSOR_DOWN="$(echotc DO 1)"
 
-function current_dir() {
-  local _max_pwd_length="45"
-  if [[ ${#PWD} -gt ${_max_pwd_length} ]]; then
-    echo "%B%F{white}%-2~ ... %2~%f%b"
-  else
-    echo "%B%F{white}%~%f%b"
-  fi
-}
+PROMPT_MAX_PWD_LENGTH=45
 
-# PROMPT and RPROMPT each expand in their own subshell, so loading the git state
-# inside them would run git twice per prompt. Load it once here instead; both
-# halves below then only read variables.
 autoload -Uz add-zsh-hook
-__prompt_load_git() {
-  prompt_git_load_state && PROMPT_GIT_REPO=1 || PROMPT_GIT_REPO=""
-}
-add-zsh-hook precmd __prompt_load_git
 
-function git_prompt_info() {
-  [[ -n "$PROMPT_GIT_REPO" ]] || return
+# `${VIRTUAL_ENV:t}` rather than `basename`, which was a fork per prompt for a
+# string zsh can take the tail of itself.
+__prompt_set_venv() {
+  if [[ -n "$VIRTUAL_ENV" ]]; then
+    PROMPT_VENV_SEGMENT="%F{yellow}(${VIRTUAL_ENV:t})%f"
+  else
+    PROMPT_VENV_SEGMENT=""
+  fi
+}
+
+# Which of the two spellings to use is the only thing measured here; both are
+# prompt escapes, so zsh still renders the path itself at redraw time and a
+# directory whose name contains a `%` or a `$` cannot reach this string.
+__prompt_set_dir() {
+  if (( ${#PWD} > PROMPT_MAX_PWD_LENGTH )); then
+    PROMPT_DIR_SEGMENT="%B%F{white}%-2~ ... %2~%f%b"
+  else
+    PROMPT_DIR_SEGMENT="%B%F{white}%~%f%b"
+  fi
+}
+
+__prompt_set_git() {
+  PROMPT_GIT_SEGMENT=""
+  PROMPT_GIT_REMOTE_SEGMENT=""
+  prompt_git_load_state || return 0
 
   local git_status=""
-
   if [[ "$PROMPT_GIT_FLAGS" == "clean" ]]; then
     git_status="%F{green}${PROMPT_ICON_CLEAN}%f "
   else
@@ -73,43 +95,40 @@ function git_prompt_info() {
     [[ "$PROMPT_GIT_FLAGS" == *renamed* ]] && git_status+="%F{magenta}${PROMPT_ICON_RENAMED}%f "
     [[ "$PROMPT_GIT_FLAGS" == *unmerged* ]] && git_status+="%F{red}${PROMPT_ICON_UNMERGED}%f "
   fi
-
   (( PROMPT_GIT_STASH > 0 )) && git_status+="%F{blue}${PROMPT_ICON_STASH}%f "
 
-  echo "%F{green}${PROMPT_ICON_BRANCH} ${PROMPT_GIT_BRANCH}%f ${git_status}"
+  PROMPT_GIT_SEGMENT="%F{green}${PROMPT_ICON_BRANCH} ${PROMPT_GIT_BRANCH}%f ${git_status}"
+
+  (( PROMPT_GIT_AHEAD != 0 )) && PROMPT_GIT_REMOTE_SEGMENT+="%F{green}${PROMPT_ICON_UP} ${PROMPT_GIT_AHEAD}%f  "
+  (( PROMPT_GIT_BEHIND != 0 )) && PROMPT_GIT_REMOTE_SEGMENT+="%F{red}${PROMPT_ICON_DOWN} ${PROMPT_GIT_BEHIND}%f"
+  return 0
 }
 
-function git_remote_status() {
-  [[ -n "$PROMPT_GIT_REPO" ]] || return
-
-  local remote_status=""
-  (( PROMPT_GIT_AHEAD != 0 )) && remote_status+="%F{green}${PROMPT_ICON_UP} ${PROMPT_GIT_AHEAD}%f  "
-  (( PROMPT_GIT_BEHIND != 0 )) && remote_status+="%F{red}${PROMPT_ICON_DOWN} ${PROMPT_GIT_BEHIND}%f"
-
-  echo "$remote_status"
+__prompt_refresh() {
+  __prompt_set_venv
+  __prompt_set_dir
+  __prompt_set_git
 }
-
-function current_caret() {
-  if [[ "$USER" == "root" ]]; then
-    echo "%F{red}# %f"
-  else
-    echo "%F{green}${PROMPT_ICON_CARET} %f"
-  fi
-}
-
-function return_status() {
-  echo "%(?..%F{red}%? ⚠️ %f)"
-}
+add-zsh-hook precmd __prompt_refresh
 
 # ================================================================
 # PROMPT CONFIGURATION
 # ================================================================
+#
+# PROMPT_SUBST expands these once per redraw. Every `$` below names a variable
+# precmd already filled, so nothing here starts a process — and a branch name or
+# a directory arriving through a parameter is substituted rather than re-parsed,
+# which is the property the `$(...)` version had and this must not lose.
+#
+# `%(?..)` stays inline: it is zsh's own conditional on the last exit status,
+# and it has to be evaluated at render time, after the command whose status it
+# reports. It was wrapped in a subshell that did nothing but echo it back.
 
 PROMPT='
-$(current_venv) $(user_info)$(current_dir)  $(git_prompt_info)
-$(current_caret)'
+${PROMPT_VENV_SEGMENT} ${PROMPT_USER_SEGMENT}${PROMPT_DIR_SEGMENT}  ${PROMPT_GIT_SEGMENT}
+${PROMPT_CARET_SEGMENT}'
 PROMPT2='. '
-RPROMPT='%{$(echotc UP 1)%} $(git_remote_status)   $(return_status)   %{$(echotc DO 1)%}'
+RPROMPT='%{${PROMPT_CURSOR_UP}%} ${PROMPT_GIT_REMOTE_SEGMENT}   %(?..%F{red}%? ⚠️ %f)   %{${PROMPT_CURSOR_DOWN}%}'
 
 # ================================================================
 # TERMINAL TITLE (OSC 2)
