@@ -1,0 +1,462 @@
+#!/usr/bin/env python3
+"""Regroup the tmux workspace from what its panes are actually doing.
+
+Sessions drift: windows accumulate in whichever session was focused when the
+work started, so what ends up next to what records the order you opened things
+rather than how they relate. This reads every pane's content, asks a model
+which panes belong together, and writes a script that moves them.
+
+    tmux-rearrange plan     scan, propose, write the script
+    tmux-rearrange apply    run the script plan wrote
+    tmux-rearrange show     print the scan without calling the model
+
+The model is given one job -- which panes group, and what to call each group --
+because that is the half needing judgement over prose. Every geometric decision
+is computed here, and the tmux commands are rendered here, so the half that can
+destroy work never comes back from a model.
+
+Nothing is applied by plan. Read the script before running it.
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+SCROLLBACK_LINES = 50
+MODEL_TIMEOUT_SECONDS = 300
+PANE_FIELDS = '#{pane_id}\t#{window_id}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_title}'
+
+
+def err(*parts: object) -> None:
+    """Diagnostics go to stderr; stdout carries data only."""
+    print(*parts, file=sys.stderr)
+
+
+class Usage(Exception):
+    """Bad invocation or unusable input: exits 2, not 1."""
+
+
+@dataclass(frozen=True)
+class Pane:
+    pane_id: str
+    window_id: str
+    command: str
+    path: str
+    title: str
+    content: str
+
+
+@dataclass(frozen=True)
+class Window:
+    window_id: str
+    session: str
+    name: str
+    pane_ids: tuple[str, ...]
+    sizes: tuple[int, ...]
+    axis: str
+    """'h' side by side, 'v' stacked, '' for one pane or a nested layout."""
+    tuned: bool
+    """True when a border was dragged: see hand_tuned()."""
+
+
+def tmux(*args: str) -> str:
+    done = subprocess.run(['tmux', *args], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise Usage(f'tmux {" ".join(args)}: {done.stderr.strip()}')
+    return done.stdout
+
+
+def axis_from_layout(layout: str) -> str:
+    """Which way a window is split, read from its layout string.
+
+    Pane dimensions cannot answer this: an even vertical split leaves every
+    pane both the same width AND the same height, so nothing in the numbers
+    distinguishes it from an even horizontal one. tmux's layout string does --
+    it wraps a left-to-right row in {} and a top-to-bottom column in []. A
+    layout carrying both is nested, and no single axis describes it.
+    """
+    side_by_side = '{' in layout
+    stacked = '[' in layout
+    if side_by_side and stacked:
+        return ''
+    if side_by_side:
+        return 'h'
+    if stacked:
+        return 'v'
+    return ''
+
+
+def hand_tuned(sizes: tuple[int, ...], total: int) -> bool:
+    """Whether these pane sizes differ from what tmux would have produced.
+
+    tmux divides a split evenly and gives the remainder to the first pane, so
+    anything further off equal division than that remainder was dragged by
+    hand. One pane is never tuned; it is what a new window starts as.
+    """
+    if len(sizes) < 2:
+        return False
+    even = (total - (len(sizes) - 1)) // len(sizes)
+    return any(abs(size - even) > 1 for size in sizes)
+
+
+def scan() -> tuple[list[Pane], list[Window]]:
+    """Read every pane and window on the server, content included."""
+    panes = []
+    for line in tmux('list-panes', '-a', '-F', PANE_FIELDS).splitlines():
+        pane_id, window_id, command, path, title = line.split('\t')
+        content = tmux('capture-pane', '-p', '-S', f'-{SCROLLBACK_LINES}', '-t', pane_id)
+        panes.append(Pane(pane_id, window_id, command, path, title, content.strip()))
+
+    windows = []
+    fields = '#{window_id}\t#{session_name}\t#{window_name}\t#{window_width}\t#{window_height}\t#{window_layout}'
+    for line in tmux('list-windows', '-a', '-F', fields).splitlines():
+        window_id, session, name, width, height, layout = line.split('\t')
+        members = tmux('list-panes', '-t', window_id, '-F', '#{pane_id}\t#{pane_width}\t#{pane_height}')
+        ids, widths, heights = [], [], []
+        for row in members.splitlines():
+            pane_id, pane_width, pane_height = row.split('\t')
+            ids.append(pane_id)
+            widths.append(int(pane_width))
+            heights.append(int(pane_height))
+        axis = axis_from_layout(layout)
+        sizes = tuple(heights) if axis == 'v' else tuple(widths)
+        extent = int(height) if axis == 'v' else int(width)
+        windows.append(
+            Window(
+                window_id=window_id,
+                session=session,
+                name=name,
+                pane_ids=tuple(ids),
+                sizes=sizes,
+                axis=axis,
+                tuned=bool(axis) and hand_tuned(sizes, extent),
+            )
+        )
+    return panes, windows
+
+
+PROMPT = """You are grouping a tmux workspace by what the work in it is actually about.
+
+Below is every pane on the server: its id, the command running in it, its
+directory, its title, and the tail of its screen.
+
+Group them into sessions. A session is one initiative -- the effort the work
+belongs to, not the repo it lives in. Within a session, group panes into
+windows: panes that are the same thread of work (a conversation and the shell
+or editor serving it) share a window.
+
+Rules that matter:
+- Judge by pane CONTENT, not titles. Two conversations referencing the same
+  issue or design usually belong together even if their titles look unrelated.
+- A session needs at least one pane running something that is not a shell. A
+  lone idle shell is not an initiative.
+- Name sessions specifically enough to recall later. "docs", "ops", "misc" and
+  "scratch" are useless; name the actual effort.
+- Do not put two of the same long-running interactive program in one window.
+- Every pane id below must appear exactly once in your answer.
+
+Return ONLY JSON, no prose and no code fence:
+
+{"sessions": [{"name": "...", "why": "one line", "windows": [{"panes": ["%1", "%2"]}]}]}
+
+PANES:
+"""
+
+
+def describe(panes: list[Pane], windows: list[Window]) -> str:
+    by_window = {w.window_id: w for w in windows}
+    blocks = []
+    for pane in panes:
+        window = by_window.get(pane.window_id)
+        where = f'{window.session}:{window.name}' if window else '?'
+        blocks.append(f'--- {pane.pane_id}  in {where}  cmd={pane.command}  cwd={pane.path}\ntitle: {pane.title}\n{pane.content}\n')
+    return '\n'.join(blocks)
+
+
+def model_result(payload: object) -> str:
+    """Pull the answer text out of what `claude -p --output-format json` emits.
+
+    That is an array of message objects -- assistant turns, rate-limit events,
+    a trailing system record -- and only the one typed "result" carries the
+    reply. A bare object is accepted too, in case the shape changes back.
+    """
+    if isinstance(payload, dict):
+        records = [payload]
+    elif isinstance(payload, list):
+        records = [r for r in payload if isinstance(r, dict)]
+    else:
+        raise Usage(f'claude returned {type(payload).__name__}, not a result object')
+
+    for record in records:
+        if record.get('type') == 'result' or 'result' in record:
+            if record.get('is_error'):
+                raise Usage(f'claude reported an error: {str(record.get("result"))[:300]}')
+            return str(record.get('result', '')).strip()
+    raise Usage('claude returned no result record')
+
+
+def ask_model(prompt: str) -> dict:
+    """Call claude -p and return the parsed grouping."""
+    if not shutil.which('claude'):
+        raise Usage('claude is not installed; nothing can propose a grouping')
+    try:
+        done = subprocess.run(
+            ['claude', '-p', prompt, '--output-format', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=MODEL_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise Usage(f'claude did not answer within {MODEL_TIMEOUT_SECONDS}s') from None
+    if done.returncode != 0:
+        raise Usage(f'claude failed: {done.stderr.strip()[:400]}')
+    try:
+        body = model_result(json.loads(done.stdout))
+    except json.JSONDecodeError as bad:
+        raise Usage(f'claude did not return JSON: {bad}') from None
+    # A fenced block is the common way the instruction not to fence gets ignored.
+    if body.startswith('```'):
+        body = body.split('\n', 1)[1].rsplit('```', 1)[0]
+    try:
+        grouping = json.loads(body)
+    except json.JSONDecodeError as bad:
+        raise Usage(f'the grouping was not JSON: {bad}\n{body[:300]}') from None
+    if not isinstance(grouping, dict) or 'sessions' not in grouping:
+        raise Usage('the grouping has no "sessions" key')
+    return grouping
+
+
+def validate(grouping: dict, panes: list[Pane]) -> None:
+    """The one invariant worth enforcing before any tmux command runs.
+
+    Every pane goes somewhere, once. A model that dropped a pane would leave
+    it stranded in a half-dissolved session; one that invented an id would
+    abort the script partway, having already moved real work.
+    """
+    seen = [p for s in grouping.get('sessions', []) for w in s.get('windows', []) for p in w.get('panes', [])]
+    have = {p.pane_id for p in panes}
+    if len(seen) != len(set(seen)):
+        dupes = sorted({p for p in seen if seen.count(p) > 1})
+        raise Usage(f'grouping repeats panes: {" ".join(dupes)}')
+    if set(seen) != have:
+        missing = sorted(have - set(seen))
+        invented = sorted(set(seen) - have)
+        detail = []
+        if missing:
+            detail.append(f'dropped {" ".join(missing)}')
+        if invented:
+            detail.append(f'invented {" ".join(invented)}')
+        raise Usage('grouping does not cover the workspace: ' + '; '.join(detail))
+
+
+def render(grouping: dict, panes: list[Pane], windows: list[Window]) -> list[str]:
+    """Turn a grouping into tmux commands. Pure: no tmux call happens here.
+
+    Panes are addressed by %id and windows by @id throughout, never by index --
+    renumber-windows shifts indices as each window leaves, so an index captured
+    up front goes stale mid-script.
+    """
+    home = {p.pane_id: p for p in panes}
+    source_of = {pid: w for w in windows for pid in w.pane_ids}
+    lines = [
+        '#!/usr/bin/env bash',
+        '# Written by tmux-rearrange. Read before running.',
+        'set -euo pipefail',
+        '',
+        'present() { tmux display-message -p -t "$1" \'\' >/dev/null 2>&1; }',
+        '',
+    ]
+    for pane_id in sorted(home):
+        lines.append(f'present {pane_id} || {{ echo "pane {pane_id} is gone; re-run plan"; exit 1; }}')
+    lines.append('')
+
+    for session in grouping['sessions']:
+        name = session['name']
+        scratch = f'__rearrange_{name}'
+        why = session.get('why', '')
+        lines.append(f'# {name}' + (f' -- {why}' if why else ''))
+        lines.append(f'tmux new-session -d -s {shell_quote(scratch)} -n __placeholder')
+        for window in session['windows']:
+            members = window['panes']
+            first, rest = members[0], members[1:]
+            # No -n: leaving the name unset keeps automatic-rename on, so the
+            # window titles itself from whatever conversation it holds.
+            lines.append(f"W=$(tmux break-pane -d -P -F '#{{window_id}}' -s {first} -t {shell_quote(scratch)}:)")
+            join = '-h' if target_axis(members, source_of) == 'h' else '-v'
+            for pane_id in rest:
+                lines.append(f'tmux join-pane -d -s {pane_id} -t "$W" {join}')
+            # break-pane on a window's LAST pane moves that window wholesale
+            # rather than making a new one, carrying its old name and its
+            # automatic-rename=off with it. Turning it back on is what makes
+            # the window name itself from the conversation it now holds.
+            lines.append('tmux set-window-option -t "$W" automatic-rename on')
+            lines.extend(restore_shape(members, home, source_of))
+        lines.append(f'tmux kill-window -t {shell_quote(scratch)}:__placeholder')
+        lines.append(f'tmux rename-session -t {shell_quote(scratch)} {shell_quote(name)}')
+        lines.append('')
+
+    lines.append("tmux list-sessions -F '#{session_name}: #{session_windows} windows'")
+    return lines
+
+
+def target_axis(members: list[str], source_of: dict[str, Window]) -> str:
+    """How to arrange a rebuilt window: its source's axis, or side by side.
+
+    render() and restore_shape() have to agree. Joining side by side and then
+    restoring a stacked proportion resizes the wrong dimension, which reads as
+    the restore silently doing nothing.
+    """
+    sources = {source_of[p].window_id for p in members if p in source_of}
+    source = source_of.get(members[0])
+    if len(sources) == 1 and source is not None and source.axis:
+        return source.axis
+    return 'h'
+
+
+def restore_shape(members: list[str], home: dict[str, Pane], source_of: dict[str, Window]) -> list[str]:
+    """Keep the window's shape when the regroup would otherwise flatten it.
+
+    Two rules, both learned by getting them wrong. A window that ends up with a
+    single pane is a regression whenever its source had more, because a new
+    window starts with one pane and every split was therefore made by hand --
+    so the vacated slot gets a blank shell. And where the source window was
+    hand-tuned and its panes stayed together, the dragged proportion is
+    reapplied; a proportion cannot follow panes that were split up, so that
+    case is deliberately left even.
+
+    Both follow the source window's own axis. Restoring a stacked window as a
+    side-by-side one would be its own kind of flattening.
+    """
+    lines = []
+    sources = {source_of[p].window_id for p in members if p in source_of}
+    source = source_of.get(members[0])
+    if source is None or not source.axis:
+        return lines
+    axis = target_axis(members, source_of)
+    flag = '-h' if axis == 'h' else '-v'
+    dimension = '-x' if axis == 'h' else '-y'
+
+    if len(members) == 1 and len(source.pane_ids) > 1:
+        path = home[members[0]].path
+        share = pane_share(source, members[0])
+        lines.append(f'tmux split-window {flag} -d -l {100 - share}% -t {members[0]} -c {shell_quote(path)}')
+        return lines
+
+    if len(sources) == 1 and source.tuned and len(members) == len(source.pane_ids):
+        share = pane_share(source, members[-1])
+        lines.append(f'tmux resize-pane -t {members[-1]} {dimension} {share}%')
+    return lines
+
+
+def pane_share(window: Window, pane_id: str) -> int:
+    """That pane's percentage of its source window's width."""
+    total = sum(window.sizes)
+    index = window.pane_ids.index(pane_id)
+    return max(10, min(90, round(window.sizes[index] * 100 / total)))
+
+
+def shell_quote(text: str) -> str:
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
+def plan_path() -> Path:
+    state = os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state'
+    return Path(state) / 'tmux-rearrange' / 'plan.sh'
+
+
+def cmd_show(as_json: bool) -> int:
+    panes, windows = scan()
+    if as_json:
+        json.dump(
+            {
+                'panes': [vars(p) | {'content': p.content[-400:]} for p in panes],
+                'windows': [vars(w) for w in windows],
+            },
+            sys.stdout,
+            indent=2,
+            default=list,
+        )
+        print()
+        return 0
+    for window in windows:
+        mark = ' tuned' if window.tuned else ''
+        print(f'{window.session}:{window.name}  {len(window.pane_ids)} panes  {"x".join(map(str, window.sizes))}{mark}')
+        for pane_id in window.pane_ids:
+            pane = next(p for p in panes if p.pane_id == pane_id)
+            print(f'  {pane_id:5} {pane.command:8} {pane.title}')
+    return 0
+
+
+def cmd_plan(as_json: bool) -> int:
+    panes, windows = scan()
+    err(f'scanned {len(panes)} panes in {len(windows)} windows; asking the model')
+    grouping = ask_model(PROMPT + describe(panes, windows))
+    validate(grouping, panes)
+
+    broken = [w for w in windows if w.tuned and not stays_together(w, grouping)]
+    for window in broken:
+        err(f'warning: {window.session}:{window.name} was hand-tuned and its panes are being split up; its layout cannot be carried over')
+
+    script = plan_path()
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text('\n'.join(render(grouping, panes, windows)) + '\n')
+    script.chmod(0o755)
+
+    if as_json:
+        json.dump(grouping, sys.stdout, indent=2)
+        print()
+    else:
+        for session in grouping['sessions']:
+            print(f'{session["name"]}  ({len(session["windows"])} windows)  {session.get("why", "")}')
+            for window in session['windows']:
+                print('  ' + ' '.join(window['panes']))
+    err(f'wrote {script} -- read it, then: tmux-rearrange apply')
+    return 0
+
+
+def stays_together(window: Window, grouping: dict) -> bool:
+    for session in grouping['sessions']:
+        for target in session['windows']:
+            if set(target['panes']) == set(window.pane_ids):
+                return True
+    return False
+
+
+def cmd_apply() -> int:
+    script = plan_path()
+    if not script.exists():
+        raise Usage(f'no plan at {script}; run tmux-rearrange plan first')
+    return subprocess.run(['bash', str(script)]).returncode
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog='tmux-rearrange', description=__doc__.splitlines()[0])
+    sub = parser.add_subparsers(dest='verb', required=True)
+    for verb, help_text in [
+        ('show', 'print the scan without calling the model'),
+        ('plan', 'scan, propose a regroup, write the script'),
+        ('apply', 'run the script plan wrote'),
+    ]:
+        p = sub.add_parser(verb, help=help_text)
+        if verb != 'apply':
+            p.add_argument('--json', action='store_true', help='machine-readable output on stdout')
+
+    args = parser.parse_args()
+    if args.verb == 'show':
+        return cmd_show(args.json)
+    if args.verb == 'plan':
+        return cmd_plan(args.json)
+    return cmd_apply()
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Usage as problem:
+        err(f'tmux-rearrange: {problem}')
+        sys.exit(2)

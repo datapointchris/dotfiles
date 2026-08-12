@@ -265,10 +265,41 @@ which went with the naming scheme and went out with it.
 Together these are what make a catch-all session safe. Work can start anywhere without a decision
 about where it belongs, and be filed once that is obvious.
 
+## Regrouping the Whole Workspace
+
+Filing a window at a time keeps up only while the drift is small. `tmux-rearrange` is the bulk
+version: it reads every pane's scrollback, asks a model which panes belong together, and writes a
+script that moves them. `plan` proposes, `apply` runs what plan wrote, `show` prints the scan
+without spending a model call.
+
+**The model gets exactly one job — which panes group, and what to call each group.** That is the
+half needing judgement over prose, and it is the half nothing else can do: titles alone will not
+reveal that two conversations two windows apart both turn on the same issue. Everything geometric
+is computed locally and the tmux commands are rendered locally, so the half that can destroy work
+never comes back from a model. One invariant is enforced before a single command runs — the set of
+pane ids returned must equal the set sent, exactly once each.
+
+Layout intent is read, not guessed. **A new window opens with one pane, so any split at all was made
+by hand** — an even 188|188 is as deliberate as a dragged 183|193, and treating only the uneven case
+as intentional is what once collapsed six windows to a single pane. Proportion is the finer signal:
+past the one-cell remainder tmux leaves when dividing, a border was dragged. The axis comes from the
+layout string rather than the numbers, because an even vertical split leaves every pane both the
+same width *and* the same height, so nothing in the dimensions distinguishes it from a horizontal
+one; `{}` is a row and `[]` is a column.
+
+What it cannot do is worth knowing before trusting it. Two-across versus three is undetectable —
+both are default-shaped for their pane count — so that is a preference, not an observation. A
+hand-tuned window whose panes get split across sessions loses its layout permanently, since the
+layout string encodes pane ids and the old geometry; only the per-pane fraction transfers, and only
+where the group stays together. It sees content, never intent: it can tell that two conversations
+cite the same item, not that you want them apart. And it proposes rather than applies, because
+reading the script is what catches the run where it was wrong.
+
 ## Files
 
 | File | Role |
 | --- | --- |
-| `apps/common/tmux-sessions` | Switching, creation, promotion, status relocation |
+| `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation |
+| `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colours |
