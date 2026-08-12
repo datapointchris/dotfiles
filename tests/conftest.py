@@ -222,11 +222,18 @@ def no_run_artefacts_on_this_machine(request):
 
     Skipped under `--docker`, where an install writes its records inside the
     container and the host's directory is not the subject.
+
+    Narrowed to this machine's own records, because that directory is a Syncthing
+    folder and a peer's run arriving mid-session is not a leak. `runs.begin`
+    defaults a record's host to `paths.MACHINE_ID`, so anything the suite could
+    write carries it — a file naming another box was delivered, not written here.
     """
     from dotfiles import paths
 
     def artefacts() -> set[str]:
-        return {path.name for path in paths.RUNS_DIR.iterdir()} if paths.RUNS_DIR.is_dir() else set()
+        if not paths.RUNS_DIR.is_dir():
+            return set()
+        return {path.name for path in paths.RUNS_DIR.iterdir() if f'-{paths.MACHINE_ID}-' in path.name}
 
     if request.config.getoption('docker'):
         yield
