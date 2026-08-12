@@ -92,7 +92,7 @@ class SystemResource:
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
-            met=ev.measured_preconditions(),
+            met=session.preconditions,
             packages=sum(1 for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
         )
 

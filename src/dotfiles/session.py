@@ -158,6 +158,22 @@ class Session:
 
         return evidence.Inventories(refresh=self.refresh)
 
+    @functools.cached_property
+    def preconditions(self) -> resolver.Preconditions:
+        """Which preconditions this machine meets, answered once for the whole run.
+
+        On the Session for the reason `inventories` is: more than one resource
+        wants the same answer and each observes for itself. The `gh` half is the
+        expensive one — `gh auth token` is 30ms against the two stats `have_amd_gpu`
+        costs — and it was already being paid once per resource that asked.
+
+        `evidence` is imported here rather than at module scope because it reaches
+        the resource vocabulary, which reaches this file.
+        """
+        from dotfiles import evidence
+
+        return evidence.measured_preconditions()
+
     @property
     def env_file(self) -> Path:
         return self.home / '.env'

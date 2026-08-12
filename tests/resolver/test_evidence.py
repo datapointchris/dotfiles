@@ -17,6 +17,7 @@ import pytest
 from dotfiles import evidence
 from dotfiles.effects import Completed
 from dotfiles.providers import gotool
+from dotfiles.session import Session
 
 
 @pytest.fixture
@@ -129,3 +130,25 @@ def test_gobin_itself_is_measured_by_gotool_directly(gobin) -> None:
     rather than assumed, since a mismatch here would silently turn every Go tool
     back into the general, unrouted case."""
     assert gotool.gobin() == gobin
+
+
+def test_the_preconditions_are_measured_once_however_many_resources_ask(monkeypatch, tmp_path) -> None:
+    """`gh auth token` is 30ms and more than one resource wants the answer. Asked
+    per resource it was a subprocess each deciding one fact about the machine, and
+    a walk that reached a different verdict half way through would report two
+    states of one login inside a single report."""
+    asked: list[list[str]] = []
+
+    def record(command, **_kwargs) -> Completed:
+        argv = tuple(str(part) for part in command)
+        asked.append(list(argv))
+        return Completed(argv, 1, '')
+
+    monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+    monkeypatch.setattr(evidence, 'run', record)
+    live = Session(machine_name='box', repo=tmp_path, home=tmp_path)
+
+    first = live.preconditions
+
+    assert live.preconditions is first
+    assert len(asked) == 1

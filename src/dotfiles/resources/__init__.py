@@ -288,6 +288,16 @@ class Batched(Protocol):
         ...
 
 
+GITHUB_AUTH_ADVICE = 'log in with `gh auth login`, or export GITHUB_TOKEN, then re-run'
+"""What to do about a missing GitHub credential, said in one place.
+
+Two resources report it and they must not word it differently: `packages` names
+it as the reason a private-repo tool cannot be installed, and `auth` names it as
+the login itself being absent. A reader seeing both rows in one `check` is
+reading one problem, so one sentence.
+"""
+
+
 def repair_for(item: DesiredItem, verdict: Verdict, met: Preconditions, blocked_by: Blocker | None = None) -> Repair:
     """Whether `apply` could do anything about this one.
 
@@ -342,7 +352,7 @@ def advice_for(item: DesiredItem, repair: Repair, blocked_by: Blocker | None = N
     if blocked_by is not None:
         return f'{blocked_by.package} is installed and conflicts with this; remove it first: {blocked_by.removal}'
     if item.precondition is Precondition.GITHUB_AUTH:
-        return 'log in with `gh auth login`, or export GITHUB_TOKEN, then re-run'
+        return GITHUB_AUTH_ADVICE
     if item.precondition is Precondition.AMD_GPU:
         return 'this machine has no AMD GPU; there is nothing to install it for here'
     return ''

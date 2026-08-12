@@ -160,7 +160,7 @@ class PackagesResource:
 
         return Observed(
             evidence=evidence,
-            met=ev.measured_preconditions(),
+            met=session.preconditions,
             reported=_reported_versions(present),
             shadowed=_shadowing(mine, evidence, plan, session.repo),
             undeclared=_undeclared_own_tools(plan, session.home),
