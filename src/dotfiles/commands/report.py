@@ -159,6 +159,24 @@ def _render(path: Path, record: runs.RunRecord) -> None:
 
 
 def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
+    """The record itself for a machine, and a reading of it for a person.
+
+    **`--json` is the record and nothing else**, which is why the slowest
+    commands appear only in the rendering. `reconcile.apply_machine` emits its
+    `--json` by reading back the file it just wrote, precisely so that a piped
+    apply and a later `report show --json` are the same bytes for one run.
+    Synthesising a field into one of them ends that, and the field would be
+    derived rather than recorded — a second document assembled from two sources,
+    which is the arrangement that property exists to refuse.
+
+    The asymmetry is between a derived view and its source rather than between a
+    person and a machine. What `_slow_commands` reads is the run's own `.jsonl`,
+    which is machine-readable, sits beside this file, and holds one line per
+    command with its duration:
+
+        jq -r 'select(.event == "ran") | "\\(.seconds)\\t\\(.argv | join(" "))"' \\
+          "$(dotfiles report path | sed 's/.json$/.jsonl/')" | sort -rn | head
+    """
     if as_json:
         emit_json(dataclasses.asdict(record))
     else:

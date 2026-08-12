@@ -142,9 +142,13 @@ prompt_user_context() {
 # VIRTUALENV
 # ================================================================
 
-# Get virtualenv name (basename only)
+# The virtualenv's directory name, taken by parameter expansion rather than by
+# forking basename. Both prompts call this once per redraw, so the fork was a
+# process per prompt to strip a path — bash pays it today and zsh paid it until
+# its prompt stopped calling out to anything. `##*/` is POSIX and works on the
+# bash 3.2 macOS ships, so the rule stays in one place for both shells.
 prompt_venv_name() {
   if [[ -n "$VIRTUAL_ENV" ]]; then
-    basename "$VIRTUAL_ENV"
+    printf '%s\n' "${VIRTUAL_ENV##*/}"
   fi
 }
