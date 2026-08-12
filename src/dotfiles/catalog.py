@@ -978,6 +978,24 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     )
 
 
+def raw_sections(path: Path) -> dict[str, Any]:
+    """A declaration file as written, before any of it is modelled.
+
+    For the questions a `Catalog` cannot answer because modelling is what
+    discards them: which sections the file names *including* the ones no
+    dataclass claims, and what a manifest body holds when it is about to be
+    rewritten into a fixture. Both need the file rather than the object, and both
+    would otherwise reach for a second `yaml.safe_load` — a second copy of the
+    grammar this module owns, invisible as a copy because it reads as opening a
+    file.
+
+    An empty file is `{}`, which is `load`'s own reading of one. A missing file
+    raises, for the same reason `load` lets one raise: nothing here can say what
+    a caller meant by a path that is not there.
+    """
+    return yaml.safe_load(path.read_text()) or {}
+
+
 def _file_for(cls: type[Entry], packages: Path, system: Path) -> Path:
     return system if cls.declared_in == 'system.yml' else packages
 

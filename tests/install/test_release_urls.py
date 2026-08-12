@@ -29,10 +29,10 @@ from pathlib import Path
 
 import httpx2
 import pytest
-import yaml
 
 from dotfiles import catalog
 from dotfiles import github_release
+from dotfiles import machine as machines
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -40,18 +40,16 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import releases as providers
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-MANIFESTS = REPO_ROOT / 'install' / 'manifests'
 PACKAGES_YML = REPO_ROOT / 'install' / 'packages.yml'
 
-# The (os, arch) pairs each PLATFORM string fuses together. Writing the fusion
-# out is the point: macOS is the one platform serving two architectures, so a
-# tool that spells only one of them is invisible from whichever Mac runs the
-# suite. Coordinates replace this table.
-PLATFORM_TARGETS = {
-    'macos': (('darwin', 'arm64'), ('darwin', 'x86_64')),
-    'archlinux': (('linux', 'x86_64'),),
-    'linux': (('linux', 'x86_64'),),
-    'wsl': (('linux', 'x86_64'),),
+# The architectures each OS family serves. Writing the pairing out is the point:
+# macOS is the one OS serving two, so a tool that spells only one of them is
+# invisible from whichever Mac runs the suite. Keyed on the coordinate rather
+# than on a `platform:` string, because the loader answers in coordinates and a
+# manifest naming its axes directly has no platform label at all.
+OS_TARGETS = {
+    OSFamily.DARWIN: (('darwin', 'arm64'), ('darwin', 'x86_64')),
+    OSFamily.LINUX: (('linux', 'x86_64'),),
 }
 
 Case = tuple[str, str, str]
@@ -61,22 +59,27 @@ LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 not vary by target for any of them, and every declared tool covers this one."""
 
 
-def _read_yaml(path: Path) -> dict:
-    return yaml.safe_load(path.read_text())
-
-
 def declared_releases() -> set[str]:
-    return {entry['name'] for entry in _read_yaml(PACKAGES_YML)['github_releases']}
+    return {entry.name for entry in catalog.load().section('github_releases')}
 
 
 def build_corpus() -> list[Case]:
-    """Every (tool, os, arch) any manifest actually asks for, deduplicated."""
+    """Every (tool, os, arch) any manifest actually asks for, deduplicated.
+
+    Asked of `machine.load` and `Subscription.wants` rather than of the manifest
+    files, because what a manifest asks for is not what its `github_releases:`
+    key literally contains — `true` means the whole section, absent means none,
+    and a list means membership. Re-reading the key here would be a second copy
+    of that grammar, and it is the copy that would be wrong the first time a
+    machine spells its subscription the other way.
+    """
+    declared = catalog.load()
     cases: set[Case] = set()
-    for manifest in sorted(MANIFESTS.glob('*.yml')):
-        declaration = _read_yaml(manifest)
-        for target in PLATFORM_TARGETS[declaration['platform']]:
-            for tool in declaration.get('github_releases') or []:
-                cases.add((tool, *target))
+    for name in machines.names(REPO_ROOT):
+        machine = machines.load(name, REPO_ROOT)
+        for entry in declared.section('github_releases'):
+            if machine.subscription('github_releases').wants(entry):
+                cases.update((entry.name, *target) for target in OS_TARGETS[machine.coordinates.os_family])
     return sorted(cases)
 
 

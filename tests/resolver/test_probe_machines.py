@@ -90,7 +90,7 @@ def probe_root(tmp_path: Path) -> Path:
         shutil.copy(REPO_ROOT / 'install' / declaration, install / declaration)
 
     for probe in PROBES:
-        source = yaml.safe_load((REPO_ROOT / 'install' / 'manifests' / f'{probe.derived_from}.yml').read_text())
+        source = catalog.raw_sections(REPO_ROOT / 'install' / 'manifests' / f'{probe.derived_from}.yml')
         source.pop('platform')
         (install / 'manifests' / f'{probe.name}.yml').write_text(
             yaml.safe_dump({**source, 'machine': probe.name, 'coordinates': probe.coordinates}, sort_keys=False)

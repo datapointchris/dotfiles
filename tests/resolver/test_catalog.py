@@ -70,7 +70,7 @@ def test_every_section_in_a_declaration_file_has_a_class(file: str, known: dict[
     `min_version` — which is what the constraint rule exists to police — and no
     per-rule test could see it, because each one names its own section.
     """
-    declared = yaml.safe_load((REPO_ROOT / 'install' / file).read_text())
+    declared = catalog.raw_sections(REPO_ROOT / 'install' / file)
     unmodelled = set(declared) - set(known) - catalog.BARE_SECTIONS
 
     assert not unmodelled, (
