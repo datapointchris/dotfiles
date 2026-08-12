@@ -144,8 +144,8 @@ def elapsed(seconds: float) -> str:
     before it means anything, and the whole reason this is printed is that
     somebody sat watching it.
 
-    Nothing at all under a tenth of a second. Seven resources each reporting
-    `0.0s` is a column of noughts that makes the one row worth reading harder to
+    Nothing at all under a tenth of a second. A column of `0.0s` down every
+    resource that answered instantly makes the one row worth reading harder to
     find, which is the opposite of what a timing is for.
 
     A slow one is coloured and an ordinary one is plain, rather than the pair
