@@ -30,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
 from pathlib import Path
 
@@ -426,13 +427,18 @@ def verify_release_checksum(
             return Verification.UNPUBLISHED
         from_sidecar = checksum_asset.endswith(CHECKSUM_SIDECAR_SUFFIXES)
 
-        destination = Path(f'/tmp/{asset_name}.checksums')  # noqa: S108
         browser_url = f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}'
-        if not download_asset(browser_url, destination, repo, tag, checksum_asset):
-            log_error(f'Failed to download {checksum_asset} from {repo}')
-            return Verification.FAILED
-        checksums_text = destination.read_text()
-        destination.unlink(missing_ok=True)
+        # A fixed `/tmp/<asset>.checksums` is both writable and guessable by
+        # anyone on the box, and `write_bytes` follows a symlink planted there.
+        # A stale file another user owns is the quieter half: the write raises,
+        # `download_asset` answers False, and every install of that tool fails
+        # for good blaming the network.
+        with tempfile.TemporaryDirectory(prefix='dotfiles-checksums-') as scratch:
+            destination = Path(scratch) / checksum_asset
+            if not download_asset(browser_url, destination, repo, tag, checksum_asset):
+                log_error(f'Failed to download {checksum_asset} from {repo}')
+                return Verification.FAILED
+            checksums_text = destination.read_text()
 
     expected = checksum_for_asset(checksums_text, asset_name, from_sidecar)
     if expected is None:

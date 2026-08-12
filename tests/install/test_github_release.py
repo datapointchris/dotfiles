@@ -167,6 +167,51 @@ class TestSidecarChecksums:
             assert github_release.select_checksum_asset(names, 'tool.tar.gz').endswith(suffix)
 
 
+class TestChecksumStaging:
+    """Where the published checksums file is put while it is being read.
+
+    It used to be `/tmp/<asset>.checksums` — one path, shared by every user on
+    the box and the same on every run. Anyone could plant a symlink there for
+    `write_bytes` to follow, and a stale root-owned file made every install of
+    that tool fail for good with a message blaming the network.
+    """
+
+    ASSET = 'tool.tar.gz'
+
+    def stage(self, tmp_path, monkeypatch) -> list:
+        """Verify one asset, recording where the checksums file was written to."""
+        payload = tmp_path / self.ASSET
+        payload.write_text('payload bytes')
+        staged: list = []
+
+        monkeypatch.setattr(github_release, 'release_assets', lambda repo, tag: {self.ASSET: 1, 'checksums.txt': 2})
+
+        def download(url, destination, repo='', tag='', asset_name=''):
+            staged.append(destination)
+            destination.write_text(f'{github_release.sha256_of(payload)}  {self.ASSET}\n')
+            return True
+
+        monkeypatch.setattr(github_release, 'download_asset', download)
+
+        outcome = github_release.verify_release_checksum(payload, self.ASSET, repo='owner/repo', tag='v1.0.0')
+        assert outcome is github_release.Verification.VERIFIED
+        return staged
+
+    def test_two_runs_never_stage_at_the_same_path(self, tmp_path, monkeypatch):
+        """The security property in the form a test can hold: an attacker cannot
+        know where the next run will write, because no two runs agree on it."""
+        first = self.stage(tmp_path, monkeypatch)
+        second = self.stage(tmp_path, monkeypatch)
+
+        assert first[0] != second[0]
+
+    def test_the_staged_file_and_its_directory_are_gone_afterwards(self, tmp_path, monkeypatch):
+        staged = self.stage(tmp_path, monkeypatch)[0]
+
+        assert not staged.exists()
+        assert not staged.parent.exists()
+
+
 class TestLatestVersion:
     """The prefixed form exists because four declared releases are CLIs living in
     a repo that also releases an API and a web app. `releases/latest` there
