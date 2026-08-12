@@ -67,15 +67,24 @@ required:
       - apps/common/pr-list
 
   # Two axes because two things have to hold: a machine outside the fleet has no
-  # peers to enumerate, and a server is not somewhere anybody sits completing an
-  # ssh target. Its absence is silent in the strict sense — _cc_fleet_hosts
-  # returns nothing, which is indistinguishable from a fleet of one.
-  - name: FLEET_MACHINES
-    description: Absolute path to this machine's peer roster
+  # homelab to name, and a server is not where anybody edits an inventory. Its
+  # absence is not silent — every reader refuses and names this variable — and it
+  # is declared here anyway, because a value the machine must supply is exactly
+  # what this register is for and a loud failure at deploy time is later than a
+  # `dotfiles check` that fails now.
+  #
+  # The consumers are outside this repo, which no other entry here has. The file
+  # is fleet data and dotfiles must never read it; what dotfiles supplies is the
+  # machine's answer to where it lives, which is the same service ~/.env performs
+  # for everything else that runs on the box.
+  - name: HOSTS_JSON
+    description: Absolute path to this machine's fleet host inventory
     network_trust: fleet
     capacity: workstation
     consumers:
-      - shell/common/functions.sh
+      - ~/homelab/pyinfra/inventory.py
+      - ~/homelab/scripts/lib/inventory.sh
+      - ~/homelab/scripts/vaultwarden-upgrade.sh
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and

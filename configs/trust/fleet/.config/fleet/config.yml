@@ -13,6 +13,12 @@
 # fleet-only, where the registry is a file every workstation has.
 machines_file: ~/dev/machines.json
 
+# The homelab inventory /etc/hosts is rendered from. Named here as well as in
+# $HOSTS_JSON because the two answer different questions: the variable is set in
+# an interactive shell, which is where homelab's deploys read it, and a systemd
+# timer running `fleet hosts check` inherits nothing.
+hosts_file: ~/dev/hosts.json
+
 # The standards `fleet audit` grades against. Named here and not left to
 # $STANDARDS_DIR, per standards/data.md § "A shared file is named in config;
 # only the tool's own default is compiled in" — the same reason repos_file is

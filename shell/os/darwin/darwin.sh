@@ -54,9 +54,6 @@ alias delete-ds-store="find . -type f -name '*.DS_Store' -ls -delete"
 # Reload local nginx and supervisor
 alias reload-dev='sudo nginx -s reload && sudo supervisorctl reload'
 
-# Symlink /etc/hosts to etc.hosts
-alias symlink-hosts='sudo ln -sf $HOME/etc.hosts /etc/hosts'
-
 # ---------- Miscellaneous ---------- #
 
 # Audio control for greenpi

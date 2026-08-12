@@ -7,10 +7,10 @@
 # ~12ms here, because it boots a full node process, and it omits the tmux
 # pane that makes a row worth jumping to.
 #
-# This is the per-machine half of a fleet-wide listing: `cca` and
-# `fleet claude sessions list` both reach other boxes by running this over
-# ssh, so the registry read has one implementation and the liveness test
-# runs where the pid means something.
+# This is the per-machine half of a fleet-wide listing: `fleet claude
+# sessions list` reaches other boxes by running this over ssh, so the
+# registry read has one implementation and the liveness test runs where the
+# pid means something.
 # ================================================================
 
 set -euo pipefail
@@ -32,7 +32,7 @@ show_help() {
 
   help_section "Notes"
   help_row "" "" "NAME is the address peers message, as /list-agents shows it"
-  help_row "" "" "Use cca for every machine in the fleet, not just this one"
+  help_row "" "" "This machine only; a fleet-wide listing runs this on each box"
   help_end
 }
 

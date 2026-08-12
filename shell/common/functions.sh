@@ -791,27 +791,6 @@ function doshell() {
   fi
 }
 
-# Every peer machine but this one, skipping any that declares no ssh.
-#
-# $FLEET_MACHINES names the roster and is declared in install/flags.yml as a
-# machine-local value; this repo never learns where it lives, and unset means
-# there are no peers rather than a guessed path. The roster does not repeat the
-# addresses, which configs/trust/fleet/etc.hosts already declares — a machine's
-# name is its ssh target and resolves through there, so there is one place an
-# address can be wrong.
-_cc_fleet_hosts() {
-  local registry="${FLEET_MACHINES:-}" self
-  [[ -n $registry && -r $registry ]] || return 0
-  self=$(uname -n)
-  jq -r --arg self "${self%%.*}" '
-    .machines[]
-    | select(.ssh != false)
-    | select((.status // "active") == "active")
-    | select(.name != $self)
-    | .name
-  ' "$registry" 2>/dev/null
-}
-
 # Bypass is the permission mode for every session, set once as
 # permissions.defaultMode in ~/.claude/settings.json rather than repeated as a
 # flag here — a session started any other way (an editor, a resume, a scheduled
@@ -829,8 +808,8 @@ _cc_fleet_hosts() {
 # set by hand suppresses the generated one outright — so a session named from a
 # word pool is unfindable in /resume forever after, showing `frito` where the
 # subject should be. Bare `cc` passes nothing and claude derives
-# `<dirname>-<hex>` for the address, which `cca` prints; pass a name only when
-# the name is also the title you want.
+# `<dirname>-<hex>` for the address, which `claude-sessions` prints; pass a
+# name only when the name is also the title you want.
 #@cc
 #--> cc [name] — start claude; unnamed, it takes an address from the directory and keeps a real title
 cc() {
@@ -843,8 +822,8 @@ cc() {
 }
 
 # Resume derives a fresh address rather than restoring the old one, so a session
-# is addressed by whatever `cca` prints for it now, never by what it was called
-# before. Naming a resume retitles the conversation for good, which on one old
+# is addressed by whatever `claude-sessions` prints for it now, never by what
+# it was called before. Naming a resume retitles the conversation for good, which on one old
 # enough to have forgotten costs the only way back to it.
 #@ccr
 #--> ccr [name] — resume a claude session by picker; naming it retitles the conversation
@@ -855,42 +834,6 @@ ccr() {
     shift
   fi
   claude --resume "${name[@]}" "$@"
-}
-
-# NAME is the address other sessions message — the same list `/list-agents`
-# shows from inside Claude. HOST says which desk to attach to.
-#
-# Every box runs the same `claude-sessions`, reached over ssh, rather than this
-# reading a synced copy of their registries: a descriptor names a pid and a
-# $XDG_RUNTIME_DIR socket, and the liveness test is kill -0, so it is only true
-# on the machine that wrote it. Asking each box means the test runs where the
-# pid means something, and the host is which machine answered rather than a
-# field that can go stale.
-#
-# A box that is asleep, or has not deployed the app yet, contributes no rows and
-# no error — a laptop being shut is the normal case, not a failure worth saying.
-#@cca
-#--> cca — list every live claude session across the fleet, by the name peers address them with
-cca() {
-  local rows self tmp host
-  self=$(uname -n)
-  self=${self%%.*}
-  tmp=$(mktemp -d) || return 1
-  (
-    claude-sessions | awk -v h="$self" 'BEGIN { FS = OFS = "\t" } { print h, $0 }' >"$tmp/$self" &
-    while IFS= read -r host; do
-      ssh -o ConnectTimeout=3 -o BatchMode=yes "$host" claude-sessions 2>/dev/null \
-        | awk -v h="$host" 'BEGIN { FS = OFS = "\t" } { print h, $0 }' >"$tmp/$host" &
-    done < <(_cc_fleet_hosts)
-    wait
-  ) 2>/dev/null
-  rows=$(cat "$tmp"/* 2>/dev/null | sort)
-  rm -rf "$tmp"
-  [[ -n $rows ]] || {
-    echo "no claude sessions running"
-    return 0
-  }
-  printf 'HOST\tNAME\tSTATUS\tWAITING\tDIR\tPANE\n%s\n' "$rows" | column -t -s$'\t'
 }
 
 #@find-commit
