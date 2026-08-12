@@ -8,5 +8,7 @@
 # by nothing. See ~/dev/standards/data.md § "A shared file is named in config".
 #
 # The path is uniform across the fleet and off it; only how the file arrives
-# differs, Syncthing here and safekeep on the work box.
+# differs. Here it is a symlink into a git clone, so the registry has a history
+# and a message saying why an entry changed; on the work box safekeep restores
+# that machine's own file to the same path.
 repos_file: ~/dev/repos.json

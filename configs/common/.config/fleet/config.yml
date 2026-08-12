@@ -7,7 +7,7 @@
 repos_file: ~/dev/repos.json
 
 # The fleet's machines, named separately from its repos because the two are
-# different files with different lifetimes. ~/dev is Syncthing, so this resolves
-# on every fleet machine and on none of the rest — which is the same set that
-# has fleet installed at all.
+# different files with different lifetimes. Both resolve through ~/dev, which
+# holds symlinks into a clone on a fleet machine and nothing at all elsewhere —
+# the same set that has fleet installed at all.
 machines_file: ~/dev/machines.json
