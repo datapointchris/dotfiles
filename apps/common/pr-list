@@ -69,14 +69,16 @@ done
 
 [ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
 
-# An entry with no status counts as active, matching every other reader: the
-# file is hand-edited and the opposite default drops a repo out without a word.
+# status is required, so it is matched plainly rather than defaulted. Supplying a
+# default here is what let the readers disagree: this one and fleet counted an
+# entry with no status, indy and relate dropped it, and every list looked
+# plausible. The registry repo rejects an entry without one at commit time.
 # Per-repo provider wins over the file's, for a registry that mixes hosts.
 repos_for() {
   jq -r --arg want "$1" '
     (.provider // "github") as $default
     | .repos[]
-    | select((.status // "active") == "active")
+    | select(.status == "active")
     | select((.provider // $default) == $want)
     | [.name, .path] | @tsv
   ' "$REGISTRY"
@@ -86,7 +88,7 @@ repos_for() {
 paths_json() {
   jq --arg home "$HOME" '
     [ .repos[]
-      | select((.status // "active") == "active")
+      | select(.status == "active")
       | {key: .name, value: (.path | sub("^~"; $home))}
     ] | from_entries
   ' "$REGISTRY"
