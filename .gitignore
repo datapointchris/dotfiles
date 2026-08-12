@@ -92,6 +92,8 @@ venv/
 # Do not commit neovim lazy plugin because different os conflict
 **/lazy-lock.json
 .claude/sessions/
+# Claude Code puts a git worktree per background agent in here
+.claude/worktrees/
 .discussion
 
 # Test artifacts
