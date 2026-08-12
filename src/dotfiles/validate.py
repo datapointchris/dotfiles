@@ -160,7 +160,7 @@ def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
 
     findings = []
     for name, manifest in sorted(manifests.items()):
-        for tool in sorted(set(manifest.logins) - set(auth.PROBES)):
+        for tool in sorted(set(manifest.auth) - set(auth.PROBES)):
             findings.append(Finding('auth', Severity.ERROR, f'manifest {name!r} names {tool!r}, which has no probe in resources/auth.py'))
     return findings
 

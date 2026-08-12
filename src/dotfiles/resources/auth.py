@@ -88,31 +88,31 @@ class Observed:
 
     @property
     def present(self) -> int:
-        """How many of the declared logins showed a credential."""
+        """How many of the declared tools showed a credential."""
         return sum(1 for credential in self.found.values() if credential.verdict is Verdict.MATCHED)
 
     @property
     def summary(self) -> str:
-        """The count above, rather than a claim that every login is there.
+        """The count above, rather than a claim that every tool is authenticated.
 
         The other resources can say "all N are installed" in their converged
         sentence, because a converged sentence is the only one they reach when
         nothing drifted. This one reaches it under `plan` whatever it found —
         nothing here is ever actionable, so `plan` keeps none of it — and
-        "all 7 declared logins are present" printed above four missing rows is the
-        summary contradicting its own evidence.
+        "all declared tools are authenticated" printed above four missing rows is
+        the summary contradicting its own evidence.
         """
         if not self.found:
-            return 'this machine declares no logins'
-        return f'{self.present} of {len(self.found)} declared login(s) present'
+            return 'this machine declares nothing under `auth:`'
+        return f'{self.present} of {len(self.found)} declared tool(s) authenticated'
 
 
 class AuthResource:
     name = NAME
-    help = 'the logins this machine needs to be able to work'
+    help = 'the tools declared under `auth:`, and whether each can log in'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        return Observed({tool: _asked(tool, session) for tool in session.machine.logins})
+        return Observed({tool: _asked(tool, session) for tool in session.machine.auth})
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         """One row per tool that could not show a credential.

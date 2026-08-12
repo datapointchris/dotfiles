@@ -229,13 +229,13 @@ def test_a_key_no_reader_consumes_is_refused(tmp_path: Path) -> None:
 def test_a_declared_auth_list_is_read_in_order(tmp_path: Path) -> None:
     loaded = load(tmp_path, {**LINUX, 'auth': ['gh', 'atuin']})
 
-    assert loaded.logins == ('gh', 'atuin')
+    assert loaded.auth == ('gh', 'atuin')
 
 
-def test_a_machine_that_names_no_logins_has_none(tmp_path: Path) -> None:
+def test_a_machine_that_names_no_auth_tools_has_none(tmp_path: Path) -> None:
     """Absent is the ordinary case, not a fault: a box nothing asks about is the
     right answer for one whose whole job is to be SSHed into."""
-    assert load(tmp_path, LINUX).logins == ()
+    assert load(tmp_path, LINUX).auth == ()
 
 
 def test_auth_declared_as_anything_but_a_list_of_names_is_refused(tmp_path: Path) -> None:
@@ -246,8 +246,11 @@ def test_auth_declared_as_anything_but_a_list_of_names_is_refused(tmp_path: Path
     assert any('declares auth as a bool' in issue for issue in found), found
 
 
-def test_the_logins_reach_the_json_a_machine_shows(tmp_path: Path) -> None:
-    assert load(tmp_path, {**LINUX, 'auth': ['gh']}).as_dict()['logins'] == ['gh']
+def test_the_json_a_machine_shows_spells_the_manifest_key_back(tmp_path: Path) -> None:
+    """`auth` in both places, as `features` and `flags` are. A second word for it
+    sends a reader who found the field to grep the manifests for a key that is not
+    there."""
+    assert load(tmp_path, {**LINUX, 'auth': ['gh']}).as_dict()['auth'] == ['gh']
 
 
 def test_a_misspelt_auth_key_is_still_refused(tmp_path: Path) -> None:

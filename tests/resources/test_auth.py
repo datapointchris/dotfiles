@@ -1,4 +1,4 @@
-"""The logins a machine needs: probed locally, reported, and never repaired.
+"""The tools a machine declares under `auth:`: probed locally, never repaired.
 
 Every probe is exercised against a shadowed binary or a real file under
 `tmp_path`, so nothing here reads whichever tools the machine running the suite
@@ -36,8 +36,8 @@ def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') 
     return target
 
 
-def build(tmp_path: Path, *logins: str) -> Session:
-    """A synthetic install tree declaring these logins, and a home to probe under.
+def build(tmp_path: Path, *tools: str) -> Session:
+    """A synthetic install tree declaring these tools, and a home to probe under.
 
     `XDG_DATA_HOME` and `XDG_CONFIG_HOME` are left to the fixture below: they are
     real knobs every tool here honours, so pointing them at `tmp_path` is the same
@@ -47,7 +47,7 @@ def build(tmp_path: Path, *logins: str) -> Session:
     (install / 'manifests').mkdir(parents=True, exist_ok=True)
     (install / 'packages.yml').write_text('{}')
     (install / 'flags.yml').write_text('{}')
-    declared = ''.join(f'  - {tool}\n' for tool in logins)
+    declared = ''.join(f'  - {tool}\n' for tool in tools)
     (install / 'manifests' / 'box.yml').write_text(f'machine: box\nplatform: linux\nauth:\n{declared}')
     return Session(machine_name='box', repo=tmp_path, home=tmp_path)
 
@@ -71,27 +71,27 @@ def changes(session: Session) -> tuple:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def declared_logins() -> set[str]:
-    return {tool for name in machines.names(paths.REPO_ROOT) for tool in machines.load(name, paths.REPO_ROOT).logins}
+def declared_tools() -> set[str]:
+    return {tool for name in machines.names(paths.REPO_ROOT) for tool in machines.load(name, paths.REPO_ROOT).auth}
 
 
-def test_every_declared_login_has_a_probe() -> None:
+def test_every_declared_tool_has_a_probe() -> None:
     """The direction that matters: a name nothing implements reads as converged.
 
     `observe` answers `UNKNOWN` for one, which `sift` counts as unmeasured and
     keeps out of the exit code — so a typo in an `auth:` list would leave the
-    machine looking sound while the login it meant to ask about went unasked.
+    machine looking sound while the tool it meant to ask about went unasked.
     """
-    named = declared_logins()
+    named = declared_tools()
 
-    assert named <= set(auth.PROBES), f'logins with no probe: {sorted(named - set(auth.PROBES))}'
+    assert named <= set(auth.PROBES), f'declared with no probe: {sorted(named - set(auth.PROBES))}'
 
 
 def test_every_probe_is_declared_by_some_manifest() -> None:
     """The other direction, and the half `validate.py` structurally cannot ask: a
     synthetic tree can replace the manifests while these functions are always the
     real ones. A probe nothing declares is dead code that reads as maintained."""
-    named = declared_logins()
+    named = declared_tools()
 
     assert set(auth.PROBES) <= named, f'probes nothing declares: {sorted(set(auth.PROBES) - named)}'
 
@@ -266,7 +266,7 @@ def test_nothing_here_is_ever_written(xdg: Path, fake_bin: Path, unprivileged: P
     assert auth.RESOURCE.perform(session, found, unprivileged).status is OutcomeStatus.REFUSED
 
 
-def test_a_machine_declaring_no_logins_has_nothing_to_report(xdg: Path) -> None:
+def test_a_machine_declaring_no_auth_tools_has_nothing_to_report(xdg: Path) -> None:
     session = build(xdg)
     observed = auth.RESOURCE.observe(session, session.plan)
 
@@ -275,10 +275,10 @@ def test_a_machine_declaring_no_logins_has_nothing_to_report(xdg: Path) -> None:
     assert observed.present == 0
 
 
-def test_the_row_counts_the_logins_that_are_there_rather_than_claiming_all_are(xdg: Path, fake_bin: Path) -> None:
+def test_the_row_counts_the_credentials_found_rather_than_claiming_all_are(xdg: Path, fake_bin: Path) -> None:
     """This resource reaches its converged sentence under `plan` whatever it found,
-    because nothing here is ever actionable — so a summary asserting every login is
-    present would contradict the rows printed right above it."""
+    because nothing here is ever actionable — so a summary asserting every tool is
+    authenticated would contradict the rows printed right above it."""
     executable(fake_bin, 'icb', '#!/bin/sh\nexit 0\n')
     executable(fake_bin, 'meso', '#!/bin/sh\nexit 1\n')
     session = build(xdg, 'icb', 'meso')

@@ -220,8 +220,13 @@ class Machine:
     requirements: tuple[Requirement, ...]
     source: Path
 
-    logins: tuple[str, ...] = ()
+    auth: tuple[str, ...] = ()
     """The tools this machine has to be able to log in to.
+
+    Named for the manifest key it reads, as `features` and `flags` are. A second
+    word for it — `logins` — is what `machines show --json` emitted while the key
+    stayed `auth:`, so a reader who found the field and went to edit the manifest
+    grepped for a key that was not there.
 
     Its own field rather than a `SUBSCRIPTIONS` entry, because there is no catalog
     section behind it — the same shape as `FEATURES`. Half the roster is installed
@@ -253,7 +258,7 @@ class Machine:
             'coordinates': self.coordinates.as_dict(),
             'features': sorted(self.features),
             'flags': dict(self.flags),
-            'logins': list(self.logins),
+            'auth': list(self.auth),
         }
 
 
@@ -282,7 +287,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     issues.extend(_unknown_keys(name, declared))
     coordinates, label = _coordinates(name, declared, issues)
     flags = _flags(declared, flag_data or {}, issues)
-    logins = _logins(name, declared, issues)
+    auth = _auth(name, declared, issues)
 
     if issues:
         raise MachineError(tuple(issues))
@@ -296,7 +301,7 @@ def load(name: str, root: Path | None = None) -> Machine:
         flags=flags,
         requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates, label),
         source=source,
-        logins=logins,
+        auth=auth,
     )
 
 
@@ -318,11 +323,11 @@ def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axe
     return narrowing.get('platform', platform_label) == platform_label
 
 
-def _logins(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
+def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
     """The tools this machine names in `auth:`, or none where it names none.
 
-    Absent is the ordinary case rather than a fault. A machine that declares no
-    login is a machine nothing asks about, which is the right answer for a box
+    Absent is the ordinary case rather than a fault. A machine that names nothing
+    here is a machine nothing asks about, which is the right answer for a box
     whose whole job is to be SSHed into.
     """
     value = declared.get('auth')
