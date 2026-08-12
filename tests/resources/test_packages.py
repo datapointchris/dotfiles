@@ -1259,3 +1259,27 @@ def test_a_go_that_cannot_answer_reports_nothing_rather_than_failing(tmp_path: P
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert undeclared_own(live) == []
+
+
+def test_a_probe_that_raises_is_recorded_rather_than_dropped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Serially a raising probe propagated and the resource refused, so the
+    failure had somewhere to be read. Caught and dropped by the pool it is
+    indistinguishable from a tool that answered and reported no version — which is
+    a row saying nothing is wrong.
+
+    Dropped is still the right outcome: one unaskable binary must not take the
+    whole resource down. What this pins is that it leaves a trace."""
+
+    def raises(item: object) -> str:
+        raise RuntimeError('the binary is a directory')
+
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+    (item,) = live.plan.for_resource('packages')
+    monkeypatch.setattr(packages, '_installed_version', raises)
+
+    with caplog.at_level('DEBUG'):
+        assert packages._reported_versions((item,)) == {}
+
+    assert any('probe failed' in record.getMessage() for record in caplog.records)

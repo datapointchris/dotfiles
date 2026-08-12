@@ -28,6 +28,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import diagnose
 from dotfiles import evidence as ev
+from dotfiles import logging
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
@@ -49,6 +50,8 @@ from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
 NAME = 'packages'
+
+log = logging.get_logger(NAME)
 
 CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.GitUvTool)
 """The entries whose currency is a question with an upstream answer.
@@ -382,6 +385,13 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
     Failures stay per item, not per batch. A probe that raises would otherwise
     surface out of the pool and take the whole resource down as unmeasurable —
     which is the opposite of what the timeout inside it exists to guarantee.
+
+    **A dropped probe is recorded.** Degrading here is right and degrading
+    silently is not: serially, a raising probe propagated and the resource
+    refused, so the failure had somewhere to be read. Caught and dropped, it is
+    indistinguishable from a tool that answered and reported no version — which
+    is a row saying nothing is wrong. The item and the error go to the run's
+    event stream, where the rest of what a probe did already is.
     """
     if not present:
         return {}
@@ -393,7 +403,8 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
             item = probes[probe]
             try:
                 reported = probe.result()
-            except Exception:  # noqa: BLE001 — a probe runs whatever a declaration names
+            except Exception as failed:  # noqa: BLE001 — a probe runs whatever a declaration names
+                log.debug('probe failed', address=item.address, executable=item.executable, error=str(failed))
                 continue
             if reported:
                 found[item.address] = reported
