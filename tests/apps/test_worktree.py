@@ -39,12 +39,19 @@ def fleet(tmp_path: Path) -> dict[str, Path]:
     A bare origin is what makes the push in `land` a real push: a test against a
     single clone would prove nothing about a fast-forward onto a branch someone
     else may have moved.
+
+    `-b main` names the branch rather than inheriting `init.defaultBranch`, which
+    is a fact about the machine and not about the fixture. Cloning an empty bare
+    repo takes the local branch from the remote's HEAD, so without it the initial
+    commit landed on `master` and `push origin main` failed with "src refspec main
+    does not match any" — green on any box whose gitconfig sets it, red on every
+    CI runner, which is where it was measured.
     """
     origin = tmp_path / 'origin.git'
     primary = tmp_path / 'primary'
     roots = tmp_path / 'roots'
 
-    subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
+    subprocess.run(['git', 'init', '-q', '--bare', '-b', 'main', str(origin)], check=True)
     subprocess.run(['git', 'clone', '-q', str(origin), str(primary)], check=True, capture_output=True)
     git(primary, 'config', 'user.email', 'test@test')
     git(primary, 'config', 'user.name', 'test')
