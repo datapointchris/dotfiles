@@ -223,17 +223,29 @@ def no_run_artefacts_on_this_machine(request):
     Skipped under `--docker`, where an install writes its records inside the
     container and the host's directory is not the subject.
 
-    Narrowed to this machine's own records, because that directory is a Syncthing
-    folder and a peer's run arriving mid-session is not a leak. `runs.begin`
-    defaults a record's host to `paths.MACHINE_ID`, so anything the suite could
-    write carries it — a file naming another box was delivered, not written here.
+    Two things arriving in that directory during a session are not leaks, and
+    both were measured refusing a commit for something the suite had not done.
+    A peer machine's record is delivered there by Syncthing; `runs.begin` defaults
+    a record's host to `paths.MACHINE_ID`, so anything the suite could write
+    carries this box's id and a file naming another one was not written here.
+    And a `dotfiles` verb run by a person or a second session on this box writes
+    a real record while the suite happens to be running.
+
+    What the suite leaks is empty, which is what separates it from both: the
+    stubbed `keep` returns before anything is written, so the file is created and
+    never filled. That is the shape of all 1372.
     """
     from dotfiles import paths
 
     def artefacts() -> set[str]:
+        """New, empty, and this machine's — a record no run finished writing."""
         if not paths.RUNS_DIR.is_dir():
             return set()
-        return {path.name for path in paths.RUNS_DIR.iterdir() if f'-{paths.MACHINE_ID}-' in path.name}
+        return {
+            path.name
+            for path in paths.RUNS_DIR.iterdir()
+            if f'-{paths.MACHINE_ID}-' in path.name and path.is_file() and path.stat().st_size == 0
+        }
 
     if request.config.getoption('docker'):
         yield
