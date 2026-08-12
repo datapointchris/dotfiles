@@ -21,11 +21,13 @@ from dotfiles import registry
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
+from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_result
+from dotfiles.output import warn
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -539,3 +541,26 @@ def identity_check(
     """
     verbosity(verbose, quiet)
     _survey('identity', machine, reconcile.Lens.CHECK, as_json)
+
+
+@identity_app.command('show')
+def identity_show() -> None:
+    """Show the include chain git assembles this machine's configuration from.
+
+    `git config --list --show-origin` is the flat version of this and is what
+    made the arrangement hard to follow: it prints every setting beside the file
+    it came from, with nothing saying that the file was reached through three
+    others, so one file overriding another is indistinguishable from a repetition.
+    """
+    from dotfiles import gitconfig
+
+    layering = gitconfig.read()
+    if not layering.read:
+        error('git would not report its configuration')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    if (masking := gitconfig.home_config()).exists():
+        warn(f'{masking} outranks all of this — git prefers it over the XDG entry point')
+
+    gitconfig.render(layering, console)
+    raise typer.Exit(ExitCode.ISSUE if layering.conflicts else ExitCode.CONVERGED)

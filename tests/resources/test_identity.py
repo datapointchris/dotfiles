@@ -17,6 +17,10 @@ from dotfiles.resources import Verdict
 from dotfiles.resources import identity
 from dotfiles.session import Session
 
+IDENTITY = '[user]\n\tname = Chris\n\temail = chris@example.com\n'
+"""A machine with nothing wrong with its identity, so a test asserting on the
+arrangement around it is not also asserting on a missing address."""
+
 
 @pytest.fixture
 def gitconfig(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -141,3 +145,55 @@ def test_a_local_override_in_this_checkout_is_named(
     assert all(change.verdict is Verdict.STALE for change in found)
     assert all(change.repair is Repair.BY_HAND for change in found)
     assert not any(change.actionable for change in found)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The arrangement the identity arrives through
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_home_gitconfig_masking_the_chain_is_reported(gitconfig: Path, session: Session) -> None:
+    """git prefers `~/.gitconfig` over the XDG entry point, for reads and writes
+    both, so one sitting there silently outranks every include below it. `apply`
+    has removed one since the entry point moved; `check` never mentioned it, so a
+    machine between applies could be overridden by a file no verb named."""
+    gitconfig.write_text(IDENTITY)
+    (session.home / '.gitconfig').write_text('[user]\n\temail = someone-else@example.com\n')
+
+    (found,) = [change for change in changes(session) if change.item == '~/.gitconfig']
+
+    assert found.verdict is Verdict.UNDECLARED
+    assert found.repair is Repair.BY_HAND
+    assert not found.actionable
+
+
+def test_a_dangling_home_gitconfig_is_still_masking(gitconfig: Path, session: Session, tmp_path: Path) -> None:
+    """`exists` follows a link, so a dangling one reads as absent — while git
+    still picks it as the file to write to, which is the whole failure."""
+    gitconfig.write_text(IDENTITY)
+    (session.home / '.gitconfig').symlink_to(tmp_path / 'gone')
+
+    assert any(change.item == '~/.gitconfig' for change in changes(session))
+
+
+def test_a_symlinked_entry_point_is_reported(gitconfig: Path, session: Session) -> None:
+    """git follows a symlink when it writes, so an entry point linked into the
+    checkout takes an identity with it — which is the one outcome
+    `deploy._ensure_git_config_entry` exists to prevent."""
+    gitconfig.write_text(IDENTITY)
+    entry = session.home / '.config' / 'git' / 'config'
+    entry.parent.mkdir(parents=True)
+    entry.symlink_to(gitconfig)
+
+    (found,) = [change for change in changes(session) if change.item == 'git entry point']
+
+    assert found.verdict is Verdict.UNDECLARED
+    assert not found.actionable
+
+
+def test_a_machine_whose_config_is_in_one_file_reports_no_layering_findings(gitconfig: Path, session: Session) -> None:
+    """The quiet case, which is every healthy machine. A detector that spoke here
+    would be one nobody reads by the end of the week."""
+    gitconfig.write_text(IDENTITY)
+
+    assert changes(session) == ()
