@@ -426,8 +426,8 @@ def test_a_stale_checkout_is_repaired_by_pulling_not_recloning(tmp_path: Path, u
 
 
 def test_check_does_not_fetch_to_answer_this(tmp_path: Path, upstream: Path, unprivileged: Privilege) -> None:
-    """A fetch per plugin, on a verb that runs at a prompt, in a pre-commit hook
-    and on a timer. Empty is not "none are behind" — it is "nobody looked", which
+    """A fetch per plugin, on a verb that runs at a prompt and unattended on a
+    timer. Empty is not "none are behind" — it is "nobody looked", which
     is why the row says only what it measured."""
     cloned(tmp_path, upstream, unprivileged)
     (upstream / 'forgit.plugin.zsh').write_text('# forgit, newer\n')

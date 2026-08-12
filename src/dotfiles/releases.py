@@ -1,6 +1,6 @@
 """Cached upstream release versions, so a tool that is present can still read as behind.
 
-`check` runs at a prompt and in a pre-commit hook, so it must not spend one GitHub
+`check` runs at a prompt and unattended on a timer, so it must not spend one GitHub
 API call per declared release answering "is anything out of date". It reads this
 cache, and the network is entered only by `--refresh`.
 
@@ -41,7 +41,7 @@ TTL = dt.timedelta(hours=12)
 
 Twice a day is far more often than these tools release and far less often than
 `check` runs, which is the whole of the tradeoff. Longer would be defensible;
-shorter turns a pre-commit hook into a rate-limit problem.
+shorter turns the timer into a rate-limit problem.
 """
 
 WORKERS = 8

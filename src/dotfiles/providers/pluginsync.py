@@ -96,8 +96,8 @@ def uninstalled(names: tuple[str, ...], plugins_dir: Path) -> tuple[str, ...]:
 
     A checkout rather than a directory: `plugin_already_installed` is `[ -d ] && cd
     && git remote`, and an interrupted clone leaves the first true and the second
-    false. Statted rather than shelled out to, because this runs on `check` — at a
-    prompt, in a pre-commit hook and on a timer — and `git remote` per plugin is a
+    false. Statted rather than shelled out to, because this runs on every `check`,
+    including the unattended one on the timer, and `git remote` per plugin is a
     subprocess per plugin to answer a question a `.git` entry already answers.
     """
     return tuple(name for name in names if not (plugins_dir / name / '.git').exists())

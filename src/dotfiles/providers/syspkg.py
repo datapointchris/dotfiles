@@ -307,10 +307,9 @@ NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas'})
 """Which currency reads reach the network, and so are measured only on request.
 
 There is no local answer for either: Flathub's available versions live on
-Flathub, and the App Store has no offline catalogue. `check` runs at a prompt, in
-a pre-commit hook and on a timer, so it must not spend a round trip to say
-whether Discord is behind — the same rule the release cache follows, arrived at
-for the same reason.
+Flathub, and the App Store has no offline catalogue. `check` runs at a prompt and
+unattended on a timer, so it must not spend a round trip to say whether Discord is
+behind — the same rule the release cache follows, arrived at for the same reason.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {

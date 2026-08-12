@@ -777,7 +777,7 @@ def test_an_online_run_ignores_a_staged_bundle(tmp_path: Path, fake_bin: Path, r
 
 
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """`check` runs at a prompt and in a pre-commit hook. The default must not
+    """`check` runs at a prompt and unattended on a timer. The default must not
     spend one API call per declared release."""
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)

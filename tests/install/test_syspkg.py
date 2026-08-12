@@ -112,6 +112,6 @@ def test_every_manager_that_installs_can_also_be_asked_and_upgraded() -> None:
 def test_the_networked_reads_are_the_ones_with_no_local_index() -> None:
     """Flathub's available versions live on Flathub and the App Store has no
     offline catalogue. Everything else answers off a local index, which is what
-    lets `check` measure them at a prompt and in a pre-commit hook."""
+    lets `check` measure them at a prompt and on a timer."""
     assert sorted(syspkg.NETWORKED) == ['flatpak', 'mas']
     assert set(syspkg.OUTDATED) > syspkg.NETWORKED

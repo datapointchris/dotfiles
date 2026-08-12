@@ -156,8 +156,8 @@ the providers satisfy rather than a happy accident:
 | `chsh` | the passwd entry's shell field |
 | `defaults write` | `defaults export` — and it needs no privilege either way |
 
-So `check` never escalates, which is what lets it run at a prompt, in a
-pre-commit hook, and inside a container with no passwordless sudo. A row that
+So `check` never escalates, which is what lets it run at a prompt, unattended on
+a timer, and inside a container with no passwordless sudo. A row that
 *cannot* be observed unprivileged reports `UNKNOWN` with the reason instead of
 guessing — a machine with no `systemctl` is not a machine whose units drifted.
 

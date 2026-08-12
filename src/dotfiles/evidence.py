@@ -295,7 +295,7 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     Two questions through one door: what is installed, and what is installed and
     behind. The second is prefixed, and the networked ones among them answer only
     under `refresh` — Flathub and the App Store have no offline catalogue, and
-    `check` runs at a prompt, in a pre-commit hook and on a timer.
+    `check` runs at a prompt and unattended on a timer.
     """
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)

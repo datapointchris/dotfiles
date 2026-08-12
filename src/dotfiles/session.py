@@ -87,7 +87,7 @@ class Session:
     """Permission to spend the network on being current.
 
     `check` reads cached upstream release versions so it can run at a prompt and
-    in a pre-commit hook without an API call per release. This is the explicit
+    on a timer without an API call per release. This is the explicit
     opt-in to measuring instead, and it is the only thing that makes a `check`
     reach GitHub.
     """
