@@ -203,3 +203,35 @@ def test_a_permission_failure_names_who_owns_the_path(tmp_path: Path) -> None:
 
     assert len(explained) > 1
     assert 'may not write it' in explained[1]
+
+
+def test_a_transient_scope_is_never_offered_as_a_thing_to_stop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A `.scope` is a cgroup around whatever a session started — a tmux pane, a
+    shell's child — not a unit anyone manages. `systemctl stop` on one kills the
+    pane it names, which is worse than the failure being explained.
+
+    Measured on the first live run of this: a binary held by a process spawned in
+    tmux was reported under `tmux-spawn-<uuid>.scope`, with advice to stop it.
+    """
+    target = tmp_path / 'held'
+    target.write_text('x')
+    monkeypatch.setattr(diagnose, 'process_holding', lambda _: ('held (pid 4242)', ''))
+    monkeypatch.setattr(diagnose, 'unit_running', lambda _: ('tmux-spawn-abc.scope', ''))
+
+    explained = diagnose.explain('ghrelease/held', f"[Errno 26] Text file busy: '{target}'")
+
+    assert 'tmux-spawn-abc.scope' in explained, 'the scope is still worth naming'
+    assert 'systemctl --user stop' not in explained
+    assert 'kill 4242' in explained
+
+
+def test_a_real_service_still_gets_the_systemctl_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The ntfy case, which is what the fix command exists for."""
+    target = tmp_path / 'ntfy'
+    target.write_text('x')
+    monkeypatch.setattr(diagnose, 'process_holding', lambda _: ('ntfy (pid 784)', ''))
+    monkeypatch.setattr(diagnose, 'unit_running', lambda _: ('ntfy-client.service', ''))
+
+    explained = diagnose.explain('ghrelease/ntfy', f"[Errno 26] Text file busy: '{target}'")
+
+    assert 'systemctl --user stop ntfy-client.service' in explained

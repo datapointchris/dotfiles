@@ -213,13 +213,23 @@ def _busy(path: Path) -> Diagnosis:
     unit, unit_why = unit_running(pid)
     if unit_why:
         unavailable = (*unavailable, unit_why)
-    if unit:
+    if unit.endswith('.service'):
         return Diagnosis(
             cause=f'{path} is being executed by {holder}, under {unit}',
             fix=f'systemctl --user stop {unit}  # then apply again',
             unavailable=unavailable,
         )
-    return Diagnosis(cause=f'{path} is being executed by {holder}', unavailable=unavailable)
+    if unit:
+        # A `.scope` is a transient cgroup around something a session started —
+        # a tmux pane, a login shell's child — not a unit anybody manages.
+        # `systemctl stop` on one kills the pane it names, so the scope is worth
+        # reporting and worth never suggesting as the thing to stop.
+        return Diagnosis(
+            cause=f'{path} is being executed by {holder}, started under {unit} rather than by a service',
+            fix=f'kill {pid}  # then apply again',
+            unavailable=unavailable,
+        )
+    return Diagnosis(cause=f'{path} is being executed by {holder}', fix=f'kill {pid}  # then apply again', unavailable=unavailable)
 
 
 def _permission(path: Path) -> Diagnosis:
