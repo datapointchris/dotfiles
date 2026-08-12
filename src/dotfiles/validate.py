@@ -77,6 +77,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
 
     findings.extend(_unresolved_names(declared, manifests))
     findings.extend(_uninstallable(declared))
+    findings.extend(_unprobeable(manifests))
     findings.extend(_unbuildable_assets(declared))
     findings.extend(_unreferenced(declared, manifests))
     return tuple(findings)
@@ -140,6 +141,27 @@ def _uninstallable(declared: catalogs.Catalog) -> list[Finding]:
     ):
         for name in sorted({entry.name for entry in declared.section(section)} - known):
             findings.append(Finding(section, Severity.ERROR, f'{name!r} has no installer function in {module}'))
+    return findings
+
+
+def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
+    """A manifest naming a login nothing knows how to ask about.
+
+    The same shape as `_uninstallable` and the same one direction: a synthetic tree
+    can replace the manifests while the probe functions are code and are always the
+    real ones, so "a probe no manifest declares" belongs in `tests/resources/`.
+
+    An error rather than a warning, because the failure is silent in the direction
+    that reassures. `observe` reports an unknown name as unmeasurable, which lands
+    outside the exit code — so a typo in an `auth:` list reads as a machine with
+    nothing wrong with it while the login it meant to ask about goes unasked.
+    """
+    from dotfiles.resources import auth
+
+    findings = []
+    for name, manifest in sorted(manifests.items()):
+        for tool in sorted(set(manifest.logins) - set(auth.PROBES)):
+            findings.append(Finding('auth', Severity.ERROR, f'manifest {name!r} names {tool!r}, which has no probe in resources/auth.py'))
     return findings
 
 

@@ -66,6 +66,7 @@ NOUNS = frozenset(
         'env',
         'system',
         'identity',
+        'auth',
         'machines',
         'report',
         'network',
@@ -80,14 +81,18 @@ Asserted alongside `VERBS` so that a new group is as deliberate as a new verb �
 the grammar is `dotfiles <noun> <verb>`, and both halves are closed.
 """
 
-RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity')
+RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity', 'auth')
 """Every addressable part of the machine, in the order rows are measured and printed.
 
 **Not the convergence order, and it cannot be.** Ordering *work* is
 `resolve.Stage`, because the chain interleaves these names: toolchains → packages
 → toolchains → packages → plugins → symlinks → plugins → system. No sequence of
-seven resource names expresses that, so a walk sorts on the stage and this tuple
+resource names expresses that, so a walk sorts on the stage and this tuple
 decides only who is asked first and whose row prints above whose.
+
+`auth` is last because it is the one resource that can only be asked once every
+other has had its say: a login is a question about a tool that is already
+installed.
 
 A dependency stated here would therefore be a dependency nothing enforces, which
 is worse than none: it reads as a guarantee.

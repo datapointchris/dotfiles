@@ -48,6 +48,7 @@ app.add_typer(resources.symlinks_app, name='symlinks', rich_help_panel='Resource
 app.add_typer(resources.env_app, name='env', rich_help_panel='Resources')
 app.add_typer(resources.system_app, name='system', rich_help_panel='Resources')
 app.add_typer(resources.identity_app, name='identity', rich_help_panel='Resources')
+app.add_typer(resources.auth_app, name='auth', rich_help_panel='Resources')
 
 app.add_typer(machines.app, name='machines', rich_help_panel='Declaration')
 app.add_typer(report.app, name='report', rich_help_panel='History')

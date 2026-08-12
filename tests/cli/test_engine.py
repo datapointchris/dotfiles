@@ -92,7 +92,7 @@ def test_no_two_resources_share_a_stage() -> None:
     # so the assertion below covers it: a fourth such resource fails this test
     # rather than slipping past the guard — which is the same drift that put
     # `system/manager` at a stage no phase named.
-    unprovided = {'env': Stage.ENVIRONMENT, 'identity': Stage.IDENTITY, 'symlinks': Stage.SYMLINKS}
+    unprovided = {'env': Stage.ENVIRONMENT, 'identity': Stage.IDENTITY, 'symlinks': Stage.SYMLINKS, 'auth': Stage.AUTH}
     assert set(vocabulary.RESOURCES) == {provider.resource for provider in registry.PROVIDERS} | set(unprovided), (
         'a resource appeared that this test does not know the stage of; read it out of its `diff` and add it'
     )

@@ -22,6 +22,9 @@ from dotfiles import registry
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
+from dotfiles.output import CHANGE_COLOURS
+from dotfiles.output import SUBJECT_COLUMN
+from dotfiles.output import VERDICT_COLUMN
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
@@ -569,3 +572,59 @@ def identity_show(as_json: bool = JsonOption) -> None:
             warn(f'{masking} outranks all of this — git prefers it over the XDG entry point')
         gitconfig.render(layering, console)
     raise typer.Exit(ExitCode.ISSUE if layering.conflicts else ExitCode.CONVERGED)
+
+
+auth_app = typer.Typer(no_args_is_help=True, help='The logins this machine needs to be able to work')
+
+
+@auth_app.command('plan')
+def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+    """Show what `apply` would do about a missing login, which is nothing.
+
+    Here because `plan` is the rehearsal of `apply` everywhere else and a resource
+    that answered one verb and not the other would be the asymmetry
+    `test_conformance.py` exists to catch. It reports converged whatever it finds:
+    every finding is `BY_HAND`, so there is nothing for the write half to keep.
+    """
+    verbosity(verbose, quiet)
+    _survey('auth', machine, reconcile.Lens.PLAN, as_json)
+
+
+@auth_app.command('check')
+def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+    """Report the declared logins this machine cannot show a credential for.
+
+    Check only, and deliberately: a login is interactive and personal — a browser
+    flow, a password, a device code — so there is nothing in the repo for `apply`
+    to write, the same call `identity` makes. Every probe is local, because this
+    runs at a shell prompt and on a timer.
+    """
+    verbosity(verbose, quiet)
+    _survey('auth', machine, reconcile.Lens.CHECK, as_json)
+
+
+@auth_app.command('show')
+def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
+    """List every login this machine declares and what asking about it found.
+
+    The whole roster rather than the findings alone, which is what `check` prints.
+    A tool that *is* logged in is the answer to "did that work" straight after
+    logging one in, and `check` is silent about it by design.
+
+    Rendered in the columns and colours `render_change` uses, because a reader
+    moving between this and a `check` row is reading the same verdicts — a second
+    palette would make one of them mean something else.
+    """
+    from dotfiles.resources import auth
+
+    session = _session(machine)
+    found = auth.RESOURCE.observe(session, session.plan).found
+    if as_json:
+        emit_json({tool: {'verdict': str(credential.verdict), 'detail': credential.detail} for tool, credential in found.items()})
+        return
+    if not found:
+        emit_text(f'{session.machine_name} declares no logins')
+        return
+    for tool, credential in found.items():
+        colour = CHANGE_COLOURS[str(credential.verdict)]
+        console.print(f'[{colour}]{credential.verdict:<{VERDICT_COLUMN}}[/] {tool:<{SUBJECT_COLUMN}} {credential.detail}')

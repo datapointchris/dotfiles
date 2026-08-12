@@ -100,17 +100,20 @@ def test_every_resource_offers_check() -> None:
         assert (resource, 'check') in leaves, f'{resource} has no check'
 
 
-def test_apply_exists_wherever_drift_can_be_fixed() -> None:
-    """Every resource applies except identity, which has nothing to write.
+CHECKED_ONLY = {'identity', 'auth'}
+"""The resources with nothing for `apply` to write, and the reason is the same for
+both: what they measure is personal and arrives by hand. An identity is
+per-machine, so the repo holds no value for it; a login is a browser flow, a
+password or a device code, so `apply` attempting one would put a prompt in front
+of every headless box. Naming them here is what stops `apply` being added to
+either later on the grounds that the set looked incomplete."""
 
-    An identity is per-machine and personal, so the repo holds no value for it.
-    Naming the exception here is what stops `apply` being added to it later on
-    the grounds that the set looked incomplete.
-    """
+
+def test_apply_exists_wherever_drift_can_be_fixed() -> None:
     leaves = {(path[0], path[-1]) for path, _ in LEAVES if len(path) == 2}
     for resource in vocabulary.RESOURCES:
         has_apply = (resource, 'apply') in leaves
-        assert has_apply is (resource != 'identity'), f'{resource}: unexpected apply={has_apply}'
+        assert has_apply is (resource not in CHECKED_ONLY), f'{resource}: unexpected apply={has_apply}'
 
 
 def test_machine_and_offline_bind_to_leaves_not_groups() -> None:

@@ -272,6 +272,7 @@ def resources() -> dict[str, Resource]:
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
     help text is what made `--help` slow enough to notice.
     """
+    from dotfiles.resources import auth
     from dotfiles.resources import env
     from dotfiles.resources import identity
     from dotfiles.resources import packages
@@ -288,6 +289,7 @@ def resources() -> dict[str, Resource]:
         'env': env.RESOURCE,
         'system': system.RESOURCE,
         'identity': identity.RESOURCE,
+        'auth': auth.RESOURCE,
     }
     return {address: known[address] for address in vocabulary.RESOURCES}
 
