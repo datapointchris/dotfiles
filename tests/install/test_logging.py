@@ -81,3 +81,61 @@ def test_configuring_without_a_run_writes_no_file(tmp_path, capsys):
 
     assert 'ran_without_recording' in capsys.readouterr().err
     assert not list(tmp_path.glob('*.jsonl'))
+
+
+def test_log_level_moves_the_console_threshold(monkeypatch, capsys):
+    """The knob is only observable here because the environment is read inside
+    `configure`. As a module constant it was fixed at first import, which is why
+    none of the three had a test."""
+    monkeypatch.setenv('LOG_LEVEL', 'debug')
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' in capsys.readouterr().err
+
+
+def test_log_level_never_moves_the_file_sink(tmp_path, monkeypatch, capsys):
+    """The record exists to hold what nobody wanted at the time, so a stream that
+    respected the console threshold would be missing exactly that."""
+    monkeypatch.setenv('LOG_LEVEL', 'ERROR')
+    event_log = tmp_path / 'run.jsonl'
+    dotfiles_logging.configure(event_log=event_log)
+
+    dotfiles_logging.get_logger('test').debug('asset_cache_hit', tool='fzf')
+
+    assert 'asset_cache_hit' not in capsys.readouterr().err
+    assert [event['event'] for event in events_in(event_log)] == ['asset_cache_hit']
+
+
+def test_an_unknown_log_level_falls_back_rather_than_raising(monkeypatch, capsys):
+    """`getattr(logging, ...)` answered for any attribute the module had, so
+    `LOG_LEVEL=basic_format` fetched the format string and setLevel raised on it."""
+    monkeypatch.setenv('LOG_LEVEL', 'basic_format')
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').info('tool_installed', tool='fzf')
+
+    assert 'tool_installed' in capsys.readouterr().err
+
+
+def test_log_format_json_sends_the_console_to_json(monkeypatch, capsys):
+    """For a caller parsing stderr rather than reading it."""
+    monkeypatch.setenv('LOG_FORMAT', 'json')
+    dotfiles_logging.configure()
+
+    dotfiles_logging.get_logger('test').info('tool_installed', tool='fzf')
+
+    emitted = json.loads(capsys.readouterr().err.strip())
+    assert emitted['event'] == 'tool_installed'
+    assert emitted['tool'] == 'fzf'
+
+
+def test_log_colors_overrides_what_the_terminal_says(monkeypatch):
+    """Forcing matters in a container, where TTY detection says no and the
+    operator reading the output says otherwise."""
+    monkeypatch.setenv('LOG_COLORS', 'true')
+    assert dotfiles_logging.use_colors() is True
+
+    monkeypatch.setenv('LOG_COLORS', 'false')
+    assert dotfiles_logging.use_colors() is False

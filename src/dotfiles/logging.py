@@ -11,6 +11,12 @@ bar to hold rather than to change for its own sake.
 stderr. `LOG_LEVEL` moves the console threshold; the file sink stays at debug
 whatever it says, since a record that respected it would be missing exactly the
 detail it exists to keep.
+
+**All three are read when they are used, never at import.** As module constants
+they were fixed by whatever the environment held when `dotfiles.logging` was
+first imported, which is before `main` has parsed anything — so nothing could
+override them afterwards and no test could set one without reloading the module.
+That is why the three documented knobs had no test between them.
 """
 
 import logging
@@ -20,9 +26,22 @@ from pathlib import Path
 
 import structlog
 
-CONSOLE_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
-CONSOLE_FORMAT = os.environ.get('LOG_FORMAT', 'console')
-COLOR_CHOICE = os.environ.get('LOG_COLORS', 'auto')
+DEFAULT_LEVEL = 'INFO'
+DEFAULT_FORMAT = 'console'
+DEFAULT_COLORS = 'auto'
+
+
+def console_level() -> str:
+    return os.environ.get('LOG_LEVEL', DEFAULT_LEVEL).upper()
+
+
+def console_format() -> str:
+    return os.environ.get('LOG_FORMAT', DEFAULT_FORMAT)
+
+
+def color_choice() -> str:
+    return os.environ.get('LOG_COLORS', DEFAULT_COLORS)
+
 
 EVENT_LOG_HANDLER_NAME = 'dotfiles_event_log'
 
@@ -41,13 +60,14 @@ def use_colors() -> bool:
     Forcing matters in a container, where TTY detection says no and the operator
     reading the output says otherwise.
     """
-    if COLOR_CHOICE in {'true', 'false'}:
-        return COLOR_CHOICE == 'true'
+    choice = color_choice()
+    if choice in {'true', 'false'}:
+        return choice == 'true'
     return sys.stderr.isatty()
 
 
 def console_processor():
-    if CONSOLE_FORMAT == 'json':
+    if console_format() == 'json':
         return structlog.processors.JSONRenderer()
     return structlog.dev.ConsoleRenderer(colors=use_colors(), pad_level=True)
 
@@ -83,7 +103,11 @@ def configure(event_log: Path | None = None) -> None:
     _quiet_the_http_client()
 
     console = logging.root.handlers[0]
-    console.setLevel(getattr(logging, CONSOLE_LEVEL, logging.INFO))
+    # Through the name mapping rather than `getattr(logging, ...)`, which answers
+    # for any attribute the module happens to have: `LOG_LEVEL=basic_format` fetched
+    # the format string and `setLevel` raised ValueError on it. WARN and FATAL are
+    # in the mapping too, so the aliases still resolve.
+    console.setLevel(logging.getLevelNamesMapping().get(console_level(), logging.INFO))
     console.setFormatter(structlog.stdlib.ProcessorFormatter(processor=console_processor()))
 
     for handler in list(logging.root.handlers):
