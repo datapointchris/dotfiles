@@ -106,12 +106,14 @@ apply_shell_keybindings() {
   # so re-applying fzf alone handed Ctrl-R back to it and the atuin binding set
   # during startup never survived into the shell the user actually typed in.
   flag_enabled SHELL_HISTORY_DB && cache_eval atuin atuin init zsh --disable-up-arrow
-  # Claude widgets, defined in the SHELL CONFIG section. Ctrl-X chords rather
-  # than Meta: ^[ is vi-cmd-mode, so every Alt binding costs a KEYTIMEOUT wait
-  # before Escape takes effect. ^X^A and ^X^E are the free ones — the rest of
-  # the ^X space belongs to zsh's completion-debug bindings.
+  # Prompt-line widgets, defined in the SHELL CONFIG section. Ctrl-X chords
+  # rather than Meta: ^[ is vi-cmd-mode, so every Alt binding costs a KEYTIMEOUT
+  # wait before Escape takes effect. ^X^A, ^X^E and ^X^D are undefined-key in
+  # zsh's emacs keymap with and without compinit; most of the rest of the ^X
+  # space is taken, and ^X^K — the obvious pick for a picker — is kill-buffer.
   bindkey "^X^A" doshell-ask-widget
   bindkey "^X^E" doshell-explain-widget
+  bindkey "^X^D" doit-choose-widget
   return 0
 }
 
@@ -249,9 +251,9 @@ ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
 
 cache_eval() {
   # `-b BIN` names the binary when it differs from the cache key, which is what
-  # a tool generating two blocks needs: one key per block, both aged against the
-  # one binary. doit does this — a completion and a startup nudge, loaded at
-  # different points because the nudge prints.
+  # a tool generating more than one block needs: one key per block, all aged
+  # against the one binary. doit does this, and its blocks load at different
+  # points in this file because only the nudge prints.
   local bin_name=""
   [[ "$1" == -b ]] && { bin_name="$2"; shift 2; }
   local name="$1"; shift
@@ -339,7 +341,7 @@ cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 
 # doit writes its own rather than using Typer's generator, so that completing a
 # pursuit name reads doit's flat name cache instead of spawning Python on Tab.
-cache_eval doit doit completion zsh
+cache_eval doit doit shell completion zsh
 
 # Third party, kept to what is typed at a prompt rather than run from a Taskfile
 # or a hook. task completes task names out of the Taskfile and sesh completes
@@ -439,6 +441,18 @@ doshell-explain-widget() {
   zle -M "${explanation:-doshell: no explanation returned}"
 }
 zle -N doshell-explain-widget
+
+# The line-editor half of `doit choose`: a ZLE widget that apply_shell_keybindings
+# binds, plus dochoose for the same pick without a chord. A subprocess cannot
+# reach into its parent's line editor, so doit emits the block and this only
+# caches it — the same split the completion and the startup nudge already use,
+# and `-b doit` ages its own cache key against the one binary.
+#
+# Here rather than among the completions because this is a prompt-line widget,
+# and it sits with the two it is bound beside. Ungated, unlike the nudge: this
+# only defines two functions, and a keybinding that disappears when a reminder
+# toggle is turned off is a keybinding nobody trusts.
+cache_eval -b doit doit-widgets doit shell widgets zsh
 
 # ------------------------------------------------------------------ #
 # PATH SETUP
@@ -836,7 +850,7 @@ fi
 # file, and the && form would leave .zshrc exiting non-zero whenever the flag is
 # off, which the prompt renders as a failed command on the first line.
 if flag_enabled SHELL_NUDGE; then
-  cache_eval -b doit doit-nudge doit shell-init zsh
+  cache_eval -b doit doit-nudge doit shell init zsh
 fi
 
 # Fires on an Issue only — a checker that could not run, a declaration that will

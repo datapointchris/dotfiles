@@ -181,7 +181,7 @@ Unset means *enabled* because the model is load-everywhere-flag-decides: a machi
 ```bash
 source "$HOME/.local/shell/flags.sh"
 
-flag_enabled SHELL_NUDGE && cache_eval -b doit doit-nudge doit shell-init zsh
+flag_enabled SHELL_NUDGE && cache_eval -b doit doit-nudge doit shell init zsh
 flag_enabled ZSHRC_DEBUG 0 && print_startup_timings
 ```
 

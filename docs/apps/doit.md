@@ -32,10 +32,15 @@ every machine that got `apps/` symlinks.
 
 Two couplings stayed here and were rewired rather than removed:
 
-- The shell startup nudge is now `cache_eval -b doit doit-nudge doit shell-init zsh`. `doit` emits
+- The shell startup nudge is now `cache_eval -b doit doit-nudge doit shell init zsh`. `doit` emits
   the block and `.zshrc` only caches it — an `eval` would put a Python start in front of every
   shell, which is the one thing [Shell Libraries](../architecture/shell-libraries.md) does not allow.
 - `bind m` and `bind t` in `tmux.conf` now call `doit launch` and `doit workflows show`.
+
+One more block does the same for the line editor: `cache_eval -b doit doit-widgets doit shell
+widgets zsh` defines the ZLE widget that lands a `doit choose` pick on the command line. `doit`
+emits no `bindkey` with it, because a subprocess cannot see what this machine's keymap already
+holds — so `apply_shell_keybindings` binds `^X^D` to it, beside the two Claude widgets.
 
 `shell/common/completions.zsh` is gone entirely. It existed only to hand-write `_menu`, and `doit`
 generates its own completion.
