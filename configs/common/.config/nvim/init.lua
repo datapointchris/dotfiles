@@ -41,6 +41,5 @@ if not profiles.is_vscode then
   require('core.autocmds')
   -- Custom floating terminal (Space t t). VSCode has its own terminal.
   require('core.floaterminal')
+  require('lsp')
 end
-
-if profiles.is_full then require('lsp') end

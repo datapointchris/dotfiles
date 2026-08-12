@@ -124,7 +124,6 @@ return {
               dir = themes_dir .. '/' .. name .. '/neovim',
               name = colorscheme,
               lazy = true,
-              cond = function() return require('core.profiles').is_full end,
             })
           end
         end

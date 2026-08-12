@@ -161,13 +161,17 @@ Two ordering hazards, both real and both now handled:
 
 ### Beyond the shell
 
-Neovim reads the same vocabulary. `core/profiles.lua` derives its plugin profile from
-`DOTFILES_CAPACITY` — a machine declaring itself a server has already said everything
-needed to pick the minimal set — with `NVIM_PROFILE` kept as the override for anything
-that does not follow. That removed a second variable which had to be set by hand on
-every server. It read `PLATFORM == 'linux'` until the axes split, which was the right
-answer for the wrong reason: `linux` happened to be the one headless platform, so a
+Neovim read the same vocabulary until 2026-08-12 and no longer does. `core/profiles.lua`
+derived a `minimal` plugin set from `DOTFILES_CAPACITY == 'server'`, with `NVIM_PROFILE`
+as the override. Before the axes split it read `PLATFORM == 'linux'`, which was the right
+answer for the wrong reason — `linux` happened to be the one headless platform, so a
 graphical Ubuntu desktop would have got the lean set.
+
+Following the coordinate was the correct fix and the profile still did not earn its keep.
+Exactly one machine ever reached it, the LXC, and the price was a hand-kept allowlist of
+editing essentials maintained forever for one box nobody sits at. Deleting it leaves one
+question — whether Neovim is embedded in VSCode — which no coordinate answers, because it
+is a fact about the process rather than about the machine.
 
 `plugins/typos.lua` is the counter-example, and worth keeping in mind before reaching for
 this vocabulary at all. It was `PLATFORM ~= 'wsl'`, then `MACHINE_ROLE ~= 'work'`, then a

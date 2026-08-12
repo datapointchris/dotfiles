@@ -1,123 +1,39 @@
--- Centralized Neovim plugin profiles
--- Single source of truth for profile detection and plugin filtering
+-- Which plugins load, which is now only a question when Neovim is embedded in
+-- VSCode through vscode-neovim. Everywhere else the whole set loads.
 --
--- Profiles (checked in priority order):
---   vscode  - auto-detected when embedded in VSCode (vim.g.vscode)
---   minimal - a machine whose declared capacity is `server`, or
---             NVIM_PROFILE=minimal explicitly
---   full    - default, everything loads
+-- An allowlist rather than a blocklist, because the spec list is not fully
+-- enumerable here: colorscheme-manager.lua synthesises specs at startup by
+-- scanning the theme library, so a blocklist cannot name what it has never
+-- seen. That leaked — `cendre` and `sora` were loading in VSCode because
+-- nobody thought to block them when those themes were added.
 --
--- The profile follows the capacity coordinate rather than being a second
--- variable that has to be set by hand and kept in step. It used to read
--- PLATFORM == 'linux', which was the right answer for the wrong reason: the
--- question is whether this box is a server, and `linux` happened to be the one
--- headless platform. A graphical Ubuntu desktop would have got the lean set.
--- NVIM_PROFILE stays as the override for anything that does not follow.
+-- What earns a place: the plugin does something VSCode does not already do.
+-- VSCode owns the chrome, the file tree, git, LSP, completion and the theme,
+-- so none of that is here.
 
 local M = {}
 
-local function resolve_profile()
-  local explicit = vim.env.NVIM_PROFILE
-  if explicit and explicit ~= '' then return explicit end
-  return vim.env.DOTFILES_CAPACITY == 'server' and 'minimal' or 'full'
-end
-
 M.is_vscode = vim.g.vscode ~= nil
-M.is_minimal = not M.is_vscode and resolve_profile() == 'minimal'
-M.is_full = not M.is_vscode and not M.is_minimal
 
--- VSCode: these plugins are DISABLED (blocklist)
--- Everything not listed here loads in VSCode
-local vscode_disabled = {
-  -- UI chrome (VSCode has its own)
-  ['lualine.nvim'] = true,
-  ['bufferline.nvim'] = true,
-  ['fidget.nvim'] = true,
-  ['indent-blankline.nvim'] = true,
-  ['dressing.nvim'] = true,
-  ['snipe.nvim'] = true,
-  -- Navigation (VSCode has native equivalents)
-  ['telescope.nvim'] = true,
-  ['telescope-fzf-native.nvim'] = true,
-  ['telescope-ui-select.nvim'] = true,
-  ['yazi.nvim'] = true,
-  ['vim-tmux-navigator'] = true,
-  -- Git (VSCode has built-in git)
-  ['gitsigns.nvim'] = true,
-  ['lazygit.nvim'] = true,
-  ['diffview.nvim'] = true,
-  ['diffbandit.nvim'] = true,
-  -- Completion & LSP (VSCode handles these)
-  ['blink.cmp'] = true,
-  ['blink.lib'] = true,
-  ['friendly-snippets'] = true,
-  ['lazydev.nvim'] = true,
-  -- Colorschemes (VSCode has its own theme manager)
-  ['github-theme'] = true,
-  ['rose-pine'] = true,
-  ['kanagawa.nvim'] = true,
-  ['gruvbox.nvim'] = true,
-  ['nordic.nvim'] = true,
-  ['nightfox.nvim'] = true,
-  ['solarized-osaka.nvim'] = true,
-  ['oceanic-next'] = true,
-  ['flexoki-moon-nvim'] = true,
-  ['everforest-nvim'] = true,
-  ['colorscheme-manager'] = true,
-  -- Sessions & editing features VSCode handles
-  ['auto-session'] = true,
-  ['cinnamon.nvim'] = true,
-  ['conform.nvim'] = true,
-  ['inc-rename.nvim'] = true,
-  ['todo-comments.nvim'] = true,
-  ['trouble.nvim'] = true,
-  ['vim-maximizer'] = true,
-  ['which-key.nvim'] = true,
-  ['zen-mode.nvim'] = true,
-  ['zk-nvim'] = true,
-}
-
--- Minimal: only these plugins load (server editing essentials, allowlist)
-local minimal_plugins = {
-  -- Core
+local vscode_enabled = {
+  -- The manager itself, so `:Lazy` still works from inside VSCode.
+  ['lazy.nvim'] = true,
   ['mini.nvim'] = true,
   ['plenary.nvim'] = true,
-  -- Navigation
-  ['telescope.nvim'] = true,
-  ['telescope-fzf-native.nvim'] = true,
-  ['telescope-ui-select.nvim'] = true,
-  ['yazi.nvim'] = true,
-  ['vim-tmux-navigator'] = true,
-  ['snipe.nvim'] = true,
-  -- UI
-  ['lualine.nvim'] = true,
-  ['bufferline.nvim'] = true,
-  ['fidget.nvim'] = true,
-  ['dressing.nvim'] = true,
-  ['indent-blankline.nvim'] = true,
-  ['cinnamon.nvim'] = true,
-  -- Editing
-  ['which-key.nvim'] = true,
+  ['nvim-treesitter'] = true,
+  ['nvim-treesitter-textobjects'] = true,
+  ['treesitter-modules.nvim'] = true,
   ['vim-visual-multi'] = true,
+  ['markdown-toc.nvim'] = true,
   ['winresize.nvim'] = true,
-  ['vim-maximizer'] = true,
-  ['blink.cmp'] = true,
-  ['blink.lib'] = true,
-  ['friendly-snippets'] = true,
-  -- Git
-  ['gitsigns.nvim'] = true,
-  ['diffview.nvim'] = true,
-  -- Diagnostics
-  ['trouble.nvim'] = true,
-  ['todo-comments.nvim'] = true,
+  ['typos'] = true,
 }
 
 --- Plugin condition function for lazy.nvim defaults.cond
 ---@param plugin LazyPlugin
 ---@return boolean
 function M.plugin_enabled(plugin)
-  if M.is_vscode then return not vscode_disabled[plugin.name] end
-  if M.is_minimal then return minimal_plugins[plugin.name] == true end
+  if M.is_vscode then return vscode_enabled[plugin.name] == true end
   return true
 end
 
