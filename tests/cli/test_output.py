@@ -183,3 +183,45 @@ def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) 
     written = capsys.readouterr()
     assert 'something happened' in written.err
     assert written.out == ''
+
+
+def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture) -> None:
+    """`ResourceResult` carried these four since it was written and no row ever
+    showed them, so "converged" meant whatever the reader assumed."""
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 differ', pending=4, privileged=2))
+
+    written = capsys.readouterr().out
+    assert '4 pending' in written
+    assert '2 need a password' in written
+
+
+def test_a_clean_row_shows_no_counts_at_all(capsys: pytest.CaptureFixture) -> None:
+    """Four noughts on every line of a healthy machine is the pages of output this
+    is trying not to become."""
+    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 172 deployed'))
+
+    written = capsys.readouterr().out
+    assert 'all 172 deployed' in written
+    assert '·' not in written
+
+
+def test_multi_line_advice_gets_one_row_per_line(capsys: pytest.CaptureFixture) -> None:
+    """Advice is assembled from what a diagnosis measured — the owning package,
+    then the command that removes it — and the command wants a line of its own."""
+    output.render_change(a_change(advice='belongs to the pacman package shellcheck\nrun: sudo pacman -Rs shellcheck'))
+
+    rows = [line for line in capsys.readouterr().err.splitlines() if '→' in line]
+    assert len(rows) == 2
+    assert 'sudo pacman -Rs shellcheck' in rows[1]
+
+
+def test_an_issue_row_does_not_repeat_its_own_attention_count(capsys: pytest.CaptureFixture) -> None:
+    """The verdict is made of those items and the detail already names them, so
+    the count restated the sentence beside it."""
+    output.render_result(
+        ResourceResult(address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', attention=4, unmeasured=1)
+    )
+
+    written = capsys.readouterr().out
+    assert '4 need attention' not in written
+    assert '1 unmeasured' in written

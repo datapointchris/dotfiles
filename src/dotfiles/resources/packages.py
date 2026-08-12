@@ -20,13 +20,16 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+from collections.abc import Iterable
 from pathlib import Path
 
 from dotfiles import catalog
+from dotfiles import diagnose
 from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
+from dotfiles.coordinates import PackageManager
 from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
@@ -216,8 +219,7 @@ class PackagesResource:
                         Verdict.UNDECLARED,
                         detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
                         repair=Repair.BY_HAND,
-                        advice='this is a judgement apply cannot make: remove the undeclared copy yourself, '
-                        'or if you prefer it, drop this entry from packages.yml and keep that copy instead',
+                        advice=_undeclared_advice(stray, plan.machine.coordinates.package_manager),
                         desired=item,
                         observed=', '.join(stray),
                     )
@@ -561,6 +563,36 @@ def _unmeasurable_advice(observed: Observed) -> str:
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
     return 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`'
+
+
+def _undeclared_advice(strays: Iterable[str], manager: PackageManager) -> str:
+    """What to do about a copy nothing declares — asked of the machine, not guessed.
+
+    This row used to end at "remove the undeclared copy yourself", which is an
+    instruction rather than a step. Acting on it meant leaving the tool to find
+    out what owned the file, and `pacman -Qo` answers that in one bounded call
+    the run could make itself.
+
+    The alternative stays on the row, because it is still a judgement only a
+    person can make: the two copies are often the same version, and which
+    mechanism should own a tool is a real choice rather than a defect.
+
+    Every path is asked about separately. Two strays for one tool are two
+    different packages more often than not, and one removal command covering both
+    would be wrong for at least one of them.
+    """
+    rows: list[str] = []
+    for stray in strays:
+        owner, unavailable = diagnose.package_owning(Path(stray), manager)
+        if unavailable:
+            rows.append(f'{stray} — could not check what owns it: {unavailable}')
+        elif owner:
+            rows.append(f'{stray} belongs to the {manager} package {owner}')
+            rows.append(f'run: {diagnose.removal_command(owner, manager)}')
+        else:
+            rows.append(f'{stray} belongs to no {manager} package, so it was put there by hand')
+    rows.append('or keep that copy instead, and drop this entry from packages.yml')
+    return '\n'.join(rows)
 
 
 def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str) -> tuple[Change, ...]:

@@ -83,6 +83,38 @@ def emit_text(text: str) -> None:
     print(text, end='')
 
 
+def tallies(result: ResourceResult) -> str:
+    """The counts behind a verdict, where there are any.
+
+    `ResourceResult` has carried these four since it was written and no row has
+    ever shown them, so "converged" meant whatever the reader assumed it meant.
+    Each answers a question the verdict alone leaves open: how much `apply` would
+    change, how much it cannot, how much nothing could measure either way, and
+    how much of the work will ask for a password.
+
+    Only non-zero counts appear. A converged resource with four zeroes would
+    otherwise print a row of noughts on every line of a healthy machine, which is
+    the "pages of output" this is trying not to become.
+
+    `attention` is dropped on an `issue` row for the same reason: that verdict is
+    *made of* the items needing attention and its detail already names them, so
+    the count restates the sentence beside it.
+
+    The pairing worth keeping is a converged row with a non-zero `pending`, which
+    looks contradictory and is not. `check` answers what is *wrong*, and a
+    declared package that is merely absent is drift the `apply` will fix. Before
+    this the two senses of "converged" were indistinguishable.
+    """
+    counts = (
+        (result.pending, 'pending'),
+        (0 if str(result.verdict) == 'issue' else result.attention, 'need attention'),
+        (result.unmeasured, 'unmeasured'),
+        (result.privileged, 'need a password'),
+    )
+    shown = [f'{count} {label}' for count, label in counts if count]
+    return f'  ·  {", ".join(shown)}' if shown else ''
+
+
 def render_result(result: ResourceResult) -> None:
     """One resource's verdict, as a row.
 
@@ -91,7 +123,7 @@ def render_result(result: ResourceResult) -> None:
     should not be a reason for the logic to be loaded.
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
-    console.print(f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}')
+    console.print(f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}{tallies(result)}')
 
 
 def render_change(change: Change) -> None:
@@ -114,8 +146,12 @@ def render_change(change: Change) -> None:
     err_console.print(
         f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{SUBJECT_COLUMN}} {change.detail}{observed}'
     )
-    if change.advice:
-        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [blue]→[/] {change.advice}')
+    # One row per line, because advice is now assembled from what a diagnosis
+    # measured — the owning package, then the command that removes it — and a
+    # reader scanning for the command wants it on a line of its own rather than
+    # inside a sentence.
+    for line in change.advice.splitlines():
+        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [blue]→[/] {line}')
 
 
 def render_finding(section: str, message: str) -> None:
