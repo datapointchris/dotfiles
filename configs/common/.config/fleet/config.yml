@@ -5,3 +5,9 @@
 # See the note in ../forge/config.yml — same file, same reason, and the two are
 # deliberately separate because each tool resolves its own.
 repos_file: ~/dev/repos.json
+
+# The fleet's machines, named separately from its repos because the two are
+# different files with different lifetimes. ~/dev is Syncthing, so this resolves
+# on every fleet machine and on none of the rest — which is the same set that
+# has fleet installed at all.
+machines_file: ~/dev/machines.json
