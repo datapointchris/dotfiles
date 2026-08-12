@@ -309,3 +309,29 @@ def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, dir
     orphan.symlink_to(repo / 'deleted.toml')
 
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
+
+
+# ─── Stream Contract ──────────────────────────────────────────────────────────
+
+
+def test_removing_symlinks_writes_nothing_to_stdout(tmp_path, capsys):
+    """Progress is a diagnostic, and stdout carries data a caller parses.
+
+    The bracket assertion is the second half: markup is only interpreted by a
+    Console, so a builtin `print` reaching for the same string puts the literal
+    tokens on the reader's screen.
+    """
+    source = tmp_path / 'dotfiles' / 'common'
+    source.mkdir(parents=True)
+    (source / 'ours.txt').write_text('ours')
+
+    home = tmp_path / 'home'
+    home.mkdir()
+    (home / 'ours.txt').symlink_to(source / 'ours.txt')
+
+    core.remove_symlinks(source, 'common', target_dir=home, verbose=True)
+
+    written = capsys.readouterr()
+    assert written.out == ''
+    assert written.err != ''
+    assert '[' not in written.err

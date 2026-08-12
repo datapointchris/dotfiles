@@ -4,9 +4,8 @@ import fnmatch
 import tomllib
 from pathlib import Path
 
-from rich import print
-
 from dotfiles import paths
+from dotfiles.output import err_console
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -299,7 +298,7 @@ def remove_symlinks(
     _target_dir = (target_dir or TARGET_DIR).resolve()
     source_dir = source_dir.resolve()
 
-    print(f'[blue]Removing {layer} symlinks...[/]')
+    err_console.print(f'[blue]Removing {layer} symlinks...[/]')
     count = 0
 
     for symlink in _find_symlinks(_target_dir):
@@ -308,16 +307,16 @@ def remove_symlinks(
             if target and target.is_relative_to(source_dir):
                 symlink.unlink()
                 if verbose:
-                    print(f'[green]✓[/] Removed: {symlink.relative_to(_target_dir)}')
+                    err_console.print(f'[green]✓[/] Removed: {symlink.relative_to(_target_dir)}')
                 count += 1
         except (OSError, ValueError):
             continue
 
     removed_dirs = cleanup_empty_directories(_target_dir, [_target_dir / d for d in CLEANUP_DIRS])
     if removed_dirs and verbose:
-        print(f'[dim]Cleaned up {len(removed_dirs)} empty directories[/]')
+        err_console.print(f'Cleaned up {len(removed_dirs)} empty directories')
 
-    print(f'[green]Removed {count} symlinks[/]')
+    err_console.print(f'[green]Removed {count} symlinks[/]')
     return count
 
 
