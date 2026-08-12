@@ -1,0 +1,237 @@
+#!/usr/bin/env bash
+# worktree - give a session its own index, and land it on main without a PR.
+#
+# A working tree is shared state. Every session standing in one shares its index,
+# its untracked files, and the tree pre-commit assembles to run hooks against —
+# so a second session commits the first one's staged work, and whole-repo hooks
+# lint a tree that neither session ever had. See
+# ~/dev/standards/git-workflow.md § "Concurrent sessions isolate with a worktree".
+#
+# The branch this creates is not a proposal. `land` pushes it straight onto main
+# as a fast-forward, so a single commit stays a single commit and the resulting
+# history is identical to having committed on main directly. A PR is still there
+# for work that grew into a large feature — push the branch and open one — which
+# is why the landing decision is made here at the end rather than guessed at the
+# start.
+
+set -euo pipefail
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck disable=SC1091
+source "$SHELL_DIR/formatting.sh"
+
+WORKTREE_ROOT="${WORKTREE_ROOT:-$HOME/.worktrees}"
+
+show_help() {
+  help_header "worktree" "Give a session its own index, and land it on main without a PR."
+  help_usage "worktree <command> [arguments]"
+
+  help_section "Commands"
+  help_row "new" "<slug>" "Create an isolated worktree off origin's default branch"
+  help_row "land" "" "Rebase, push onto the default branch, then clean up"
+  help_row "list" "" "The worktrees of this repo, with what each is carrying"
+  help_row "drop" "[--force]" "Abandon this worktree without landing it"
+
+  help_section "Examples"
+  help_row "worktree new token-auth" "" "Isolate before touching a repo another session is in"
+  help_row "worktree land" "" "One commit onto main: no PR, no merge commit"
+  help_row "worktree drop --force" "" "Throw the work away, commits included"
+
+  help_section "Notes"
+  help_row "" "" "Worktrees live under \$WORKTREE_ROOT (default ~/.worktrees/<repo>/<slug>)"
+  help_row "" "" "'land' refuses a dirty tree, and never discards a conflicted rebase"
+  help_row "" "" "For work that grew: 'git push -u origin HEAD' and open a PR instead"
+  help_row "" "" "Never 'git stash' while a second worktree is live — the stack is shared"
+  help_end
+}
+
+# The primary checkout, which owns .git and is what a linked worktree has to hand
+# back to: `git worktree list` prints it first by definition.
+primary_checkout() {
+  git worktree list --porcelain | awk '/^worktree /{print $2; exit}'
+}
+
+in_linked_worktree() {
+  [[ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]]
+}
+
+# origin's own idea of its default branch, so a repo that never adopted `main`
+# still lands where it should. The remote HEAD is absent on a clone made with
+# --no-tags or one whose ref was never set, hence the fallback.
+default_branch() {
+  local ref
+  if ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null); then
+    basename "$ref"
+  else
+    echo main
+  fi
+}
+
+require_repo() {
+  git rev-parse --git-dir >/dev/null 2>&1 || {
+    print_error "Not inside a git repository"
+    exit 1
+  }
+}
+
+require_clean() {
+  local dirty
+  dirty=$(git status --porcelain)
+  [[ -z "$dirty" ]] && return 0
+  print_error "This worktree has uncommitted changes"
+  echo "$dirty"
+  echo ""
+  print_info "Commit them (git commit -m ... -- <paths>) or 'worktree drop --force'"
+  exit 1
+}
+
+cmd_new() {
+  local slug="${1:-}"
+  [[ -n "$slug" ]] || {
+    print_error "Usage: worktree new <slug>"
+    exit 1
+  }
+
+  require_repo
+  local primary repo path branch base
+  primary=$(primary_checkout)
+  repo=$(basename "$primary")
+  path="$WORKTREE_ROOT/$repo/$slug"
+  branch="wip/$slug"
+  base=$(default_branch)
+
+  [[ -e "$path" ]] && {
+    print_error "Already exists: $path"
+    exit 1
+  }
+
+  git fetch --quiet origin
+  git worktree add --quiet "$path" -b "$branch" "origin/$base"
+
+  print_success "Isolated at $path"
+  print_info "cd $path"
+}
+
+cmd_land() {
+  require_repo
+  in_linked_worktree || {
+    print_error "Not in a worktree — 'land' is what hands one back to the primary checkout"
+    print_info "Run 'worktree new <slug>' first, or commit directly if no other session is here"
+    exit 1
+  }
+  require_clean
+
+  local primary base branch path ahead
+  primary=$(primary_checkout)
+  base=$(default_branch)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  path=$(git rev-parse --show-toplevel)
+
+  git fetch --quiet origin
+  ahead=$(git rev-list --count "origin/$base..HEAD")
+  [[ "$ahead" -eq 0 ]] && {
+    print_error "Nothing to land: no commits above origin/$base"
+    exit 1
+  }
+
+  # Never abort on our own initiative: a conflicted rebase holds the only copy of
+  # the resolution in progress, and the standard resolves a conflict inside the
+  # commit that caused it rather than by discarding and retrying.
+  git rebase --quiet "origin/$base" || {
+    print_error "Rebase stopped on a conflict — resolve it here, then run 'worktree land' again"
+    print_info "Repair everything the commit broke before 'git rebase --continue'"
+    exit 1
+  }
+
+  git push --quiet origin "HEAD:$base" || {
+    print_error "Push rejected — origin/$base moved again; run 'worktree land' to retry"
+    exit 1
+  }
+  print_success "Landed $ahead commit(s) on $base"
+
+  git -C "$primary" worktree remove "$path"
+  git -C "$primary" branch --quiet -D "$branch"
+
+  catch_up_primary "$primary" "$base"
+  print_info "cd $primary"
+}
+
+# The primary checkout is now behind, and in dotfiles that checkout is deployed
+# machine state — so leaving it stale is not cosmetic. Fast-forward it only when
+# it is clean and on the branch we landed on: another session may be working
+# there, and its tree is not ours to move.
+catch_up_primary() {
+  local primary="$1" base="$2" head
+  head=$(git -C "$primary" rev-parse --abbrev-ref HEAD)
+
+  if [[ "$head" != "$base" ]]; then
+    print_warning "$primary is on $head, not $base — catch it up yourself"
+    return 0
+  fi
+  if [[ -n "$(git -C "$primary" status --porcelain)" ]]; then
+    print_warning "$primary has local changes — run 'git fetch origin && git rebase origin/$base' there when free"
+    return 0
+  fi
+
+  git -C "$primary" fetch --quiet origin
+  git -C "$primary" rebase --quiet "origin/$base"
+  print_success "Caught up $primary"
+}
+
+cmd_drop() {
+  local force="${1:-}"
+  require_repo
+  in_linked_worktree || {
+    print_error "Not in a worktree"
+    exit 1
+  }
+
+  local primary base branch path unlanded
+  primary=$(primary_checkout)
+  base=$(default_branch)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  path=$(git rev-parse --show-toplevel)
+
+  if [[ "$force" != "--force" ]]; then
+    require_clean
+    unlanded=$(git rev-list --count "origin/$base..HEAD")
+    [[ "$unlanded" -gt 0 ]] && {
+      print_error "$unlanded commit(s) here are on no other branch"
+      print_info "'worktree land' to keep them, or 'worktree drop --force' to lose them"
+      exit 1
+    }
+  fi
+
+  git -C "$primary" worktree remove --force "$path"
+  git -C "$primary" branch --quiet -D "$branch"
+  print_success "Dropped $path"
+  print_info "cd $primary"
+}
+
+cmd_list() {
+  require_repo
+  local base path branch ahead state
+  base=$(default_branch)
+
+  while read -r path _ branch; do
+    branch="${branch#\[}"
+    branch="${branch%\]}"
+    ahead=$(git -C "$path" rev-list --count "origin/$base..HEAD" 2>/dev/null || echo "?")
+    state="clean"
+    [[ -n "$(git -C "$path" status --porcelain 2>/dev/null)" ]] && state="dirty"
+    printf '%-40s %-24s %s ahead, %s\n' "${path/#$HOME/\~}" "$branch" "$ahead" "$state"
+  done < <(git worktree list)
+}
+
+case "${1:-}" in
+  new) shift && cmd_new "$@" ;;
+  land) cmd_land ;;
+  drop) shift && cmd_drop "$@" ;;
+  list) cmd_list ;;
+  -h | --help | help | '') show_help ;;
+  *)
+    print_error "Unknown command: $1"
+    show_help
+    exit 1
+    ;;
+esac
