@@ -30,6 +30,9 @@ import typer
 
 from dotfiles import machine as machines
 from dotfiles import network
+from dotfiles.commands import QuietOption
+from dotfiles.commands import VerboseOption
+from dotfiles.commands import verbosity
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
@@ -46,13 +49,20 @@ JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on
 
 
 @app.command('check')
-def check(machine_name: str | None = MachineOption, output: Path | None = OutputOption, as_json: bool = JsonOption) -> None:
+def check(
+    machine_name: str | None = MachineOption,
+    output: Path | None = OutputOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Probe every source this machine installs from, and report what is blocked.
 
     Exit 3 on a block rather than 0, so a scheduled run or a container assertion
     does not have to parse the output to learn the answer. A blocked source is a
     real finding: it means an install here would fail, or would need a bundle.
     """
+    verbosity(verbose, quiet)
     try:
         machine = machines.load(machine_name) if machine_name else Session.resolve().machine
     except (machines.MachineError, FileNotFoundError) as unresolved:

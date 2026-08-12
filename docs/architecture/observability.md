@@ -127,12 +127,22 @@ changed nothing a reader could see. The resource verdict stays on stdout because
 it is the answer to the question asked, and a `check` reporting by exit code alone
 would be a worse command, not a quieter one.
 
-The flags bind on the leaves — all three root verbs and the same three under each
-resource — for the reason `--machine` does, which `main.py` records: Click parses
-group options before the subcommand name, so a flag declared on the group turns
-`dotfiles apply -v` into `No such option`. `tests/cli/test_conformance.py` walks
-the tree and fails when a reconciling leaf is missing either one, which is what
-stops the asymmetry `--dry-run` and `--force` each had.
+The flags bind on the leaves rather than on the groups, for the reason `--machine`
+does and which `main.py` records: Click parses group options before the subcommand
+name, so a flag declared on the group turns `dotfiles apply -v` into
+`No such option`. `tests/cli/test_conformance.py` walks the tree and fails when a
+`plan`, `check` or `apply` is missing either one, which is what stops the
+asymmetry `--dry-run` and `--force` each had.
+
+**Every one of them takes the pair, with no exceptions.** The first cut spared
+`network check`, `bundle check` and the two under `windows`, on the grounds that
+they answer a question about a network or an archive rather than converging the
+machine, and so emit nothing worth turning up. Measuring that afterwards showed it
+was false — `network.py` and `windows.py` go through `effects` six and four times,
+and `offline_bundle.py` twice. `machines check` is the only one that really does
+not emit, and `-q` still earns its place there because the finding rows it
+suppresses are rendered the same way as everything else. The rule is the verb
+rather than the subject, so learning `-v` on one `check` teaches it everywhere.
 
 **Both are below the record, which is why the walk is not instrumented.**
 `effects` is already the one module that touches the world outside the process, so

@@ -35,19 +35,19 @@ LEAVES = [(path, cmd) for path, cmd in TREE if not isinstance(cmd, click.Group)]
 GROUPS = [(path, cmd) for path, cmd in TREE if isinstance(cmd, click.Group)]
 
 
-RECONCILING = [
-    (path, command)
-    for path, command in LEAVES
-    if path[-1] in {'plan', 'check', 'apply'} and (len(path) == 1 or path[0] in vocabulary.RESOURCES)
-]
-"""The root three and the same three under each resource — every leaf that walks
-the engine, and so every leaf with a debug stream worth turning up.
+RECONCILING = [(path, command) for path, command in LEAVES if path[-1] in {'plan', 'check', 'apply'}]
+"""Every `plan`, `check` and `apply` in the tree, with no exceptions carved out.
 
-`machines check`, `network check`, `bundle check` and the two under `windows` are
-deliberately outside it. They answer a question about a declaration, a network or
-an archive rather than converging a part of this machine, and none of them emits
-through `effects`, so a verbosity flag there would promise detail that does not
-exist."""
+The first cut of this rule kept `network check`, `bundle check` and the two under
+`windows` outside it, on the stated grounds that none of them emits through
+`effects`. That was measured afterwards and is false: `network.py` and
+`windows.py` reference `effects` six and four times, and `offline_bundle.py`
+twice. Only `machines check` really does not, and `-q` still means something there
+because the finding rows it suppresses are rendered the same way.
+
+So the rule is the verb, not the subject. A reader who learns `-v` on one
+`check` has learned it everywhere, which is worth more than sparing four leaves a
+flag."""
 
 
 def test_the_tree_is_not_empty() -> None:

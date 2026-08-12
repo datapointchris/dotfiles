@@ -19,6 +19,9 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve as resolver
 from dotfiles import validate
+from dotfiles.commands import QuietOption
+from dotfiles.commands import VerboseOption
+from dotfiles.commands import verbosity
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
@@ -262,6 +265,8 @@ def _safekeep_block(machine: machines.Machine) -> str:
 def check_machines(
     name: str = typer.Argument(None, help='Machine name (default: every manifest)'),
     as_json: bool = typer.Option(False, '--json', help='Emit the findings as JSON'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Validate the declaration: every manifest, and packages.yml's own structure.
 
@@ -276,6 +281,7 @@ def check_machines(
     rather than drift's, which is what lets the same number mean the same thing
     whether it came from here or from the whole-machine walk.
     """
+    verbosity(verbose, quiet)
     if name:
         _manifest_path(name)
         hint(f'checking every manifest, not only {name}: packages.yml is shared by all of them')

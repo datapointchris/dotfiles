@@ -20,6 +20,9 @@ from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import windows
 from dotfiles import windows_bundle
+from dotfiles.commands import QuietOption
+from dotfiles.commands import VerboseOption
+from dotfiles.commands import verbosity
 from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.output import hint
@@ -74,8 +77,9 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
 
 
 @bundle_app.command('check')
-def check() -> None:
+def check(verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report whether a usable bundle is staged."""
+    verbosity(verbose, quiet)
     error('bundle check is not built: it diffs a staged bundle against the plan the resolver produces')
     hint('the resolver it was waiting on has landed; what it reads is the document `dotfiles plan --json` emits')
     raise typer.Exit(ExitCode.ISSUE)
@@ -97,7 +101,7 @@ def prune() -> None:
 
 
 @windows_app.command('check')
-def windows_check(as_json: bool = JsonOption) -> None:
+def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report which Windows tools are missing from this WSL machine's PATH.
 
     A real checker as of the conversion, and cheap enough to be one: the question
@@ -105,6 +109,7 @@ def windows_check(as_json: bool = JsonOption) -> None:
     winget nor a network — which is what stopped it existing while the answer lived
     inside a shell script that could only install.
     """
+    verbosity(verbose, quiet)
     try:
         into = windows.destination()
     except windows.WindowsSideError as unreachable:
@@ -122,6 +127,8 @@ def windows_check(as_json: bool = JsonOption) -> None:
 def windows_apply(
     source: str = typer.Option(None, '--source', help='Bundle archive or directory to install from'),
     offline: bool = typer.Option(False, '--offline', help='Install from --source rather than winget'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Install the Windows tools WSL copies onto its PATH.
 
@@ -130,6 +137,7 @@ def windows_apply(
     step — so `dotfiles apply` converges it, and doing it again here would be one
     act with two owners and no way to tell which had run.
     """
+    verbosity(verbose, quiet)
     if offline and not source:
         raise typer.BadParameter('--offline needs --source naming the bundle to install from')
 
