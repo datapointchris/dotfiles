@@ -692,6 +692,12 @@ system_packages:
     description: Text-based web browser and HTML renderer for aerc
     tags: [cli, communication]
 
+  - name: urlscan
+    brew: urlscan
+    pacman: urlscan
+    description: URL selector for aerc message bodies
+    tags: [cli, communication]
+
   - name: newsboat
     brew: newsboat
     pacman: newsboat
