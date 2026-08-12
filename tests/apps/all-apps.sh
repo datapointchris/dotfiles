@@ -104,6 +104,7 @@ test_cmd "printcolors available" "command -v printcolors"
 # --help only: a bare run subscribes and never returns, which the 5s timeout
 # would report as a failure rather than the success it actually is.
 test_cmd "claude-ci-watch help" "claude-ci-watch --help"
+test_cmd "unattended help" "unattended --help"
 
 # ================================================================
 # 2. SHELL LIBRARIES

@@ -157,6 +157,9 @@ def test_every_supported_shell_bounds_the_age_of_what_it_prints() -> None:
 def linux(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
+    # Absent unless a test deploys it. Left pointing at the real ~/.local/bin,
+    # the unit's shape would depend on whether this machine has run an apply.
+    monkeypatch.setattr(schedule, 'WRAPPER', tmp_path / 'bin' / 'unattended')
     monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
     return tmp_path / 'config' / 'systemd' / 'user'
 
@@ -195,6 +198,39 @@ def test_the_unit_names_the_installed_binary_not_whatever_is_on_path(linux: Path
     steps.apply('check-schedule', Privilege())
 
     assert f'ExecStart={installed} check' in (linux / 'dotfiles-check.service').read_text()
+
+
+def test_the_check_runs_through_the_wrapper_that_reports_a_dead_run(linux: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """Nothing else notices a scheduled run that crashed: no workstation is in
+    the homelab's monitoring inventory, and a red user unit is only seen by
+    someone already looking."""
+    executable(fake_bin, 'systemctl')
+    schedule.WRAPPER.parent.mkdir(parents=True, exist_ok=True)
+    schedule.WRAPPER.touch()
+
+    steps.apply('check-schedule', Privilege())
+
+    execstart = f'ExecStart={schedule.WRAPPER} --ok-exit 0,3 -- {schedule.INSTALLED} check'
+    assert execstart in (linux / 'dotfiles-check.service').read_text()
+
+
+def test_the_wrapper_tolerates_the_verdict_check_exits_with(linux: Path) -> None:
+    """3 says the machine has an issue, which `check` re-derives every run and the
+    nudge already carries. Reporting it to the inbox as well would put one fact
+    under two lifetimes, and the archived copy would be wrong by the next run."""
+    assert '3' in schedule.CHECK_ANSWERS.split(',')
+
+
+def test_a_machine_without_the_wrapper_still_gets_a_schedule(linux: Path, fake_bin: Path) -> None:
+    """The symlink arrives with the apps layer and this row can be applied first,
+    so naming a file that does not exist would trade a schedule that reports
+    nothing for a schedule that does not run."""
+    executable(fake_bin, 'systemctl')
+    assert not schedule.WRAPPER.exists()
+
+    steps.apply('check-schedule', Privilege())
+
+    assert f'ExecStart={schedule.INSTALLED} check' in (linux / 'dotfiles-check.service').read_text()
 
 
 def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
@@ -240,6 +276,9 @@ def test_an_installed_but_disabled_timer_is_stale(linux: Path, fake_bin: Path) -
 def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('HOME', str(tmp_path))
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
+    # Absent unless a test deploys it. Left pointing at the real ~/.local/bin,
+    # the unit's shape would depend on whether this machine has run an apply.
+    monkeypatch.setattr(schedule, 'WRAPPER', tmp_path / 'bin' / 'unattended')
     monkeypatch.setattr(schedule, '_is_darwin', lambda: True)
     return tmp_path / 'Library' / 'LaunchAgents' / f'{schedule.LABEL}.plist'
 
