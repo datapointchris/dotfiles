@@ -14,6 +14,7 @@ Run with: pytest tests/apps/test_prs.py
 from __future__ import annotations
 
 import json
+import os
 import re
 import stat
 import subprocess
@@ -45,7 +46,12 @@ def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
 
 @pytest.fixture
 def listing(tmp_path: Path):
-    """Run `prs --list` over a fixed set of rows, returning its stdout lines."""
+    """Run `prs --list` over a fixed set of rows, returning its stdout lines.
+
+    PATH inherits rather than naming /usr/bin, because the pipeline needs the
+    real jq and jq is a brew package on macOS. `bin_dir` first is what shadows
+    `pr-list`.
+    """
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
 
@@ -57,7 +63,7 @@ def listing(tmp_path: Path):
             [str(PRS), '--list'],
             capture_output=True,
             text=True,
-            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:/usr/bin:/bin'},
+            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:{os.environ["PATH"]}'},
         )
         assert result.returncode == 0, result.stderr
         return result.stdout.splitlines()

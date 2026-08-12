@@ -16,6 +16,7 @@ Run with: pytest tests/apps/test_worktree.py
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -71,7 +72,7 @@ def run(fleet: dict[str, Path]):
     def _run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
         env = {
             'HOME': str(fleet['primary'].parent),
-            'PATH': '/usr/bin:/bin:/usr/local/bin',
+            'PATH': os.environ['PATH'],
             'SHELL_DIR': str(SHELL_DIR),
             'WORKTREE_ROOT': str(fleet['roots']),
         }

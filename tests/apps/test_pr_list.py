@@ -17,6 +17,7 @@ Run with: pytest tests/apps/test_pr_list.py
 from __future__ import annotations
 
 import json
+import os
 import stat
 import subprocess
 from pathlib import Path
@@ -67,8 +68,10 @@ def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **over
 def run(tmp_path: Path):
     """Invoke pr-list against a synthetic registry and a stubbed provider CLI.
 
-    `/usr/bin:/bin` stays behind the stub dir so jq is the real one — the jq is
-    most of what is under test, and a fake would assert nothing about it.
+    The real PATH stays behind the stub dir so jq is the real one — the jq is
+    most of what is under test, and a fake would assert nothing about it. It is
+    inherited rather than spelled out because jq is a brew package on macOS and
+    so is on neither /usr/bin nor /bin there.
     """
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
@@ -82,7 +85,7 @@ def run(tmp_path: Path):
             [str(PR_LIST), '--registry', str(path)],
             capture_output=True,
             text=True,
-            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:/usr/bin:/bin'},
+            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:{os.environ["PATH"]}'},
         )
 
     return _run
