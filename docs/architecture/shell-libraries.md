@@ -16,7 +16,7 @@ handling. A library contains function definitions, variable assignments and
 conditional logic, and nothing else.
 
 `error-handling.sh` follows this by exposing `enable_error_traps` as an explicit
-opt-in rather than arming traps on load. Every library is checked for the
+opt-in rather than setting strict mode on load — the name is the only trap in it. Every library is checked for the
 violation by `tests/shell/test_shell_libraries.py`; see
 [Library Flag Pollution](../learnings/library-flag-pollution.md) for the
 incident that produced the test.
