@@ -26,6 +26,8 @@ from pathlib import Path
 
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles.output import hint
+from dotfiles.output import warn
 
 
 def cache_file() -> Path:
@@ -112,19 +114,28 @@ def load(path: Path | None = None) -> dict[str, Cached]:
     return entries
 
 
-def save(entries: dict[str, Cached], path: Path | None = None) -> None:
-    """Write the cache, and say nothing if the cache cannot be written.
+def save(entries: dict[str, Cached], path: Path | None = None) -> bool:
+    """Write the cache, and say when it could not be written.
 
     A read-only or full `$XDG_CACHE_HOME` must not fail a `check` that has already
-    produced its answer — the next run simply measures again.
+    produced its answer. Silence is what makes that permanent: an unwritten cache
+    reads back empty, so every currency-capable tool answers `UNKNOWN` advising a
+    refresh, and the refresh it advises is the write that keeps failing. The
+    machine is stuck reporting nothing measurable with the reason unnamed.
+
+    Returns whether it wrote, so a caller can tell the two apart without reading
+    the warning.
     """
     payload = {key: {'version': entry.version, 'checked': entry.checked.isoformat()} for key, entry in entries.items()}
     target = path or cache_file()
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
-    except OSError:
-        return
+    except OSError as unwritable:
+        warn(f'could not cache upstream versions at {target}: {unwritable}')
+        hint(f'every declared release reads as unknown until {target.parent} takes a write — check its permissions and free space')
+        return False
+    return True
 
 
 def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.datetime) -> dict[str, Cached]:

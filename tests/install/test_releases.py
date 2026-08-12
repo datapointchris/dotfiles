@@ -67,7 +67,24 @@ def test_an_unwritable_cache_does_not_fail_the_run(tmp_path: Path) -> None:
     blocked = tmp_path / 'a-file'
     blocked.write_text('not a directory')
 
-    releases.save({'owner/repo': releases.Cached('v1', NOW)}, blocked / 'releases.json')
+    assert releases.save({'owner/repo': releases.Cached('v1', NOW)}, blocked / 'releases.json') is False
+
+
+def test_an_unwritable_cache_is_reported_rather_than_swallowed(tmp_path: Path) -> None:
+    """An unwritten cache reads back empty, so every declared release answers
+    `UNKNOWN` advising a refresh — and the refresh it advises is this write. The
+    machine reports nothing measurable forever with the reason unnamed, which is
+    why the failure has to be an answer the caller can read."""
+    blocked = tmp_path / 'a-file'
+    blocked.write_text('not a directory')
+    path = blocked / 'releases.json'
+
+    assert releases.save({'owner/repo': releases.Cached('v1', NOW)}, path) is False
+    assert releases.load(path) == {}
+
+
+def test_a_written_cache_says_it_wrote(tmp_path: Path) -> None:
+    assert releases.save({'owner/repo': releases.Cached('v1', NOW)}, cache(tmp_path)) is True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
