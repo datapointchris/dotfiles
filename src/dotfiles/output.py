@@ -147,32 +147,40 @@ def elapsed(seconds: float) -> str:
     Nothing at all under a tenth of a second. Seven resources each reporting
     `0.0s` is a column of noughts that makes the one row worth reading harder to
     find, which is the opposite of what a timing is for.
+
+    A slow one is coloured and an ordinary one is plain, rather than the pair
+    being coloured against faint. Faint is unreadable on half the terminal themes
+    this fleet uses, so the row it was hiding is the row somebody came back to
+    the screen to find.
     """
     if seconds < 0.1:
         return ''
     rendered = f'{seconds:.1f}s' if seconds < 60 else f'{int(seconds // 60)}m{seconds % 60:04.1f}s'
-    colour = 'yellow' if seconds >= SLOW_RESOURCE_SECONDS else 'dim'
-    return f'  [{colour}]{rendered}[/]'
+    return f'  [yellow]{rendered}[/]' if seconds >= SLOW_RESOURCE_SECONDS else f'  {rendered}'
 
 
 def announce(address: str, detail: str) -> None:
     """Say what is being measured, before it is.
 
-    Only to a terminal, which is the whole of what this is for: it exists to be
-    read during the wait, and a wait nobody is sitting through does not need
-    narrating. The scheduled check writes into the journal and a `--json` run is
-    parsed, so in both a progress line is a second row per resource that carries
-    nothing the verdict row does not.
+    Two gates, answering different questions. `showing_evidence` is `-q`, and
+    cli-design.md § "Quieten the evidence, never the answer" names the progress
+    headings as exactly what it removes — so a run told to be quiet does not get
+    louder than it was before this line existed. `heading` beside it has always
+    been gated the same way, and a progress line that outranked it would be the
+    odd one.
 
-    Not gated on `showing_evidence`, unlike every other row here. `-q` lowers how
-    much a run says about what it *found*, and a machine that appears to have
-    hung is not a finding.
+    The terminal test is the second, and it is not about volume: this exists to
+    be read *during* the wait, and a wait nobody is sitting through does not need
+    narrating. The scheduled check writes into the journal and a `--json` run is
+    parsed, so in both this is a second row per resource carrying nothing the
+    verdict row does not.
     """
-    if err_console.is_terminal:
-        # Cropped rather than wrapped. A resource's help runs to a sentence, and a
-        # transient line that takes two rows on a narrow terminal doubles the
-        # height of the progress block it is trying to keep small.
-        err_console.print(f'[dim]⋯ {address:<11} {detail}[/]', no_wrap=True, overflow='ellipsis')
+    if not showing_evidence() or not err_console.is_terminal:
+        return
+    # Cropped rather than wrapped. A resource's help runs to a sentence, and a
+    # transient line that takes two rows on a narrow terminal doubles the height
+    # of the progress block it is trying to keep small.
+    err_console.print(f'[blue]⋯[/] {address:<11} {detail}', no_wrap=True, overflow='ellipsis')
 
 
 def measured(address: str, detail: str, seconds: float) -> None:
@@ -183,7 +191,12 @@ def measured(address: str, detail: str, seconds: float) -> None:
     saying "drift" immediately above the repair for it is a fact that expires as
     the reader looks at it. What does not expire is which part of the machine the
     wait belonged to.
+
+    Gated with the rest of the narration: this is the working an apply shows, not
+    the answer it was asked for, and `-q` is a request for less of exactly this.
     """
+    if not showing_evidence():
+        return
     err_console.print(f'[green]✓[/] [bold]{address:<11}[/] {detail}{elapsed(seconds)}')
 
 

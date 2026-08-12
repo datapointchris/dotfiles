@@ -255,8 +255,12 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
     console.print('[bold yellow]set in more than one file[/]')
     for conflict in layering.conflicts:
         console.print(f'  [bold]{conflict.key}[/]')
+        # The losers plain and the winner coloured, rather than the losers faint.
+        # Faint is unreadable on half the themes this fleet uses, and these rows
+        # are the evidence for the finding — the one that must stay legible is
+        # the value being overridden, not the one already in effect.
         for setting in conflict.losers:
-            console.print(f'    [dim]{setting.origin.name:<22} {setting.value!r}[/]')
+            console.print(f'    {setting.origin.name:<22} {setting.value!r}  overridden')
         console.print(f'    [green]{conflict.winner.origin.name:<22} {conflict.winner.value!r}[/]  wins')
 
 
@@ -267,12 +271,16 @@ def _state(path: Path, contributed: dict[Path, int]) -> str:
     coordinate needs one, so `host.gitconfig` missing on a machine that is not WSL
     is the design working — git ignores an include whose target is not there,
     which is what makes the scheme optional per axis.
+
+    The three are told apart by what they say, not by how faintly they are
+    printed. Every one of them is an ordinary state, so none earns a colour, and
+    faint is unreadable on half the themes this fleet uses.
     """
     if not path.exists():
-        return '[dim]absent — nothing declares one for this machine[/]'
+        return 'absent — nothing declares one for this machine'
     if count := contributed.get(path, 0):
-        return f'[dim]{count} setting(s)[/]'
-    return '[dim]no settings[/]'
+        return f'{count} setting(s)'
+    return 'no settings'
 
 
 def _branch(path: Path, edges: dict[Path, list[Include]], contributed: dict[Path, int], console, prefix: str) -> None:  # noqa: ANN001
