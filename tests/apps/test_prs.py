@@ -52,22 +52,36 @@ def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
 
 
 @pytest.fixture
-def listing(tmp_path: Path):
+def bin_dir(tmp_path: Path) -> Path:
+    """A directory that leads PATH, so anything written into it shadows the real
+    tool of that name."""
+    path = tmp_path / 'bin'
+    path.mkdir()
+    return path
+
+
+def write_stub(bin_dir: Path, name: str, body: str) -> None:
+    stub = bin_dir / name
+    stub.write_text(f'#!/bin/sh\n{body}\n')
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+
+
+def stub_pr_list(bin_dir: Path, rows: tuple[dict[str, Any], ...]) -> None:
+    write_stub(bin_dir, 'pr-list', f"cat <<'JSON'\n{json.dumps(list(rows))}\nJSON")
+
+
+@pytest.fixture
+def listing(tmp_path: Path, bin_dir: Path):
     """Run `prs --list` over a fixed set of rows, returning its stdout lines.
 
     PATH inherits rather than naming /usr/bin, because the pipeline needs the
-    real jq and jq is a brew package on macOS. `bin_dir` first is what shadows
-    `pr-list`. The locale is set because this listing is only ever read from a
-    terminal that has one, and `column` measures a non-ASCII cell differently
-    without it.
+    real jq and jq is a brew package on macOS. The locale is set because this
+    listing is only ever read from a terminal that has one, and `column` measures
+    a non-ASCII cell differently without it.
     """
-    bin_dir = tmp_path / 'bin'
-    bin_dir.mkdir()
 
     def _listing(*rows: dict[str, Any]) -> list[str]:
-        stub = bin_dir / 'pr-list'
-        stub.write_text(f"#!/bin/sh\ncat <<'JSON'\n{json.dumps(list(rows))}\nJSON\n")
-        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+        stub_pr_list(bin_dir, rows)
         result = subprocess.run(
             [str(PRS), '--list'],
             capture_output=True,
@@ -82,6 +96,40 @@ def listing(tmp_path: Path):
         return result.stdout.splitlines()
 
     return _listing
+
+
+@pytest.fixture
+def picker(tmp_path: Path, bin_dir: Path):
+    """Run bare `prs` over a fixed set of rows, returning the lines it feeds fzf.
+
+    fzf is the only place a displayed row can be read: everything past it fetches
+    a ref and opens a tmux window. The stub records its stdin and exits 130, the
+    code for a dismissed picker, which `prs` turns into a clean exit. nvim and
+    tmux are stubbed only to satisfy the tool check on a machine without them,
+    and TMUX is set because this refuses to run outside a session.
+    """
+    fed = tmp_path / 'fed-to-fzf'
+
+    def _picker(*rows: dict[str, Any]) -> list[str]:
+        stub_pr_list(bin_dir, rows)
+        write_stub(bin_dir, 'fzf', f"cat >'{fed}'\nexit 130")
+        write_stub(bin_dir, 'nvim', 'exit 0')
+        write_stub(bin_dir, 'tmux', 'exit 0')
+        result = subprocess.run(
+            [str(PRS)],
+            capture_output=True,
+            text=True,
+            env={
+                'HOME': str(tmp_path),
+                'PATH': f'{bin_dir}:{os.environ["PATH"]}',
+                'LC_ALL': UTF8_LOCALE,
+                'TMUX': '/tmp/tmux-fixture,1,0',
+            },
+        )
+        assert result.returncode == 0, result.stderr
+        return fed.read_text(encoding='utf-8').splitlines()
+
+    return _picker
 
 
 def cells(line: str) -> list[str]:
@@ -178,6 +226,46 @@ def test_a_pr_is_never_marked_as_stacked_on_itself(listing) -> None:
     it, and a provider reporting a degenerate base gets a sane row instead."""
     lines = listing(pr('dotfiles', 1, 'self', base='self'))
     assert cells(lines[1])[3] == 'self'
+
+
+def fields(line: str) -> list[str]:
+    """The picker's row, which is tab-separated rather than padded."""
+    return line.split('\t')
+
+
+def test_the_picker_marks_a_stacked_pr_the_way_the_listing_does(picker) -> None:
+    """The picker is the default mode and the surface where a PR is chosen for
+    review, so a child that reads here as ordinary work against the default
+    branch gets reviewed against the wrong base. Two renderings of one dataset
+    disagreeing about a stack is worse than neither showing it."""
+    lines = picker(
+        pr('dotfiles', 1, 'split-plan-check-verbs'),
+        pr('dotfiles', 2, 'language-toolchains', base='split-plan-check-verbs'),
+    )
+    assert re.fullmatch(r'language-toolchains \S+ #1', fields(lines[1])[4])
+    assert 'split-plan-check-verbs' not in fields(lines[1])[4]
+    assert fields(lines[0])[4] == 'split-plan-check-verbs'
+
+
+def test_the_picker_keeps_the_marker_inside_one_field(picker) -> None:
+    """fzf splits the line on tabs and hides the first field, so a marker built
+    with a tab instead of a space would push the title out of view and shift what
+    `--with-nth` displays."""
+    lines = picker(
+        pr('dotfiles', 1, 'split-plan-check-verbs'),
+        pr('dotfiles', 2, 'language-toolchains', base='split-plan-check-verbs'),
+    )
+    assert [len(fields(line)) for line in lines] == [6, 6]
+    assert fields(lines[1])[0] == '1'
+    assert fields(lines[1])[5] == 'a change in dotfiles'
+
+
+def test_the_picker_leaves_an_unstacked_row_alone(picker) -> None:
+    """Every row carrying an arrow is the same failure as no row carrying one:
+    the marker only means something if it distinguishes."""
+    lines = picker(pr('dotfiles', 1, 'a-branch'), pr('doit', 2, 'b-branch', base='master'))
+    assert fields(lines[0]) == ['0', 'dotfiles', '#1', '3d', 'a-branch', 'a change in dotfiles']
+    assert fields(lines[1]) == ['1', 'doit', '#2', '3d', 'b-branch', 'a change in doit']
 
 
 def test_an_empty_backlog_says_so_rather_than_printing_a_bare_header(listing) -> None:
