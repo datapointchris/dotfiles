@@ -926,8 +926,7 @@ github_releases:
     repo: equalsraf/win32yank
     # nvim, tmux and zsh-vi-mode invoke this by name, and Linux has no PATHEXT to
     # supply the suffix — so the installed file must carry it or every caller
-    # misses. The deleted bash installer held the name; nothing did between then
-    # and this line, and `check` stayed green because it asks for what it installed.
+    # misses.
     command: win32yank.exe
     # Its installer skips unless /proc/version names Microsoft, so it is absent by
     # design in a container. Declared here so verification applies the same test

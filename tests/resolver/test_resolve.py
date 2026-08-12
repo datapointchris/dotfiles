@@ -113,14 +113,16 @@ DEPLOYED_TREES = ('apps', 'configs', 'shell')
 """The three trees that get symlinked into `$HOME`, and so the only places a
 caller can invoke a binary from."""
 
-WIN32YANK_CALL = re.compile(r'win32yank(\S*)[ \t]+-')
-"""`win32yank` followed by a flag on the same line, which is what invoking it
-looks like in shell, lua and tmux alike.
+WIN32YANK_CALL = re.compile(r'win32yank(\S*)[ \t]+-[io]\b')
+"""`win32yank` followed by `-i` or `-o` on the same line — the two flags every
+call site passes, and what invoking it looks like in shell, lua and tmux alike.
 
-Prose naming the tool is a mention rather than a call, and so is the nvim
-provider named `win32yank-wsl` — neither may be read as a caller. Matched per
-line because a mention ending a comment would otherwise join the `--` opening
-the next one.
+Anchoring on those flags rather than on a bare `-` is what keeps prose out. A
+comment introducing the tool with a dash, `# win32yank - the clipboard bridge`,
+otherwise reads as a caller under a name the entry does not install, and so does
+a `--`-delimited aside or a quoted mention whose closing quote `\\S*` swallows.
+The nvim provider named `win32yank-wsl` carries no flag and is excluded the same
+way.
 """
 
 
@@ -130,10 +132,9 @@ def test_every_caller_invokes_the_win32yank_filename_the_entry_installs(declarat
 
     `providers/ghrelease` writes `bin_dir() / entry.executable` and then asks
     `which` for that same name, so the check is a mirror: a machine whose
-    clipboard is dead reports converged. Deleting the twenty-three bash
-    installers (5d3714a2) took with it the `.exe` this entry had always installed
-    under, because `packages.yml` never carried it — and every call site went on
-    asking for a suffix that Linux, having no PATHEXT, will not supply.
+    clipboard is dead reports converged. `packages.yml` is the only place the
+    installed filename is stated, and every call site names the `.exe` suffix
+    that Linux, having no PATHEXT, will not supply on its own.
 
     Asserted against whatever the callers say rather than against a literal, so
     the pairing has to be broken on purpose from either side.
