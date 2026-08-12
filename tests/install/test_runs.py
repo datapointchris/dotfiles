@@ -160,6 +160,36 @@ class TestSpan:
         assert path.stem == '20260810T140000Z-worklaptop-apply'
 
 
+class TestWhereRecordsLand:
+    """The destination an unargued `write` resolves, which nothing else measures.
+
+    Every other test here hands `write` a directory, so the default was covered
+    only by the constant being read correctly at import. A record found loose in
+    the checkout is the failure that made this worth pinning: whatever put it
+    there, a record inside the repo is committable, and `dotfiles report` reads
+    the state directory and would never find it.
+    """
+
+    def test_records_live_outside_the_checkout(self):
+        assert paths.RUNS_DIR.is_relative_to(paths.STATE_HOME)
+        assert not paths.STATE_HOME.is_relative_to(paths.REPO_ROOT)
+
+    def test_the_default_destination_follows_xdg_state_home(self, tmp_path, monkeypatch):
+        """Through the environment variable rather than the constant, because a
+        path assembled at import is exactly what a monkeypatched `RUNS_DIR` would
+        stop testing."""
+        import importlib
+
+        monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path))
+        importlib.reload(paths)
+        try:
+            written = runs.write(a_run())
+            assert written.parent == tmp_path / 'dotfiles' / 'runs'
+        finally:
+            monkeypatch.undo()
+            importlib.reload(paths)
+
+
 class TestListing:
     def test_runs_come_back_newest_first(self, runs_dir):
         for index in range(3):

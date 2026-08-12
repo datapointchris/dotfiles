@@ -107,6 +107,11 @@ test-wsl-network-restricted.log
 .tmp-transfer/
 .wsl-rootfs-cache/
 
+# A run record read out of a container lands in the CWD; it belongs under
+# $XDG_STATE_HOME/dotfiles/runs and one left here is committable
+/20*T*Z-*.json
+/20*T*Z-*.jsonl
+
 # Offline install bundles
 *.tar.gz
 
