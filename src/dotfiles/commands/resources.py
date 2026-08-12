@@ -1,4 +1,4 @@
-"""The seven resources, each with the same verbs applied to one part of the machine.
+"""The resources, each with the same verbs applied to one part of the machine.
 
 `check` never writes and `apply` is `check` plus acting on what it found. That is
 structural rather than a promise: nothing here takes a `--dry-run`, because there

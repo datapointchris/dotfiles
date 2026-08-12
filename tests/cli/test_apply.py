@@ -156,8 +156,8 @@ def test_owner_narrowing_leaves_only_providers_with_something_to_install(name: s
 
 @pytest.mark.parametrize('name', machines.names())
 def test_owner_narrowing_reaches_the_walk_and_not_only_the_plan(name: str) -> None:
-    """`symlinks`, `env` and `identity` have no provider, so `ownable` never
-    reaches them and an owner-narrowed *plan* leaves all three intact.
+    """`symlinks`, `env`, `identity` and `auth` have no provider, so `ownable` never
+    reaches them and an owner-narrowed *plan* leaves every one of them intact.
 
     Unnarrowed, `apply --owner X` deployed every symlink, wrote `~/.env` and
     `~/.gitconfig`, and ran the deployment epilogue — none of which has anything
@@ -171,6 +171,7 @@ def test_owner_narrowing_reaches_the_walk_and_not_only_the_plan(name: str) -> No
     assert 'symlinks' not in narrowed.resources
     assert 'env' not in narrowed.resources
     assert 'identity' not in narrowed.resources
+    assert 'auth' not in narrowed.resources
     assert set(narrowed.resources) <= {registry.named(provider).resource for provider in plan.providers}
 
 

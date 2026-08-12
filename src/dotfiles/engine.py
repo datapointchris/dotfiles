@@ -139,8 +139,8 @@ class Selection:
         left holding none.
 
         What `--owner` means, and it has to reach the *walk* rather than only the
-        plan. `symlinks`, `env` and `identity` have no provider, so `ownable`
-        never reaches them and an owner-narrowed plan leaves all three intact —
+        plan. `symlinks`, `env`, `identity` and `auth` have no provider, so `ownable`
+        never reaches them and an owner-narrowed plan leaves every one of them intact —
         `apply --owner X` would deploy every symlink, write `~/.env` and run the
         deployment epilogue, none of which has anything to do with X. Dropping a
         resource that holds no wanted provider excludes them by construction
@@ -266,7 +266,7 @@ def resources() -> dict[str, Resource]:
 
     Measuring and printing order, not the order work happens in: that is
     `_in_stage_order`, and the two differ because the convergence chain
-    interleaves these seven names.
+    interleaves these names.
 
     Imported here rather than at module scope because `resources/packages.py`
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
@@ -353,7 +353,7 @@ def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
     `assess` walks resource by resource, because that is how a reader wants the
     rows grouped. Converging is ordered by `Stage`, and the two are not the same
     walk: the chain runs toolchains → packages → toolchains → packages → plugins →
-    symlinks → plugins → system, so no ordering of the seven resource names can
+    symlinks → plugins → system, so no ordering of the resource names can
     express it.
 
     Stable, so the order *within* a stage stays the plan's own

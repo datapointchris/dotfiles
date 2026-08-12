@@ -244,8 +244,8 @@ the declaration in the plan and ignored it in the run, and failed with
 `cargo: No such file or directory`.
 
 Owner narrowing drops every provider whose contents cannot be traced to a GitHub owner,
-and then every resource left holding none — so `symlinks`, `env` and `identity`, which
-have no provider to be ownable, fall out of the walk rather than deploying in full
+and then every resource left holding none — so `symlinks`, `env`, `identity` and `auth`,
+which have no provider to be ownable, fall out of the walk rather than deploying in full
 alongside somebody's tools. Ownership is derived from
 whichever field carries it — `repo`, `github_repo`, or a Go import path in `package` —
 not from a `personal` tag, because a tag has to be remembered on every new tool and
@@ -320,6 +320,46 @@ of re-deriving one. `theme.sh --update` and `font.sh --update` run `theme update
 version matched a sentinel string against their output and always missed, printing
 `theme updated` on every run; it also ended in an unconditional `exit 0`, so a genuine
 failure never reached the report.
+
+## Logins, which are checked and never repaired
+
+A converged machine is not necessarily a working one. Every binary can be installed,
+every symlink deployed and every flag set while the CLIs that do the work sit logged out
+— which was the state of the Arch box on 2026-08-12, with `learning`, `meso`, `nomad`
+and `atuin` all unauthenticated and `dotfiles check` reporting a screen of converged
+rows. The `auth` resource closes that gap, and four decisions inside it are worth
+stating because the code cannot state them about itself.
+
+**The manifest names which tools, the module says how each is asked.** A machine's
+`auth:` list is the roster and `src/dotfiles/resources/auth.py` holds one probe per name,
+with a test asserting the two sets match in both directions. That is the split
+`custom_installers` and `steps` already use, and it is forced harder here: `aws` arrives
+through a custom installer and `bbkt` is installed by hand on the work box, so a field on
+a `packages.yml` row could not reach either of them. Putting the roster in code instead
+would be the one place this repo keeps a machine's declaration out of.
+
+**Every probe is local, and each one carries the measurement that picked it.** `check`
+runs at every shell prompt through the nudge, in a pre-commit hook and on a six-hourly
+timer, so a network round trip per declared tool is unaffordable and would report a
+working login as broken on any machine that is offline. The cheap probe is per tool and
+it inverts between them, which is the part worth writing down: `gh auth token` is 30ms
+where `gh auth status` validates against the API at 333ms, while for the personal data
+CLIs `auth status` is the 4ms one — it reads the keychain and makes no HTTP call — and
+`auth token` refreshes at 215ms. `atuin` and `aws` have no cheap CLI probe at all and are
+answered by a file, because `atuin status` queries the sync server once a session exists
+and `aws sts get-caller-identity` is 698ms and networked.
+
+**Nothing is ever repaired, and `apply` cannot reach it.** A login is a browser flow, a
+password or a device code, so every finding is `Repair.BY_HAND` and therefore never
+`actionable` — which is what keeps it out of the stage-ordered walk entirely rather than
+relying on a branch that could be wrong. Getting this backwards would turn every `apply`
+on a headless box into a prompt storm. It is the same answer `identity` gives for the
+same reason, and both resources have a `check` and no `apply`.
+
+**Whether a credential is still current is out of scope, deliberately.** An expired
+keychain token and a stale SSO cache both read as present. Asking properly means a round
+trip in every case, which is the one thing this resource cannot do. `<tool> auth status
+--json` already carries an `expired` field, so that is where a later pass starts.
 
 ## Why there is a CLI now
 

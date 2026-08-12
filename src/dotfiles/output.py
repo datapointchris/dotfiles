@@ -133,7 +133,7 @@ SLOW_RESOURCE_SECONDS = 2.0
 
 The number is a reading threshold, not a performance one: a row that takes long
 enough to be *waited on* is the row a reader is looking for when they come back
-to a screen that sat still, and everything under it is noise in a list of seven.
+to a screen that sat still, and everything under it is noise in a list of rows.
 """
 
 

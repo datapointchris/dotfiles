@@ -21,8 +21,8 @@ refuses rather than forces.
 `Privilege` is a parameter of `perform` and of nothing else, which is what makes
 "the read-only verbs never escalate" structural rather than a promise: `observe`
 is not handed one, so the code to ask for a password is not reachable from the
-half `plan` and `check` run. Six of the seven resources ignore it, and that is the
-point — an unused parameter is cheaper than a subsystem that has to be trusted.
+half `plan` and `check` run. Every resource but `system` ignores it, and that is
+the point — an unused parameter is cheaper than a subsystem that has to be trusted.
 """
 
 from __future__ import annotations
@@ -234,7 +234,7 @@ class Observation(Protocol):
 
     Except for one sentence. `summary` is what a resource's row says when nothing
     drifted, and it belongs to the observation because that is the only thing that
-    knows how much was examined — the walk used to build all seven of these
+    knows how much was examined — the walk used to build all of these
     itself, reaching into `evidence`, `links`, `present` and `installed` from a
     module that had no other reason to know those fields existed.
     """

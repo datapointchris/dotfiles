@@ -3,7 +3,7 @@
 Nothing here touches a machine. `advice_for` and `repair_for` are pure
 functions over a `DesiredItem` and a measured `Preconditions`, and the
 `__post_init__` on `Change` is a validation rule worth testing on its own
-rather than only through the seven resources that can trip it.
+rather than only through the resources that can trip it.
 """
 
 from __future__ import annotations

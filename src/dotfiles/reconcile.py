@@ -72,7 +72,7 @@ class ResourceVerdict(StrEnum):
     shell nudge not worth having.
 
     There was a fourth, `PENDING`, for a resource whose checker had not been
-    written yet. Every one of the seven answers for itself now, so a verdict
+    written yet. Every one of them answers for itself now, so a verdict
     meaning "no evidence either way" has nothing to report it.
     """
 
@@ -113,7 +113,7 @@ class ResourceResult:
     """What measuring this resource cost, off the engine's own clock.
 
     Already in every run record and never once on screen, which is how a check
-    that took five minutes could be reported as seven converged rows with nothing
+    that took five minutes could be reported as a screen of converged rows with nothing
     saying where the five minutes went. Carried on the result rather than looked
     up from the record afterwards, because the reader who needs it is the one
     watching the run rather than the one reading it back.
@@ -471,7 +471,7 @@ def apply_machine(
         return ExitCode.USAGE
 
     # The walk, not only the plan. An owner narrows which *entries* are wanted,
-    # and a resource with no provider — symlinks, env, identity — has no entry to
+    # and a resource with no provider — symlinks, env, identity, auth — has no entry to
     # narrow, so it survives an owner-narrowed plan untouched and gets deployed
     # by a command that asked for one person's tools.
     if owner is not None:

@@ -1,8 +1,8 @@
 """One module per section of the help, so where a command goes is never a question.
 
 The verbosity pair lives here rather than beside each command group because it is
-the one option every reconciling leaf takes, in all three verbs and under all
-seven resources. `--machine` and `--json` are declared per module and that is
+the one option every reconciling leaf takes, in all three verbs and under every
+resource. `--machine` and `--json` are declared per module and that is
 fine — they differ in help text and in which leaves want them — but a flag that
 must read identically on twenty leaves is a flag that should have one definition.
 """

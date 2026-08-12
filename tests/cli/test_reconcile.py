@@ -63,7 +63,7 @@ def test_an_issue_outranks_drift() -> None:
 
 def test_every_resource_answers_for_itself() -> None:
     """There was a fourth verdict, `PENDING`, for a resource whose checker had not
-    been written. All seven answer now, so nothing can report "no evidence either
+    been written. Every one of them answers now, so nothing can report "no evidence either
     way" — and a gate built on `check` is no longer partly blind."""
     assert set(reconcile.ResourceVerdict) == {ResourceVerdict.CONVERGED, ResourceVerdict.DRIFT, ResourceVerdict.ISSUE}
     assert set(engine.resources()) == set(vocabulary.RESOURCES)
