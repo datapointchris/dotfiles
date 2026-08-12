@@ -21,6 +21,7 @@ go_tools:
   - sops
   - todoui
   - forge
+  - fleet
   - ifiles
   - gowall
   - ascii-image-converter
