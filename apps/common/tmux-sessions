@@ -24,6 +24,10 @@ Commands:
   promote [name]    Move the focused window out into a session of its own
   windows           Fuzzy-find a window across every session
   list              Print sessions in status-line order, current one marked
+  move-left         Swap the focused session with the one to its left
+  move-right        Swap the focused session with the one to its right
+  move-first        Send the focused session to the front of the list
+  move-last         Send the focused session to the end of the list
   install-status    Move tmux's stock window row to the second status line
 EOF
 }
@@ -191,6 +195,74 @@ list_sessions() {
   done < <(session_order)
 }
 
+# Rebuild a session under a fresh id, keeping every window, pane and process.
+# There is no swap-session and no way to renumber, so this is the only lever on
+# the order the status line draws: ids only ever ascend, and a session recreated
+# now sorts after every session that was not.
+rebuild_session() {
+  local name=$1 scratch="__reorder_$1" window
+  tmux new-session -d -s "$scratch" -n __placeholder
+  # By id, not index: renumber-windows shifts indices as each window leaves.
+  while IFS= read -r window; do
+    tmux move-window -s "$window" -t "$scratch:"
+  done < <(tmux list-windows -t "=$name" -F '#{window_id}')
+  tmux kill-window -t "$scratch:__placeholder"
+  tmux rename-session -t "=$scratch" "$name"
+}
+
+# Swap the focused session with its neighbour by rebuilding the shortest run of
+# sessions that produces the new order. Moving left leaves the focused session
+# alone and rebuilds the neighbour it jumped; moving right has to rebuild the
+# focused one, since a rebuild can only ever send a session later.
+shift_session() {
+  local direction=$1 current sessions=() i=-1 n
+  current="$(current_session)"
+  while IFS= read -r n; do sessions+=("$n"); done < <(session_order)
+
+  local idx
+  for idx in "${!sessions[@]}"; do
+    [[ ${sessions[idx]} == "$current" ]] && i=$idx
+  done
+  [[ $i -lt 0 ]] && {
+    echo "tmux-sessions: no current session" >&2
+    exit 1
+  }
+
+  local rebuild=()
+  if [[ $direction == left ]]; then
+    [[ $i -eq 0 ]] && return 0
+    rebuild=("${sessions[i - 1]}" "${sessions[@]:i+1}")
+  else
+    [[ $i -eq $((${#sessions[@]} - 1)) ]] && return 0
+    rebuild=("$current" "${sessions[@]:i+2}")
+  fi
+
+  local name
+  for name in "${rebuild[@]}"; do rebuild_session "$name"; done
+  # A rebuilt session is a new one; the client is left wherever tmux dropped it
+  # when the old session died, so put it back deliberately.
+  focus_session "$current"
+}
+
+# Jump the focused session to one end. Worth having as its own verb rather than
+# repeated shifts: each shift is a full rebuild, so walking four positions costs
+# four of them where this costs one pass. Sending it last is the cheap direction
+# -- one rebuild, since a rebuilt session always sorts last.
+send_session() {
+  local target=$1 current name
+  current="$(current_session)"
+
+  if [[ $target == last ]]; then
+    rebuild_session "$current"
+  else
+    while IFS= read -r name; do
+      [[ $name == "$current" ]] && continue
+      rebuild_session "$name"
+    done < <(session_order)
+  fi
+  focus_session "$current"
+}
+
 # Sessions belong on the first status line, above the windows, but tmux draws
 # status-format[0] topmost and ships the window row there. Copy that stock row
 # down to line 2 and leave line 1 for the theme's session list, which is sourced
@@ -231,6 +303,22 @@ case "${1:-}" in
   install-status)
     require_server
     install_status
+    ;;
+  move-left)
+    require_server
+    shift_session left
+    ;;
+  move-right)
+    require_server
+    shift_session right
+    ;;
+  move-first)
+    require_server
+    send_session first
+    ;;
+  move-last)
+    require_server
+    send_session last
     ;;
   *)
     usage

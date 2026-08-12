@@ -87,6 +87,8 @@ status bar colour the same way it owns `pane-border-format`.
 | --- | --- |
 | `M-n` / `M-p` | Previous / next window |
 | `M-,` / `M-.` | Previous / next session |
+| `M-h` / `M-l` | Move the focused session left / right |
+| `M-a` / `M-e` | Move the focused session to the front / end |
 | `M-o` | Last session |
 | `M-t` | New session |
 | `prefix K` | Kill the session, after confirming |
@@ -143,6 +145,17 @@ Creation order is the right choice for the display, and the reason is worth keep
 Renaming a session leaves it where it is and a new one is appended at the end. Alphabetical
 ordering would reshuffle the list whenever a session was created or renamed, which destroys the
 positional memory that makes it fast to read.
+
+Stable is not fixed, though. tmux has no `swap-session` and ids only ever ascend with no way to
+renumber, but a session recreated now sorts after every session that was not — so `move-left`,
+`move-right`, `move-first` and `move-last` reorder by rebuilding the shortest run of sessions that
+produces the order wanted, carrying windows and their processes across with `move-window`. Moving
+left leaves the focused session alone and rebuilds the neighbour it jumped; moving right has to
+rebuild the focused one, since a rebuild can only send a session later.
+
+The order does not survive a restart. tmux-resurrect saves by session **name** and its file lists
+them alphabetically, so a restore recreates them in that order and hands out ids to match. A
+deliberate order lasts as long as the server does; a name is what orders sessions across restarts.
 
 Because the order only matters at keypress time, line 1 stays a pure tmux format rather than a
 `#(shell-command)`. Formats re-evaluate on tmux's own redraw events, so the list updates the moment
