@@ -254,14 +254,19 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
     target.parent.mkdir(parents=True, exist_ok=True)
 
     if asset.archive is Archive.RAW:
-        shutil.copy2(download, target)
-        effects.make_executable(target)
+        if not effects.install(download, target):
+            return Result(False, _unplaceable(executable, target))
         return Result(True, str(target))
 
     if asset.archive is Archive.GZIP:
-        if not effects.gunzip(download, target):
+        # Decompressed beside the download rather than onto `target`, because
+        # opening the destination for writing is the thing that fails when the
+        # destination is running. `install` is what lands it.
+        plain = staging / executable
+        if not effects.gunzip(download, plain):
             return Result(False, f'{asset.name} did not decompress')
-        effects.make_executable(target)
+        if not effects.install(plain, target):
+            return Result(False, _unplaceable(executable, target))
         return Result(True, str(target))
 
     if asset.tree:
@@ -274,18 +279,28 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
     source = unpacked / asset.path
     if not source.is_file():
         return Result(False, f'{asset.name} contains no {asset.path}')
-    shutil.move(str(source), target)
-    effects.make_executable(target)
+    if not effects.install(source, target):
+        return Result(False, _unplaceable(executable, target))
 
     for extra in asset.extras:
         beside = unpacked / extra
         if not beside.is_file():
             continue
         placed = bin_dir() / Path(extra).name
-        shutil.move(str(beside), placed)
-        effects.make_executable(placed)
+        if not effects.install(beside, placed):
+            return Result(False, _unplaceable(Path(extra).name, placed))
 
     return Result(True, str(target))
+
+
+def _unplaceable(executable: str, target: Path) -> str:
+    """Why a replace failed, given that a running target is no longer a reason.
+
+    Naming the directory rather than guessing: `install` replaces rather than
+    writes through, so ETXTBSY is gone and what is left is a filesystem the user
+    cannot write to, or one with no room.
+    """
+    return f'{executable} downloaded but could not be placed in {target.parent}'
 
 
 def _place_tree(asset: ReleaseArtifact, download: Path, target: Path) -> Result:

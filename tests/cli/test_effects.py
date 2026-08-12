@@ -211,3 +211,85 @@ def test_a_command_that_would_not_start_is_still_logged(output: Output, caplog) 
         run(['definitely-not-a-real-binary-xyz'], output=output)
 
     assert logged(caplog)[0]['returncode'] == NOT_FOUND
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Landing a binary that is currently running
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def running_binary(tmp_path: Path):
+    """A real executable, copied and then executed, so the kernel holds it.
+
+    A `#!` script will not do. The kernel executes the *interpreter* and merely
+    reads the script, so writing to a running script raises nothing and the test
+    would pass against the bug it exists to catch.
+    """
+    import shutil as sh
+
+    target = tmp_path / 'held'
+    sh.copy2('/bin/sleep', target)
+    target.chmod(0o755)
+    child = subprocess.Popen([str(target), '60'])
+    time.sleep(0.2)
+    yield target
+    child.kill()
+    child.wait()
+
+
+def test_copying_onto_a_running_binary_is_refused(running_binary: Path, tmp_path: Path) -> None:
+    """The failure being fixed, pinned first so the fix below is not vacuous.
+
+    This is what `shutil.move` degrades to whenever staging and target are on
+    different filesystems — always here, since a download lands in `/tmp` on
+    tmpfs and the binary belongs on the root disk.
+    """
+    import errno
+    import shutil as sh
+
+    replacement = tmp_path / 'replacement'
+    sh.copy2('/bin/true', replacement)
+
+    with pytest.raises(OSError) as refused:
+        sh.copy2(replacement, running_binary)
+
+    assert refused.value.errno == errno.ETXTBSY
+
+
+def test_install_replaces_a_running_binary(running_binary: Path, tmp_path: Path) -> None:
+    """Replacing unlinks the old inode rather than writing through it, so the
+    running process keeps what it is executing and the next start gets the new
+    one. Nothing has to be stopped before an apply.
+
+    Measured cost of not doing this: ntfy sat at 2.26.0 across three applies in
+    one day while 2.27.0 was published, because its service had held the binary
+    for four days.
+    """
+    import shutil as sh
+
+    replacement = tmp_path / 'replacement'
+    sh.copy2('/bin/true', replacement)
+    before = running_binary.stat().st_ino
+
+    assert effects.install(replacement, running_binary) is True
+
+    assert running_binary.stat().st_ino != before, 'the file was written through rather than replaced'
+    assert running_binary.stat().st_mode & 0o111, 'the replacement is not executable'
+
+
+def test_install_leaves_nothing_behind_when_it_fails(tmp_path: Path) -> None:
+    """A half-written temporary beside the target would be picked up by nothing
+    and cleaned by nothing."""
+    unwritable = tmp_path / 'readonly'
+    unwritable.mkdir()
+    target = unwritable / 'tool'
+    source = tmp_path / 'source'
+    source.write_bytes(b'#!/bin/true\n')
+    unwritable.chmod(0o500)
+
+    try:
+        assert effects.install(source, target) is False
+        assert not list(unwritable.iterdir())
+    finally:
+        unwritable.chmod(0o700)

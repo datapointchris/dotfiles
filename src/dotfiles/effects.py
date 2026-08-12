@@ -413,3 +413,45 @@ def gunzip(source: Path, destination: Path) -> bool:
 def make_executable(path: Path) -> None:
     """chmod +x, preserving whatever else the mode says."""
     path.chmod(path.stat().st_mode | 0o111)
+
+
+NEW_SUFFIX = '.dotfiles-new'
+
+
+def install(source: Path, target: Path) -> bool:
+    """Put a downloaded file at `target`, even when `target` is running.
+
+    Through a temporary name in the target's own directory and `os.replace`,
+    never by writing into `target` itself. The kernel refuses to open a running
+    executable for writing and returns ETXTBSY, and `shutil.copy2` and a
+    `destination.open('wb')` both do exactly that.
+
+    **`shutil.move` is not a way round it.** It renames only within one
+    filesystem and falls back to copy-then-unlink across two, and here it is
+    always across two: the download is staged in a `TemporaryDirectory` under
+    `/tmp`, which is tmpfs, while `~/.local/bin` is on the root ext4. So the move
+    that looks atomic degrades to a copy into the live path.
+
+    Replacing unlinks the old inode instead of writing through it. A process
+    still executing the old binary keeps its own inode and is undisturbed; the
+    next start picks up the new one. That is why nothing has to be stopped before
+    an apply, and why this needs no knowledge of what happens to be running.
+
+    Measured on this fleet: `ntfy-client.service` has held `~/.local/bin/ntfy`
+    for four days with `Restart=always`, so every apply refused with ETXTBSY and
+    ntfy sat at 2.26.0 while 2.27.0 was published. Any long-running tool
+    installed from a release had the same permanent failure.
+    """
+    began = time.perf_counter()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    beside = target.with_name(f'.{target.name}{NEW_SUFFIX}')
+    ok = True
+    try:
+        shutil.copy2(source, beside)
+        beside.chmod(beside.stat().st_mode | 0o111)
+        os.replace(beside, target)
+    except OSError:
+        ok = False
+        beside.unlink(missing_ok=True)
+    log.debug('installed', source=str(source), target=str(target), ok=ok, seconds=round(time.perf_counter() - began, 3))
+    return ok
