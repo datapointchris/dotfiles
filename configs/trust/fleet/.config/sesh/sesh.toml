@@ -1,6 +1,16 @@
 [default_session]
 preview_command = "eza --all --git --icons --color=always {}"
 
+# Everything here is a read, so this session is safe to kill and rebuild at any
+# time -- unlike the others, where a pane holds work that cannot be reconstructed
+# from a name. The split is inline because sesh has no pane config: [[window]]
+# carries only name, startup_script and path, and issue #198 asking for panes was
+# closed without them.
+[[session]]
+name = "monitor"
+path = "~"
+startup_command = "tmux split-window -v -d -t monitor: oxker ; btop"
+
 [[session]]
 name = "dotfiles"
 path = "~/dotfiles"

@@ -193,16 +193,21 @@ two. Its **candidate discovery** — zoxide frecency, config entries, `fd` — i
 still what `prefix s` is for; it emits paths, and what you do with a path is your choice. Its
 **session creation** is the model-bound half, and `M-t` is the road for a named initiative instead.
 
-`sesh.toml` therefore lists only long-lived contexts — `dotfiles`, `dev`, `ichrisbirch` — rather
-than every repo. A configured block cannot describe an initiative anyway: it carries a name and one
-directory and has no `windows` key (verified against the binary's toml tags), so a configured
-session opens one window and the rest is assembled by hand. Declaring initiative templates would
-mean handing off to tmuxinator via `sesh connect -T`, which is heavier than typing a name for work
-that lasts a few days.
+`sesh.toml` therefore lists long-lived contexts rather than every repo — `sesh list -c` enumerates
+them. Declaring initiative templates would mean handing off to tmuxinator via `sesh connect -T`,
+which is heavier than typing a name for work that lasts a few days.
+
+The exception is `monitor`, which is not an initiative: btop over oxker, every pane a read, safe to
+kill and rebuild because nothing in it holds work. That is exactly what a config block describes
+well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
+issue #198 asking for panes was closed without them — so the split runs inline in
+`startup_command` via `tmux split-window`. It replaced a bash app that did the same thing in 150
+lines, and the file lives in `configs/trust/fleet/`, so the coordinate keeps it off the work box
+without the app's `command -v` probing.
 
 `prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,
 and the split mirrors the two status lines: `prefix s` is line 1, `prefix w` is line 2 for every
-session at once. sesh's own `sesh window` only lists windows **in the current session**, so it
+session at once. sesh's own `sesh window` takes `-s` to target one session at a time, so it still
 cannot answer "which session is that window in" — the gap `prefix w` exists to fill. sesh in turn
 does something `prefix w` cannot: it creates sessions from zoxide directories, config entries, and
 `fd` results, so it reaches places that have no running session at all.
