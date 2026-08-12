@@ -23,9 +23,13 @@ dotfiles apply --machine archlinux-personal-workstation
 commands back; `dotfiles plan` says what `apply` would change before it changes
 anything.
 
-`./install.sh` with no arguments names the manifests this checkout carries.
-Once the CLI is on the box, `dotfiles machines list` names them and
-`dotfiles machines show <name>` says what one declares.
+The manifests this checkout carries are the files in `install/manifests/`, and
+`./install.sh --help` says what the bootstrap does. Once the CLI is on the box,
+`dotfiles machines list` names them and `dotfiles machines show <name>` says
+what one declares. `--machine` is required, but `MACHINE` in the environment
+substitutes for it — and every converged machine exports one, so a bare
+`./install.sh` there skips straight to reinstalling the CLI from whichever
+checkout the script sits in.
 
 A blocked download does not stop the run — the common case behind a corporate
 firewall. `apply` names what failed when it ends, and `dotfiles report latest`
@@ -126,7 +130,6 @@ Tools are documented in the registry with usage examples and tips, deployed from
 # Themes
 theme list                              # List available themes
 theme apply rose-pine                   # Apply theme across terminal apps
-theme change                            # Interactive picker with color preview
 
 # Updates
 dotfiles update                         # Pull the repo and repair what the pull invalidated
@@ -172,7 +175,7 @@ There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/)
 
 **Modern CLI replacements**: bat (cat with syntax highlighting), eza (ls with git integration), fd (find that respects .gitignore), ripgrep (grep but faster), yazi (terminal file manager).
 
-**Task automation**: one `Taskfile.yml` of namespaced entry points, listed by `task --list-all`. Composite operations live in `install/ops/` so the Taskfile and the `dotfiles` CLI share one implementation instead of drifting into two.
+**Task automation**: one `Taskfile.yml` of namespaced entry points, listed by `task --list-all`. Both front doors reach the same place — nearly every task is a thin `uv run dotfiles ...` onto `src/dotfiles/`, so there is no second implementation to drift. `install/ops/docs.sh` is residue of an earlier split, not the mechanism.
 
 ## Contributing
 
