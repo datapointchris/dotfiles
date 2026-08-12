@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import gzip
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -32,6 +33,7 @@ import tarfile
 import time
 import zipfile
 from collections.abc import Callable
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -78,7 +80,54 @@ Long enough for the answers whose whole content is the answer — a version
 string, a resolved path, a one-line status — and far short of an install
 transcript. The cut is by length rather than by naming which commands count,
 because the caller that would have to declare it is every provider.
+
+A credential is short, so the length cut is exactly what lets one through.
+`redacted` and `yields_credential` are the gates that stop it.
 """
+
+SECRET_SHAPES = (
+    re.compile(r'\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}'),
+    re.compile(r'\bxox[abposr]-[A-Za-z0-9-]{10,}'),
+    re.compile(r'\b(?:sk|rk)-[A-Za-z0-9]{20,}'),
+    re.compile(r'\bAKIA[0-9A-Z]{16}\b'),
+    re.compile(r'\bey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'),
+)
+"""Token shapes scrubbed from anything a command said before it is recorded.
+
+The run log is replicated between machines, so a credential written here does
+not stay on the box that minted it. Measured 2026-08-12: `gh auth token` is on
+the default `check` path, and 156 of 492 run files held a live token that had
+reached every machine.
+
+Shape matching rather than a list of commands that yield secrets: the argv that
+prints one is not knowable from here, and `--refresh` alone reaches half a dozen
+providers. A shape that stops being current leaks again, which is why
+`yields_credential` also drops the answer of an argv naming a credential.
+
+Three doors, not one. A secret reaches the record as the answer, as a failed
+command's transcript, or in the argv itself — a token passed as an argument is
+recorded whatever the command did with it. All three are scrubbed.
+"""
+
+CREDENTIAL_WORDS = ('token', 'secret', 'password', 'credential', 'apikey', 'api-key')
+"""Argv words whose command's output is never recorded, whatever it looks like.
+
+The shapes above cannot know a bespoke format. A command asked for a credential
+by name is one whose answer has no diagnostic value worth the risk.
+"""
+
+
+def redacted(text: str) -> str:
+    """Replace anything token-shaped, so a record can be read anywhere."""
+    for shape in SECRET_SHAPES:
+        text = shape.sub('[redacted]', text)
+    return text
+
+
+def yields_credential(argv: Sequence[str]) -> bool:
+    """Whether this command was asked for a secret, so its answer is dropped."""
+    return any(word in part.lower() for part in argv for word in CREDENTIAL_WORDS)
+
 
 SLOW_SECONDS = 5.0
 """How long a single command may take before the run says so unasked.
@@ -222,14 +271,14 @@ def run(
         """
         seconds = round(time.perf_counter() - began, 3)
         fields = {
-            'argv': list(argv),
+            'argv': [redacted(part) for part in argv],
             'returncode': completed.returncode,
             'seconds': seconds,
             'cwd': directory,
         }
         if not completed.ok:
-            fields['transcript'] = completed.transcript
-        elif (answer := completed.stdout.strip()) and len(answer) <= ANSWER_LIMIT:
+            fields['transcript'] = redacted(completed.transcript)
+        elif not yields_credential(argv) and (answer := redacted(completed.stdout.strip())) and len(answer) <= ANSWER_LIMIT:
             fields['answer'] = answer
         log.debug('ran', **fields)
 

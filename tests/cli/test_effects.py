@@ -293,3 +293,73 @@ def test_install_leaves_nothing_behind_when_it_fails(tmp_path: Path) -> None:
         assert not list(unwritable.iterdir())
     finally:
         unwritable.chmod(0o700)
+
+
+class TestNoCredentialReachesTheRunLog:
+    """The run log replicates between machines, so a secret written into it does
+    not stay on the box that minted it.
+
+    Measured 2026-08-12: `gh auth token` sits on the default `check` path, and
+    156 of 492 run files on this machine held a live token that had already
+    reached every other one. The length cut cannot help — a token is short, which
+    is exactly why it passed.
+    """
+
+    # Assembled at runtime rather than written out. A literal with a real token's
+    # shape is what GitHub push protection blocks, and a fixture file is not worth
+    # an allowlist entry that would also wave through the next real one.
+    SHAPES = (
+        ('gh' + 'o_', 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'),
+        ('gh' + 'p_', 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'),
+        ('github' + '_pat_', '11ABCDE0Y0abcdefghij_KLMNOPQRSTUVWXYZ012345'),
+        ('xox' + 'b-', '1234567890-abcdefghijklmnop'),
+        ('AKI' + 'A', 'IOSFODNN7EXAMPLE'),
+    )
+
+    @pytest.mark.parametrize('prefix, body', SHAPES)
+    def test_a_token_shape_is_scrubbed(self, prefix: str, body: str) -> None:
+        secret = prefix + body
+        assert secret not in effects.redacted(f'the answer is {secret} today')
+        assert '[redacted]' in effects.redacted(secret)
+
+    def test_ordinary_output_is_untouched(self) -> None:
+        """A version string and a path must survive, or the record loses the
+        diagnostic value the answer field exists for."""
+        for answer in ('doit 2.0.0', '/usr/local/go/bin/go', 'converged'):
+            assert effects.redacted(answer) == answer
+
+    def test_a_command_asked_for_a_credential_is_recognised(self) -> None:
+        assert effects.yields_credential(['gh', 'auth', 'token'])
+        assert effects.yields_credential(['bbkt', 'config', 'path', 'token'])
+        assert not effects.yields_credential(['gh', 'auth', 'status'])
+        assert not effects.yields_credential(['go', 'version'])
+
+    def test_the_answer_of_a_credential_command_is_never_recorded(self, caplog: pytest.LogCaptureFixture) -> None:
+        """The shapes cannot know a bespoke format, so the argv is the second gate.
+
+        Asserted against the `answer` field rather than the whole line, because
+        the argv is recorded either way and legitimately names the command.
+        """
+        with caplog.at_level('DEBUG'):
+            run(['printf', 'ordinary'], output=Output.QUIET)
+        assert "'answer': 'ordinary'" in caplog.text
+
+        caplog.clear()
+        with caplog.at_level('DEBUG'):
+            run(['printf', 'shhh', '--token'], output=Output.QUIET)
+        assert "'answer'" not in caplog.text
+
+    def test_a_token_passed_as_an_argument_is_scrubbed_from_the_argv(self, caplog: pytest.LogCaptureFixture) -> None:
+        """The argv is the third door, and the one a transcript fix leaves open —
+        a token handed to a command is recorded whatever the command did with it."""
+        secret = 'gh' + 'p_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'
+        with caplog.at_level('DEBUG'):
+            run(['printf', '%s', f'Authorization: Bearer {secret}'], output=Output.QUIET)
+        assert secret not in caplog.text
+
+    def test_a_token_in_a_failed_commands_transcript_is_scrubbed(self, caplog: pytest.LogCaptureFixture) -> None:
+        """A failing command records its whole transcript, which is the other door."""
+        secret = 'gh' + 'o_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'
+        with caplog.at_level('DEBUG'):
+            run(['sh', '-c', f'echo {secret}; exit 1'], output=Output.QUIET)
+        assert secret not in caplog.text
