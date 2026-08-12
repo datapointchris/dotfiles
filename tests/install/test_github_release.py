@@ -170,10 +170,11 @@ class TestSidecarChecksums:
 class TestChecksumStaging:
     """Where the published checksums file is put while it is being read.
 
-    It used to be `/tmp/<asset>.checksums` — one path, shared by every user on
-    the box and the same on every run. Anyone could plant a symlink there for
-    `write_bytes` to follow, and a stale root-owned file made every install of
-    that tool fail for good with a message blaming the network.
+    A fixed path is shared by every user on the box and identical on every run, so
+    anyone can plant a symlink there for `write_bytes` to follow. A stale file
+    another user owns is the quieter half of the same fault: the write raises, the
+    download reads as failed, and every install of that tool fails for good with a
+    message blaming the network.
     """
 
     ASSET = 'tool.tar.gz'
