@@ -1,19 +1,17 @@
 """The git configuration this machine reads, and the identity it commits under.
 
-Identity is the part of it that matters most and was for a long time the only
-part measured. What the rest of this file adds is the arrangement identity
-*arrives through*: the configuration is a chain of includes — entry point, shared
-config, one file per coordinate axis, then the trust overlay that supplies the
-address — and a chain nothing reports is a chain nobody can debug. Two failures
-in it are silent and both change what a commit carries.
+Identity is the part that matters most, and it arrives through an arrangement:
+the configuration is a chain of includes — entry point, shared config, one file
+per coordinate axis, then the trust overlay that supplies the address. Two
+failures in that chain are silent, and both change what a commit carries, which
+is why this resource measures the chain as well as the address at the end of it.
 
-A `~/.gitconfig` outranks the entire chain, for reads and writes both. `apply`
-has removed one since the entry point moved under XDG, and `check` never
-mentioned it — so on a machine between applies the whole layering could be
-overridden by a file no verb named.
+A `~/.gitconfig` outranks the entire chain, for reads and writes both, so one
+sitting there decides the identity and nothing in the chain says so. `apply`
+removes one; between applies it is `check` that has to name it.
 
-And a key two files disagree about resolves to whichever git read last, which is
-a fact about include order that neither file states. `gitconfig.py` holds the
+A key two files disagree about resolves to whichever git read last, which is a
+fact about include order that neither file states. `gitconfig.py` holds the
 reading and the narrowing that keeps it from firing on git's own multi-value
 idiom.
 

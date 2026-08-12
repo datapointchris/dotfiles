@@ -164,10 +164,9 @@ def announce(address: str, detail: str) -> None:
 
     Two gates, answering different questions. `showing_evidence` is `-q`, and
     cli-design.md § "Quieten the evidence, never the answer" names the progress
-    headings as exactly what it removes — so a run told to be quiet does not get
-    louder than it was before this line existed. `heading` beside it has always
-    been gated the same way, and a progress line that outranked it would be the
-    odd one.
+    headings as exactly what it removes. `heading` beside it is gated the same
+    way, and a progress line outranking the heading it announces would be the odd
+    one out.
 
     The terminal test is the second, and it is not about volume: this exists to
     be read *during* the wait, and a wait nobody is sitting through does not need

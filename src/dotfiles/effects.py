@@ -83,12 +83,11 @@ because the caller that would have to declare it is every provider.
 SLOW_SECONDS = 5.0
 """How long a single command may take before the run says so unasked.
 
-Everything here is already timed and written to the run's event stream at debug,
-where it answers the question perfectly and only for somebody who already knew to
-look. That is the gap this closes: on the work box a `check` took five minutes,
-printed nothing while it did, and the one file that could say which command ate
-them was a `.jsonl` nobody opens. A command over this threshold is now an `info`
-record, which reaches the console at the default level.
+Every command here is timed and written to the run's event stream at debug,
+which answers the question perfectly and only for somebody who already suspected
+a command was the answer. A run that stalls for five minutes and prints nothing
+gives nobody that suspicion, so a command over this threshold is an `info` record
+instead, which reaches the console at the default level.
 
 Five seconds because it has to sit above the slowest *legitimate* probe and below
 anything a person would call a stall. Measured across this fleet's records, the

@@ -23,15 +23,15 @@ export VIRTUAL_ENV_DISABLE_PROMPT=1
 #
 # Every segment is *assigned to a variable*, never printed from inside PROMPT.
 #
-# A `$(...)` in a prompt is a forked subshell on every redraw, and this prompt
-# had nine of them — five in PROMPT, four in RPROMPT — on top of the one `git`
-# call. Eight of the nine were computing something that had not changed: the
-# caret depends on $USER, the user@host segment on $SSH_CONNECTION, the two
-# echotc sequences on the terminal, and the exit-status segment was a subshell
-# wrapped around a `%(?..)` that zsh expands by itself. A fork is cheap on Arch
-# and is not cheap on WSL, where this was measured as a prompt that lagged.
+# A `$(...)` in a prompt is a forked subshell on every redraw, so a segment that
+# runs one pays for a process every time the line repaints. Almost nothing here
+# needs it: the caret depends on $USER, the user@host segment on
+# $SSH_CONNECTION, and the two echotc sequences on the terminal — all fixed for
+# the life of the shell and computed once below. A fork is cheap on Arch and is
+# not cheap on WSL, which is where the cost of ignoring this is felt.
 #
-# What is left is one `git status` per prompt, in precmd, where it was already.
+# What genuinely varies is measured in precmd, so the only process this prompt
+# starts is the one `git status`.
 
 # Constant for the life of the shell, so they are computed once here rather than
 # per keystroke. `%m` and `%F` stay unexpanded — they are prompt escapes, which
@@ -49,8 +49,8 @@ else
 fi
 
 # The two cursor moves RPROMPT uses to paint itself a line up. Captured once:
-# they are a property of the terminal, and re-asking termcap on every redraw was
-# two of the nine forks.
+# they are a property of the terminal, so asking termcap per redraw buys nothing
+# and costs a fork each.
 PROMPT_CURSOR_UP="$(echotc UP 1)"
 PROMPT_CURSOR_DOWN="$(echotc DO 1)"
 
@@ -58,8 +58,8 @@ PROMPT_MAX_PWD_LENGTH=45
 
 autoload -Uz add-zsh-hook
 
-# `${VIRTUAL_ENV:t}` rather than `basename`, which was a fork per prompt for a
-# string zsh can take the tail of itself.
+# `${VIRTUAL_ENV:t}` rather than `basename`: zsh takes the tail itself, and a
+# fork per prompt to strip a path is one the shell need never pay.
 __prompt_set_venv() {
   if [[ -n "$VIRTUAL_ENV" ]]; then
     PROMPT_VENV_SEGMENT="%F{yellow}(${VIRTUAL_ENV:t})%f"
@@ -116,13 +116,13 @@ add-zsh-hook precmd __prompt_refresh
 # ================================================================
 #
 # PROMPT_SUBST expands these once per redraw. Every `$` below names a variable
-# precmd already filled, so nothing here starts a process — and a branch name or
-# a directory arriving through a parameter is substituted rather than re-parsed,
-# which is the property the `$(...)` version had and this must not lose.
+# precmd already filled, so nothing here starts a process — and a branch name
+# arriving through a parameter is substituted rather than re-parsed, which is
+# what keeps a `$` or a `%` in one from being read as prompt syntax.
 #
 # `%(?..)` stays inline: it is zsh's own conditional on the last exit status,
-# and it has to be evaluated at render time, after the command whose status it
-# reports. It was wrapped in a subshell that did nothing but echo it back.
+# so it has to be expanded at render time, after the command whose status it
+# reports — precmd runs too early to have an answer for it.
 
 PROMPT='
 ${PROMPT_VENV_SEGMENT} ${PROMPT_USER_SEGMENT}${PROMPT_DIR_SEGMENT}  ${PROMPT_GIT_SEGMENT}
