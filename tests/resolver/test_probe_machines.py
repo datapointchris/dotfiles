@@ -69,7 +69,7 @@ PROBES = (
             'os_family': 'linux',
             'display_stack': 'none',
             'host': 'wsl',
-            'network_trust': 'employer',
+            'network_trust': 'nonfleet',
             'capacity': 'workstation',
         },
         swaps='package_manager',

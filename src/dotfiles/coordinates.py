@@ -49,7 +49,7 @@ class Host(enum.StrEnum):
 
 class NetworkTrust(enum.StrEnum):
     FLEET = 'fleet'
-    EMPLOYER = 'employer'
+    NONFLEET = 'nonfleet'
 
 
 class Capacity(enum.StrEnum):
@@ -128,7 +128,7 @@ PLATFORM_BUNDLES: dict[str, Coordinates] = {
     'archlinux': Coordinates(
         PackageManager.PACMAN, OSFamily.LINUX, DisplayStack.WAYLAND, Host.NATIVE, NetworkTrust.FLEET, Capacity.WORKSTATION
     ),
-    'wsl': Coordinates(PackageManager.APT, OSFamily.LINUX, DisplayStack.NONE, Host.WSL, NetworkTrust.EMPLOYER, Capacity.WORKSTATION),
+    'wsl': Coordinates(PackageManager.APT, OSFamily.LINUX, DisplayStack.NONE, Host.WSL, NetworkTrust.NONFLEET, Capacity.WORKSTATION),
     'linux': Coordinates(PackageManager.APT, OSFamily.LINUX, DisplayStack.NONE, Host.NATIVE, NetworkTrust.FLEET, Capacity.SERVER),
 }
 """The four platform strings, written out as the tuples they always were.

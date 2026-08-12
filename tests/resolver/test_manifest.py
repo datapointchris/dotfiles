@@ -167,7 +167,7 @@ def test_coordinates_can_be_declared_directly(tmp_path: Path) -> None:
                 'os_family': 'linux',
                 'display_stack': 'none',
                 'host': 'wsl',
-                'network_trust': 'employer',
+                'network_trust': 'nonfleet',
                 'capacity': 'workstation',
             },
         },

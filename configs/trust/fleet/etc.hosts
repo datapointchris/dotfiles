@@ -1,5 +1,5 @@
 # Homelab and workstation hosts. Lives under the fleet trust overlay because it
-# names the trusted VLAN and every homelab service: on an employer machine that
+# names the trusted VLAN and every homelab service: on a nonfleet machine that
 # is a map of the home network sitting in $HOME, which is what deploying it from
 # configs/common/ did.
 # NOTE: Manually copy to /etc/hosts (requires sudo).

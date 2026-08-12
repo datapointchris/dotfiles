@@ -2,7 +2,7 @@
 
 Checked and never written. Where the machine identity comes from is the trust
 axis's business: a fleet machine includes the personal identity the repo ships,
-and the employer machine defaults to an address the repo deliberately does not
+and the nonfleet machine defaults to an address the repo deliberately does not
 hold. Either way `apply` has nothing to write here, and `user.useConfigOnly`
 means a machine without one discovers it when git refuses a commit, mid-work.
 Asking here moves that discovery to the moment someone is already looking at
@@ -13,7 +13,7 @@ unset machine — which is exactly what would happen when the check runs from
 inside a clone that sets its own. `--includes` because `--global` implies
 `--no-includes`: identity now always arrives through an include, so without it
 this reads the entry-point stub, which carries no [user] by design, and calls
-every machine unset. The pair also ignores the employer machine's `includeIf`,
+every machine unset. The pair also ignores the nonfleet machine's `includeIf`,
 which is what makes this report the machine's default rather than whatever the
 current directory happens to resolve to.
 

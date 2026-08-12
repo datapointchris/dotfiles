@@ -142,8 +142,8 @@ echo ""
 echo "Config Files:"
 test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
 # Only where the repo actually ships one. A fleet machine includes the personal
-# identity; an employer machine deliberately defaults to an address this repo does
-# not hold, so asserting it there failed every employer-trust container for a file
+# identity; a nonfleet machine deliberately defaults to an address this repo does
+# not hold, so asserting it there failed every nonfleet-trust container for a file
 # nothing is designed to write. `dotfiles check`'s identity row is what reports a
 # genuinely missing one, on the machines where that is a fault.
 if [[ "${DOTFILES_TRUST:-}" == "fleet" ]]; then

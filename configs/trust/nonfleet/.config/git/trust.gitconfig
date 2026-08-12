@@ -1,4 +1,4 @@
-# Employer is the default and personal is the exception, never the reverse. A
+# Nonfleet is the default and personal is the exception, never the reverse. A
 # repo that slips through the match then commits under the employer address —
 # wrong, but internal — where the inverse puts a personal address into employer
 # history. Both spellings are already in this repo's log from the arrangement

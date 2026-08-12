@@ -114,7 +114,7 @@ siblings, which is what every shell and every overlay reads.
 Detection was tried and is what the declaration replaced: a wsl manifest whose
 `~/.env` was missing fell back to a guess and deployed the linux shell overlay
 for a whole install. A guess also cannot answer half the axes — nothing on a box
-knows whether it is on employer or fleet network, or whether it is meant to be a
+knows whether it is on a fleet or nonfleet network, or whether it is meant to be a
 workstation or a server.
 
 `dotfiles machines show <name>` prints the resolved tuple for any manifest,
@@ -138,7 +138,7 @@ Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ship
 the overlay directory that supplies it: `host.gitconfig` carries `core.autocrlf` from
 `configs/host/wsl/`, because a checkout on the Linux side is edited from Windows tools too, and
 `trust.gitconfig` carries identity. Both are ignored while absent, so a machine needing neither
-ships nothing. Trust comes last because its employer form overrides a default with an `includeIf`,
+ships nothing. Trust comes last because its nonfleet form overrides a default with an `includeIf`,
 and git resolves last-wins.
 
 The `gh` credential helper used to be in that overlay and is now common, which is what collapsed
