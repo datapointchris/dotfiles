@@ -43,19 +43,6 @@ INSTALLED = Path.home() / '.local' / 'bin' / 'dotfiles'
 directory `symlinks/core.py` names for the apps layer."""
 
 
-WRAPPER = Path.home() / '.local' / 'bin' / 'unattended'
-"""The apps-layer wrapper that reports a run which died to the fleet inbox."""
-
-CHECK_ANSWERS = '0,3'
-"""The exit codes `check` uses to answer rather than to fail.
-
-3 is its verdict that something is wrong with the machine, which it re-derives on
-every run and already surfaces through the nudge — reporting that to the inbox
-as well would put one fact under two lifetimes, and the archived copy would be
-wrong by the next run. What is worth reporting is the run that never got that
-far: a traceback, a missing interpreter, a unit that could not start."""
-
-
 def _executable() -> str:
     """The *installed* `dotfiles`, not whichever one is on PATH right now.
 
@@ -73,23 +60,6 @@ def _executable() -> str:
     if INSTALLED.exists():
         return str(INSTALLED)
     return shutil.which('dotfiles') or str(INSTALLED)
-
-
-def _command() -> list[str]:
-    """The check, wrapped so a run that dies says so somewhere.
-
-    Nothing else notices. Grafana and Loki watch the homelab and no workstation
-    is in their inventory, and a `check` that crashed leaves a red unit nobody is
-    looking at until they next run `systemctl --user --failed` by hand.
-
-    Falls back to the bare check when the wrapper is not on disk. The symlink
-    arrives with the apps layer and this row can be applied before it, so naming
-    a file that does not exist would trade a schedule that reports nothing for a
-    schedule that does not run.
-    """
-    if WRAPPER.exists():
-        return [str(WRAPPER), '--ok-exit', CHECK_ANSWERS, '--', _executable(), 'check']
-    return [_executable(), 'check']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -110,7 +80,7 @@ def _service_content() -> str:
     # ignored. Splitting the verbs removed the reason rather than the symptom:
     # drift is `plan`'s answer now, `check` exits 0 or 3, and a red unit means
     # something is actually wrong.
-    return f'[Unit]\nDescription=Report anything wrong with this machine\n\n[Service]\nType=oneshot\nExecStart={" ".join(_command())}\n'
+    return f'[Unit]\nDescription=Report anything wrong with this machine\n\n[Service]\nType=oneshot\nExecStart={_executable()} check\n'
 
 
 def _timer_content() -> str:
@@ -182,7 +152,7 @@ def _agent_content() -> bytes:
     return plistlib.dumps(
         {
             'Label': LABEL,
-            'ProgramArguments': _command(),
+            'ProgramArguments': [_executable(), 'check'],
             'StartInterval': INTERVAL_SECONDS,
             'RunAtLoad': True,
             # launchd has no notion of "log somewhere sensible"; without these the
