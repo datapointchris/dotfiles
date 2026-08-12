@@ -399,10 +399,10 @@ fzf-man-widget() {
       --bind "alt-c:+change-preview(cht.sh {1})+change-prompt(ﯽ Cheat > )" \
       --bind "alt-m:+change-preview(${batman})+change-prompt( Man > )" \
       --bind "alt-t:+change-preview(tldr --color=always {1})+change-prompt(ﳁ TLDR > )"
-  [[ -n "$ZSH_VERSION" ]] && zle reset-prompt
+  [[ -n "${ZSH_VERSION:-}" ]] && zle reset-prompt
 }
 # `Ctrl-H` keybinding to launch the widget (zsh only)
-if [[ -n "$ZSH_VERSION" ]]; then
+if [[ -n "${ZSH_VERSION:-}" ]]; then
   bindkey '^h' fzf-man-widget
   zle -N fzf-man-widget
 fi
@@ -784,7 +784,7 @@ function doshell() {
   elif command -v xclip >/dev/null 2>&1; then
     printf '%s' "$cmd" | xclip -selection clipboard
   fi
-  if [[ -n "$ZSH_VERSION" ]]; then
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
     print -z "$cmd"
   else
     printf '%s\n' "$cmd" # non-zsh: just print it
