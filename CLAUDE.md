@@ -6,6 +6,30 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
+**dotfiles does not manage fleet data** (⚠️ MANDATORY): dotfiles configures *machines*. A registry
+of repos, a roster of machines, a body of standards — these are the fleet's own data, and dotfiles
+never owns, clones, installs, locates or checks them. "It would be convenient for `dotfiles check`
+to verify it" is exactly the reasoning this forbids: the moment an apply or a check reaches for
+that data, a machine outside the fleet is running an engine that expects something it will never
+have, and the tool that legitimately owns the data has been bypassed.
+
+- **Permitted**: a *fleet-scoped config file* under `configs/trust/fleet/` naming a path. It is
+  deployed configuration for a tool, it never lands off the fleet, and `configs/trust/nonfleet/`
+  carries the other machine's answer. This is the trust axis doing its job.
+- **Forbidden**: anything in `configs/common/`, `apps/common/` or `shell/common/` hardcoding a
+  fleet path; a manifest declaring a fleet data clone; a resource in the engine that clones,
+  pulls, or reports on fleet data.
+- **When common code genuinely needs the location**, it reads an environment variable declared in
+  `install/flags.yml` below the OVERRIDES marker — the same mechanism as `WINDOWS_USER`. The repo
+  declares that a machine *needs* a value and never learns what it is, and `dotfiles check` fails
+  while it is unset. No fallback to a default path: a default is the hardcoding, one indirection
+  later, and it silently produces a wrong answer instead of a missing-value error.
+
+This is the counterpart to `~/.claude/CLAUDE.md` § "Nothing calls `fleet` except what the fleet is
+for". That rule stops a tool from *executing* fleet; this one stops dotfiles from *adopting* the
+fleet's data as its own responsibility. Both exist because the work box runs this same engine with
+none of it.
+
 **File Naming and Organization**:
 
 - All markdown files use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`

@@ -791,14 +791,17 @@ function doshell() {
   fi
 }
 
-# Every fleet machine but this one, skipping any that declares no ssh.
-# ~/dev/machines.json is the roster. It does not repeat the addresses, which
-# configs/trust/fleet/etc.hosts already declares — a machine's name is its ssh
-# target and resolves through there, so there is one place an address can be
-# wrong.
+# Every peer machine but this one, skipping any that declares no ssh.
+#
+# $FLEET_MACHINES names the roster and is declared in install/flags.yml as a
+# machine-local value; this repo never learns where it lives, and unset means
+# there are no peers rather than a guessed path. The roster does not repeat the
+# addresses, which configs/trust/fleet/etc.hosts already declares — a machine's
+# name is its ssh target and resolves through there, so there is one place an
+# address can be wrong.
 _cc_fleet_hosts() {
-  local registry="${FLEET_MACHINES:-$HOME/dev/machines.json}" self
-  [[ -r $registry ]] || return 0
+  local registry="${FLEET_MACHINES:-}" self
+  [[ -n $registry && -r $registry ]] || return 0
   self=$(uname -n)
   jq -r --arg self "${self%%.*}" '
     .machines[]

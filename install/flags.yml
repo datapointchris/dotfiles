@@ -53,6 +53,30 @@ required:
     consumers:
       - shell/host/wsl/wsl.sh
 
+  # Every workstation has a repo registry and they are different files; where
+  # this one keeps it is its own fact, so the repo declares that it needs the
+  # answer and never carries one. Absence qualifies as silent despite pr-list
+  # dying on an empty path: unset falls back to $XDG_CONFIG_HOME/repos.json, and
+  # a stale file sitting there reports PRs for the wrong set of repos rather
+  # than failing. Narrowed on capacity because a server has no registry to name,
+  # not on trust — a machine outside the fleet has one too, listing its own work.
+  - name: REPOS_JSON
+    description: Absolute path to this machine's repo registry
+    capacity: workstation
+    consumers:
+      - apps/common/pr-list
+
+  # Two axes because two things have to hold: a machine outside the fleet has no
+  # peers to enumerate, and a server is not somewhere anybody sits completing an
+  # ssh target. Its absence is silent in the strict sense — _cc_fleet_hosts
+  # returns nothing, which is indistinguishable from a fleet of one.
+  - name: FLEET_MACHINES
+    description: Absolute path to this machine's peer roster
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - shell/common/functions.sh
+
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
 # must never know its contents — one level up: a required file rather than a

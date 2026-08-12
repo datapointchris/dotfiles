@@ -20,10 +20,13 @@
 
 set -euo pipefail
 
+# $REPOS_JSON is declared in install/flags.yml as a machine-local value, because
+# where a machine keeps its registry is that machine's fact and not this repo's.
+# There is deliberately no fallback to a known location: a default would be the
+# hardcoded path one indirection later, and it fails by reading the wrong file
+# rather than by saying the value is unset.
 REGISTRY="${REPOS_JSON:-${XDG_CONFIG_HOME:-$HOME/.config}/repos.json}"
 LANE=""
-# The Syncthing machines keep the registry in ~/dev, which is not an XDG path.
-[ -f "$REGISTRY" ] || REGISTRY="$HOME/dev/repos.json"
 
 die() {
   echo "pr-list: $1" >&2
