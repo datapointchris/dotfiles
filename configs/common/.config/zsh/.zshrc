@@ -229,7 +229,11 @@ compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
 log "Setup" "compinit"
 
 # Completion styling
-zstyle ':completion:*' menu select
+# `no` rather than `select`: selection turned the second Tab into an interactive
+# highlighted picker that inserts the first candidate, so backing out of it costs
+# a backspace. `no` also overrides AUTO_MENU, which would otherwise cycle
+# candidates into the line. Repeated Tab now just re-lists.
+zstyle ':completion:*' menu no
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*:descriptions' format "%B--- %d%b"
 
@@ -671,6 +675,7 @@ fi
 # Nothing forks per keystroke. A tool's index is read once per shell into an
 # assoc array through the `read` builtin, and every keystroke after that is a
 # hash lookup — the same rule this file states for the doshell widgets.
+typeset -g _clisteno_shown=''
 typeset -gA _clisteno_meaning _clisteno_sequence _clisteno_loaded
 
 _clisteno_load() {
@@ -697,8 +702,11 @@ _clisteno_load() {
 # for what was typed rather than an offer about what is being typed: `dectl exa`
 # showed nothing, and `exg` never appeared until `glue` was already complete.
 # `(I)` matches keys inside the shell rather than looping over them, and `(b)`
-# stops a `*` or `[` in the buffer being read as pattern.
+# stops a `*` or `[` in the buffer being read as pattern. Answers in REPLY: a
+# printing function has to be read back through `$(...)`, which forks per
+# keystroke and cost 0.68ms against 0.10ms for the same work assigned.
 _clisteno_best() {
+  REPLY=''
   local -a matches
   matches=(${(k)_clisteno_sequence[(I)${(b)1}*]})
   local best='' candidate count=0 fewest=0 depth
@@ -714,11 +722,14 @@ _clisteno_best() {
       (( count++ ))
     fi
   done
-  (( count == 1 )) && print -r -- "$best"
+  (( count == 1 )) && REPLY=$best
 }
 
 _clisteno_hint() {
   local -a words
+  # REPLY is scoped here so _clisteno_best writes the caller's local rather than
+  # clobbering the global every keystroke.
+  local REPLY
   words=(${(z)BUFFER})
   local shown=''
   if (( ${#words} >= 2 )); then
@@ -731,14 +742,20 @@ _clisteno_hint() {
     elif [[ -n $meaning ]]; then
       shown="$meaning"
     else
-      local best=$(_clisteno_best "$line")
-      [[ -n $best ]] && shown="⌁ ${words[1]} ${_clisteno_sequence[$best]}"
+      _clisteno_best "$line"
+      [[ -n $REPLY ]] && shown="⌁ ${words[1]} ${_clisteno_sequence[$REPLY]}"
     fi
   fi
-  # Always, including empty: the message survives until something replaces it,
-  # so skipping the call leaves the previous command's summary under a line that
-  # no longer means it.
-  zle -M "$shown"
+  # Only on change, but including empty: the message survives until something
+  # replaces it, so skipping a real change leaves the previous command's summary
+  # under a line that no longer means it — while repainting an unchanged one
+  # erases the completion list, which zsh draws in this same area. The hook fires
+  # on the redraw a Tab causes, so an unconditional -M wiped every listing the
+  # instant it appeared.
+  if [[ $shown != $_clisteno_shown ]]; then
+    _clisteno_shown=$shown
+    zle -M "$shown"
+  fi
 }
 
 if flag_enabled SHELL_CLISTENO; then
