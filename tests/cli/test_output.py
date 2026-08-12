@@ -134,16 +134,18 @@ def test_the_observed_value_appears_only_when_there_is_one(capsys: pytest.Captur
     assert '(is ' not in capsys.readouterr().err
 
 
-def test_a_finding_shares_the_column_a_change_uses(capsys: pytest.CaptureFixture) -> None:
-    """A finding is evidence for the `machines` row the way a Change is evidence
-    for a resource's, so the two have to read as one list rather than two."""
-    output.render_change(a_change())
-    change_row = capsys.readouterr().err
+@pytest.mark.parametrize('label', [*[str(verdict) for verdict in Verdict], 'invalid'])
+def test_every_label_fits_the_column_it_is_padded_into(label: str) -> None:
+    """A label wider than its column pushes the subject out of line for that row
+    alone, which reads as a broken list rather than as a long word. `invalid` is
+    here because `render_finding` writes it as a literal, so it is a label the
+    enum does not cover.
 
-    output.render_finding('go_tools', 'no such section')
-    finding_row = capsys.readouterr().err
-
-    assert change_row.index('ripgrep') == finding_row.index('go_tools')
+    Asserted against the constant rather than by rendering two rows and comparing
+    where they put a name: the alignment itself is now true by construction, since
+    one constant feeds all three format strings.
+    """
+    assert len(label) <= output.VERDICT_COLUMN
 
 
 def test_quiet_drops_the_evidence_and_keeps_the_verdict(capsys: pytest.CaptureFixture) -> None:

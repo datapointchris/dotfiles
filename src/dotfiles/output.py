@@ -30,6 +30,18 @@ VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
 
 CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
 
+EVIDENCE_INDENT = '  '
+VERDICT_COLUMN = 11
+SUBJECT_COLUMN = 28
+"""The two columns every evidence row shares — a change's, a finding's, and the
+advice line that hangs under both.
+
+Named because they are the property, not a detail of one f-string. A finding
+reading as part of the same list as the changes above it is what makes the output
+one list rather than two, and that only holds while all three agree. Repeated as
+literals they had already been copied four times, and nothing would have failed if
+one of the copies drifted."""
+
 
 def showing_evidence() -> bool:
     """Whether the per-item rows below a verdict are worth printing.
@@ -99,9 +111,11 @@ def render_change(change: Change) -> None:
         return
     colour = CHANGE_COLOURS[str(change.verdict)]
     observed = f' (is {change.observed!r})' if change.observed else ''
-    err_console.print(f'  [{colour}]{change.verdict:<11}[/] {change.item:<28} {change.detail}{observed}')
+    err_console.print(
+        f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{SUBJECT_COLUMN}} {change.detail}{observed}'
+    )
     if change.advice:
-        err_console.print(f'  {"":<11} {"":<28} [blue]→[/] {change.advice}')
+        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [blue]→[/] {change.advice}')
 
 
 def render_finding(section: str, message: str) -> None:
@@ -113,7 +127,7 @@ def render_finding(section: str, message: str) -> None:
     """
     if not showing_evidence():
         return
-    err_console.print(f'  [red]{"invalid":<11}[/] {section:<28} {message}')
+    err_console.print(f'{EVIDENCE_INDENT}[red]{"invalid":<{VERDICT_COLUMN}}[/] {section:<{SUBJECT_COLUMN}} {message}')
 
 
 def heading(text: str) -> None:
