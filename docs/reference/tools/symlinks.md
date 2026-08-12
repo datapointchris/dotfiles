@@ -101,6 +101,30 @@ rules exist because of bugs that are easy to reintroduce:
 All three are worked through in
 [Learnings: Symlinks Path Gotchas](../../learnings/symlinks-path-gotchas.md).
 
+### Where the orphan scan will not go
+
+`EXCLUDE_SEARCH_DIRS` is a second, separate list: it governs where the walk that
+finds broken links descends, not what gets linked. Entries match whole path
+components as a contiguous run, so `.config/environment.d` is not read as `env`
+and `.local/share/buildkit` is not read as `build` — both are directories this
+repo can legitimately deploy into.
+
+It names the expensive subtrees of `~/Library` rather than `~/Library` itself,
+because `configs/os/darwin/Library/Application Support/` is deployed and an
+exclusion on the parent takes the deployed tree with it. `Messages/Attachments`
+and `Mail` are named individually for the cost: the walk runs inside every plan,
+apply and check, and neither is reachable as a deployment target.
+
+### The depth ceiling is a live constraint on the darwin overlay
+
+`SEARCH_DEPTH` bounds that walk at five components below `$HOME`, and the
+deepest path this repo deploys sits exactly on it —
+`Library/Application Support/Vivaldi/External Extensions/<extension>.json`.
+Adding a directory level under `External Extensions/`, or lowering the ceiling,
+drops that link out of the scan with nothing said: it stays deployed, and no run
+ever reports it stale. `tests/symlinks/test_core.py` builds that exact path at
+that exact depth, so neither change can happen quietly.
+
 ## Broken links
 
 `plan` finds them — an orphan is drift `apply` repairs by pruning — and it

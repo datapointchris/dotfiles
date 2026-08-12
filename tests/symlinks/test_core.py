@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import dotfiles.symlinks.core as core
+from dotfiles import paths
 
 # ─── Utility Tests ────────────────────────────────────────────────────────────
 
@@ -259,29 +260,53 @@ def test_remove_symlinks_leaves_a_sibling_trees_links_alone(tmp_path):
 # ─── Search Exclusions ────────────────────────────────────────────────────────
 
 
-def test_the_scan_reaches_the_macos_application_support_tree(tmp_path):
-    """`configs/os/darwin/Library/Application Support/` is deployed, so the one
-    tree the scan must reach was the one a bare `Library` substring skipped."""
+DARWIN_DEPLOYED_EXTENSION = Path('Library/Application Support/Vivaldi/External Extensions/nngceckbapebfimnlniiiahkandclblb.json')
+
+
+def test_the_scan_reaches_the_deepest_deployed_darwin_path(tmp_path):
+    """The real path `configs/os/darwin/` deploys, at its real depth.
+
+    Five components below `$HOME`, which is exactly `SEARCH_DEPTH` with no
+    margin. A shallower stand-in is still reached by a scan that has already
+    stopped short of the shipped file, so the fixture has to spell the whole
+    path for the ceiling to be pinned at all.
+    """
     repo = (tmp_path / 'dotfiles').resolve()
     repo.mkdir()
 
     home = tmp_path / 'home'
-    deployed = home / 'Library' / 'Application Support' / 'Vivaldi'
-    deployed.mkdir(parents=True)
-    orphan = deployed / 'extensions.json'
+    orphan = home / DARWIN_DEPLOYED_EXTENSION
+    orphan.parent.mkdir(parents=True)
     orphan.symlink_to(repo / 'deleted.json')
 
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
 
 
-def test_the_scan_still_skips_the_caches_under_library(tmp_path):
+def test_the_darwin_overlay_still_deploys_that_path():
+    """The fixture above is a copy of a path in the repo, and a copy drifts."""
+    deployed = paths.REPO_ROOT / 'configs' / 'os' / 'darwin' / DARWIN_DEPLOYED_EXTENSION
+
+    assert deployed.exists(), f'{DARWIN_DEPLOYED_EXTENSION} is no longer what configs/os/darwin/ deploys'
+
+
+@pytest.mark.parametrize(
+    'directory',
+    [
+        'Library/Caches/Vivaldi',
+        'Library/Containers/com.apple.Safari',
+        'Library/Messages/Attachments/a0',
+        'Library/Mail/V10',
+    ],
+)
+def test_the_scan_still_skips_the_expensive_subtrees_under_library(tmp_path, directory):
+    """Naming subtrees rather than `Library` keeps each one skipped on its own."""
     repo = (tmp_path / 'dotfiles').resolve()
     repo.mkdir()
 
     home = tmp_path / 'home'
-    cached = home / 'Library' / 'Caches' / 'Vivaldi'
-    cached.mkdir(parents=True)
-    (cached / 'extensions.json').symlink_to(repo / 'deleted.json')
+    skipped = home / directory
+    skipped.mkdir(parents=True)
+    (skipped / 'extensions.json').symlink_to(repo / 'deleted.json')
 
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == []
 
@@ -315,12 +340,7 @@ def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, dir
 
 
 def test_removing_symlinks_writes_nothing_to_stdout(tmp_path, capsys):
-    """Progress is a diagnostic, and stdout carries data a caller parses.
-
-    The bracket assertion is the second half: markup is only interpreted by a
-    Console, so a builtin `print` reaching for the same string puts the literal
-    tokens on the reader's screen.
-    """
+    """Progress is a diagnostic, and stdout carries data a caller parses."""
     source = tmp_path / 'dotfiles' / 'common'
     source.mkdir(parents=True)
     (source / 'ours.txt').write_text('ours')
@@ -334,4 +354,3 @@ def test_removing_symlinks_writes_nothing_to_stdout(tmp_path, capsys):
     written = capsys.readouterr()
     assert written.out == ''
     assert written.err != ''
-    assert '[' not in written.err

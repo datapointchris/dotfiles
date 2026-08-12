@@ -11,6 +11,12 @@ from dotfiles.output import err_console
 
 DOTFILES_DIR = paths.REPO_ROOT
 TARGET_DIR = Path.home().resolve()
+
+# The deepest deployed path sits exactly on this ceiling with no margin:
+# `Library/Application Support/Vivaldi/External Extensions/<extension>.json`,
+# five components below `$HOME`. Lowering this, or adding a directory level
+# under `External Extensions/`, drops that link out of the orphan scan silently
+# — it is still deployed, and nothing ever reports it stale.
 SEARCH_DEPTH = 5
 
 CLEANUP_DIRS = ['.config', '.local/shell', '.local/share/applications']
@@ -49,18 +55,24 @@ EXCLUDE_PATTERNS = [
 # Directories to skip entirely during symlink searches (never descend into these)
 #
 # `~/Library` names its expensive subtrees rather than the whole directory,
-# because `configs/os/darwin/Library/Application Support/` is deployed and
-# excluding the parent made the one macOS tree this manager links into the one
-# tree it never scanned for orphans. Excluding `Application Support` with a
-# carve-out for the deployed path was rejected: that writes one file's location
-# into a general exclusion list, so the next thing deployed beside it stops
-# being scanned again with nothing to say so.
+# because `configs/os/darwin/Library/Application Support/` is deployed and an
+# exclusion on the parent takes the deployed tree with it. Excluding
+# `Application Support` with a carve-out for the deployed path was rejected:
+# that writes one file's location into a general exclusion list, so the next
+# thing deployed beside it stops being scanned again with nothing to say so.
+#
+# `Messages/Attachments` and `Mail` are named because scanning `~/Library` is a
+# cost paid on every plan, apply and check, and neither is reachable as a
+# deployment target. `Attachments` fans out over two levels of hex, both inside
+# `SEARCH_DEPTH`, so the walk would iterate the whole of it.
 EXCLUDE_SEARCH_DIRS = [
     'Library/Caches/',
     'Library/Containers/',
     'Library/Group Containers/',
     'Library/Developer/',
     'Library/Mobile Documents/',
+    'Library/Messages/Attachments/',
+    'Library/Mail/',
     '.Trash/',
     'Applications/',
     'Movies/',
@@ -105,10 +117,9 @@ def is_excluded_search_dir(path: Path) -> bool:
     """Whether the orphan scan refuses to descend into this directory.
 
     Whole components, matched as a contiguous run so a multi-part entry means the
-    nesting it spells. A bare substring test read `env` out of
-    `.config/environment.d` and `build` out of `.local/share/buildkit`, silently
-    exempting real deployment targets from the only pass that removes a stale
-    link.
+    nesting it spells. Components, not substrings: `.config/environment.d`
+    contains `env` and `.local/share/buildkit` contains `build`, and both are
+    real deployment targets.
     """
     parts = path.parts
     return any(
