@@ -15,6 +15,7 @@ import typer
 
 from dotfiles import bridge
 from dotfiles import engine
+from dotfiles import gitconfig
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
@@ -544,7 +545,7 @@ def identity_check(
 
 
 @identity_app.command('show')
-def identity_show() -> None:
+def identity_show(as_json: bool = JsonOption) -> None:
     """Show the include chain git assembles this machine's configuration from.
 
     `git config --list --show-origin` is the flat version of this and is what
@@ -552,15 +553,19 @@ def identity_show() -> None:
     it came from, with nothing saying that the file was reached through three
     others, so one file overriding another is indistinguishable from a repetition.
     """
-    from dotfiles import gitconfig
-
     layering = gitconfig.read()
     if not layering.read:
         error('git would not report its configuration')
         raise typer.Exit(ExitCode.ISSUE)
 
-    if (masking := gitconfig.home_config()).exists():
-        warn(f'{masking} outranks all of this — git prefers it over the XDG entry point')
+    masking = gitconfig.home_config()
+    if not masking.exists():
+        masking = None
 
-    gitconfig.render(layering, console)
+    if as_json:
+        emit_json(gitconfig.document(layering, masking))
+    else:
+        if masking:
+            warn(f'{masking} outranks all of this — git prefers it over the XDG entry point')
+        gitconfig.render(layering, console)
     raise typer.Exit(ExitCode.ISSUE if layering.conflicts else ExitCode.CONVERGED)

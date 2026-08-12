@@ -223,6 +223,43 @@ def read(scope: str = '--global') -> Layering:
     return Layering(tuple(_parse(result.stdout)))
 
 
+def document(layering: Layering, masked_by: Path | None) -> dict:
+    """The layering as a caller parses it, matching what `render` draws.
+
+    Built from the same three properties the tree is, so the two cannot come to
+    different conclusions about which file won or whether an include fired. What
+    a reader wants from this is exactly what makes the chain hard to follow by
+    hand: which files are involved, which pulled in which, and where two of them
+    disagree.
+
+    `masked_by` is passed rather than measured here, because whose home is being
+    reported on belongs to the caller — `resources/identity.py` asks about the
+    session's home and this module has no session.
+    """
+    return {
+        'files': [str(path) for path in layering.files],
+        'includes': [
+            {
+                'source': str(include.source),
+                'target': str(include.target),
+                'condition': include.condition,
+                'taken': include.taken,
+            }
+            for include in layering.includes
+        ],
+        'conflicts': [
+            {
+                'key': conflict.key,
+                'files': conflict.files,
+                'winner': {'origin': str(conflict.winner.origin), 'value': conflict.winner.value},
+                'losers': [{'origin': str(setting.origin), 'value': setting.value} for setting in conflict.losers],
+            }
+            for conflict in layering.conflicts
+        ],
+        'masked_by': str(masked_by) if masked_by else None,
+    }
+
+
 def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Console, imported by the caller
     """The include chain as a tree, and what each file contributed.
 

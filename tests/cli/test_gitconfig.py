@@ -149,3 +149,31 @@ def test_a_file_repeating_a_key_speaks_with_its_last_word(tmp_path: Path) -> Non
     (conflict,) = read(tmp_path / 'entry.cfg').conflicts
 
     assert [setting.value for setting in conflict.losers] == ['bat']
+
+
+def test_the_json_document_answers_what_the_tree_draws(layered: Path) -> None:
+    """`--json` is what a caller parses, and the chain, the conflicts and the
+    winner are exactly what makes the layering hard to follow by hand.
+
+    Built from the same three properties the tree is, so the two cannot come to
+    different conclusions about which file won."""
+    layering = read(layered)
+
+    document = gitconfig.document(layering, masked_by=None)
+
+    assert [Path(path).name for path in document['files']] == ['entry.cfg', 'middle.cfg', 'leaf.cfg']
+    assert [Path(edge['target']).name for edge in document['includes']] == ['middle.cfg', 'leaf.cfg']
+    assert all(edge['taken'] for edge in document['includes'])
+    (conflict,) = document['conflicts']
+    assert conflict['key'] == 'core.pager'
+    assert conflict['files'] == 2
+    assert Path(conflict['winner']['origin']).name == 'leaf.cfg'
+    assert document['masked_by'] is None
+
+
+def test_the_document_names_what_is_masking_the_chain(layered: Path, tmp_path: Path) -> None:
+    """The one fact a caller cannot derive from the chain itself: a `~/.gitconfig`
+    outranks everything in it, and nothing inside the layering mentions it."""
+    document = gitconfig.document(read(layered), masked_by=tmp_path / '.gitconfig')
+
+    assert document['masked_by'] == str(tmp_path / '.gitconfig')
