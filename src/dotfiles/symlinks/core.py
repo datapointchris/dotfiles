@@ -48,8 +48,20 @@ EXCLUDE_PATTERNS = [
 ]
 
 # Directories to skip entirely during symlink searches (never descend into these)
+#
+# `~/Library` names its expensive subtrees rather than the whole directory,
+# because `configs/os/darwin/Library/Application Support/` is deployed and
+# excluding the parent made the one macOS tree this manager links into the one
+# tree it never scanned for orphans. Excluding `Application Support` with a
+# carve-out for the deployed path was rejected: that writes one file's location
+# into a general exclusion list, so the next thing deployed beside it stops
+# being scanned again with nothing to say so.
 EXCLUDE_SEARCH_DIRS = [
-    'Library/',
+    'Library/Caches/',
+    'Library/Containers/',
+    'Library/Group Containers/',
+    'Library/Developer/',
+    'Library/Mobile Documents/',
     '.Trash/',
     'Applications/',
     'Movies/',
@@ -84,8 +96,27 @@ EXCLUDE_SEARCH_DIRS = [
     '.vim/',
 ]
 
+EXCLUDED_SEARCH_SEQUENCES = tuple(tuple(Path(pattern).parts) for pattern in EXCLUDE_SEARCH_DIRS)
+
 
 # ─── Utilities ────────────────────────────────────────────────────────────────
+
+
+def is_excluded_search_dir(path: Path) -> bool:
+    """Whether the orphan scan refuses to descend into this directory.
+
+    Whole components, matched as a contiguous run so a multi-part entry means the
+    nesting it spells. A bare substring test read `env` out of
+    `.config/environment.d` and `build` out of `.local/share/buildkit`, silently
+    exempting real deployment targets from the only pass that removes a stale
+    link.
+    """
+    parts = path.parts
+    return any(
+        parts[start : start + len(sequence)] == sequence
+        for sequence in EXCLUDED_SEARCH_SEQUENCES
+        for start in range(len(parts) - len(sequence) + 1)
+    )
 
 
 def should_exclude(path: Path) -> bool:
@@ -159,16 +190,12 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
     """Find all symlinks under base_dir with depth-limited, exclusion-aware traversal."""
     symlinks: list[Path] = []
 
-    def should_skip(path: Path) -> bool:
-        path_str = str(path)
-        return any(pattern.rstrip('/') in path_str for pattern in EXCLUDE_SEARCH_DIRS)
-
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
             return
         try:
             for item in directory.iterdir():
-                if item.is_dir() and should_skip(item):
+                if item.is_dir() and is_excluded_search_dir(item):
                     continue
                 if item.is_symlink():
                     symlinks.append(item)
@@ -211,6 +238,12 @@ def link_ownership(target_path: Path, *roots: Path) -> str:
     this manager's to replace. `roots` carries the tree currently being linked,
     so a caller pointed at a tree that is not the installed repo still
     recognises its own links.
+
+    Containment is compared by path component, never by string prefix.
+    `~/dotfiles-backup` and `~/dotfiles.bak` both start with `~/dotfiles`, and
+    calling a link into one of them `ours` is what lets an apply replace the copy
+    somebody took before a risky change — without the foreign refusal and without
+    `--force`.
     """
     if not (target_path.exists() or target_path.is_symlink()):
         return 'absent'
@@ -222,7 +255,7 @@ def link_ownership(target_path: Path, *roots: Path) -> str:
         return 'foreign'
 
     owned = (DOTFILES_DIR, *(root.resolve() for root in roots))
-    return 'ours' if any(str(destination).startswith(str(root)) for root in owned) else 'foreign'
+    return 'ours' if any(destination.is_relative_to(root) for root in owned) else 'foreign'
 
 
 SKEL_DIR = Path('/etc/skel')
@@ -257,7 +290,12 @@ def remove_symlinks(
     verbose: bool = False,
     target_dir: Path | None = None,
 ) -> int:
-    """Remove all symlinks in target_dir that point into source_dir."""
+    """Remove all symlinks in target_dir that point into source_dir.
+
+    Containment by path component, for the reason `link_ownership` gives: a
+    string prefix makes `common-backup` part of `common`, and this verb unlinks
+    what it matches.
+    """
     _target_dir = (target_dir or TARGET_DIR).resolve()
     source_dir = source_dir.resolve()
 
@@ -267,7 +305,7 @@ def remove_symlinks(
     for symlink in _find_symlinks(_target_dir):
         try:
             target = resolve_broken_symlink(symlink) if not symlink.exists() else symlink.resolve()
-            if target and str(target).startswith(str(source_dir)):
+            if target and target.is_relative_to(source_dir):
                 symlink.unlink()
                 if verbose:
                     print(f'[green]✓[/] Removed: {symlink.relative_to(_target_dir)}')
@@ -296,7 +334,7 @@ def find_broken_symlinks(
         if symlink.exists():
             continue
         target = resolve_broken_symlink(symlink)
-        if target and str(target).startswith(str(_dotfiles_dir)):
+        if target and target.is_relative_to(_dotfiles_dir):
             broken.append(symlink)
 
     return broken

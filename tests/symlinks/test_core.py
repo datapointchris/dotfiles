@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 import dotfiles.symlinks.core as core
 
 # ─── Utility Tests ────────────────────────────────────────────────────────────
@@ -180,3 +182,130 @@ def test_this_repo_declares_its_own_scripts(tmp_path):
     """The default path resolves, so the exclusion is live rather than a
     parameter nothing ever fills."""
     assert 'dotfiles' in core.console_script_names()
+
+
+# ─── Path Ownership ───────────────────────────────────────────────────────────
+#
+# A sibling of the repo shares its whole path as a string prefix. `~/dotfiles`
+# and `~/dotfiles-backup` are different trees, and the second one holds the copy
+# somebody made before a risky change.
+
+
+def test_a_link_into_a_repo_sibling_is_foreign(tmp_path, monkeypatch):
+    repo = (tmp_path / 'dotfiles').resolve()
+    repo.mkdir()
+
+    backup = (tmp_path / 'dotfiles-backup').resolve()
+    backup.mkdir()
+    (backup / '.zshrc').write_text('the copy taken before the risky change')
+
+    home = tmp_path / 'home'
+    home.mkdir()
+    link = home / '.zshrc'
+    link.symlink_to(backup / '.zshrc')
+
+    monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
+
+    assert core.link_ownership(link, repo) == 'foreign'
+
+
+def test_a_link_into_the_repo_is_still_ours(tmp_path, monkeypatch):
+    repo = (tmp_path / 'dotfiles').resolve()
+    (repo / 'common').mkdir(parents=True)
+    (repo / 'common' / '.zshrc').write_text('deployed')
+
+    home = tmp_path / 'home'
+    home.mkdir()
+    link = home / '.zshrc'
+    link.symlink_to(repo / 'common' / '.zshrc')
+
+    monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
+
+    assert core.link_ownership(link, repo) == 'ours'
+
+
+def test_a_broken_link_into_a_repo_sibling_is_not_an_orphan(tmp_path):
+    repo = (tmp_path / 'dotfiles').resolve()
+    repo.mkdir()
+
+    home = tmp_path / 'home'
+    home.mkdir()
+    (home / '.zshrc').symlink_to(tmp_path / 'dotfiles-backup' / '.zshrc')
+
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == []
+
+
+def test_remove_symlinks_leaves_a_sibling_trees_links_alone(tmp_path):
+    source = tmp_path / 'dotfiles' / 'common'
+    source.mkdir(parents=True)
+    (source / 'ours.txt').write_text('ours')
+
+    sibling = tmp_path / 'dotfiles' / 'common-backup'
+    sibling.mkdir(parents=True)
+    (sibling / 'theirs.txt').write_text('theirs')
+
+    home = tmp_path / 'home'
+    home.mkdir()
+    (home / 'ours.txt').symlink_to(source / 'ours.txt')
+    (home / 'theirs.txt').symlink_to(sibling / 'theirs.txt')
+
+    count = core.remove_symlinks(source, 'common', target_dir=home)
+
+    assert count == 1
+    assert not (home / 'ours.txt').is_symlink()
+    assert (home / 'theirs.txt').is_symlink()
+
+
+# ─── Search Exclusions ────────────────────────────────────────────────────────
+
+
+def test_the_scan_reaches_the_macos_application_support_tree(tmp_path):
+    """`configs/os/darwin/Library/Application Support/` is deployed, so the one
+    tree the scan must reach was the one a bare `Library` substring skipped."""
+    repo = (tmp_path / 'dotfiles').resolve()
+    repo.mkdir()
+
+    home = tmp_path / 'home'
+    deployed = home / 'Library' / 'Application Support' / 'Vivaldi'
+    deployed.mkdir(parents=True)
+    orphan = deployed / 'extensions.json'
+    orphan.symlink_to(repo / 'deleted.json')
+
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
+
+
+def test_the_scan_still_skips_the_caches_under_library(tmp_path):
+    repo = (tmp_path / 'dotfiles').resolve()
+    repo.mkdir()
+
+    home = tmp_path / 'home'
+    cached = home / 'Library' / 'Caches' / 'Vivaldi'
+    cached.mkdir(parents=True)
+    (cached / 'extensions.json').symlink_to(repo / 'deleted.json')
+
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == []
+
+
+@pytest.mark.parametrize(
+    'directory',
+    [
+        '.config/environment.d',
+        '.config/vendored',
+        '.local/share/buildkit',
+        '.config/distrobox',
+    ],
+)
+def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, directory):
+    """`env`, `vendor`, `build` and `dist` are all excluded search dirs, and all
+    four appear inside the name of a directory this repo can legitimately deploy
+    into."""
+    repo = (tmp_path / 'dotfiles').resolve()
+    repo.mkdir()
+
+    home = tmp_path / 'home'
+    deployed = home / directory
+    deployed.mkdir(parents=True)
+    orphan = deployed / 'config.toml'
+    orphan.symlink_to(repo / 'deleted.toml')
+
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
