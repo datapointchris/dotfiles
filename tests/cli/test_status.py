@@ -44,8 +44,9 @@ def test_a_writable_state_directory_is_written_and_says_nothing(
     below would be noise on every check rather than evidence."""
     home = state_at(monkeypatch, tmp_path / 'state')
 
-    status.record([CONVERGED], 'box', when())
+    recorded = status.record([CONVERGED], 'box', when())
 
+    assert recorded is True
     assert (home / 'status-box.json').is_file()
     assert capsys.readouterr().err == ''
 
@@ -54,28 +55,30 @@ def test_a_writable_state_directory_is_written_and_says_nothing(
 def test_an_unwritable_state_directory_is_reported_rather_than_swallowed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
-    """`except OSError: return` left this indistinguishable from a successful
-    write. The file it fails to write is what the prompt nudge reads, so the
-    failure surfaced as a nudge that silently stopped firing."""
+    """A failure here is indistinguishable from a successful write to everything
+    downstream: the file it cannot write is what the prompt nudge reads, and a
+    nudge that never fires is what a converged machine looks like. So the answer
+    is a value the caller can read, not only a sentence on stderr."""
     refused = tmp_path / 'refused'
     refused.mkdir()
     refused.chmod(0o500)
     home = state_at(monkeypatch, refused / 'dotfiles')
 
-    status.record([BROKEN], 'box', when())
+    recorded = status.record([BROKEN], 'box', when())
 
+    assert recorded is False
     assert not home.exists()
-    assert capsys.readouterr().err != ''
 
 
 @NOT_ROOT
 def test_an_unwritable_state_directory_does_not_change_what_check_exits_with(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The half that must not regress. A check answered the question it was asked,
-    and a state directory it cannot write is not a reason to fail the run — so
-    this returns rather than raising, and the caller's exit code is its own."""
+    and a state directory it cannot write is not a reason to fail the run — so the
+    failure is a returned `False` rather than an exception, and the caller's exit
+    code is its own."""
     refused = tmp_path / 'refused'
     refused.mkdir()
     refused.chmod(0o500)
     state_at(monkeypatch, refused / 'dotfiles')
 
-    assert status.record([BROKEN], 'box', when()) is None
+    assert status.record([BROKEN], 'box', when()) is False

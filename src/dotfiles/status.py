@@ -27,13 +27,14 @@ import json
 from collections.abc import Sequence
 
 from dotfiles import paths
+from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
 
 
-def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> None:
-    """Write both files, or neither, and say so when neither.
+def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
+    """Write both files, and say when the state directory would not take them.
 
     The state directory is on Syncthing for the fleet and absent on a fresh
     machine, and neither is a reason for `dotfiles check` to exit non-zero — it
@@ -42,7 +43,16 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
     successful write to everything downstream, and what it produces is a prompt
     nudge that never fires again — which reads as a converged machine.
 
-    The warning goes to stderr so it cannot corrupt a `--json` run.
+    Not atomic across the two, and it does not claim to be: a directory that
+    refuses the first write refuses both, which is the failure this actually
+    meets, but a status file written and a nudge that then fails leaves the
+    status on disk beside a nudge that is one run out of date. Bounded rather
+    than repaired, because the shell stops reading a nudge older than
+    `MAX_AGE_SECONDS` anyway.
+
+    Returns whether it recorded. The warning goes to stderr so it cannot corrupt
+    a `--json` run, which is also why the answer is a value rather than the
+    warning being the only trace.
     """
     try:
         paths.STATE_HOME.mkdir(parents=True, exist_ok=True)
@@ -50,7 +60,9 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
         _write_nudge(results)
     except OSError as unwritable:
         warn(f'could not record this check under {paths.STATE_HOME}: {unwritable}')
-        return
+        hint(f'no shell will nudge until {paths.STATE_HOME} takes a write — check its permissions and free space')
+        return False
+    return True
 
 
 def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check') -> dict[str, object]:
