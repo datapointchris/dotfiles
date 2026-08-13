@@ -25,6 +25,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -47,11 +48,30 @@ class Observed:
     `which` satisfied by it.
     """
 
+    examined: tuple[Examined, ...] = ()
+    """Every runtime that answered, keyed by the plan address `diff` uses.
+
+    Built in `observe` rather than derived from `reported`, which is keyed by bare
+    name so the summary can read as prose. A row has to carry the same key a
+    change does or one runtime appears twice under two spellings, and rebuilding
+    the address here would mean a second mapping kept in step with the first.
+    """
+
     @property
     def summary(self) -> str:
         """Names the runtimes rather than counting them: which ones a machine
         needs is derived from its tool lists, so the list itself is the finding."""
         return ', '.join(sorted(self.reported)) or 'none needed'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The runtimes that answered, each with the version it printed.
+
+        The version is the part the summary cannot carry. Four runtimes named in
+        one sentence is a list crammed into prose, and it drops the one fact
+        anybody reads this row for — which Go this machine is actually on.
+        """
+        return self.examined
 
 
 class ToolchainsResource:
@@ -61,6 +81,7 @@ class ToolchainsResource:
     def observe(self, session: Session, plan: Plan) -> Observed:
         reported: dict[str, str] = {}
         absent: dict[str, str] = {}
+        examined: list[Examined] = []
 
         for item in plan.for_resource(NAME):
             # Asked of the provider rather than of PATH. A runtime with a fixed
@@ -82,8 +103,9 @@ class ToolchainsResource:
                 absent[item.name] = f'{probe} would not report a version'
             else:
                 reported[item.name] = version
+                examined.append(Examined(item.address, version))
 
-        return Observed(reported=reported, absent=absent)
+        return Observed(reported=reported, absent=absent, examined=tuple(examined))
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         changes = []

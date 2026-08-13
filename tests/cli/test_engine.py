@@ -9,6 +9,8 @@ was nothing after this".
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from dotfiles import engine
@@ -20,6 +22,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -51,8 +54,9 @@ class Fake:
 
 
 class _Observed:
-    def __init__(self, summary: str) -> None:
+    def __init__(self, summary: str, inventory: tuple[Examined, ...] = ()) -> None:
         self.summary = summary
+        self.inventory = inventory
 
 
 def change(item: str) -> Change:
@@ -529,3 +533,17 @@ def test_the_transaction_is_timed_once_rather_than_per_item(session: Session, mo
 
     assert timings[0] is not None
     assert timings[1:] == [None, None]
+
+
+def test_every_resource_can_name_what_it_examined() -> None:
+    """`_measure` reads `observed.inventory` off whatever a resource returns, so a
+    resource that never grew one raises `AttributeError` mid-walk and takes down
+    the whole of its own report — as a `Refusal`, which reads as a checker that
+    crashed rather than as a missing property.
+
+    Asserted on the class rather than by observing, because observing reaches the
+    machine and the property is what the walk actually touches.
+    """
+    observations = {name: inspect.getmodule(type(resource)).Observed for name, resource in engine.resources().items()}  # type: ignore[union-attr]
+
+    assert [name for name, observed in observations.items() if not hasattr(observed, 'inventory')] == []

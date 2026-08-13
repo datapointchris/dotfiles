@@ -30,6 +30,7 @@ from dotfiles.commands import network
 from dotfiles.commands import report
 from dotfiles.commands import resources
 from dotfiles.commands import staging
+from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
 from dotfiles.session import Session
@@ -145,15 +146,15 @@ def plan(
     named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
-    events = reconcile.survey(skipped, machine, refresh=refresh, owner=owner)
-    results = reconcile.plan_machine(events)
-    sinks.keep(events, identity, {'skip': sorted(skipped)})
+    lens = reconcile.Lens.PLAN
+    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, owner=owner, report=None if as_json else render_result)
+    results = walked.results
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped)})
 
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
-        for result in results:
-            render_result(result)
+        console.print(f'[bold]plan[/]  {reconcile.verdict_line(results, lens)}')
         manage.report_position(fetch_first=False)
     raise typer.Exit(reconcile.exit_code(results))
 
@@ -183,9 +184,10 @@ def check(
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)
-    events = reconcile.survey(skipped, machine, refresh=refresh)
-    results = reconcile.check_machine(events, skip=skipped)
-    sinks.keep(events, identity, {'skip': sorted(skipped)})
+    lens = reconcile.Lens.CHECK
+    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, report=None if as_json else render_result)
+    results = walked.results
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped)})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge
@@ -203,8 +205,7 @@ def check(
         # without a version to test.
         emit_json(status.document(results, checked_machine, when))
     else:
-        for result in results:
-            render_result(result)
+        console.print(f'[bold]check[/] {reconcile.verdict_line(results, lens)}')
         # Read from `.git`, never fetched: this is the honest stand-in for an
         # update notice, and a notice that spends a network round trip at every
         # prompt is one that gets turned off. It reports its own age instead.

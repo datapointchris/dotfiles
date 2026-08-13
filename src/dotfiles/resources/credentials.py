@@ -50,6 +50,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -165,6 +166,20 @@ class Observed:
         if not self.found:
             return 'git is configured with no credential helper on this machine'
         return f'{self.working} of {len(self.found)} configured helper(s) runnable'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The helpers that run, keyed the way `diff` keys the ones that do not.
+
+        Same `label → program` item as a change here, so a broken helper and a
+        working one are the same row with a different verdict rather than two
+        spellings of one helper.
+        """
+        return tuple(
+            Examined(f'{entry.helper.label} → {entry.helper.program}', entry.detail)
+            for entry in self.found
+            if entry.verdict is Verdict.MATCHED
+        )
 
 
 class CredentialsResource:

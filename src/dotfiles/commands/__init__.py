@@ -14,7 +14,13 @@ import typer
 from dotfiles import logging
 
 VerboseOption = typer.Option(
-    0, '--verbose', '-v', count=True, metavar='', show_default=False, help='Every step; -vv adds the HTTP requests behind them'
+    0,
+    '--verbose',
+    '-v',
+    count=True,
+    metavar='',
+    show_default=False,
+    help='Every item examined, and every step; -vv adds the HTTP requests behind them',
 )
 QuietOption = typer.Option(False, '--quiet', '-q', help='The verdict alone, without the per-item evidence')
 

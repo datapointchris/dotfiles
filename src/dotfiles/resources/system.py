@@ -33,6 +33,7 @@ from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import Verdict
 from dotfiles.resources import advice_for
@@ -78,6 +79,18 @@ class Observed:
         asked = ', '.join(sorted(self.asked)) or 'nothing'
         line = f'all {self.packages} declared system packages installed (asked {asked})'
         return f'{line}, and {len(self.config)} configuration item(s) match' if self.config else line
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The declared packages, then the `system.yml` rows, both by address.
+
+        Two kinds under one resource, and the summary already counts them apart —
+        so they list apart too, packages first, in the order the sentence names
+        them.
+        """
+        packages = tuple(Examined(address, found.detail) for address, found in sorted(self.evidence.items()))
+        configuration = tuple(Examined(address, state.detail) for address, state in sorted(self.config.items()))
+        return packages + configuration
 
 
 class SystemResource:

@@ -31,6 +31,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -90,6 +91,16 @@ class Observed:
         only "is anything broken", so a file added to `configs/` and never
         deployed read as converged."""
         return f'all {len(self.links)} declared symlinks are deployed'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """Every declared link, addressed as `diff` addresses one, showing where it lands.
+
+        The whole set rather than the deployed subset, because deciding which is
+        which is `_verdict`'s and duplicating it here is a second opinion that can
+        disagree. `reconcile.sift` drops the ones that produced a finding.
+        """
+        return tuple(Examined(link.address, str(link.target)) for link in self.links)
 
 
 TREES: tuple[tuple[str, tuple[str, ...], bool], ...] = (

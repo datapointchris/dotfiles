@@ -18,10 +18,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from rich.console import Console
+from rich.control import Control
+from rich.segment import ControlType
 
 if TYPE_CHECKING:
     from dotfiles.reconcile import ResourceResult
     from dotfiles.resources import Change
+    from dotfiles.resources import Examined
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
@@ -29,6 +32,13 @@ err_console = Console(stderr=True, highlight=False)
 VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
 
 CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
+
+MATCHED = 'matched'
+"""The label an `Examined` row carries.
+
+A literal rather than `str(Verdict.MATCHED)`, so this module keeps its runtime
+distance from `resources`: nothing about presentation should be a reason to import
+the logic. `tests/cli/test_output.py` asserts the two agree."""
 
 EVIDENCE_INDENT = '  '
 VERDICT_COLUMN = 11
@@ -84,48 +94,113 @@ def emit_text(text: str) -> None:
 
 
 def tallies(result: ResourceResult) -> str:
-    """The counts behind a verdict, where there are any.
+    """The counts behind a verdict, where there are any, worded for the verb asking.
 
-    `ResourceResult` has carried these four since it was written and no row has
-    ever shown them, so "converged" meant whatever the reader assumed it meant.
-    Each answers a question the verdict alone leaves open: how much `apply` would
-    change, how much it cannot, how much nothing could measure either way, and
-    how much of the work will ask for a password.
+    `ResourceResult` has carried these since it was written and no row has ever
+    shown them, so "converged" meant whatever the reader assumed it meant. Each
+    answers a question the verdict alone leaves open: how much the other verb
+    would report, how much nothing could measure either way, and how much of the
+    work will ask for a password.
 
-    Only non-zero counts appear. A converged resource with four zeroes would
-    otherwise print a row of noughts on every line of a healthy machine, which is
-    the "pages of output" this is trying not to become.
+    **Each verb shows only the count that is not its own answer**, and words it as
+    the other verb's business. A `plan` row saying `converged` beside
+    `4 need attention` was a row contradicting itself: apply has nothing to do
+    here, and four tools are logged out, and both are true. Saying "4 need a
+    person" is the same number read from the side that owns it. The mirror case is
+    a `check` row saying `converged` beside a non-zero `pending`, which is a
+    declared package merely absent — drift, and not something wrong.
 
-    `attention` is dropped on an `issue` row for the same reason: that verdict is
-    *made of* the items needing attention and its detail already names them, so
-    the count restates the sentence beside it.
+    The count a verb *does* answer with never appears, because its own detail
+    sentence already states it. `4 item(s) need a person: learning, meso, ...`
+    followed by `4 need a person` is the sentence twice.
 
-    The pairing worth keeping is a converged row with a non-zero `pending`, which
-    looks contradictory and is not. `check` answers what is *wrong*, and a
-    declared package that is merely absent is drift the `apply` will fix. Before
-    this the two senses of "converged" were indistinguishable.
+    Only non-zero counts appear. A converged resource with zeroes would otherwise
+    print a row of noughts on every line of a healthy machine, which is the "pages
+    of output" this is trying not to become.
     """
-    counts = (
-        (result.pending, 'pending'),
-        (0 if str(result.verdict) == 'issue' else result.attention, 'need attention'),
-        (result.unmeasured, 'unmeasured'),
-        (result.privileged, 'need a password'),
-    )
+    counts: tuple[tuple[int, str], ...]
+    if str(result.lens) == 'check':
+        counts = ((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
+    else:
+        counts = ((result.attention, 'need a person'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
     shown = [f'{count} {label}' for count, label in counts if count]
     return f'  ·  {", ".join(shown)}' if shown else ''
 
 
 def render_result(result: ResourceResult) -> None:
-    """One resource's verdict, as a row.
+    """One resource's section: its verdict, then the rows that verdict is made of.
 
-    Keyed on the verdict's string value rather than the enum, so this module
-    stays below `reconcile` and does not import it at runtime — presentation
-    should not be a reason for the logic to be loaded.
+    The heading goes to stdout because it is the answer to the question asked, and
+    the rows go to stderr because they are the evidence for it — the same split
+    every command here keeps. Interleaved on a terminal they read as one section,
+    and redirected they separate into an answer and a transcript.
+
+    **The rows come after the heading, and belong to it.** They were printed while
+    the fold was still running, which put the whole walk's evidence above the whole
+    walk's verdicts: four logged-out CLIs appeared under the progress line for
+    `credentials`, and the `credentials` verdict two lines later said converged.
+    Nothing on screen tied a row to the resource that found it.
+
+    Keyed on the verdict's string value rather than the enum, so this module stays
+    below `reconcile` and does not import it at runtime — presentation should not
+    be a reason for the logic to be loaded.
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
     console.print(
         f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}{tallies(result)}{elapsed(result.seconds)}'
     )
+    for section, message in result.invalid:
+        render_finding(section, message)
+    for change in result.findings:
+        render_change(change)
+    if not listing(result):
+        return
+    for change in result.others:
+        render_change(change)
+    for row in result.examined:
+        render_examined(row)
+
+
+LISTED_MAX = 24
+"""How many items a resource may have before its default row is a count.
+
+A reading threshold rather than a performance one. Below it the summary sentence
+*is* the list, only worse — "go, node, rust, uv" names four runtimes and drops
+the version of each, and "~/.env matches the manifest" withholds the whole of
+what the file says this machine is. Above it the sentence is a genuine collapse
+of something nobody wants unasked, and `-v` expands it.
+
+The number is where a section stops reading as one block and starts being a page.
+It leaves the three declared inventories — packages, symlinks, the system half —
+as counts, which is right for a different reason too: each is long enough that
+its own `list` verb is the better door.
+"""
+
+
+def listing(result: ResourceResult) -> bool:
+    """Whether this resource names its items or counts them.
+
+    `-v` is the flag, per cli-design.md § "`-a` is not a substitute for `-v`": the
+    work is identical either way and only what reaches the screen changes.
+    """
+    if not showing_evidence():
+        return False
+    return listing_everything() or len(result.others) + len(result.examined) <= LISTED_MAX
+
+
+def listing_everything() -> bool:
+    """Whether `-v` (or `LOG_LEVEL=debug`) asked for every item on screen.
+
+    Read off the console threshold for the reason `showing_evidence` is, and it is
+    the same threshold from the other end: one flag decides how much of a run
+    reaches the terminal, so a second switch could disagree with it.
+    """
+    import logging as stdlib
+
+    from dotfiles import logging
+
+    level, _ = logging.resolved_console()
+    return stdlib.getLevelNamesMapping().get(level, stdlib.INFO) <= stdlib.DEBUG
 
 
 SLOW_RESOURCE_SECONDS = 2.0
@@ -176,10 +251,35 @@ def announce(address: str, detail: str) -> None:
     """
     if not showing_evidence() or not err_console.is_terminal:
         return
-    # Cropped rather than wrapped. A resource's help runs to a sentence, and a
-    # transient line that takes two rows on a narrow terminal doubles the height
-    # of the progress block it is trying to keep small.
+    # Cropped rather than wrapped, which is also what makes `retract` correct: it
+    # moves the cursor up exactly one row, and a line that wrapped would leave the
+    # half above it on screen.
     err_console.print(f'[blue]⋯[/] {address:<11} {detail}', no_wrap=True, overflow='ellipsis')
+
+
+def retract() -> None:
+    """Take back the progress line, now that the answer is ready to replace it.
+
+    A progress line is a statement about the present tense, and leaving it on
+    screen turns it into a second, worse report. Measured on this machine: a
+    healthy `check` printed nine `⋯` lines carrying each resource's help text, then
+    nine verdict rows carrying each resource's answer, and the reader's question
+    was which of the two lists was the report — the resource descriptions read as
+    a summary of their own.
+
+    Gated as `announce` is, because it erases what `announce` wrote and a run
+    where nothing was written must not eat the line above it.
+
+    And gated once more, on `-v` not being set. This erases *the line above*, not
+    the announcement by identity, so it is only correct while nothing else can have
+    printed in between — which at DEBUG is false: `engine._measure` logs
+    `measured` and every `effects.run` logs `ran`, all to this console. There the
+    progress line stays, which is the right answer anyway, since a reader who asked
+    for the log wants the line the log belongs under.
+    """
+    if not showing_evidence() or listing_everything() or not err_console.is_terminal:
+        return
+    err_console.control(Control((ControlType.CURSOR_UP, 1), (ControlType.CARRIAGE_RETURN,), (ControlType.ERASE_IN_LINE, 2)))
 
 
 def measured(address: str, detail: str, seconds: float) -> None:
@@ -230,6 +330,19 @@ def render_change(change: Change) -> None:
     # inside a sentence.
     for line in change.advice.splitlines():
         err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [blue]→[/] {line}')
+
+
+def render_examined(row: Examined) -> None:
+    """One item a resource looked at and was happy with, in the changes' columns.
+
+    `matched` is the label, which is the verdict a `Change` would have carried had
+    the resource had anything to say about it — so a section reads as one list of
+    every item, with the interesting ones coloured rather than segregated.
+    """
+    if not showing_evidence():
+        return
+    colour = CHANGE_COLOURS[MATCHED]
+    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{MATCHED:<{VERDICT_COLUMN}}[/] {row.item:<{SUBJECT_COLUMN}} {row.detail}')
 
 
 def render_finding(section: str, message: str) -> None:

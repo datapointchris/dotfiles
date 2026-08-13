@@ -34,6 +34,7 @@ from dotfiles.registry import Provider
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
@@ -54,8 +55,14 @@ class Observed:
     declines and the row says only what it looked at.
     """
 
-    managers: frozenset[str] = frozenset()
-    """The plugin managers this run examined, by name."""
+    managers: tuple[tuple[str, str], ...] = ()
+    """The plugin managers this run examined, each as (address, name).
+
+    Both, because the two readers want different halves. The summary sentence
+    names them the way anybody talks about them — lazy, tpm — while a row has to
+    be keyed the way `diff` keys one, or a manager with something outstanding and
+    one without would appear under two different spellings in the same section.
+    """
 
     unsynced: tuple[tuple[str, str], ...] = ()
     """The managers with something outstanding, each with what was measured."""
@@ -72,7 +79,21 @@ class Observed:
         cloned = f'all {len(self.present)} cloned plugins are present'
         if not self.managers:
             return cloned
-        return f'{cloned}, and {" and ".join(sorted(self.managers))} have nothing pending'
+        named = sorted(name for _, name in self.managers)
+        return f'{cloned}, and {" and ".join(named)} have nothing pending'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The checkouts on disk, then the managers with nothing outstanding.
+
+        A checkout that is behind is left out, because `diff` already gives it a
+        row of its own — and `behind` is only ever populated by a run that spent
+        the network, so on a `check` this is every present clone.
+        """
+        pending = {address for address, _ in self.unsynced}
+        clones = tuple(Examined(address, 'cloned') for address in sorted(self.present - self.behind))
+        managers = tuple(Examined(address, 'nothing pending') for address, _ in sorted(self.managers) if address not in pending)
+        return clones + managers
 
 
 class PluginsResource:
@@ -89,7 +110,7 @@ class PluginsResource:
             behind=frozenset(item.address for item in clones if item.address in present and clone.behind(item, session.home))
             if session.refresh
             else frozenset(),
-            managers=frozenset(item.name for item, _ in syncs),
+            managers=tuple((item.address, item.name) for item, _ in syncs),
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
         )
 

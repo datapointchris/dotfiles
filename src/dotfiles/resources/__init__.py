@@ -243,18 +243,50 @@ class Outcome:
         return cls(change, OutcomeStatus.FAILED, diagnose.explain(change.item, result.detail))
 
 
+@dc.dataclass(frozen=True, slots=True)
+class Examined:
+    """One item a resource looked at and had nothing to report about.
+
+    The other half of what a measurement found. `diff` returns only what differs,
+    so everything a healthy machine holds was invisible — a resource that examined
+    four runtimes and ninety-six packages said so in one sentence each, and the
+    reader had no way to see which four or which ninety-six without running a
+    different command against a different source.
+
+    Not a `Change`. A change is a unit of work and travels into the run record,
+    the exit code and `apply`; this travels no further than the screen, which is
+    why it rides on `Summary` and is dropped by `sinks.record` the way `Started`
+    is. Recording it would put a hundred and seventy-three matched symlinks into
+    every run record for a fact the summary already states as a count.
+    """
+
+    item: str
+    detail: str = ''
+
+
 class Observation(Protocol):
     """Whatever a resource measured. Opaque to everything but its own `diff`.
 
-    Except for one sentence. `summary` is what a resource's row says when nothing
-    drifted, and it belongs to the observation because that is the only thing that
-    knows how much was examined. Building it in the walk instead means reaching
-    into `evidence`, `links`, `present` and `installed` from a module that has no
-    other reason to know those fields exist.
+    Except for two things. `summary` is what a resource's row says when nothing
+    drifted, and `inventory` is the same knowledge itemised. Both belong to the
+    observation because that is the only thing that knows how much was examined.
+    Building either in the walk instead means reaching into `evidence`, `links`,
+    `present` and `installed` from a module that has no other reason to know those
+    fields exist.
     """
 
     @property
     def summary(self) -> str: ...
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """Every item this measurement was happy with, in a stable order.
+
+        Required rather than defaulted, so a resource added later cannot silently
+        report an empty list where it has items to name. A resource with genuinely
+        nothing to itemise returns `()` and says why in its own docstring.
+        """
+        ...
 
 
 @runtime_checkable

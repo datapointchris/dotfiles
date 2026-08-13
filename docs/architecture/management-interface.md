@@ -48,6 +48,46 @@ So `plan` exits 1 when changes are pending (`terraform plan -detailed-exitcode`)
 and the shell nudge — which has always fired on Issues only — is now reading the verb
 that means it.
 
+### One section per resource, and a closing line naming the verb
+
+The split above is right and was invisible on screen, which made both verbs read as
+broken. A machine whose only fault was four logged-out CLIs printed nine converged rows
+under `plan` — correct, and indistinguishable from a run that had failed to look. The
+same machine under `check` printed the four findings *above* every verdict row, because
+the fold rendered each item as it decided it and the verdicts came afterwards: `auth`'s
+rows landed under the progress line for `credentials`, and `credentials` then reported
+converged two lines below them.
+
+Three things fix it, and none of them changes what is measured.
+
+Each resource is folded and printed the moment its measurement lands, as a **section** —
+the verdict, then the rows that verdict is made of, indented under it. The progress line
+above it is **retracted** rather than left on screen, so the report is one list of
+resources rather than two. And a resource with few enough items **names them** instead of
+counting them: `go, node, rust, uv` is a list crammed into prose that drops the version of
+each, and `~/.env matches the manifest` withholds the whole of what the file says this
+machine is. `output.LISTED_MAX` is the bound, above which `-v` is what expands the count —
+which leaves the three declared inventories as counts, where their own `list` verb is the
+better door anyway.
+
+The closing line says which question was answered and where the other one is asked. It is
+the answer to "plan converged and said nothing — am I using it wrong":
+
+```text
+plan  nothing for apply to change; 5 item(s) need a person — run: dotfiles check
+check 2 resource(s) need a person: packages, auth
+```
+
+Each verb's row also words the *other* verb's count as that verb owns it. A `plan` row
+reading `converged` beside `4 need attention` was a row contradicting itself, and both
+halves were true — apply has nothing to do here, and four tools are logged out. It reads
+`4 need a person` now. The mirror case is a `check` row reading `converged` beside a
+non-zero count, which is a declared package merely absent, so it reads `3 differ`. Neither
+verb ever restates its own answer as a count beside the sentence that already gave it.
+
+Nothing here reaches `--json`, whose document is unchanged: it carries the verb, the
+verdict and the four counts, and a caller parses those rather than a rendering.
+
 Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
 getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
 install uv, `uv tool install --editable`, and print the `plan` and `apply` that converge

@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+import functools
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -47,10 +49,12 @@ from dotfiles.output import hint
 from dotfiles.output import measured
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
+from dotfiles.output import retract
 from dotfiles.output import success
 from dotfiles.output import warn
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -81,11 +85,65 @@ class ResourceVerdict(StrEnum):
     ISSUE = 'issue'
 
 
+class Lens(StrEnum):
+    """Which question is being asked of one walk.
+
+    `plan` and `check` measure the same machine and differ only in what they keep,
+    so they are two folds over one stream rather than two walks. The split uses
+    fields that already existed and had never been read this way: `Repair` says
+    who can fix a change, and its own docstring describes exactly this — *what
+    lets `check` report it without `apply` reporting a failure for work it was
+    never able to do*.
+    """
+
+    PLAN = 'plan'
+    """What `apply` would change: `AUTOMATIC` repairs of a missing or stale item."""
+
+    CHECK = 'check'
+    """What is wrong: real findings `apply` cannot fix — a machine-local value
+    nobody set, a file only safekeep restores, a private-repo tool with no
+    credentials, a foreign target needing `--force`, a flag set that nothing
+    declares. Plus anything that refused to be measured."""
+
+
 @dataclass(frozen=True)
 class ResourceResult:
     address: str
     verdict: ResourceVerdict
     detail: str
+
+    lens: Lens = Lens.PLAN
+    """Which question produced this row, so the renderer can word it.
+
+    On the row it decides two words. "3 pending" under `check` means the drift
+    `plan` owns, and "4 need a person" under `plan` means the findings `check`
+    owns — the same two counts, each read from the other side. Rendered without
+    it, one of the two always reads as contradicting the verdict beside it.
+    """
+
+    findings: tuple[Change, ...] = ()
+    """The items this lens kept, rendered as rows under the verdict.
+
+    Carried rather than printed while folding, which is what put every resource's
+    evidence above every resource's verdict: the rows for `auth` landed under the
+    progress line for `credentials` and read as credentials failures, and the
+    `credentials` row two lines below said converged.
+    """
+
+    others: tuple[Change, ...] = ()
+    """The items the *other* lens keeps, plus what nothing could measure. Shown
+    under `-v`, so one run can answer both questions when that is what is wanted."""
+
+    examined: tuple[Examined, ...] = ()
+    """What was looked at and found fine, minus anything that produced a finding."""
+
+    invalid: tuple[tuple[str, str], ...] = ()
+    """Section and message for each declaration problem, which only `machines` has.
+
+    Carried for the reason `findings` is. Printed while the row was being built,
+    these landed above every resource's heading and read as findings against
+    whatever resource happened to follow them.
+    """
 
     pending: int = 0
     """Items `apply` would change."""
@@ -155,32 +213,16 @@ def check_declaration() -> ResourceResult:
     broken = validate.errors(findings)
     if not broken:
         warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
-        return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}')
+        return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}', lens=Lens.CHECK)
 
-    for finding in broken:
-        render_finding(finding.section, finding.message)
-    return ResourceResult('machines', ResourceVerdict.ISSUE, f'{len(broken)} problem(s) in the declaration', attention=len(broken))
-
-
-class Lens(StrEnum):
-    """Which question is being asked of one walk.
-
-    `plan` and `check` measure the same machine and differ only in what they keep,
-    so they are two folds over one stream rather than two walks. The split uses
-    fields that already existed and had never been read this way: `Repair` says
-    who can fix a change, and its own docstring describes exactly this — *what
-    lets `check` report it without `apply` reporting a failure for work it was
-    never able to do*.
-    """
-
-    PLAN = 'plan'
-    """What `apply` would change: `AUTOMATIC` repairs of a missing or stale item."""
-
-    CHECK = 'check'
-    """What is wrong: real findings `apply` cannot fix — a machine-local value
-    nobody set, a file only safekeep restores, a private-repo tool with no
-    credentials, a foreign target needing `--force`, a flag set that nothing
-    declares. Plus anything that refused to be measured."""
+    return ResourceResult(
+        'machines',
+        ResourceVerdict.ISSUE,
+        f'{len(broken)} problem(s) in the declaration',
+        lens=Lens.CHECK,
+        invalid=tuple((finding.section, finding.message) for finding in broken),
+        attention=len(broken),
+    )
 
 
 def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Change]]:
@@ -199,56 +241,89 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     return pending, attention, unmeasured
 
 
-def from_changes(address: str, changes: Sequence[Change], converged: str, lens: Lens = Lens.PLAN, seconds: float = 0.0) -> ResourceResult:
+def from_changes(
+    address: str,
+    changes: Sequence[Change],
+    converged: str,
+    lens: Lens = Lens.PLAN,
+    seconds: float = 0.0,
+    examined: Sequence[Examined] = (),
+) -> ResourceResult:
     """Fold one resource's per-item changes into the row its verb prints.
 
-    Each kept change is rendered as it is folded, so the reader sees what was
-    found and then the summary of it.
+    Pure, and it prints nothing. Rendering while folding is what separated every
+    resource's evidence from its own verdict — the whole walk's item rows landed
+    first and the whole walk's verdicts after them, so a row belonged to whichever
+    resource the reader guessed. The rows travel on the result instead, and
+    `output.render_result` puts them under the heading they are evidence for.
     """
     pending, attention, unmeasured = sift(changes)
     kept = pending if lens is Lens.PLAN else attention
-    for change in kept:
-        render_change(change)
+    others = [change for change in changes if change not in kept and change.drifted]
 
-    # `seconds` stays out of this dict. Every entry in it is a count of items and
-    # this is a duration, which is not a distinction worth losing to save an
-    # argument — spread in with the rest it widens the whole mapping to
-    # `int | float` and the four genuine counts stop being typed as counts.
-    counts = {
-        'pending': len(pending),
-        'attention': len(attention),
-        'unmeasured': len(unmeasured),
-        'privileged': len(privileged(pending)),
-    }
+    root_needed = len(privileged(pending))
+    row = functools.partial(
+        ResourceResult,
+        address,
+        lens=lens,
+        findings=tuple(kept),
+        others=tuple(others),
+        examined=_unreported(examined, changes),
+        pending=len(pending),
+        attention=len(attention),
+        unmeasured=len(unmeasured),
+        privileged=root_needed,
+        seconds=seconds,
+    )
     gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
     if not kept:
-        return ResourceResult(address, ResourceVerdict.CONVERGED, converged + gap, **counts, seconds=seconds)
+        return row(verdict=ResourceVerdict.CONVERGED, detail=converged + gap)
 
     if lens is Lens.PLAN:
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
-        root = f', {counts["privileged"]} needing root' if counts['privileged'] else ''
-        detail = f'{len(kept)} item(s) differ from the declaration{root}{gap}'
-        return ResourceResult(address, ResourceVerdict.DRIFT, detail, **counts, seconds=seconds)
-    detail = f'{len(kept)} item(s) need attention that apply cannot give{_lead(kept)}{gap}'
-    return ResourceResult(address, ResourceVerdict.ISSUE, detail, **counts, seconds=seconds)
+        root = f', {root_needed} needing root' if root_needed else ''
+        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from the declaration{root}{gap}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need a person{_lead(kept)}{gap}')
+
+
+def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
+    """The listed items that no finding already covers.
+
+    Subtracted here rather than by each resource, so a resource's `inventory` can
+    be a plain restatement of what it looked at. Deciding what differs is `diff`'s,
+    and a second opinion formed in the observation is one that can disagree with
+    it — which is how one item comes to be both a stale row and a fine one in the
+    same section.
+
+    Keyed on `item`, which is why `inventory` has to address a thing the way `diff`
+    addresses it. A resource keying its rows two ways gets both spellings printed
+    and neither subtracted.
+    """
+    reported = {change.item for change in changes}
+    return tuple(row for row in examined if row.item not in reported)
 
 
 def _lead(kept: Sequence[Change]) -> str:
     """Which items, and the fix if every one of them takes the same one.
 
-    A bare count answers nothing once the reader is at this line, having already
-    scrolled past the rows `render_change` printed for it — this is the line a
-    shell nudge or a scheduled-run summary carries on its own, with those rows
-    long gone. Naming the items makes a scrollback search find them again; naming
-    the fix too, when it is the one fix, means this line alone is the answer.
+    A bare count answers nothing once the reader is at this line, having the rows
+    themselves underneath it — this is the line a shell nudge or a scheduled-run
+    summary carries on its own, with those rows long gone. Naming the items makes
+    a scrollback search find them again; naming the fix too, when it is the one
+    fix, means this line alone is the answer.
     """
     if not kept:
         return ''
     shown = ', '.join(change.item for change in kept[:4])
     names = shown if len(kept) <= 4 else f'{shown} and {len(kept) - 4} more'
     distinct_fixes = {change.advice for change in kept if change.advice}
-    fix = f' — {next(iter(distinct_fixes))}' if len(distinct_fixes) == 1 else ''
+    only = next(iter(distinct_fixes)) if len(distinct_fixes) == 1 else ''
+    # A one-line summary takes a one-line fix. Advice is assembled from what a
+    # diagnosis measured and runs to several lines — the owning package, then the
+    # command that removes it — and folded in here it wrapped this row over five,
+    # pushing the item names it exists to carry off the first of them.
+    fix = f' — {only}' if only and '\n' not in only else ''
     return f': {names}{fix}'
 
 
@@ -276,27 +351,40 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
         seconds = next((event.timing.duration_seconds for event in group if event.timing is not None), 0.0)
         refusal = next((event.payload for event in group if isinstance(event.payload, Refusal)), None)
         if refusal is not None:
-            results.append(ResourceResult(address, ResourceVerdict.ISSUE, refusal.reason, seconds=seconds))
+            results.append(ResourceResult(address, ResourceVerdict.ISSUE, refusal.reason, lens=lens, seconds=seconds))
             continue
         changes = [event.payload for event in group if isinstance(event.payload, Change)]
-        summary = next((event.payload.detail for event in group if isinstance(event.payload, Summary)), '')
-        results.append(from_changes(address, changes, summary, lens, seconds))
+        told = next((event.payload for event in group if isinstance(event.payload, Summary)), None)
+        detail = told.detail if told is not None else ''
+        results.append(from_changes(address, changes, detail, lens, seconds, told.examined if told is not None else ()))
     return results
 
 
+@dataclass(frozen=True)
+class Surveyed:
+    """One read-only walk, in both the shapes its readers want.
+
+    Two, because they are genuinely different things rather than one derived from
+    the other: `events` is what the machine turned out to be and is what the run
+    record and the `--json` document are built from, while `results` is the fold
+    of it under one verb's question. Walking once per reader is three measurements
+    pretending to be one.
+    """
+
+    events: list[Event]
+    results: list[ResourceResult]
+
+
 def survey(
+    lens: Lens,
     skip: frozenset[str] = frozenset(),
     machine: str | None = None,
     *,
     refresh: bool = False,
     owner: str | None = None,
-) -> list[Event]:
-    """Measure the machine once. Both verbs and the run record read this list.
-
-    Returned rather than folded here because there is more than one reader: the
-    console wants rows, `--json` wants a document and `runs.py` wants outcomes with
-    their timings. Walking it once per reader is three measurements pretending to
-    be one.
+    report: Callable[[ResourceResult], None] | None = None,
+) -> Surveyed:
+    """Measure the machine once, folding and reporting each resource as it lands.
 
     A skipped address is absent rather than present as a fourth verdict: it was not
     examined, so it has nothing to report, and inventing a row for it would put
@@ -309,23 +397,58 @@ def survey(
     owner-narrowed plan would otherwise still report every symlink and `~/.env` as
     part of what one person's tools cover.
 
-    **Consumed one event at a time, not with `list()`.** The walk is a generator
-    and materialising it is what made a slow resource indistinguishable from a
-    hung one: every announcement it yields arrived after the last measurement had
-    finished, so the whole point of announcing was lost to the collection. The
-    list still comes back whole, because the readers below want it whole.
+    **Reported a resource at a time, not once at the end.** The walk is a generator
+    and materialising it is what made a slow resource indistinguishable from a hung
+    one. Folding at the end had the same shape one layer up: every progress line
+    printed, then every verdict, so the screen carried two lists of the same nine
+    names and a reader had to work out that one was a question and one an answer.
+    Each resource now announces itself, erases that line, and prints its own
+    section — so what is on screen is one list, and the wait is visible while it
+    is happening rather than reconstructable afterwards.
     """
     session = Session.resolve(machine, refresh=refresh, owner=owner)
     selection = engine.Selection.excluding(skip)
     if owner is not None:
         selection = selection.narrowed_to(session.plan.providers)
 
-    collected = []
+    results: list[ResourceResult] = []
+
+    def keep(result: ResourceResult) -> None:
+        results.append(result)
+        if report is not None:
+            report(result)
+
+    for row in _declaration_row(skip) if lens is Lens.CHECK else []:
+        keep(row)
+
+    collected: list[Event] = []
+    measuring: list[Event] = []
     for event in engine.assess(session, selection):
         if isinstance(event.payload, Started):
             announce(event.resource, event.payload.detail)
         collected.append(event)
-    return collected
+        measuring.append(event)
+        # A resource ends on one or the other — `engine._measure` yields a Summary
+        # when it answered and a Refusal when it could not, and never both.
+        if isinstance(event.payload, Summary | Refusal):
+            retract()
+            keep(fold(measuring, lens)[0])
+            measuring = []
+
+    if measuring:
+        retract()
+        keep(fold(measuring, lens)[0])
+    return Surveyed(collected, results)
+
+
+def _declaration_row(skip: frozenset[str]) -> list[ResourceResult]:
+    """The `machines` verdict, unless it was skipped.
+
+    One place, because both readers of it have to agree on two things: that it
+    comes before the walk, and that `--skip machines` removes it rather than
+    leaving a row nothing measured.
+    """
+    return [] if 'machines' in skip else [check_declaration()]
 
 
 def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:
@@ -347,9 +470,42 @@ def check_machine(events: Iterable[Event], *, skip: frozenset[str] = frozenset()
     is what made the scheduled unit sit permanently failed on a box with nothing
     wrong with it — and what would have trained the shell nudge away inside a week.
     """
-    results = [] if 'machines' in skip else [check_declaration()]
+    results = _declaration_row(skip)
     results.extend(fold(events, Lens.CHECK))
     return results
+
+
+def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
+    """What this verb answered, and where the question it did not answer is asked.
+
+    The line that makes the pair legible. `plan` and `check` walk the same machine
+    and keep different halves, so on a machine with logged-out CLIs and nothing
+    else wrong, `plan` prints nine converged rows and `check` prints four
+    findings — which reads as one of them being broken rather than as two
+    questions. Neither run said which question it had answered, and nothing on
+    screen named the other verb.
+
+    Always printed, including when there is nothing to report, because the run
+    that most needs it is the one that found nothing.
+
+    Worded like the checkout line printed under it — a verdict, then `run: <the
+    command>` where there is one. Two closing lines in two grammars would read as
+    two unrelated notices rather than as the end of one report.
+    """
+    pending = sum(result.pending for result in results)
+    if lens is Lens.PLAN:
+        attention = sum(result.attention for result in results)
+        if pending:
+            return f'{pending} item(s) to change — run: dotfiles apply'
+        if attention:
+            return f'nothing for apply to change; {attention} item(s) need a person — run: dotfiles check'
+        return 'nothing to change'
+
+    troubled = [result.address for result in results if result.verdict is ResourceVerdict.ISSUE]
+    drift = f'; {pending} item(s) differ from the declaration — run: dotfiles plan' if pending else ''
+    if troubled:
+        return f'{len(troubled)} resource(s) need a person: {", ".join(troubled)}{drift}'
+    return f'nothing wrong{drift}'
 
 
 def exit_code(results: list[ResourceResult]) -> ExitCode:
@@ -494,6 +650,9 @@ def apply_machine(
         if isinstance(event.payload, Started):
             announce(event.resource, event.payload.detail)
         elif isinstance(event.payload, Summary) and event.timing is not None:
+            # Same pairing the read-only verbs make: the progress line is a
+            # statement in the present tense, and what replaces it is the answer.
+            retract()
             measured(event.resource, event.payload.detail, event.timing.duration_seconds)
         planned.append(event)
 

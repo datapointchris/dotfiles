@@ -42,6 +42,7 @@ from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -145,6 +146,17 @@ class Observed:
         knowing a field it has no other reason to know.
         """
         return f'all {len(self.evidence)} declared packages are installed'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """Every declared entry, addressed as `diff` addresses one.
+
+        The reported version where a release binary printed one, and what the
+        evidence found otherwise — which for a registry package is the manager
+        that answered for it. `reconcile.sift` drops whatever produced a finding,
+        so this is the installed set on a converged machine.
+        """
+        return tuple(Examined(address, self.reported.get(address) or found.detail) for address, found in sorted(self.evidence.items()))
 
 
 class PackagesResource:

@@ -56,6 +56,7 @@ from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import GITHUB_AUTH_ADVICE
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -106,6 +107,15 @@ class Observed:
         if not self.found:
             return 'this machine declares nothing under `auth:`'
         return f'{self.present} of {len(self.found)} declared tool(s) authenticated'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The tools that showed a credential, each with what was found.
+
+        Declaration order rather than sorted, matching the manifest's `auth:` list,
+        so the rows read as the roster with the logged-out ones lifted out of it.
+        """
+        return tuple(Examined(tool, credential.detail) for tool, credential in self.found.items() if credential.verdict is Verdict.MATCHED)
 
 
 class AuthResource:

@@ -24,6 +24,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -80,6 +81,27 @@ class Observed:
     @property
     def summary(self) -> str:
         return '~/.env matches the manifest and the declared flags'
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """Every assignment the file makes, then the required files that are there.
+
+        The generated half carries its value, because a coordinate is what selects
+        which overlays a shell sources and reading it back is the whole point of
+        looking. The half below the marker is named without one: a required value
+        is machine-local precisely because the repo must never hold it, and
+        printing it on a screen somebody screenshots undoes that.
+
+        Nothing here asks what drifted. `diff` decides that, and `reconcile.sift`
+        drops any item it reported — so a stale flag appears once, as a finding,
+        rather than once here and once there.
+        """
+        if not self.exists:
+            return ()
+        generated = tuple(Examined(key, self.generated[key]) for key in sorted(self.generated))
+        below = tuple(Examined(key, 'set below the marker') for key in sorted(set(self.values) - set(self.generated)))
+        files = tuple(Examined(path, 'present') for path in sorted(self.present_files))
+        return generated + below + files
 
 
 class EnvResource:

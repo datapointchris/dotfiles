@@ -58,6 +58,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -104,6 +105,17 @@ class Observed:
         """
         files = len(self.layering.files)
         return f'{self.who}, from {files} config file(s)' if files else self.who
+
+    @property
+    def inventory(self) -> tuple[Examined, ...]:
+        """The two fields that resolved, then the files they resolved through.
+
+        The files are the half worth itemising. "from 5 config file(s)" is a count
+        of the exact thing that makes this arrangement hard to follow, and which
+        five it means is the question the count provokes.
+        """
+        fields = tuple(Examined(field, self.values[field]) for field in FIELDS if self.values[field])
+        return fields + tuple(Examined(str(path), 'read by git, in this order') for path in self.layering.files)
 
 
 class IdentityResource:

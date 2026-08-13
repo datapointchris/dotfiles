@@ -22,6 +22,7 @@ from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.runs import Timing
@@ -200,7 +201,7 @@ def test_the_issue_line_names_the_item_and_its_fix() -> None:
 
     folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
 
-    assert folded.detail == '1 item(s) need attention that apply cannot give: env/WINDOWS_USER — set it in ~/.env'
+    assert folded.detail == '1 item(s) need a person: env/WINDOWS_USER — set it in ~/.env'
 
 
 def test_the_issue_line_names_every_item_and_the_shared_fix_once() -> None:
@@ -273,3 +274,100 @@ def test_nothing_at_all_says_so_without_a_gap_clause() -> None:
 
     assert folded.verdict is ResourceVerdict.CONVERGED
     assert folded.detail == 'all installed'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The rows a verdict is made of
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_row_carries_the_items_it_kept_rather_than_printing_them() -> None:
+    """Printed while folding, these landed above every resource's verdict — so
+    `auth`'s four logged-out CLIs appeared under the progress line for
+    `credentials`, and `credentials` reported converged two lines below them."""
+    changes = [change(Verdict.MISSING, Repair.BY_HAND, item='auth/nomad')]
+
+    folded = reconcile.from_changes('auth', changes, '3 of 7 authenticated', reconcile.Lens.CHECK)
+
+    assert [kept.item for kept in folded.findings] == ['auth/nomad']
+
+
+def test_each_verb_keeps_its_own_findings_and_carries_the_others() -> None:
+    """One walk answers both questions, so the half this verb does not answer is
+    still on the row for `-v` to print. Neither verb re-measures for it."""
+    changes = [
+        change(Verdict.MISSING, Repair.AUTOMATIC, item='ghrelease/zk'),
+        change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER'),
+    ]
+
+    planned = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN)
+
+    assert [kept.item for kept in planned.findings] == ['ghrelease/zk']
+    assert [rest.item for rest in planned.others] == ['env/WINDOWS_USER']
+
+
+def test_a_listed_item_that_already_has_a_finding_is_dropped_from_the_listing() -> None:
+    """A resource's `inventory` is a plain restatement of what it looked at, so it
+    names items that turned out to differ. Printed as well as the finding, one item
+    would appear twice in one section under two verdicts."""
+    changes = [change(Verdict.MISSING, item='ghrelease/zk')]
+    examined = [Examined('ghrelease/zk', '0.14.0'), Examined('ghrelease/lazygit', '0.44.1')]
+
+    folded = reconcile.from_changes('packages', changes, 'all installed', examined=examined)
+
+    assert [row.item for row in folded.examined] == ['ghrelease/lazygit']
+
+
+def test_the_fix_is_dropped_from_the_summary_when_it_needs_more_than_a_line() -> None:
+    """Advice is assembled from what a diagnosis measured — the owning package,
+    then the command that removes it. Folded into this one-line summary it wrapped
+    the row over five, pushing the item names it exists to carry off the first."""
+    diagnosed = change(Verdict.UNDECLARED, Repair.BY_HAND, item='uv/mypy', advice='belongs to nothing\nrun: rm it')
+
+    folded = reconcile.from_changes('packages', [diagnosed], 'all installed', reconcile.Lens.CHECK)
+
+    assert folded.detail == '1 item(s) need a person: uv/mypy'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The closing line that tells the two verbs apart
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_plan_with_nothing_to_do_says_where_the_other_question_is_asked() -> None:
+    """The run this exists for. On a machine whose only fault is four logged-out
+    CLIs, `plan` prints nine converged rows and looks like it said nothing —
+    which reads as the verb being broken rather than as the other verb's subject.
+    """
+    results = [ResourceResult('auth', ResourceVerdict.CONVERGED, '3 of 7', lens=reconcile.Lens.PLAN, attention=4)]
+
+    line = reconcile.verdict_line(results, reconcile.Lens.PLAN)
+
+    assert line == 'nothing for apply to change; 4 item(s) need a person — run: dotfiles check'
+
+
+def test_a_plan_with_work_to_do_names_the_verb_that_does_it() -> None:
+    results = [ResourceResult('packages', ResourceVerdict.DRIFT, '2 differ', lens=reconcile.Lens.PLAN, pending=2)]
+
+    assert reconcile.verdict_line(results, reconcile.Lens.PLAN) == '2 item(s) to change — run: dotfiles apply'
+
+
+def test_a_check_names_the_resources_that_need_a_person() -> None:
+    results = [
+        ResourceResult('packages', ResourceVerdict.ISSUE, '1 needs a person', lens=reconcile.Lens.CHECK, attention=1),
+        ResourceResult('auth', ResourceVerdict.ISSUE, '4 need a person', lens=reconcile.Lens.CHECK, attention=4),
+        ResourceResult('env', ResourceVerdict.CONVERGED, 'matches', lens=reconcile.Lens.CHECK),
+    ]
+
+    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 resource(s) need a person: packages, auth'
+
+
+def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None:
+    """Drift is not this verb's subject and must not move its exit code, which is
+    exactly why the run has to say the drift is there — otherwise a converged
+    `check` reads as a machine with nothing to apply."""
+    results = [ResourceResult('packages', ResourceVerdict.CONVERGED, 'all installed', lens=reconcile.Lens.CHECK, pending=3)]
+
+    line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
+
+    assert line == 'nothing wrong; 3 item(s) differ from the declaration — run: dotfiles plan'

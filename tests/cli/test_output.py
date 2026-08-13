@@ -23,10 +23,12 @@ from rich.console import Console
 
 from dotfiles import logging
 from dotfiles import output
+from dotfiles.reconcile import Lens
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Verdict
 
 
@@ -39,7 +41,7 @@ def a_change(**overrides) -> Change:
         'verdict': Verdict.STALE,
         'detail': '14.1.0 to 14.1.1',
     }
-    return Change(**(fields | overrides))
+    return Change(**(fields | overrides))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize('verdict', list(ResourceVerdict))
@@ -211,13 +213,52 @@ def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) 
 
 
 def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture) -> None:
-    """`ResourceResult` carried these four since it was written and no row ever
-    showed them, so "converged" meant whatever the reader assumed."""
+    """`ResourceResult` carried these since it was written and no row ever showed
+    them, so "converged" meant whatever the reader assumed."""
     output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 differ', pending=4, privileged=2))
 
     written = capsys.readouterr().out
-    assert '4 pending' in written
     assert '2 need a password' in written
+
+
+def test_a_plan_row_words_the_other_half_as_the_other_verb_owns_it(capsys: pytest.CaptureFixture) -> None:
+    """The row Chris read as self-contradictory: `plan` said `converged` and the
+    tally beside it said `4 need attention`. Both were true — apply has nothing to
+    do, and four CLIs are logged out — and the pair read as one row disagreeing
+    with itself."""
+    result = ResourceResult(address='auth', verdict=ResourceVerdict.CONVERGED, detail='3 of 7 authenticated', lens=Lens.PLAN, attention=4)
+
+    output.render_result(result)
+
+    written = capsys.readouterr().out
+    assert '4 need a person' in written
+    assert 'attention' not in written
+
+
+def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixture) -> None:
+    """The mirror case, and the pairing worth keeping: nothing is wrong, and three
+    declared packages are merely absent. `pending` is `plan`'s word for its own
+    answer, so on this side it is named as the difference it is."""
+    result = ResourceResult(address='packages', verdict=ResourceVerdict.CONVERGED, detail='all installed', lens=Lens.CHECK, pending=3)
+
+    output.render_result(result)
+
+    assert '3 differ' in capsys.readouterr().out
+
+
+def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureFixture) -> None:
+    """A `check` issue row is *made of* the items needing a person and its detail
+    names them, and a `plan` drift row is made of what it would change. Either
+    count beside its own sentence is the sentence twice."""
+    output.render_result(
+        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4)
+    )
+    assert '·' not in capsys.readouterr().out
+
+    output.render_result(
+        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 item(s) differ', lens=Lens.PLAN, pending=4)
+    )
+    assert '·' not in capsys.readouterr().out
 
 
 def test_a_clean_row_shows_no_counts_at_all(capsys: pytest.CaptureFixture) -> None:
@@ -240,16 +281,123 @@ def test_multi_line_advice_gets_one_row_per_line(capsys: pytest.CaptureFixture) 
     assert 'sudo pacman -Rs shellcheck' in rows[1]
 
 
-def test_an_issue_row_does_not_repeat_its_own_attention_count(capsys: pytest.CaptureFixture) -> None:
-    """The verdict is made of those items and the detail already names them, so
-    the count restated the sentence beside it."""
+def test_an_unmeasurable_count_survives_the_wording_rules(capsys: pytest.CaptureFixture) -> None:
+    """It is neither verb's answer, so neither suppresses it. It is also the one
+    count whose word is the same on both sides."""
     output.render_result(
-        ResourceResult(address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', attention=4, unmeasured=1)
+        ResourceResult(
+            address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4, unmeasured=1
+        )
     )
 
-    written = capsys.readouterr().out
-    assert '4 need attention' not in written
-    assert '1 unmeasured' in written
+    assert '1 unmeasured' in capsys.readouterr().out
+
+
+def test_the_evidence_is_printed_under_the_verdict_it_belongs_to(capsys: pytest.CaptureFixture) -> None:
+    """The defect Chris hit. Rendered while folding, `auth`'s four logged-out rows
+    landed above every resource's verdict, directly under the progress line for
+    `credentials` — which then reported converged two lines below them.
+
+    Both streams are read, because the pair only reads as one section on a
+    terminal where they interleave."""
+    finding = a_change(resource='auth', item='nomad', verdict=Verdict.MISSING, detail='the OS keychain holds no token')
+    result = ResourceResult(
+        address='auth', verdict=ResourceVerdict.ISSUE, detail='1 item(s) need a person', lens=Lens.CHECK, findings=(finding,)
+    )
+
+    output.render_result(result)
+
+    written = capsys.readouterr()
+    assert 'auth' in written.out
+    assert 'nomad' in written.err
+
+
+def test_a_small_resource_names_its_items_rather_than_counting_them(capsys: pytest.CaptureFixture) -> None:
+    """ "go, node, rust, uv" is a list crammed into prose, and it drops the version
+    of each — which is the one fact anybody opens that row for."""
+    result = ResourceResult(
+        address='toolchains',
+        verdict=ResourceVerdict.CONVERGED,
+        detail='go, node, rust, uv',
+        examined=(Examined('toolchain/go', '1.25.0'), Examined('toolchain/uv', '0.9.2')),
+    )
+
+    output.render_result(result)
+
+    written = capsys.readouterr().err
+    assert 'toolchain/go' in written
+    assert '1.25.0' in written
+
+
+def test_a_large_resource_keeps_its_count_until_verbose_asks(capsys: pytest.CaptureFixture) -> None:
+    """Above the threshold the summary is a genuine collapse rather than a list in
+    disguise, and `-v` is the flag that expands it — cli-design.md § "`-a` is not a
+    substitute for `-v`", since the work is identical either way."""
+    result = ResourceResult(
+        address='symlinks',
+        verdict=ResourceVerdict.CONVERGED,
+        detail='all 173 declared symlinks are deployed',
+        examined=tuple(Examined(f'configs/file{index}', '~/.config') for index in range(output.LISTED_MAX + 1)),
+    )
+
+    output.render_result(result)
+    assert capsys.readouterr().err == ''
+
+    logging.choose_console(verbose=1)
+    try:
+        output.render_result(result)
+    finally:
+        logging.choose_console()
+
+    assert 'configs/file7' in capsys.readouterr().err
+
+
+def test_the_label_on_a_listed_item_is_the_verdict_a_change_would_carry(capsys: pytest.CaptureFixture) -> None:
+    """`MATCHED` spelled as a literal in `output`, so presentation is not a reason
+    to import the logic. This is what stops the two drifting apart."""
+    assert str(Verdict.MATCHED) == output.MATCHED
+
+    output.render_examined(Examined('toolchain/go', '1.25.0'))
+
+    assert output.MATCHED in capsys.readouterr().err
+
+
+def test_retracting_without_a_progress_line_to_take_back_writes_nothing(capsys: pytest.CaptureFixture) -> None:
+    """It erases the line above it, so a run where `announce` printed nothing would
+    eat whatever was there instead. Both are gated on the same two questions."""
+    output.retract()
+
+    assert capsys.readouterr().err == ''
+
+
+def test_the_progress_line_is_taken_back_when_its_answer_arrives(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A progress line is a statement in the present tense. Left on screen, nine of
+    them carrying nine resource descriptions read as a second report, and the
+    reader's question becomes which of the two lists is the answer."""
+    written = io.StringIO()
+    monkeypatch.setattr(output, 'err_console', Console(file=written, force_terminal=True, highlight=False))
+
+    output.announce('packages', 'everything installed from a package manager')
+    output.retract()
+
+    assert '\x1b[1A' in written.getvalue()
+
+
+def test_the_progress_line_survives_verbose_because_the_log_lands_under_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It erases the line above, not the announcement by identity. At `-v` the
+    engine logs `measured` and every `effects.run` logs `ran` to this same console
+    in between, so the row above the answer is a log line rather than the
+    progress line."""
+    written = io.StringIO()
+    monkeypatch.setattr(output, 'err_console', Console(file=written, force_terminal=True, highlight=False))
+    logging.choose_console(verbose=1)
+    try:
+        output.announce('packages', 'everything installed from a package manager')
+        output.retract()
+    finally:
+        logging.choose_console()
+
+    assert '\x1b[1A' not in written.getvalue()
 
 
 def narrated(monkeypatch: pytest.MonkeyPatch, *, quiet: bool) -> str:

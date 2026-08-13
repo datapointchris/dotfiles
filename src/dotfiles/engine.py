@@ -469,4 +469,4 @@ def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> 
     log.debug('measured', resource=address, seconds=round(timing.duration_seconds, 3), changes=len(changes))
     for change in changes:
         yield Event(address, change, stage=change.stage)
-    yield Event(address, Summary(observed.summary), timing=timing)
+    yield Event(address, Summary(observed.summary, observed.inventory), timing=timing)

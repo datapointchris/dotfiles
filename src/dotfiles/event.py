@@ -18,6 +18,7 @@ import dataclasses as dc
 
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.runs import Timing
 from dotfiles.vocabulary import ExitCode
@@ -47,15 +48,22 @@ class Started:
 
 @dc.dataclass(frozen=True, slots=True)
 class Summary:
-    """What a resource examined, in its own terms.
+    """What a resource examined, in its own terms, and the items behind it.
 
     A sentence and not a count, deliberately. Each resource measures a different
     kind of thing — declared packages, deployed links, runtimes a tool list
     implies — so one `examined: int` across all of them would be a number meaning
     something different in every row, which is worse than no number.
+
+    `examined` is that sentence itemised, for the reader who wants to see what was
+    looked at rather than take a count for it. It rides here rather than arriving
+    as changes of its own, because a `Change` is a unit of work: one carrying
+    `MATCHED` would travel into the run record and be written out per item, which
+    is a hundred and seventy-three rows of nothing for every `check` of symlinks.
     """
 
     detail: str
+    examined: tuple[Examined, ...] = ()
 
 
 @dc.dataclass(frozen=True, slots=True)
