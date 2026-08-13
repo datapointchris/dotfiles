@@ -25,6 +25,9 @@ go_tools:
   - ifiles
   - gowall
   - ascii-image-converter
+  - gopls
+  - sqls
+  - docker-language-server
 
 github_releases:
   - fzf

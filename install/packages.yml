@@ -305,9 +305,17 @@ system_packages:
     description: Ruby programming language (macOS only in Brewfile)
 
   # Language Servers
+  # Enabled in nvim by lua/lsp/init.lua, which is the list these have to satisfy.
+  # The Go-based servers there install through go_tools instead.
   - name: lua-language-server
+    pacman: lua-language-server
     brew: lua-language-server
-    description: Lua LSP (macOS only for now)
+    description: Lua LSP
+
+  - name: marksman
+    pacman: marksman
+    brew: marksman
+    description: Markdown LSP (shares markdown buffers with zk; see nvim core/autocmds.lua)
 
   # Linters & Formatters
   # Note: shellcheck moved to github_releases for consistent versioning across platforms
@@ -1539,6 +1547,26 @@ go_tools:
     github_repo: TheZoraiz/ascii-image-converter
     binary_pattern: "ascii-image-converter_{Os_mac}_{go_arch}_64bit.tar.gz"
     description: Convert images to ASCII art (used by theme tool)
+
+  # Language servers nvim enables in lua/lsp/init.lua. Go tools rather than
+  # system packages so one declaration covers every platform — apt carries none
+  # of the three.
+  # gopls publishes no release assets and sqls ships its binary in a .zip, which
+  # `extract_go_binary` does not open, so neither declares a binary_pattern: the
+  # bundler skips them with a warning instead of staging something unusable.
+  - name: gopls
+    package: golang.org/x/tools/gopls
+    description: Go LSP
+
+  - name: sqls
+    package: github.com/sqls-server/sqls
+    description: SQL LSP
+
+  - name: docker-language-server
+    package: github.com/docker/docker-language-server/cmd/docker-language-server
+    github_repo: docker/docker-language-server
+    binary_pattern: "docker-language-server-{os}-{go_arch}-{version}"
+    description: Dockerfile and compose LSP
 
 # ================================================================
 # SHELL PLUGINS
