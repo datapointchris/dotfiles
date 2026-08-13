@@ -146,6 +146,21 @@ reads a unit test may legitimately want and only the second word separates them.
 """
 
 
+class WouldInstall(BaseException):
+    """Raised where an install was attempted, and deliberately not an `Exception`.
+
+    `engine._measure` and `engine._act` both wrap a resource in `except Exception`
+    and turn what it raised into a `Refusal`, because one checker crashing must not
+    end the walk. That isolation swallows a guard raised as an `AssertionError`:
+    the install is still refused, but the run reports a refused resource and exits
+    3, which reads as a resource that could not be examined rather than as a test
+    that tried to change this machine.
+
+    A `BaseException` passes straight through, which is the same reason
+    `pytest.fail` raises one.
+    """
+
+
 @pytest.fixture(autouse=True)
 def logging_is_configured():
     """Unconfigured structlog writes to stdout, which the suite must never see.
@@ -196,7 +211,7 @@ def no_installing_on_this_machine(request, monkeypatch):
         def guarded(command, *args, **kwargs):
             argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
             if argv[:2] in INSTALLING:
-                raise AssertionError(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
+                raise WouldInstall(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
             return original(command, *args, **kwargs)
 
         return guarded
@@ -393,6 +408,32 @@ def _executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n')
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
     return target
+
+
+@pytest.fixture
+def uv_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A scratch `$UV_TOOL_DIR`, which is the knob uv itself honours.
+
+    Here rather than beside the packages tests, because `tests/matrix/` builds the
+    same directory as part of a whole synthetic machine and a fixture defined in
+    one test package is invisible to another.
+    """
+    directory = tmp_path / 'uv-tools'
+    directory.mkdir()
+    monkeypatch.setenv('UV_TOOL_DIR', str(directory))
+    return directory
+
+
+@pytest.fixture
+def release_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`$XDG_CACHE_HOME` is the real knob, so pointing it here patches nothing.
+
+    Here for the reason `uv_tools` is, and it is the only upstream a test without
+    a network may read: `matrix.harness.cached` writes it and
+    `releases.cache_file()` re-reads the variable on every call.
+    """
+    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'cache'))
+    return tmp_path / 'cache' / 'dotfiles' / 'releases.json'
 
 
 @pytest.fixture

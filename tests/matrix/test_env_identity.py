@@ -1,0 +1,799 @@
+"""`~/.env` and the git identity, driven through the front door.
+
+The two resources a machine is *identified* by, and the two whose findings a
+person rather than `apply` usually has to settle. They are measured together
+because they answer one question from opposite sides: `env` says which machine
+this is and what it wants running, `identity` says who its commits come from.
+Neither reads `packages.yml`, so a row here can attribute its exit code to the
+one file it wrote.
+
+Every state is built out of real files under the sandbox — a manifest, a
+`flags.yml`, `~/.env` itself, and a git configuration git actually reads —
+because both resources measure files and nothing else. Nothing in `src/dotfiles/`
+is patched, and no test asserts against this developer's own machine.
+
+**The pairing is what most of this pins.** `plan` and `check` are two folds over
+one measurement: `plan` keeps what `apply` would repair and `check` keeps what
+only a person can. A state appearing under both, or under neither, is the failure
+these matrices exist to catch — it is what made a scheduled unit sit permanently
+failed on a healthy box.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from dotfiles import machine as machines
+from dotfiles.vocabulary import ExitCode
+from matrix import harness
+from matrix.harness import Invocation
+from matrix.harness import Sandbox
+from matrix.harness import unwrapped
+
+Run = Callable[..., Invocation]
+Arrange = Callable[[Sandbox], None]
+
+LINUX_LAYERS = 'pkg/apt os/linux display/none host/native trust/fleet capacity/server'
+ARCH_LAYERS = 'pkg/pacman os/linux display/wayland host/native trust/fleet capacity/workstation'
+MACOS_LAYERS = 'pkg/brew os/darwin display/aqua host/native trust/fleet capacity/workstation'
+"""What three platform bundles resolve to, written out rather than derived.
+
+Derived from `Coordinates.overlays` these would assert that the renderer agrees
+with itself. Written out, a seventh axis or a reordering fails here and has to be
+looked at — which is the whole reason `.zshrc` may read one variable instead of
+six. `tests/resources/test_env.py` spells two of them for the same reason.
+"""
+
+ARCHLINUX: dict[str, Any] = {'machine': 'box', 'platform': 'archlinux'}
+MACOS_MACHINE: dict[str, Any] = {'machine': 'other', 'platform': 'macos'}
+
+ALPHA_ON: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'description': 'first flag', 'default': True}]}
+ALPHA_OFF: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'description': 'first flag', 'default': False}]}
+
+LOCAL_VALUE: dict[str, Any] = {'required': [{'name': 'MATRIX_LOCAL_VALUE', 'description': 'an employer hostname'}]}
+"""A name no shell on any machine exports, so the register is answered by the
+sandbox alone. `WINDOWS_USER` would be the real one and is deliberately not used:
+`settings.resolve` reads `os.environ` for a value with no `SHARED_PATHS` entry, so
+a developer who happened to export one would converge a row built to drift."""
+
+SECRET = 'export OPENAI_API_KEY=sk-matrix-secret\n'
+"""What the real file carries below the marker, and the thing a regeneration must
+never lose."""
+
+IDENTITY = '[user]\n\tname = Synthetic Box\n\temail = box@example.invalid\n'
+"""The identity `Sandbox.settle` writes, restated where a test rewrites the file."""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Building one machine's state
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def redeclare(sandbox: Sandbox, manifest: dict[str, Any] | None = None, flags: dict[str, Any] | None = None) -> None:
+    """Change the declaration and leave `~/.env` as it was, which is the drift.
+
+    `sandbox.declare` settles afterwards, so it can express what a machine
+    declares and never what one has fallen behind. This is the other half: the
+    repo moved and the machine has not regenerated, which is how a flag's new
+    default reaches nothing and how a manifest's coordinates go stale.
+    """
+    harness.write_declaration(sandbox.repo, manifest=manifest or harness.MINIMAL_MANIFEST, flags=flags, machine=sandbox.machine)
+
+
+def below_the_marker(sandbox: Sandbox, *lines: str) -> None:
+    """Append hand-edited assignments, where a real machine keeps its secrets."""
+    with sandbox.env_file.open('a') as handle:
+        handle.writelines(lines)
+
+
+def git_config(sandbox: Sandbox, name: str, text: str) -> Path:
+    """One file in the chain git assembles this machine's configuration from.
+
+    Written under `$XDG_CONFIG_HOME`, which is where git looks for the global
+    config and where `Sandbox.settle` puts the entry point. That is a real knob
+    git honours, so the configuration under test is assembled by git itself.
+    """
+    path = sandbox.config / 'git' / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ~/.env: what each state looks like to each verb
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def converged(sandbox: Sandbox) -> None:
+    """The sandbox as built. Named so the matrix has a row for the baseline."""
+
+
+def no_env_file(sandbox: Sandbox) -> None:
+    sandbox.env_file.unlink()
+
+
+def manifest_moved_the_layers(sandbox: Sandbox) -> None:
+    redeclare(sandbox, manifest=ARCHLINUX)
+
+
+def flag_default_moved(sandbox: Sandbox) -> None:
+    sandbox.declare(flags=ALPHA_OFF)
+    redeclare(sandbox, flags=ALPHA_ON)
+
+
+def flag_overridden_below_the_marker(sandbox: Sandbox) -> None:
+    sandbox.declare(flags=ALPHA_ON)
+    below_the_marker(sandbox, 'export ALPHA_FLAG=false\n')
+
+
+def coordinate_overridden_below_the_marker(sandbox: Sandbox) -> None:
+    below_the_marker(sandbox, f'export DOTFILES_LAYERS="{ARCH_LAYERS}"\n')
+
+
+def required_value_unset(sandbox: Sandbox) -> None:
+    sandbox.declare(flags=LOCAL_VALUE)
+
+
+def required_value_answered(sandbox: Sandbox) -> None:
+    sandbox.declare(flags=LOCAL_VALUE)
+    below_the_marker(sandbox, 'export MATRIX_LOCAL_VALUE=some-employer-host\n')
+
+
+def required_file_absent(sandbox: Sandbox) -> None:
+    sandbox.declare(flags={'required_files': [{'name': 'local.sh', 'path': str(sandbox.home / 'local.sh'), 'description': 'shell code'}]})
+
+
+def required_file_present(sandbox: Sandbox) -> None:
+    required_file_absent(sandbox)
+    (sandbox.home / 'local.sh').write_text('# machine-local\n')
+
+
+def flag_nothing_declares(sandbox: Sandbox) -> None:
+    below_the_marker(sandbox, 'export NVIM_AI_ENABLED=false\n')
+
+
+def unreadable_config_toml(sandbox: Sandbox) -> None:
+    config = sandbox.config / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('repos_registry = "unterminated\n')
+
+
+ENV_STATES = [
+    pytest.param(converged, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='converged'),
+    pytest.param(no_env_file, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='no-env-file'),
+    pytest.param(manifest_moved_the_layers, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='manifest-moved-the-layers'),
+    pytest.param(flag_default_moved, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='flag-default-moved'),
+    pytest.param(flag_overridden_below_the_marker, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='flag-overridden-by-hand'),
+    pytest.param(coordinate_overridden_below_the_marker, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='coordinate-overridden-by-hand'),
+    pytest.param(required_value_unset, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-value-unset'),
+    pytest.param(required_value_answered, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='required-value-answered'),
+    pytest.param(required_file_absent, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-file-absent'),
+    pytest.param(required_file_present, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='required-file-present'),
+    pytest.param(flag_nothing_declares, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='flag-nothing-declares'),
+    pytest.param(unreadable_config_toml, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='unreadable-config-toml'),
+]
+"""One machine state per row, with what each verb makes of it.
+
+The four columns are the whole contract: a state is drift, or it is a finding,
+and no state is both. Reading down the two exit-code columns says which is which
+without opening a single assertion — `apply` repairs the generated half of the
+file, and every hand-edited or machine-local thing below it belongs to a person.
+"""
+
+
+@pytest.mark.parametrize(('arrange', 'planned', 'pending', 'checked', 'attention'), ENV_STATES)
+def test_plan_and_check_keep_opposite_halves_of_one_env_measurement(
+    sandbox: Sandbox,
+    cli: Run,
+    arrange: Arrange,
+    planned: ExitCode,
+    pending: int,
+    checked: ExitCode,
+    attention: int,
+) -> None:
+    """Both verbs against one state, in one test, because the pair is the claim.
+
+    Asserted apart, each row reads as an isolated verdict and the property that
+    matters is invisible: nothing this resource finds is reported by both verbs,
+    and nothing it finds is reported by neither.
+    """
+    arrange(sandbox)
+
+    ran = cli('env', 'plan', '--json')
+    assert (ran.exit_code, ran.document['pending']) == (planned, pending)
+
+    ran = cli('env', 'check', '--json')
+    assert (ran.exit_code, ran.document['attention']) == (checked, attention)
+
+
+@pytest.mark.parametrize(
+    ('arrange', 'checked'),
+    [
+        pytest.param(no_env_file, ExitCode.CONVERGED, id='no-env-file'),
+        pytest.param(manifest_moved_the_layers, ExitCode.CONVERGED, id='manifest-moved-the-layers'),
+        pytest.param(flag_default_moved, ExitCode.CONVERGED, id='flag-default-moved'),
+        pytest.param(coordinate_overridden_below_the_marker, ExitCode.ISSUE, id='coordinate-overridden-by-hand'),
+        pytest.param(required_value_unset, ExitCode.ISSUE, id='required-value-unset'),
+        pytest.param(required_file_absent, ExitCode.ISSUE, id='required-file-absent'),
+    ],
+)
+def test_an_apply_settles_what_plan_planned_and_reports_the_rest_unchanged(
+    sandbox: Sandbox, cli: Run, arrange: Arrange, checked: ExitCode
+) -> None:
+    """The write half of the same matrix, and the reason the split is worth having.
+
+    `plan` is empty afterwards on every row, including the three `apply` could do
+    nothing about — because it never planned them. `check` is unchanged on exactly
+    those three, which is what stops a machine-local value nobody set from making
+    a freshly-installed box look like a failed install.
+    """
+    arrange(sandbox)
+
+    assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
+    assert cli('env', 'plan').exit_code == ExitCode.CONVERGED
+    assert cli('env', 'check').exit_code == checked
+
+
+def test_a_regeneration_keeps_every_hand_written_line_below_the_marker(sandbox: Sandbox, cli: Run) -> None:
+    """The property the whole marker design exists for. The real file carries API
+    tokens beside the generated coordinates, so a regeneration that lost the half
+    below the marker would take a machine's secrets with it — and the drift being
+    repaired here is precisely the one that rewrites the half above."""
+    below_the_marker(sandbox, SECRET)
+    redeclare(sandbox, manifest=ARCHLINUX)
+
+    cli('env', 'apply')
+
+    written = sandbox.env_file.read_text()
+    assert SECRET in written
+    assert ARCH_LAYERS in written
+
+
+def test_an_apply_with_nothing_to_repair_takes_no_backup_over_the_last_one(sandbox: Sandbox, cli: Run) -> None:
+    """A finding only a person can settle must not provoke a write.
+
+    The loop this rules out was measured: STALE, apply, DONE, STALE again, with a
+    fresh `.env.bak` taken over the last one every round until the backup is of
+    nothing. The absent backup is the evidence, because `envfile.write` copies the
+    file before it touches it — so a backup existing means the file was rewritten.
+    """
+    coordinate_overridden_below_the_marker(sandbox)
+
+    cli('env', 'apply')
+
+    assert not (sandbox.home / '.env.bak').exists()
+
+
+def test_the_machine_a_manifest_names_decides_which_layers_the_file_carries(sandbox: Sandbox, cli: Run) -> None:
+    """`DOTFILES_LAYERS` is the one thing `.zshrc` reads its overlays from, so a
+    manifest changing it changes which files every shell on the machine sources."""
+    redeclare(sandbox, manifest=ARCHLINUX)
+
+    cli('env', 'apply')
+
+    assert f'export DOTFILES_LAYERS="${{DOTFILES_LAYERS:-{ARCH_LAYERS}}}"' in sandbox.env_file.read_text()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# env show
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ('named', 'layers'),
+    [
+        pytest.param('box', LINUX_LAYERS, id='this-machine'),
+        pytest.param('other', MACOS_LAYERS, id='another-machine'),
+    ],
+)
+def test_show_renders_the_generated_section_for_the_machine_named(sandbox: Sandbox, cli: Run, named: str, layers: str) -> None:
+    """`--machine` selects a manifest, so `show` answers for a box this one is not.
+
+    That is what makes it useful before an install: the file it prints is the file
+    `apply` would write on the machine named, and neither this machine's `~/.env`
+    nor its coordinates take any part in it.
+    """
+    harness.write_declaration(sandbox.repo, manifest=MACOS_MACHINE, machine='other')
+
+    ran = cli('env', 'show', '--machine', named)
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert f'export MACHINE="${{MACHINE:-{named}}}"' in ran.stdout
+    assert layers in ran.stdout
+
+
+def test_show_writes_nothing_at_all(sandbox: Sandbox, cli: Run) -> None:
+    """The rehearsal of a write, on a machine that has never had one. A `show` that
+    created the file would make the first `plan` after it report a converged
+    machine nobody applied to."""
+    sandbox.env_file.unlink()
+
+    cli('env', 'show')
+
+    assert not sandbox.env_file.exists()
+
+
+def test_show_names_a_required_value_without_carrying_one(sandbox: Sandbox, cli: Run) -> None:
+    """The repo declares that a machine needs a value and must never hold what it
+    is, so the generated section names it in a comment and assigns nothing."""
+    sandbox.declare(flags=LOCAL_VALUE)
+
+    ran = cli('env', 'show')
+
+    assert 'MATRIX_LOCAL_VALUE - an employer hostname' in ran.stdout
+    assert 'export MATRIX_LOCAL_VALUE' not in ran.stdout
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The git identity, and the arrangement it arrives through
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def one_file(sandbox: Sandbox) -> None:
+    """What `settle` leaves: an entry point that carries the identity itself."""
+
+
+def three_file_chain(sandbox: Sandbox) -> None:
+    """The real arrangement in miniature — entry point, shared config, identity.
+
+    Three files rather than one because the identity arriving through a chain of
+    includes is the thing that makes this configuration hard to follow by hand,
+    and the reason `identity show` draws a tree at all.
+    """
+    personal = git_config(sandbox, 'personal.gitconfig', IDENTITY)
+    shared = git_config(sandbox, 'common.gitconfig', f'[core]\n\tpager = less\n[include]\n\tpath = {personal}\n')
+    git_config(sandbox, 'config', f'[include]\n\tpath = {shared}\n')
+
+
+def no_identity(sandbox: Sandbox) -> None:
+    (sandbox.config / 'git' / 'config').unlink()
+
+
+def only_a_name(sandbox: Sandbox) -> None:
+    git_config(sandbox, 'config', '[user]\n\tname = Synthetic Box\n')
+
+
+def home_gitconfig_masks_the_chain(sandbox: Sandbox) -> None:
+    """git prefers `~/.gitconfig` over the XDG entry point, so one sitting there
+    silently outranks every include below it."""
+    (sandbox.home / '.gitconfig').write_text('[user]\n\tname = Someone Else\n\temail = else@example.invalid\n')
+
+
+def symlinked_entry_point(sandbox: Sandbox) -> None:
+    """git follows a symlink when it writes, so an entry point linked into a
+    checkout takes any identity written through it into the repo."""
+    entry = sandbox.home / '.config' / 'git' / 'config'
+    entry.parent.mkdir(parents=True, exist_ok=True)
+    entry.symlink_to(sandbox.config / 'git' / 'config')
+
+
+def two_files_disagree(sandbox: Sandbox) -> None:
+    """One key, two files, two values — an ambiguity a reader cannot see, because
+    a listing prints both rows with nothing saying which git read last."""
+    other = git_config(sandbox, 'other.gitconfig', '[core]\n\tpager = delta\n')
+    git_config(sandbox, 'config', f'{IDENTITY}[core]\n\tpager = less\n[include]\n\tpath = {other}\n')
+
+
+IDENTITY_STATES = [
+    pytest.param(one_file, ExitCode.CONVERGED, 0, id='one-file'),
+    pytest.param(three_file_chain, ExitCode.CONVERGED, 0, id='three-file-include-chain'),
+    pytest.param(no_identity, ExitCode.ISSUE, 2, id='no-identity'),
+    pytest.param(only_a_name, ExitCode.ISSUE, 1, id='only-a-name'),
+    pytest.param(home_gitconfig_masks_the_chain, ExitCode.ISSUE, 1, id='home-gitconfig-masks-the-chain'),
+    pytest.param(symlinked_entry_point, ExitCode.ISSUE, 1, id='symlinked-entry-point'),
+    pytest.param(two_files_disagree, ExitCode.ISSUE, 1, id='two-files-disagree'),
+]
+
+
+@pytest.mark.parametrize(('arrange', 'checked', 'attention'), IDENTITY_STATES)
+def test_check_reports_the_identity_and_the_arrangement_around_it(
+    sandbox: Sandbox, cli: Run, arrange: Arrange, checked: ExitCode, attention: int
+) -> None:
+    """Two kinds of finding under one verb: what is wrong with the identity, and
+    what is wrong with the chain that produces it. Both change what a commit
+    carries, and neither is visible in `git config --get user.email`."""
+    arrange(sandbox)
+
+    ran = cli('identity', 'check', '--json')
+
+    assert (ran.exit_code, ran.document['attention']) == (checked, attention)
+
+
+@pytest.mark.parametrize(('arrange', 'checked', 'attention'), IDENTITY_STATES)
+def test_plan_is_converged_whatever_is_wrong_with_the_identity(
+    sandbox: Sandbox, cli: Run, arrange: Arrange, checked: ExitCode, attention: int
+) -> None:
+    """An identity is personal and per-machine, so the repo has nothing to write
+    here and `plan` has nothing to promise. The verb exists so that a resource
+    answering `check` and not `plan` cannot happen — and it answers zero every
+    time, including on the machine `check` exits 3 for.
+
+    `attention` still travels on the row, which is what lets `plan -v` report the
+    other verb's findings without adopting them.
+    """
+    arrange(sandbox)
+
+    ran = cli('identity', 'plan', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert ran.document['pending'] == 0
+    assert ran.document['attention'] == attention
+
+
+def test_the_converged_row_names_the_identity_and_how_many_files_produced_it(sandbox: Sandbox, cli: Run) -> None:
+    """The file count is the part worth stating unasked: an address alone reads as
+    though one file set it, and the difficulty here is that several did."""
+    three_file_chain(sandbox)
+
+    ran = cli('identity', 'check', '--json')
+
+    assert ran.document['detail'] == 'Synthetic Box <box@example.invalid>, from 3 config file(s)'
+
+
+def test_a_home_gitconfig_takes_the_whole_chain_out_of_the_reading(sandbox: Sandbox, cli: Run) -> None:
+    """Not merely outranking it — git stops reading the XDG entry point at all, so
+    every include below it contributes nothing. That is why one file sitting in
+    `$HOME` is a finding rather than a preference."""
+    three_file_chain(sandbox)
+    home_gitconfig_masks_the_chain(sandbox)
+
+    ran = cli('identity', 'show', '--json')
+
+    assert ran.document['files'] == [str(sandbox.home / '.gitconfig')]
+    assert ran.document['masked_by'] == str(sandbox.home / '.gitconfig')
+
+
+def test_show_draws_the_include_chain_in_the_order_git_read_it(sandbox: Sandbox, cli: Run) -> None:
+    """`git config --list --show-origin` is the flat projection of this and is what
+    made the arrangement hard to follow: it prints each leaf beside its file with
+    nothing saying the file was reached through two others."""
+    three_file_chain(sandbox)
+
+    ran = cli('identity', 'show', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert ran.document['files'] == [
+        str(sandbox.config / 'git' / 'config'),
+        str(sandbox.config / 'git' / 'common.gitconfig'),
+        str(sandbox.config / 'git' / 'personal.gitconfig'),
+    ]
+    assert [(one['target'], one['taken']) for one in ran.document['includes']] == [
+        (str(sandbox.config / 'git' / 'common.gitconfig'), True),
+        (str(sandbox.config / 'git' / 'personal.gitconfig'), True),
+    ]
+
+
+def test_show_names_the_file_that_wins_a_key_two_files_set(sandbox: Sandbox, cli: Run) -> None:
+    """The winner is the last file git read, which is a fact about include order
+    that neither file states. Exits 3, because a reader cannot predict the value
+    from either file alone."""
+    two_files_disagree(sandbox)
+
+    ran = cli('identity', 'show', '--json')
+
+    assert ran.exit_code == ExitCode.ISSUE
+    (conflict,) = ran.document['conflicts']
+    assert conflict['key'] == 'core.pager'
+    assert conflict['winner'] == {'origin': str(sandbox.config / 'git' / 'other.gitconfig'), 'value': 'delta'}
+    assert [loser['value'] for loser in conflict['losers']] == ['less']
+
+
+def test_a_repeated_include_is_never_itself_a_conflict(sandbox: Sandbox, cli: Run) -> None:
+    """Every hop in the chain is spelled `include.path`, so a detector reading them
+    as one key called the entire layering one enormous conflict with itself — on a
+    machine with nothing wrong with it, which is how a detector earns being
+    ignored."""
+    three_file_chain(sandbox)
+
+    assert cli('identity', 'show', '--json').document['conflicts'] == []
+    assert cli('identity', 'check').exit_code == ExitCode.CONVERGED
+
+
+def test_show_refuses_rather_than_reporting_a_machine_with_no_configuration(sandbox: Sandbox, cli: Run) -> None:
+    """git answers nothing when there is no global config to list, and the refusal
+    goes to stderr with no document behind it — so a `--json` caller reads an exit
+    code rather than an empty layering it would have to tell apart from a real
+    one."""
+    no_identity(sandbox)
+
+    ran = cli('identity', 'show', '--json')
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.stdout == ''
+    assert 'git would not report its configuration' in ran.stderr
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The machine contract: which stream, and what shape
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+RESOURCE_RESULT_KEYS = {'address', 'verdict', 'detail', 'pending', 'attention', 'unmeasured', 'privileged', 'seconds'}
+"""Every field `ResourceResult.as_dict` emits.
+
+Asserted as a whole set rather than by picking two of them: the counts are the
+answer a caller branches on, and one dropped in a refactor would leave every test
+reading `detail` — which is prose and says so.
+"""
+
+
+@pytest.mark.parametrize(
+    ('resource', 'verb'),
+    [
+        pytest.param('env', 'plan', id='env-plan'),
+        pytest.param('env', 'check', id='env-check'),
+        pytest.param('identity', 'plan', id='identity-plan'),
+        pytest.param('identity', 'check', id='identity-check'),
+    ],
+)
+def test_a_json_run_puts_one_resource_result_on_stdout_and_nothing_beside_it(sandbox: Sandbox, cli: Run, resource: str, verb: str) -> None:
+    """The two consoles, measured on the pair of resources most likely to warn: one
+    reads a file that may not exist and the other shells out to git. A stray
+    diagnostic on stdout turns a `--json` parse into a syntax error rather than
+    the warning it was."""
+    required_value_unset(sandbox)
+    no_identity(sandbox)
+
+    ran = cli(resource, verb, '--json')
+
+    assert set(ran.document) == RESOURCE_RESULT_KEYS
+    assert ran.document['address'] == resource
+    assert ran.stderr == ''
+
+
+def test_the_identity_layering_document_carries_the_four_things_a_reader_came_for(sandbox: Sandbox, cli: Run) -> None:
+    """Which files are involved, which pulled in which, where two disagree, and
+    whether anything is masking the lot. `document` is built from the same three
+    properties the tree is drawn from, so the two cannot reach different
+    conclusions."""
+    three_file_chain(sandbox)
+
+    assert set(cli('identity', 'show', '--json').document) == {'files', 'includes', 'conflicts', 'masked_by'}
+
+
+@pytest.mark.parametrize(
+    ('resource', 'verb'),
+    [
+        pytest.param('env', 'check', id='env-check'),
+        pytest.param('identity', 'check', id='identity-check'),
+    ],
+)
+def test_a_human_run_prints_the_verdict_on_stdout_and_its_evidence_on_stderr(sandbox: Sandbox, cli: Run, resource: str, verb: str) -> None:
+    """The row is the answer and the item rows under it are the working, so the two
+    are on different streams — a pipeline reading the verdict gets one line, and a
+    person watching gets both."""
+    required_value_unset(sandbox)
+    no_identity(sandbox)
+
+    ran = cli(resource, verb)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.stdout.startswith('✗ ')
+    assert '→ ' in ran.stderr
+
+
+def test_a_check_lists_what_it_looked_at_and_was_happy_with(sandbox: Sandbox, cli: Run) -> None:
+    """The other half of a measurement. `diff` returns only what differs, so
+    everything a healthy machine holds was invisible — and the coordinate a shell
+    reads its overlays from is exactly what someone looking at this file wants to
+    see the value of."""
+    required_value_unset(sandbox)
+
+    ran = cli('env', 'check')
+
+    assert f'matched DOTFILES_LAYERS {LINUX_LAYERS}' in unwrapped(ran.stderr)
+    assert 'matched MACHINE box' in unwrapped(ran.stderr)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A flag below the marker that parses as neither true nor false
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def unparseable_flag_below_the_marker(sandbox: Sandbox) -> None:
+    sandbox.declare(flags=ALPHA_ON)
+    below_the_marker(sandbox, 'export ALPHA_FLAG=maybe\n')
+
+
+def test_an_unparseable_flag_below_the_marker_is_planned_as_repairable(sandbox: Sandbox, cli: Run) -> None:
+    """Current behaviour. The value the shell reads is the one below the marker, so
+    the section `apply` owns is not where the wrong value is — and `plan` offers to
+    rewrite it anyway."""
+    unparseable_flag_below_the_marker(sandbox)
+
+    ran = cli('env', 'plan', '--json')
+
+    assert ran.exit_code == ExitCode.DRIFT
+    assert ran.document['pending'] == 1
+
+
+def test_applying_an_unparseable_flag_reports_done_and_takes_a_backup(sandbox: Sandbox, cli: Run) -> None:
+    """Current behaviour, and the shape of the loop: the write happens, the backup
+    is taken, and nothing about what the shell reads has changed."""
+    unparseable_flag_below_the_marker(sandbox)
+
+    assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
+    assert (sandbox.home / '.env.bak').exists()
+
+
+@pytest.mark.xfail(strict=True, reason='an unparseable value below the marker is reported AUTOMATIC and apply cannot reach it')
+def test_an_apply_settles_a_flag_that_parses_as_neither_true_nor_false(sandbox: Sandbox, cli: Run) -> None:
+    """The fault: `_flags` gives an unparseable value `Repair.AUTOMATIC` without
+    asking which half of the file it came from.
+
+    `_identity` asks, three functions above it, and says why in its own docstring —
+    an override below the marker is the last assignment in the file, so the shell
+    takes it whatever the generated section says, and offering it as repairable
+    buys a `check` that finds it, an `apply` that reports DONE, a fresh `.env.bak`
+    over the last one, and a machine that has not moved. `_flags` reaches
+    `observed.generated` for the *stale-default* branch and not for this one, so
+    `ALPHA_FLAG=maybe` written below the marker is the one input that still loops.
+
+    Correctly, it is `Repair.BY_HAND` with advice naming the assignment to drop —
+    which would move it out of `plan` and into `check`, where a person is the whole
+    plan for it.
+    """
+    unparseable_flag_below_the_marker(sandbox)
+
+    cli('env', 'apply')
+
+    assert cli('env', 'plan').exit_code == ExitCode.CONVERGED
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A dangling ~/.gitconfig
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def dangling_home_gitconfig(sandbox: Sandbox) -> None:
+    (sandbox.home / '.gitconfig').symlink_to(sandbox.root / 'nothing-here')
+
+
+def test_check_reports_a_dangling_home_gitconfig_as_masking(sandbox: Sandbox, cli: Run) -> None:
+    """`exists` follows a link, so a dangling one reads as absent — while git still
+    picks it as the file to write to, which is the whole failure. The resource
+    tests `is_symlink` as well, and finds it."""
+    dangling_home_gitconfig(sandbox)
+
+    ran = cli('identity', 'check', '--json')
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert '~/.gitconfig' in ran.document['detail']
+
+
+def test_show_is_silent_about_a_dangling_home_gitconfig(sandbox: Sandbox, cli: Run) -> None:
+    """Current behaviour, and the inconsistency: the same file, the same machine,
+    named by one surface and unmentioned by the other."""
+    dangling_home_gitconfig(sandbox)
+
+    ran = cli('identity', 'show', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert ran.document['masked_by'] is None
+
+
+@pytest.mark.xfail(strict=True, reason='identity show tests exists() alone, which a dangling symlink answers False')
+def test_show_names_the_dangling_home_gitconfig_that_check_reports(sandbox: Sandbox, cli: Run) -> None:
+    """The fault: `identity_show` decides masking with `home_config().exists()`,
+    and `IdentityResource.observe` decides it with `exists() or is_symlink()`.
+
+    The second carries the reason in a comment beside it — a dangling link reads as
+    absent to `exists` and is still the file git writes an identity into. `show` is
+    the command a person runs *because* `check` named the file, so it is the one
+    surface that must not disagree, and it draws a tree with the masking file
+    missing from it.
+
+    Correctly, `show` measures masking the way the resource does.
+    """
+    dangling_home_gitconfig(sandbox)
+
+    assert cli('identity', 'show', '--json').document['masked_by'] == str(sandbox.home / '.gitconfig')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A --machine naming no manifest
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+UNKNOWN_MACHINE = ('--machine', 'nosuch')
+
+READ_VERBS = [
+    pytest.param(('env', 'plan'), id='env-plan'),
+    pytest.param(('env', 'check'), id='env-check'),
+    pytest.param(('env', 'show'), id='env-show'),
+    pytest.param(('identity', 'plan'), id='identity-plan'),
+    pytest.param(('identity', 'check'), id='identity-check'),
+]
+
+
+@pytest.mark.parametrize('argv', READ_VERBS)
+def test_a_read_verb_raises_on_a_machine_with_no_manifest(sandbox: Sandbox, cli: Run, argv: tuple[str, ...]) -> None:
+    """Current behaviour. `MachineError` reaches the caller as a traceback rather
+    than as a report, on every read verb these two resources have."""
+    with pytest.raises(machines.MachineError, match='has no manifest at'):
+        cli(*argv, *UNKNOWN_MACHINE)
+
+
+@pytest.mark.parametrize('argv', READ_VERBS)
+def test_the_crash_reaches_the_shell_as_the_one_code_check_cannot_return(sandbox: Sandbox, cli: Run, argv: tuple[str, ...]) -> None:
+    """What a caller sees, which is worse than the traceback. An uncaught exception
+    is exit 1 — `DRIFT` — so `check --machine nosuch` answers with the code it
+    documents itself as never returning, and prints not one word about why."""
+    ran = cli(*argv, *UNKNOWN_MACHINE, catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.DRIFT
+    assert ran.output == ''
+
+
+def test_the_write_verb_names_the_missing_manifest_and_the_ones_that_exist(sandbox: Sandbox, cli: Run) -> None:
+    """The handled path, and the evidence that the read verbs are the ones wrong:
+    `apply_machine` catches `MachineError` and reports it, so the same typo on the
+    same machine is a legible refusal here and a traceback one verb away."""
+    ran = cli('env', 'apply', *UNKNOWN_MACHINE)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'nosuch: has no manifest at' in unwrapped(ran.stderr)
+    assert 'Available: box' in unwrapped(ran.stderr)
+
+
+@pytest.mark.xfail(strict=True, reason='engine.assess resolves session.plan outside the per-resource try, so MachineError escapes the walk')
+def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(sandbox: Sandbox, cli: Run) -> None:
+    """The fault: `assess` evaluates `session.plan` in the loop body at the call to
+    `covered.plan_for(...)`, outside the `try` that `_measure` wraps each resource
+    in — so the declaration failing to load is not the refusal the walk was built
+    to turn every exception into.
+
+    `Session.machine` is lazy precisely so a run that never asks about a machine
+    pays nothing, which puts the first read of the manifest inside the walk rather
+    than at `Session.resolve`, where `_session` is watching for it. `apply` avoids
+    it by catching `MachineError` around its own `session.plan` before the walk
+    starts; nothing does that for `plan`, `check` or `show`.
+
+    Correctly, a `--machine` naming no manifest is reported with the name and the
+    manifests that do exist — the message `apply` already produces — under exit 2,
+    which is what `machines show <typo>` answers today. The code is the one claim
+    this file shares with `test_symlinks.py`, `test_auth_credentials.py` and
+    `test_composite.py`, and the latter carries the reasoning.
+    """
+    ran = cli('env', 'check', *UNKNOWN_MACHINE, catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'nosuch' in ran.stderr
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The converged sentence on a machine with no identity
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_identity_row_prints_an_empty_address_where_the_machine_has_none(sandbox: Sandbox, cli: Run) -> None:
+    """Current behaviour. `plan` is right that there is nothing to change and says
+    so with a sentence naming nobody."""
+    git_config(sandbox, 'config', '[core]\n\tpager = less\n')
+
+    ran = cli('identity', 'plan', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert ran.document['detail'] == ' <>, from 1 config file(s)'
+
+
+@pytest.mark.xfail(strict=True, reason='Observed.who formats an empty name and email into `<>` rather than saying there is none')
+def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sandbox, cli: Run) -> None:
+    """The fault: `Observed.who` builds `f'{name} <{email}>'` from two values that
+    may both be empty, and `summary` is what the converged row prints.
+
+    A row reading `✓ identity  <>` is a tick beside an identity of nobody, on a
+    machine where `user.useConfigOnly` means the next commit is refused. `check`
+    reports it properly one verb away, which is what makes the tick misread as the
+    whole answer rather than as half of a pair.
+
+    Correctly, the sentence says the machine has no identity — the row's verdict
+    stays converged, because there is still nothing for `apply` to write.
+    """
+    git_config(sandbox, 'config', '[core]\n\tpager = less\n')
+
+    assert '<>' not in cli('identity', 'plan', '--json').document['detail']

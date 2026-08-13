@@ -8,6 +8,11 @@ FileNotFoundError and the fixture cannot run its own helpers.
 
 These replace nine subprocess tests that drove `packages missing` against a
 synthetic tree. The question is the same; the answer is now a function call.
+
+The builders that write that tree — `session`, `executable`, `reporting`,
+`receipt`, `cached`, `staged_bundle` — live in `matrix.harness`, because
+`tests/matrix/` drives the same declaration through the CLI and two copies of a
+synthetic-repo builder is two ideas of what a declaration is.
 """
 
 from __future__ import annotations
@@ -15,12 +20,15 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 import os
-import stat
 from pathlib import Path
-from typing import Any
 
 import pytest
-import yaml
+from matrix.harness import cached
+from matrix.harness import executable
+from matrix.harness import receipt
+from matrix.harness import reporting
+from matrix.harness import session
+from matrix.harness import staged_bundle
 
 from dotfiles import evidence as ev
 from dotfiles import paths
@@ -39,33 +47,6 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import packages
 from dotfiles.session import Session
-
-
-def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
-    target = directory / name
-    target.write_text(script)
-    target.chmod(target.stat().st_mode | stat.S_IEXEC)
-    return target
-
-
-@pytest.fixture
-def uv_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    directory = tmp_path / 'uv-tools'
-    directory.mkdir()
-    monkeypatch.setenv('UV_TOOL_DIR', str(directory))
-    return directory
-
-
-def session(tmp_path: Path, packages_yml: dict[str, Any], manifest: dict[str, Any]) -> Session:
-    repo = tmp_path / 'repo'
-    (repo / 'install' / 'manifests').mkdir(parents=True, exist_ok=True)
-    (repo / 'install' / 'packages.yml').write_text(yaml.safe_dump(packages_yml, sort_keys=False))
-    (repo / 'install' / 'flags.yml').write_text('{}')
-    (repo / 'install' / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
-    home = tmp_path / 'home'
-    home.mkdir(exist_ok=True)
-    return Session(machine_name='box', repo=repo, home=home)
 
 
 def verdicts(live: Session) -> dict[str, Verdict]:
@@ -214,11 +195,6 @@ def test_a_library_only_tool_with_no_directory_is_missing_not_unknown(tmp_path: 
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'uv_tools': ['numpy']})
 
     assert verdicts(live) == {'uv/numpy': Verdict.MISSING}
-
-
-def receipt(directory: Path, name: str, requirement: str) -> None:
-    (directory / name).mkdir(exist_ok=True)
-    (directory / name / 'uv-receipt.toml').write_text(f'[tool]\nrequirements = [{requirement}]\n')
 
 
 def test_a_git_installed_tool_reports_the_revision_uv_recorded(uv_tools: Path) -> None:
@@ -378,24 +354,8 @@ def test_a_private_repo_with_a_token_is_repairable(tmp_path: Path, fake_bin: Pat
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.fixture
-def release_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`$XDG_CACHE_HOME` is the real knob, so pointing it here patches nothing."""
-    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'cache'))
-    return tmp_path / 'cache' / 'dotfiles' / 'releases.json'
-
-
-def cached(path: Path, entries: dict[str, str], age: dt.timedelta = dt.timedelta(0)) -> None:
-    checked = dt.datetime.now(dt.UTC) - age
-    releases.save({key: releases.Cached(version, checked) for key, version in entries.items()}, path)
-
-
 LAZYGIT = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit'}]}
 DECLARES_LAZYGIT = {'machine': 'box', 'platform': 'linux', 'github_releases': ['lazygit']}
-
-
-def reporting(directory: Path, name: str, version: str) -> Path:
-    return executable(directory, name, f'#!/bin/sh\nprintf "%s\\n" "{version}"\n')
 
 
 def test_a_release_behind_the_latest_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
@@ -650,16 +610,6 @@ def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin:
 
     assert changes(live) == ()
     assert not ran.exists()
-
-
-def staged_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rows: dict[str, str], category: str = 'binary') -> Path:
-    """A bundle manifest, written the way `create_bundle.Bundle.record` writes it."""
-    installers = tmp_path / 'installers'
-    installers.mkdir(parents=True, exist_ok=True)
-    lines = [f'{category}|{name}|{version}|{name}' for name, version in rows.items()]
-    (installers / 'manifest.txt').write_text('# Format: category|name|version|filename\n' + '\n'.join(lines) + '\n')
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', installers)
-    return installers
 
 
 def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
