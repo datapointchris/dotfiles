@@ -81,6 +81,23 @@ detail is pushed off a narrow terminal entirely. The over-long item takes the hi
 alone, which is the same trade `announce` makes by cropping."""
 
 
+def quoted(value: str) -> str:
+    """A measured value, delimited for reading, with its backslashes left alone.
+
+    `repr` was doing this and doubles every backslash, which is wrong in the one
+    place a backslash carries meaning: a git credential helper is a shell command
+    line, so `/mnt/c/Program\\ Files/...` printed as `Program\\\\ Files` reads as a
+    config that escaped the space twice. That is unreadable exactly when someone
+    is reading it to count them.
+
+    The quotes stay, because a value's leading or trailing space is otherwise
+    invisible. So does `repr`, for a value carrying a control character — a raw
+    newline would break the row into two and put the second half in a column that
+    means something else.
+    """
+    return repr(value) if any(character in value for character in '\n\r\t') else f"'{value}'"
+
+
 def showing_evidence() -> bool:
     """Whether the per-item rows below a verdict are worth printing.
 
@@ -407,7 +424,7 @@ def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
         return
     colour = CHANGE_COLOURS[str(change.verdict)]
     attribution = f' from {change.source}' if change.source else ''
-    observed = f' (is {change.observed!r}{attribution})' if change.observed else ''
+    observed = f' (is {quoted(change.observed)}{attribution})' if change.observed else ''
     err_console.print(f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{width}} {change.detail}{observed}')
     # One row per line, because advice is now assembled from what a diagnosis
     # measured — the owning package, then the command that removes it — and a

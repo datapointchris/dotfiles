@@ -139,6 +139,25 @@ def test_the_observed_value_appears_only_when_there_is_one(capsys: pytest.Captur
     assert '(is ' not in capsys.readouterr().err
 
 
+def test_a_backslash_in_an_observed_value_is_printed_once(capsys: pytest.CaptureFixture) -> None:
+    """`repr` doubles it, and a credential helper is a shell command line where the
+    count is the whole question. A path escaped once, shown as escaped twice, is
+    unreadable exactly when someone is reading it to count them."""
+    output.render_change(a_change(observed=r'/mnt/c/Program\ Files/Git/gcm.exe'))
+
+    assert r"'/mnt/c/Program\ Files/Git/gcm.exe'" in capsys.readouterr().err
+
+
+def test_a_control_character_still_renders_escaped() -> None:
+    """A raw newline would break one row into two and put the second half under a
+    column that means something else."""
+    assert output.quoted('one\ntwo') == "'one\\ntwo'"
+
+
+def test_a_value_keeps_its_quotes_so_a_trailing_space_stays_visible() -> None:
+    assert output.quoted('delta ') == "'delta '"
+
+
 def test_the_layer_that_supplied_a_value_is_named_only_when_there_is_one(capsys: pytest.CaptureFixture) -> None:
     """A registry absent at a path this machine's shells chose and one absent at a
     path its config file chose are different problems with one word for the
