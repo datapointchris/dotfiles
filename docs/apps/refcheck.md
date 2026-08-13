@@ -15,5 +15,4 @@ Reference validator for codebases — finds broken `source`/`bash` targets, stal
 
 ## See Also
 
-- `tests/apps/refcheck-validation-original-issues.md` — the four original path bugs the tool was built to catch, and which of them it does
 - [Toolbox](toolbox.md) — tool discovery across the installed toolchain
