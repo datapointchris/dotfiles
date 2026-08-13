@@ -728,20 +728,22 @@ def test_a_leaf_given_a_machine_that_does_not_exist_names_the_ones_that_do(verb:
     assert 'box' in ran.stderr
 
 
-def test_requirements_lets_an_unresolvable_manifest_out_the_same_way(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`_manifest_path` answers whether the file is *there*, which leaves the other
-    half open: a manifest that exists and will not load still escapes this leaf.
+@pytest.mark.parametrize('verb', ['requirements', 'show'], ids=['requirements', 'show'])
+def test_an_unreadable_manifest_is_an_issue_whichever_door_asks(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A manifest that exists and will not load is a fault in the repo, so it is an
+    Issue with its reasons printed rather than a usage error.
 
-    `machines show` reports it as an Issue with the reasons printed, because it
-    loads through `_plan` and that has a handler. `requirements` calls
-    `machines.load` bare and reports nothing at all. One exception type, two
-    meanings, and a per-site decision about which — the shape a boundary handler
-    reading the code off the exception is meant to end.
+    Both halves of the question now answer together. Whether the *file* is there
+    and whether it *reads* are different questions, and a guard answering only the
+    first let an unreadable manifest through as exit 1 with both streams empty —
+    `DRIFT`, on a machine with no drift, from a verb that measured nothing.
     """
     sandbox.declare(manifest={'machine': 'box'})
 
-    assert cli('machines', 'requirements', catch_exceptions=True).exit_code == 1
-    assert cli('machines', 'show', catch_exceptions=True).exit_code == ExitCode.ISSUE
+    ran = cli('machines', verb, catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'cannot be resolved' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

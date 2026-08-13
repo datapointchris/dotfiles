@@ -297,13 +297,28 @@ def names(root: Path | None = None) -> list[str]:
     return sorted(path.stem for path in directory.glob('*.yml')) if directory.is_dir() else []
 
 
-def load(name: str, root: Path | None = None) -> Machine:
-    """Read one manifest and `flags.yml`, or raise with everything wrong in it."""
+def manifest_path(name: str, root: Path | None = None) -> Path:
+    """Where this machine's manifest is, refusing a name nothing declares.
+
+    One function raising one error, so a caller wanting the *file* and a caller
+    wanting the *machine* cannot describe a missing name two ways. `machines show
+    --raw` and `machines edit` want the path and never parse it, which is the whole
+    reason a second answer to "is there a manifest called this" is available to be
+    worded differently — a different key word for the list, and silence about where
+    it looked. Two messages kept in step by hand is the arrangement this replaces.
+    """
     install = (root / 'install') if root else paths.INSTALL_DIR
     source = install / 'manifests' / f'{name}.yml'
     if not source.is_file():
         available = ', '.join(names(root)) or 'none found'
         raise NoSuchMachine((DeclarationIssue(name, f'has no manifest at {source}. Available: {available}'),))
+    return source
+
+
+def load(name: str, root: Path | None = None) -> Machine:
+    """Read one manifest and `flags.yml`, or raise with everything wrong in it."""
+    install = (root / 'install') if root else paths.INSTALL_DIR
+    source = manifest_path(name, root)
 
     declared = yaml.safe_load(source.read_text()) or {}
     flags_file = install / 'flags.yml'

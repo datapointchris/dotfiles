@@ -127,12 +127,11 @@ class Session:
         with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
         was. Found by installing the timer and reading its first failure.
 
-        **The manifest is read here, so a Session this returns has one.** Naming
-        a machine and proving the name means something are the same act, and
-        splitting them is what let `MachineError` surface from wherever the
-        `machine` property happened to be touched first — inside `survey`, past
-        every handler, as a traceback and exit 1. A name that resolves to no
-        manifest is not a resolved machine.
+        **The manifest is read here, so a Session this returns has one.** Naming a
+        machine and proving the name means something are the same act. Split, the
+        `machine` property is lazy and `MachineError` surfaces from wherever it is
+        first touched — inside `survey`, past every handler, as a traceback and
+        exit 1. A name that resolves to no manifest is not a resolved machine.
 
         Deliberately not in `__init__`: constructing a Session directly is the
         bootstrap and test affordance, where the caller supplies the repo and

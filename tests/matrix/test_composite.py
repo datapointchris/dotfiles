@@ -688,12 +688,12 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(ver
     case: a caller has to be able to tell "you typed it wrong" from "it ran and
     failed", and only the first is worth retrying.
 
-    `apply` and `network check` answered 3 until `NoSuchMachine` split the typo out
-    from the machine fault — both reached it by rescuing an exception around a
-    load, neither by deciding a typo is a machine fault. Exit 3 means something is
-    wrong with the *machine*, and nothing is: `check` is documented to answer 0 or
-    3, so a mistyped `--machine` answering 3 is a scheduled caller reading a typo
-    as an issue to page about.
+    Exit 3 is the alternative and it is wrong here. It means something is wrong
+    with the *machine*, and nothing is — a name is misspelt. `check` is documented
+    to answer 0 or 3, so a mistyped `--machine` answering 3 is a scheduled caller
+    paging about a typo. Catching the exception around a load reaches 3 without
+    anyone deciding a typo is a machine fault, which is what `NoSuchMachine` exists
+    to separate.
 
     A manifest that exists and will not parse keeps exit 3. That is the whole
     distinction `NoSuchMachine` carries, and

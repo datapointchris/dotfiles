@@ -713,9 +713,9 @@ def test_the_write_verb_names_the_missing_manifest_and_the_ones_that_exist(sandb
     """The write verb names the manifest it looked for and the ones that exist, and
     answers the code every read verb answers.
 
-    `apply_machine` was diagnosing this correctly and reporting it as an Issue
-    while the read verbs let it out as a traceback. Both halves moved to exit 2:
-    the typo is the same typo whichever verb is given it.
+    The write verb and the read verbs answer alike, because the typo is the same
+    typo whichever verb is given it. A verb diagnosing it as an Issue would be
+    reporting a fault in the machine, and the machine is fine.
     """
     ran = cli('env', 'apply', *UNKNOWN_MACHINE)
 
