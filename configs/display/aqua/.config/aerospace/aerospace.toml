@@ -78,7 +78,7 @@ alt-shift-j = 'move down'
 alt-shift-k = 'move up'
 alt-shift-l = 'move right'
 
-# Join windows (vim-style) — uses MEH (ctrl-shift-alt) to avoid collision with tmux pane resize (ctrl-alt)
+# Join windows (vim-style) — uses MEH (ctrl-shift-alt); tmux pane resize is ctrl-shift+arrow
 ctrl-shift-alt-h = 'join-with left'
 ctrl-shift-alt-j = 'join-with down'
 ctrl-shift-alt-k = 'join-with up'

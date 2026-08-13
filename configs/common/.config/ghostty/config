@@ -36,3 +36,9 @@ font-feature = -clig
 confirm-close-surface = false
 
 keybind = shift+enter=text:\x1b\r
+
+# tmux resizes panes on ctrl+shift+arrow, and Ghostty's defaults bind the left
+# and right of those to tab switching. Unbound rather than remapped: sessions
+# are the tabs here, so nothing is lost. Up and down were never bound.
+keybind = ctrl+shift+arrow_left=unbind
+keybind = ctrl+shift+arrow_right=unbind
