@@ -20,30 +20,7 @@
 
 set -euo pipefail
 
-# $DOTFILES_REPOS_REGISTRY, then repos_registry in dotfiles' own config, which
-# the trust variant deploys — ~/.config/dotfiles/config.toml on the fleet, and the
-# same path off it naming a different file. Both rungs, in that order, because
-# src/dotfiles/settings.py SHARED_PATHS declares both for this one setting and a
-# reader honouring only one of them answers differently from `dotfiles config
-# show` while both look right.
-#
-# The config carries the machine's answer rather than a variable alone: ~/.env is
-# a shell file, so an unattended caller sources no profile and saw nothing, which
-# is the whole reason the shared $REPOS_JSON came out.
-#
-# yq rather than a grep, and it is on every machine including the work box. There
-# is no fallback to a known location: a default would be the hardcoded path one
-# indirection later, and it fails by reading the wrong file rather than by saying
-# nothing named one. An unset value leaves REGISTRY empty and the -f test below
-# reports it.
-DOTFILES_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml"
-REGISTRY="${DOTFILES_REPOS_REGISTRY:-}"
-if [ -z "$REGISTRY" ] && [ -f "$DOTFILES_CONFIG" ]; then
-  # -oy is not cosmetic: without it yq warns on stderr that its default output
-  # format changed, on every single invocation.
-  REGISTRY="$(yq -p toml -oy -r '.repos_registry // ""' "$DOTFILES_CONFIG")"
-fi
-REGISTRY="${REGISTRY/#\~/$HOME}"
+REGISTRY=""
 LANE=""
 
 die() {
@@ -72,7 +49,6 @@ EOF
 }
 
 command -v jq >/dev/null 2>&1 || die "jq is required"
-command -v yq >/dev/null 2>&1 || die "yq is required, to read repos_registry from $DOTFILES_CONFIG"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -92,7 +68,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ -n "$REGISTRY" ] || die "nothing names a registry: set repos_registry in $DOTFILES_CONFIG"
+# After the flags, so --registry wins without repos-registry having to be
+# satisfiable first. It resolves and validates in one step, and exits non-zero
+# with its own message when nothing names a registry.
+[ -n "$REGISTRY" ] || REGISTRY="$(repos-registry)"
 [ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
 
 # status is required, so it is matched plainly rather than defaulted. Supplying a

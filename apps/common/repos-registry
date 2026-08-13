@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Where this machine's repo registry is, as a path on stdout.
+#
+# The one resolver. Seven skills and a handful of tools each need the same answer
+# and were each carrying the literal `~/dev/repos.json`, which resolves on a fleet
+# box and names nothing on the work box — a machine that has its own registry,
+# listing work repos, at its own path. A hardcoded path is not a smaller version
+# of this; it is a wrong answer on one of the machines that reads it.
+#
+# Lives in dotfiles rather than in fleet because every machine has this and only
+# some have fleet, which is the same reason `pr-list` and `claude-sessions` are
+# here. Nothing in it may call back into a fleet-only binary.
+#
+# Two rungs, in that order: $DOTFILES_REPOS_REGISTRY, then `repos_registry` in
+# dotfiles' own config. `src/dotfiles/settings.py` SHARED_PATHS declares both for
+# this one setting, and a reader honouring only one of them answers differently
+# from `dotfiles config show` while both look right.
+#
+# The config carries the machine's answer rather than a variable alone: ~/.env is
+# a shell file, so an unattended caller sources no profile and saw nothing, which
+# is the whole reason the shared $REPOS_JSON came out.
+#
+# There is no fallback to a known location. A default would be the hardcoded path
+# one indirection later, and it fails by reading the wrong file rather than by
+# saying nothing named one.
+
+set -euo pipefail
+
+DOTFILES_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml"
+
+die() {
+  echo "repos-registry: $1" >&2
+  exit 1
+}
+
+case "${1:-}" in
+  --help | -h)
+    cat <<EOF
+Usage: repos-registry
+
+Prints the path to this machine's repo registry, or explains why there is none.
+
+Resolved from \$DOTFILES_REPOS_REGISTRY, then repos_registry in
+$DOTFILES_CONFIG. Exits non-zero when nothing names one or the
+named file is absent, so \$(repos-registry) never yields a path that is not there.
+EOF
+    exit 0
+    ;;
+  '') ;;
+  *) die "unknown argument: $1" ;;
+esac
+
+command -v yq >/dev/null 2>&1 || die "yq is required, to read repos_registry from $DOTFILES_CONFIG"
+
+REGISTRY="${DOTFILES_REPOS_REGISTRY:-}"
+if [ -z "$REGISTRY" ] && [ -f "$DOTFILES_CONFIG" ]; then
+  # -oy is not cosmetic: without it yq warns on stderr that its default output
+  # format changed, on every single invocation.
+  REGISTRY="$(yq -p toml -oy -r '.repos_registry // ""' "$DOTFILES_CONFIG")"
+fi
+REGISTRY="${REGISTRY/#\~/$HOME}"
+
+[ -n "$REGISTRY" ] || die "nothing names a registry: set repos_registry in $DOTFILES_CONFIG"
+[ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
+
+echo "$REGISTRY"
