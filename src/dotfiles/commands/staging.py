@@ -46,7 +46,7 @@ windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 
-def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str) -> str:
+def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool) -> str:
     """The value a flag carries, or the one a person points at in a list.
 
     Click's own `prompt=` does this in one argument and is not used, for a reason
@@ -59,17 +59,16 @@ def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: 
     long, hyphenated and easy to typo, and the whole point of asking is that the
     caller did not have one to hand.
 
-    A name that was passed is checked here too, so a typo is `USAGE` rather than
-    the `ISSUE` it becomes once `build` reports it as a machine that will not
-    load. That is the distinction `commands.resolved` already draws for every
-    other `--machine`: retryable with a different name, or genuinely wrong.
+    A value that was passed is returned unexamined. Whether it names something
+    real is the caller's question and is answered where that question already
+    has one sentence — `machines.manifest_path` for a machine, click's `Choice`
+    for an arch. Checking here as well is how one tool comes to answer "no such
+    machine" two different ways.
     """
     if value is not None:
-        if value not in options:
-            raise typer.BadParameter(f'{flag} {value!r} is not declared. Valid: {", ".join(options)}')
         return value
-    if not sys.stdin.isatty():
-        raise typer.BadParameter(f'{flag} is required when stdin is not a terminal. Valid: {", ".join(options)}')
+    if no_input or not sys.stdin.isatty():
+        raise typer.BadParameter(f'{flag} is required without a terminal to ask. Valid: {", ".join(options)}')
 
     for index, option in enumerate(options, start=1):
         err_console.print(f'  [bold]{index}[/]  {option}')
@@ -87,6 +86,8 @@ def create(
         help='CPU of the machine that will install this bundle',
     ),
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
+    no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
+    no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
 ) -> None:
     """Download every installer this repo needs into one archive.
 
@@ -102,14 +103,22 @@ def create(
     has.
 
     Both are offered as a numbered list on a terminal. Neither blocks without one:
-    a scripted caller gets the usage error naming the flag.
+    without a TTY, or under `--no-input`, the usage error names the flag instead.
+
+    `--no-cache` re-downloads every asset. Assets are kept for 90 days, so the
+    one thing no other flag can reach is a cached file that is wrong — truncated,
+    or a release republished under a tag it already used.
     """
     from dotfiles import create_bundle
 
-    chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for')
-    chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU")
+    chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
+    chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU", no_input=no_input)
+    # The one sentence this tool has for a name nothing declares, rather than a
+    # second one worded here. It names where it looked and lists what exists, and
+    # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
+    machines.manifest_path(chosen_machine)
 
-    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=True)
+    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache)
 
     if print_path:
         print(built)
@@ -184,7 +193,13 @@ def check(
     bundlable = len(found.covered) + len(found.uncovered)
     console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
     if found.uncovered:
-        hint(f'build a newer bundle where the network reaches: dotfiles bundle create --machine {session.machine_name} --arch ARCH')
+        # Both values real, so the line pastes. `ARCH` sat here and exited USAGE on
+        # the very flag the hint was teaching. This runs on the machine that will
+        # install, so its own CPU is the answer.
+        hint(
+            'build a newer bundle where the network reaches: '
+            f'dotfiles bundle create --machine {session.machine_name} --arch {axes.detect_arch()}'
+        )
     raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
 

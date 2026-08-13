@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import coordinates as axes
+from dotfiles import create_bundle
 from dotfiles import runs
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
@@ -670,14 +671,20 @@ def test_every_offered_arch_is_accepted_and_stops_at_the_machine(arch: str, sand
     ran = cli('bundle', 'create', '--machine', 'nope', '--arch', arch, catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert "--machine 'nope' is not declared" in ran.stderr
+    assert 'nope: has no manifest' in ran.stderr
 
 
 def test_an_unknown_arch_is_a_usage_error_naming_the_ones_that_exist(cli: Callable[..., Invocation]) -> None:
     ran = cli('bundle', 'create', '--machine', 'box', '--arch', 'sparc', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert "'sparc' is not one of 'x86_64', 'arm64'" in ran.stderr
+    # The rejected value, not click's sentence around it: the wording is click's to
+    # change, and spelling the valid ones out here duplicates the `axes.Arch` the
+    # test above derives its parametrization from — so a third member would break
+    # this for a reason it does not assert.
+    assert 'sparc' in ran.stderr
+    for offered in axes.Arch:
+        assert str(offered) in ran.stderr
 
 
 def test_neither_value_is_defaulted_when_there_is_no_terminal_to_ask(cli: Callable[..., Invocation]) -> None:
@@ -690,20 +697,34 @@ def test_neither_value_is_defaulted_when_there_is_no_terminal_to_ask(cli: Callab
     ran = cli('bundle', 'create', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert '--machine is required when stdin is not a terminal' in ran.stderr
+    assert '--machine is required without a terminal to ask' in ran.stderr
 
 
 def test_a_machine_nothing_declares_is_a_usage_error_rather_than_a_broken_build(cli: Callable[..., Invocation]) -> None:
     """A typo is retryable with a different name, which is what `USAGE` means.
 
-    Caught at the flag rather than left to `build`, where a name nothing declares
-    arrives as a `BundleError` and would exit ISSUE — sending the caller to look
-    for a fault in a machine that simply is not spelt that way.
+    Refused before `build`, where a name nothing declares arrives as a
+    `BundleError` and would exit ISSUE — sending the caller to look for a fault in
+    a machine that simply is not spelt that way.
+
+    The sentence is `machines.manifest_path`'s, which every other `--machine` door
+    already answers with: it names where it looked and lists what exists. A second
+    wording here is how one tool comes to answer one question two ways.
     """
     ran = cli('bundle', 'create', '--machine', 'nope', '--arch', 'x86_64', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert "--machine 'nope' is not declared" in ran.stderr
+    assert 'nope: has no manifest at' in ran.stderr
+    assert 'Available: box' in ran.stderr
+
+
+def test_no_input_refuses_from_a_terminal_rather_than_asking(cli: Callable[..., Invocation]) -> None:
+    """A wrapper script runs from a terminal, so the TTY gate alone leaves it no way
+    to make a missing flag fail instead of block. `--no-input` is that way."""
+    ran = cli('bundle', 'create', '--no-input', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert '--machine is required without a terminal to ask' in ran.stderr
 
 
 def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch) -> None:
@@ -715,7 +736,6 @@ def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation
     `BundleError` — has always exited ISSUE. The two disagreed for as long as this
     leaf passed an argparse return value straight to `typer.Exit`.
     """
-    from dotfiles import create_bundle
 
     def refuse(*_args: object, **_kwargs: object) -> Path:
         raise create_bundle.BundleError('no network')

@@ -25,6 +25,7 @@ import yaml
 import dotfiles
 from dotfiles import catalog
 from dotfiles import paths
+from dotfiles import refusal
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
@@ -478,8 +479,23 @@ def iter_section_entries(data: dict[str, Any], section: str):
                 yield {'name': key, **entry}
 
 
+def cli() -> None:
+    """The `packages` console script, which is the other door onto `main`.
+
+    `main` raises `Refusal` and does not report it, because the `dotfiles` CLI
+    calls it in-process and wants the refusal to travel to `refusal.Boundary`.
+    This door has no click group to carry one, so it reports here — through the
+    same `refusal.report` the boundary uses, so a misspelt package name reads
+    identically whichever binary was typed.
+    """
+    try:
+        main()
+    except Refusal as refused:
+        sys.exit(refusal.report(refused))
+
+
 def main(argv: list[str] | None = None) -> None:
-    """Main entry point with argument parsing.
+    """Parse arguments and run one query, raising rather than reporting.
 
     `argv` defaults to `sys.argv[1:]` for the console script, and is passed
     explicitly by the `dotfiles` CLI, which calls this in-process. The
@@ -544,4 +560,4 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == '__main__':
-    main()
+    cli()
