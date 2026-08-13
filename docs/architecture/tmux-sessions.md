@@ -87,8 +87,8 @@ status bar colour the same way it owns `pane-border-format`.
 | --- | --- |
 | `M-n` / `M-p` | Previous / next window |
 | `M-,` / `M-.` | Previous / next session |
-| `M-h` / `M-l` | Move the focused session left / right |
-| `M-a` / `M-e` | Move the focused session to the front / end |
+| `M-h` / `M-l` | Move the focused session left / right — Linux only |
+| `M-a` / `M-e` | Move the focused session to the front / end — Linux only |
 | `M-o` | Last session |
 | `M-t` | New session |
 | `prefix K` | Kill the session, after confirming |
@@ -119,14 +119,18 @@ firmware.
 The prefixed `h` / `l` went at the same time. They existed as a fallback for the chord, and a
 fallback for keys that now need no fallback is one more binding to remember.
 
-Alt is also the only modifier tmux can take. Its key parser accepts `C-`, `M-`, and `S-` and
+Alt is the only modifier available *to a letter*. tmux's key parser accepts `C-`, `M-` and `S-` and
 rejects everything else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
-bound at any level, whatever the keyboard sends. The vim-natural `M-h` / `M-l` are unavailable too:
-AeroSpace grabs them globally for window focus. `M-[` is avoided because Alt+`[` emits the CSI
-prefix, leaving tmux to disambiguate it on the `escape-time` timer.
+bound at any level, whatever the keyboard sends. Ctrl is spent on the terminal's own control codes,
+which leaves Alt. Arrows are the exception and carry every modifier bit in their `CSI 1;<mod>`
+encoding, which is how pane resize reaches `C-S-arrow`. `M-[` is avoided because Alt+`[` emits the
+CSI prefix, leaving tmux to disambiguate it on the `escape-time` timer.
 
-Watch `aerospace.toml` for the same reason: `alt-comma` and `alt-period` are commented out there,
-and uncommenting either silently takes the session keys before tmux ever sees them.
+**AeroSpace takes four of these before tmux sees them, and only on macOS.** `alt-h` and `alt-l` are
+window focus; `alt-a` and `alt-e` are workspaces A and E. So the four reordering keys are Linux-only,
+and the movement keys were picked from letters AeroSpace leaves alone. Watch `aerospace.toml` for the
+rest: `alt-comma` and `alt-period` are commented out there, and uncommenting either silently takes
+the session keys.
 
 On macOS this all rests on Ghostty delivering Option as Alt, which it does by default only for U.S.
 keyboard layouts. Setting `macos-option-as-alt` explicitly would pin it; it is deliberately left
