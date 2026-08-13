@@ -19,6 +19,14 @@ machine's shells, this machine.
 outside this tool's own XDG directories is what that standard forbids, and the
 registry it would have to guess at moved twice in six hours on 2026-08-12. A
 compiled-in path would have been wrong before the commit carrying it landed.
+
+**The shared variable sits above the config key here and below it in indy**,
+which is that standard's canonical source. The difference is deliberate and is
+what this tool's situation asks for: indy's config key exists so one reader can
+be pointed at a different registry from everyone else, whereas this file exists
+only so a shell-less unit gets the same answer the shells already have. Putting
+the config above the variable would let a stale config.toml silently override
+the value every other reader on the machine is using.
 """
 
 from __future__ import annotations
