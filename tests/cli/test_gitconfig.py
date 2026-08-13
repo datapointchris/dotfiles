@@ -98,6 +98,34 @@ def test_an_ordinary_key_in_the_same_section_still_conflicts(tmp_path: Path) -> 
     assert conflict.winner.value == 'false'
 
 
+def test_a_remote_condition_a_global_read_cannot_evaluate_is_undecided(tmp_path: Path) -> None:
+    """`hasconfig:` asks about a repository's remotes and the read that produced
+    this layering never opened one, so the target contributing nothing says
+    nothing about the condition. Drawing it as `did not hold` claimed the
+    personal identity was unused on the machine where it decides every commit."""
+    (tmp_path / 'entry.cfg').write_text(
+        '[includeIf "hasconfig:remote.*.url:https://github.com/datapointchris/**"]\n\tpath = personal.cfg\n'
+    )
+    (tmp_path / 'personal.cfg').write_text('[user]\n\tname = Chris\n')
+
+    (include,) = read(tmp_path / 'entry.cfg').includes
+
+    assert not include.taken
+    assert include.undecided
+
+
+def test_a_directory_condition_that_did_not_hold_is_decided(tmp_path: Path) -> None:
+    """The working directory is enough to settle a `gitdir:` condition, and git
+    does settle it on the same read — so silence there is a real answer."""
+    (tmp_path / 'entry.cfg').write_text('[includeIf "gitdir:/nowhere/that/exists/"]\n\tpath = elsewhere.cfg\n')
+    (tmp_path / 'elsewhere.cfg').write_text('[user]\n\tname = Chris\n')
+
+    (include,) = read(tmp_path / 'entry.cfg').includes
+
+    assert not include.taken
+    assert not include.undecided
+
+
 def test_the_includes_holding_the_chain_together_are_not_themselves_a_conflict(layered: Path) -> None:
     """Every include in a chain is spelled `include.path`, so treating them as one
     key made the whole layering read as one enormous conflict with itself. That

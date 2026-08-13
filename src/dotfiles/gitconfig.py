@@ -134,6 +134,26 @@ class Include:
     not being used.
     """
 
+    @property
+    def undecided(self) -> bool:
+        """Whether `taken` is silence rather than an answer.
+
+        A `hasconfig:remote.*.url` condition asks about a repository's remotes,
+        and a `--global` read is precisely the one that does not open a
+        repository's config — so git never evaluates it and the target
+        contributes nothing whatever the answer would have been. Measured on git
+        2.55, where the sibling `gitdir:` spelling *was* evaluated by the same
+        command: the working directory alone decides that one.
+
+        Reported rather than resolved. Making the layering repo-aware would pull
+        the local and system files into a reading that exists to describe the
+        machine. Drawing it as `condition did not hold` was the actual fault, and
+        on the nonfleet box that is the include deciding the identity — so the
+        chain said the personal identity was unused on every run where it was the
+        one in effect.
+        """
+        return self.condition.startswith('hasconfig:') and not self.taken
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Conflict:
@@ -287,6 +307,7 @@ def document(layering: Layering, masked_by: Path | None) -> dict:
                 'target': str(include.target),
                 'condition': include.condition,
                 'taken': include.taken,
+                'undecided': include.undecided,
             }
             for include in layering.includes
         ],
@@ -371,7 +392,12 @@ def _branch(path: Path, edges: dict[Path, list[Include]], contributed: dict[Path
     for index, include in enumerate(children):
         last = index == len(children) - 1
         condition = f'  [yellow]if {include.condition}[/]' if include.condition else ''
-        skipped = '' if include.taken or not include.target.exists() else '  [yellow]— condition did not hold here[/]'
+        if include.undecided:
+            skipped = '  [yellow]— decided per repository; a global read cannot say[/]'
+        elif include.taken or not include.target.exists():
+            skipped = ''
+        else:
+            skipped = '  [yellow]— condition did not hold here[/]'
         console.print(
             f'{prefix}{"└─ " if last else "├─ "}[bold]{include.target.name}[/]  {_state(include.target, contributed)}{condition}{skipped}'
         )
