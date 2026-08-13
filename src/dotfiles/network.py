@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 
 from dotfiles import catalog
 from dotfiles import coordinates
+from dotfiles import diagnose
 from dotfiles import effects
 from dotfiles import machine as machines
 from dotfiles import resolve
@@ -124,6 +125,22 @@ class ProbeResult:
     Empty is the common answer and means "the target's own host", so a reader and
     the harness both see a redirect only where there was one. Defaulted because it
     is a later addition and the constructions that predate it are still correct."""
+
+    refusal: str = ''
+    """Why this probe said no, where the reason is known.
+
+    **A blocked host and an untrusted certificate were one answer, and they need
+    opposite responses.** A firewall that drops the connection is what an offline
+    bundle exists for; a TLS-intercepting proxy is reachable and needs its CA
+    installed, and a bundle built for it is hours spent on a two-minute fix. Every
+    non-zero curl status collapsed to `NO` in the same column, so an intercepted
+    machine read as a blackholed one — measured 2026-08-13, when curl exit 60 was
+    reported as a block.
+
+    Deliberately not a column in the committed results file. `tests/e2e/harness.py`
+    parses that file by splitting on its pipes to decide which hosts to blackhole, so
+    its grammar is an interface; this rides on the terminal report and in the debug
+    stream instead."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -315,9 +332,31 @@ def measure(probe: Probe) -> ProbeResult:
 
     fallback = probe.fallback_command()
     if fallback is None:
-        return ProbeResult(probe, False, _landing(probe, answered.stdout))
+        return ProbeResult(probe, False, _landing(probe, answered.stdout), _refusal(probe, answered))
     retried = effects.run(fallback, output=effects.Output.QUIET)
-    return ProbeResult(probe, retried.ok, _landing(probe, retried.stdout or answered.stdout))
+    if retried.ok:
+        return ProbeResult(probe, True, _landing(probe, retried.stdout))
+    return ProbeResult(probe, False, _landing(probe, retried.stdout or answered.stdout), _refusal(probe, retried))
+
+
+def _refusal(probe: Probe, answered: effects.Completed) -> str:
+    """Why one probe said no, from what the command exited with and printed.
+
+    The transcript's own words win over the exit status, because git has no code for
+    this and curl's is one number for a condition the text states exactly. A clone is
+    the case that forces it: `git ls-remote` exits 128 for a certificate it will not
+    verify and for a repository that does not exist, and only the message separates
+    them.
+
+    Empty for a plain refusal, which is the common answer and already fully described
+    by the NO beside it. A reason invented for every failure is a reason nobody reads.
+    """
+    if any(marker in answered.transcript for marker in diagnose.INTERCEPTED):
+        return 'the TLS certificate is not signed by a CA this machine trusts'
+    if probe.cloned:
+        said = answered.transcript.strip().splitlines()
+        return said[-1].strip() if said else ''
+    return diagnose.curl_cause(answered.returncode)
 
 
 def _landing(probe: Probe, written: str) -> str:

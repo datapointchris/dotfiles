@@ -13,6 +13,7 @@ staged copy wins even on a machine with a working network.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import shutil
 import tempfile
 from collections.abc import Mapping
@@ -29,28 +30,54 @@ from dotfiles.providers import bundle_file
 BUNDLE_SCRIPTS = 'scripts'
 
 
-def staged(name: str, url: str, into: Path, *, offline: bool) -> Path | None:
+@dc.dataclass(frozen=True, slots=True)
+class Script:
+    """A vendor install script on disk, or why it is not.
+
+    Truthy when there is one to run, for the reason `github_release.Fetched` is: both
+    call sites already branched on the old `Path | None`, so carrying the reason costs
+    them a field rather than a rewrite.
+    """
+
+    path: Path | None
+    reason: str = ''
+
+    def __bool__(self) -> bool:
+        return self.path is not None
+
+
+def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
     """The vendor's install script on disk, from the bundle or the network.
 
     The bundle is preferred whenever it holds one, not only when offline: the
     script is served from an unversioned URL, so a machine restoring from a bundle
     must run the script that bundle was built against rather than whatever the
     vendor is serving today.
+
+    **The reason is returned, because this was the one failure with no cause anywhere
+    at all.** A script that fails to *run* streams its own error to the terminal and
+    its transcript to the debug log; a script that fails to *download* produced
+    `could not download the rustup install script from https://sh.rustup.rs` and
+    nothing else, on screen, in the record and in the stream alike. That is the whole
+    of what a TLS-intercepted machine was ever told about the certificate that stopped
+    it.
     """
     script = into / 'install.sh'
     cached = bundle_file(BUNDLE_SCRIPTS) / f'{name}-install.sh'
     if cached.is_file():
         shutil.copy2(cached, script)
-        return script
+        return Script(script)
     if offline:
-        return None
-    return script if effects.fetch(url, script) else None
+        return Script(None)
+
+    arrived = effects.fetch(url, script)
+    return Script(script if arrived else None, arrived.reason)
 
 
-def unstaged(name: str, url: str, *, offline: bool) -> str:
+def unstaged(name: str, url: str, *, offline: bool, reason: str = '') -> str:
     if offline:
         return f'{name} installs from {url}, which the offline bundle at {paths.BUNDLE_DIR} does not stage'
-    return f'could not download the {name} install script from {url}'
+    return f'could not download the {name} install script from {url}{f": {reason}" if reason else ""}'
 
 
 def run(
@@ -72,14 +99,50 @@ def run(
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{name}-') as scratch:
         err_console.print(f'{name}: {url}', soft_wrap=True)
         script = staged(name, url, Path(scratch), offline=offline)
-        if script is None:
+        if not script:
             # Offline is a refusal and a failed download is not, which is the whole
             # difference between the two sentences `unstaged` writes: nothing stages
             # rustup, so an offline run reaching here is the design working, while a
             # network that would not serve the script is the world saying no.
-            return Result(False, unstaged(name, url, offline=offline), refused=offline)
-        completed = effects.run(['bash', str(script), *args], env=dict(env) if env else None, output=Output.STREAM)
+            return Result(False, unstaged(name, url, offline=offline, reason=script.reason), refused=offline)
+        completed = effects.run(['bash', str(script.path), *args], env=dict(env) if env else None, output=Output.STREAM)
 
     if completed.ok:
         return Result(True, '')
-    return Result(False, f'the {name} install script exited {completed.returncode}')
+    return Result(False, failure(name, completed))
+
+
+def failure(name: str, completed: effects.Completed) -> str:
+    """What a failed vendor script said, or its exit status where it said nothing.
+
+    The transcript, because the exit status alone is unreadable and the cause is
+    already in hand. `providers/clone.py` has done exactly this for `git pull` since
+    it was written, and the number-only sentence here is what left a TLS-intercepted
+    work box reading `the claude-code install script exited 60` — where 60 is curl's
+    code for a certificate it would not verify, and the script had printed the reason
+    a screen earlier.
+
+    Scrolling is the argument, not availability: the text does reach stderr while the
+    script runs, and a multi-minute apply has carried it off the screen long before
+    the failure line is read. It reaches neither `--json` nor `dotfiles report`, both
+    of which show this message and only this message.
+
+    The last lines rather than the first. A vendor installer prints its banner,
+    progress and environment checks before it fails, so the head of a transcript is
+    reliably the part that has nothing to do with the failure.
+    """
+    said = [line for line in completed.transcript.splitlines() if line.strip()]
+    if not said:
+        return f'the {name} install script exited {completed.returncode}'
+    tail = '\n'.join(said[-TRANSCRIPT_LINES:])
+    return f'the {name} install script exited {completed.returncode}\n{tail}'
+
+
+TRANSCRIPT_LINES = 3
+"""How much of a failed script's output rides on the failure message.
+
+Three, because `Outcome.from_result` renders every line after the first as its own
+indented advice row, so this is a budget in screen rows on a report that may carry
+several failures. Enough for a curl error plus the line that provoked it, and short
+of a stack of shell traces. The whole transcript is in the run's debug stream for
+anyone who needs the rest."""

@@ -251,6 +251,83 @@ def _no_space(path: Path) -> Diagnosis:
     return Diagnosis(cause=f'the filesystem holding {path} is full')
 
 
+CURL_CAUSES = {
+    6: 'the host name would not resolve',
+    7: 'the connection was refused or filtered before any reply',
+    22: 'the server answered with an HTTP error',
+    28: 'the request timed out',
+    35: 'the TLS handshake failed',
+    51: "the server's certificate or fingerprint was rejected",
+    56: 'the connection was reset while receiving',
+    60: 'the TLS certificate is not signed by a CA this machine trusts',
+    77: 'the CA certificate bundle could not be read',
+}
+"""What curl's exit status means, for the codes this fleet actually sees.
+
+Named because a bare number is where a diagnosis stopped. `the claude-code install
+script exited 60` was the whole of what a TLS-intercepted work box was told on
+2026-08-13, and 60 is curl's code for a certificate it will not verify — which is
+one CA import away from fixed and reads as an outage.
+
+Only curl's, and only where a caller knows the number came from curl. A vendor
+install script running under `set -e` exits with its own status, so four of the five
+custom installers report 1 for the same block — which is why the transcript matters
+more than the code, and why nothing here guesses from a number alone.
+"""
+
+INTERCEPTED = (
+    'certificate verify failed',
+    'unable to get local issuer certificate',
+    'self signed certificate',
+    'self-signed certificate',
+    'SSLCertVerificationError',
+    'CERTIFICATE_VERIFY_FAILED',
+)
+"""Text that means the transport rejected a certificate rather than failing to connect.
+
+Matched on the message because that is what every layer here actually has: httpx2
+raises `ConnectError` wrapping an ssl error whose `str()` carries this, curl prints
+it, and git prints it. The distinction is the whole diagnosis — a refused connection
+needs an offline bundle and an untrusted certificate needs a CA, and reporting the
+second as the first is what sends somebody to build a tarball for a two-minute fix.
+"""
+
+
+def _intercepted(message: str) -> Diagnosis:
+    """A certificate this machine will not trust, and where its trust store is.
+
+    The extra CA path is asked of the machine rather than written down, because the
+    answer differs per distribution and a wrong path is worse than none: a reader
+    told to drop a file somewhere Debian does not look will conclude the CA was not
+    the problem.
+    """
+    stores = [Path(candidate) for candidate in TRUST_STORES if Path(candidate).is_dir()]
+    cause = 'the TLS certificate presented is not signed by a CA this machine trusts, which is what a corporate proxy does'
+    if not stores:
+        return Diagnosis(cause=cause, unavailable=('where to install a CA: no known trust-store directory on this machine',))
+    return Diagnosis(cause=cause, fix=f'install the proxy CA into {stores[0]}, then: {REFRESH_TRUST[stores[0].as_posix()]}')
+
+
+TRUST_STORES = ('/usr/local/share/ca-certificates', '/etc/ca-certificates/trust-source/anchors', '/etc/pki/ca-trust/source/anchors')
+"""Where a machine takes an extra CA, most specific distribution first.
+
+Probed for existence rather than selected from the package-manager coordinate: a
+container and a WSL distribution can disagree with the coordinate their manifest
+declares, and the directory being there is the fact that matters.
+"""
+
+REFRESH_TRUST = {
+    '/usr/local/share/ca-certificates': 'sudo update-ca-certificates',
+    '/etc/ca-certificates/trust-source/anchors': 'sudo trust extract-compat',
+    '/etc/pki/ca-trust/source/anchors': 'sudo update-ca-trust',
+}
+"""The command that rebuilds the bundle after a CA lands, per store.
+
+Keyed by the directory rather than by distribution for the reason above — the store
+that exists is what decides, and each of the three has its own refresh command.
+"""
+
+
 WRITE_FAILURES = (
     ('Text file busy', _busy),
     ('Permission denied', _permission),
@@ -277,7 +354,19 @@ def explain(item: str, message: str) -> str:
     is a file-write failure and so applies to any provider that writes one; a
     provider needing its own reading adds a branch here rather than a new call
     site.
+
+    **The interception test comes first, and runs no probe.** It reads two paths off
+    the filesystem and matches text, where the write branches shell out — so putting
+    it ahead costs nothing and stops a certificate rejection being read as one of
+    them. It matters that it is reachable at all: every download failure arrived here
+    as `could not download <url>` until `github_release.download_asset` began
+    carrying its exception, so this table's two filesystem markers were unreachable
+    from a download and this one had nothing to match on.
     """
+    if any(marker in message for marker in INTERCEPTED):
+        found = _intercepted(message)
+        return '\n'.join((message, *found.lines())) if found else message
+
     for marker, interpret in WRITE_FAILURES:
         if marker not in message:
             continue
@@ -287,3 +376,14 @@ def explain(item: str, message: str) -> str:
         found = interpret(path)
         return '\n'.join((message, *found.lines())) if found else message
     return message
+
+
+def curl_cause(returncode: int) -> str:
+    """What a curl exit status means, or '' for one nothing here names.
+
+    Public because two callers want it and neither should keep its own copy: the
+    connectivity probe runs curl directly, and a provider reporting a vendor script's
+    status has a number that may or may not be curl's. Empty rather than a guess for
+    an unknown code, since inventing a cause is what makes a diagnosis untrustworthy.
+    """
+    return CURL_CAUSES.get(returncode, '')
