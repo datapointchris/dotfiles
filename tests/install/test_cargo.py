@@ -21,6 +21,7 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import effects
+from dotfiles import github_release
 from dotfiles import paths
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
@@ -30,6 +31,8 @@ from dotfiles.providers import bundle
 from dotfiles.providers import cargo
 
 FD = catalog.CargoPackage.from_mapping({'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd'})
+
+REFUSED = 'ConnectError: certificate verify failed: unable to get local issuer certificate'
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 MACOS = Target(OSFamily.DARWIN, Arch.ARM64)
@@ -254,7 +257,7 @@ def test_the_precondition_builds_from_source_when_the_release_cannot_be_had(home
     """The source build is the only path that works on the work box, where release
     asset downloads are blocked but crates.io is reachable."""
     monkeypatch.setattr(cargo.shutil, 'which', lambda name: None if name == 'cargo-binstall' else '/usr/bin/cargo')
-    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: github_release.Fetched(False, REFUSED))
     reached = crates()
 
     result = cargo.binstall(LINUX, offline=False)
@@ -265,7 +268,7 @@ def test_the_precondition_builds_from_source_when_the_release_cannot_be_had(home
 
 def test_no_cargo_and_no_release_reports_both_halves(home, staged, crates, monkeypatch) -> None:
     monkeypatch.setattr(cargo.shutil, 'which', lambda _name: None)
-    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: github_release.Fetched(False, REFUSED))
     crates()
 
     result = cargo.binstall(LINUX, offline=False)
@@ -273,13 +276,14 @@ def test_no_cargo_and_no_release_reports_both_halves(home, staged, crates, monke
     assert not result.ok
     assert 'could not download' in result.detail
     assert 'no cargo to build it' in result.detail
+    assert REFUSED in result.detail, 'a bare "could not download" is what sent a TLS block to the wrong diagnosis'
 
 
 def test_a_package_still_reaches_the_bundle_when_the_precondition_fails(home, staged, crates, monkeypatch) -> None:
     """The precondition failing is not a reason to skip a tool the bundle already
     carries — which is the whole install on a machine with no working network."""
     monkeypatch.setattr(cargo.shutil, 'which', lambda _name: None)
-    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: github_release.Fetched(False, REFUSED))
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates()
 

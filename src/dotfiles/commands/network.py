@@ -33,9 +33,13 @@ from dotfiles import network
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
+from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.output import hint
+from dotfiles.output import render_advice
+from dotfiles.output import render_row
 from dotfiles.output import success
 from dotfiles.output import warn
 from dotfiles.session import Session
@@ -88,17 +92,43 @@ def check(
                         'reach': str(verdict.probe.reach),
                         'reachable': verdict.reachable,
                         'landed': verdict.landed,
+                        'refusal': str(verdict.refusal),
+                        'refusal_detail': verdict.detail,
                     }
                     for verdict in verdicts
                 ],
             }
         )
     else:
+        # The evidence columns every other report uses, and on stderr: these are the
+        # working behind the tally below, and the tally is the answer a caller reads.
+        # Printed at column 0 on stdout, they interleaved with the `unprobed` warnings
+        # that go to stderr — so on a terminal the two lists shuffled together and
+        # under redirection they separated into halves of one thought.
+        width = max([SUBJECT_COLUMN, *(len(f'{one.probe.section}/{one.probe.name}') for one in blocked)])
         for verdict in blocked:
-            console.print(f'[red]blocked[/red]  {verdict.probe.section}/{verdict.probe.name}  {verdict.probe.target}')
+            render_row('blocked', f'{verdict.probe.section}/{verdict.probe.name}', verdict.probe.target, 'red', width)
+            # Under the row rather than appended to it. The target is already the
+            # longest field on a line that has to stay scannable, and the reason is
+            # what turns a NO into an action — a refused connection wants a bundle
+            # and an untrusted certificate wants a CA.
+            if verdict.detail:
+                render_advice(verdict.detail, width)
         for reason in measurement.unprobed:
-            warn(reason)
+            # Nothing to ask rather than asked and refused, which is the same
+            # distinction `unmeasured` carries everywhere else in this report.
+            render_row('unprobed', '', reason, 'magenta', width)
+        # On the member, never on its prose. This compared a substring of an English
+        # sentence written out in two modules, so rewording either one stopped the
+        # hint firing with nothing asserting it.
+        intercepted = [verdict for verdict in blocked if verdict.refusal is network.Refusal.INTERCEPTED]
         console.print(f'{len(verdicts) - len(blocked)} reachable, {len(blocked)} blocked')
+        if intercepted:
+            # Said once at the end as well as per row, because this is the one
+            # refusal whose fix is a single act covering every row that shows it —
+            # and the closing line is what a reader takes away from forty rows.
+            warn(f'{len(intercepted)} host(s) were reachable but presented an untrusted certificate, which a bundle does not fix')
+            hint('install the proxy CA and re-run: dotfiles network check')
 
     if output is not None:
         written = network.render(

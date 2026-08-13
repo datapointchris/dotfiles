@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import effects
+from dotfiles import github_release
 from dotfiles.effects import Completed
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Result
@@ -128,14 +129,21 @@ def test_the_new_prefix_is_put_on_path_for_the_rest_of_the_run(world, monkeypatc
     assert os.environ['PATH'].split(os.pathsep)[0] == str(prefix)
 
 
-def test_a_download_that_fails_says_where_it_was_looking(world, monkeypatch) -> None:
+REFUSED = 'ConnectError: certificate verify failed: unable to get local issuer certificate'
+
+
+def test_a_download_that_fails_says_where_it_was_looking_and_why(world, monkeypatch) -> None:
+    """The first thing that runs on a fresh Mac, so the failure with the least context
+    around it — and the one most likely to be read as a dead network when it is a
+    proxy certificate."""
     world(absent=('brew',))
-    monkeypatch.setattr(effects, 'fetch', lambda url, destination, **kwargs: False)
+    monkeypatch.setattr(effects, 'fetch', lambda url, destination, **kwargs: github_release.Fetched(False, REFUSED))
 
     result = bootstrap.homebrew()
 
     assert not result.ok
     assert bootstrap.BREW_INSTALLER in result.detail
+    assert REFUSED in result.detail
 
 
 # ─────────────────────────────────────────────────────────────────────────────

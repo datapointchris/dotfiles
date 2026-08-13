@@ -361,8 +361,10 @@ def _companions(name: str, tag: str, *, offline: bool) -> str:
             shutil.copy2(cached, destination)
         elif offline:
             return f'{companion.name} is not in the offline bundle and cannot be downloaded'
-        elif not effects.fetch(url, destination):
-            return f'could not download {companion.name} from {url}'
+        else:
+            arrived = effects.fetch(url, destination)
+            if not arrived:
+                return f'could not download {companion.name} from {url}: {arrived.reason}'
 
         effects.make_executable(destination)
     return ''

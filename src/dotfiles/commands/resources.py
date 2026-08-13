@@ -16,6 +16,7 @@ import typer
 from dotfiles import bridge
 from dotfiles import engine
 from dotfiles import gitconfig
+from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
@@ -55,6 +56,7 @@ def _survey(
     *,
     source: str | None = None,
     owner: str | None = None,
+    offline: bool = False,
 ) -> None:
     """One resource, through the same engine and the same fold the composite uses.
 
@@ -62,12 +64,19 @@ def _survey(
     cannot answer one way here and another way under `dotfiles plan` — which is
     what seven parallel `check_*` functions made possible and eventually true.
 
-    The selectors are the same two `apply` takes, resolved the same way, because a
+    The selectors are the same ones `apply` takes, resolved the same way, because a
     read that cannot express the write's scope is not a rehearsal of it. Narrowing
     to a section with no read-only preview was the one case where a preview is
     worth most.
+
+    `offline` reports the staged bundle before measuring, as the composite does, and
+    stages nothing — a read verb that unpacked a tarball would be writing. Sharing
+    `reconcile.report_bundle` rather than wording it here is what stops this door and
+    the composite one describing the same bundle two ways.
     """
-    session = _session(machine, owner=owner)
+    if offline:
+        reconcile.report_bundle(offline_bundle.describe())
+    session = _session(machine, owner=owner, offline=offline)
     selection = engine.Selection.of(*_selected(address, source))
     if owner is not None:
         selection = selection.narrowed_to(session.plan.providers)
@@ -77,9 +86,9 @@ def _survey(
     _report(reconcile.fold(engine.assess(session, selection), lens)[0], as_json)
 
 
-def _session(machine: str | None, owner: str | None = None) -> Session:
+def _session(machine: str | None, owner: str | None = None, offline: bool = False) -> Session:
     try:
-        return Session.resolve(machine, owner=owner)
+        return Session.resolve(machine, owner=owner, offline=offline)
     except NoMachine as unresolved:
         raise typer.BadParameter(str(unresolved)) from unresolved
 
@@ -162,7 +171,7 @@ SourceOption = typer.Option(
 )
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
-OfflineOption = typer.Option(False, '--offline', help='Install from a staged offline bundle')
+OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 ReinstallOption = typer.Option(
     None,
@@ -219,6 +228,7 @@ def packages_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
     owner: str = OwnerOption,
+    offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -230,16 +240,27 @@ def packages_plan(
     is worth most.
     """
     verbosity(verbose, quiet)
-    _survey('packages', machine, reconcile.Lens.PLAN, as_json, source=source, owner=owner)
+    _survey('packages', machine, reconcile.Lens.PLAN, as_json, source=source, owner=owner, offline=offline)
 
 
 @packages_app.command('check')
 def packages_check(
-    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
-    """Report packages this machine declares but has not installed."""
+    """Report packages this machine declares but has not installed.
+
+    `--offline` measures against the staged bundle, as the composite `check` does.
+    The selectors were deliberately withheld from this verb on a symmetry argument;
+    this is not one of them, because it changes the answer rather than narrowing it.
+    A machine whose bundle carries nothing for the tools it has installed is a
+    machine nothing can speak for, which is exactly what `check` exists to say.
+    """
     verbosity(verbose, quiet)
-    _survey('packages', machine, reconcile.Lens.CHECK, as_json)
+    _survey('packages', machine, reconcile.Lens.CHECK, as_json, offline=offline)
 
 
 @packages_app.command('apply')
@@ -293,20 +314,28 @@ toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and t
 
 @toolchains_app.command('plan')
 def toolchains_plan(
-    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Show which language runtimes `apply` would install or raise."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json)
+    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, offline=offline)
 
 
 @toolchains_app.command('check')
 def toolchains_check(
-    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Report toolchain drift."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json)
+    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, offline=offline)
 
 
 @toolchains_app.command('apply')
@@ -339,19 +368,29 @@ plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plu
 
 
 @plugins_app.command('plan')
-def plugins_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+def plugins_plan(
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Show which declared plugins `apply` would clone."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.PLAN, as_json)
+    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline)
 
 
 @plugins_app.command('check')
 def plugins_check(
-    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Report plugin drift."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.CHECK, as_json)
+    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline)
 
 
 @plugins_app.command('apply')
@@ -481,6 +520,7 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 def system_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
+    offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -491,14 +531,20 @@ def system_plan(
     without the configuration rows — is the one most worth rehearsing here.
     """
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source)
+    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source, offline=offline)
 
 
 @system_app.command('check')
-def system_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+def system_check(
+    machine: str = MachineOption,
+    offline: bool = OfflineOption,
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Report system configuration drift."""
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.CHECK, as_json)
+    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline)
 
 
 @system_app.command('apply')

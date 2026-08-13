@@ -78,8 +78,12 @@ def homebrew() -> Result:
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-homebrew-') as scratch:
         script = Path(scratch) / 'install.sh'
-        if not effects.fetch(BREW_INSTALLER, script):
-            return Result(False, f'could not download the Homebrew installer from {BREW_INSTALLER}')
+        arrived = effects.fetch(BREW_INSTALLER, script)
+        if not arrived:
+            # The first thing that runs on a fresh Mac, so the failure with the least
+            # context around it — and the one most likely to be read as "the network
+            # is down" when it is a proxy certificate.
+            return Result(False, f'could not download the Homebrew installer from {BREW_INSTALLER}: {arrived.reason}')
         installed = effects.run(['bash', str(script)], env={'NONINTERACTIVE': '1'})
 
     if not installed.ok:

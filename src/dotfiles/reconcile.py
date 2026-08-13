@@ -41,24 +41,27 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.output import SUBJECT_CEILING
+from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import announce
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import measured
+from dotfiles.output import render_advice
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
+from dotfiles.output import render_note
+from dotfiles.output import render_row
 from dotfiles.output import retract
-from dotfiles.output import success
 from dotfiles.output import warn
+from dotfiles.providers import bundle
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
-from dotfiles.resources import Repair
-from dotfiles.resources import Verdict
 from dotfiles.resources import privileged
 from dotfiles.session import NoMachine
 from dotfiles.session import Session
@@ -234,10 +237,16 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     The alternative was measured on a cold release cache: every declared release
     is unmeasurable until something refreshes it, which would print a screen of
     rows and exit non-zero on a machine with nothing wrong with it.
+
+    Each of the three is read off the change rather than derived by subtracting the
+    other two here. The subtraction was the same classification written a second
+    time, and it disagreed with the first: `sinks.intention` asked the change and
+    this asked the list, so a `MISSING` verdict with no repairer printed under
+    "needs a person" and was recorded as `observed`.
     """
-    unmeasured = [change for change in changes if change.verdict is Verdict.UNKNOWN and change.repair is Repair.NONE]
+    unmeasured = [change for change in changes if change.unmeasured]
     pending = [change for change in changes if change.actionable]
-    attention = [change for change in changes if change.drifted and change not in unmeasured and change not in pending]
+    attention = [change for change in changes if change.declined]
     return pending, attention, unmeasured
 
 
@@ -396,6 +405,7 @@ def survey(
     *,
     refresh: bool = False,
     owner: str | None = None,
+    offline: bool = False,
     report: Callable[[ResourceResult], None] | None = None,
 ) -> Surveyed:
     """Measure the machine once, folding and reporting each resource as it lands.
@@ -419,8 +429,16 @@ def survey(
     Each resource now announces itself, erases that line, and prints its own
     section — so what is on screen is one list, and the wait is visible while it
     is happening rather than reconstructable afterwards.
+
+    `offline` swaps the upstream for the staged bundle, exactly as it does for the
+    write, and never stages one. `refresh` is dropped rather than refused alongside
+    it: the flag means "spend the network on being current", there is no network to
+    spend, and `resources.packages._upstream` already ignores it on this branch — so
+    passing it through would be one more place the two could come to disagree.
     """
-    session = Session.resolve(machine, refresh=refresh, owner=owner)
+    if offline:
+        report_bundle(offline_bundle.describe())
+    session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, offline=offline)
     selection = engine.Selection.excluding(skip)
     if owner is not None:
         selection = selection.narrowed_to(session.plan.providers)
@@ -556,7 +574,7 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 
 
 def _stage_bundle() -> ExitCode | None:
-    """Put a bundle where the providers read one, or say why the run cannot go on.
+    """Put a bundle where the providers read one, and say which bundle that is.
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
@@ -569,24 +587,58 @@ def _stage_bundle() -> ExitCode | None:
     Nothing is staged over an existing bundle: a machine part way through an
     offline install has one, and re-reading the archive each run would be work
     for an answer that is already on disk.
+
+    **Both branches report, because both install from a bundle.** The bundle is the
+    upstream under this flag, so a run that does not name it has withheld the thing
+    every verdict below was decided against — and the branch that finds one already
+    staged is the one every run after the first takes. Measured 2026-08-13 on the
+    work box: twelve package items came back unmeasurable because the bundle carried
+    no version for them, with nothing on screen naming the bundle, its location, its
+    date or its contents.
+
+    An empty manifest ends the run rather than starting it. Every provider reads
+    the bundle through that file, so a staged directory without one installs
+    nothing from anywhere and reports each tool separately as its own mystery.
     """
-    if paths.BUNDLE_DIR.is_dir():
-        return None
+    extracted = None
+    if not paths.BUNDLE_DIR.is_dir():
+        archive = offline_bundle.newest()
+        if archive is None:
+            warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
+            hint(f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH')
+            return ExitCode.ISSUE
 
-    archive = offline_bundle.newest()
-    if archive is None:
-        warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
-        hint(f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH')
-        return ExitCode.ISSUE
+        try:
+            offline_bundle.stage(archive)
+        except offline_bundle.StagingError as unreadable:
+            warn(str(unreadable))
+            return ExitCode.ISSUE
+        extracted = archive
 
-    try:
-        staged = offline_bundle.stage(archive)
-    except offline_bundle.StagingError as unreadable:
-        warn(str(unreadable))
-        return ExitCode.ISSUE
+    staged = offline_bundle.describe(extracted)
+    report_bundle(staged)
+    return None if staged.readable else ExitCode.ISSUE
 
-    success(f'staged {archive.name} at {staged}')
-    return None
+
+def report_bundle(staged: offline_bundle.Staging) -> None:
+    """Name the bundle a run is installing from, in the read verbs' own shape.
+
+    Public because all three offline paths print it — the gate in `apply`, and the
+    `--offline` rehearsals of `plan` and `check` — and a fourth wording of the same
+    fact is what "the bundle is the upstream" cannot survive. Rendered as a resource
+    section rather than as a `success` line so it sits in the same column as the
+    verdict rows beneath it, and reads as part of one report.
+    """
+    if not staged.readable:
+        warn(f'{paths.under_home(staged.directory)} holds no {bundle.MANIFEST}, so nothing can be installed from it')
+        hint('stage a bundle built by `dotfiles bundle create`: dotfiles bundle stage PATH')
+        return
+
+    measured('bundle', staged.headline(), 0.0)
+    if breakdown := staged.breakdown():
+        render_note(breakdown)
+    else:
+        render_note(f'{bundle.MANIFEST} lists no files, so every tool will report its own miss')
 
 
 def apply_machine(
@@ -691,8 +743,7 @@ def apply_machine(
 
     performed = list(_perform(session, planned))
 
-    for change in _unrepairable(planned):
-        render_change(change)
+    _report_untouched(planned)
 
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
@@ -725,10 +776,12 @@ def apply_machine(
     if as_json and recorded:
         emit_json(dc.asdict(runs.read(recorded)))
 
+    unmeasured = _unmeasured(planned)
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
     if unsuccessful:
         err_console.rule('[bold red]failed[/]', align='left')
         warn(f'{len(unsuccessful)} item(s) did not converge: {", ".join(unsuccessful)}')
+        _warn_unmeasured(unmeasured)
         # The path, not the command that would print it. What a person does with a
         # failed offline install is send the record to the fleet, and naming
         # `dotfiles report latest` left them hunting `$XDG_STATE_HOME` for a file
@@ -738,7 +791,76 @@ def apply_machine(
         return ExitCode.ISSUE
 
     err_console.rule(f'[bold green]converged[/]  {session.machine_name}', align='left')
+    # Under the green rule and not instead of it. Nothing failed and nothing was
+    # left undone that this run could have done, so the verdict stands — but
+    # "converged" over a set of items nothing could measure is true only of the work
+    # attempted, and a reader takes it as a statement about the machine.
+    _warn_unmeasured(unmeasured)
     return ExitCode.CONVERGED
+
+
+def _report_untouched(planned: Iterable[Event]) -> None:
+    """The two sets `apply` walked past, each under a heading saying why.
+
+    Reported and not counted, both of them. A machine-local value nobody has set and
+    a file only safekeep restores are real findings, and exiting non-zero for them
+    makes every freshly-installed work box look like a failed install between the
+    install and the restore. `apply` answers whether the work it attempted
+    succeeded; whether anything is *wrong* is the question `check` exists for.
+
+    Both sets were reachable and only one was printed. What differs and needs a
+    person was rendered as bare rows with no heading, so it read as a continuation of
+    whatever provider had acted last. What nothing could measure was rendered nowhere
+    at all.
+
+    Measured 2026-08-13 on the work box: an `apply --offline` planned twelve package
+    items, acted on one, and said nothing whatsoever about the eleven it had declined
+    because the staged bundle carried no version to compare them against. Each of
+    those eleven already held the sentence explaining itself — `packages._unmeasurable`
+    composes it, and `plan` prints it — so this is a renderer that was missing rather
+    than a diagnosis that was.
+    """
+    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
+    pending, attention, unmeasured = sift(changes)
+    for label, group in (('needs a person', attention), ('not measurable', unmeasured)):
+        if not group:
+            continue
+        heading(label)
+        width = max([SUBJECT_COLUMN, *(len(change.item) for change in group)])
+        for change in group:
+            render_change(change, min(width, SUBJECT_CEILING))
+
+
+def _warn_unmeasured(unmeasured: Sequence[Change]) -> None:
+    """Say on the closing line that part of the machine has no verdict.
+
+    Beside the rule rather than only in the rows above it, because this is the line a
+    scheduled run's summary carries with the rows long gone — the same argument
+    `_lead` makes for naming items on a verdict row. One shared fix is named where
+    every item agrees on it, which offline is the case for: a bundle carrying nothing
+    to compare against is one fix for all of them, not one each.
+    """
+    if not unmeasured:
+        return
+    named = ', '.join(change.item for change in unmeasured[:4])
+    more = f' and {len(unmeasured) - 4} more' if len(unmeasured) > 4 else ''
+    warn(f'{len(unmeasured)} item(s) could not be measured, so nothing was done about them: {named}{more}')
+    fixes = {change.advice for change in unmeasured if change.advice}
+    if len(fixes) == 1:
+        hint(next(iter(fixes)))
+
+
+def _unmeasured(planned: Iterable[Event]) -> list[Change]:
+    """What nothing could measure, so `apply` had no verdict to act on.
+
+    Not a failure and not drift, which is why it has neither the exit code nor the
+    `_unsuccessful` list: there is no evidence the item differs, and inventing one
+    would exit non-zero on a machine with nothing wrong with it. What it is is a hole
+    in the run's coverage, and a hole nobody is told about is indistinguishable from
+    a converged machine.
+    """
+    _, _, unmeasured = sift([event.payload for event in planned if isinstance(event.payload, Change)])
+    return unmeasured
 
 
 def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
@@ -778,31 +900,41 @@ def _render(event: Event) -> None:
     payload = event.payload
     if isinstance(payload, Refusal):
         warn(payload.reason)
-    elif isinstance(payload, Outcome) and payload.status in (OutcomeStatus.REFUSED, OutcomeStatus.SKIPPED):
-        err_console.print(f'[yellow]-[/] {payload.message or payload.change.item}')
-    elif isinstance(payload, Outcome) and payload.ok:
-        err_console.print(f'[green]✓[/] {payload.message or payload.change.item}')
-    elif isinstance(payload, Outcome):
-        # One row per line: a diagnosed failure carries the cause and the command
-        # that fixes it under the provider's own message, and the command wants a
-        # line of its own rather than a place inside a paragraph.
-        cause, *diagnosed = payload.message.splitlines() or ['']
-        err_console.print(f'[red]✗[/] {payload.change.item}: {cause}')
-        for line in diagnosed:
-            err_console.print(f'  [blue]→[/] {line}')
+        return
+    if not isinstance(payload, Outcome):
+        return
+
+    label, colour = OUTCOME_MARKS[payload.status]
+    cause, *diagnosed = (payload.message or payload.change.item).splitlines() or ['']
+    render_row(label, payload.change.item, cause, colour)
+    # One row per line: a diagnosed failure carries the cause and the command that
+    # fixes it under the provider's own message, and the command wants a line of its
+    # own rather than a place inside a paragraph. Aligned through the shared
+    # continuation, because this indented by two and `render_change` by the width of
+    # the two columns above — so one run's failures and its findings hung their
+    # advice in different places.
+    for line in diagnosed:
+        render_advice(line)
 
 
-def _unrepairable(planned: Iterable[Event]) -> list[Change]:
-    """What differs and `apply` cannot fix, which is `check`'s answer reported here.
+OUTCOME_MARKS = {
+    OutcomeStatus.DONE: ('done', 'green'),
+    OutcomeStatus.SKIPPED: ('skipped', 'yellow'),
+    OutcomeStatus.REFUSED: ('refused', 'yellow'),
+    OutcomeStatus.FAILED: ('failed', 'red'),
+    OutcomeStatus.ABSENT: ('absent', 'red'),
+}
+"""The word each outcome carries in the verdict column, and its colour.
 
-    Reported and not counted: a machine-local value nobody has set and a file only
-    safekeep restores are real findings, and exiting non-zero for them makes every
-    freshly-installed work box look like a failed install between the install and
-    the restore. `apply` answers whether the work it attempted succeeded; whether
-    anything is *wrong* is the question `check` exists for.
-    """
-    _, attention, _ = sift([event.payload for event in planned if isinstance(event.payload, Change)])
-    return attention
+A word rather than a bare tick, dash or cross. Those three had to cover five
+statuses, so `refused` and `skipped` shared a dash and `failed` and `absent` shared
+a cross — and the pairs are exactly the ones whose distinction decides where to go
+and look. `ABSENT` means read the declaration where `FAILED` means read the command,
+which is a difference its own docstring spells out and the mark erased.
+
+A refusal keeps a colour that is not red: it wrote nothing and did nothing wrong,
+and an offline machine skipping a source the bundle was never built to stage must
+not read as a broken install."""
 
 
 def _unsuccessful(events: Iterable[Event]) -> list[str]:

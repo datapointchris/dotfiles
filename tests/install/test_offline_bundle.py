@@ -18,9 +18,12 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
+from dotfiles import resolve
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
 
@@ -165,3 +168,94 @@ def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staged, monke
 
     assert reconcile._stage_bundle() is ExitCode.ISSUE
     assert not staged.exists()
+
+
+class TestSayingWhichBundle:
+    """A run that installs from a bundle has to name the bundle.
+
+    The already-staged branch returned early and printed nothing, so every offline
+    apply after the first said not one word about where its answers came from — and
+    under `--offline` the bundle *is* the upstream every currency verdict is decided
+    against. Measured 2026-08-13 on the work box: twelve package items came back
+    unmeasurable and the only thing on screen was one failed install.
+    """
+
+    def test_an_already_staged_bundle_is_named_rather_than_passed_over(self, staged, capsys) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\ncargo|ripgrep|15.2.0|rg.tar.gz\n')
+
+        assert reconcile._stage_bundle() is None
+
+        # Newlines stripped before matching: Rich wraps a long path across lines, and
+        # the assertion is about what the line says rather than where it breaks.
+        said = capsys.readouterr().err.replace('\n', '')
+        assert str(staged) in said
+        assert 'already staged' in said
+        assert '2 file(s)' in said
+
+    def test_the_categories_are_named_because_a_bundle_of_wheels_is_not_a_bundle(self, staged, capsys) -> None:
+        """`61 files` reads as a full bundle when 60 of them are the CLI's own wheels."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('wheel|rich|14.0.0|rich.whl\nbinary|fd|10.2.0|fd\n')
+
+        reconcile._stage_bundle()
+
+        assert 'binary 1, wheel 1' in capsys.readouterr().err
+
+    def test_a_freshly_unpacked_bundle_says_which_archive_it_came_from(self, tmp_path, home, staged, monkeypatch, capsys) -> None:
+        monkeypatch.chdir(tmp_path)
+        archive(tmp_path, 'dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz')
+
+        assert reconcile._stage_bundle() is None
+
+        assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in capsys.readouterr().err
+
+    def test_a_directory_with_no_manifest_ends_the_run_rather_than_starting_it(self, staged, capsys) -> None:
+        """Every provider reads the bundle through the manifest, so without one the
+        run installs nothing from anywhere and reports each tool as its own mystery."""
+        staged.mkdir(parents=True)
+
+        assert reconcile._stage_bundle() is ExitCode.ISSUE
+        assert bundle.MANIFEST in capsys.readouterr().err
+
+    def test_the_build_date_and_platform_are_read_off_the_header(self, staged) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text(
+            '# Dotfiles Offline Bundle\n# Created: Thu Aug 13 00:51:54 2026\n# Platform: linux/x86_64\nbinary|fd|10.2.0|fd\n'
+        )
+
+        described = offline_bundle.describe()
+
+        assert described.built == 'Thu Aug 13 00:51:54 2026'
+        assert described.platform == 'linux/x86_64'
+        assert len(described.carried) == 1, 'the header lines must not be read as rows'
+
+
+class TestCoverage:
+    """Which declared items a bundle can install, and which it was never built to."""
+
+    def _plan(self, name: str = 'wsl-work-workstation'):
+        return resolve.resolve(catalog.load(), machines.load(name))
+
+    def test_a_system_package_is_not_a_gap_in_a_bundle(self, staged) -> None:
+        """The first version of this reported `apt`, `bash` and `ca-certificates` as
+        things the bundle had failed to carry — a list nobody can act on, burying the
+        rows that matter. A bundle stages four declaration kinds and apt is not one."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+        found = offline_bundle.coverage(offline_bundle.describe(), self._plan())
+
+        assert 'apt' not in found.uncovered
+        assert 'bash' not in found.uncovered
+        assert found.outside > 0, 'the items a bundle never carries are counted, not dropped'
+
+    def test_a_go_tool_is_matched_on_its_executable_not_its_name(self, staged) -> None:
+        """The bundler records a Go tool under `entry.executable` and every other kind
+        under its name, so comparing names alone reported tools the bundle carries."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('go-binary|task|v3.52.0|task\n')
+
+        found = offline_bundle.coverage(offline_bundle.describe(), self._plan())
+
+        assert 'task' in found.covered

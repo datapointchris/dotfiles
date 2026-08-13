@@ -25,6 +25,23 @@ VerboseOption = typer.Option(
 QuietOption = typer.Option(False, '--quiet', '-q', help='The verdict alone, without the per-item evidence')
 
 
+def contradiction(first: str, second: str) -> None:
+    """Refuse two flags that cancel each other, rather than picking one.
+
+    `verbosity` has always done this for `-v` with `-q`, and the reasoning it gives
+    generalises: either order of resolution is defensible, which is the tell that a
+    caller passing both did not mean either. That argument was written inside one
+    function, so nothing reached the next pair — `--offline --refresh` resolved
+    silently to offline, where `--refresh` means spend the network on being current
+    and `--offline` means there is none.
+
+    `BadParameter`, so it exits 2 as a usage error. A caller has to be able to tell
+    "you typed it wrong" from "it ran and failed", and only the first is worth
+    retrying with different arguments.
+    """
+    raise typer.BadParameter(f'{first} and {second} contradict each other; pass one')
+
+
 def verbosity(verbose: int, quiet: bool) -> None:
     """Point the console sink at what the flags asked for, before anything logs.
 

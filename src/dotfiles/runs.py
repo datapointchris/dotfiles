@@ -208,10 +208,19 @@ class RunRecord:
 
     @property
     def converged(self) -> bool:
-        """Compared against the enum rather than a literal spelling of it. This
-        read `'MATCHED'` for as long as it existed and was therefore never true:
+        """Whether this run found the machine already matching what it declares.
+
+        Not whether it left it that way, which is a different question and is
+        `commands/report._unsuccessful`'s. That split is deliberate and documented
+        there: this is the right answer for `show`, whose reader is looking at one
+        run, and the wrong one for a list, where it would mark a healthy apply that
+        repaired something the same as a run that could not examine a resource at all.
+
+        Compared against the enum rather than a literal spelling of it. This read
+        `'MATCHED'` for as long as it existed and was therefore never true:
         `Verdict` is a `StrEnum` whose values are lower case, so every record ever
-        written said drift — including the ones that had nothing wrong with them."""
+        written said drift — including the ones that had nothing wrong with them.
+        """
         return not self.issues and all(outcome.verdict == Verdict.MATCHED for outcome in self.outcomes)
 
 

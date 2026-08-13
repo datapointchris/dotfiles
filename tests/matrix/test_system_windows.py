@@ -36,6 +36,7 @@ import dataclasses as dc
 import grp
 import os
 import pwd
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -882,7 +883,10 @@ def test_windows_check_reports_the_declared_filenames_missing_from_one_directory
     assert ran.exit_code == ExitCode.DRIFT
     assert f'0 of {len(windows.TOOLS)} Windows tools' in ran.output
     for tool in windows.TOOLS:
-        assert f'missing  {tool.name}' in ran.output
+        # By field rather than by sentence. The rows are column-aligned, so the
+        # gap between the state and the name is padding and changes whenever the
+        # widest name does.
+        assert re.search(rf'missing\s+{re.escape(tool.name)}\b', ran.output)
 
 
 def test_windows_check_is_converged_once_every_declared_binary_is_there(
@@ -954,7 +958,7 @@ def test_an_offline_windows_apply_installs_what_the_bundle_carries_and_names_the
     assert (home / '.local' / 'bin' / 'rg.exe').read_text() == 'RIPGREP'
     assert ran.exit_code == ExitCode.ISSUE
     assert f'1 of {len(windows.TOOLS)} Windows tools' in ran.output
-    assert 'jq did not land' in ran.output
+    assert re.search(r'jq\s+did not land', ran.output)
 
 
 def test_a_complete_bundle_converges_and_reaches_no_windows_side_to_do_it(

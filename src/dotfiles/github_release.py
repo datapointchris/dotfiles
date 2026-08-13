@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.parse
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx2
@@ -346,11 +347,63 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
     return None
 
 
-def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
+@dataclass(frozen=True, slots=True)
+class Fetched:
+    """Whether one download happened, and why it did not.
+
+    **Truthy on success, so every existing call site is unchanged.** Eleven
+    providers test the result of `effects.fetch` with `if` or `if not`, and eight
+    test doubles return a bare `True`/`False`. A plain `str` return would have
+    inverted every one of them silently — `False` and `''` are both falsy, so a
+    double answering `False` would have read as a *successful* fetch. Nothing
+    downstream has to change to keep working, and the sites that want the reason
+    read one field.
+
+    `reason` is the exception's own text and never a sentence composed here. What a
+    reader needs is the string the transport produced — `certificate verify failed:
+    unable to get local issuer certificate` is the whole diagnosis of a corporate
+    TLS proxy, and no wording invented at this level can stand in for it.
+    """
+
+    ok: bool
+    reason: str = ''
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    @classmethod
+    def failed(cls, problem: Exception) -> Fetched:
+        """The reason as a reader needs it: the type, then what it said.
+
+        The type is kept because several of these say nothing on their own —
+        `httpx2.ConnectError('')` and a bare `OSError` are both possible, and
+        `ConnectError` alone already separates a refused connection from a 404.
+        """
+        said = str(problem).strip()
+        named = type(problem).__name__
+        return cls(False, f'{named}: {said}' if said else named)
+
+
+def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> Fetched:
     """The browser URL 404s on a private repo whatever token is presented; only
     the REST asset endpoint serves those, and only with an octet-stream Accept.
+
+    **This is the only place a download's reason exists, so it has to leave here.**
+    Both handlers catch `(httpx2.HTTPError, OSError)`, which spans a 404, a captive
+    portal's 403, a TLS certificate rejection, a proxy refusal, ENOSPC and EACCES —
+    one `False` for all of them makes every "could not download X" in the tree
+    generic, because nothing else is left to print. `create_bundle.download` keeps
+    its exception for the same reason; this is that shape one level lower, where
+    every provider reaches it.
+
+    Two consequences worth naming. `diagnose.explain` already probes on `Permission
+    denied` and `No space left`, and neither could ever fire for a download while
+    `OSError` was collapsed into the same `False` as an HTTP error. And a private
+    repo that fails twice for two different reasons now says both, rather than
+    reporting the second as though the first had not happened.
     """
     destination.parent.mkdir(parents=True, exist_ok=True)
+    first = ''
 
     if github_token() and repo and tag and asset_name:
         asset_id = release_assets(repo, tag).get(asset_name)
@@ -359,16 +412,21 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
                 destination.write_bytes(
                     request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
                 )
-            except (httpx2.HTTPError, OSError):
-                log_warning(f'Asset API download failed for {asset_name}, falling back to the public URL')
+            except (httpx2.HTTPError, OSError) as refused:
+                first = Fetched.failed(refused).reason
+                log_warning(f'Asset API download failed for {asset_name} ({first}), falling back to the public URL')
             else:
-                return True
+                return Fetched(True)
 
     try:
         destination.write_bytes(request(url))
-    except (httpx2.HTTPError, OSError):
-        return False
-    return True
+    except (httpx2.HTTPError, OSError) as refused:
+        answered = Fetched.failed(refused)
+        # Both, where the private path was tried and also failed. One reason would
+        # be the public URL's, which on a private repo is a 404 that explains
+        # nothing about the credentialed attempt that came first.
+        return Fetched(False, f'{answered.reason} (asset API first said {first})') if first else answered
+    return Fetched(True)
 
 
 def verify_from_bundle(path: Path, asset_name: str, checksums_file: Path) -> Verification | None:
@@ -435,8 +493,13 @@ def verify_release_checksum(
         # for good blaming the network.
         with tempfile.TemporaryDirectory(prefix='dotfiles-checksums-') as scratch:
             destination = Path(scratch) / checksum_asset
-            if not download_asset(browser_url, destination, repo, tag, checksum_asset):
-                log_error(f'Failed to download {checksum_asset} from {repo}')
+            # The reason, because the caller renders `FAILED` as "checksum mismatch"
+            # and nothing mismatched — the file never arrived. That message has
+            # already cost one install that blamed the network, which is what the
+            # comment above is about, and a generic failure is why it was believed.
+            arrived = download_asset(browser_url, destination, repo, tag, checksum_asset)
+            if not arrived:
+                log_error(f'Failed to download {checksum_asset} from {repo}: {arrived.reason}')
                 return Verification.FAILED
             checksums_text = destination.read_text()
 

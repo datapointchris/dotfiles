@@ -384,30 +384,40 @@ def run(
     return answered(Completed(command=argv, returncode=process.returncode, transcript=''.join(lines)))
 
 
-def fetch(url: str, destination: Path, *, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
+def fetch(url: str, destination: Path, *, repo: str = '', tag: str = '', asset_name: str = '') -> github_release.Fetched:
     """Download one file. The release-asset arguments are how a private repo works.
 
     Delegated rather than reimplemented: `github_release` already carries the
-    asset-id fallback, and that module is stdlib-only because the offline bundler
-    runs it under a system python3 this package cannot import into. One
-    implementation, reachable from both.
+    asset-id fallback. One implementation, reachable from both this and the bundler.
+
+    **Returns why it failed, and is still usable as a boolean.** Every caller here
+    writes `if effects.fetch(...)` or `if not effects.fetch(...)`, and `Fetched` is
+    truthy exactly when the download happened — so the reason is additive rather
+    than a migration. A caller that wants it reads `.reason`; one that does not is
+    unchanged.
     """
     began = time.perf_counter()
-    ok = github_release.download_asset(url, destination, repo, tag, asset_name)
+    answered = github_release.download_asset(url, destination, repo, tag, asset_name)
     log.debug(
         'fetched',
         url=url,
         destination=str(destination),
         repo=repo,
         tag=tag,
-        ok=ok,
+        ok=answered.ok,
+        # Beside the byte count for the same reason it is: this is the stream read
+        # after a failed install, and a TLS-intercepting proxy is the one cause that
+        # is invisible in every other field. It went unrecorded anywhere at all
+        # until now, which is how a curl certificate rejection reached a person as
+        # `could not download <url>`.
+        reason=answered.reason,
         seconds=round(time.perf_counter() - began, 3),
         # The literal answer to "what did it actually download", which a machine
         # behind a captive portal needs most: a fetch that reports success having
         # written a 900-byte login page looks identical to one that worked.
         bytes=destination.stat().st_size if destination.exists() else 0,
     )
-    return ok
+    return answered
 
 
 def unpack(archive: Path, into: Path) -> bool:

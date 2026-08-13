@@ -186,7 +186,7 @@ SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _staged_script(request: Request, url: str, into: Path) -> Path | None:
+def _staged_script(request: Request, url: str, into: Path) -> script.Script:
     return script.staged(request.entry.name, url, into, offline=request.offline)
 
 
@@ -200,8 +200,8 @@ def _run_vendor_script(request: Request, url: str) -> Result:
     return script.run(request.entry.name, url, offline=request.offline)
 
 
-def _unstaged(request: Request, url: str) -> str:
-    return script.unstaged(request.entry.name, url, offline=request.offline)
+def _unstaged(request: Request, url: str, reason: str = '') -> str:
+    return script.unstaged(request.entry.name, url, offline=request.offline, reason=reason)
 
 
 def _present_and_offline(request: Request, installed: bool) -> Result | None:
@@ -277,16 +277,27 @@ def _claude_code(request: Request) -> Result:
         return Result(True, f'claude-code {installed.splitlines()[0]} (self-updating)')
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
-        script = _staged_script(request, request.entry.install_url, Path(scratch))
-        if script is None:
-            return Result(False, _unstaged(request, request.entry.install_url))
-        completed = effects.run(['bash', str(script)], output=Output.STREAM)
+        # Named before it is reached, as `theme`, `font` and the runtimes do through
+        # `script.run`. This installer stages by hand and printed nothing, so it was
+        # the one vendor script whose URL never reached the screen — on a firewalled
+        # machine that is the single most useful line, because the host is what a
+        # person has to get unblocked.
+        err_console.print(f'claude-code: {request.entry.install_url}', soft_wrap=True)
+        staged = _staged_script(request, request.entry.install_url, Path(scratch))
+        if not staged:
+            # `refused` where the bundle simply does not carry it, matching every
+            # other installer: an offline machine that was never given this script is
+            # doing what it was built to do, and reporting a failure makes the whole
+            # stage non-zero for it. Without this, offline claude-code was the one
+            # unstaged script counted as a broken install.
+            return Result(False, _unstaged(request, request.entry.install_url, staged.reason), refused=request.offline)
+        completed = effects.run(['bash', str(staged.path)], output=Output.STREAM)
 
     if completed.ok:
         return Result(True, 'claude-code installed')
     if BUSY_INSTALLING.search(completed.transcript):
         return Result(True, 'claude-code skipped: another process is currently installing it')
-    return Result(False, f'the claude-code install script exited {completed.returncode}')
+    return Result(False, script.failure('claude-code', completed))
 
 
 BUSY_INSTALLING = re.compile(r'another process is currently installing|claude.*running', re.IGNORECASE)
@@ -334,8 +345,9 @@ def _awscli(request: Request) -> Result:
         staging = Path(scratch)
         archive = staging / 'awscliv2.zip'
         err_console.print(f'awscli: {url}', soft_wrap=True)
-        if not effects.fetch(url, archive):
-            return Result(False, f'could not download {url}')
+        arrived = effects.fetch(url, archive)
+        if not arrived:
+            return Result(False, f'could not download {url}: {arrived.reason}')
         if not effects.unpack(archive, staging / 'unpacked'):
             return Result(False, 'the awscli zip did not unpack')
 
@@ -393,8 +405,9 @@ def _mount_s3(request: Request) -> Result:
         staging = Path(scratch)
         archive = staging / 'mount-s3.tar.gz'
         err_console.print(f'mount-s3: {tarball_url}', soft_wrap=True)
-        if not effects.fetch(tarball_url, archive):
-            return Result(False, f'could not download {tarball_url}')
+        arrived = effects.fetch(tarball_url, archive)
+        if not arrived:
+            return Result(False, f'could not download {tarball_url}: {arrived.reason}')
 
         refused = _verify_signature(archive, tarball_url, f'{request.entry.url}/public_keys/KEYS', staging)
         if refused:
@@ -483,8 +496,9 @@ def _terraform_ls(request: Request) -> Result:
         staging = Path(scratch)
         archive = staging / asset
         err_console.print(f'terraform-ls {latest}: {release}/{asset}', soft_wrap=True)
-        if not effects.fetch(f'{release}/{asset}', archive):
-            return Result(False, f'could not download {release}/{asset}')
+        arrived = effects.fetch(f'{release}/{asset}', archive)
+        if not arrived:
+            return Result(False, f'could not download {release}/{asset}: {arrived.reason}')
 
         refused = _verify_checksum(archive, asset, f'{release}/terraform-ls_{version}_SHA256SUMS', staging)
         if refused:
@@ -508,8 +522,12 @@ def _verify_checksum(archive: Path, asset_name: str, checksums_url: str, staging
     with the download path, and that is exactly when a checksum matters.
     """
     published = staging / 'SHA256SUMS'
-    if not effects.fetch(checksums_url, published):
-        return f'could not download {checksums_url}, so {asset_name} could not be verified'
+    arrived = effects.fetch(checksums_url, published)
+    if not arrived:
+        # The reason matters most here of anywhere: the whole justification for
+        # refusing rather than warning is that a miss indicates something specific
+        # about the download path, and the message named nothing specific.
+        return f'could not download {checksums_url}, so {asset_name} could not be verified: {arrived.reason}'
 
     expected = github_release.checksum_for_asset(published.read_text(errors='replace'), asset_name)
     if expected is None:

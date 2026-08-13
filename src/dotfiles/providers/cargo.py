@@ -230,8 +230,9 @@ def _binstall_from_release(target: Target) -> Result:
     with tempfile.TemporaryDirectory(prefix='dotfiles-cargo-binstall-') as scratch:
         staging = Path(scratch)
         download = staging / archive_name
-        if not effects.fetch(url, download):
-            return Result(False, f'could not download {url}')
+        arrived = effects.fetch(url, download)
+        if not arrived:
+            return Result(False, f'could not download {url}: {arrived.reason}')
 
         unpacked = staging / 'unpacked'
         if not effects.unpack(download, unpacked):

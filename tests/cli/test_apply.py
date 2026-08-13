@@ -639,3 +639,127 @@ def test_a_streamed_walk_is_still_handed_over_whole(quiet: None, monkeypatch: py
 
     assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
     assert walk.acted
+
+
+def unmeasurable(item: str, detail: str = 'the staged bundle carries no version for it', advice: str = 'extract a newer bundle') -> Event:
+    """An item nothing could establish anything about, which is neither drift nor a
+    failure. Offline is where a run fills up with them: the bundle is the upstream,
+    so a bundle carrying no row for a tool leaves that tool with no verdict at all."""
+    change = Change('packages', Stage.TOOLS, item, Verdict.UNKNOWN, detail=detail, repair=Repair.NONE, advice=advice)
+    return Event('packages', change, stage=Stage.TOOLS)
+
+
+class TestWhatApplyDeclinedToTouch:
+    """Measured 2026-08-13 on the work box: `apply --offline` planned twelve package
+    items, acted on one, and said nothing whatsoever about the eleven it declined
+    because the staged bundle carried no version to compare them against.
+
+    Each of those eleven already carried the sentence explaining itself, and `plan`
+    prints it. The renderer was missing, not the diagnosis.
+    """
+
+    def test_an_item_nothing_could_measure_is_named_rather_than_passed_over(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        walked(monkeypatch, Walk(unmeasurable('doit'), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        # Newlines stripped: Rich wraps the detail column at the terminal width, and
+        # the assertion is about what the row says rather than where it breaks.
+        said = capsys.readouterr().err.replace('\n', '')
+        assert 'doit' in said
+        assert 'staged bundle carries no version' in said
+
+    def test_the_closing_line_says_part_of_the_machine_has_no_verdict(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        """The rows scroll away; this is the line a scheduled summary carries alone."""
+        walked(monkeypatch, Walk(unmeasurable('doit'), unmeasurable('syncer'), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        assert '2 item(s) could not be measured' in capsys.readouterr().err
+
+    def test_the_closing_fix_is_named_once_however_many_items_share_it(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        """A bundle carrying nothing to compare against is one fix for all of them, so
+        the closing line names it once. The rows above keep their own advice column,
+        which is `render_change`'s contract and unrelated to this."""
+        walked(monkeypatch, Walk(unmeasurable('doit'), unmeasurable('syncer'), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        closing = capsys.readouterr().err.split('could not be measured')[-1]
+        assert closing.count('extract a newer bundle') == 1
+
+    def test_it_does_not_move_the_exit_code(self, quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
+        """There is no evidence the item differs, and inventing one exits non-zero on
+        a machine with nothing wrong with it — a cold release cache makes every
+        declared release unmeasurable at once."""
+        walked(monkeypatch, Walk(unmeasurable('doit'), outcomes=()))
+
+        assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
+
+    def test_what_needs_a_person_gets_a_heading_of_its_own(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        """These were printed as bare rows with no heading, so they read as a
+        continuation of whatever provider had acted last."""
+        walked(monkeypatch, Walk(drift('atuin', Repair.BY_HAND), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        assert 'needs a person' in capsys.readouterr().err
+
+    def test_stdout_stays_empty(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+        """`--json` owns stdout, so every one of these rows is a diagnostic."""
+        walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        assert capsys.readouterr().out == ''
+
+
+class TestTheRecordSaysWhatTheRunMeant:
+    def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Measured 2026-08-13 on the work box: one record held eighteen `planned`
+        rows, eleven of them carrying `verdict: unknown`, against five `done` and one
+        `failed`. Nothing was ever going to be done about the eleven, and the record
+        was the only artefact a person could read afterwards to find that out."""
+        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
+        walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), drift('ripgrep'), outcomes=()))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+        actions = {outcome['address']: outcome['action'] for outcome in written['outcomes']}
+        assert actions['packages/doit'] == 'unmeasured'
+        assert actions['packages/atuin'] == 'declined'
+        assert actions['packages/ripgrep'] == 'planned'
+
+    def test_a_failed_write_reaches_the_records_issues(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`issues` held Refusals alone, which are raised exceptions — and a provider
+        answering `Result(ok=False)` returns normally. So the record of the run that
+        failed the claude-code install carried `issues: []` beside `action: failed`,
+        and a person sending it to the fleet was sending a record claiming nothing
+        had gone wrong."""
+        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
+        walked(monkeypatch, Walk(drift('claude-code'), outcomes=(done('claude-code', OutcomeStatus.FAILED),)))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+        assert [issue['address'] for issue in written['issues']] == ['packages']
+        assert 'claude-code' in written['issues'][0]['message']
+
+    def test_a_refusal_is_still_not_a_failed_write(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A source the bundle was never designed to stage comes back REFUSED, and an
+        offline machine doing exactly what it was built to do must not file an issue."""
+        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
+        walked(monkeypatch, Walk(drift('rustup'), outcomes=(done('rustup', OutcomeStatus.REFUSED),)))
+
+        reconcile.apply_machine(engine.Selection.everything())
+
+        assert json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())['issues'] == []

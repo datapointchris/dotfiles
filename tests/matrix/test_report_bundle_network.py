@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import tarfile
 from collections.abc import Callable
 from pathlib import Path
@@ -621,15 +622,35 @@ def test_a_reconcile_verb_files_a_record_report_can_read_back(verb: str, cli: Ca
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('verb', ['check', 'show', 'prune'], ids=['check', 'show', 'prune'])
+@pytest.mark.parametrize('verb', ['prune'], ids=['prune'])
 def test_an_unbuilt_bundle_verb_refuses_rather_than_answering_nothing(verb: str, cli: Callable[..., Invocation]) -> None:
     """Exit 3 and a sentence saying what it would do, which is the only honest
     answer a stub can give — exiting 0 would report a machine as checked by a verb
-    that checked nothing."""
+    that checked nothing.
+
+    `check` and `show` were stubs when this was written and are implemented on this
+    branch, so they moved to the case below. `prune` is the one still owed.
+    """
     ran = cli('bundle', verb, catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
     assert f'bundle {verb} is not built' in ran.stderr
+
+
+@pytest.mark.parametrize('verb', ['check', 'show'], ids=['check', 'show'])
+def test_a_built_bundle_verb_with_nothing_staged_names_the_path_and_the_fix(verb: str, cli: Callable[..., Invocation]) -> None:
+    """Now that these are implemented, an absent bundle is a finding about the
+    machine rather than about the verb.
+
+    The distinction the previous case protected still holds — exit 3 rather than 0,
+    because a verb that found nothing to read has not checked anything. What
+    changed is that the sentence is about the bundle instead of about the stub.
+    """
+    ran = cli('bundle', verb, catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'no readable bundle at' in ran.stderr
+    assert 'dotfiles bundle stage' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -908,13 +929,21 @@ def test_an_asset_row_that_could_not_be_built_is_carried_as_a_reason(
 
 def test_the_human_rendering_names_only_what_is_blocked(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Every reachable row printed would bury the three that matter, and the count
-    at the end is what says how many were asked."""
+    at the end is what says how many were asked.
+
+    Asserted per stream rather than on the two joined. The tally is the answer and
+    belongs on stdout; the rows are the evidence behind it and belong on stderr,
+    per `standards/cli-design.md` § "stdout is data, stderr is everything else".
+    An assertion over both at once cannot tell a row on the wrong stream from a row
+    on the right one, which is how an empty stdout goes unnoticed.
+    """
     sandbox.shadow('curl', ANSWERS)
     sandbox.shadow('git', REFUSES)
 
     ran = cli('network', 'check', catch_exceptions=True)
 
-    assert 'blocked  git_clone/dotfiles' in ran.stdout
+    assert re.search(r'blocked\s+git_clone/dotfiles', ran.stderr)
+    assert '1 blocked' in ran.stdout
     assert 'astral.sh' not in ran.stdout
     assert f'3 reachable, {BASELINE_PROBES - 3} blocked' in ran.stdout
 

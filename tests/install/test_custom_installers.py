@@ -102,18 +102,32 @@ class Runs:
 class Fetches:
     """Every URL an installer would have downloaded, with a body per URL."""
 
-    def __init__(self, bodies: dict[str, bytes] | None = None, refuse: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        bodies: dict[str, bytes] | None = None,
+        refuse: tuple[str, ...] = (),
+        reason: str = 'ConnectError: certificate verify failed: unable to get local issuer certificate',
+    ) -> None:
         self.bodies = bodies or {}
         self.refuse = refuse
+        self.reason = reason
         self.urls: list[str] = []
 
-    def __call__(self, url: str, destination: Path, **_kwargs) -> bool:
+    def __call__(self, url: str, destination: Path, **_kwargs) -> github_release.Fetched:
+        """`Fetched`, not a bool, because that is what `effects.fetch` answers.
+
+        A double returning a bare `False` would still read as a failure at every
+        `if not fetch(...)`, so this is not about the branch — it is about `.reason`,
+        which the providers now quote into their own messages. A refusal carries the
+        text a TLS-intercepting proxy would produce, so a test can assert the cause
+        survives the trip rather than only that the install failed.
+        """
         self.urls.append(url)
         if any(part in url for part in self.refuse):
-            return False
+            return github_release.Fetched(False, self.reason)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(self.bodies.get(url, SCRIPT))
-        return True
+        return github_release.Fetched(True)
 
 
 @pytest.fixture
