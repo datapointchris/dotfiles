@@ -31,6 +31,8 @@ from matrix.harness import LAZYGIT
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
+from matrix.harness import addresses
+from matrix.harness import resource
 
 READ_VERBS = ('plan', 'check')
 ALL_VERBS = ('plan', 'check', 'apply')
@@ -50,19 +52,15 @@ WOULD_INSTALL = 'would install on this machine'
 because it raises a `BaseException` that `tests/` exports no name for."""
 
 
-def skipping(*addresses: str) -> list[str]:
-    """`--skip` is repeatable, so a matrix row carries the addresses and not the argv."""
-    return [argument for address in addresses for argument in ('--skip', address)]
+def skipping(*dropped: str) -> list[str]:
+    """`--skip` is repeatable, so a matrix row carries the addresses and not the argv.
 
-
-def addresses(ran: Invocation) -> list[str]:
-    """Which resources a read verb's document says it walked."""
-    return [row['address'] for row in ran.document['resources']]
-
-
-def row(ran: Invocation, address: str) -> dict:
-    """One resource's row out of the document, by address."""
-    return next(found for found in ran.document['resources'] if found['address'] == address)
+    Not `*addresses`, which is the module-level reader of a document imported
+    above — the same collision `resource` had in two other files and was renamed
+    out of. A parameter that shadows a helper reads fine until the helper is
+    wanted inside the function that hid it.
+    """
+    return [argument for address in dropped for argument in ('--skip', address)]
 
 
 def broken_identity(sandbox: Sandbox) -> None:
@@ -230,10 +228,10 @@ def test_skipping_one_provider_keeps_the_resource_in_the_walk_and_drops_its_item
     narrowed = cli('plan', '--skip', 'packages/ghrelease', '--json')
 
     assert unnarrowed.exit_code == ExitCode.DRIFT
-    assert row(unnarrowed, 'packages')['pending'] == 1
+    assert resource(unnarrowed, 'packages')['pending'] == 1
     assert narrowed.exit_code == ExitCode.CONVERGED
     assert 'packages' in addresses(narrowed)
-    assert row(narrowed, 'packages')['pending'] == 0
+    assert resource(narrowed, 'packages')['pending'] == 0
 
 
 def test_skipping_the_declaration_check_removes_the_finding_it_would_have_reported(
@@ -252,7 +250,7 @@ def test_skipping_the_declaration_check_removes_the_finding_it_would_have_report
     skipped = cli('check', '--skip', 'machines', '--json')
 
     assert reported.exit_code == ExitCode.ISSUE
-    assert row(reported, 'machines')['verdict'] == 'issue'
+    assert resource(reported, 'machines')['verdict'] == 'issue'
     assert skipped.exit_code == ExitCode.CONVERGED
     assert addresses(skipped) == list(RESOURCES)
 
@@ -371,8 +369,8 @@ def test_refresh_asks_nothing_about_a_tool_that_is_not_installed(verb: str, sand
 
     ran = cli(verb, '--refresh', '--json')
 
-    assert row(ran, 'packages')['pending'] == 1
-    assert row(ran, 'packages')['unmeasured'] == 0
+    assert resource(ran, 'packages')['pending'] == 1
+    assert resource(ran, 'packages')['unmeasured'] == 0
 
 
 def test_apply_reaches_upstream_without_being_asked_to(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -412,7 +410,7 @@ def test_an_owner_narrows_the_walk_to_the_resources_holding_that_owners_provider
 
     assert ran.exit_code == ExitCode.DRIFT
     assert addresses(ran) == ['packages']
-    assert row(ran, 'packages')['pending'] == 1
+    assert resource(ran, 'packages')['pending'] == 1
 
 
 def test_an_apply_scoped_to_an_owner_that_matches_nothing_refuses(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -482,6 +480,21 @@ def test_each_verb_emits_the_document_its_reader_wants(verb: str, keys: set[str]
     assert ran.document['verb'] == verb
 
 
+@pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
+def test_the_interchange_document_says_which_generation_it_is(verb: str, cli: Callable[..., Invocation]) -> None:
+    """A literal, which is the point: this is the one place a number is the check
+    rather than a copy of it.
+
+    Read from `status.VERSION` the assertion re-reads whatever the writer wrote
+    with, so it survives a bump that should not have happened, a revert, and a
+    shape change with no bump. Editing the number here is the deliberate second act
+    that makes a bump a decision instead of a side effect — and this document
+    crosses machines, so a generation nobody declared is one the far end cannot
+    test for.
+    """
+    assert cli(verb, '--json').document['version'] == 2
+
+
 @pytest.mark.parametrize('verb', ALL_VERBS, ids=list(ALL_VERBS))
 def test_a_json_run_puts_the_document_alone_on_stdout(verb: str, cli: Callable[..., Invocation]) -> None:
     """One stray diagnostic on stdout turns a `--json` parse into a syntax error
@@ -547,7 +560,7 @@ def test_each_verb_keeps_its_own_half_of_one_machines_findings(
     ran = cli(verb, '--json')
 
     assert ran.exit_code == code
-    assert {address: row(ran, address)['verdict'] for address in verdicts} == verdicts
+    assert {address: resource(ran, address)['verdict'] for address in verdicts} == verdicts
 
 
 def test_the_two_verbs_count_the_same_items_and_disagree_only_about_which_matter(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -563,8 +576,8 @@ def test_the_two_verbs_count_the_same_items_and_disagree_only_about_which_matter
     planned = cli('plan', '--json')
     checked = cli('check', '--json')
 
-    counted = {address: (row(planned, address)['pending'], row(planned, address)['attention']) for address in RESOURCES}
-    assert counted == {address: (row(checked, address)['pending'], row(checked, address)['attention']) for address in RESOURCES}
+    counted = {address: (resource(planned, address)['pending'], resource(planned, address)['attention']) for address in RESOURCES}
+    assert counted == {address: (resource(checked, address)['pending'], resource(checked, address)['attention']) for address in RESOURCES}
     assert counted['packages'] == (1, 0)
     assert counted['identity'] == (0, 2)
 
@@ -708,14 +721,22 @@ def test_the_run_record_is_filed_under_the_resolved_machine_rather_than_the_argu
     assert sandbox.latest_record['machine'] == sandbox.machine
 
 
-def test_the_status_document_a_check_writes_is_the_one_it_printed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_the_status_file_a_check_writes_carries_its_verdicts_and_none_of_its_rows(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Every `check` refreshes what the next shell reports, not only the scheduled
-    one — which is what stops a nudge outliving the problem it describes. The file
-    and the pipe carry the same bytes, so a reader of either is reading the same
-    run."""
+    one — which is what stops a nudge outliving the problem it describes.
+
+    The same run and not the same bytes. This file is written unasked into a
+    directory the fleet syncs, several times a day, and the question it answers is
+    whether the machine is converged; the document on stdout was asked for and is
+    kept by whoever asked, so it carries the items behind every count. Written as
+    the document, the file measured 127 KB against 2.8 KB for the same walk.
+    """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
 
     ran = cli('check', '--json')
     written = json.loads(sandbox.status_file.read_text())
 
-    assert written == ran.document
+    assert [row['address'] for row in written['resources']] == addresses(ran)
+    assert [row['verdict'] for row in written['resources']] == [row['verdict'] for row in ran.document['resources']]
+    assert written['verdict'] == ran.document['verdict']
+    assert not any(key in row for row in written['resources'] for key in ('findings', 'others', 'examined', 'invalid'))

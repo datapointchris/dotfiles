@@ -76,7 +76,7 @@ def verbosity(verbose: int, quiet: bool) -> None:
     logging.configure()
 
 
-def resolved(machine: str | None, owner: str | None = None, *, offline: bool = False) -> Session:
+def resolved(machine: str | None, owner: str | None = None, packages: frozenset[str] = frozenset(), *, offline: bool = False) -> Session:
     """One machine's Session, for every leaf that takes `--machine`.
 
     Three failures, two answers, and none of them is decided here any more.
@@ -95,4 +95,4 @@ def resolved(machine: str | None, owner: str | None = None, *, offline: bool = F
     What is left is a one-line alias, kept because twenty leaves name it and
     because the paragraph above is the thing worth having in one place.
     """
-    return Session.resolve(machine, owner=owner, offline=offline)
+    return Session.resolve(machine, owner=owner, packages=packages, offline=offline)

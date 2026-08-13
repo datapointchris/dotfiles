@@ -141,7 +141,7 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
         assert '--offline' not in names, f'{"/".join(path) or "root"} declares --offline on the group'
 
 
-SELECTORS = ('--machine', '--source', '--owner', '--offline')
+SELECTORS = ('--machine', '--source', '--owner', '--package', '--offline')
 """Options that narrow *what* a verb covers, rather than how it writes.
 
 `--offline` belongs here despite reading as a write instruction: under the flag the
@@ -149,8 +149,10 @@ staged bundle *is* the upstream every currency verdict is measured against, so i
 changes what the answer is rather than narrowing the write. A plan that ignores it
 rehearses a different run, which is the defect this test exists for.
 
-`--reinstall` is the genuine member of the other group. It names work to do again
-whatever measuring concludes, so there is no reading of a machine it could change.
+`--reinstall` is the genuine member of the other group, and the split is what made
+that clean: it used to take a name, which put a narrowing inside a force flag and
+left it a member of both groups at once. Bare, it adds work to whatever the
+selectors above left, so there is no reading of a machine it could change.
 """
 
 
@@ -253,18 +255,28 @@ def test_no_apply_offers_refresh_because_every_apply_already_refreshes() -> None
             assert '--refresh' not in options, f'{"/".join(path)} offers --refresh, which it cannot decline to do'
 
 
-def test_no_check_offers_an_owner() -> None:
-    """`check` asks whether anything is *wrong*, and an owner does not narrow that:
-    a logged-out CLI and an unset machine-local value belong to no one.
+WITHHELD_FROM_CHECK = ('--source', '--owner', '--package')
+"""The narrowings `check` deliberately does not take.
 
-    `--owner` is in `SELECTORS`, and the selector test above asserts plan ⊇ apply
-    and says nothing about `check` — deliberately, since `check` takes neither
-    `--source` nor `--owner`. This is the other half of that decision, and without
-    it nothing prevented an `--owner` appearing on one `check`.
+`check` asks whether anything is *wrong*, and none of these narrows that: a
+logged-out CLI and an unset machine-local value belong to no owner, no section and
+no entry. `--offline` is the one narrowing-shaped flag it does take, because that
+changes what the examination compares against rather than what it examines, and
+`test_check_takes_offline_wherever_apply_does` asserts the other direction for it.
+"""
+
+
+@pytest.mark.parametrize('flag', WITHHELD_FROM_CHECK)
+def test_no_check_offers_a_narrowing(flag: str) -> None:
+    """The other half of the selector decision, which nothing else pins.
+
+    These are in `SELECTORS`, and the selector test above asserts plan ⊇ apply and
+    says nothing about `check` — deliberately. Without this, a narrowing added to
+    one `check` would pass every test in the file.
     """
     for path, options in ACCEPTED.items():
         if path[-1] == 'check':
-            assert '--owner' not in options, f'{"/".join(path)} is a check offering --owner'
+            assert flag not in options, f'{"/".join(path)} is a check offering {flag}'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

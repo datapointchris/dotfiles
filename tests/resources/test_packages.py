@@ -752,9 +752,9 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_named_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin: Path) -> None:
+def test_a_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'task')
-    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'task'}))
+    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=True)
 
     found = changes(live)
 
@@ -762,22 +762,21 @@ def test_a_named_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fa
     assert found[0].actionable
 
 
-def test_an_installed_tool_nobody_named_is_still_left_alone(tmp_path: Path, fake_bin: Path) -> None:
-    """The flag names entries because the alternative is a blanket force, which is
-    a fresh `go install` of every Go tool to repair one binary."""
+def test_an_installed_tool_is_left_alone_without_the_flag(tmp_path: Path, fake_bin: Path) -> None:
+    """The default, and the thing the flag exists to override: a tool that measures
+    fine is not touched."""
     executable(fake_bin, 'task')
-    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'something-else'}))
 
-    assert changes(live) == ()
+    assert changes(session(tmp_path, GO_TOOL, DECLARES_TASK)) == ()
 
 
 def test_a_reinstall_reaches_what_currency_cannot_measure(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """The reason it is checked ahead of the comparison rather than after. A version
     string nothing can parse is UNKNOWN and `Repair.NONE`, so measuring alone can
-    never repair it — and that is exactly the tool worth naming."""
+    never repair it — and that is exactly the tool worth reinstalling."""
     reporting(fake_bin, 'lazygit', 'built from source')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
-    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), reinstall=frozenset({'lazygit'}))
+    live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), reinstall=True)
 
     found = changes(live)
 
@@ -785,10 +784,10 @@ def test_a_reinstall_reaches_what_currency_cannot_measure(tmp_path: Path, fake_b
 
 
 def test_a_reinstall_of_something_absent_is_still_just_missing(tmp_path: Path, fake_bin: Path) -> None:
-    """Naming a tool that is not there changes nothing: it was already going to be
-    installed, and the detail should say why it is in the plan rather than
+    """The flag changes nothing for a tool that is not there: it was already going
+    to be installed, and the detail should say why it is in the plan rather than
     reporting a reinstall of something that was never installed."""
-    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=frozenset({'task'}))
+    live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=True)
 
     found = changes(live)
 

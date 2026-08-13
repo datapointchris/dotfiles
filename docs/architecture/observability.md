@@ -15,15 +15,19 @@ their readers are:
 | --- | --- | --- |
 | `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
 | `runs/<id>.jsonl` | every `plan`, `check` and `apply` | a person debugging one failure |
-| `status.json` | every `check` | another machine; the bundle builder reads `plan --json` |
+| `status.json` | every `check` | a caller asking where this machine stands |
 | `nudge` | every `check` | zsh, at every prompt |
 
-The split that matters most is the last one. `status.json` is the document a
-caller reasons about; `nudge` is one line of human text. Deriving the line from
-the document at prompt time would mean parsing JSON in zsh, which means `jq`,
-which means a subprocess per shell — the exact cost `.zshrc`'s completion caching
-exists to avoid. A file holding exactly the sentence to print is `$(<file)`, with
-no fork at all.
+The split that matters most is the last one. `status.json` is a document a caller
+reasons about; `nudge` is one line of human text. Deriving the line from the
+document at prompt time would mean parsing JSON in zsh, which means `jq`, which
+means a subprocess per shell — the exact cost `.zshrc`'s completion caching exists
+to avoid. A file holding exactly the sentence to print is `$(<file)`, with no fork
+at all.
+
+The interchange document `plan --json` and `check --json` emit is a fifth thing
+and is deliberately not in the table, because nothing here writes it: it goes to
+stdout, and where it lands is the caller's business.
 
 ## The run record
 
@@ -207,17 +211,58 @@ nothing to say, and a fork per prompt is not invisible.
 `dotfiles shell-init <shell>` prints the snippet; `.zshrc` caches it behind the
 `DOTFILES_NUDGE` flag.
 
-## `status.json` crosses machines, so it is versioned
+## The interchange document crosses machines, so it is versioned
 
-`check --json` emits the same document the file holds — version, machine, when it
-was measured, the worst verdict, and every resource's row. Not a bare array of
-rows: both forms cross machines, and a reader cannot tell two shapes apart without
-a version to test.
+`plan --json` and `check --json` emit it — version, verb, machine, when it was
+measured, the worst verdict, and every resource's row. Not a bare array of rows:
+it crosses machines, and a reader cannot tell two shapes apart without a version
+to test.
 
-That is the point of the document. The work box is git-only and off Syncthing, so
-the way its needs reach the fleet is its check output travelling as a file. What
-it says is missing or outdated is what the fleet builds into the next offline
-bundle for it.
+That is the point of it. The work box is git-only and off Syncthing, so the way
+its needs reach the fleet is its check output travelling as a file. What it says
+is missing or outdated is what the fleet builds into the next offline bundle
+for it.
+
+**Each resource's row names its items, and does not merely count them.** A row
+carries the findings this verb kept, the ones the other verb keeps, everything
+that was examined and matched, and any declaration problem — beside the counts
+that summarise all four. Counts alone answered *how many*, and every question a
+bundle builder or a caller actually has is *which*, so the only way to reach an
+item was to parse the terminal rendering. The rows travel whatever `-v` says,
+because a document is not a rendering and a verbosity flag must not decide what a
+machine is told.
+
+That is the version 2 shape, and the number moved for it. Nothing was removed, so
+a version 1 reader still works — but a version 1 document has no `findings` key at
+all, which is indistinguishable from a version 2 resource that found nothing, and
+a builder acting on the first stages an empty bundle for a machine that named
+twelve missing tools.
+
+The resource-scoped read verbs emit this document too, and that is the other half
+of the bump. `dotfiles packages plan --json` answered a bare resource row, and an
+array of them whenever the walk turned out to be two resources wide — which
+`--source` makes it whenever the section's runtime is declared `needed_by`, a fact
+about the declaration that no caller of that door holds. One shape now, for one
+resource and for nine.
+
+## `status.json` is the state, not that document
+
+The file a `check` writes carries the same header and every resource's verdict,
+detail and counts — and none of the rows. It has its own version, still 1, because
+it is its own artifact and has not changed: what moved to 2 was the document, and
+a shared number could not have said which of the two.
+
+**The difference is who asked.** The document is composed because a caller asked
+for it and is kept by that caller, so carrying every item is exactly what it is
+for. This file is written unasked by every check, several times a day, into a
+directory the fleet syncs — and the question it exists to answer is whether this
+machine is converged. Written as the document it measured 127 KB against 2.8 KB
+for the same walk, of which 33 KB was 252 rows naming things that were fine.
+
+So a caller wanting the items redirects the door that composes them —
+`dotfiles check --json > wherever` — rather than reading a file that happens to be
+lying around. `standards/cli-design.md` § "A fact on screen is reachable through
+some machine door" is satisfied by that door and asks nothing of this file.
 
 **`apply --json` is not this document, and deliberately so.** The two answer
 different questions and unifying them would cost the bundle loop its input. `plan`
@@ -229,13 +274,13 @@ it and `dotfiles report show --json` cannot give different answers about one run
 which building the same document twice would allow. Everything a run narrates goes
 to stderr, so stdout stays a stream.
 
-**The loop that consumes it is not built.** `bundle create --since <status.json>`
-would diff the document to carry only what that machine is missing, and
-`bundle check <status.json>` would answer whether it needs a new bundle at all.
-Both are stubs today and error out saying so, which is why nothing here silently
-returns a wrong answer. The document exists ahead of them on purpose: it is
-written by every check already, so by the time the loop is built it will have a
-history to diff against rather than starting from the day it ships.
+**Half the loop that consumes it is built.** `bundle check` answers whether a
+staged bundle covers what a machine's plan asks for, resolved locally rather than
+from a document. What is missing is the other direction: a `bundle create` that
+takes a machine's own `plan --json` and carries only what that machine lacks,
+instead of every installer the repo declares. The document is ready for it — a
+row names its items, which is what a diff needs — and so is the history, because
+every `plan` and `check` already files a run record carrying the same changes.
 
 ## Related
 

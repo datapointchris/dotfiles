@@ -34,10 +34,12 @@ from __future__ import annotations
 
 import dataclasses as dc
 import grp
+import json
 import os
 import pwd
 import re
 from collections.abc import Callable
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -51,10 +53,64 @@ from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
+from matrix.harness import resource
 
 Arrange = Callable[[Sandbox, pytest.MonkeyPatch], None]
 """How one case makes its machine. Given the sandbox and the same monkeypatch it
 was built with, so a case can shadow a binary and patch `grp` in one place."""
+
+
+def named(ran: Invocation, key: str) -> list[str]:
+    """The addresses in one of the `system` row's lists: findings, others, examined.
+
+    The reason this module has it. A `system` plan holds rows of six mechanisms at
+    once — a package, its manager, a group, a unit, a file, a login shell — so the
+    resource's `pending` is a sum and every case here is about exactly one of the
+    addends. Asserting on the sum passed on a workstation and failed in CI at
+    `assert 3 == 2`, naming neither the row under test nor the row that moved the
+    total.
+
+    One accessor for all three lists, because every one of them keys its rows on
+    `item` — a change and an examined row alike — which is what lets the four sets
+    below be told apart by *which list* an address turned up in rather than by
+    re-deciding its verdict here. A second classification written in a test is one
+    that can agree with `sift` today and disagree next week.
+    """
+    return [entry['item'] for entry in resource(ran, 'system')[key]]
+
+
+class Lands(StrEnum):
+    """Which set one address has to turn up in, once both read verbs have run.
+
+    Four, and the pair of verbs is what separates them: `plan` keeps what `apply`
+    can repair, `check` keeps what needs a person, what neither keeps is what
+    nothing could measure, and an address in no finding at all was looked at and
+    matched.
+    """
+
+    PENDING = 'pending'
+    ATTENTION = 'attention'
+    UNMEASURED = 'unmeasured'
+    MATCHED = 'matched'
+
+
+def lands(planned: Invocation, checked: Invocation, address: str) -> Lands:
+    """Where the two documents between them put one address.
+
+    `others` is each verb's residue — everything that drifted and it did not keep —
+    so plan's holds attention and unmeasured, and check's holds pending and
+    unmeasured. Their intersection is the unmeasured exactly, which is why this
+    asks for both rather than reading one and trusting an order.
+    """
+    if address in named(planned, 'findings'):
+        return Lands.PENDING
+    if address in named(checked, 'findings'):
+        return Lands.ATTENTION
+    if address in named(planned, 'others') and address in named(checked, 'others'):
+        return Lands.UNMEASURED
+    if address in named(planned, 'examined'):
+        return Lands.MATCHED
+    raise AssertionError(f'{address} is in no list of the system row: {json.dumps(resource(planned, "system"), indent=2)}')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,37 +327,42 @@ def login_shell_still_bash(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) ->
     synthetic_account(monkeypatch, shell='/bin/bash')
 
 
-ROWS: list[tuple[str, Arrange, int, int, int]] = [
-    ('an-absent-managed-file', absent_file, 1, 0, 0),
-    ('a-managed-file-already-carrying-the-line', file_with_the_line, 0, 0, 0),
-    ('a-managed-file-missing-the-line', file_without_the_line, 1, 0, 0),
-    ('a-wholly-owned-file-that-matches', file_matching_exactly, 0, 0, 0),
-    ('a-wholly-owned-file-that-differs', file_differing, 1, 0, 0),
-    ('a-group-the-account-is-already-in', already_in_the_group, 0, 0, 0),
-    ('a-group-the-account-is-not-in', not_in_the_group, 1, 0, 0),
-    ('a-group-this-entry-creates', group_this_entry_creates, 1, 0, 0),
-    ('a-group-nothing-here-creates', group_nothing_here_creates, 0, 1, 0),
-    ('a-unit-already-enabled', unit_already_enabled, 0, 0, 0),
-    ('a-unit-that-should-be-enabled', unit_not_enabled, 1, 0, 0),
-    ('a-unit-wanted-off-and-not-installed', unit_wanted_off_and_not_installed, 0, 0, 0),
-    ('a-machine-with-no-systemctl', no_systemctl_at_all, 0, 0, 1),
-    ('a-login-shell-already-set', login_shell_already_zsh, 0, 0, 0),
-    ('a-login-shell-still-bash', login_shell_still_bash, 1, 0, 0),
+ROWS: list[tuple[str, Arrange, str, Lands]] = [
+    ('an-absent-managed-file', absent_file, 'file/zdotdir', Lands.PENDING),
+    ('a-managed-file-already-carrying-the-line', file_with_the_line, 'file/zdotdir', Lands.MATCHED),
+    ('a-managed-file-missing-the-line', file_without_the_line, 'file/zdotdir', Lands.PENDING),
+    ('a-wholly-owned-file-that-matches', file_matching_exactly, 'file/autologin', Lands.MATCHED),
+    ('a-wholly-owned-file-that-differs', file_differing, 'file/autologin', Lands.PENDING),
+    ('a-group-the-account-is-already-in', already_in_the_group, 'group/docker', Lands.MATCHED),
+    ('a-group-the-account-is-not-in', not_in_the_group, 'group/docker', Lands.PENDING),
+    ('a-group-this-entry-creates', group_this_entry_creates, 'group/docker', Lands.PENDING),
+    ('a-group-nothing-here-creates', group_nothing_here_creates, 'group/docker', Lands.ATTENTION),
+    ('a-unit-already-enabled', unit_already_enabled, 'systemd/docker.socket', Lands.MATCHED),
+    ('a-unit-that-should-be-enabled', unit_not_enabled, 'systemd/docker.socket', Lands.PENDING),
+    ('a-unit-wanted-off-and-not-installed', unit_wanted_off_and_not_installed, 'systemd/gdm', Lands.MATCHED),
+    ('a-machine-with-no-systemctl', no_systemctl_at_all, 'systemd/docker.socket', Lands.UNMEASURED),
+    ('a-login-shell-already-set', login_shell_already_zsh, 'login-shell/zsh', Lands.MATCHED),
+    ('a-login-shell-still-bash', login_shell_still_bash, 'login-shell/zsh', Lands.PENDING),
 ]
-"""Each `system.yml` kind in each state it can be in, with what the two read verbs
-owe it: how many items `apply` would change, how many need a person, and how many
-nothing could measure."""
+"""Each `system.yml` kind in each state it can be in, named by the address it
+produces and by which of the four sets that address belongs in.
+
+The address is the point. Every case here declares exactly one row and is about
+what happens to it, and each was written as a count of the whole resource instead —
+which held only while nothing else in the walk had anything to say. It stopped
+holding the moment the package managers were shadowed, and the failure that
+followed read `assert 3 == 2`.
+"""
 
 
-@pytest.mark.parametrize(('arrange', 'pending', 'attention', 'unmeasured'), [row[1:] for row in ROWS], ids=[row[0] for row in ROWS])
+@pytest.mark.parametrize(('arrange', 'address', 'expected'), [row[1:] for row in ROWS], ids=[row[0] for row in ROWS])
 def test_a_configuration_row_is_drift_for_plan_and_a_finding_only_for_check(
     sandbox: Sandbox,
     cli: Callable[..., Invocation],
     monkeypatch: pytest.MonkeyPatch,
     arrange: Arrange,
-    pending: int,
-    attention: int,
-    unmeasured: int,
+    address: str,
+    expected: Lands,
 ) -> None:
     """One measurement, two questions, and the exit codes that separate them.
 
@@ -315,29 +376,36 @@ def test_a_configuration_row_is_drift_for_plan_and_a_finding_only_for_check(
     planned = cli('system', 'plan', '--json')
     checked = cli('system', 'check', '--json')
 
-    assert (planned.document['pending'], planned.document['attention'], planned.document['unmeasured']) == (pending, attention, unmeasured)
-    assert planned.exit_code == (ExitCode.DRIFT if pending else ExitCode.CONVERGED)
-    assert checked.exit_code == (ExitCode.ISSUE if attention else ExitCode.CONVERGED)
+    assert lands(planned, checked, address) is expected
+    assert planned.exit_code == (ExitCode.DRIFT if expected is Lands.PENDING else ExitCode.CONVERGED)
+    assert checked.exit_code == (ExitCode.ISSUE if expected is Lands.ATTENTION else ExitCode.CONVERGED)
     assert checked.exit_code != ExitCode.DRIFT, 'check answers 0 or 3 and never 1'
 
 
-@pytest.mark.parametrize(('arrange', 'pending'), [(row[1], row[2]) for row in ROWS], ids=[row[0] for row in ROWS])
+@pytest.mark.parametrize(('arrange', 'address', 'expected'), [row[1:] for row in ROWS], ids=[row[0] for row in ROWS])
 def test_every_configuration_repair_declares_that_it_needs_root(
     sandbox: Sandbox,
     cli: Callable[..., Invocation],
     monkeypatch: pytest.MonkeyPatch,
     arrange: Arrange,
-    pending: int,
+    address: str,
+    expected: Lands,
 ) -> None:
-    """Counted before anything runs, which is the half of the front-loaded design
-    that survived acquiring root at the write. A plan that is complete can say how
-    many of its findings will stop for a password; nothing here prompts to find out.
+    """Declared before anything runs, which is the half of the front-loaded design
+    that survived acquiring root at the write. A plan that is complete can say
+    which of its findings will stop for a password; nothing here prompts to find out.
+
+    Asserted on the row rather than on the resource's total. The two agreed only
+    because every mechanism this file declares escalates — so a row that did not
+    would have moved a count that named nothing, and `needs_root: false` below is
+    exactly that row.
     """
     arrange(sandbox, monkeypatch)
 
     planned = cli('system', 'plan', '--json')
+    escalating = [change['item'] for change in resource(planned, 'system')['findings'] if change['privileged']]
 
-    assert planned.document['privileged'] == pending
+    assert escalating == ([address] if expected is Lands.PENDING else [])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -372,16 +440,22 @@ def test_a_configuration_row_reaches_the_plan_only_where_its_narrowing_holds(
     planned: bool,
 ) -> None:
     """Each key narrows independently and all of them must hold, so a row wanting
-    two conditions says both rather than needing a combined axis."""
+    two conditions says both rather than needing a combined axis.
+
+    The declared package is pending on every one of these, so the plan is never
+    empty and the question is only whether `file/probe` is beside it. This asked
+    whether the total was two or one, which is the same question until something
+    else in the walk moves — and on the CI runner the real `apt` answered where the
+    desk's had nothing to say, making it three and two, and the failure named
+    neither row.
+    """
     sandbox.declare(packages=CURL, manifest={**LINUX, **manifest})
     sandbox.shadow('dpkg-query', NOTHING_INSTALLED)
     declare_system(sandbox, {'managed_files': [{'name': 'probe', 'path': str(sandbox.root / 'probe'), 'content': 'x\n', **narrowing}]})
 
     ran = cli('system', 'plan', '--json')
 
-    # The declared package is pending on every one of these, so the row under test
-    # is the difference between one pending item and two.
-    assert ran.document['pending'] == (2 if planned else 1)
+    assert ('file/probe' in named(ran, 'findings')) is planned
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -562,8 +636,9 @@ def test_narrowing_to_the_package_section_drops_the_manager_row_beside_it(sandbo
     whole = cli('system', 'plan', '--json')
     narrowed = cli('system', 'plan', '--source', 'system_packages', '--json')
 
-    assert (whole.document['pending'], whole.document['unmeasured']) == (1, 1)
-    assert (narrowed.document['pending'], narrowed.document['unmeasured']) == (1, 0)
+    assert named(whole, 'findings') == named(narrowed, 'findings') == ['system/curl']
+    assert 'manager/apt' in named(whole, 'others')
+    assert 'manager/apt' not in named(narrowed, 'others')
 
 
 def test_narrowing_the_write_to_the_package_section_leaves_the_configuration_alone(
@@ -693,10 +768,11 @@ def test_the_package_summary_does_not_claim_an_install_the_counts_contradict(san
     a_machine_missing_its_declared_package(sandbox)
 
     ran = cli('system', 'check', '--json')
+    detail = resource(ran, 'system')['detail']
 
-    assert ran.document['pending'] == 1, 'the machine is missing the one package it declares'
-    assert '0 of 1 declared system packages installed' in ran.document['detail']
-    assert 'all 1 declared system packages installed' not in ran.document['detail']
+    assert 'system/curl' in named(ran, 'others'), 'the machine is missing the one package it declares'
+    assert '0 of 1 declared system packages installed' in detail
+    assert 'all 1 declared system packages installed' not in detail
 
 
 def test_the_configuration_summary_counts_only_the_rows_that_match(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -710,8 +786,8 @@ def test_the_configuration_summary_counts_only_the_rows_that_match(sandbox: Sand
 
     ran = cli('system', 'check', '--json')
 
-    assert ran.document['pending'] == 1, 'the declared file does not exist'
-    assert '0 configuration item(s) match' in ran.document['detail']
+    assert 'file/autologin' in named(ran, 'others'), 'the declared file does not exist'
+    assert '0 configuration item(s) match' in resource(ran, 'system')['detail']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -737,9 +813,10 @@ def test_a_row_declaring_it_needs_no_root_is_planned_as_needing_none(sandbox: Sa
     a_file_declaring_it_needs_no_root(sandbox)
 
     ran = cli('system', 'plan', '--json')
+    (change,) = resource(ran, 'system')['findings']
 
-    assert ran.document['pending'] == 1
-    assert ran.document['privileged'] == 0
+    assert change['item'] == 'file/thing'
+    assert change['privileged'] is False
 
 
 def test_a_row_declaring_it_needs_no_root_is_written_without_root(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

@@ -92,6 +92,14 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
+PackageOption = resources.PackageOption
+"""Shared with the resource leaves rather than declared twice.
+
+The help text has to read identically wherever it appears — `commands/__init__.py`
+says so for the verbosity pair — and this one carries a completion callback as
+well, so a second declaration is a second thing to keep in step. `--owner` above
+is the older duplicate and is left alone; copying it would be copying the defect."""
+
 VerboseOption = commands.VerboseOption
 QuietOption = commands.QuietOption
 
@@ -126,6 +134,7 @@ def plan(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
+    package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
@@ -141,8 +150,9 @@ def plan(
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
 
-    `--owner` is `apply`'s and means the same, because a scope the write accepts
-    and the read cannot express is not a narrower preview but no preview at all.
+    `--owner` and `--package` are `apply`'s and mean the same, because a scope the
+    write accepts and the read cannot express is not a narrower preview but no
+    preview at all.
 
     **`--offline` is the same argument, arrived at the hard way.** It was ruled
     write-only on the grounds that it describes *how* to write, and that reading was
@@ -162,7 +172,14 @@ def plan(
     sinks.open_log(identity)
     lens = reconcile.Lens.PLAN
     walked = reconcile.survey(
-        lens, skipped, machine, refresh=refresh, owner=owner, offline=offline, report=None if as_json else render_result
+        lens,
+        skipped,
+        machine,
+        refresh=refresh,
+        owner=owner,
+        packages=frozenset(package or ()),
+        offline=offline,
+        report=None if as_json else render_result,
     )
     results = walked.results
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
@@ -226,10 +243,11 @@ def check(
     status.record(results, checked_machine, when)
 
     if as_json:
-        # The same document `status.json` holds, not a bare array of the same
-        # rows. Both cross machines — the work box's check output is what decides
-        # what the fleet builds it — and a reader cannot tell two shapes apart
-        # without a version to test.
+        # Not what `status.record` just wrote. That file accrues unasked in a
+        # synced directory and holds the verdicts alone; this is composed because
+        # a caller asked and is kept by them, so it carries the items behind every
+        # count — which is what makes the work box's check output worth handing to
+        # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:
         render_verdict(results, lens)
@@ -248,6 +266,8 @@ def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
+    package: list[str] = PackageOption,
+    reinstall: bool = resources.ReinstallOption,
     offline: bool = OfflineOption,
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
     as_json: bool = JsonOption,
@@ -258,6 +278,12 @@ def apply_command(
 
     `plan` plus acting on what it found — the same walk with the last step run,
     which is why there is no `--dry-run` for this to be the opposite of.
+
+    `--reinstall` is the one flag here that adds work rather than narrowing it:
+    everything this run covers is installed again whatever measuring concludes.
+    Bare it is the whole machine, which is expensive and not dangerous; `--package`
+    is how a caller spends less, and the two compose because scope and force are
+    different questions.
 
     `--through` is a ceiling on the ordering rather than a selection of parts:
     `--skip` and the resource sub-apps say *which mechanisms*, and neither can say
@@ -286,13 +312,24 @@ def apply_command(
             machine=machine,
             offline=offline,
             owner=owner,
-            # `offline` unconditionally, `through` only when given. The first decides
-            # what every currency verdict in the record was measured against, so a
-            # record that omits it cannot be read back. Measured 2026-08-13 on the
-            # work box: an `apply --offline` recorded `{"skip": []}` and nothing in it
-            # said the bundle was the upstream. The second is a ceiling and its absence
-            # means "all the way", which the missing key already says.
-            flags={'skip': sorted(skipped), 'offline': offline, **({'through': through} if through else {})},
+            packages=frozenset(package or ()),
+            reinstall=reinstall,
+            # `skip`, `offline`, `package` and `reinstall` unconditionally; `through`
+            # only when given. The first four each decide how a row in the record is
+            # read back — what the currency verdicts were measured against, which
+            # part of the machine this run covered, and why an installed item was
+            # stale — so a record omitting one is a record that cannot be read.
+            # Measured 2026-08-13 on the work box: an `apply --offline` recorded
+            # `{"skip": []}` and nothing in it said the bundle was the upstream. The
+            # ceiling is different: its absence means "all the way", which the
+            # missing key already says.
+            flags={
+                'skip': sorted(skipped),
+                'offline': offline,
+                'package': sorted(package or ()),
+                'reinstall': reinstall,
+                **({'through': through} if through else {}),
+            },
             as_json=as_json,
         )
     )

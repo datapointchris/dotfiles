@@ -116,13 +116,18 @@ class Observed:
     the bundle does not carry it and never will until a newer one is built.
     """
 
-    reinstall: frozenset[str] = frozenset()
-    """Entry names this run was told to install again whatever their state.
+    reinstall: bool = False
+    """Whether this run was told to install its items again whatever their state.
 
     A session fact carried into the observation because `diff` is handed the plan
     and the observation and nothing else — the same route `from_bundle` takes. It
     is the one input here that is not a measurement, which is why it produces a
     Change with its own detail rather than being folded into a verdict.
+
+    A boolean rather than the entry names it used to be: which entries is
+    `--package`'s question, and by the time a plan reaches here it has already been
+    answered — the plan holds what the run covers, so a name test here would be
+    the narrowing decided a second time and free to disagree with the first.
     """
 
     @property
@@ -194,10 +199,14 @@ class PackagesResource:
         `--reinstall` is that something even when nothing was measurable.
 
         It is checked ahead of currency rather than after, because the tools worth
-        naming are the ones currency cannot speak for: a half-written binary, a
-        version string nobody can parse, an entry whose section is not asked about
-        upstream at all. Running the comparison first would answer "current" and
-        drop the item the caller explicitly asked for.
+        reinstalling are the ones currency cannot speak for: a half-written binary,
+        a version string nobody can parse, an entry whose section is not asked
+        about upstream at all. Running the comparison first would answer "current"
+        and drop the item the caller explicitly asked for.
+
+        It reaches every item the plan still holds, which is the whole of what
+        `--reinstall` covers: `--package` has already narrowed that plan, so this
+        asks nothing about scope.
         """
         changes = []
         for item in plan.for_resource(NAME):
@@ -216,7 +225,7 @@ class PackagesResource:
                         desired=item,
                     )
                 )
-            elif item.name in observed.reinstall:
+            elif observed.reinstall:
                 repair = repair_for(item, Verdict.STALE, observed.met)
                 changes.append(
                     Change(
@@ -225,7 +234,7 @@ class PackagesResource:
                         item.address,
                         Verdict.STALE,
                         repair=repair,
-                        detail='named by --reinstall, so it is installed again whatever it reports',
+                        detail='--reinstall, so it is installed again whatever it reports',
                         advice=advice_for(item, repair),
                         desired=item,
                         observed=observed.reported.get(item.address, ''),

@@ -1136,25 +1136,43 @@ def for_section(section: str) -> Provider | None:
     return BY_SECTION.get(section)
 
 
-def serving(section: str) -> tuple[Provider, ...]:
-    """Every provider a run narrowed to one section needs, not only the one that installs it.
+def required_by(section: str) -> tuple[Provider, ...]:
+    """Every provider whose items must exist before this section's can install.
 
     `needed_by` already declares that a toolchain is wanted *because* a section
     resolved, and `resolve` honours it — the plan for a machine with
-    `cargo_packages` carries `rust-toolchain` too. A selection that dropped it
-    honoured the declaration in the plan and ignored it in the run, so
-    `packages apply --source cargo_packages` on a machine without rustup failed
-    with `cargo binstall bat exited 127: cargo: No such file or directory` rather
-    than installing what it needed.
+    `cargo_packages` carries `rust-toolchain` too.
 
     Derived from the registry rather than listed, so a section that grows a
-    prerequisite gets it here the moment `needed_by` says so.
+    prerequisite gets it here the moment `needed_by` says so. Separate from
+    `serving` below because two callers want different halves of one answer: a
+    `--source` selects the section *and* what it needs, while a `--package`
+    narrowing keeps the entry it named and everything the named entry needs — the
+    section's own provider is what the two disagree about.
+
+    `''` is refused, for the reason `BY_SECTION` refuses to index it. Two
+    different facts are spelled that way and matching them against each other
+    equates them: a row belonging to no section — a manager upgrade, a plugin
+    sync — would be answered with every runtime gated by no section. `--package
+    tpm` named the tmux sync, whose section is '', and resolved a plan carrying
+    the uv runtime, which `apply` then installed. `serving` never met this
+    because `BY_SECTION.get('')` is None and it returns before asking.
+    """
+    if not section:
+        return ()
+    return tuple(other for other in PROVIDERS if isinstance(other, ToolchainProvider) and other.needed_by == section)
+
+
+def serving(section: str) -> tuple[Provider, ...]:
+    """Every provider a run narrowed to one section needs, not only the one that installs it.
+
+    A selection that dropped the prerequisite honoured the declaration in the plan
+    and ignored it in the run, so `packages apply --source cargo_packages` on a
+    machine without rustup failed with `cargo binstall bat exited 127: cargo: No
+    such file or directory` rather than installing what it needed.
     """
     provider = BY_SECTION.get(section)
-    if provider is None:
-        return ()
-    required = tuple(other for other in PROVIDERS if isinstance(other, ToolchainProvider) and other.needed_by == section)
-    return (*required, provider)
+    return () if provider is None else (*required_by(section), provider)
 
 
 def for_resource(resource: str) -> tuple[Provider, ...]:

@@ -58,6 +58,7 @@ from dotfiles.output import render_row
 from dotfiles.output import retract
 from dotfiles.output import warn
 from dotfiles.providers import bundle
+from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
@@ -181,13 +182,23 @@ class ResourceResult:
     watching the run rather than the one reading it back.
     """
 
-    def as_dict(self) -> dict[str, str | int | float]:
-        """Counts beside the sentence, not only inside it.
+    def as_counts(self) -> dict[str, object]:
+        """This resource's verdict and how much of it stands where. No items.
 
         `detail` is prose and will be reworded; the numbers are the answer. A
         reader that had to parse "3 item(s) differ" back out of English was
         reading a rendering rather than a result — and so was every test that
         asserted on it.
+
+        The half a reader wants when the artifact accrues rather than being asked
+        for: `status.state` writes one of these per resource on every scheduled
+        check into a directory the fleet syncs, and what it needs to answer is
+        whether this machine is converged, not which hundred and seventy-eight
+        symlinks were fine. `as_dict` below is the other half's home.
+
+        `lens` is held back from both. The document names the verb once, at the
+        top, and it is the same fact — a row repeating it would be a second place
+        for the two to disagree.
         """
         return {
             'address': self.address,
@@ -198,6 +209,37 @@ class ResourceResult:
             'unmeasured': self.unmeasured,
             'privileged': self.privileged,
             'seconds': round(self.seconds, 3),
+        }
+
+    def as_dict(self) -> dict[str, object]:
+        """The counts, and the rows behind every one of them.
+
+        **The counts alone were the same defect one level down.** They say how
+        many, and every question anyone actually has is *which* — so a caller
+        wanting the row it narrowed to had nothing to name it by and asserted on
+        the total instead. That works until a second row moves, and then the
+        failure reads `assert 3 == 2` and names neither. `standards/cli-design.md`
+        § "A fact on screen is reachable through some machine door" is the
+        property: `render_result` prints all four of these lists, so all four are
+        reachable here.
+
+        **All four unconditionally, because `--json` is not a rendering.** The
+        screen shows `findings` always, and `others` and `examined` below a size
+        threshold or under `-v`; `-v` is how loud a run is, and a document that
+        varied with it would make the flag decide what a machine was told rather
+        than what a person was shown.
+
+        Reached only through `status.document`, which a caller asks for and keeps.
+        The rows are what makes that document worth handing to another machine and
+        what makes it 45 times the size of the counts, so the artifact written
+        unasked by every scheduled check takes `as_counts` instead.
+        """
+        return {
+            **self.as_counts(),
+            'findings': [change.as_dict() for change in self.findings],
+            'others': [change.as_dict() for change in self.others],
+            'examined': [row.as_dict() for row in self.examined],
+            'invalid': [{'section': section, 'message': message} for section, message in self.invalid],
         }
 
 
@@ -395,8 +437,19 @@ class NothingSelected(refusal.Refusal):
     code = ExitCode.USAGE
 
 
-def for_owner(selection: engine.Selection, providers: frozenset[str], owner: str | None) -> engine.Selection:
-    """This selection, narrowed to the providers that owner's entries need.
+class Unreachable(refusal.Refusal):
+    """A `--package` name that this run will not walk.
+
+    `USAGE` for the reason `NothingSelected` is: retyping the command is what
+    fixes it, and a run that accepted the name would report success for work it
+    never looked at.
+    """
+
+    code = ExitCode.USAGE
+
+
+def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, packages: frozenset[str]) -> engine.Selection:
+    """This selection, reduced to the providers the narrowed plan still needs.
 
     One function for all three doors, because they had come apart on exactly the
     case it refuses. `apply` said `nothing selected for owner X` and exited 2 while
@@ -404,15 +457,62 @@ def for_owner(selection: engine.Selection, providers: frozenset[str], owner: str
     misspelt `--owner` answered `nothing to change` about a machine nothing had
     measured, which is the one thing `plan` must never say.
 
-    Why the narrowing has to reach the walk and not only the plan is
+    Both narrowings arrive already applied to `plan`, which is what lets one
+    reduction serve them: `--owner` and `--package` each answer "which entries",
+    and the selection only has to follow the providers those entries left. Why the
+    narrowing has to reach the walk and not only the plan is
     `Selection.narrowed_to`'s, and stays there.
+
+    Only `--owner` can empty this today: a `--package` name is refused above
+    unless the selection already covers it, so its provider survives by
+    construction. The refusal still names whichever narrowing was given rather
+    than assuming that, because a message whose accuracy rests on an argument
+    elsewhere in the file is a message that goes wrong quietly.
     """
-    if owner is None:
+    confirm_reachable(packages, plan, selection)
+    if owner is None and not packages:
         return selection
-    narrowed = selection.narrowed_to(providers)
-    if not narrowed.resources:
-        raise NothingSelected(f'nothing selected for owner {owner}')
-    return narrowed
+    narrowed_selection = selection.narrowed_to(plan.providers)
+    if not narrowed_selection.resources:
+        asked = f'owner {owner}' if owner else ', '.join(sorted(packages))
+        raise NothingSelected(f'nothing selected for {asked}')
+    return narrowed_selection
+
+
+def confirm_reachable(packages: frozenset[str], plan: Plan, selection: engine.Selection) -> None:
+    """Refuse a `--package` name this run does not reach, before anything is measured.
+
+    Against the *selection* rather than against `plan.items` alone, which answers
+    for the whole machine and so speaks about a run nobody asked for.
+    `apply_machine` already refused a name the machine does not declare, and said
+    why: one "would otherwise be accepted and then match nothing, which reads as a
+    reinstall that ran and did nothing". A name the machine declares and the
+    narrowing excludes has exactly that shape — `packages apply --reinstall uv`
+    named the toolchain, passed against the whole plan, and converged having
+    reinstalled nothing.
+
+    Two ways to miss and two sentences, because the fixes differ: a name nothing
+    declares is retyped, and a name outside the narrowing is reached by widening
+    or by naming the address that carries it. The second sentence names that
+    address, which is the one thing a caller cannot work out from the refusal.
+
+    `plan` is already narrowed to these names, so the entries it still holds are
+    the named ones and their prerequisites — which is why a name absent from it is
+    a name nothing declares.
+    """
+    if not packages:
+        return
+    if undeclared := packages - {item.name for item in plan.items}:
+        raise Unreachable(
+            f'nothing this machine declares is named {", ".join(sorted(undeclared))}',
+            advice="'dotfiles packages list' names what it could be",
+        )
+    if unreached := packages - {item.name for item in plan.items if selection.covers(item)}:
+        carries = sorted({addressed(item.resource, item.provider) for item in plan.items if item.name in unreached})
+        raise Unreachable(
+            f'this run does not reach {", ".join(sorted(unreached))}',
+            advice=f'{", ".join(carries)} installs it — narrow to that, or drop the narrowing',
+        )
 
 
 @dataclass(frozen=True)
@@ -437,6 +537,7 @@ def survey(
     *,
     refresh: bool = False,
     owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
     offline: bool = False,
     report: Callable[[ResourceResult], None] | None = None,
 ) -> Surveyed:
@@ -448,9 +549,9 @@ def survey(
     leaves the resource in the walk with that provider gone, so the row is still
     there and is honest about the narrower thing it measured.
 
-    `owner` goes through the same `for_owner` `apply_machine` does, refusal
-    included: a rehearsal that walked an owner the write refuses is a rehearsal of
-    a run that never happens.
+    `owner` and `packages` go through the same `narrowed` `apply_machine` does,
+    refusals included: a rehearsal that walked a scope the write refuses is a
+    rehearsal of a run that never happens.
 
     **Reported a resource at a time, not once at the end.** The walk is a generator
     and materialising it is what made a slow resource indistinguishable from a hung
@@ -469,8 +570,8 @@ def survey(
     """
     if offline:
         report_bundle(offline_bundle.describe())
-    session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, offline=offline)
-    selection = for_owner(engine.Selection.excluding(skip), session.plan.providers, owner)
+    session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
+    selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
 
     results: list[ResourceResult] = []
 
@@ -711,8 +812,9 @@ def apply_machine(
     *,
     offline: bool = False,
     owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
     force: bool = False,
-    reinstall: frozenset[str] = frozenset(),
+    reinstall: bool = False,
     flags: dict | None = None,
     as_json: bool = False,
 ) -> ExitCode:
@@ -746,7 +848,9 @@ def apply_machine(
         return ExitCode.ISSUE
 
     try:
-        session = Session.resolve(machine, offline=offline, owner=owner, refresh=not offline, force=force, reinstall=reinstall)
+        session = Session.resolve(
+            machine, offline=offline, owner=owner, packages=packages, refresh=not offline, force=force, reinstall=reinstall
+        )
         plan = session.plan
     except (NoMachine, machines.NoSuchMachine) as unnamed:
         warn(str(unnamed))
@@ -755,13 +859,21 @@ def apply_machine(
         warn(str(refused))
         return ExitCode.ISSUE
 
-    # Against the resolved plan rather than the whole declaration: a name this
-    # machine does not subscribe to would otherwise be accepted and then match
-    # nothing, which reads as a reinstall that ran and did nothing.
-    if unplanned := reinstall - {item.name for item in plan.items}:
-        warn(f'nothing this machine declares is named {", ".join(sorted(unplanned))}')
-        hint("'dotfiles packages list' names what it could be")
+    if not selection.resources:
+        warn('nothing selected')
         return ExitCode.USAGE
+
+    # Every scope refusal above the run record, and none below it: a run refused
+    # for how it was typed never measured this machine, and filing one under it
+    # puts a record in `dotfiles report` that answers for nothing.
+    try:
+        selection = narrowed(selection, plan, owner, packages)
+    except (NothingSelected, Unreachable) as refused:
+        # Reported here rather than raised past this frame, so the function keeps
+        # answering in exit codes. A run that completed and found drift is a
+        # result, and one idiom covering both would make the ordinary outcome an
+        # exception.
+        return refusal.report(refused)
 
     # Here rather than at the top, because a run is filed under the machine it
     # ran on and nothing before this knows which that is. `began` is carried down
@@ -769,19 +881,6 @@ def apply_machine(
     # whether or not there was a name to file it under yet.
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
-
-    if not selection.resources:
-        warn('nothing selected')
-        return ExitCode.USAGE
-
-    try:
-        selection = for_owner(selection, plan.providers, owner)
-    except NothingSelected as refused:
-        # Reported here rather than raised past this frame, so the function keeps
-        # answering in exit codes. A run that completed and found drift is a
-        # result, and one idiom covering both would make the ordinary outcome an
-        # exception.
-        return refusal.report(refused)
 
     if offline and (unstaged := _stage_bundle()):
         return unstaged

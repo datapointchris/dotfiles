@@ -11,6 +11,7 @@ remaining work is legible as a list of callers.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Sequence
 
 import typer
@@ -22,6 +23,7 @@ from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
+from dotfiles import status
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import resolved
@@ -41,7 +43,7 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-def _report(results: Sequence[reconcile.ResourceResult], as_json: bool) -> None:
+def _report(results: Sequence[reconcile.ResourceResult], as_json: bool, *, machine: str, when: dt.datetime, lens: reconcile.Lens) -> None:
     """Print every resource the walk covered, and exit with the code all of them earn.
 
     Every one, because a selection can hold more than the noun it was typed under:
@@ -50,14 +52,16 @@ def _report(results: Sequence[reconcile.ResourceResult], as_json: bool) -> None:
     toolchain too. Reporting the first row alone exited 0 on a machine whose
     rehearsed write would have had a whole toolchain to install.
 
-    One object for one row and an array for several. A reader tells those apart on
-    the first byte, which two objects carrying different keys could not — and the
-    single row is what every call but a cross-resource `--source` produces, so
-    wrapping the common case in the versioned whole-machine document to spare the
-    branch would rewrite the contract for a shape that arrives from one flag.
+    **The same document the composite verbs emit, for one row and for nine.** This
+    door answered a bare object for a single result and an array for several, so
+    the very case above — the one that had already been fixed on the exit code —
+    changed the shape of stdout underneath a reader who had asked for a package
+    section. Which of the two arrived was decided by a `needed_by` edge in the
+    declaration, which is not a fact any caller of this door holds. `status.document`
+    says the rest.
     """
     if as_json:
-        emit_json(results[0].as_dict() if len(results) == 1 else [result.as_dict() for result in results])
+        emit_json(status.document(results, machine, when, verb=str(lens)))
     else:
         for result in results:
             render_result(result)
@@ -72,6 +76,7 @@ def _survey(
     *,
     source: str | None = None,
     owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
     offline: bool = False,
 ) -> None:
     """One noun's selection, through the same engine and the same fold the composite uses.
@@ -93,20 +98,29 @@ def _survey(
     stages nothing — a read verb that unpacked a tarball would be writing. Sharing
     `reconcile.report_bundle` rather than wording it here is what stops this door and
     the composite one describing the same bundle two ways.
+
+    The document is stamped from `dt.datetime.now` rather than from a `runs.begin`,
+    because this door deliberately files no run: the two read verbs are what a shell
+    prompt and a timer call, and a record per prompt is what filled the state
+    directory with thousands of empty files once already. The machine is the
+    resolved name for the reason the composite `check` takes it that way — under the
+    timer nothing is passed and nothing is exported, and the document once said the
+    machine was `""` while the walk had correctly read `~/.env`.
     """
+    began = dt.datetime.now(dt.UTC)
     if offline:
         reconcile.report_bundle(offline_bundle.describe())
-    session = _session(machine, owner=owner, offline=offline)
-    selection = reconcile.for_owner(engine.Selection.of(*_selected(address, source)), session.plan.providers, owner)
-    _report(reconcile.fold(engine.assess(session, selection), lens), as_json)
+    session = _session(machine, owner=owner, packages=packages, offline=offline)
+    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
+    _report(reconcile.fold(engine.assess(session, selection), lens), as_json, machine=session.machine_name, when=began, lens=lens)
 
 
-def _session(machine: str | None, owner: str | None = None, offline: bool = False) -> Session:
-    return resolved(machine, owner, offline=offline)
+def _session(machine: str | None, owner: str | None = None, packages: frozenset[str] = frozenset(), offline: bool = False) -> Session:
+    return resolved(machine, owner, packages=packages, offline=offline)
 
 
-def _selected(resource: str, source: str | None) -> tuple[str, ...]:
-    """The addresses one `--source` names, or the whole resource when it names none.
+def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
+    """The addresses this noun's narrowings name, plus whatever they cannot install without.
 
     A section names a provider and an address is `resource/provider`, so `--source`
     is a set of addresses rather than the intersection of a section against a
@@ -118,11 +132,22 @@ def _selected(resource: str, source: str | None) -> tuple[str, ...]:
     cannot install. The addresses carry their own resources, which is what lets a
     `packages` selection reach `toolchains` without naming it here.
 
-    Narrowing *below* a section — one tool out of `github_releases` — is still the
-    resolver's, and still absent.
+    **`--package` reaches the same runtime through the same relation**, one row
+    below `--source`. Which *entries* are wanted is the resolver's — an address is
+    as fine as a selection gets, so a single entry has none of its own and is
+    filtered out of the plan instead — but what those entries *need* is a
+    selection question, and leaving it here made the two flags disagree about one
+    machine: `packages plan --source cargo_packages` walked the Rust toolchain and
+    `packages plan --package ripgrep` did not, so the second rehearsed a run that
+    would have failed with `cargo: No such file or directory`.
+
+    `reconcile.narrowed` reduces the selection afterwards to whatever providers
+    the narrowed plan left, so a prerequisite offered here and not wanted costs a
+    row nobody sees.
     """
+    needed = _prerequisites(packages)
     if not source:
-        return (resource,)
+        return (resource, *needed)
     provider = registry.for_section(source)
     if provider is None:
         error(f'nothing installs {source}: {registry.UNPROVIDED.get(source, "no provider claims that section")}')
@@ -130,7 +155,33 @@ def _selected(resource: str, source: str | None) -> tuple[str, ...]:
     if provider.resource != resource:
         error(f'{source} belongs to {provider.resource}, not {resource}')
         raise typer.Exit(ExitCode.USAGE)
-    return tuple(addressed(one.resource, one.name) for one in registry.serving(source))
+    return (*(addressed(one.resource, one.name) for one in registry.serving(source)), *needed)
+
+
+def _prerequisites(packages: frozenset[str]) -> tuple[str, ...]:
+    """The addresses the entries `--package` named cannot install without.
+
+    Resolved from the declaration rather than from the plan, because this decides
+    the walk and the walk is chosen before a machine is resolved on the `apply`
+    path. It is the same relation the resolver reads — an entry's section, and
+    what `registry.required_by` says that section needs — so the plan and the run
+    cannot come to different conclusions about one entry.
+
+    A name the declaration does not carry contributes nothing and is not refused
+    here. `reconcile.confirm_reachable` is where a name is measured against the
+    run, against the *selection* rather than the whole plan, and it is what keeps
+    `packages apply --package uv` a usage error naming the toolchain that carries
+    it: a runtime is gated by no section, so naming one widens nothing.
+    """
+    if not packages:
+        return ()
+
+    from dotfiles import catalog
+
+    declared = catalog.load()
+    sections = {entry.section for entry in declared.all_entries() if entry.name in packages}
+    wanted = (addressed(one.resource, one.name) for section in sections for one in registry.required_by(section))
+    return tuple(dict.fromkeys(wanted))
 
 
 def _within(resource: str) -> tuple[str, ...]:
@@ -159,7 +210,7 @@ def available_sources() -> list[str]:
 
 
 def declared_names() -> list[str]:
-    """Every entry name `--reinstall` could take, from the parsed declaration.
+    """Every entry name `--package` could take, from the parsed declaration.
 
     Through the catalog rather than the YAML that `available_sources` reads,
     because two of the sections nest their rows under editorial category keys and
@@ -197,12 +248,13 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
-ReinstallOption = typer.Option(
+PackageOption = typer.Option(
     None,
-    '--reinstall',
-    help='Install this entry again whatever measuring it concludes (repeatable)',
+    '--package',
+    help='Only this declared entry, and whatever it needs to install (repeatable)',
     autocompletion=declared_names,
 )
+ReinstallOption = typer.Option(False, '--reinstall', help='Install again whatever measuring concludes, for everything this run covers')
 
 
 def _apply_resource(
@@ -212,8 +264,9 @@ def _apply_resource(
     source: str | None,
     owner: str | None = None,
     *,
+    packages: frozenset[str] = frozenset(),
     force: bool = False,
-    reinstall: frozenset[str] = frozenset(),
+    reinstall: bool = False,
     as_json: bool = False,
 ) -> None:
     """Converge this resource, or just what `--source` names and what that needs.
@@ -223,12 +276,14 @@ def _apply_resource(
     so a preview and the write it rehearses cannot disagree about what a section
     covers.
 
-    `--owner` narrows the plan rather than the selection, because ownership is a
-    fact about the entries. It arrived to serve `update.sh --mine` against
-    `install/phases.sh`'s hand-maintained `owner_aware` column; the column and the
-    script are gone and the flag is the survivor.
+    `--owner` and `--package` narrow the plan rather than the selection, because
+    which entries are wanted is a fact about the entries. What a named entry
+    *needs* is not, which is why `_selected` takes the names too. `--owner` arrived
+    to serve `update.sh --mine` against `install/phases.sh`'s hand-maintained
+    `owner_aware` column; the column and the script are gone and the flag is the
+    survivor.
     """
-    addresses = _selected(resource, source)
+    addresses = _selected(resource, source, packages)
 
     raise typer.Exit(
         reconcile.apply_machine(
@@ -236,10 +291,15 @@ def _apply_resource(
             machine=machine,
             offline=offline,
             owner=owner,
+            packages=packages,
             force=force,
             reinstall=reinstall,
             as_json=as_json,
-            flags={'selection': ', '.join(addresses)},
+            # The same three the composite records, for the same reason: a row is
+            # read back against what the run covered and why it was actionable.
+            # `selection` is this door's `skip`, spelled as the addresses the noun
+            # and its `--source` resolved to.
+            flags={'selection': ', '.join(addresses), 'package': sorted(packages), 'reinstall': reinstall},
         )
     )
 
@@ -252,6 +312,7 @@ def packages_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
     owner: str = OwnerOption,
+    package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -259,12 +320,21 @@ def packages_plan(
 ) -> None:
     """Show which declared packages `apply` would install or upgrade.
 
-    `--source` and `--owner` are `apply`'s, and mean the same here: this is the
-    rehearsal of the write those two narrow, which is the one case where a preview
-    is worth most.
+    `--source`, `--owner` and `--package` are `apply`'s, and mean the same here:
+    this is the rehearsal of the write those three narrow, which is the one case
+    where a preview is worth most.
     """
     verbosity(verbose, quiet)
-    _survey('packages', machine, reconcile.Lens.PLAN, as_json, source=source, owner=owner, offline=offline)
+    _survey(
+        'packages',
+        machine,
+        reconcile.Lens.PLAN,
+        as_json,
+        source=source,
+        owner=owner,
+        packages=frozenset(package or ()),
+        offline=offline,
+    )
 
 
 @packages_app.command('check')
@@ -293,25 +363,39 @@ def packages_apply(
     source: str = SourceOption,
     offline: bool = OfflineOption,
     owner: str = OwnerOption,
-    reinstall: list[str] = ReinstallOption,
+    package: list[str] = PackageOption,
+    reinstall: bool = ReinstallOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
     """Install every declared package that is missing.
 
-    `--reinstall NAME` additionally installs one that is already there, from
+    `--reinstall` additionally installs the ones that are already there, from
     whichever source this run has — the proxy and the release API online, the
     staged bundle under `--offline`. It is the answer to a tool whose installed
     state is wrong in a way measuring cannot see: bytes that are corrupt, a
     version string nothing can parse, or a section nobody asks upstream about.
+
+    It covers whatever the run covers, so `--package NAME` is how one tool is
+    repaired without re-downloading every release: the two are scope and force,
+    and they compose rather than one carrying the other.
 
     A version that is merely *wrong* needs none of this. `apply` measures currency
     against a live figure and repairs what differs in either direction, so a tool
     stranded above its own newest release is already this command's to fix.
     """
     verbosity(verbose, quiet)
-    _apply_resource('packages', machine, offline, source, owner, reinstall=frozenset(reinstall or ()), as_json=as_json)
+    _apply_resource(
+        'packages',
+        machine,
+        offline,
+        source,
+        owner,
+        packages=frozenset(package or ()),
+        reinstall=reinstall,
+        as_json=as_json,
+    )
 
 
 @packages_app.command('list')
@@ -555,6 +639,7 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 def system_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
+    package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -562,11 +647,12 @@ def system_plan(
 ) -> None:
     """Show which system packages and configuration rows `apply` would change.
 
-    `--source` is `apply`'s, and the narrow write it names — the package payload
-    without the configuration rows — is the one most worth rehearsing here.
+    `--source` and `--package` are `apply`'s, and the narrow write they name — the
+    package payload without the configuration rows, or one row out of it — is the
+    one most worth rehearsing here.
     """
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source, offline=offline)
+    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source, packages=frozenset(package or ()), offline=offline)
 
 
 @system_app.command('check')
@@ -587,6 +673,7 @@ def system_apply(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     source: str = SourceOption,
+    package: list[str] = PackageOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -597,9 +684,10 @@ def system_apply(
     sections beside its configuration rows. `--source system_packages` is the
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
+    `--package` is the same act one row further down.
     """
     verbosity(verbose, quiet)
-    _apply_resource('system', machine, offline, source, as_json=as_json)
+    _apply_resource('system', machine, offline, source, packages=frozenset(package or ()), as_json=as_json)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

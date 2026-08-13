@@ -214,7 +214,20 @@ class Change:
         """
         return self.drifted and not self.unmeasured and not self.actionable
 
-    def as_dict(self) -> dict[str, str]:
+    def as_dict(self) -> dict[str, str | bool]:
+        """One decided unit of work, as the interchange document carries it.
+
+        `privileged` is emitted as a JSON boolean. It was `str(...).lower()` while
+        nothing shipped this method, and a homogeneous `dict[str, str]` is a shape
+        rather than an answer: `'false'` is truthy in every language a consumer
+        would read this from, so the one field that exists to warn about a password
+        would have promised one on every row.
+
+        `desired` is deliberately absent. `__post_init__` pins `item` to
+        `desired.address`, so the plan address is already here, and the rest of a
+        `DesiredItem` is the declaration — which `dotfiles machines show --json`
+        answers for in full, against the whole machine rather than one walk.
+        """
         return {
             'resource': self.resource,
             'stage': self.stage.name.lower(),
@@ -225,7 +238,7 @@ class Change:
             'advice': self.advice,
             'observed': self.observed,
             'source': self.source,
-            'privileged': str(self.privileged).lower(),
+            'privileged': self.privileged,
         }
 
 
@@ -327,10 +340,17 @@ class Examined:
     different command against a different source.
 
     Not a `Change`. A change is a unit of work and travels into the run record,
-    the exit code and `apply`; this travels no further than the screen, which is
-    why it rides on `Summary` and is dropped by `sinks.record` the way `Started`
-    is. Recording it would put a hundred and seventy-three matched symlinks into
-    every run record for a fact the summary already states as a count.
+    the exit code and `apply`; this reaches none of the three, which is why it
+    rides on `Summary` and is dropped by `sinks.record` the way `Started` is.
+    Recording it would put a hundred and seventy-three matched symlinks into every
+    run record for a fact the summary already states as a count.
+
+    It does reach `--json`, and the artefacts differ in the way that decides it: a
+    run record and `status.json` are written by every run and kept, so what they
+    hold accrues, while the interchange document is composed for one run on
+    request and kept by whoever asked. The count is the right answer for the first
+    two and not for the third, where the whole point is that a machine which
+    cannot reach the network hands another machine what it measured.
     """
 
     item: str
@@ -347,6 +367,22 @@ class Examined:
     whole resource could not express, and which is the honest reading of it
     anyway. Empty for a resource that measures one kind, which is most of them.
     """
+
+    def as_dict(self) -> dict[str, str]:
+        """This row's own three fields, and deliberately not a `Change`'s.
+
+        The screen dresses one of these as a matched change so a section reads as
+        a single list, and the document does not: `repair`, `advice`, `observed`
+        and `privileged` are answers a `diff` gave about work, and nobody decided
+        any of them here. Filling them in to share a shape would put a second
+        classification beside the one `sift` made, which is the disagreement
+        `Change.declined` exists to have ruled out.
+
+        `group` has no counterpart on a `Change` and rides here alone, which is the
+        other half of the same argument: a resource splits what it merely holds
+        into kinds and never splits what differs.
+        """
+        return {'item': self.item, 'detail': self.detail, 'group': self.group}
 
 
 class Observation(Protocol):

@@ -63,13 +63,40 @@ def results(*verdicts: tuple[str, Verdict]) -> list[ResourceResult]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_document_is_versioned(state: Path) -> None:
-    """It crosses machines — the work box's output decides what the fleet builds
-    into its next bundle — and an unversioned interchange document breaks
-    silently when the two ends disagree about its shape."""
+def test_the_status_file_is_versioned_and_still_at_one(state: Path) -> None:
+    """It crosses machines — the fleet syncs the state directory — and an
+    unversioned file breaks silently when the two ends disagree about its shape.
+
+    A literal, and this is the one place a literal is the check rather than a copy.
+    Asserted against `status.STATE_VERSION` this re-reads the constant the writer
+    wrote with, so it fails only if the key disappears — a bump that should not
+    have happened, a revert, and a shape change with no bump all pass. Editing the
+    number here is the deliberate second act that makes a bump a decision.
+
+    Still 1 while the interchange document is 2, which is the arrangement being
+    pinned: two artifacts, two numbers, and one moving is exactly what the other's
+    must not follow. The document's own literal is in `tests/matrix/test_composite.py`.
+    """
     status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
 
     assert json.loads(paths.STATUS_FILE.read_text())['version'] == 1
+
+
+def test_the_status_file_carries_each_resource_verdict_and_no_item_rows(state: Path) -> None:
+    """What `record` writes is the state, not the document `--json` composes.
+
+    This file is written unasked by every check into a directory the fleet syncs,
+    and what it exists to answer is where each resource stands. Writing the
+    document here put every examined item in it — 127 KB against 2.8 KB for the
+    same walk, several times a day, on every box — for rows no reader of this file
+    had asked for.
+    """
+    status.record(results(('system', ResourceVerdict.ISSUE)), 'box', WHEN)
+    (row,) = json.loads(paths.STATUS_FILE.read_text())['resources']
+
+    assert row['address'] == 'system'
+    assert row['verdict'] == 'issue'
+    assert set(row) == {'address', 'verdict', 'detail', 'pending', 'attention', 'unmeasured', 'privileged', 'seconds'}
 
 
 def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) -> None:

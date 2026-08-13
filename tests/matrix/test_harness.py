@@ -24,6 +24,7 @@ from matrix.harness import LAZYGIT
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
+from matrix.harness import resource
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The synthetic repo is what resolves
@@ -110,7 +111,7 @@ def test_a_declared_release_that_is_absent_is_what_plan_reports(sandbox: Sandbox
     ran = cli('packages', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.DRIFT
-    assert ran.document['pending'] == 1
+    assert [change['item'] for change in resource(ran, 'packages')['findings']] == ['ghrelease/lazygit']
 
 
 def test_an_installed_tool_at_the_newest_release_reports_nothing_pending(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -123,7 +124,7 @@ def test_an_installed_tool_at_the_newest_release_reports_nothing_pending(sandbox
     ran = cli('packages', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['pending'] == 0
+    assert resource(ran, 'packages')['findings'] == []
 
 
 def test_an_installed_tool_behind_the_release_cache_is_pending(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -134,7 +135,7 @@ def test_an_installed_tool_behind_the_release_cache_is_pending(sandbox: Sandbox,
     ran = cli('packages', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.DRIFT
-    assert ran.document['pending'] == 1
+    assert [change['item'] for change in resource(ran, 'packages')['findings']] == ['ghrelease/lazygit']
 
 
 def test_an_expired_cache_entry_is_unmeasured_rather_than_current(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -146,7 +147,7 @@ def test_an_expired_cache_entry_is_unmeasured_rather_than_current(sandbox: Sandb
 
     ran = cli('packages', 'plan', '--json')
 
-    assert ran.document['unmeasured'] == 1
+    assert resource(ran, 'packages')['unmeasured'] == 1
 
 
 def test_a_usage_error_is_told_apart_from_a_finding(cli: Callable[..., Invocation]) -> None:

@@ -1,14 +1,22 @@
 """What a `check` leaves behind for something that is not watching it.
 
-Two files, and the split is the whole design. `status.json` is the document —
-every resource's verdict and when it was measured — for a caller that wants to
-reason about the machine. `nudge` is one line of human text, present only when
-there is something a person should act on.
+Two files, and the split is the whole design. `status.json` is the state — every
+resource's verdict, its counts, and when it was measured — for a caller that
+wants to reason about the machine. `nudge` is one line of human text, present
+only when there is something a person should act on.
 
 Two rather than one because of who reads them. The nudge is read by a **shell
 snippet at every prompt**, and JSON parsing in zsh means `jq`, which means a
 subprocess per shell — the exact cost `.zshrc`'s completion caching exists to
 avoid. A one-line file is `$(<file)`, which zsh reads with no fork at all.
+
+**The state file is not the `--json` document, and the difference is who asked.**
+`document` below is composed for one run because a caller asked for it, and that
+caller keeps it — so it carries every item behind every count, which is what makes
+it worth handing to a machine that can reach the network. This file is written by
+every check, wanted by nobody in particular, and lands in `$XDG_STATE_HOME`, which
+is a Syncthing folder for the fleet. Written as the document it was 127 KB against
+2.8 KB for the same walk, several times a day, on every box.
 
 **It fires on Issues, not on drift.** Drift is the normal state of a machine
 between applies; nudging about it every prompt would train the nudge away inside
@@ -57,7 +65,7 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
     """
     try:
         paths.STATE_HOME.mkdir(parents=True, exist_ok=True)
-        paths.STATUS_FILE.write_text(json.dumps(document(results, machine, when), indent=2) + '\n')
+        paths.STATUS_FILE.write_text(json.dumps(state(results, machine, when), indent=2) + '\n')
         _write_nudge(results)
     except OSError as unwritable:
         warn(f'could not record this check under {paths.STATE_HOME}: {unwritable}')
@@ -66,25 +74,99 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
     return True
 
 
+STATE_VERSION = 1
+"""Which generation of the status *file* this is.
+
+Its own number because it is its own artifact. The two were one while `record`
+wrote what `document` composed, and that is precisely how the file came to carry
+the rows: a bump made for the interchange document reached a file that had no
+reader for them. A shared number cannot say that one of two shapes moved, which
+is the whole job a version has.
+
+Still 1, and honestly so — this file holds exactly what it held before the
+document grew rows, so anything already reading one keeps working. `runs.SCHEMA`
+is the same arrangement for the run record: one artifact, one number, moved when
+that artifact changes and never because a neighbour did.
+"""
+
+VERSION = 2
+"""Which generation of the interchange document this is.
+
+**2 carries the rows; 1 carried only the counts per resource.** Additive per row,
+and additive is not the test. The test is whether a consumer can *state* which
+generation it needs, and a bundle builder that reads `findings` needs 2 — under 1
+it would have to infer the answer from whether a key is present, decide what an
+absent one means, and get "this machine found nothing" for a machine that named
+twelve missing tools. Inferring a generation from the keys in front of you is the
+unversioned failure this number exists to end, not a substitute for it.
+
+The same bump covers the resource-scoped doors, which emitted a bare
+`ResourceResult` or a list of them and now emit this. That half is not additive at
+all: `dotfiles packages plan --json` used to answer an object with `pending` at the
+top and now answers one with `resources` at the top.
+"""
+
+
 def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check') -> dict[str, object]:
-    """The versioned interchange document.
+    """The versioned interchange document, from every read door.
 
     Versioned because it crosses machines: the work box's output is what decides
     what the fleet builds into its next offline bundle, and an unversioned
-    document breaks silently when the two ends disagree about its shape.
+    document breaks silently when the two ends disagree about its shape. What each
+    generation holds, and why this one is 2, is `VERSION`'s own.
 
     `verb` names which question produced it. `plan` and `check` measure the same
     machine and keep different findings, so two documents of one shape would
     otherwise be indistinguishable — and the bundle builder wants the plan's rows
-    while the nudge wants the check's.
+    rather than the check's.
+
+    **One shape for one resource and for nine.** The resource-scoped verbs emitted
+    a bare row for a single result and an array for several, on the argument that a
+    reader tells those apart on the first byte. It can, and having to is the defect:
+    a consumer of `packages plan --json` branches on a count it did not choose,
+    because `--source` reaching a runtime through `needed_by` silently makes the
+    walk two resources wide, and a two-resource walk then dropped a row through the
+    door that takes an object. `standards/cli-design.md` § "A fact on screen is
+    reachable through some machine door" states the property — one run reads
+    identically through either door — and § "Two front doors on one dataset spell
+    everything identically" is why a second spelling has nothing to distinguish.
     """
     return {
-        'version': 1,
+        'version': VERSION,
         'verb': verb,
         'machine': machine,
         'checked': when.isoformat(),
         'verdict': _worst(results),
         'resources': [result.as_dict() for result in results],
+    }
+
+
+def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> dict[str, object]:
+    """What `status.json` holds: every resource's verdict, its counts, and the time.
+
+    The same header as `document` and `as_counts` in place of `as_dict`, which is
+    the whole difference. Both cross machines and both are versioned; what they
+    are not is one artifact, and writing the document here made every scheduled
+    check push 127 KB into a Syncthing folder to answer a question — is this
+    machine converged — that 2.8 KB answers.
+
+    A caller wanting the items asks for them: `dotfiles check --json > wherever`
+    is the composed-on-request half, and it is the same walk through a door that
+    knows somebody is holding the result. `standards/cli-design.md` § "A fact on
+    screen is reachable through some machine door" is satisfied by that door and
+    asks nothing of this file.
+
+    `verb` is here and constant, because only `check` writes this file — kept so
+    the file says what produced it rather than leaving a reader to infer it from
+    the filename.
+    """
+    return {
+        'version': STATE_VERSION,
+        'verb': 'check',
+        'machine': machine,
+        'checked': when.isoformat(),
+        'verdict': _worst(results),
+        'resources': [result.as_counts() for result in results],
     }
 
 

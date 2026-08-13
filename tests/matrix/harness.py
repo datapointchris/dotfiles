@@ -614,6 +614,44 @@ class Invocation:
         return self.stdout + self.stderr
 
 
+def addresses(ran: Invocation) -> list[str]:
+    """Which resources a read verb's document says it walked, in walk order."""
+    return [found['address'] for found in _rows(ran)]
+
+
+def resource(ran: Invocation, address: str) -> dict[str, Any]:
+    """One resource's row out of a read verb's document, by name.
+
+    Here rather than in one module because every read door emits the same
+    document now — `dotfiles plan --json` and `dotfiles system plan --json` differ
+    in what they walked and not in what they answer with. A per-module accessor
+    would be the same lookup written nine times, and the module that wrote it
+    slightly differently is the one whose assertion stops meaning what it says.
+
+    Raises rather than answering `None` for an address the document does not hold.
+    A test asking about a resource the run never walked is asserting against a
+    machine it did not build, and `None['pending']` names the wrong thing.
+    """
+    rows = {found['address']: found for found in _rows(ran)}
+    if address not in rows:
+        raise AssertionError(f'{" ".join(ran.argv)} walked {sorted(rows)}, which does not include {address}')
+    return rows[address]
+
+
+def _rows(ran: Invocation) -> list[dict[str, Any]]:
+    """The resource rows of a read verb's document, or a failure naming the run.
+
+    `document` is None wherever stdout carried none, so indexing it directly
+    raises `'NoneType' object is not subscriptable` — which names neither the
+    command nor the missing `--json`. Same argument `resource` makes above about
+    an address the document does not hold, one step earlier: the run that emitted
+    no document at all is the commoner mistake of the two.
+    """
+    if ran.document is None:
+        raise AssertionError(f'{" ".join(ran.argv)} put no document on stdout')
+    return ran.document['resources']
+
+
 def invoke(*argv: str, catch_exceptions: bool = False) -> Invocation:
     """Run one command against whatever the sandbox has built, and record all of it.
 

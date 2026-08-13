@@ -28,13 +28,13 @@ def planned(declaration: catalog.Catalog, name: str, **kwargs: Any) -> resolve.P
     return resolve.resolve(declaration, machines.load(name, REPO_ROOT), **kwargs)
 
 
-def synthetic(tmp_path: Path, packages: dict[str, Any], manifest: dict[str, Any]) -> resolve.Plan:
+def synthetic(tmp_path: Path, declared: dict[str, Any], manifest: dict[str, Any], **narrowing: Any) -> resolve.Plan:
     install = tmp_path / 'install'
-    (install / 'manifests').mkdir(parents=True)
-    (install / 'packages.yml').write_text(yaml.safe_dump(packages, sort_keys=False))
+    (install / 'manifests').mkdir(parents=True, exist_ok=True)
+    (install / 'packages.yml').write_text(yaml.safe_dump(declared, sort_keys=False))
     (install / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
     (install / 'flags.yml').write_text('{}')
-    return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path))
+    return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), **narrowing)
 
 
 def test_wsl_plans_none_of_the_docker_packages_its_apt_repo_does_not_carry(declaration: catalog.Catalog) -> None:
@@ -310,6 +310,69 @@ def test_owner_narrowing_drops_the_runtimes_whole(tmp_path: Path) -> None:
     plan = resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), owner='go-task')
 
     assert [item.address for item in plan.items] == ['go/task']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# --package
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+TPM = {'tmux_plugins': {'tpm': {'repo': 'https://github.com/tmux-plugins/tpm', 'install_dir': '~/.config/tmux/plugins/tpm'}}}
+WANTS_TPM = {**WANTS_GO, 'tmux_plugins': True}
+
+
+def narrowed_to(
+    tmp_path: Path, packages: frozenset[str], declared: dict[str, Any] | None = None, manifest: dict[str, Any] | None = None
+) -> list[str]:
+    plan = synthetic(tmp_path, declared or {'runtimes': RUNTIMES, **GO_TOOL}, manifest or WANTS_GO, packages=packages)
+    return [item.address for item in plan.items]
+
+
+def test_a_package_narrowing_keeps_the_runtime_that_entry_needs(tmp_path: Path) -> None:
+    """`cli-design.md` § "A narrowing flag reaches the whole run, or what it cannot
+    reach is left out of the run": narrowing to `task` and dropping Go asks for
+    something that cannot install, which is the failure `--source` already had and
+    `registry.required_by` already answers.
+
+    `uv` goes, and it is the pair that makes this a rule rather than a
+    coincidence — it is a runtime too, and nothing named needs it.
+    """
+    assert narrowed_to(tmp_path, frozenset({'task'})) == ['go-toolchain/go', 'go/task']
+
+
+def test_a_package_narrowing_can_name_the_runtime_itself(tmp_path: Path) -> None:
+    """A runtime is a planned entry like any other, so naming one narrows to it.
+
+    The tool it exists for is not dragged in with it: `needed_by` points from the
+    section to the runtime, and reading it backwards would make a runtime name mean
+    every tool that uses it.
+    """
+    assert narrowed_to(tmp_path, frozenset({'uv'})) == ['uv-toolchain/uv']
+
+
+def test_an_empty_set_is_not_the_absence_of_the_flag(tmp_path: Path) -> None:
+    """None is every entry and an empty set is none of them, which is why
+    `Session.plan` passes `self.packages or None` rather than the field itself. A
+    frozenset that meant both would make an unpassed flag resolve an empty plan and
+    report a converged machine."""
+    assert narrowed_to(tmp_path, frozenset()) == []
+    assert narrowed_to(tmp_path, frozenset({'task', 'uv'})) == ['go-toolchain/go', 'uv-toolchain/uv', 'go/task']
+
+
+def test_a_package_naming_a_row_that_belongs_to_no_section_keeps_no_runtime(tmp_path: Path) -> None:
+    """`''` is two different facts, and matching them against each other equated them.
+
+    A manager upgrade, a plugin sync and a toolchain gated by nothing all carry
+    `''` — the first two as the section they were planned from, the last as the
+    section that would gate it. So `required_by('')` answered "every ungated
+    runtime", and narrowing to the tmux sync resolved a plan carrying uv, which
+    `apply` then installed on a run that named a tmux plugin.
+
+    Both rows named `tpm` stay: the clone and the sync are two items with one
+    name, and a narrowing that kept one of them would be dropping work the other
+    half of the pair depends on.
+    """
+    assert narrowed_to(tmp_path, frozenset({'tpm'}), {'runtimes': RUNTIMES, **GO_TOOL, **TPM}, WANTS_TPM) == ['tpm/tpm', 'tmux-sync/tpm']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

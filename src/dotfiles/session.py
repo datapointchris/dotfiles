@@ -109,14 +109,34 @@ class Session:
     already had dotfiles of its own.
     """
 
-    reinstall: frozenset[str] = frozenset()
-    """Entry names to install again whatever measuring them concludes.
+    packages: frozenset[str] = frozenset()
+    """Entry names this run is narrowed to, or empty for every one this machine declares.
 
-    Named rather than a blanket `--force`, because "install everything again"
-    is not a thing anyone wants: it is a fresh `go install` of every Go tool and a
-    re-download of every release to repair one binary. The names are validated
-    against the plan before the walk starts, so a typo is a usage error rather
-    than a run that quietly reinstalls nothing.
+    `--package`, and it narrows the plan exactly as `owner` above does — plus the
+    prerequisites the named entries need, which `resolve._named` keeps. Empty
+    means unnarrowed, so the field spells "no narrowing" the same way `owner`'s
+    None does rather than as a plan with nothing in it.
+
+    The names are measured against the walk's `Selection` before anything runs, so
+    a name outside the narrowing is a usage error rather than a run that reports a
+    converged machine having looked at none of it.
+    """
+
+    reinstall: bool = False
+    """Install again whatever measuring concludes, for everything this run covers.
+
+    A boolean rather than a set of names, because scope is `--package`'s job:
+    `cli-design.md` § "Scope is structural: the argument's presence selects it,
+    never a flag" is what a name-taking `--reinstall` broke, welding one narrowing
+    onto a force flag that every resource could otherwise honour. What survives as
+    a flag is § "A flag never decides whether the command writes"'s test — what
+    parameterises the work the same way whichever verb runs it — and a boolean
+    passes it where `--reinstall lazygit` does not.
+
+    Bare, it therefore means everything the run covers. That is expensive rather
+    than dangerous — a fresh `go install` of every Go tool and a re-download of
+    every release — which is exactly the case § "Scope is structural" sanctions a
+    set-wide act for, and `--package` is how a caller spends less.
 
     Distinct from `force` above, which authorises overwriting a *foreign* file and
     decides nothing about what is installed.
@@ -161,7 +181,7 @@ class Session:
 
     @functools.cached_property
     def plan(self) -> resolver.Plan:
-        return resolver.resolve(self.catalog, self.machine, owner=self.owner)
+        return resolver.resolve(self.catalog, self.machine, owner=self.owner, packages=self.packages or None)
 
     @functools.cached_property
     def inventories(self) -> evidence.Inventories:

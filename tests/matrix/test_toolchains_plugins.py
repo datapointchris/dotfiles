@@ -37,6 +37,7 @@ from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
 from matrix.harness import git_checkout
+from matrix.harness import resource
 from matrix.harness import unwrapped
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,29 +217,33 @@ def test_declaring_a_runtime_in_the_catalog_puts_it_on_no_machine(
 
     assert reported(listed, RUNTIME_ROWS) == {'uv-toolchain/uv'}
     assert counted.exit_code == ExitCode.CONVERGED
-    assert counted.document['pending'] == 0
+    assert resource(counted, 'toolchains')['findings'] == []
 
 
 def test_a_machine_that_needs_a_runtime_it_lacks_is_drift_rather_than_an_issue(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """The pair the two verbs exist to separate, and the counts are not the split.
+    """The pair the two verbs exist to separate, and the pending item is not the split.
 
-    Both documents report one pending item, because `pending` is what the walk
+    Both documents carry the same pending row, because `pending` is what the walk
     measured rather than what this verb keeps. The verdict is where the two part:
     a missing runtime is what `apply` is for, so `check` — which runs unattended on
     a timer — reports the machine as having nothing wrong with it and exits 0.
+
+    `plan` keeps the row as a finding and `check` files the same address under
+    `others`, which is how one measurement answers both questions without either
+    verb adopting the other's.
     """
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
 
-    planned = cli('toolchains', 'plan', '--json')
-    checked = cli('toolchains', 'check', '--json')
+    planned = resource(cli('toolchains', 'plan', '--json'), 'toolchains')
+    checked = resource(cli('toolchains', 'check', '--json'), 'toolchains')
 
-    assert (planned.exit_code, planned.document['verdict']) == (ExitCode.DRIFT, 'drift')
-    assert (checked.exit_code, checked.document['verdict']) == (ExitCode.CONVERGED, 'converged')
-    assert planned.document['pending'] == checked.document['pending'] == 1
-    assert planned.document['attention'] == checked.document['attention'] == 0
+    assert (planned['verdict'], checked['verdict']) == ('drift', 'converged')
+    assert [change['item'] for change in planned['findings']] == ['rust-toolchain/rust']
+    assert [change['item'] for change in checked['others']] == ['rust-toolchain/rust']
+    assert checked['findings'] == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,13 +252,13 @@ def test_a_machine_that_needs_a_runtime_it_lacks_is_drift_rather_than_an_issue(
 
 
 @pytest.mark.parametrize(
-    ('reports', 'code', 'pending', 'unmeasured'),
+    ('reports', 'code', 'verdict'),
     [
-        (None, ExitCode.DRIFT, 1, 0),
-        ('rustc 1.89.0 (90b35a623 2026-01-14)', ExitCode.DRIFT, 1, 0),
-        ('rustc 1.90.0 (90b35a623 2026-01-14)', ExitCode.CONVERGED, 0, 0),
-        ('rustc 1.97.1 (8bab26f4f 2026-07-14)', ExitCode.CONVERGED, 0, 0),
-        ('rustc: unknown build', ExitCode.CONVERGED, 0, 1),
+        (None, ExitCode.DRIFT, 'missing'),
+        ('rustc 1.89.0 (90b35a623 2026-01-14)', ExitCode.DRIFT, 'stale'),
+        ('rustc 1.90.0 (90b35a623 2026-01-14)', ExitCode.CONVERGED, ''),
+        ('rustc 1.97.1 (8bab26f4f 2026-07-14)', ExitCode.CONVERGED, ''),
+        ('rustc: unknown build', ExitCode.CONVERGED, 'unknown'),
     ],
     ids=['absent', 'below-the-floor', 'at-the-floor', 'above-the-floor', 'no-version-in-it'],
 )
@@ -263,22 +268,27 @@ def test_a_runtime_is_measured_against_the_floor_its_catalog_row_declares(
     cli: Callable[..., Invocation],
     reports: str | None,
     code: ExitCode,
-    pending: int,
-    unmeasured: int,
+    verdict: str,
 ) -> None:
     """A version that cannot be read is unmeasured rather than stale, and neither
     verb's answer: reporting it as too old would be a guess dressed as a
-    measurement, and it must not move an exit code."""
+    measurement, and it must not move an exit code.
+
+    The verdict on the rust row rather than the resource's counts, which said
+    "one item is pending" where the two rows that produce one are `missing` and
+    `stale` — a distinction this table exists to draw and the count erased.
+    """
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
     if reports is not None:
         sandbox.installed('rustc', reports)
 
     ran = cli('toolchains', 'plan', '--json')
+    row = resource(ran, 'toolchains')
+    rust = {change['item']: change['verdict'] for change in [*row['findings'], *row['others']]}
 
     assert ran.exit_code == code
-    assert ran.document['pending'] == pending
-    assert ran.document['unmeasured'] == unmeasured
+    assert rust == ({'rust-toolchain/rust': verdict} if verdict else {})
 
 
 def test_a_runtime_on_path_that_will_not_answer_counts_as_absent(
@@ -332,9 +342,10 @@ def test_the_runtimes_that_install_under_home_ask_for_no_password(
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep'], 'npm_globals': ['bash-language-server']})
 
     ran = cli('toolchains', 'plan', '--json')
+    findings = resource(ran, 'toolchains')['findings']
 
-    assert ran.document['pending'] == 2
-    assert ran.document['privileged'] == 0
+    assert sorted(change['item'] for change in findings) == ['node-toolchain/node', 'rust-toolchain/rust']
+    assert [change['item'] for change in findings if change['privileged']] == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -554,7 +565,8 @@ def test_an_uncloned_plugin_is_drift_and_a_plugin_installed_by_something_else_is
     advised = cli('plugins', 'check')
 
     assert planned.exit_code == ExitCode.DRIFT
-    assert (planned.document['pending'], planned.document['attention']) == (1, 1)
+    assert [change['item'] for change in resource(planned, 'plugins')['findings']] == ['yazi-plugin/git']
+    assert [change['item'] for change in resource(checked, 'plugins')['findings']] == ['shell-plugin/forgit']
     assert checked.exit_code == ExitCode.ISSUE
     assert 'present, but not a git checkout, so nothing here can update it' in unwrapped(advised.stderr)
     assert 'and re-run to clone it, or drop the entry if another tool owns this plugin' in unwrapped(advised.stderr)
@@ -758,25 +770,71 @@ def test_narrowing_a_read_to_a_section_reports_the_runtime_it_selected(
     assert ran.exit_code == ExitCode.DRIFT
 
 
+def test_narrowing_to_one_entry_keeps_the_runtime_that_entry_needs(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """`--package` is the same narrowing one row below `--source`, so it answers
+    `needed_by` the same way.
+
+    `cli-design.md` § "A narrowing flag reaches the whole run, or what it cannot
+    reach is left out of the run" is what decides it: a run narrowed to `ripgrep`
+    on a machine with no rustup would otherwise plan a cargo install and nothing
+    that can perform one. `resolve._named` keeps the runtime because
+    `registry.required_by` says the section needs it, and the frame the guard
+    raises from is what says the runtime was reached rather than the release cache.
+    """
+    only_the_sandbox_on_path(sandbox, monkeypatch)
+    sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
+    sandbox.installed('rg', 'ripgrep 14.1.1')
+
+    with pytest.raises(ReachedTheNetwork) as reached:
+        cli('apply', '--package', 'ripgrep')
+
+    assert reached_through(reached, 'toolchain.py')
+
+
+def test_narrowing_to_one_entry_drops_the_runtimes_nothing_named_needs(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """The other half: only the *required* runtime survives, not every runtime.
+
+    `go` is `needed_by: go_tools` and this run names a cargo package, so a
+    narrowing that kept it would be widening under another name — and the four
+    toolchain rows are exactly where that would go unnoticed, since `plan` prints
+    them whenever anything pulls them in.
+
+    Through the composite verb, because that is the door with no resource scope of
+    its own: `toolchains plan --package ripgrep` names an entry that noun does not
+    reach and is refused, which is a different assertion and one the selection
+    matrix already makes.
+    """
+    only_the_sandbox_on_path(sandbox, monkeypatch)
+    sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep'], 'go_tools': ['task']})
+
+    ran = cli('plan', '--package', 'ripgrep')
+
+    assert reported(ran, RUNTIME_ROWS) == {'rust-toolchain/rust'}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The verbs themselves
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('resource', ['toolchains', 'plugins'], ids=['toolchains', 'plugins'])
+@pytest.mark.parametrize('address', ['toolchains', 'plugins'], ids=['toolchains', 'plugins'])
 @pytest.mark.parametrize('verb', ['plan', 'check'], ids=['plan', 'check'])
 def test_a_read_verb_puts_its_document_alone_on_stdout(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation], resource: str, verb: str
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation], address: str, verb: str
 ) -> None:
     """The machine contract both nouns share. One stray diagnostic on stdout turns a
     `--json` parse into a syntax error rather than the warning it was."""
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep'], 'shell_plugins': True})
 
-    ran = cli(resource, verb, '--json')
+    ran = cli(address, verb, '--json')
 
     assert ran.document is not None
-    assert ran.document['address'] == resource
+    assert resource(ran, address)['address'] == address
     assert ran.stdout.strip().startswith('{')
 
 

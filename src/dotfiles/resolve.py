@@ -283,7 +283,13 @@ class Plan:
         return tuple(item for item in self.items if item.section == section)
 
 
-def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: str | None = None) -> Plan:
+def resolve(
+    declaration: catalog.Catalog,
+    machine: machines.Machine,
+    *,
+    owner: str | None = None,
+    packages: frozenset[str] | None = None,
+) -> Plan:
     """Everything `machine` should have, in the order it has to be installed.
 
     One loop over the registry, and the registry's order *is* the two passes: a
@@ -296,6 +302,10 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
     restatement of a fact already in the data; a provider whose entries all belong
     to someone else resolves to zero items and is skipped because it is empty, not
     because a column said so.
+
+    `packages` is `--package`, and it narrows the same way. None is every entry;
+    an empty set would be a plan with nothing in it, which is a different
+    instruction and one no caller means by not passing the flag.
 
     The registry is imported here rather than at module scope because its
     providers build the item types defined in this file — asking for it at import
@@ -312,7 +322,33 @@ def resolve(declaration: catalog.Catalog, machine: machines.Machine, *, owner: s
             planned = tuple(item for item in planned if item.entry is not None and item.entry.owner == owner)
         items.extend(planned)
 
+    if packages is not None:
+        items = _named(items, packages)
     return Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
+
+
+def _named(items: list[DesiredItem], packages: frozenset[str]) -> list[DesiredItem]:
+    """The entries `--package` named, plus whatever those entries need to install.
+
+    The prerequisite is kept rather than dropped, per `cli-design.md` § "A
+    narrowing flag reaches the whole run, or what it cannot reach is left out of
+    the run": `--package task` on a machine with no Go plans the Go runtime too,
+    because a narrowing that left it out would ask for something that cannot
+    install. `registry.required_by` is where that relation is declared, so a
+    section growing a prerequisite gets one here without this function changing.
+
+    After the loop rather than inside it, unlike `owner`. Three providers derive
+    their rows from what earlier ones planned — the manager upgrades, the plugin
+    syncs, the toolchains — and filtering them incrementally would let a row
+    survive on the strength of an entry this narrowing is about to drop. Filtering
+    the finished list asks one question of every row: was it named, or is it
+    required by something that was.
+    """
+    from dotfiles import registry
+
+    sections = {item.section for item in items if item.name in packages}
+    prerequisites = {provider.name for section in sections for provider in registry.required_by(section)}
+    return [item for item in items if item.name in packages or item.provider in prerequisites]
 
 
 def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed: set[str]) -> bool:

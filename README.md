@@ -135,6 +135,7 @@ theme apply rose-pine                   # Apply theme across terminal apps
 dotfiles update                         # Pull the repo and repair what the pull invalidated
 task update                             # Alias for install: apply is the update
 dotfiles apply --owner datapointchris   # Only my own tools
+dotfiles apply --reinstall --package lazygit  # Install one entry again, whatever it measures
 
 # Symlinks
 dotfiles symlinks apply                 # Deploy configs (also: plan, check, show, unlink)

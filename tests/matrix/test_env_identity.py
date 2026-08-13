@@ -32,6 +32,7 @@ from dotfiles.vocabulary import ExitCode
 from matrix import harness
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
+from matrix.harness import resource
 from matrix.harness import unwrapped
 
 Run = Callable[..., Invocation]
@@ -207,10 +208,10 @@ def test_plan_and_check_keep_opposite_halves_of_one_env_measurement(
     arrange(sandbox)
 
     ran = cli('env', 'plan', '--json')
-    assert (ran.exit_code, ran.document['pending']) == (planned, pending)
+    assert (ran.exit_code, resource(ran, 'env')['pending']) == (planned, pending)
 
     ran = cli('env', 'check', '--json')
-    assert (ran.exit_code, ran.document['attention']) == (checked, attention)
+    assert (ran.exit_code, resource(ran, 'env')['attention']) == (checked, attention)
 
 
 @pytest.mark.parametrize(
@@ -391,7 +392,7 @@ def test_check_reports_the_identity_and_the_arrangement_around_it(
 
     ran = cli('identity', 'check', '--json')
 
-    assert (ran.exit_code, ran.document['attention']) == (checked, attention)
+    assert (ran.exit_code, resource(ran, 'identity')['attention']) == (checked, attention)
 
 
 @pytest.mark.parametrize(('arrange', 'checked', 'attention'), IDENTITY_STATES)
@@ -411,8 +412,8 @@ def test_plan_is_converged_whatever_is_wrong_with_the_identity(
     ran = cli('identity', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['pending'] == 0
-    assert ran.document['attention'] == attention
+    assert resource(ran, 'identity')['pending'] == 0
+    assert resource(ran, 'identity')['attention'] == attention
 
 
 def test_the_converged_row_names_the_identity_and_how_many_files_produced_it(sandbox: Sandbox, cli: Run) -> None:
@@ -422,7 +423,7 @@ def test_the_converged_row_names_the_identity_and_how_many_files_produced_it(san
 
     ran = cli('identity', 'check', '--json')
 
-    assert ran.document['detail'] == 'Synthetic Box <box@example.invalid>, from 3 config file(s)'
+    assert resource(ran, 'identity')['detail'] == 'Synthetic Box <box@example.invalid>, from 3 config file(s)'
 
 
 def test_a_home_gitconfig_takes_the_whole_chain_out_of_the_reading(sandbox: Sandbox, cli: Run) -> None:
@@ -503,17 +504,39 @@ def test_show_refuses_rather_than_reporting_a_machine_with_no_configuration(sand
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-RESOURCE_RESULT_KEYS = {'address', 'verdict', 'detail', 'pending', 'attention', 'unmeasured', 'privileged', 'seconds'}
+DOCUMENT_KEYS = {'version', 'verb', 'machine', 'checked', 'verdict', 'resources'}
+"""The interchange document's own fields, which a resource-scoped read emits too.
+
+Whole-set equality, because the wrapping is the claim: this door answered a bare
+`ResourceResult` for one result and an array of them for several, so a consumer
+branched on a shape decided by a `needed_by` edge it never saw.
+"""
+
+RESOURCE_RESULT_KEYS = {
+    'address',
+    'verdict',
+    'detail',
+    'findings',
+    'others',
+    'examined',
+    'invalid',
+    'pending',
+    'attention',
+    'unmeasured',
+    'privileged',
+    'seconds',
+}
 """Every field `ResourceResult.as_dict` emits.
 
 Asserted as a whole set rather than by picking two of them: the counts are the
-answer a caller branches on, and one dropped in a refactor would leave every test
-reading `detail` — which is prose and says so.
+answer a caller branches on, the four lists are which items those counts are
+about, and one dropped in a refactor would leave every test reading `detail` —
+which is prose and says so.
 """
 
 
 @pytest.mark.parametrize(
-    ('resource', 'verb'),
+    ('address', 'verb'),
     [
         pytest.param('env', 'plan', id='env-plan'),
         pytest.param('env', 'check', id='env-check'),
@@ -521,7 +544,7 @@ reading `detail` — which is prose and says so.
         pytest.param('identity', 'check', id='identity-check'),
     ],
 )
-def test_a_json_run_puts_one_resource_result_on_stdout_and_nothing_beside_it(sandbox: Sandbox, cli: Run, resource: str, verb: str) -> None:
+def test_a_json_run_puts_one_resource_result_on_stdout_and_nothing_beside_it(sandbox: Sandbox, cli: Run, address: str, verb: str) -> None:
     """The two consoles, measured on the pair of resources most likely to warn: one
     reads a file that may not exist and the other shells out to git. A stray
     diagnostic on stdout turns a `--json` parse into a syntax error rather than
@@ -529,10 +552,11 @@ def test_a_json_run_puts_one_resource_result_on_stdout_and_nothing_beside_it(san
     required_value_unset(sandbox)
     no_identity(sandbox)
 
-    ran = cli(resource, verb, '--json')
+    ran = cli(address, verb, '--json')
 
-    assert set(ran.document) == RESOURCE_RESULT_KEYS
-    assert ran.document['address'] == resource
+    assert set(ran.document) == DOCUMENT_KEYS
+    assert ran.document['verb'] == verb
+    assert set(resource(ran, address)) == RESOURCE_RESULT_KEYS
     assert ran.stderr == ''
 
 
@@ -547,20 +571,20 @@ def test_the_identity_layering_document_carries_the_four_things_a_reader_came_fo
 
 
 @pytest.mark.parametrize(
-    ('resource', 'verb'),
+    ('address', 'verb'),
     [
         pytest.param('env', 'check', id='env-check'),
         pytest.param('identity', 'check', id='identity-check'),
     ],
 )
-def test_a_human_run_prints_the_verdict_on_stdout_and_its_evidence_on_stderr(sandbox: Sandbox, cli: Run, resource: str, verb: str) -> None:
+def test_a_human_run_prints_the_verdict_on_stdout_and_its_evidence_on_stderr(sandbox: Sandbox, cli: Run, address: str, verb: str) -> None:
     """The row is the answer and the item rows under it are the working, so the two
     are on different streams — a pipeline reading the verdict gets one line, and a
     person watching gets both."""
     required_value_unset(sandbox)
     no_identity(sandbox)
 
-    ran = cli(resource, verb)
+    ran = cli(address, verb)
 
     assert ran.exit_code == ExitCode.ISSUE
     assert ran.stdout.startswith('✗ ')
@@ -599,7 +623,8 @@ def test_an_unparseable_flag_below_the_marker_is_reported_and_not_planned(sandbo
     ran = cli('env', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (ran.document['pending'], ran.document['attention']) == (0, 1)
+    row = resource(ran, 'env')
+    assert (row['pending'], row['attention']) == (0, 1)
 
 
 def test_applying_an_unparseable_flag_writes_nothing(sandbox: Sandbox, cli: Run) -> None:
@@ -647,7 +672,7 @@ def test_check_reports_a_dangling_home_gitconfig_as_masking(sandbox: Sandbox, cl
     ran = cli('identity', 'check', '--json')
 
     assert ran.exit_code == ExitCode.ISSUE
-    assert '~/.gitconfig' in ran.document['detail']
+    assert '~/.gitconfig' in resource(ran, 'identity')['detail']
 
 
 def test_show_names_the_dangling_home_gitconfig_that_check_reports(sandbox: Sandbox, cli: Run) -> None:
@@ -736,7 +761,7 @@ def test_the_identity_row_names_both_missing_fields_where_the_machine_has_none(s
     ran = cli('identity', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['detail'] == 'no name and no email, from 1 config file(s)'
+    assert resource(ran, 'identity')['detail'] == 'no name and no email, from 1 config file(s)'
 
 
 def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sandbox, cli: Run) -> None:
@@ -754,7 +779,7 @@ def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sand
     """
     git_config(sandbox, 'config', '[core]\n\tpager = less\n')
 
-    assert '<>' not in cli('identity', 'plan', '--json').document['detail']
+    assert '<>' not in resource(cli('identity', 'plan', '--json'), 'identity')['detail']
 
 
 def test_the_identity_row_names_the_one_field_a_machine_is_missing(sandbox: Sandbox, cli: Run) -> None:
@@ -765,7 +790,7 @@ def test_the_identity_row_names_the_one_field_a_machine_is_missing(sandbox: Sand
 
     ran = cli('identity', 'plan', '--json')
 
-    assert ran.document['detail'] == 'Synthetic Box and no email, from 1 config file(s)'
+    assert resource(ran, 'identity')['detail'] == 'Synthetic Box and no email, from 1 config file(s)'
 
 
 def generated_line(sandbox: Sandbox, line: str) -> None:
@@ -795,7 +820,7 @@ def test_a_generated_line_the_declaration_no_longer_writes_is_drift(sandbox: San
     ran = cli('env', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.DRIFT
-    assert ran.document['pending'] == 1
+    assert resource(ran, 'env')['pending'] == 1
 
 
 def test_an_apply_drops_the_line_and_keeps_what_is_below_the_marker(sandbox: Sandbox, cli: Run) -> None:

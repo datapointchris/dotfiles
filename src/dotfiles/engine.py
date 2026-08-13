@@ -187,6 +187,21 @@ class Selection:
             return False
         return self.providers is None or item.resource != resource or item.provider in self.providers
 
+    def covers(self, item: DesiredItem) -> bool:
+        """Whether this walk reaches one item at all.
+
+        `wants` answers for a resource that is *being* walked; this asks about an
+        item whose resource may not be in the walk, which is the question a caller
+        validating a name against the run has and `plan.items` cannot answer — the
+        plan is the whole machine's, and a narrowed run reaches part of it.
+
+        Asked of the item's *own* resource, so the per-resource narrowing above is
+        preserved rather than flattened: this is the very predicate the walk will
+        apply when it reaches that resource, and a `--skip` aimed at another one
+        still cannot change the answer.
+        """
+        return item.resource in self.resources and self.wants(item.resource, item)
+
     def plan_for(self, resource: str, plan: Plan) -> Plan:
         """The plan this resource should see, with everything it was told to leave alone gone.
 

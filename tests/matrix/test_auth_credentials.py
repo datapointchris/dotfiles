@@ -28,6 +28,7 @@ from matrix.harness import ANSWERS as RUNS_AND_SAYS_NOTHING
 from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
+from matrix.harness import resource
 
 Arrange = Callable[[Sandbox, pytest.MonkeyPatch], None]
 
@@ -158,7 +159,7 @@ def test_auth_check_reports_only_the_tool_that_needs_a_person(
     ran = cli('auth', 'check', '--json')
 
     assert ran.exit_code == checked
-    assert ran.document['address'] == 'auth'
+    assert resource(ran, 'auth')['verdict'] == ('issue' if checked else 'converged')
 
 
 @pytest.mark.parametrize(('arrange', 'checked'), AUTH_STATES)
@@ -176,7 +177,7 @@ def test_auth_plan_is_converged_whatever_the_roster_turned_out_to_be(
     ran = cli('auth', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['pending'] == 0
+    assert resource(ran, 'auth')['findings'] == []
 
 
 @pytest.mark.parametrize(
@@ -206,8 +207,10 @@ def test_the_counts_separate_a_finding_from_a_question_that_could_not_be_asked(
     arrange(sandbox, monkeypatch)
 
     ran = cli('auth', 'check', '--json')
+    row = resource(ran, 'auth')
 
-    assert (ran.document['attention'], ran.document['unmeasured']) == (attention, unmeasured)
+    assert (row['attention'], row['unmeasured']) == (attention, unmeasured)
+    assert len(row['findings']) == attention
 
 
 def test_a_file_answered_probe_reaches_the_same_two_verdicts_as_a_cli_one(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -458,7 +461,7 @@ def test_credentials_check_reports_a_helper_that_will_not_run(
     ran = cli('credentials', 'check', '--json')
 
     assert ran.exit_code == checked
-    assert ran.document['address'] == 'credentials'
+    assert resource(ran, 'credentials')['verdict'] == ('issue' if checked else 'converged')
 
 
 @pytest.mark.parametrize(('arrange', 'checked'), CREDENTIAL_STATES)
@@ -473,7 +476,7 @@ def test_credentials_plan_has_nothing_to_change_about_any_of_them(
     ran = cli('credentials', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['pending'] == 0
+    assert resource(ran, 'credentials')['findings'] == []
 
 
 @pytest.mark.parametrize(

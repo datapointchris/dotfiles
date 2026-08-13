@@ -17,6 +17,7 @@ rather than one exit code.
 from __future__ import annotations
 
 import dataclasses as dc
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -26,6 +27,7 @@ from dotfiles.vocabulary import ExitCode
 from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
+from matrix.harness import resource
 from matrix.harness import unwrapped
 
 REPO_COPY = 'the repo copy\n'
@@ -242,8 +244,8 @@ def test_plan_owns_a_repairable_destination_and_check_owns_a_foreign_one(
     planned = cli('symlinks', 'plan', '--json')
     checked = cli('symlinks', 'check', '--json')
 
-    assert (planned.exit_code, planned.document['pending']) == (row.plan, row.pending)
-    assert (checked.exit_code, checked.document['attention']) == (row.check, row.attention)
+    assert (planned.exit_code, resource(planned, 'symlinks')['pending']) == (row.plan, row.pending)
+    assert (checked.exit_code, resource(checked, 'symlinks')['attention']) == (row.check, row.attention)
 
 
 @pytest.mark.parametrize('state', list(DESTINATIONS), ids=list(DESTINATIONS))
@@ -458,23 +460,35 @@ def test_json_puts_a_document_on_stdout_and_every_diagnostic_on_stderr(
     verb: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
     """The machine contract the two consoles exist for. One stray row on stdout
-    turns a caller's parse into a syntax error rather than the warning it was."""
+    turns a caller's parse into a syntax error rather than the warning it was.
+
+    Asserted as "stdout parses whole and is nothing but the document", not as "a
+    diagnostic sentence is absent from stdout". The sentence was the proxy and it
+    stopped meaning what it said the moment the document started carrying the
+    findings: `was not created by this manager` is now a `detail` field inside the
+    document, which is the finding arriving through the door built for it rather
+    than a row leaking onto the wrong stream. A row that did leak still fails
+    this — it makes stdout unparseable, which is the harm either way.
+    """
     a_plain_file(sandbox, cli)
 
     ran = cli('symlinks', *verb, '--json')
 
-    assert ran.document is not None
-    assert ran.stdout.strip().startswith('{')
-    assert 'was not created by this manager' not in ran.stdout
+    assert json.loads(ran.stdout) == ran.document
 
 
-def test_the_read_verbs_emit_the_resource_row_and_apply_emits_the_run_record(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Deliberately two shapes. A row is this resource's verdict; a run record is a
-    transcript of what one `apply` did, and it is what `report show --json` prints
-    back for the same run."""
+def test_the_read_verbs_emit_the_interchange_document_and_apply_emits_the_run_record(
+    sandbox: Sandbox, cli: Callable[..., Invocation]
+) -> None:
+    """Deliberately two shapes. The read verbs answer the versioned interchange
+    document, whichever door they were entered through and however many resources
+    the walk turned out to cover; a run record is a transcript of what one `apply`
+    did, and it is what `report show --json` prints back for the same run."""
     nothing_deployed(sandbox, cli)
+    planned = cli('symlinks', 'plan', '--json')
 
-    assert cli('symlinks', 'plan', '--json').document['address'] == 'symlinks'
+    assert planned.document['verb'] == 'plan'
+    assert resource(planned, 'symlinks')['address'] == 'symlinks'
     assert cli('symlinks', 'apply', '--json').document['verb'] == 'apply'
 
 
@@ -589,8 +603,10 @@ def test_a_check_that_found_an_undeployed_link_does_not_say_it_is_deployed(sandb
     """
     nothing_deployed(sandbox, cli)
 
-    assert cli('symlinks', 'check', '--json').document['detail'] == '0 of 1 declared symlinks in place'
-    assert 'deployed' not in cli('symlinks', 'check', '--json').document['detail']
+    detail = resource(cli('symlinks', 'check', '--json'), 'symlinks')['detail']
+
+    assert detail == '0 of 1 declared symlinks in place'
+    assert 'deployed' not in detail
 
 
 def test_show_says_a_fully_deployed_machine_has_nothing_undeployed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

@@ -42,6 +42,7 @@ import pytest
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
+from matrix.harness import resource
 
 TOOL = 'lazygit'
 REPO = 'jesseduffield/lazygit'
@@ -51,6 +52,9 @@ DECLARED = {'github_releases': [{'name': TOOL, 'repo': REPO}]}
 no builder in `providers/releases.py` an ERROR, which `apply` refuses to run
 against and `check` reports as an Issue. So the declaration is synthetic and the
 name is a real one."""
+
+ADDRESS = f'ghrelease/{TOOL}'
+"""How the plan addresses that entry, which is what every row about it is keyed on."""
 
 GATED = {'github_releases': [{'name': TOOL, 'repo': REPO, 'requires_github_auth': True}]}
 """The same entry behind a credential this machine does not have.
@@ -206,24 +210,30 @@ def test_currency_moves_plans_exit_code_and_never_checks(
 
 @pytest.mark.parametrize('relation', CACHED, ids=[relation.id for relation in CACHED])
 @pytest.mark.parametrize('verb', ['plan', 'check'])
-def test_a_json_run_counts_the_relation_and_prints_no_rows(
+def test_a_json_run_names_the_relation_and_prints_no_rows(
     sandbox: Sandbox, cli: Callable[..., Invocation], relation: Against, verb: str
 ) -> None:
-    """The counts are the answer a caller parses, and they are the same under both verbs.
+    """The item is the answer a caller parses, and it is the same under both verbs.
 
     `sift` is lens-independent — `pending`, `attention` and `unmeasured` are
     properties of the changes rather than of the question — so the split between
     "apply would fix this" and "nothing could measure it" is one fact read from two
     sides. Stderr is empty because `--json` renders no evidence at all: the document
     on stdout is the whole output, which is what keeps it parseable.
+
+    Asserted by address and verdict rather than by the resource's counts. One
+    declared entry makes the two agree, and a second would not — the count says
+    something is stale where this says which thing, which is the question anyone
+    reading a currency report has.
     """
     machine(sandbox, relation)
 
     ran = cli('packages', verb, '--json')
+    row = resource(ran, 'packages')
+    measured = {change['item']: change['verdict'] for change in [*row['findings'], *row['others']]}
 
-    assert ran.document['pending'] == (1 if relation.verdict == 'stale' else 0)
-    assert ran.document['unmeasured'] == (1 if relation.verdict == 'unknown' else 0)
-    assert ran.document['attention'] == 0
+    assert measured == ({ADDRESS: relation.verdict} if relation.verdict else {})
+    assert row['attention'] == 0
     assert ran.stderr == ''
 
 
@@ -430,7 +440,7 @@ def test_offline_needs_a_bundle_before_it_measures_anything(sandbox: Sandbox, cl
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-REINSTALL_DETAIL = 'named by --reinstall, so it is installed again whatever it reports'
+REINSTALL_DETAIL = '--reinstall, so it is installed again whatever it reports'
 
 
 @pytest.mark.parametrize('relation', STAGED, ids=[relation.id for relation in STAGED])
@@ -449,7 +459,7 @@ def test_a_reinstall_forces_stale_from_every_relation(sandbox: Sandbox, cli: Cal
     """
     offline_machine(sandbox, relation, packages=GATED)
 
-    ran = cli('packages', 'apply', '--offline', '--reinstall', TOOL)
+    ran = cli('packages', 'apply', '--offline', '--reinstall', '--package', TOOL)
 
     assert f'stale ghrelease/{TOOL} {REINSTALL_DETAIL}' in said(ran)
     assert ran.exit_code == ExitCode.CONVERGED
@@ -468,7 +478,7 @@ def test_a_reinstall_carries_what_the_tool_reported_even_where_it_means_nothing(
     """
     offline_machine(sandbox, relation, packages=GATED)
 
-    ran = cli('packages', 'apply', '--offline', '--reinstall', TOOL)
+    ran = cli('packages', 'apply', '--offline', '--reinstall', '--package', TOOL)
 
     assert (f"(is '{relation.reported}')" in said(ran)) is (relation.reported is not None)
 
@@ -483,7 +493,7 @@ def test_a_reinstall_apply_can_act_on_is_planned_and_attempted(sandbox: Sandbox,
     """
     offline_machine(sandbox, STAGED[0])
 
-    ran = cli('packages', 'apply', '--offline', '--reinstall', TOOL, '--json')
+    ran = cli('packages', 'apply', '--offline', '--reinstall', '--package', TOOL, '--json')
 
     assert (f'packages/ghrelease/{TOOL}', 'stale', 'planned') in recorded(ran)
     assert (f'packages/ghrelease/{TOOL}', 'stale', 'failed') in recorded(ran)
@@ -491,10 +501,16 @@ def test_a_reinstall_apply_can_act_on_is_planned_and_attempted(sandbox: Sandbox,
 
 def test_a_reinstall_naming_nothing_this_machine_declares_is_a_usage_error(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Validated against the resolved plan, so a name the machine does not subscribe
-    to is refused rather than matching nothing and reading as a reinstall that ran."""
+    to is refused rather than matching nothing and reading as a reinstall that ran.
+
+    `--reinstall` is passed, which is what keeps this row about the composed form
+    rather than a second spelling of `test_a_package_name_the_resolved_plan_does_not_carry_is_a_usage_error`
+    over in `test_packages_selection.py`. The refusal is the *narrowing's*, and the
+    thing worth pinning is that force does not buy a name past it.
+    """
     offline_machine(sandbox, STAGED[0])
 
-    ran = cli('packages', 'apply', '--offline', '--reinstall', 'ripgrep')
+    ran = cli('packages', 'apply', '--offline', '--reinstall', '--package', 'ripgrep')
 
     assert ran.exit_code == ExitCode.USAGE
     assert 'nothing this machine declares is named ripgrep' in said(ran)
@@ -569,7 +585,7 @@ def test_the_upgrade_and_the_reinstall_of_a_gated_tool_are_declined_alike(sandbo
     offline_machine(sandbox, STAGED[1], packages=GATED)
 
     upgrade = cli('packages', 'apply', '--offline', '--json')
-    reinstall = cli('packages', 'apply', '--offline', '--reinstall', TOOL, '--json')
+    reinstall = cli('packages', 'apply', '--offline', '--reinstall', '--package', TOOL, '--json')
 
     assert (f'packages/ghrelease/{TOOL}', 'stale', 'declined') in recorded(upgrade)
     assert (f'packages/ghrelease/{TOOL}', 'stale', 'declined') in recorded(reinstall)

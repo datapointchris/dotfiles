@@ -98,8 +98,9 @@ halves were true — apply has nothing to do here, and four tools are logged out
 non-zero count, which is a declared package merely absent, so it reads `3 differ`. Neither
 verb ever restates its own answer as a count beside the sentence that already gave it.
 
-Nothing here reaches `--json`, whose document is unchanged: it carries the verb, the
-verdict and the four counts, and a caller parses those rather than a rendering.
+Nothing here reaches `--json`, which is a document rather than a rendering: it carries
+the verb, the verdict, the four counts and the items behind each of them, so a caller
+parses those rather than the screen. [Observability](observability.md) has its shape.
 
 Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
 getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
@@ -274,6 +275,7 @@ dotfiles apply --skip system          # a whole resource: the sudo-gated, slowes
 dotfiles apply --skip plugins/tpm     # one provider inside one, leaving its neighbours
 dotfiles packages apply --source cargo_packages   # one section, and what it needs
 dotfiles apply --owner datapointchris # only tools traceable to that owner
+dotfiles apply --package lazygit      # one declared entry, and what it needs
 dotfiles apply --through system_upgrade           # stop after that stage
 ```
 
@@ -285,6 +287,28 @@ what describes *how* to write rather than what to cover: installing from a stage
 or forcing an entry past what measuring concluded. `tests/cli/test_conformance.py` asserts
 the split across the whole tree, because the gap opened by adding a selector to one verb
 and forgetting its sibling, and nothing else notices.
+
+### Scope and force are different flags
+
+`--reinstall` used to take an entry name, which made one flag answer both questions:
+`--reinstall lazygit` said *what* to cover and *that* measuring should be overruled, so
+the scope it carried existed nowhere else and no other resource could honour the force.
+It is two flags now. `--package` is the narrowing, one row below `--source` and reaching
+every resource; `--reinstall` is a boolean over whatever the narrowings left, which any
+resource's `diff` can read.
+
+Bare, `--reinstall` therefore means everything the run covers. That is expensive and not
+dangerous — a fresh `go install` of every Go tool and a re-download of every release —
+which is the case `cli-design.md` § "Scope is structural: the argument's presence selects
+it, never a flag" sanctions a set-wide act for. Repairing one tool is
+`--reinstall --package <name>`, and the two compose because they answer different
+questions.
+
+A `--package` name is measured against the `Selection` the walk will use, not against the
+machine's whole plan. `packages apply --package uv` names the toolchain, which that noun
+does not reach, and is a usage error naming the address that does carry it — where
+validating against the plan accepted the name, walked past the item, and reported a
+converged machine to a caller who had asked for work.
 
 `--through` is the one selector that is not a selection of parts. `--skip` and the
 resource sub-apps say *which mechanisms*; neither can say *how far*, because the stages a
@@ -298,7 +322,8 @@ A section brings what it declares it needs. `--source cargo_packages` on a machi
 without rustup installs the Rust toolchain first, because `needed_by` already says the
 runtime is wanted *because* that section resolved; narrowing to the section alone honoured
 the declaration in the plan and ignored it in the run, and failed with
-`cargo: No such file or directory`.
+`cargo: No such file or directory`. `--package ripgrep` answers the same way and through
+the same registry relation, so one entry brings its runtime and no other.
 
 Owner narrowing drops every provider whose contents cannot be traced to a GitHub owner,
 and then every resource left holding none — so `symlinks`, `env`, `identity`, `auth` and
