@@ -1562,10 +1562,16 @@ go_tools:
     package: github.com/sqls-server/sqls
     description: SQL LSP
 
+  # reports_version: its banner is a hardcoded `0.0.0` that only a release build
+  # stamps over, and `evidence.reported_version` falls back to `go version -m`
+  # only when the banner cannot be parsed at all. `0.0.0` parses, so it wins and
+  # currency reads the tool as permanently behind — measured reinstalling on
+  # three consecutive applies before this was declared.
   - name: docker-language-server
     package: github.com/docker/docker-language-server/cmd/docker-language-server
     github_repo: docker/docker-language-server
     binary_pattern: "docker-language-server-{os}-{go_arch}-{version}"
+    reports_version: false
     description: Dockerfile and compose LSP
 
 # ================================================================
