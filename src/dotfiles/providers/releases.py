@@ -152,10 +152,13 @@ def atuin(tag: str, target: Target) -> ReleaseArtifact:
 
 
 def duckdb(tag: str, target: Target) -> ReleaseArtifact:
-    """One fat `osx-universal` binary covers both Macs, so darwin needs no arch
-    branch. The asset carries no version, and the zip holds a bare `duckdb`."""
-    stem = 'osx-universal' if target.is_darwin else ('linux-arm64' if target.is_arm else 'linux-amd64')
-    return ReleaseArtifact(f'duckdb_cli-{stem}.zip', Archive.ZIP, path='duckdb')
+    """The one entry here whose architecture is spelled the same on both systems,
+    so only the OS stem moves. `osx-universal` is also published and was rejected:
+    it is the two binaries in one file, 34MB against 18MB, to dodge a branch every
+    other entry already carries and that `Target` exists to answer."""
+    system = 'osx' if target.is_darwin else 'linux'
+    arch = 'arm64' if target.is_arm else 'amd64'
+    return ReleaseArtifact(f'duckdb_cli-{system}-{arch}.zip', Archive.ZIP, path='duckdb')
 
 
 def duf(tag: str, target: Target) -> ReleaseArtifact:
