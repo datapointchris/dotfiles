@@ -100,13 +100,15 @@ def test_every_resource_offers_check() -> None:
         assert (resource, 'check') in leaves, f'{resource} has no check'
 
 
-CHECKED_ONLY = {'identity', 'auth'}
-"""The resources with nothing for `apply` to write, and the reason is the same for
-both: what they measure is personal and arrives by hand. An identity is
-per-machine, so the repo holds no value for it; a login is a browser flow, a
+CHECKED_ONLY = {'identity', 'auth', 'credentials'}
+"""The resources with nothing for `apply` to write, and the reason is nearly the
+same for all three: what they measure is personal and arrives by hand. An identity
+is per-machine, so the repo holds no value for it; a login is a browser flow, a
 password or a device code, so `apply` attempting one would put a prompt in front
-of every headless box. Naming them here is what stops `apply` being added to
-either later on the grounds that the set looked incomplete."""
+of every headless box. `credentials` is the odd one — its findings are not
+personal but they are not the repo's either, since a helper that will not start is
+a fault in the machine underneath git. Naming them here is what stops `apply`
+being added to any of them later on the grounds that the set looked incomplete."""
 
 
 def test_apply_exists_wherever_drift_can_be_fixed() -> None:

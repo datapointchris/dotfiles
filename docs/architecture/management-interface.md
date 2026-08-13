@@ -244,9 +244,9 @@ the declaration in the plan and ignored it in the run, and failed with
 `cargo: No such file or directory`.
 
 Owner narrowing drops every provider whose contents cannot be traced to a GitHub owner,
-and then every resource left holding none — so `symlinks`, `env`, `identity` and `auth`,
-which have no provider to be ownable, fall out of the walk rather than deploying in full
-alongside somebody's tools. Ownership is derived from
+and then every resource left holding none — so `symlinks`, `env`, `identity`, `auth` and
+`credentials`, which have no provider to be ownable, fall out of the walk rather than
+deploying in full alongside somebody's tools. Ownership is derived from
 whichever field carries it — `repo`, `github_repo`, or a Go import path in `package` —
 not from a `personal` tag, because a tag has to be remembered on every new tool and
 silently excludes whatever it misses.

@@ -628,3 +628,84 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     for tool, credential in found.items():
         colour = CHANGE_COLOURS[str(credential.verdict)]
         console.print(f'[{colour}]{credential.verdict:<{VERDICT_COLUMN}}[/] {tool:<{SUBJECT_COLUMN}} {credential.detail}')
+
+
+credentials_app = typer.Typer(no_args_is_help=True, help='The git credential helpers this machine is configured with')
+
+
+@credentials_app.command('plan')
+def credentials_plan(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
+    """Show what `apply` would do about a broken credential helper, which is nothing.
+
+    Here for the same reason `auth plan` is: `plan` rehearses `apply` everywhere
+    else, and a resource answering one verb and not the other is the asymmetry
+    `test_conformance.py` exists to catch.
+    """
+    verbosity(verbose, quiet)
+    _survey('credentials', machine, reconcile.Lens.PLAN, as_json)
+
+
+@credentials_app.command('check')
+def credentials_check(
+    machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
+) -> None:
+    """Report the configured credential helpers that will not run.
+
+    Never asks for a credential. This runs unattended on a timer, and a real
+    `get` is what makes a helper open a browser — `credentials show --probe` is
+    where that lives.
+    """
+    verbosity(verbose, quiet)
+    _survey('credentials', machine, reconcile.Lens.CHECK, as_json)
+
+
+@credentials_app.command('show')
+def credentials_show(
+    machine: str = MachineOption,
+    probe: bool = typer.Option(False, '--probe', help='Also ask each helper for a real credential. Interactive; may contact a server.'),
+    as_json: bool = JsonOption,
+) -> None:
+    """Every configured helper, the file that set it, and whether it runs.
+
+    The whole roster rather than the faults alone, which is what `check` prints.
+    A helper that *does* run is the answer to "did that fix it" straight after a
+    `wsl.exe --shutdown`, and `check` is silent about it by design.
+
+    `--probe` is the half that cannot run unattended: it sends each helper a real
+    credential request and reports whether one came back. Opt-in because that is
+    what reaches the network and what a GUI helper answers with a window.
+    """
+    from dotfiles.resources import credentials
+
+    session = _session(machine)
+    found = credentials.RESOURCE.observe(session, session.plan).found
+    probed = {entry.helper.label: credentials.probe(entry.helper) for entry in found} if probe else {}
+
+    if as_json:
+        emit_json(
+            [
+                {
+                    'scope': entry.helper.label,
+                    'value': entry.helper.value,
+                    'program': entry.helper.program,
+                    'origin': str(entry.helper.origin),
+                    'verdict': str(entry.verdict),
+                    'detail': entry.detail,
+                    **({'probed': probed[entry.helper.label][0], 'probe_detail': probed[entry.helper.label][1]} if probe else {}),
+                }
+                for entry in found
+            ]
+        )
+        return
+    if not found:
+        emit_text('git is configured with no credential helper on this machine')
+        return
+    for entry in found:
+        colour = CHANGE_COLOURS[str(entry.verdict)]
+        console.print(f'[{colour}]{entry.verdict:<{VERDICT_COLUMN}}[/] {entry.helper.label:<{SUBJECT_COLUMN}} {entry.detail}')
+        console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} set in {entry.helper.origin}')
+        if probe:
+            answered, why = probed[entry.helper.label]
+            console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [{"green" if answered else "yellow"}]probe:[/] {why}')

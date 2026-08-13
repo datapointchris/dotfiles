@@ -67,6 +67,7 @@ NOUNS = frozenset(
         'system',
         'identity',
         'auth',
+        'credentials',
         'machines',
         'report',
         'network',
@@ -81,7 +82,7 @@ Asserted alongside `VERBS` so that a new group is as deliberate as a new verb â€
 the grammar is `dotfiles <noun> <verb>`, and both halves are closed.
 """
 
-RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity', 'auth')
+RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity', 'auth', 'credentials')
 """Every addressable part of the machine, in the order rows are measured and printed.
 
 **Not the convergence order, and it cannot be.** Ordering *work* is
@@ -90,9 +91,12 @@ RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', '
 resource names expresses that, so a walk sorts on the stage and this tuple
 decides only who is asked first and whose row prints above whose.
 
-`auth` is last because it is the one resource that can only be asked once every
-other has had its say: a login is a question about a tool that is already
-installed.
+`auth` and `credentials` are last because both can only be asked once every other
+has had its say: a login is a question about a tool that is already installed,
+and a credential helper is a question about a git configuration that is already
+deployed. `credentials` follows `auth` because it is the narrower of the two â€”
+`auth` covers whatever the manifest declares, while this one covers only what the
+include chain happened to resolve to.
 
 A dependency stated here would therefore be a dependency nothing enforces, which
 is worse than none: it reads as a guarantee.

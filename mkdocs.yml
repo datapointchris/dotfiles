@@ -155,6 +155,7 @@ nav:
       - Testing Bootstrap Dependencies: learnings/testing-bootstrap-dependencies.md
       - Symlinks Path Gotchas: learnings/symlinks-path-gotchas.md
       - WSL PowerShell Stdin Consumption: learnings/wsl-powershell-stdin-consumption.md
+      - WSL Credential Helper Exec Format Error: learnings/wsl-credential-helper-exec-format-error.md
       - pre-commit Stash Recovery: learnings/pre-commit-stash-recovery.md
       - Shared Stash Across Worktrees: learnings/shared-stash-across-worktrees.md
       - Bash TTY Detection in Command Substitution: learnings/bash-tty-detection-command-substitution.md

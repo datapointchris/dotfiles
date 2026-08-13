@@ -195,6 +195,7 @@ def run(
     output: Output = Output.STREAM,
     show: Callable[[str], str | None] | None = None,
     timeout: float | None = None,
+    stdin_text: str | None = None,
 ) -> Completed:
     """Run a command. See `Output` for where its output goes and why.
 
@@ -220,7 +221,16 @@ def run(
     never. Refused for STREAM, where minutes are a normal install rather than a
     hang, and where the reader loop would not observe a deadline anyway.
 
-    **Every child's stdin is closed, on every branch, rather than inherited.**
+    `stdin_text` is the one way to send a child anything, and it is `QUIET` only.
+    A git credential helper is the case: its request arrives on stdin as
+    `protocol=https\\nhost=...\\n\\n` and there is no flag spelling of it. Supplying
+    bytes is the opposite of the hazard below — the child reads a value this
+    process chose and then EOF, rather than whatever terminal happened to be
+    wired up — so the guarantee that closed stdin gives every other caller is
+    unchanged. Refused for STREAM and DATA because neither captures the answer
+    that would make writing worth it.
+
+    **Every other child's stdin is closed, on every branch, rather than inherited.**
     `yay -S --needed --noconfirm` still opens a menu when a name has several AUR
     providers — `--noconfirm` bypasses pacman's "Are you sure?" questions and
     nothing else, by pacman's own manual — and that menu reads its answer with
@@ -250,6 +260,8 @@ def run(
         raise ValueError('a streaming command has no deadline: its reader loop cannot observe one, and installs legitimately take minutes')
     if show is not None and output is not Output.STREAM:
         raise ValueError('only a streaming command echoes anything, so there is nothing for `show` to filter')
+    if stdin_text is not None and output is not Output.QUIET:
+        raise ValueError('writing to a child is only worth it where its answer is captured, which is QUIET alone')
 
     began = time.perf_counter()
 
@@ -323,7 +335,14 @@ def run(
     if output is Output.QUIET:
         try:
             captured = subprocess.run(
-                argv, cwd=directory, env=environment, check=False, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL
+                argv,
+                cwd=directory,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                **({'input': stdin_text} if stdin_text is not None else {'stdin': subprocess.DEVNULL}),
             )
         except OSError as problem:
             return missing(problem)

@@ -116,6 +116,19 @@ class Stage(enum.IntEnum):
     on PATH.
     """
 
+    CREDENTIALS = 125
+    """The same kind of label as AUTH, and separate for the reason that test names.
+
+    Nothing here is actionable either, so the number sequences no work. It exists
+    because `test_no_two_resources_share_a_stage` requires a stage to have one
+    owner: two resources sharing one makes the order between them a tie-break
+    decided by whichever was measured first.
+
+    After AUTH because it is the narrower question. `auth` asks whether the tools
+    a manifest declares can log in; this asks whether the helpers a git config
+    resolved to will start, which is a smaller set that nothing declares.
+    """
+
 
 class Precondition(enum.StrEnum):
     """State a machine can be in that stops an item installing, checked live.

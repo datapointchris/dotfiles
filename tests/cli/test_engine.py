@@ -88,11 +88,17 @@ def test_no_two_resources_share_a_stage() -> None:
         owners.setdefault(provider.stage, set()).add(provider.resource)
 
     # A resource with no provider decides its own stage inside its `diff`, where
-    # nothing else can read it. Naming the three here is therefore a second list,
-    # so the assertion below covers it: a fourth such resource fails this test
-    # rather than slipping past the guard — which is the same drift that put
+    # nothing else can read it. Naming them here is therefore a second list, so
+    # the assertion below covers it: one more such resource fails this test rather
+    # than slipping past the guard — which is the same drift that put
     # `system/manager` at a stage no phase named.
-    unprovided = {'env': Stage.ENVIRONMENT, 'identity': Stage.IDENTITY, 'symlinks': Stage.SYMLINKS, 'auth': Stage.AUTH}
+    unprovided = {
+        'env': Stage.ENVIRONMENT,
+        'identity': Stage.IDENTITY,
+        'symlinks': Stage.SYMLINKS,
+        'auth': Stage.AUTH,
+        'credentials': Stage.CREDENTIALS,
+    }
     assert set(vocabulary.RESOURCES) == {provider.resource for provider in registry.PROVIDERS} | set(unprovided), (
         'a resource appeared that this test does not know the stage of; read it out of its `diff` and add it'
     )
