@@ -376,14 +376,15 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # Shell code (symlinked from dotfiles/shell/ by symlinks manager)
 [[ -f "$SHELL_DIR/functions.sh" ]] && source "$SHELL_DIR/functions.sh" && log "Load" "$SHELL_DIR/functions.sh" || log_error "Load" "$SHELL_DIR/functions.sh"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
-# One overlay directory per coordinate axis, in the order ~/.env exports them.
-# Absent is the normal case and not an error: an axis earns a directory only
-# when something differs along it, so a machine loads two or three of these six.
-# The (N) qualifier is what makes an unmatched glob expand to nothing instead of
-# erroring, which is the whole reason this is a zsh-only spelling.
-for overlay in \
-  "pkg/$DOTFILES_PKG" "os/$DOTFILES_OS" "display/$DOTFILES_DISPLAY" \
-  "host/$DOTFILES_HOST" "trust/$DOTFILES_TRUST" "capacity/$DOTFILES_CAPACITY"; do
+# The overlay directories this machine loads, resolved by `dotfiles env apply`
+# and shipped as one space-separated list. Absent is the normal case and not an
+# error: an axis earns a directory only when something differs along it, so a
+# machine loads two or three of the six it names.
+# ${=...} is zsh's explicit word split — an unquoted expansion is a single word
+# here, unlike bash. The (N) qualifier is what makes an unmatched glob expand to
+# nothing instead of erroring, which is the whole reason this is a zsh-only
+# spelling.
+for overlay in ${=DOTFILES_LAYERS}; do
   for overlay_file in "$SHELL_DIR/$overlay"/*.sh(N); do
     source "$overlay_file" && log "Load" "$overlay_file" || log_error "Load" "$overlay_file"
   done

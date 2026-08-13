@@ -70,10 +70,10 @@ Shell functions and aliases live in `shell/`, deployed via symlinks — no build
 - **Per coordinate**: `shell/<axis>/<value>/` → `~/.local/shell/<axis>/<value>/`, keeping the path so a sourced file says which coordinate asked for it
 - **Machine-local**: `~/.local/shell/local.sh` — a real file that exists in no repo, described below
 
-`.zshrc` sources `common/` and then loops over the six `DOTFILES_*` variables in
-`~/.env`, sourcing every `.sh` in each overlay it finds and `local.sh` last. An
-overlay directory that does not exist is skipped, which is most of them: an axis
-earns a directory only where something actually differs along it.
+`.zshrc` sources `common/` and then loops over `$DOTFILES_LAYERS` from `~/.env`,
+sourcing every `.sh` in each overlay it finds and `local.sh` last. An overlay
+directory that does not exist is skipped, which is most of them: an axis earns a
+directory only where something actually differs along it.
 
 The axes replaced a single fused `PLATFORM` string, which could not say that the apt helpers belong to Ubuntu-on-WSL *and* to the Debian LXC, or that the Wayland config belongs to any Linux running it rather than to Arch. A `MACHINE_ROLE` axis (work, personal, server) was tried alongside `PLATFORM` and removed before the split: it was rendered from the same manifest, so it carried no information `MACHINE` did not, and it declared three values while shipping a single file that served a single machine. That file was employer infrastructure, which the machine-local overlay handles instead — a better fit, because that code was never shareable in the first place.
 
@@ -119,9 +119,15 @@ The sync is a `windows-shell` row in `install/system.yml` narrowed to `host: wsl
 
 Nothing detects it. `MACHINE` is the one hand-chosen value; it selects a
 manifest, and the manifest declares where the machine sits on each of the six
-axes in `src/dotfiles/coordinates.py`. `dotfiles env apply` writes those
-coordinates into `~/.env` as `DOTFILES_PKG`, `DOTFILES_OS` and their four
-siblings, which is what every shell and every overlay reads.
+axes in `src/dotfiles/coordinates.py`. `dotfiles env apply` resolves that point
+into the `<axis>/<value>` directories it selects and writes them into `~/.env`
+as one `DOTFILES_LAYERS` list, which is what every shell sources from.
+
+One variable rather than one per axis. Six existed only so `.zshrc` and
+`.bashrc` could reassemble a list `Coordinates.overlays` had already built, and
+each shell spelled the six axis names again in its own hand-written loop with
+nothing holding either copy to `OVERLAY_DIRS`. Shipping the resolved list is the
+same information with one place for it to be wrong.
 
 Detection was tried and is what the declaration replaced: a wsl manifest whose
 `~/.env` was missing fell back to a guess and deployed the linux shell overlay
@@ -156,7 +162,7 @@ overrides a default with an `includeIf`, and git resolves last-wins.
 Naming the value is what makes `ls ~/.config/git/` answer what the machine is. `trust.gitconfig`
 said only that the trust axis had been resolved; `nonfleet.gitconfig` says which way. The cost is
 that `common.gitconfig` has to spell every value out, because git expands nothing but `~` in an
-`include.path` — `.zshrc` reaches the same overlays through `$DOTFILES_HOST` and needs no list,
+`include.path` — `.zshrc` reaches the same overlays through `$DOTFILES_LAYERS` and needs no list,
 which is the asymmetry that lets `shell/` keep `<axis>/<value>/` in its deployed path while
 `configs/` flattens. `dotfiles machines check` fails on an overlay gitconfig no include names, since
 git would otherwise ignore the missing line without a word.

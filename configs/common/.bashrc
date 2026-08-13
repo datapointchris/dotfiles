@@ -14,18 +14,22 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # non-login interactive bash gets the same overlays a login one does.
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
-# One overlay directory per coordinate axis. The detector this replaced guessed
+# The overlay directories this machine loads, resolved by `dotfiles env apply`
+# and shipped as one space-separated list. The detector this replaced guessed
 # from uname and /proc/version and got two of the axes wrong by construction —
 # it had no way to know a machine's trust or capacity, and no machine ever told
 # it. Nothing loads when ~/.env is absent, which is the honest answer.
-for overlay in \
-  "pkg/$DOTFILES_PKG" "os/$DOTFILES_OS" "display/$DOTFILES_DISPLAY" \
-  "host/$DOTFILES_HOST" "trust/$DOTFILES_TRUST" "capacity/$DOTFILES_CAPACITY"; do
+#
+# Read into an array rather than looped over unquoted: the split is deliberate,
+# and spelling it this way says so instead of relying on word splitting nobody
+# can tell from an accident.
+read -ra dotfiles_layers <<<"${DOTFILES_LAYERS:-}"
+for overlay in "${dotfiles_layers[@]}"; do
   for overlay_file in "$SHELL_DIR/$overlay"/*.sh; do
     [[ -r "$overlay_file" ]] && source "$overlay_file"
   done
 done
-unset overlay overlay_file
+unset dotfiles_layers overlay overlay_file
 
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 

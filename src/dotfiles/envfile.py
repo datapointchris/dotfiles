@@ -23,7 +23,6 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from dotfiles import coordinates as axes
 from dotfiles.machine import Machine
 
 MARKER = '# OVERRIDES - hand-edited; everything below is preserved on regenerate'
@@ -45,17 +44,25 @@ def assignment(name: str, value: str) -> str:
 
 
 def coordinate_exports(machine: Machine) -> dict[str, str]:
-    """The coordinate variables `~/.env` carries, and what they should say.
+    """The coordinate variable `~/.env` carries, and what it should say.
 
-    One function for both halves: `render` writes these and `resources/env.py`
-    checks a machine against them, so the file `apply` produces and the file
+    One function for both halves: `render` writes this and `resources/env.py`
+    checks a machine against it, so the file `apply` produces and the file
     `check` demands cannot disagree about a name or a spelling.
 
-    Named `DOTFILES_*` because the bare axis names are not safe in a shell — zsh
-    sets `HOST` itself, and `OS` and `CAPACITY` are generic enough that something
-    else will want them eventually.
+    One variable rather than one per axis. The six existed only so `.zshrc` and
+    `.bashrc` could reassemble `<axis>/<value>` pairs that `Coordinates.overlays`
+    had already resolved — six exports, two hand-written lists spelling the axis
+    names again, and nothing holding either list to `OVERLAY_DIRS`. Shipping the
+    resolved list is the same information with one place to be wrong.
+
+    A dict of one rather than a bare string, because both callers want a mapping
+    of name to expected value and a second coordinate export would land here.
+
+    Named `DOTFILES_LAYERS` because a bare `LAYERS` is not safe in a shell, and
+    for the reason the six were prefixed before it: zsh sets `HOST` itself.
     """
-    return {f'DOTFILES_{directory.upper()}': str(getattr(machine.coordinates, axis)) for axis, directory in axes.OVERLAY_DIRS.items()}
+    return {'DOTFILES_LAYERS': ' '.join(machine.coordinates.overlays)}
 
 
 def render(machine: Machine) -> str:
@@ -78,9 +85,9 @@ def render(machine: Machine) -> str:
         '# anything else, so this file is also the install bootstrap.',
         assignment('MACHINE', machine.name),
         '',
-        '# Coordinates. Where this machine sits on each axis, which is what selects the',
-        '# overlay directories under configs/, shell/ and apps/ — .zshrc builds its',
-        '# source list from exactly these six. Prefixed because zsh already sets HOST.',
+        '# Coordinates, resolved to the overlay directories they select under configs/,',
+        '# shell/ and apps/. .zshrc and .bashrc source from exactly this list rather than',
+        '# rebuilding it from one variable per axis. Prefixed because zsh already sets HOST.',
     ]
 
     lines += [assignment(name, value) for name, value in coordinate_exports(machine).items()]

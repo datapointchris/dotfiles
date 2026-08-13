@@ -243,7 +243,7 @@ def _git_overlays(root: Path) -> list[Finding]:
     resolved — `nonfleet.gitconfig`, not `trust.gitconfig`. And every one of them
     has to be named by an include in `common.gitconfig`, because git expands
     nothing but `~` in an `include.path` and cannot be pointed at a directory the
-    way `.zshrc` points at `$DOTFILES_HOST`.
+    way `.zshrc` points at `$DOTFILES_LAYERS`.
 
     Both failures are silent, and silent in the *same* way, which is what makes
     them worth a check rather than a convention. git ignores an include whose

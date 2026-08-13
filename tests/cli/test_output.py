@@ -90,7 +90,7 @@ def test_emit_json_keeps_square_brackets(capsys: pytest.CaptureFixture) -> None:
 def test_emit_text_adds_nothing_of_its_own(capsys: pytest.CaptureFixture) -> None:
     """A wrapped `~/.env` line is a different file from the one that was asked
     for, and a trailing newline nobody wrote is a different file too."""
-    body = 'MACHINE=archlinux\nDOTFILES_PKG=' + 'x' * 200 + '\n'
+    body = 'MACHINE=archlinux\nDOTFILES_LAYERS=' + 'x' * 200 + '\n'
 
     output.emit_text(body)
 

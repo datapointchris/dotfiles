@@ -149,15 +149,16 @@ explicit fetch, and exits 1 when there is something to pull.
 ## The machine environment (`~/.env`)
 
 `~/.env` is the first thing `.zshrc` sources, and where every command that is not given
-`--machine` learns which machine it is on. It answers three questions — which machine this is (`MACHINE`), where it sits on each of
-the six coordinate axes (the `DOTFILES_*` block), and which features it wants running
+`--machine` learns which machine it is on. It answers three questions — which machine this is (`MACHINE`), which overlay directories
+its six coordinates resolve to (`DOTFILES_LAYERS`), and which features it wants running
 (the flags from `install/flags.yml`) —
 and it also carries secrets and machine-local values that must never be checked in.
 
 `MACHINE` is the only one of the three that is chosen: it names a manifest, and
 everything else is derived from that manifest by the resolver. The coordinates are what
-select the overlay directories under `configs/`, `shell/` and `apps/`, so a shell reads
-them directly — `.zshrc` builds its source list from exactly those six variables. Placing this file by
+select the overlay directories under `configs/`, `shell/` and `apps/`, and the resolved
+list is what ships — `.zshrc` and `.bashrc` iterate `DOTFILES_LAYERS` rather than
+rebuilding it from a variable per axis. Placing this file by
 hand is therefore the whole of the pre-install bootstrap: `session.resolve_machine` reads
 the file itself when `$MACHINE` is unset, so a rebuild that restores `~/.env` first never
 needs `--machine` on anything. Reading the file rather than only the environment is what

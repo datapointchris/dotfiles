@@ -33,6 +33,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MANIFEST: dict[str, Any] = {'machine': 'box', 'platform': 'macos'}
 
+MACOS_LAYERS = 'pkg/brew os/darwin display/aqua host/native trust/fleet capacity/workstation'
+LINUX_LAYERS = 'pkg/apt os/linux display/none host/native trust/fleet capacity/server'
+"""What the two platform bundles resolve to, spelled out rather than derived.
+
+Derived from `Coordinates.overlays`, these would assert that the renderer agrees
+with itself. Written out, a seventh axis or a reordering fails here and has to be
+looked at — which is the whole reason `.zshrc` may read one variable instead of
+six.
+"""
+
 FLAGS: dict[str, Any] = {
     'flags': [
         {'name': 'ALPHA_FLAG', 'description': 'First flag', 'default': True},
@@ -87,7 +97,7 @@ def test_the_generated_section_carries_identity_from_the_manifest(tmp_path: Path
     values = envfile.parse_env_assignments(envfile.render(machine(tmp_path)))
 
     assert values['MACHINE'] == 'box'
-    assert values['DOTFILES_OS'] == 'darwin'
+    assert values['DOTFILES_LAYERS'] == MACOS_LAYERS
 
 
 def test_every_declared_flag_is_written_explicitly(tmp_path: Path) -> None:
@@ -110,7 +120,7 @@ def test_generated_lines_are_exported(tmp_path: Path) -> None:
     """nvim reads these through `vim.env`, so a bare assignment would not reach it."""
     section = envfile.render(machine(tmp_path))
 
-    assert 'export DOTFILES_OS=' in section
+    assert 'export DOTFILES_LAYERS=' in section
     assert 'export ALPHA_FLAG=' in section
 
 
@@ -119,7 +129,7 @@ def test_generated_lines_let_the_ambient_environment_win(tmp_path: Path) -> None
     sources this file — a bare assignment would clobber the ambient value."""
     section = envfile.render(machine(tmp_path))
 
-    assert 'export DOTFILES_OS="${DOTFILES_OS:-darwin}"' in section
+    assert f'export DOTFILES_LAYERS="${{DOTFILES_LAYERS:-{MACOS_LAYERS}}}"' in section
     assert 'export ALPHA_FLAG="${ALPHA_FLAG:-true}"' in section
 
 
@@ -127,14 +137,14 @@ def test_the_ambient_override_actually_wins_in_a_real_shell(tmp_path: Path, env_
     envfile.write(env_file, machine(tmp_path))
 
     result = subprocess.run(
-        ['bash', '-c', f'source "{env_file}"; echo "$DOTFILES_OS"'],
+        ['bash', '-c', f'source "{env_file}"; echo "$DOTFILES_LAYERS"'],
         capture_output=True,
         text=True,
-        env={**os.environ, 'DOTFILES_OS': 'linux'},
+        env={**os.environ, 'DOTFILES_LAYERS': 'os/linux'},
         check=True,
     )
 
-    assert result.stdout.strip() == 'linux'
+    assert result.stdout.strip() == 'os/linux'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -227,7 +237,7 @@ def test_a_refresh_replaces_the_generated_section_and_nothing_else(tmp_path: Pat
     envfile.write(env_file, machine(tmp_path, {**MANIFEST, 'platform': 'linux'}))
 
     values = envfile.read(env_file)
-    assert values['DOTFILES_OS'] == 'linux'
+    assert values['DOTFILES_LAYERS'] == LINUX_LAYERS
     assert values['OPENAI_API_KEY'] == 'sk-secret'
 
 
@@ -338,7 +348,7 @@ def test_identity_drift_from_the_manifest_is_stale(tmp_path: Path) -> None:
     live = session(tmp_path, {**MANIFEST, 'platform': 'linux'})
     envfile.write(live.env_file, live.machine)
 
-    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_OS']
+    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_LAYERS']
 
     assert found[0].verdict is Verdict.STALE
     assert found[0].actionable
@@ -353,12 +363,12 @@ def test_an_overridden_coordinate_is_named_but_is_not_ours_to_write(tmp_path: Pa
     live = session(tmp_path)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write('export DOTFILES_OS=linux\n')
+        target.write(f'export DOTFILES_LAYERS="{LINUX_LAYERS}"\n')
 
-    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_OS']
+    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_LAYERS']
 
     assert found[0].verdict is Verdict.STALE
-    assert found[0].observed == 'linux'
+    assert found[0].observed == LINUX_LAYERS
     assert found[0].repair is Repair.BY_HAND
     assert not found[0].actionable
     assert str(live.env_file) in found[0].advice
@@ -372,14 +382,14 @@ def test_an_overridden_coordinate_settles_rather_than_being_rewritten_each_run(t
     live = session(tmp_path)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write('export DOTFILES_OS=linux\n')
+        target.write(f'export DOTFILES_LAYERS="{LINUX_LAYERS}"\n')
 
     for _ in range(3):
         for change in [found for found in changes(tmp_path) if found.actionable]:
             env_resource.RESOURCE.perform(session(tmp_path), change, unprivileged)
 
     assert not (tmp_path / '.env.bak').exists()
-    assert envfile.read(live.env_file)['DOTFILES_OS'] == 'linux'
+    assert envfile.read(live.env_file)['DOTFILES_LAYERS'] == LINUX_LAYERS
 
 
 def test_a_flag_nothing_declares_is_undeclared_and_unrepairable(tmp_path: Path, env_file: Path) -> None:

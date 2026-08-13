@@ -92,7 +92,7 @@ path = ~/.config/delta/current.gitconfig
 #
 # The values are written out because git cannot expand a variable in an
 # include.path — `~` is the only substitution it does. .zshrc sources the same
-# overlays through $DOTFILES_HOST and needs no such list, which is why shell/
+# overlays through $DOTFILES_LAYERS and needs no such list, which is why shell/
 # keeps the axis/value directory in its deployed path and this cannot.
 #
 # That enumeration is the one cost, and it is guarded: `dotfiles machines check`

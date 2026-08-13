@@ -29,10 +29,32 @@ if [[ -f "$HOME/.env" ]]; then
   source "$HOME/.env"
 fi
 
-if [[ -z "${MACHINE:-}" || -z "${DOTFILES_PKG:-}" ]]; then
+if [[ -z "${MACHINE:-}" || -z "${DOTFILES_LAYERS:-}" ]]; then
   echo "ERROR: ~/.env does not declare this machine. Run: dotfiles env apply"
   exit 1
 fi
+
+# One axis's value, out of the resolved overlay list ~/.env carries. Read from
+# that list rather than from a variable per axis, so this file and the shells
+# cannot come to disagree about what the machine is.
+layer_value() {
+  local axis=$1 layer
+  local -a layers
+  read -ra layers <<<"$DOTFILES_LAYERS"
+  for layer in "${layers[@]}"; do
+    if [[ $layer == "$axis"/* ]]; then
+      printf '%s\n' "${layer#"$axis"/}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Whether the machine loads a given `<axis>/<value>` overlay at all. Padded on
+# both sides so `trust/fleet` cannot match inside `trust/fleetish`.
+loads_layer() {
+  [[ " $DOTFILES_LAYERS " == *" $1 "* ]]
+}
 
 # ================================================================
 # TEST TRACKING
@@ -119,7 +141,8 @@ test_file "functions.sh exists" "$HOME/.local/shell/functions.sh"
 test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
 # Every machine has a package manager and every package manager has an
 # overlay, so this is the one coordinate directory that must always deploy.
-test_file "the ${DOTFILES_PKG} overlay is deployed" "$HOME/.local/shell/pkg/${DOTFILES_PKG}/${DOTFILES_PKG}.sh"
+PKG=$(layer_value pkg)
+test_file "the ${PKG} overlay is deployed" "$HOME/.local/shell/pkg/${PKG}/${PKG}.sh"
 
 # Test they can be sourced
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"
@@ -147,7 +170,7 @@ test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
 # not hold, so asserting it there failed every nonfleet-trust container for a file
 # nothing is designed to write. `dotfiles check`'s identity row is what reports a
 # genuinely missing one, on the machines where that is a fault.
-if [[ "${DOTFILES_TRUST:-}" == "fleet" ]]; then
+if loads_layer trust/fleet; then
   test_cmd "git identity resolves" "git config --global --includes --get user.email"
 fi
 test_file "tmux config exists" "$HOME/.config/tmux/tmux.conf"
@@ -179,14 +202,14 @@ test_cmd "fzf installed" "command -v fzf"
 # ================================================================
 # 7. COORDINATE-SPECIFIC APPS
 # ================================================================
-if [[ "$DOTFILES_OS" == "darwin" ]]; then
+if loads_layer os/darwin; then
   echo ""
   echo "macOS:"
   test_file "ghostty config exists" "$HOME/.config/ghostty/config"
   test_cmd "brew installed" "command -v brew"
 fi
 
-if [[ "$DOTFILES_DISPLAY" == "wayland" ]]; then
+if loads_layer display/wayland; then
   echo ""
   echo "Wayland:"
   test_cmd "rofi-power available" "command -v rofi-power"
