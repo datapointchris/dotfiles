@@ -50,10 +50,9 @@ LINUX = coordinates.PLATFORM_BUNDLES['linux']
 def busiest_owner() -> str:
     """The owner the declaration names most, read rather than typed here.
 
-    `install/phases.sh` carried an `OWNER` constant this file's predecessor used
-    to source. With the bash gone there is no such constant anywhere in the repo,
-    and writing one in would be a name that rots the day a repo moves — what these
-    tests need is an owner with entries behind it, not a particular one.
+    No `OWNER` constant exists anywhere in the repo, and writing one in would be a
+    name that rots the day a repo moves — what these tests need is an owner with
+    entries behind it, not a particular one.
     """
     declaration = catalog.load()
     owners = Counter(entry.owner for section in catalog.SECTIONS for entry in declaration.section(section) if entry.owner)
@@ -131,7 +130,7 @@ def test_a_whole_walk_reaches_env_and_identity() -> None:
 
 
 def test_selecting_one_resource_narrows_to_it() -> None:
-    """What `dotfiles packages apply` does, and what `--only` used to."""
+    """What `dotfiles packages apply` does."""
     assert engine.Selection.of('packages').resources == ('packages',)
 
 

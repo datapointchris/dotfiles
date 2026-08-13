@@ -65,9 +65,9 @@ def test_every_section_is_either_provided_or_explained() -> None:
     """A section in neither installs nothing and says nothing about it — which is
     the state `runtimes` sat in for months.
 
-    Both declarations at once. `packages.yml` and `system.yml` used to be asked
-    this separately because two maps answered it; one registry holds both, so a
-    new section in either file has to answer the same question.
+    Both declarations at once. One registry holds `packages.yml` and `system.yml`
+    together, so a new section in either file has to answer the same question. Two
+    maps would answer it separately.
     """
     declared = set(catalog.SECTIONS) | set(catalog.SYSTEM_SECTIONS)
     unaccounted = declared - set(registry.BY_SECTION) - set(registry.UNPROVIDED)

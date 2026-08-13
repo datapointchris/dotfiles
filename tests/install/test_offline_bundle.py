@@ -131,7 +131,7 @@ def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
 
 
 def test_apply_stages_the_archive_it_finds(tmp_path, home, staged, monkeypatch) -> None:
-    """The behaviour the bootstrap used to supply by running the apply itself."""
+    """The behaviour the bootstrap would otherwise supply by running the apply itself."""
     monkeypatch.chdir(tmp_path)
     archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 

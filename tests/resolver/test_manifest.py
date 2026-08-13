@@ -139,7 +139,7 @@ def test_a_gate_covers_the_whole_section(tmp_path: Path) -> None:
 
 def test_a_derived_section_is_never_subscribed_to(tmp_path: Path) -> None:
     """A machine gets the Go toolchain because it declared `go_tools`, which is
-    why the booleans that used to gate it were removed."""
+    why no boolean gates it."""
     assert load(tmp_path, {**LINUX, 'go_tools': ['task']}).subscription('runtimes').coverage is machines.Coverage.NONE
 
 

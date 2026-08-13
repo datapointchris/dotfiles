@@ -1,9 +1,9 @@
-"""One object per mechanism, and the invariants that used to be five tables.
+"""One object per mechanism, and the invariants that would otherwise be five tables.
 
 Nothing here touches a machine. The registry is a description — which section a
 provider plans from, how it tells whether one of its items is present, whether
-repairing one escalates — and the whole point of collapsing the tables is that
-those three answers can no longer be given by three files that disagree.
+repairing one escalates — and the whole point of one object is that those three
+answers cannot be given by three files that disagree.
 """
 
 from __future__ import annotations
@@ -364,8 +364,9 @@ def test_a_precondition_is_readable_on_an_entry_from_any_section() -> None:
 
 
 def test_a_renamed_precondition_field_raises_rather_than_reading_as_ungated() -> None:
-    """The whole point of dropping `getattr(..., False)`. A rename used to answer
-    `NONE` silently, which for `requires_amd_gpu` is the 12 GiB it exists to stop."""
+    """The whole point of not reaching for `getattr(..., False)`: under it a rename
+    answers `NONE` silently, which for `requires_amd_gpu` is the 12 GiB it exists
+    to stop."""
 
     class Renamed:
         """An entry whose `requires_amd_gpu` was renamed out from under the reader."""

@@ -38,7 +38,7 @@ class TestDeclaration:
         assert len({tool.winget for tool in windows.TOOLS}) == len(windows.TOOLS)
 
     def test_placeholders_are_the_ones_expand_asset_knows(self) -> None:
-        """A stray {tag} or {ver} — the vocabulary this file used to have — would
+        """A stray {tag} or {ver} — a vocabulary this file does not use — would
         survive expansion and 404 at download time."""
         for tool in windows.TOOLS:
             assert '{' not in windows_bundle.expand_asset(tool.asset, 'v1.2.3'), tool.name

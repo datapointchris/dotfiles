@@ -114,8 +114,8 @@ def test_the_windows_override_is_ordered_after_the_shared_files(windows: Windows
 
 
 def test_a_broken_file_costs_only_itself(windows: Windows) -> None:
-    """The regression the whole layout exists for: a syntax error used to be fatal
-    to everything after it, because the files were concatenated into one."""
+    """The regression the whole layout exists for: a syntax error is fatal to
+    everything after it when the files are concatenated into one."""
     with (windows.staged / 'functions.sh').open('a') as broken:
         broken.write('if true; then\n')
 

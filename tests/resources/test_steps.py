@@ -161,8 +161,8 @@ def orbstack(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_an_orbstack_that_has_not_been_installed_yet_is_still_planned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The app arrives at SYSTEM_APPS and this row is decided at SYSTEM_CONFIG of
     the same run, so reading `/Applications` answers about the machine before the
-    run. It used to short-circuit to MATCHED there, which is a fresh Mac reporting
-    a converged docker config that points nowhere.
+    run. Short-circuiting to MATCHED there is a fresh Mac reporting a converged
+    docker config that points nowhere.
     """
     monkeypatch.setattr(steps, 'ORBSTACK_PLUGINS', tmp_path / 'absent')
     monkeypatch.setenv('DOCKER_CONFIG', str(tmp_path / 'docker'))

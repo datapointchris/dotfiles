@@ -90,9 +90,9 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
 
 
 def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_it(home, bundle, proxy, monkeypatch) -> None:
-    """`/usr/local/go/bin` used to reach PATH only as a side effect of *installing*
-    Go, so a machine whose toolchain was already current never placed it and every
-    tool here failed with `go: command not found`.
+    """Placing `/usr/local/go/bin` on PATH only as a side effect of *installing* Go
+    leaves a machine whose toolchain is already current without it, and every tool
+    here fails with `go: command not found`.
 
     Invisible interactively, because `.zshenv` names the directory — so it bit only
     the non-interactive callers, which is the scheduled check, cron, `docker exec`

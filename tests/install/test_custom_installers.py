@@ -380,9 +380,9 @@ class TestClaudeCode:
 
 class TestAwscli:
     def test_macos_never_plans_it_at_all_because_homebrew_has_the_formula(self, declared):
-        """The deferral used to be a branch in the installer returning success
-        having done nothing, which is still a planned item, a measured row and a
-        printed line on every run of a Mac with nothing wrong."""
+        """Deferring inside the installer instead — a branch returning success
+        having done nothing — is still a planned item, a measured row and a printed
+        line on every run of a Mac with nothing wrong."""
         entry = declared.find('custom_installers', 'awscli')
 
         assert not resolve.available(entry, machines.load('macos-personal-workstation').coordinates)

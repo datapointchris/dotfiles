@@ -1,7 +1,7 @@
 """The container rig, before anything is installed.
 
 Seconds rather than half an hour, because nothing here runs `install.sh`. These
-are the questions that used to require a full install to answer — is the repo
+are the questions that would otherwise require a full install to answer — is the repo
 really in there, does a command see the PATH a login shell would, is the network
 the one the work box reported — and every one of them is a way the harness can be
 wrong while the code under test is fine.

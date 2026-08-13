@@ -84,9 +84,8 @@ def test_the_record_the_run_pointed_at_is_the_one_that_exists(restricted: Machin
 
 
 def test_a_failure_is_not_silently_converged(restricted: Machine) -> None:
-    """The defect this whole tier exists for: the install used to exit 0 no
-    matter what failed, so `install && next-thing` chained straight past a broken
-    machine. The status is `apply`'s now that the bootstrap hands over rather than
-    running it, and the property is unchanged — a failed stage has to reach the
-    caller."""
+    """The defect this whole tier exists for: an install exiting 0 whatever failed
+    lets `install && next-thing` chain straight past a broken machine. The status
+    is `apply`'s, since the bootstrap hands over rather than running it — a failed
+    stage has to reach the caller."""
     assert restricted.install_status != 0

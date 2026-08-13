@@ -4,10 +4,10 @@ Two properties that nothing else can catch, and both fail at commit time rather
 than on a machine:
 
 **A directory nobody selects deploys to nobody and says nothing.** `configs/`,
-`shell/` and `apps/` used to be keyed on `PLATFORM`, where a misspelled overlay
-was one of four known strings away from working. Keyed on coordinates there are
-fourteen legal values across six axes, so `configs/display/wayand/` is a plausible
-typo that would silently reach no machine ever.
+`shell/` and `apps/` are keyed on coordinates rather than on one `PLATFORM`
+string. Keyed on one string, a misspelled overlay is one of four known values away
+from working; keyed on six axes, `configs/display/wayand/` is a plausible typo
+that would silently reach no machine ever.
 
 **Two overlays claiming one target is last-write-wins, silently.** Deployment is
 ordered, so a conflict does not fail — it deploys whichever layer comes later

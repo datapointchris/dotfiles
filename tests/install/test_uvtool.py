@@ -190,7 +190,7 @@ def test_a_repo_with_no_release_installs_from_the_branch_with_a_warning(uv, rele
     ],
 )
 def test_every_clone_url_shape_resolves_to_the_same_repo(released, repo: str, slug: str) -> None:
-    """A trailing slash used to pass straight through as part of the slug, building
+    """A trailing slash passing straight through as part of the slug builds
     `/repos/owner/name//releases/latest`."""
     asked = released('v6.0.0')
 

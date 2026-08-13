@@ -66,10 +66,10 @@ def test_an_existing_entry_point_is_left_alone(entry_point: Path) -> None:
 def test_a_linked_entry_point_is_replaced_rather_than_written_through(entry_point: Path, tmp_path: Path) -> None:
     """The regression this whole file exists for.
 
-    The entry point used to be a symlink into the checkout. `git config --global`
-    follows a link when writing, so the first person to follow git's own "Please
-    tell me who you are" hint committed an identity into the repo — which is
-    exactly what happened while this change was being written.
+    The entry point is a real file rather than a symlink into the checkout. `git
+    config --global` follows a link when writing, so with one there the first
+    person to follow git's own "Please tell me who you are" hint commits an
+    identity into the repo.
     """
     repo_file = tmp_path / 'configs' / 'common' / '.config' / 'git' / 'common.gitconfig'
     repo_file.parent.mkdir(parents=True)

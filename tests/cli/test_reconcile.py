@@ -193,10 +193,9 @@ def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
 
 
 def test_the_issue_line_names_the_item_and_its_fix() -> None:
-    """The summary used to say only a count, and by the time a reader reaches it
-    the rows that explained the problem have scrolled past `render_change`.
-    Naming the item and its advice here makes this line the whole answer on its
-    own."""
+    """A summary saying only a count arrives too late to use: the rows that
+    explained the problem have scrolled past `render_change` by then. Naming the
+    item and its advice here makes this line the whole answer on its own."""
     changes = [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER', advice='set it in ~/.env')]
 
     folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)

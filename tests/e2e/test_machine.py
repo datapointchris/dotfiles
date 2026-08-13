@@ -144,11 +144,11 @@ def test_docker_compose_is_the_v2_plugin(converged_machine: Machine) -> None:
     nothing about the subcommand resolving, which is what every compose file here
     is written against.
 
-    Skipped from the *declaration*, not from the environment's name. The skip used
-    to read `name == 'wsl'`, and `offline` and `restricted` also run the
+    Skipped from the *declaration*, not from the environment's name. Skipping on
+    `name == 'wsl'` misses `offline` and `restricted`, which also run the
     `wsl-work-workstation` manifest — where every docker entry carries
     `excludes_host: wsl`, because WSL uses Docker Desktop on the Windows host.
-    So this failed on two environments for a package they correctly do not install.
+    That fails two environments for a package they correctly do not install.
     """
     if not any(item.name == 'docker-compose-plugin' for item in declared_items(converged_machine.environment)):
         pytest.skip('this machine does not declare the compose plugin')

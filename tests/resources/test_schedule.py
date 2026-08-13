@@ -220,9 +220,9 @@ def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
     must not go red for it — that is how a real failure comes to be ignored.
 
     Asserted on the verb's answer rather than on the unit file, because the unit
-    file is where the *workaround* used to live: `SuccessExitStatus=1` existed
-    only because one verb answered both "what differs" and "what is wrong". The
-    split removed the reason, so there is nothing left in the unit to assert.
+    file is where a *workaround* would live: `SuccessExitStatus=1` is needed only
+    while one verb answers both "what differs" and "what is wrong". Split, there is
+    nothing left in the unit to assert.
     """
     behind = [ResourceResult('packages', ResourceVerdict.CONVERGED, 'up to date', pending=3)]
 

@@ -82,7 +82,7 @@ def crate(**fields) -> catalog.CargoPackage:
 
 class TestCargoTarget:
     """Naming lives in the provider that installs from the name; these are the
-    same cases the bundler used to answer for itself."""
+    same cases the bundler would otherwise answer for itself."""
 
     def test_defaults_to_the_triple_for_the_platform(self):
         assert cargo.asset_target(crate(), LINUX_X86) == 'x86_64-unknown-linux-gnu'
@@ -126,8 +126,8 @@ class TestPatternExpansion:
 
     def test_the_two_sections_disagree_about_arm_and_each_gets_its_own_spelling(self):
         """A cargo tool's assets say aarch64 and a Go tool's say arm64, for the same
-        CPU. The bundler used to pass a different arch string per section from two
-        call sites; each provider now carries its own."""
+        CPU. Each provider carries its own spelling, rather than the bundler
+        passing a different arch string per section from two call sites."""
         pattern = {'binary_pattern': '{platform}_{arch}.tar.gz'}
 
         assert cargo.stage(crate(**pattern), 'v1', MACOS_ARM) == 'apple_darwin_aarch64.tar.gz'
@@ -322,11 +322,11 @@ class TestFailureDetail:
 class TestBundleRoundTrip:
     """What the bundler writes is what the provider reads back.
 
-    The two used to agree by convention: the bundler expanded a `binary_pattern`
-    out of a pipe-joined row and recorded the *command*, while `cargo-tools.sh`
-    globbed four loose patterns against two candidate names. A disagreement was
-    silent — the tool installed from the network instead, which on the firewalled
-    machine the bundle exists for means it did not install at all.
+    Agreeing by convention is not enough: a bundler expanding a `binary_pattern`
+    out of a pipe-joined row and recording the *command*, against a
+    `cargo-tools.sh` globbing four loose patterns over two candidate names. A
+    disagreement is silent — the tool installs from the network instead, which on
+    the firewalled machine the bundle exists for means it does not install at all.
 
     So this asserts the whole loop rather than either half: stage a package the
     way `add_cargo_binaries` does, then ask the provider for it.
