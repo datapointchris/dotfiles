@@ -197,7 +197,10 @@ def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quie
     absent = windows.missing(into)
     for name in sorted(absent):
         render_row('missing', name, f'not in {into}', 'yellow')
-    for name in sorted(set(windows.TOOLS) - set(absent)):
+    # Names on both sides. `windows.TOOLS` holds `Tool`, `windows.missing` returns
+    # their names, so differencing the two removes nothing and then sorts a frozen
+    # dataclass declared without `order=True` — a TypeError on every invocation.
+    for name in sorted({tool.name for tool in windows.TOOLS} - set(absent)):
         render_row('matched', name, '', 'green')
     console.print(f'{len(windows.TOOLS) - len(absent)} of {len(windows.TOOLS)} Windows tools in {into}')
     raise typer.Exit(ExitCode.DRIFT if absent else ExitCode.CONVERGED)

@@ -355,29 +355,36 @@ def test_offline_the_bundle_is_the_upstream_and_the_record_says_what_was_done(
 
     ran = cli('packages', 'apply', '--offline', '--json')
 
-    planned = [row for row in recorded(ran) if row[0].endswith(TOOL) and row[2] == 'planned']
-    assert planned == ([(f'packages/ghrelease/{TOOL}', relation.verdict, 'planned')] if relation.verdict else [])
+    # `unmeasured` is this branch's word for a row nothing could ask upstream
+    # about. It used to be filed as `planned`, which read as work the run intended
+    # and then silently did not do.
+    decided = 'planned' if relation.acted else 'unmeasured'
+    filed = [row for row in recorded(ran) if row[0].endswith(TOOL) and row[2] in {'planned', 'unmeasured'}]
+    assert filed == ([(f'packages/ghrelease/{TOOL}', relation.verdict, decided)] if relation.verdict else [])
     assert [row for row in recorded(ran) if row[2] == 'failed'] == (
         [(f'packages/ghrelease/{TOOL}', relation.verdict, 'failed')] if relation.acted else []
     )
     assert ran.exit_code == (ExitCode.ISSUE if relation.acted else ExitCode.CONVERGED)
 
 
-def test_offline_an_unmeasurable_row_is_filed_and_not_printed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A bundle carrying no row for the tool leaves it unknown, and `apply` is silent.
+def test_offline_an_unmeasurable_row_is_filed_and_named(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A bundle carrying no row for the tool leaves it unknown, and the run says so.
 
-    `apply` prints what it cannot fix and acts on what it can; an `UNKNOWN` change
-    is neither, so the screen says nothing about it and the record is the only
-    place it survives. That is why the sentence naming the fix — *extract a newer
-    offline bundle* — is unreachable from this verb, and why the flag that would
-    show it, `--offline`, is the one the read verbs do not take.
+    Renamed rather than inverted. The old name was `..._filed_and_not_printed` and
+    carried its assertion, so flipping the body under it would have left a test
+    saying the opposite of what it checks — worse than no test.
+
+    Silence was the old behaviour and the fault this branch exists to fix. An
+    `UNKNOWN` change is neither acted on nor repairable, so `apply` printed nothing
+    and the record was the only place it survived — a caller watching the screen
+    saw a converged run over a machine holding a tool nothing could measure.
     """
     offline_machine(sandbox, STAGED[4])
 
     ran = cli('packages', 'apply', '--offline', '--json')
 
-    assert (f'packages/ghrelease/{TOOL}', 'unknown', 'planned') in recorded(ran)
-    assert TOOL not in said(ran)
+    assert (f'packages/ghrelease/{TOOL}', 'unknown', 'unmeasured') in recorded(ran)
+    assert TOOL in said(ran)
 
 
 def test_offline_needs_a_bundle_before_it_measures_anything(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -480,29 +487,31 @@ def test_a_reinstall_naming_nothing_this_machine_declares_is_a_usage_error(sandb
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(
-    ('argv', 'refused'),
-    [
-        pytest.param(('packages', 'plan', '--offline'), 'No such option: --offline', id='plan-offline'),
-        pytest.param(('packages', 'check', '--offline'), 'No such option: --offline', id='check-offline'),
-        pytest.param(('packages', 'check', '--source', 'github_releases'), 'No such option: --source', id='check-source'),
-    ],
-)
-def test_a_read_verb_refuses_a_flag_it_does_not_take(
-    sandbox: Sandbox, cli: Callable[..., Invocation], argv: tuple[str, ...], refused: str
-) -> None:
-    """`--offline` names where the bytes come from, so only the verb that fetches
-    any takes it — a `plan` that read a bundle would be rehearsing a run nobody can
-    ask for. `check` narrows to nothing at all: it answers what is *wrong* with the
-    whole resource, and a section-scoped one would report a converged machine by
-    not having looked.
+def test_check_refuses_a_section_it_cannot_narrow_to(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`check` answers what is *wrong* with the whole resource, so a section-scoped
+    one would report a converged machine by not having looked.
+
+    The `--offline` half of this case is gone rather than reversed. It asserted
+    that `plan` and `check` refuse the flag, which this branch deliberately
+    changes, and `tests/cli/test_conformance.py::test_check_takes_offline_wherever_apply_does`
+    is now where that policy lives — derived by walking the tree instead of listed
+    here. Two copies do not disagree while both are true, so nothing surfaces the
+    duplication until the policy moves, and then whichever copy the author knew
+    about is the one revised. That is exactly what happened: `SELECTORS` gained
+    `--offline` with the new argument while this docstring still stated the old one
+    as fact. See `standards/testing.md` § "A surface invariant is derived from the
+    command tree, never listed in a behavioural test".
+
+    `--source` stays because nothing walks the tree for it. This literal is the
+    only thing asserting that rule, and the rule reaches a policy with a derived
+    home rather than every literal.
     """
     machine(sandbox, CACHED[1])
 
-    ran = cli(*argv, catch_exceptions=True)
+    ran = cli('packages', 'check', '--source', 'github_releases', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert refused in said(ran)
+    assert 'No such option: --source' in said(ran)
 
 
 def test_the_sections_source_will_take_are_this_machines_declaration(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
