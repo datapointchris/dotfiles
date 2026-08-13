@@ -49,6 +49,7 @@ github_releases:
   - tenv
   - yq
   - ntfy
+  - duckdb
   # Personal data CLIs — released by their own app repos under a cli/v* tag
   - icb
   - learning

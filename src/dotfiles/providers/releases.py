@@ -151,6 +151,13 @@ def atuin(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'atuin-{triple}.tar.gz', Archive.TARBALL, path=f'atuin-{triple}/atuin')
 
 
+def duckdb(tag: str, target: Target) -> ReleaseArtifact:
+    """One fat `osx-universal` binary covers both Macs, so darwin needs no arch
+    branch. The asset carries no version, and the zip holds a bare `duckdb`."""
+    stem = 'osx-universal' if target.is_darwin else ('linux-arm64' if target.is_arm else 'linux-amd64')
+    return ReleaseArtifact(f'duckdb_cli-{stem}.zip', Archive.ZIP, path='duckdb')
+
+
 def duf(tag: str, target: Target) -> ReleaseArtifact:
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_x86_64') if target.is_darwin else 'linux_x86_64'
     return ReleaseArtifact(f'duf_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='duf')
@@ -347,6 +354,7 @@ def _go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
 
 ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'atuin': atuin,
+    'duckdb': duckdb,
     'duf': duf,
     'fzf': fzf,
     'glow': glow,

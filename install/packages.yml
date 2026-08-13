@@ -897,6 +897,17 @@ github_releases:
     repo: casey/just
     description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
 
+  # A release rather than a system package or a uv tool, and neither was a
+  # preference. `uv tool install duckdb` fails outright — the PyPI package is the
+  # Python library and publishes no executable. apt has `duckdb` only in the
+  # newest Ubuntu suite, so the WSL box cannot rely on it, while pacman and brew
+  # both carry it. The release is the one method that answers on all three.
+  - name: duckdb
+    repo: duckdb/duckdb
+    checksum: unpublished
+    description: In-process analytical SQL, for querying CSV/JSON/parquet from the shell
+    tags: [cli, development]
+
   # mikefarah/yq (Go), NOT the Python jq-wrapper: the de-facto standard yq that every
   # tutorial and Claude Code assumes. Direct binary, consistent version across platforms,
   # and works behind the WSL work firewall (github release download, no Go module proxy).
