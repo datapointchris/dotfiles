@@ -20,11 +20,16 @@
 
 set -euo pipefail
 
-# The registry comes from dotfiles' own config, which the trust overlay deploys —
-# ~/.config/dotfiles/config.toml on the fleet, and the same path off it naming a
-# different file. Read from there rather than from a variable, because ~/.env is
-# a shell file: an unattended caller sources no profile and saw nothing, which is
-# the whole reason the shared $REPOS_JSON came out.
+# $DOTFILES_REPOS_REGISTRY, then repos_registry in dotfiles' own config, which
+# the trust overlay deploys — ~/.config/dotfiles/config.toml on the fleet, and the
+# same path off it naming a different file. Both rungs, in that order, because
+# src/dotfiles/settings.py SHARED_PATHS declares both for this one setting and a
+# reader honouring only one of them answers differently from `dotfiles config
+# show` while both look right.
+#
+# The config carries the machine's answer rather than a variable alone: ~/.env is
+# a shell file, so an unattended caller sources no profile and saw nothing, which
+# is the whole reason the shared $REPOS_JSON came out.
 #
 # yq rather than a grep, and it is on every machine including the work box. There
 # is no fallback to a known location: a default would be the hardcoded path one
@@ -32,13 +37,13 @@ set -euo pipefail
 # nothing named one. An unset value leaves REGISTRY empty and the -f test below
 # reports it.
 DOTFILES_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml"
-REGISTRY=""
-if [ -f "$DOTFILES_CONFIG" ]; then
+REGISTRY="${DOTFILES_REPOS_REGISTRY:-}"
+if [ -z "$REGISTRY" ] && [ -f "$DOTFILES_CONFIG" ]; then
   # -oy is not cosmetic: without it yq warns on stderr that its default output
   # format changed, on every single invocation.
   REGISTRY="$(yq -p toml -oy -r '.repos_registry // ""' "$DOTFILES_CONFIG")"
-  REGISTRY="${REGISTRY/#\~/$HOME}"
 fi
+REGISTRY="${REGISTRY/#\~/$HOME}"
 LANE=""
 
 die() {
