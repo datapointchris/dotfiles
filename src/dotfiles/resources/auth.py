@@ -141,8 +141,8 @@ class AuthResource:
                 Stage.AUTH,
                 tool,
                 credential.verdict,
-                detail=credential.detail,
                 repair=Repair.NONE if credential.verdict is Verdict.UNKNOWN else Repair.BY_HAND,
+                detail=credential.detail,
                 advice=credential.advice,
             )
             for tool, credential in observed.found.items()

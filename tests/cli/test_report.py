@@ -26,6 +26,7 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
 runner = CliRunner()
@@ -46,7 +47,7 @@ def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def change(item: str, verdict: Verdict) -> Change:
-    return Change('packages', Stage.TOOLS, item, verdict)
+    return Change('packages', Stage.TOOLS, item, verdict, repair=Repair.AUTOMATIC)
 
 
 def recorded(runs_dir: Path, *events: Event, verb: str = 'apply') -> Path:

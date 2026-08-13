@@ -36,6 +36,10 @@ NAME = 'env'
 RESTORE = 'restore it with safekeep'
 """What gets a required file back, unless its entry declares otherwise."""
 
+NOT_A_FLAG = 'is neither truthy nor falsey'
+"""Said once, because the two halves of the file report it with the same words and
+a different repair — see `_unparseable`."""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
@@ -136,6 +140,7 @@ class EnvResource:
                     Stage.ENVIRONMENT,
                     str(observed.path),
                     Verdict.MISSING,
+                    repair=Repair.AUTOMATIC,
                     detail='the file does not exist, so no shell knows what machine this is',
                 ),
             )
@@ -194,10 +199,27 @@ def _identity(machine, observed: Observed) -> list[Change]:
         actual = observed.values.get(key)
         written = observed.generated.get(key)
         if actual is None:
-            changes.append(Change(NAME, Stage.ENVIRONMENT, key, Verdict.MISSING, detail=f'the manifest declares {expected}'))
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    key,
+                    Verdict.MISSING,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'the manifest declares {expected}',
+                )
+            )
         elif written is not None and written != expected:
             changes.append(
-                Change(NAME, Stage.ENVIRONMENT, key, Verdict.STALE, detail=f'the manifest declares {expected}', observed=written)
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    key,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'the manifest declares {expected}',
+                    observed=written,
+                )
             )
         elif actual != expected:
             changes.append(
@@ -206,9 +228,9 @@ def _identity(machine, observed: Observed) -> list[Change]:
                     Stage.ENVIRONMENT,
                     key,
                     Verdict.STALE,
+                    repair=Repair.BY_HAND,
                     detail=f'the manifest declares {expected}, and an assignment below the marker overrides it',
                     observed=actual,
-                    repair=Repair.BY_HAND,
                     advice=f'drop that assignment from {observed.path}, or declare {actual} in the manifest',
                 )
             )
@@ -225,20 +247,53 @@ def _flags(machine, observed: Observed) -> list[Change]:
     one. A hand-edited override below the marker stays quiet for the reason
     `read_generated` records: it wins at runtime, so it is not drift, and no
     rewrite of the section above it could repair it anyway.
+
+    The second question asks the same thing of the same file and has to answer who
+    can repair it, which is `_identity`'s split three functions above. A value the
+    shell cannot read is drift wherever it was written, but only the generated half
+    is `apply`'s to rewrite: an unparseable assignment below the marker is still
+    the last one in the file, so offering it as repairable buys a `check` that
+    finds it, an `apply` that reports DONE, a fresh `.env.bak` over the last one,
+    and a machine that has not moved.
     """
     changes = []
     for name, expected in machine.flags.items():
         actual = observed.values.get(name)
         written = observed.generated.get(name)
         if actual is None:
-            changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.MISSING, detail=f'would be {expected}'))
+            changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'would be {expected}'))
         elif actual.lower() not in envfile.TRUTHY | envfile.FALSEY:
-            changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.STALE, detail='is neither truthy nor falsey', observed=actual))
+            changes.append(_unparseable(name, actual, generated=written == actual, path=observed.path))
         elif written is not None and written != expected:
             changes.append(
-                Change(NAME, Stage.ENVIRONMENT, name, Verdict.STALE, detail=f'the manifest declares {expected}', observed=written)
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    name,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'the manifest declares {expected}',
+                    observed=written,
+                )
             )
     return changes
+
+
+def _unparseable(name: str, actual: str, generated: bool, path: Path) -> Change:
+    """A flag holding a value no shell reads as true or false, addressed to whoever
+    owns the half it was written in."""
+    if generated:
+        return Change(NAME, Stage.ENVIRONMENT, name, Verdict.STALE, repair=Repair.AUTOMATIC, detail=NOT_A_FLAG, observed=actual)
+    return Change(
+        NAME,
+        Stage.ENVIRONMENT,
+        name,
+        Verdict.STALE,
+        repair=Repair.BY_HAND,
+        detail=f'{NOT_A_FLAG}, and an assignment below the marker sets it',
+        observed=actual,
+        advice=f'drop that assignment from {path}, or give it a value `flag_enabled` reads',
+    )
 
 
 def _config(observed: Observed) -> list[Change]:
@@ -258,8 +313,8 @@ def _config(observed: Observed) -> list[Change]:
             Stage.ENVIRONMENT,
             str(settings.config_file()),
             Verdict.STALE,
-            detail=f'cannot be read, so it answers nothing — {observed.config_problem}',
             repair=Repair.BY_HAND,
+            detail=f'cannot be read, so it answers nothing — {observed.config_problem}',
             advice='fix the TOML, or delete the file to fall back to ~/.env alone',
         )
     ]
@@ -291,8 +346,8 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                 Stage.ENVIRONMENT,
                 entry.name,
                 Verdict.MISSING,
-                detail=f'not set — {entry.description or "a machine-local value"}',
                 repair=Repair.BY_HAND,
+                detail=f'not set — {entry.description or "a machine-local value"}',
                 advice=settings.where_to_name(entry.name, observed.path),
             )
         )
@@ -307,8 +362,8 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                     Stage.ENVIRONMENT,
                     entry.path,
                     Verdict.MISSING,
-                    detail=f'nothing names its location — {description}',
                     repair=Repair.BY_HAND,
+                    detail=f'nothing names its location — {description}',
                     advice=settings.where_to_name(unnamed[0], observed.path),
                 )
             )
@@ -323,8 +378,8 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                 Stage.ENVIRONMENT,
                 entry.path,
                 Verdict.MISSING,
-                detail=f'absent — {description}',
                 repair=Repair.BY_HAND,
+                detail=f'absent — {description}',
                 advice=entry.restore or RESTORE,
                 observed=entry.resolved_path(observed.resolved) if source else '',
                 source=source,
@@ -353,6 +408,7 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
             Stage.ENVIRONMENT,
             name,
             Verdict.STALE,
+            repair=Repair.AUTOMATIC,
             detail='the declaration no longer writes it, so a regeneration drops it',
             observed=value,
         )
@@ -385,8 +441,8 @@ def _undeclared(machine, observed: Observed) -> list[Change]:
             Stage.ENVIRONMENT,
             name,
             Verdict.UNDECLARED,
-            detail='is set but flags.yml declares no such flag',
             repair=Repair.NONE,
+            detail='is set but flags.yml declares no such flag',
             observed=observed.values[name],
         )
         for name in sorted(hand_set)

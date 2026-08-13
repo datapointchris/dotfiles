@@ -33,11 +33,14 @@ from dotfiles.registry import PluginSyncProvider
 from dotfiles.registry import Provider
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
+from dotfiles.resolve import Preconditions
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.resources import advice_for
+from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
 NAME = 'plugins'
@@ -47,6 +50,19 @@ NAME = 'plugins'
 class Observed:
     present: frozenset[str]
     """Addresses whose checkout is on disk."""
+
+    met: Preconditions
+    """Which declared preconditions this machine meets, measured once for the walk.
+
+    Required rather than defaulted, following `packages.Observed`: a default is
+    the pessimistic reading, and a walk that measured nothing would report every
+    gated plugin `BY_HAND` as though it had asked.
+
+    Carried at all because a plugin entry can declare one. `CloneProvider`
+    inherits `CatalogProvider.plan`, which sets `precondition=precondition_of(entry)`
+    from `requires_github_auth` / `requires_amd_gpu` on the base `Entry` — so a
+    private-repo plugin is planned gated whether or not this resource looks.
+    """
 
     behind: frozenset[str] = frozenset()
     """Addresses whose checkout is behind the branch it tracks.
@@ -138,6 +154,7 @@ class PluginsResource:
         }
         return Observed(
             present=present,
+            met=session.preconditions,
             behind=frozenset(item.address for item in clones if item.address in present and clone.behind(item, session.home))
             if session.refresh
             else frozenset(),
@@ -159,13 +176,13 @@ class PluginsResource:
         for item, provider in _units(plan):
             if isinstance(provider, PluginSyncProvider):
                 if outstanding := pending.get(item.address, ''):
-                    changes.append(_change(item, Verdict.MISSING, outstanding))
+                    changes.append(_change(item, Verdict.MISSING, outstanding, observed.met))
             elif item.address not in observed.present:
-                changes.append(_change(item, Verdict.MISSING, f'not cloned from {_short(clone.repository(item))}'))
+                changes.append(_change(item, Verdict.MISSING, f'not cloned from {_short(clone.repository(item))}', observed.met))
             elif directory := observed.unmanaged.get(item.address, ''):
                 changes.append(_unmanaged(item, directory))
             elif item.address in observed.behind:
-                changes.append(_change(item, Verdict.STALE, f'behind {_short(clone.repository(item))}'))
+                changes.append(_change(item, Verdict.STALE, f'behind {_short(clone.repository(item))}', observed.met))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
@@ -216,15 +233,29 @@ def _unmanaged(item: DesiredItem, directory: str) -> Change:
         item.stage,
         item.address,
         Verdict.STALE,
-        detail='present, but not a git checkout, so nothing here can update it',
         repair=Repair.BY_HAND,
+        detail='present, but not a git checkout, so nothing here can update it',
         advice=f'remove {directory} and re-run to clone it, or drop the entry if another tool owns this plugin',
         desired=item,
     )
 
 
-def _change(item: DesiredItem, verdict: Verdict, detail: str) -> Change:
-    return Change(NAME, item.stage, item.address, verdict, detail=detail, desired=item)
+def _change(item: DesiredItem, verdict: Verdict, detail: str, met: Preconditions) -> Change:
+    """A finding about a planned item, so `repair_for` decides who can fix it.
+
+    `Repair.AUTOMATIC` is the right answer for every plugin declared today, and
+    right by accident: no clone section in `packages.yml` declares a precondition.
+    `CloneProvider` inherits `CatalogProvider.plan`, so the first one that does is
+    planned `Precondition.GITHUB_AUTH` — and a literal would report it repairable,
+    sending `apply` at an unauthenticated clone that exits non-zero for something
+    the machine was never able to have. That is the case `repair_for` exists to
+    end, and a literal is exactly what cannot see it.
+
+    `advice_for` beside it because an unmet precondition answers `BY_HAND`, and a
+    `BY_HAND` change with nothing to do about it is refused by the constructor.
+    """
+    repair = repair_for(item, verdict, met)
+    return Change(NAME, item.stage, item.address, verdict, repair=repair, detail=detail, advice=advice_for(item, repair), desired=item)
 
 
 def _units(plan: Plan) -> tuple[tuple[DesiredItem, Provider], ...]:

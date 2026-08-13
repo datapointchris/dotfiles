@@ -27,6 +27,7 @@ from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
@@ -248,7 +249,7 @@ class TestUvToolRepair:
         monkeypatch.setattr(github_release, 'latest_version', lambda repo, tag_prefix='': 'v6.0.0')
 
         planned = item(provider, name, entry)
-        change = Change('packages', planned.stage, planned.address, verdict, desired=planned)
+        change = Change('packages', planned.stage, planned.address, verdict, repair=Repair.AUTOMATIC, desired=planned)
         found = registry.named(provider)
         assert found is not None
         outcome = found.install(Session(machine_name='box'), change, planned, Privilege(offer=False))

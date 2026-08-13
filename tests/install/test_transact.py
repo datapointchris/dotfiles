@@ -32,6 +32,7 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
 ITEM = 'sioyek'
@@ -59,7 +60,7 @@ def install_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def transact(privilege: Privilege) -> Outcome:
-    change = Change('packages', Stage.TOOLS, ITEM, Verdict.MISSING)
+    change = Change('packages', Stage.TOOLS, ITEM, Verdict.MISSING, repair=Repair.AUTOMATIC)
     return registry._transact('aur', [(change, PACKAGE)], privilege)[ITEM]
 
 

@@ -234,7 +234,7 @@ def drift(item: str, repair: Repair = Repair.AUTOMATIC) -> Event:
 
 
 def done(item: str, status: OutcomeStatus = OutcomeStatus.DONE) -> Event:
-    change = Change('packages', Stage.TOOLS, item, Verdict.MISSING)
+    change = Change('packages', Stage.TOOLS, item, Verdict.MISSING, repair=Repair.AUTOMATIC)
     return Event('packages', Outcome(change, status, f'{status} {item}'), stage=Stage.TOOLS)
 
 
@@ -647,7 +647,7 @@ def unmeasurable(item: str, detail: str = 'the staged bundle carries no version 
     """An item nothing could establish anything about, which is neither drift nor a
     failure. Offline is where a run fills up with them: the bundle is the upstream,
     so a bundle carrying no row for a tool leaves that tool with no verdict at all."""
-    change = Change('packages', Stage.TOOLS, item, Verdict.UNKNOWN, detail=detail, repair=Repair.NONE, advice=advice)
+    change = Change('packages', Stage.TOOLS, item, Verdict.UNKNOWN, repair=Repair.NONE, detail=detail, advice=advice)
     return Event('packages', change, stage=Stage.TOOLS)
 
 

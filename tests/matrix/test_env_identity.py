@@ -589,43 +589,38 @@ def unparseable_flag_below_the_marker(sandbox: Sandbox) -> None:
     below_the_marker(sandbox, 'export ALPHA_FLAG=maybe\n')
 
 
-def test_an_unparseable_flag_below_the_marker_is_planned_as_repairable(sandbox: Sandbox, cli: Run) -> None:
-    """Current behaviour. The value the shell reads is the one below the marker, so
-    the section `apply` owns is not where the wrong value is — and `plan` offers to
-    rewrite it anyway."""
+def test_an_unparseable_flag_below_the_marker_is_reported_and_not_planned(sandbox: Sandbox, cli: Run) -> None:
+    """The value the shell reads is the one below the marker, so the section `apply`
+    owns is not where the wrong value is. `_flags` asks which half wrote it, the way
+    `_identity` does, and a value `apply` cannot reach counts as attention rather
+    than as work the run intends to do."""
     unparseable_flag_below_the_marker(sandbox)
 
     ran = cli('env', 'plan', '--json')
 
-    assert ran.exit_code == ExitCode.DRIFT
-    assert ran.document['pending'] == 1
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert (ran.document['pending'], ran.document['attention']) == (0, 1)
 
 
-def test_applying_an_unparseable_flag_reports_done_and_takes_a_backup(sandbox: Sandbox, cli: Run) -> None:
-    """Current behaviour, and the shape of the loop: the write happens, the backup
-    is taken, and nothing about what the shell reads has changed."""
+def test_applying_an_unparseable_flag_writes_nothing(sandbox: Sandbox, cli: Run) -> None:
+    """No write means no backup, which is the fact that separates this from the loop
+    it used to sit in: an `apply` that reported DONE, rolled `.env.bak` over the last
+    one, and left the machine reading `maybe`."""
     unparseable_flag_below_the_marker(sandbox)
+    (sandbox.home / '.env.bak').unlink(missing_ok=True)
 
     assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
-    assert (sandbox.home / '.env.bak').exists()
+    assert not (sandbox.home / '.env.bak').exists()
 
 
-@pytest.mark.xfail(strict=True, reason='an unparseable value below the marker is reported AUTOMATIC and apply cannot reach it')
 def test_an_apply_settles_a_flag_that_parses_as_neither_true_nor_false(sandbox: Sandbox, cli: Run) -> None:
-    """The fault: `_flags` gives an unparseable value `Repair.AUTOMATIC` without
-    asking which half of the file it came from.
+    """An `apply` leaves nothing behind that the next `plan` still offers to repair.
 
-    `_identity` asks, three functions above it, and says why in its own docstring —
-    an override below the marker is the last assignment in the file, so the shell
-    takes it whatever the generated section says, and offering it as repairable
-    buys a `check` that finds it, an `apply` that reports DONE, a fresh `.env.bak`
-    over the last one, and a machine that has not moved. `_flags` reaches
-    `observed.generated` for the *stale-default* branch and not for this one, so
-    `ALPHA_FLAG=maybe` written below the marker is the one input that still loops.
-
-    Correctly, it is `Repair.BY_HAND` with advice naming the assignment to drop —
-    which would move it out of `plan` and into `check`, where a person is the whole
-    plan for it.
+    `_flags` used to give an unparseable value `Repair.AUTOMATIC` without asking
+    which half of the file it came from, and `ALPHA_FLAG=maybe` written below the
+    marker was the one input that looped for ever: `plan` offered the rewrite,
+    `apply` performed it against the section above, and the assignment below stayed
+    the last one in the file.
     """
     unparseable_flag_below_the_marker(sandbox)
 

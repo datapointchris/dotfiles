@@ -60,7 +60,7 @@ class _Observed:
 
 
 def change(item: str) -> Change:
-    return Change('packages', Stage.TOOLS, item, Verdict.MISSING, detail='not installed')
+    return Change('packages', Stage.TOOLS, item, Verdict.MISSING, repair=Repair.AUTOMATIC, detail='not installed')
 
 
 @pytest.fixture
@@ -258,11 +258,11 @@ def test_execute_acts_in_stage_order_rather_than_in_walk_order(session: Session,
     packages = Writer(
         'packages',
         changes=(
-            Change('packages', Stage.TOOLS, 'fnm', Verdict.MISSING),
-            Change('packages', Stage.NODE_TOOLS, 'typescript-language-server', Verdict.MISSING),
+            Change('packages', Stage.TOOLS, 'fnm', Verdict.MISSING, repair=Repair.AUTOMATIC),
+            Change('packages', Stage.NODE_TOOLS, 'typescript-language-server', Verdict.MISSING, repair=Repair.AUTOMATIC),
         ),
     )
-    toolchains = Writer('toolchains', changes=(Change('toolchains', Stage.NODE, 'node', Verdict.MISSING),))
+    toolchains = Writer('toolchains', changes=(Change('toolchains', Stage.NODE, 'node', Verdict.MISSING, repair=Repair.AUTOMATIC),))
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': packages, 'toolchains': toolchains})
 
     planned = list(engine.assess(session))

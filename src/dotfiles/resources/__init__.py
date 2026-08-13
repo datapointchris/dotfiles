@@ -105,8 +105,19 @@ class Change:
     stage: Stage
     item: str
     verdict: Verdict
+
+    repair: Repair
+    """Who can fix this, answered at the site that decided the verdict.
+
+    Required rather than defaulted to `AUTOMATIC`, because a default here is an
+    answer given by omission: a site that never asked the question still promised
+    `apply` could repair it, and the sites that did state it were the only thing a
+    wrong one could be read against. `repair_for` is the answer for anything the
+    plan carries an item for; a literal is for the resources whose subjects
+    nothing declares.
+    """
+
     detail: str = ''
-    repair: Repair = Repair.AUTOMATIC
     desired: DesiredItem | None = None
     observed: str = ''
 

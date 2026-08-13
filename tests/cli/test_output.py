@@ -29,6 +29,7 @@ from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
 
@@ -39,6 +40,7 @@ def a_change(**overrides) -> Change:
         'stage': Stage.ENVIRONMENT,
         'item': 'ripgrep',
         'verdict': Verdict.STALE,
+        'repair': Repair.AUTOMATIC,
         'detail': '14.1.0 to 14.1.1',
     }
     return Change(**(fields | overrides))  # type: ignore[arg-type]

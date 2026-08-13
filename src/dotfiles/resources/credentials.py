@@ -230,8 +230,8 @@ class CredentialsResource:
                 Stage.CREDENTIALS,
                 f'{entry.helper.label} → {entry.helper.program}',
                 entry.verdict,
-                detail=entry.detail,
                 repair=Repair.NONE if entry.verdict is Verdict.UNKNOWN else Repair.BY_HAND,
+                detail=entry.detail,
                 # The origin on its own line rather than in `observed`, which the
                 # renderer spells `(is 'X')` — true of a value and misleading of a
                 # file. What a reader needs is the config to open, and on a machine

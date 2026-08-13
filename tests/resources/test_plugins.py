@@ -16,6 +16,7 @@ import pytest
 import yaml
 
 from dotfiles import engine
+from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import clone
@@ -256,6 +257,57 @@ def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path,
     reported = [event.payload.item for event in planned if event.resource == 'plugins' and isinstance(event.payload, Change)]
 
     assert reported == ['shell-plugin/forgit', 'tmux-sync/tpm']
+
+
+def test_a_private_plugin_is_gated_and_its_neighbour_is_not(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A plugin can declare a precondition, and this resource used to be unable to see one.
+
+    `CloneProvider` inherits `CatalogProvider.plan`, which reads
+    `requires_github_auth` off the base `Entry` — so a private-repo plugin is
+    planned `Precondition.GITHUB_AUTH` whatever this file does about it. The clone
+    findings answered `Repair.AUTOMATIC` as a literal, which was right only
+    because no clone section in `packages.yml` declares one yet. The first that
+    does would be reported repairable, and `apply` would attempt an
+    unauthenticated `git clone` and exit non-zero for something the machine was
+    never able to have.
+
+    Both rows in one session, because per-row is the half that is easy to lose:
+    skipping the section wholesale would trade one wrong answer for a worse one.
+    """
+    monkeypatch.setattr(ev, 'have_github_credentials', lambda: False)
+    live = session(
+        tmp_path,
+        packages={
+            'shell_plugins': [
+                {'name': 'forgit', 'repo': 'https://github.com/wfxr/forgit.git'},
+                {'name': 'inner', 'repo': 'https://github.com/datapointchris/inner', 'requires_github_auth': True},
+            ]
+        },
+        manifest={'machine': 'box', 'platform': 'linux', 'shell_plugins': True},
+    )
+
+    found = {change.item: change for change in changes(live)}
+
+    assert found['shell-plugin/forgit'].repair is Repair.AUTOMATIC
+    assert found['shell-plugin/inner'].repair is Repair.BY_HAND
+    assert 'gh auth login' in found['shell-plugin/inner'].advice
+
+
+def test_a_private_plugin_with_a_credential_is_apply_s_to_fix(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other half, and what stops the fix above being read as "gated plugins
+    are never installed". A `gh` login is lost and restored, so the precondition is
+    a state the machine is in rather than a permanent property of the entry."""
+    monkeypatch.setattr(ev, 'have_github_credentials', lambda: True)
+    live = session(
+        tmp_path,
+        packages={'shell_plugins': [{'name': 'inner', 'repo': 'https://github.com/datapointchris/inner', 'requires_github_auth': True}]},
+        manifest={'machine': 'box', 'platform': 'linux', 'shell_plugins': True},
+    )
+
+    (found,) = changes(live)
+
+    assert found.repair is Repair.AUTOMATIC
+    assert found.advice == ''
 
 
 def test_a_machine_declining_plugins_plans_none(tmp_path: Path) -> None:

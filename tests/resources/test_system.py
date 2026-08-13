@@ -487,7 +487,7 @@ def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_pa
     live = missing(tmp_path, fake_bin)
     item = live.plan.for_resource('system')[0]
     unusable = dc.replace(item, entry=catalog.SystemPackage.from_mapping({'name': 'mas', 'brew': 'mas'}))
-    change = Change('system', unusable.stage, unusable.address, Verdict.MISSING, desired=unusable)
+    change = Change('system', unusable.stage, unusable.address, Verdict.MISSING, repair=Repair.AUTOMATIC, desired=unusable)
 
     outcomes = registry.BY_NAME['system'].install_all(live, [change], Privilege(offer=False))
 

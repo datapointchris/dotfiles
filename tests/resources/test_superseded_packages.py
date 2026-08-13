@@ -62,8 +62,8 @@ def change_for(desired: DesiredItem, found: ev.Evidence) -> Change:
         Stage.SYSTEM,
         desired.address,
         found.verdict,
-        detail=found.detail,
         repair=repair,
+        detail=found.detail,
         advice=advice_for(desired, repair, found.blocked_by),
         desired=desired,
     )

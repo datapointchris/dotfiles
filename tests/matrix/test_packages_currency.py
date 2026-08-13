@@ -539,26 +539,24 @@ def test_the_sections_source_will_take_are_this_machines_declaration(sandbox: Sa
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_credential_gated_tool_is_upgraded_without_the_credential_being_checked(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A stale private release is `AUTOMATIC`, where the reinstall of it is `BY_HAND`.
+def test_the_upgrade_and_the_reinstall_of_a_gated_tool_are_declined_alike(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """One entry, one machine, one missing credential, one answer.
 
     `diff` runs `repair_for` on the two branches that reach it — evidence that did
-    not match, and a named reinstall — and `currency_of` builds its `Change` with
-    the default repair instead, so no currency verdict has ever consulted a
-    precondition. One entry, one machine, one missing credential, two answers.
-
-    Current behaviour, pinned so a change to it is visible.
+    not match, and a named reinstall — and `currency_of` used to build its `Change`
+    with the default repair instead, so no currency verdict had ever consulted a
+    precondition. The two paths reach the same entry in the same state, so a
+    verdict either of them can produce has to carry the same repair.
     """
     offline_machine(sandbox, STAGED[1], packages=GATED)
 
     upgrade = cli('packages', 'apply', '--offline', '--json')
     reinstall = cli('packages', 'apply', '--offline', '--reinstall', TOOL, '--json')
 
-    assert (f'packages/ghrelease/{TOOL}', 'stale', 'failed') in recorded(upgrade)
-    assert [row for row in recorded(reinstall) if row[2] == 'failed'] == []
+    assert (f'packages/ghrelease/{TOOL}', 'stale', 'declined') in recorded(upgrade)
+    assert (f'packages/ghrelease/{TOOL}', 'stale', 'declined') in recorded(reinstall)
 
 
-@pytest.mark.xfail(strict=True, reason='currency_of never calls repair_for, so a precondition does not gate an upgrade')
 def test_a_credential_gated_tool_is_not_upgraded_without_the_credential(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """An upgrade this machine cannot perform should be reported, not attempted.
 

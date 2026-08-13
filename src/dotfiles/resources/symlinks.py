@@ -229,6 +229,7 @@ class SymlinksResource:
                 Stage.SYMLINKS,
                 str(path),
                 Verdict.STALE,
+                repair=Repair.AUTOMATIC,
                 detail='points into the repo at a file that no longer exists',
             )
             for path in observed.orphans
@@ -281,18 +282,25 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
     ownership = observed.ownership.get(link.target, 'absent')
 
     if ownership == 'absent':
-        return Change(NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, detail=f'{link.target} does not exist')
+        return Change(NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist')
 
     if ownership == 'foreign':
         if link.target in observed.adoptable:
-            return Change(NAME, Stage.SYMLINKS, link.address, Verdict.STALE, detail=f'{link.target} exists and will be adopted')
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} exists and will be adopted',
+            )
         return Change(
             NAME,
             Stage.SYMLINKS,
             link.address,
             Verdict.STALE,
-            detail=f'{link.target} was not created by this manager',
             repair=Repair.BY_HAND,
+            detail=f'{link.target} was not created by this manager',
             advice=FOREIGN_ADVICE,
         )
 
@@ -303,6 +311,7 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
             Stage.SYMLINKS,
             link.address,
             Verdict.STALE,
+            repair=Repair.AUTOMATIC,
             detail=f'{link.target} points elsewhere in the repo',
             observed=str(destination or ''),
         )

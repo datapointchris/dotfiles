@@ -203,8 +203,8 @@ class PackagesResource:
                         item.stage,
                         item.address,
                         evidence.verdict,
-                        detail=evidence.detail,
                         repair=repair,
+                        detail=evidence.detail,
                         advice=advice_for(item, repair, evidence.blocked_by),
                         desired=item,
                     )
@@ -217,8 +217,8 @@ class PackagesResource:
                         item.stage,
                         item.address,
                         Verdict.STALE,
-                        detail='named by --reinstall, so it is installed again whatever it reports',
                         repair=repair,
+                        detail='named by --reinstall, so it is installed again whatever it reports',
                         advice=advice_for(item, repair),
                         desired=item,
                         observed=observed.reported.get(item.address, ''),
@@ -234,8 +234,8 @@ class PackagesResource:
                         item.stage,
                         item.address,
                         Verdict.UNDECLARED,
-                        detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
                         repair=Repair.BY_HAND,
+                        detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
                         advice=_undeclared_advice(stray, plan.machine.coordinates.package_manager),
                         desired=item,
                         observed=', '.join(stray),
@@ -249,8 +249,8 @@ class PackagesResource:
                     Stage.TOOLS,
                     binary,
                     Verdict.UNDECLARED,
-                    detail=f'built from {module}, which nothing this machine declares asks for',
                     repair=Repair.BY_HAND,
+                    detail=f'built from {module}, which nothing this machine declares asks for',
                     advice='declare it in install/packages.yml and this machine’s manifest, '
                     'or remove the binary if it was installed by hand and is not wanted',
                 )
@@ -528,6 +528,16 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     Gated on `measured_upstream` because the same comparison against a *cached*
     figure means the opposite — the tool self-updated and the cache has not caught
     up, which is the cache being behind rather than the tool being wrong.
+
+    **Every verdict here answers through `repair_for`, the same as `diff`'s two
+    branches.** A currency verdict is a verdict about an item the plan carries, so
+    the preconditions that decide whether the item can be installed at all decide
+    whether it can be upgraded — and they decide it in the direction the verdict is
+    most likely to be true in, since a private release nobody could download is one
+    nobody could upgrade either. Deciding it here instead left one entry on one
+    machine with two answers: `BY_HAND` when `--reinstall` named it, `AUTOMATIC`
+    when the version comparison did, and a failure recorded on every run for work
+    the machine was never able to do.
     """
     reported = observed.reported.get(item.address)
     if reported is None:
@@ -539,15 +549,15 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
-                detail=f'{item.executable} is installed but would not report a version',
                 repair=Repair.NONE,
+                detail=f'{item.executable} is installed but would not report a version',
                 desired=item,
             ),
         )
 
     pinned = item.entry.version if isinstance(item.entry, catalog.GithubRelease) else ''
     if pinned:
-        return _compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}')
+        return _compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}', observed.met)
 
     cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
     if cached is None:
@@ -557,8 +567,8 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
-                detail=_unmeasurable(item, observed),
                 repair=Repair.NONE,
+                detail=_unmeasurable(item, observed),
                 advice=_unmeasurable_advice(observed),
                 desired=item,
                 observed=reported,
@@ -566,19 +576,29 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     if observed.measured_upstream and versions.exceeds(reported, cached.version):
+        repair = repair_for(item, Verdict.STALE, observed.met)
         return (
             Change(
                 NAME,
                 item.stage,
                 item.address,
                 Verdict.STALE,
+                repair=repair,
                 detail=f'ahead of {cached.version}, which is the newest release and what a fresh install produces',
+                advice=advice_for(item, repair),
                 desired=item,
                 observed=reported,
             ),
         )
 
-    return _compared(item, reported, cached.version, versions.at_least(reported, cached.version), f'{cached.version} is the latest release')
+    return _compared(
+        item,
+        reported,
+        cached.version,
+        versions.at_least(reported, cached.version),
+        f'{cached.version} is the latest release',
+        observed.met,
+    )
 
 
 def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -601,19 +621,22 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
-                detail=_unmeasurable(item, observed),
                 repair=Repair.NONE,
+                detail=_unmeasurable(item, observed),
                 advice=_unmeasurable_advice(observed),
                 desired=item,
             ),
         )
+    repair = repair_for(item, Verdict.STALE, observed.met)
     return (
         Change(
             NAME,
             item.stage,
             item.address,
             Verdict.STALE,
+            repair=repair,
             detail=f'installed from the default branch, not a release; {cached.version} is the newest',
+            advice=advice_for(item, repair),
             desired=item,
         ),
     )
@@ -673,12 +696,17 @@ def _undeclared_advice(strays: Iterable[str], manager: PackageManager) -> str:
     return '\n'.join(rows)
 
 
-def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str) -> tuple[Change, ...]:
+def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str, met: Preconditions) -> tuple[Change, ...]:
     """One comparison's outcome, with `None` kept distinct from `False`.
 
     An unparseable version is not an old one. Reporting it as behind would send
     `apply` to reinstall a tool nothing established was wrong, which is the guess
     `Verdict.UNKNOWN` exists to refuse.
+
+    `met` is carried down rather than the repair being decided by the caller,
+    because the repair follows the verdict and the verdict is settled here.
+    `repair_for` answers both branches: nobody's to repair for the one nothing
+    could parse, and the item's own preconditions for the one `apply` would act on.
     """
     if verdict is None:
         return (
@@ -687,21 +715,24 @@ def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | Non
                 item.stage,
                 item.address,
                 Verdict.UNKNOWN,
+                repair=repair_for(item, Verdict.UNKNOWN, met),
                 detail=f'{because}, and {reported!r} has no version in it',
-                repair=Repair.NONE,
                 desired=item,
                 observed=reported,
             ),
         )
     if verdict:
         return ()
+    repair = repair_for(item, Verdict.STALE, met)
     return (
         Change(
             NAME,
             item.stage,
             item.address,
             Verdict.STALE,
+            repair=repair,
             detail=because,
+            advice=advice_for(item, repair),
             desired=item,
             observed=reported,
         ),

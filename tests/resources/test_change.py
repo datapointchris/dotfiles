@@ -8,6 +8,8 @@ rather than only through the resources that can trip it.
 
 from __future__ import annotations
 
+import dataclasses as dc
+
 import pytest
 
 from dotfiles.resolve import DesiredItem
@@ -37,6 +39,43 @@ def item(precondition: Precondition = Precondition.NONE) -> DesiredItem:
     )
 
 
+def test_repair_is_answered_at_every_site_rather_than_by_omission() -> None:
+    """The invariant the required field created, which nothing else asserts.
+
+    Seventeen construction sites took `Repair.AUTOMATIC` by default, and being
+    seventeen is what made a wrong one findable: a site that never asked who could
+    fix its finding stood beside sites that had, so the omission had something to
+    be read against. Making the field required removed that redundancy and put
+    nothing in its place. Restore the default and every existing site goes on
+    compiling, every test here goes on passing, and the next `Change` written
+    afterwards promises `apply` can repair something it cannot — which is the
+    whole of what a defaulted `repair` says.
+
+    Asserted of the field rather than of a `TypeError` from a short call, because
+    those are not the same claim. A short call raises `TypeError` for any change
+    to the signature at all — a field reordered, a field renamed, a field added
+    ahead of this one — so it can pass for the wrong reason as easily as fail for
+    one, and it would go on passing if `repair` were defaulted and some other
+    field became required in its place.
+
+    Asserted of the field rather than of the call sites, because a restored
+    default is invisible to a walk over sites that still pass `repair`
+    explicitly. Every one of them would stay green, and the site that found out
+    would be the one written next — which is exactly the delay the required field
+    exists to remove.
+
+    `detail`, `advice`, `observed` and `source` default legitimately, and the
+    difference is what a default *means*. An empty `detail` is an absence: nothing
+    was said. A defaulted `repair` is an answer — `apply` can fix this — given by a
+    site that never considered the question, and `apply` acts on it.
+    """
+    fields = {field.name: field for field in dc.fields(Change)}
+    repair = fields['repair']
+
+    assert repair.default is dc.MISSING, 'Change.repair has a default again, so a site can answer it by omission'
+    assert repair.default_factory is dc.MISSING, 'Change.repair has a default factory, so a site can answer it by omission'
+
+
 def test_a_by_hand_change_with_no_advice_is_refused() -> None:
     """A refusal `apply` cannot act on has to leave a reader something to do, or
     it is a dead end rather than a finding."""
@@ -52,7 +91,7 @@ def test_a_by_hand_change_with_advice_is_fine() -> None:
 def test_advice_is_optional_off_by_hand() -> None:
     """Nothing about `AUTOMATIC` or `NONE` needs a next step: `apply` is the next
     step, or there is nothing to measure."""
-    Change('packages', Stage.TOOLS, 'ghrelease/lazygit', Verdict.MISSING)
+    Change('packages', Stage.TOOLS, 'ghrelease/lazygit', Verdict.MISSING, repair=Repair.AUTOMATIC)
     Change('packages', Stage.TOOLS, 'ghrelease/lazygit', Verdict.UNKNOWN, repair=Repair.NONE)
 
 

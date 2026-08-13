@@ -209,8 +209,8 @@ class IdentityResource:
                 Stage.IDENTITY,
                 field,
                 Verdict.MISSING,
-                detail='commits will be refused',
                 repair=Repair.BY_HAND,
+                detail='commits will be refused',
                 advice=f'set it with `git config --global {field} <value>`',
             )
             for field in FIELDS
@@ -222,8 +222,8 @@ class IdentityResource:
                 Stage.IDENTITY,
                 field,
                 Verdict.STALE,
-                detail=f"this checkout sets its own {field}, over the machine's {quoted(observed.values[field])}",
                 repair=Repair.BY_HAND,
+                detail=f"this checkout sets its own {field}, over the machine's {quoted(observed.values[field])}",
                 advice=(
                     f'remove it with `git config --local --unset {field}` from inside this checkout, or update it to match if intentional'
                 ),
@@ -262,8 +262,8 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
                 Stage.IDENTITY,
                 '~/.gitconfig',
                 Verdict.UNDECLARED,
-                detail='git prefers it over the XDG entry point, so it silently outranks every include below',
                 repair=Repair.BY_HAND,
+                detail='git prefers it over the XDG entry point, so it silently outranks every include below',
                 advice=(
                     'move anything it holds into ~/.config/git/local.gitconfig, then delete it — '
                     '`git config --file ~/.gitconfig --list` is what it is still deciding'
@@ -279,8 +279,8 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
                 Stage.IDENTITY,
                 'git entry point',
                 Verdict.UNDECLARED,
-                detail='~/.config/git/config is a symlink, and git follows one when it writes',
                 repair=Repair.BY_HAND,
+                detail='~/.config/git/config is a symlink, and git follows one when it writes',
                 advice='remove it and re-run `dotfiles symlinks apply`, which writes a real file there',
                 observed=str(gitconfig.entry_point(observed.home)),
             )
@@ -295,8 +295,8 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
             Stage.IDENTITY,
             conflict.key,
             Verdict.UNDECLARED,
-            detail=f'set in {conflict.files} files; {conflict.winner.origin.name} is read last and wins',
             repair=Repair.BY_HAND,
+            detail=f'set in {conflict.files} files; {conflict.winner.origin.name} is read last and wins',
             advice='\n'.join(
                 [
                     *(f'{setting.origin}: {quoted(setting.value)} (overridden)' for setting in conflict.losers),

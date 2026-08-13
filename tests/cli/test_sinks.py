@@ -21,6 +21,7 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
 MACHINE = 'linux-lxc-server'
@@ -32,7 +33,7 @@ def identity(verb: str = 'plan') -> runs.Identity:
 
 
 def change(item: str, verdict: Verdict = Verdict.MISSING) -> Change:
-    return Change('packages', Stage.TOOLS, item, verdict)
+    return Change('packages', Stage.TOOLS, item, verdict, repair=Repair.AUTOMATIC)
 
 
 def timing(seconds: float) -> runs.Timing:
