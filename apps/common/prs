@@ -20,6 +20,14 @@ die() {
   exit 1
 }
 
+# 2 rather than 1, so a caller can tell "you typed it wrong" from "it ran and
+# failed". Only the first is worth retrying with different arguments.
+usage_error() {
+  echo "prs: $1" >&2
+  usage >&2
+  exit 2
+}
+
 usage() {
   cat <<'EOF'
 Usage: prs [--list]
@@ -93,7 +101,7 @@ case "${1:-}" in
     exit 0
     ;;
   "") ;;
-  *) die "unknown argument: $1" ;;
+  *) usage_error "unknown argument: $1" ;;
 esac
 
 [ -n "${TMUX:-}" ] || die "not inside tmux — this opens a review window"
@@ -102,7 +110,22 @@ for tool in jq fzf nvim git; do
 done
 
 prs_json=$(pr-list)
-[ "$(jq 'length' <<<"$prs_json")" -gt 0 ] || die "no open PRs"
+# Not a failure: pr-list read every repo in the registry and the answer is none.
+# Exiting non-zero here made an empty inbox indistinguishable from a broken tool.
+#
+# The pause is what makes the answer readable at all. This normally runs as
+# `display-popup -E`, which tears the popup down the instant the command exits,
+# so a line printed on the way out flashes past in milliseconds and the keybinding
+# reads as dead. Guarded on a terminal so nothing scripted ever blocks on it.
+if [ "$(jq 'length' <<<"$prs_json")" -eq 0 ]; then
+  echo 'No open PRs across the registry.'
+  echo '  pr-list  prints the listing this reads'
+  if [ -t 0 ]; then
+    read -rsn1 -p 'press any key to close '
+    echo
+  fi
+  exit 0
+fi
 
 # The index leads and is hidden (--with-nth=2..), so the choice survives a title
 # containing a tab or a leading number.
