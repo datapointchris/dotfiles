@@ -27,6 +27,7 @@ from typing import Any
 
 import pytest
 
+from dotfiles import envfile
 from dotfiles.vocabulary import ExitCode
 from matrix import harness
 from matrix.harness import Invocation
@@ -748,3 +749,56 @@ def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sand
     git_config(sandbox, 'config', '[core]\n\tpager = less\n')
 
     assert '<>' not in cli('identity', 'plan', '--json').document['detail']
+
+
+def generated_line(sandbox: Sandbox, line: str) -> None:
+    """Insert an assignment into the managed section, above the OVERRIDES marker.
+
+    Where a variable the declaration used to write sits after it stops writing it.
+    `below_the_marker` is the other half of the file and a different question: that
+    is where a machine keeps what is its own, and `apply` never touches it.
+    """
+    text = sandbox.env_file.read_text()
+    sandbox.env_file.write_text(text.replace(envfile.MARKER, f'{line}\n\n{envfile.MARKER}', 1))
+
+
+def test_a_generated_line_the_declaration_no_longer_writes_is_drift(sandbox: Sandbox, cli: Run) -> None:
+    """Reported by name, and repairable, because `apply` rebuilds the section.
+
+    The managed half is regenerated from `render` in full, so a line nothing
+    declares is one rewrite from gone. Nothing found it: the check iterated what
+    the declaration expects and asked each whether the file agreed, so a key in
+    the file that the declaration never mentions was never asked about. It reached
+    the report through `Observed.inventory`, which lists every generated key as
+    examined — a row saying it had been looked at and was fine.
+
+    `DOTFILES_LAYERS` is the real instance and the reason the name here is not
+    flag-shaped. `_undeclared` catches a stray `*_ENABLED` or `*_DEBUG` by
+    convention, which is why a coordinate variable walked past it.
+    """
+    sandbox.declare()
+    generated_line(sandbox, 'export DOTFILES_LAYERS="pkg/apt os/linux"')
+
+    ran = cli('env', 'plan', '--json')
+
+    assert ran.exit_code == ExitCode.DRIFT
+    assert ran.document['pending'] == 1
+
+
+def test_an_apply_drops_the_line_and_keeps_what_is_below_the_marker(sandbox: Sandbox, cli: Run) -> None:
+    """The repair is the regeneration, so the orphan goes and a secret stays.
+
+    Both halves in one case because they are one act: `apply` rewrites everything
+    above the marker and copies everything below it, so a check that the orphan
+    went is only half an answer without a check that the file was not truncated.
+    """
+    sandbox.declare()
+    generated_line(sandbox, 'export DOTFILES_LAYERS="pkg/apt os/linux"')
+    below_the_marker(sandbox, 'export A_SECRET="keep me"\n')
+
+    assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
+
+    settled = sandbox.env_file.read_text()
+    assert 'DOTFILES_LAYERS' not in settled
+    assert 'A_SECRET' in settled
+    assert cli('env', 'plan').exit_code == ExitCode.CONVERGED

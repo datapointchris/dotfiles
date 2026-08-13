@@ -144,6 +144,7 @@ class EnvResource:
         changes.extend(_flags(machine, observed))
         changes.extend(_config(observed))
         changes.extend(_requirements(machine, observed))
+        changes.extend(_orphaned(machine, observed))
         changes.extend(_undeclared(machine, observed))
         return tuple(changes)
 
@@ -329,6 +330,36 @@ def _requirements(machine, observed: Observed) -> list[Change]:
             )
         )
     return changes
+
+
+def _orphaned(machine, observed: Observed) -> list[Change]:
+    """Generated lines the declaration no longer writes.
+
+    Repairable, unlike `_undeclared`, and that is the whole difference between
+    them. `apply` rebuilds the managed section from `render`, so an orphan is one
+    rewrite from gone.
+
+    The two also ask different questions. `_undeclared` asks the whole file
+    whether a name *looks* like a flag, which is a convention and misses anything
+    not spelled that way. This asks the managed section whether the declaration
+    still produces the name at all, so nothing can slip past for being named
+    unusually. `DOTFILES_LAYERS` did exactly that: generated for as long as
+    coordinates shipped in this file, still there when they stopped, and listed
+    among the rows that had been examined and found fine.
+    """
+    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags}
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            name,
+            Verdict.STALE,
+            detail='the declaration no longer writes it, so a regeneration drops it',
+            observed=value,
+        )
+        for name, value in sorted(observed.generated.items())
+        if name not in declared
+    ]
 
 
 def _undeclared(machine, observed: Observed) -> list[Change]:
