@@ -224,7 +224,7 @@ def request(url: str, accept: str | None = None) -> bytes:
     CDN, and a client that carried the header through would leak the credential on
     the request path that runs most often.
 
-    Both of httpx's sharp edges are stated here rather than inherited, per
+    Both of httpx2's sharp edges are stated here rather than inherited, per
     `python.md`: redirects are *not* followed by default, and the default timeout
     is 5s — which a 200MB neovim tarball would meet as a failure.
     """

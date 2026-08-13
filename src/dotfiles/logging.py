@@ -129,7 +129,7 @@ HTTP_LOGGERS = ('httpx2', 'httpcore2', 'httpx', 'httpcore')
 
 Named rather than solved by lowering the root level: root is DEBUG on purpose, so
 the event log gets everything while the console filters. That means any library
-logging at INFO reaches the console by default, and httpx writes one
+logging at INFO reaches the console by default, and httpx2 writes one
 `HTTP Request: GET https://api.github.com/... "200 OK"` per call — which on a
 release refresh is a line per declared tool, between the rows a person is
 actually reading.
