@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import typer
 
+from dotfiles import banner
 from dotfiles import commands
 from dotfiles import engine
 from dotfiles import logging
 from dotfiles import reconcile
-from dotfiles import refusal
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import status
@@ -38,7 +38,7 @@ from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(
     name='dotfiles',
-    cls=refusal.Boundary,
+    cls=banner.Masthead,
     no_args_is_help=True,
     rich_markup_mode='rich',
     help='Reconcile this machine with the dotfiles repo.',
@@ -152,6 +152,8 @@ def plan(
     it finds and names the absence of one as the finding it is.
     """
     commands.verbosity(verbose, quiet)
+    if not as_json:
+        banner.show()
     if offline and refresh:
         commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
@@ -200,6 +202,8 @@ def check(
     for, which is exactly what `check` exists to say.
     """
     commands.verbosity(verbose, quiet)
+    if not as_json:
+        banner.show()
     if offline and refresh:
         commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
@@ -268,6 +272,8 @@ def apply_command(
     a partial bundle can be built from it.
     """
     commands.verbosity(verbose, quiet)
+    if not as_json:
+        banner.show()
     try:
         ceiling = engine.stage_named(through) if through else None
     except engine.UnknownAddress as unknown:
