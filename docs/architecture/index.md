@@ -70,10 +70,12 @@ Shell functions and aliases live in `shell/`, deployed via symlinks — no build
 - **Per coordinate**: `shell/<axis>/<value>/` → `~/.local/shell/<axis>/<value>/`, keeping the path so a sourced file says which coordinate asked for it
 - **Machine-local**: `~/.local/shell/local.sh` — a real file that exists in no repo, described below
 
-`.zshrc` sources `common/` and then loops over `$DOTFILES_LAYERS` from `~/.env`,
-sourcing every `.sh` in each overlay it finds and `local.sh` last. An overlay
-directory that does not exist is skipped, which is most of them: an axis earns a
-directory only where something actually differs along it.
+`.zshrc` sources `common/` and then globs `~/.local/shell/*/*/*.sh`, sourcing
+every one it finds and `local.sh` last. It reads no list to decide which: the
+symlink manager deploys only the directories this machine's coordinates select
+and prunes the ones it no longer does, so the tree is the resolved answer. Most
+of the six axes have no directory at all, because an axis earns one only where
+something actually differs along it.
 
 The axes replaced a single fused `PLATFORM` string, which could not say that the apt helpers belong to Ubuntu-on-WSL *and* to the Debian LXC, or that the Wayland config belongs to any Linux running it rather than to Arch. A `MACHINE_ROLE` axis (work, personal, server) was tried alongside `PLATFORM` and removed before the split: it was rendered from the same manifest, so it carried no information `MACHINE` did not, and it declared three values while shipping a single file that served a single machine. That file was employer infrastructure, which the machine-local overlay handles instead — a better fit, because that code was never shareable in the first place.
 
@@ -121,13 +123,16 @@ Nothing detects it. `MACHINE` is the one hand-chosen value; it selects a
 manifest, and the manifest declares where the machine sits on each of the six
 axes in `src/dotfiles/coordinates.py`. `dotfiles env apply` resolves that point
 into the `<axis>/<value>` directories it selects and writes them into `~/.env`
-as one `DOTFILES_LAYERS` list, which is what every shell sources from.
+and deploys them. Nothing about that point reaches `~/.env`.
 
-One variable rather than one per axis. Six existed only so `.zshrc` and
-`.bashrc` could reassemble a list `Coordinates.overlays` had already built, and
-each shell spelled the six axis names again in its own hand-written loop with
-nothing holding either copy to `OVERLAY_DIRS`. Shipping the resolved list is the
-same information with one place for it to be wrong.
+No coordinate variable at all, which took two goes to arrive at. Six existed
+first, one per axis, so each shell could reassemble a list `Coordinates.overlays`
+had already built — six exports and two hand-written loops spelling the axis
+names again, with nothing holding either copy to `OVERLAY_DIRS`. Collapsing them
+to one resolved list fixed the disagreement between the copies and left the copy
+itself. That list named six directories on a machine that had one, because it
+recorded what the coordinates *select* while the tree holds what actually
+differs. A shell that globs the tree needs neither.
 
 Detection was tried and is what the declaration replaced: a wsl manifest whose
 `~/.env` was missing fell back to a guess and deployed the linux shell overlay
@@ -162,7 +167,7 @@ overrides a default with an `includeIf`, and git resolves last-wins.
 Naming the value is what makes `ls ~/.config/git/` answer what the machine is. `trust.gitconfig`
 said only that the trust axis had been resolved; `nonfleet.gitconfig` says which way. The cost is
 that `common.gitconfig` has to spell every value out, because git expands nothing but `~` in an
-`include.path` — `.zshrc` reaches the same overlays through `$DOTFILES_LAYERS` and needs no list,
+`include.path` — `.zshrc` reaches the same overlays by globbing the deployed tree and needs no list,
 which is the asymmetry that lets `shell/` keep `<axis>/<value>/` in its deployed path while
 `configs/` flattens. `dotfiles machines check` fails on an overlay gitconfig no include names, since
 git would otherwise ignore the missing line without a word.

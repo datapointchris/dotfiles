@@ -21,39 +21,45 @@ set -euo pipefail
 # THE MACHINE'S DECLARATION
 # ================================================================
 
-# Read, never detected. A detector answered `linux` inside a container modelling
-# WSL and then failed on an overlay that machine never deploys — and it cannot
-# answer the trust or capacity axes at all, because nothing on a box knows them.
+# MACHINE is read, never detected. A detector answered `linux` inside a container
+# modelling WSL, and then failed on an overlay that machine never deploys. It
+# cannot answer the trust or capacity axes at all, because nothing on a box knows
+# them.
 if [[ -f "$HOME/.env" ]]; then
   # shellcheck disable=SC1091
   source "$HOME/.env"
 fi
 
-if [[ -z "${MACHINE:-}" || -z "${DOTFILES_LAYERS:-}" ]]; then
+if [[ -z "${MACHINE:-}" ]]; then
   echo "ERROR: ~/.env does not declare this machine. Run: dotfiles env apply"
   exit 1
 fi
 
-# One axis's value, out of the resolved overlay list ~/.env carries. Read from
-# that list rather than from a variable per axis, so this file and the shells
-# cannot come to disagree about what the machine is.
-layer_value() {
-  local axis=$1 layer
-  local -a layers
-  read -ra layers <<<"$DOTFILES_LAYERS"
-  for layer in "${layers[@]}"; do
-    if [[ $layer == "$axis"/* ]]; then
-      printf '%s\n' "${layer#"$axis"/}"
-      return 0
-    fi
-  done
-  return 1
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+
+# Whether the machine deploys a given `<axis>/<value>` overlay, asked of the
+# deployed tree. `dotfiles symlinks apply` deploys the directories this machine's
+# coordinates select and prunes the ones it no longer does, so the tree is the
+# resolved answer and no list has to be carried alongside it.
+#
+# `shell/` is the tree that can answer, because it is the only one that keeps the
+# axis in its deployed path — `configs/` and `apps/` flatten. A layer carrying no
+# shell code is therefore invisible here and is gated on its own deployed file
+# further down.
+deploys_layer() {
+  [[ -d "$SHELL_DIR/$1" ]]
 }
 
-# Whether the machine loads a given `<axis>/<value>` overlay at all. Padded on
-# both sides so `trust/fleet` cannot match inside `trust/fleetish`.
-loads_layer() {
-  [[ " $DOTFILES_LAYERS " == *" $1 "* ]]
+# The value this machine sits at on one axis, named by the directory deployed
+# under it.
+layer_value() {
+  local path
+  for path in "$SHELL_DIR/$1"/*; do
+    [[ -d $path ]] || continue
+    printf '%s\n' "${path##*/}"
+    return 0
+  done
+  return 1
 }
 
 # ================================================================
@@ -141,8 +147,10 @@ test_file "functions.sh exists" "$HOME/.local/shell/functions.sh"
 test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
 # Every machine has a package manager and every package manager has an
 # overlay, so this is the one coordinate directory that must always deploy.
-PKG=$(layer_value pkg)
-test_file "the ${PKG} overlay is deployed" "$HOME/.local/shell/pkg/${PKG}/${PKG}.sh"
+# Empty when none did, which names a path nothing can be at and so reports the
+# absence through the tracker rather than aborting the run.
+PKG=$(layer_value pkg) || PKG=''
+test_file "the ${PKG:-pkg} overlay is deployed" "$SHELL_DIR/pkg/${PKG}/${PKG}.sh"
 
 # Test they can be sourced
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"
@@ -170,7 +178,12 @@ test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
 # not hold, so asserting it there failed every nonfleet-trust container for a file
 # nothing is designed to write. `dotfiles check`'s identity row is what reports a
 # genuinely missing one, on the machines where that is a fault.
-if loads_layer trust/fleet; then
+#
+# Gated on the file the fleet trust overlay ships rather than on the layer: no
+# shell code differs along that axis, so `$SHELL_DIR` has nothing to say about it.
+# The gate and the assertion are different claims — the include being on disk does
+# not mean git resolves an address through the chain.
+if [[ -f "$HOME/.config/git/fleet.gitconfig" ]]; then
   test_cmd "git identity resolves" "git config --global --includes --get user.email"
 fi
 test_file "tmux config exists" "$HOME/.config/tmux/tmux.conf"
@@ -202,14 +215,17 @@ test_cmd "fzf installed" "command -v fzf"
 # ================================================================
 # 7. COORDINATE-SPECIFIC APPS
 # ================================================================
-if loads_layer os/darwin; then
+if deploys_layer os/darwin; then
   echo ""
   echo "macOS:"
   test_file "ghostty config exists" "$HOME/.config/ghostty/config"
   test_cmd "brew installed" "command -v brew"
 fi
 
-if loads_layer display/wayland; then
+# Gated on waybar for the reason the git identity is gated on its include: the
+# display axis ships no shell code, and waybar is the one wayland config nothing
+# below asserts against.
+if [[ -f "$HOME/.config/waybar/config.jsonc" ]]; then
   echo ""
   echo "Wayland:"
   test_cmd "rofi-power available" "command -v rofi-power"

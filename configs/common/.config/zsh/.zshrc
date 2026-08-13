@@ -9,6 +9,10 @@
 # ------------------------------------------------------------------ #
 # Sourced before anything else because .env is where every feature flag is set;
 # the entry is logged further down, once log() exists to report it.
+# Guarded, and one of the three that stays: `~/.env` is written by `dotfiles env
+# apply`, a different resource from the one that deploys this file, and
+# `install.sh` reads MACHINE out of it before either has run. A shell before the
+# first apply is bootstrap ordering rather than a fault to report.
 env_file="$HOME/.env"
 [[ -f $env_file ]] && source $env_file
 
@@ -18,8 +22,10 @@ env_file="$HOME/.env"
 export SHELL_DIR="$HOME/.local/shell"
 
 # flags.sh next, because every gate below this point is a flag_enabled call.
+# Unguarded: it is deployed by the same `symlinks apply` that deploys this file,
+# so a shell running here has it.
 flags_file="$SHELL_DIR/flags.sh"
-[[ -f $flags_file ]] && source $flags_file
+source $flags_file
 
 CHECK_MARK="☑️"
 ERROR_MARK="❌"
@@ -42,17 +48,19 @@ log() {
 }
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
-# Log environment
+# Log environment. The two already sourced above are logged here, now that log()
+# exists; `~/.env` only when it was there, because absent is legitimate for it
+# alone.
 colors_file="$SHELL_DIR/colors.sh"
 formatting_file="$SHELL_DIR/formatting.sh"
-[[ -f $env_file ]] && log "Load" "$env_file" || log_error "Load" "$env_file"
-[[ -f $flags_file ]] && log "Load" "$flags_file" || log_error "Load" "$flags_file"
-[[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
-[[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
+[[ -f $env_file ]] && log "Load" "$env_file"
+log "Load" "$flags_file"
+source $colors_file && log "Load" "$colors_file"
+source $formatting_file && log "Load" "$formatting_file"
 
 # Shared prompt utilities (used by prompt.zsh)
 prompt_lib_file="$SHELL_DIR/prompt-lib.sh"
-[[ -f $prompt_lib_file ]] && source $prompt_lib_file && log "Load" "$prompt_lib_file" || log_error "Load" "$prompt_lib_file"
+source $prompt_lib_file && log "Load" "$prompt_lib_file"
 
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
@@ -357,7 +365,7 @@ log "Setup" "Completions"
 # PROMPT
 # ------------------------------------------------------------------ #
 my_prompt="$HOME/.local/shell/prompt.zsh"
-[[ -f $my_prompt ]] && source $my_prompt && log "Load" $my_prompt || log_error "Load" $my_prompt
+source $my_prompt && log "Load" $my_prompt
 
 # ------------------------------------------------------------------ #
 # PLUGIN REPLACEMENTS
@@ -373,31 +381,34 @@ my_prompt="$HOME/.local/shell/prompt.zsh"
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
-# Shell code (symlinked from dotfiles/shell/ by symlinks manager)
-[[ -f "$SHELL_DIR/functions.sh" ]] && source "$SHELL_DIR/functions.sh" && log "Load" "$SHELL_DIR/functions.sh" || log_error "Load" "$SHELL_DIR/functions.sh"
-[[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
-# The overlay directories this machine loads, resolved by `dotfiles env apply`
-# and shipped as one space-separated list. Absent is the normal case and not an
-# error: an axis earns a directory only when something differs along it, so a
-# machine loads two or three of the six it names.
-# ${=...} is zsh's explicit word split — an unquoted expansion is a single word
-# here, unlike bash. The (N) qualifier is what makes an unmatched glob expand to
-# nothing instead of erroring, which is the whole reason this is a zsh-only
-# spelling.
-for overlay in ${=DOTFILES_LAYERS}; do
-  for overlay_file in "$SHELL_DIR/$overlay"/*.sh(N); do
-    source "$overlay_file" && log "Load" "$overlay_file" || log_error "Load" "$overlay_file"
-  done
+# Shell code, deployed by `dotfiles symlinks apply`. Sourced without testing that
+# any of it is there: what should exist is the declaration's question, and
+# `dotfiles symlinks check` answers it by name — `shell/common/aliases.sh` is
+# missing, and where it should be. A guard here can only say a path is absent to
+# someone already sitting at the shell, and cannot say what was meant to fill it.
+source "$SHELL_DIR/functions.sh" && log "Load" "$SHELL_DIR/functions.sh"
+source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh"
+
+# The coordinate layers, read off the disk rather than off a list. `symlinks
+# apply` deploys only the directories this machine's coordinates select and
+# prunes the ones it no longer does, so this tree is the resolved answer and
+# needs no second copy in `~/.env` to disagree with.
+# The (N) qualifier makes an unmatched glob expand to nothing rather than
+# erroring — a machine whose every axis matches `common/` has no nested layer at
+# all, which is normal.
+for layer_file in "$SHELL_DIR"/*/*/*.sh(N); do
+  source "$layer_file" && log "Load" "$layer_file"
 done
-unset overlay overlay_file
+unset layer_file
 
 # Machine-local overlay, last so it can build on what the platform exported (the
 # work box's aws-login reads $winchris from wsl.sh). A real file, not a symlink:
 # it holds shell code that deliberately never enters this repo — employer
 # hostnames and the like — and it is restored by safekeep rather than installed.
 # `relink` only removes symlinks that resolve into the repo, so it survives
-# untouched. Absent on every machine that does not declare one, which is why the
-# source is guarded like an optional platform overlay.
+# untouched. Absent on every machine that does not declare one, and the last of
+# the three guards that stays: this file is restored, never deployed, so
+# `symlinks check` has nothing to say about it and its absence is not drift.
 local_file="$SHELL_DIR/local.sh"
 [[ -f "$local_file" ]] && source "$local_file" && log "Load" "$local_file"
 
