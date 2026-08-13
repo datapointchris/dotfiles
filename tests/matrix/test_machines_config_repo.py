@@ -952,30 +952,20 @@ def test_repo_show_reports_a_dirty_tree_as_dirty(sandbox: Sandbox, cli: Callable
     assert '?? untracked.txt' in cli('repo', 'show').stdout
 
 
-def test_repo_show_prints_git_s_refusal_and_still_reports_success(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour on a directory that is not a checkout.
-
-    The transcript is printed whether or not git succeeded, and the return code is
-    never read, so the run answers 0 having reported nothing about the repo.
-    """
-    ran = cli('repo', 'show')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert 'not a git repository' in ran.stdout
-
-
-@pytest.mark.xfail(strict=True, reason='`repo show` prints `bridge.git`s transcript and never reads its return code')
 def test_repo_show_refuses_rather_than_reporting_success_it_did_not_have(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Exit 0 is the answer "the repo is at this commit on this branch", and here
-    there is no commit, no branch and no repo.
+    """Exit 0 is the answer "the repo is at this commit on this branch", and on a
+    directory that is not a checkout there is no commit, no branch and no repo.
 
-    `manage.update` reads the same call's status and exits 3 with `could not read
-    HEAD — is this a git repository?`, so the two halves of one module disagree
-    about whether git refusing matters.
+    It used to print git's transcript whether or not git succeeded and never read
+    the return code, so the run answered 0 with `fatal: not a git repository` as
+    its whole output. `manage.update` read the same call's status all along, so
+    the two halves of one module disagreed about whether git refusing mattered.
     """
-    ran = cli('repo', 'show')
+    ran = cli('repo', 'show', catch_exceptions=True)
 
-    assert ran.exit_code != ExitCode.CONVERGED
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'could not read the working tree' in ran.stderr
+    assert ran.stdout == ''
 
 
 # ─────────────────────────────────────────────────────────────────────────────

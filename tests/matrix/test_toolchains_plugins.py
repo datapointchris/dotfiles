@@ -441,16 +441,18 @@ def test_the_toolchain_list_is_the_runtimes_section_and_nothing_else(sandbox: Sa
 
 
 def test_a_toolchain_nothing_declares_is_refused_rather_than_answered_emptily(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A bare 1 rather than an `ExitCode`, and that is what the code does: `show`
-    goes through `declaration.main`, which predates the vocabulary and signals with
-    `sys.exit`. Asserted as the literal so a later alignment onto `USAGE` shows up
-    here as the change it is."""
+    """`USAGE`, because naming a toolchain that exists is what fixes it.
+
+    It answered a bare 1 until `declaration.main` stopped signalling through
+    `sys.exit` — argparse's convention, where 1 means failed, arriving in a tool
+    where 1 means the machine has drift.
+    """
     sandbox.declare(packages=RUNTIMES, manifest=BARE)
 
     ran = cli('toolchains', 'show', 'haskell', catch_exceptions=True)
 
-    assert ran.exit_code == 1
-    assert 'not found' in unwrapped(ran.stderr)
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'no package named haskell' in unwrapped(ran.stderr)
 
 
 def test_showing_a_toolchain_prints_the_runtimes_row_it_names(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

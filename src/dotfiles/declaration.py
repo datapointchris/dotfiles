@@ -25,6 +25,8 @@ import yaml
 import dotfiles
 from dotfiles import catalog
 from dotfiles import paths
+from dotfiles.refusal import Refusal
+from dotfiles.vocabulary import ExitCode
 
 SECTION_STRUCTURES = {section: cls.structure for section, cls in catalog.SECTIONS.items()}
 """How each section is spelled, for the raw-dict walks below. `catalog.SECTIONS`
@@ -110,14 +112,12 @@ def get_packages_file(root: Path | None = None) -> Path:
         packages_file = root / 'install' / 'packages.yml'
         if packages_file.exists():
             return packages_file
-        print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
-        sys.exit(1)
+        raise Refusal(f'packages.yml not found at {packages_file}')
 
     if paths.PACKAGES_FILE.exists():
         return paths.PACKAGES_FILE
 
-    print('Error: packages.yml not found', file=sys.stderr)
-    sys.exit(1)
+    raise Refusal('packages.yml not found')
 
 
 def load_packages(root: Path | None = None) -> dict[str, Any]:
@@ -320,12 +320,13 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     matches = [p for p in get_all_packages(data) if p.get('name', '').lower() == name_lower]
 
     if not matches:
-        print(f'Error: Package not found: {args.name}', file=sys.stderr)
-        print('\nSimilar packages:', file=sys.stderr)
         similar = [p for p in get_all_packages(data) if name_lower in p.get('name', '').lower()]
-        for pkg in similar[:5]:
-            print(f'  {pkg["name"]:<28} {pkg.get("description", "")}', file=sys.stderr)
-        sys.exit(1)
+        near = ', '.join(pkg['name'] for pkg in similar[:5])
+        raise Refusal(
+            f'no package named {args.name}',
+            code=ExitCode.USAGE,
+            advice=f'did you mean: {near}' if near else 'list them with: dotfiles packages list',
+        )
 
     # Sort with available-on-this-platform first
     matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)
@@ -395,11 +396,11 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List packages with optional filters."""
     # Validate section filter
     if args.section and args.section not in PACKAGE_SECTIONS:
-        print(f'Error: Unknown section: {args.section}', file=sys.stderr)
-        print('\nAvailable sections:', file=sys.stderr)
-        for s in PACKAGE_SECTIONS:
-            print(f'  {s}', file=sys.stderr)
-        sys.exit(1)
+        raise Refusal(
+            f'unknown section {args.section}',
+            code=ExitCode.USAGE,
+            advice=f'available: {", ".join(PACKAGE_SECTIONS)}',
+        )
 
     # Determine which sections to query
     if args.section:
