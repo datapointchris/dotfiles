@@ -304,10 +304,12 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
 def _state(path: Path, contributed: dict[Path, int]) -> str:
     """What one file is doing, in the three states worth telling apart.
 
-    Absent is a normal state rather than a fault. An overlay exists only where a
-    coordinate needs one, so `host.gitconfig` missing on a machine that is not WSL
-    is the design working — git ignores an include whose target is not there,
-    which is what makes the scheme optional per axis.
+    Absent is a normal state rather than a fault. Each overlay gitconfig is named
+    for the coordinate value that ships it, and `common.gitconfig` names every one
+    it knows of, so a machine lists the values it is not as well as the ones it
+    is: `wsl.gitconfig` absent on a native machine is the design working. git
+    ignores an include whose target is not there, which is what makes the scheme
+    optional per axis and lets one shared file name every value.
 
     The three are told apart by what they say, not by how faintly they are
     printed. Every one of them is an ordinary state, so none earns a colour, and

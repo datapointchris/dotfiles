@@ -84,20 +84,40 @@ path = ~/.config/delta/current.gitconfig
 	helper =
 	helper = !gh auth git-credential
 
-# Whatever one coordinate needs that the rest do not, one include per axis and
-# each named for the overlay directory that supplies it. Absolute rather than
-# relative because this file is reached through a symlink and a relative include
-# would resolve against the repo. Ignored while absent, so a machine shipping
-# none needs no file.
+# Whatever one coordinate needs that the rest do not, one include per overlay
+# that exists, each named for the coordinate *value* rather than the axis. So
+# `ls ~/.config/git/` says what this machine is: nonfleet.gitconfig names which
+# side of the trust split this box sits on, where trust.gitconfig said only that
+# a side had been chosen. The axis is what the comment headings below carry.
+#
+# The values are written out because git cannot expand a variable in an
+# include.path — `~` is the only substitution it does. .zshrc sources the same
+# overlays through $DOTFILES_HOST and needs no such list, which is why shell/
+# keeps the axis/value directory in its deployed path and this cannot.
+#
+# That enumeration is the one cost, and it is guarded: `dotfiles machines check`
+# fails when an overlay ships a gitconfig no line here names, because git ignores
+# a missing include silently and a forgotten line would deploy a file nothing
+# ever reads.
+#
+# Absolute rather than relative because this file is reached through a symlink
+# and a relative include would resolve against the repo. Ignored while absent, so
+# each machine reads only the lines its own coordinates deployed.
 #
 # trust comes last: it carries identity, and on a machine hosting both employer
 # and personal work the personal exception is an includeIf that has to be read
 # after the default it overrides.
+
+# host
 [include]
-path = ~/.config/git/host.gitconfig
+path = ~/.config/git/wsl.gitconfig
+
+# trust
+[include]
+path = ~/.config/git/fleet.gitconfig
 
 [include]
-path = ~/.config/git/trust.gitconfig
+path = ~/.config/git/nonfleet.gitconfig
 
 # %cs/%cr rather than %ad with --date=short, so the format carries its own date
 # rendering and stays usable from any alias without a paired flag.

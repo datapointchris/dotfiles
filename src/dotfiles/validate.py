@@ -80,6 +80,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_unprobeable(manifests))
     findings.extend(_unbuildable_assets(declared))
     findings.extend(_unreferenced(declared, manifests))
+    findings.extend(_git_overlays(root))
     return tuple(findings)
 
 
@@ -219,4 +220,75 @@ def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Mach
         referenced = {name for subscription in subscriptions for name in subscription.names}
         for name in sorted({entry.name for entry in declared.section(section)} - referenced):
             findings.append(Finding(section, Severity.WARNING, f'{name!r} is declared but no manifest names it'))
+    return findings
+
+
+GIT_OVERLAY_GLOB = 'configs/*/*/.config/git/*.gitconfig'
+COMMON_GITCONFIG = 'configs/common/.config/git/common.gitconfig'
+GIT_INCLUDE_PREFIX = 'path = ~/.config/git/'
+
+
+def _git_overlays(root: Path) -> list[Finding]:
+    """The two rules holding the git include scheme together, neither of which git
+    can enforce.
+
+    An overlay gitconfig is named for the coordinate *value* that ships it, so
+    `ls ~/.config/git/` answers what the machine is rather than which axes were
+    resolved — `nonfleet.gitconfig`, not `trust.gitconfig`. And every one of them
+    has to be named by an include in `common.gitconfig`, because git expands
+    nothing but `~` in an `include.path` and cannot be pointed at a directory the
+    way `.zshrc` points at `$DOTFILES_HOST`.
+
+    Both failures are silent, and silent in the *same* way, which is what makes
+    them worth a check rather than a convention. git ignores an include whose
+    target is absent — deliberately, since that is the mechanism letting one
+    shared file name every value — so a file nothing includes is
+    indistinguishable from a value this machine simply is not. The overlay
+    deploys, git never reads it, and `identity show` draws a tree it does not
+    appear in.
+
+    Errors rather than warnings, because both produce a machine configured
+    differently from what the repo says it is.
+    """
+    overlays = sorted(root.glob(GIT_OVERLAY_GLOB))
+    common = root / COMMON_GITCONFIG
+    if not common.exists():
+        # Only a fault when something is waiting to be included. A tree with no
+        # git overlays at all has nothing to say about the scheme either way.
+        if not overlays:
+            return []
+        return [Finding('gitconfig', Severity.ERROR, f'{COMMON_GITCONFIG} is missing, so no overlay gitconfig is reachable')]
+
+    lines = [line.strip() for line in common.read_text().splitlines()]
+    included = {line.removeprefix(GIT_INCLUDE_PREFIX) for line in lines if line.startswith(GIT_INCLUDE_PREFIX)}
+
+    findings, shipped = [], set()
+    for overlay in overlays:
+        axis, value = overlay.relative_to(root / 'configs').parts[:2]
+        shipped.add(overlay.name)
+        relative = overlay.relative_to(root)
+        if overlay.stem != value:
+            findings.append(
+                Finding(
+                    'gitconfig',
+                    Severity.ERROR,
+                    f'{relative} is named for neither its value nor anything else: '
+                    f'the {axis} value here is {value!r}, so it must be {value}.gitconfig',
+                )
+            )
+        elif overlay.name not in included:
+            findings.append(
+                Finding(
+                    'gitconfig',
+                    Severity.ERROR,
+                    f'{relative} is deployed but no include names it, so git never reads it; '
+                    f'add `{GIT_INCLUDE_PREFIX}{overlay.name}` to {COMMON_GITCONFIG}',
+                )
+            )
+
+    # The stale half, and only a warning: git ignores the line, so nothing is
+    # misconfigured. What it costs is a reader trusting the file, who sees a value
+    # named here and goes looking for the overlay that no longer ships it.
+    for name in sorted(included - shipped):
+        findings.append(Finding('gitconfig', Severity.WARNING, f'{COMMON_GITCONFIG} includes {name!r}, which no overlay ships'))
     return findings

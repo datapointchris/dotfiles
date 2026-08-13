@@ -301,3 +301,80 @@ def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> Non
     unbuildable = [finding for finding in validate.declaration() if 'binary_pattern' in finding.message]
 
     assert unbuildable == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The git include scheme, whose two rules git itself cannot enforce
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def git_tree(root: Path, *, overlays: dict[str, str], includes: list[str]) -> Path:
+    """A configs/ tree carrying overlay gitconfigs and the common file naming them.
+
+    `overlays` maps an `<axis>/<value>` directory to the gitconfig basename it
+    ships, so a test can put the wrong name in the right place — which is the
+    misnaming this check exists to catch and is not otherwise expressible.
+    """
+    tree(root)
+    common = root / 'configs' / 'common' / '.config' / 'git'
+    common.mkdir(parents=True, exist_ok=True)
+    (common / 'common.gitconfig').write_text('\n'.join(f'[include]\npath = ~/.config/git/{name}' for name in includes))
+    for coordinate, filename in overlays.items():
+        overlay = root / 'configs' / coordinate / '.config' / 'git'
+        overlay.mkdir(parents=True, exist_ok=True)
+        (overlay / filename).write_text('[core]\nautocrlf = input')
+    return root
+
+
+def test_an_overlay_gitconfig_named_for_its_value_and_included_is_silent(tmp_path: Path) -> None:
+    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig'])
+
+    assert validate.declaration(root) == ()
+
+
+def test_an_overlay_gitconfig_named_for_its_axis_is_an_error(tmp_path: Path) -> None:
+    """The scheme this replaced. An overlay named for its axis, deployed to
+    `~/.config/git/`, says a side of the trust split was chosen and never which one.
+
+    The expected path is assembled from the coordinate the fixture was handed
+    rather than spelled out, so the two cannot disagree — and so the file holds no
+    complete literal for a path that deliberately does not exist, which refcheck
+    would otherwise read as a reference the rename left behind.
+    """
+    coordinate, misnamed = 'trust/nonfleet', 'trust.gitconfig'
+    root = git_tree(tmp_path, overlays={coordinate: misnamed}, includes=[misnamed])
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        f'configs/{coordinate}/.config/git/{misnamed} is named for neither its value nor anything else: '
+        f"the trust value here is 'nonfleet', so it must be nonfleet.gitconfig"
+    ]
+
+
+def test_an_overlay_gitconfig_no_include_names_is_an_error(tmp_path: Path) -> None:
+    """The failure the enumeration in `common.gitconfig` introduced, and the whole
+    reason this check exists. git ignores an include whose target is absent, so a
+    file nothing includes deploys, is never read, and reports nothing."""
+    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=[])
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        'configs/host/wsl/.config/git/wsl.gitconfig is deployed but no include names it, so git never reads it; '
+        f'add `{validate.GIT_INCLUDE_PREFIX}wsl.gitconfig` to {validate.COMMON_GITCONFIG}'
+    ]
+
+
+def test_an_include_no_overlay_ships_is_a_warning(tmp_path: Path) -> None:
+    """Harmless to git and misleading to a reader, which is the warning/error line
+    everywhere else in this module."""
+    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig', 'native.gitconfig'])
+
+    findings = validate.declaration(root)
+
+    assert messages(findings, Severity.ERROR) == []
+    assert messages(findings, Severity.WARNING) == [f"{validate.COMMON_GITCONFIG} includes 'native.gitconfig', which no overlay ships"]
+
+
+def test_a_tree_with_no_git_overlays_says_nothing(tmp_path: Path) -> None:
+    """Every other test in this module builds a tree with no `configs/` at all, so
+    a missing common.gitconfig has to be silent rather than a finding about a
+    scheme the tree is not using."""
+    assert validate.declaration(tree(tmp_path)) == ()

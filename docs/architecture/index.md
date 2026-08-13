@@ -134,12 +134,20 @@ checkout would commit an identity into the repo the first time anyone followed g
 tell me who you are" hint.
 
 Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships from
-`configs/common/.config/git/common.gitconfig`. Below it sits one include per axis, each named for
-the overlay directory that supplies it: `host.gitconfig` carries `core.autocrlf` from
-`configs/host/wsl/`, because a checkout on the Linux side is edited from Windows tools too, and
-`trust.gitconfig` carries identity. Both are ignored while absent, so a machine needing neither
-ships nothing. Trust comes last because its nonfleet form overrides a default with an `includeIf`,
-and git resolves last-wins.
+`configs/common/.config/git/common.gitconfig`. Below it sits one include per overlay, each named for
+the coordinate **value** that supplies it rather than the axis: `wsl.gitconfig` carries
+`core.autocrlf` from `configs/host/wsl/`, because a checkout on the Linux side is edited from
+Windows tools too, and `fleet.gitconfig` or `nonfleet.gitconfig` carries identity. All are ignored
+while absent, so a machine needing none ships nothing. Trust comes last because its nonfleet form
+overrides a default with an `includeIf`, and git resolves last-wins.
+
+Naming the value is what makes `ls ~/.config/git/` answer what the machine is. `trust.gitconfig`
+said only that the trust axis had been resolved; `nonfleet.gitconfig` says which way. The cost is
+that `common.gitconfig` has to spell every value out, because git expands nothing but `~` in an
+`include.path` — `.zshrc` reaches the same overlays through `$DOTFILES_HOST` and needs no list,
+which is the asymmetry that lets `shell/` keep `<axis>/<value>/` in its deployed path while
+`configs/` flattens. `dotfiles machines check` fails on an overlay gitconfig no include names, since
+git would otherwise ignore the missing line without a word.
 
 The `gh` credential helper used to be in that overlay and is now common, which is what collapsed
 three near-identical files into one. It was per-platform only because it named an absolute path —
@@ -149,7 +157,7 @@ here.
 
 Identity rides the trust axis, because that is the thing it actually varies with: a machine hosting
 employer work alongside personal needs a different default from one hosting only personal work.
-A fleet machine's `trust.gitconfig` includes `personal.gitconfig` unconditionally, so the three
+A fleet machine's `fleet.gitconfig` includes `personal.gitconfig` unconditionally, so the three
 personal machines take their identity from the repo and nobody sets one by hand. The personal
 address is in the repo because it is already in every commit object here — shipping it discloses
 nothing, and a value the repo owns cannot drift on one machine or vanish when a symlink is pruned.
