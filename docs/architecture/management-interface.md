@@ -400,6 +400,7 @@ real type system, a test suite, and dependencies it can declare.
 | Package declarations | `src/dotfiles/catalog.py` — one typed row per entry; a section's schema is its dataclass |
 | Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |
 | Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
+| What this tool's own config resolved to | `dotfiles config show` — the value and the rung that supplied it |
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 

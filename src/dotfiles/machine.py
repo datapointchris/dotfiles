@@ -176,7 +176,17 @@ class Requirement:
         return bool(self.path)
 
     @property
-    def resolved_path(self) -> str:
+    def declared_names(self) -> tuple[str, ...]:
+        """Every name that has to resolve before this entry can be measured.
+
+        A value is its own name; a file is named by whatever variables its path
+        references, which is usually one and may be none. What this is for is
+        letting a caller collect the whole register's names and answer them in one
+        reading, rather than each entry reaching for the rungs as it is reached.
+        """
+        return settings.variables(self.path) if self.is_file else (self.name,)
+
+    def resolved_path(self, resolved: settings.Resolved) -> str:
         """`path` with $VARIABLES and ~ resolved, for touching the filesystem here.
 
         A declared entry may name its own location through a variable this repo also
@@ -184,10 +194,10 @@ class Requirement:
         which the repo must never carry. Read as a literal, `check` reports a missing
         file named `$REPOS_JSON`, which is the failure this exists to avoid.
 
-        Through `settings.expand` rather than `os.path.expandvars`, which reads the
-        process environment alone: the scheduled check runs from a unit that has
-        sourced no profile, so every variable `~/.env` exports is unset there and this
-        reported the registry missing on a machine holding it.
+        Answered from a snapshot rather than resolved here, and that is what makes it
+        a method: the rungs include a config file, so an entry that resolved itself
+        would be a read at every point of use and two entries in one report could
+        disagree about what the machine says.
 
         Only for *this* machine, and only where the filesystem is actually touched.
         Everything that shows the path shows the declaration instead: a listing and the
@@ -195,21 +205,17 @@ class Requirement:
         is generated for a named machine and pasted on it — expanding there would write
         the generating machine's answer into another machine's config.
         """
-        return settings.expand(self.path)
+        return resolved.expand(self.path)
 
-    @property
-    def is_present(self) -> bool:
+    def is_present(self, resolved: settings.Resolved) -> bool:
         """Whether the declared file is actually on this machine.
 
-        Empty is checked before the filesystem is, because `Path('')` is `.` and a
-        current directory always exists — so a variable that is *set but empty* would
-        report the registry present while nothing had been declared at all. That is
-        the precise failure this register exists to catch.
-
-        An unset variable needs no special case: expandvars leaves `$REPOS_JSON`
-        literal, and no file is named that.
+        A declaration nothing answers keeps its `$REPOS_JSON` literal, and no file is
+        named that — so an unanswered entry reports absent rather than resolving to
+        something plausible. A set-but-empty variable takes the same road, because
+        `settings.resolve` skips a falsy rung instead of substituting it.
         """
-        return bool(self.resolved_path) and Path(self.resolved_path).exists()
+        return Path(self.resolved_path(resolved)).exists()
 
 
 @dc.dataclass(frozen=True, slots=True)

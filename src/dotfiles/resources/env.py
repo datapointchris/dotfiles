@@ -20,7 +20,6 @@ from pathlib import Path
 
 from dotfiles import envfile
 from dotfiles import settings
-from dotfiles.machine import Requirement
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -60,6 +59,17 @@ class Observed:
     value drift anywhere and call the machine converged.
     """
 
+    resolved: settings.Resolved
+    """Every name the register declares, answered once, from the same reading of
+    config.toml that `config_problem` reports on.
+
+    Carried rather than resolved in `diff`, for the reason `symlinks` carries
+    `ownership` and `pointing_at`: `diff` is the pure half, and a rung that is a
+    file on disk makes any resolution there a read. It also has to be the *same*
+    reading — a repair landing between two of them produced one report that
+    rejected config.toml and resolved the registry through it two rows apart.
+    """
+
     config_problem: str = ''
     """Why this tool's own config.toml could not be read, empty when it could.
 
@@ -78,13 +88,19 @@ class EnvResource:
 
     def observe(self, session: Session, plan: Plan) -> Observed:
         path = session.env_file
+        config = settings.read_config()
+        resolved = settings.resolve_all(
+            {name for entry in plan.machine.requirements for name in entry.declared_names},
+            config,
+        )
         return Observed(
             path=path,
             exists=path.exists(),
             values=envfile.read(path),
-            present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present),
+            present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present(resolved)),
             generated=envfile.read_generated(path),
-            config_problem=settings.read_config().problem,
+            resolved=resolved,
+            config_problem=config.problem,
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -237,11 +253,13 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     scheduled check's advice wrong. *Nothing names its location* is a machine that
     never answered, and the remedy is to answer; *absent at a named path* is a
     machine that answered and has no file there, and the remedy is a restore. Only
-    the second is what safekeep can fix.
+    the second is what safekeep can fix. The two share a verdict, so `source` is
+    what separates them for anything but a reader — set on the second and empty on
+    the first, since a rung is exactly what the first one lacks.
     """
     changes = []
     for entry in machine.required_values:
-        if observed.values.get(entry.name) or settings.resolve(entry.name):
+        if observed.values.get(entry.name) or observed.resolved.of(entry.name):
             continue
         changes.append(
             Change(
@@ -258,7 +276,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
         if entry.path in observed.present_files:
             continue
         description = entry.description or 'a machine-local file'
-        if unnamed := settings.unresolved(entry.path):
+        if unnamed := observed.resolved.unresolved(entry.path):
             changes.append(
                 Change(
                     NAME,
@@ -271,32 +289,24 @@ def _requirements(machine, observed: Observed) -> list[Change]:
                 )
             )
             continue
+        # Carried only where a variable chose the path. An entry naming a literal
+        # one reads worse with its own `~` expanded back at it, and there is no
+        # rung to attribute it to.
+        source = observed.resolved.source(entry.path)
         changes.append(
             Change(
                 NAME,
                 Stage.ENVIRONMENT,
                 entry.path,
                 Verdict.MISSING,
-                detail=f'absent{_where_it_resolved(entry)} — {description}',
+                detail=f'absent — {description}',
                 repair=Repair.BY_HAND,
                 advice=entry.restore or RESTORE,
+                observed=entry.resolved_path(observed.resolved) if source else '',
+                source=source,
             )
         )
     return changes
-
-
-def _where_it_resolved(entry: Requirement) -> str:
-    """The path a variable-declared entry resolved to, and the rung that said so.
-
-    Only where the declaration does not already say it: an entry naming a literal
-    path reads worse with its own `~` expanded back at it. For one naming a
-    variable, the resolved path is the whole finding — a registry reported absent
-    is a different problem depending on whether the path came from this machine's
-    shells or from its config file.
-    """
-    if not (source := settings.path_source(entry.path)):
-        return ''
-    return f' at {entry.resolved_path} (from {source})'
 
 
 def _undeclared(machine, observed: Observed) -> list[Change]:

@@ -537,8 +537,7 @@ def test_a_required_value_nothing_answers_is_advised_at_every_rung(tmp_path: Pat
     found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == 'REPOS_JSON']
 
     assert found[0].verdict is Verdict.MISSING
-    assert 'DOTFILES_REPOS_JSON' in found[0].advice
-    assert str(settings.config_file()) in found[0].advice
+    assert found[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
 
 
 def test_a_registry_nothing_names_is_not_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
@@ -549,8 +548,8 @@ def test_a_registry_nothing_names_is_not_advised_as_a_restore(tmp_path: Path, un
 
     found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
 
-    assert found[0].advice != env_resource.RESTORE
-    assert str(settings.config_file()) in found[0].advice
+    assert found[0].source == ''
+    assert found[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
 
 
 def test_a_registry_named_but_absent_is_still_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
@@ -563,19 +562,34 @@ def test_a_registry_named_but_absent_is_still_advised_as_a_restore(tmp_path: Pat
     found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
 
     assert found[0].advice == env_resource.RESTORE
+    assert found[0].source == str(settings.config_file())
 
 
 def test_a_named_but_absent_registry_reports_the_path_and_the_rung(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
     """A registry reported absent is a different problem depending on which rung
-    chose the path, so the finding carries both."""
+    chose the path, so the finding carries both — as fields, because the two file
+    findings share a verdict and nothing else could tell them apart."""
     monkeypatch.setenv('REPOS_JSON', str(tmp_path / 'gone.json'))
     live = session(tmp_path, MANIFEST, REGISTRY_FILE)
     envfile.write(live.env_file, live.machine)
 
     found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
 
-    assert str(tmp_path / 'gone.json') in found[0].detail
-    assert '$REPOS_JSON' in found[0].detail
+    assert found[0].observed == str(tmp_path / 'gone.json')
+    assert found[0].source == '$REPOS_JSON'
+
+
+def test_a_literal_declaration_carries_no_resolved_path(tmp_path: Path, unshelled: Path) -> None:
+    """Nothing chose it, so there is no rung to attribute — and an entry naming a
+    literal path reads worse with its own `~` expanded back at it."""
+    declared = {**FLAGS, 'required_files': [{'name': 'local', 'path': '~/.local/shell/local.sh', 'machine': 'box'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=declared) if change.verdict is Verdict.MISSING]
+
+    assert found[0].observed == ''
+    assert found[0].source == ''
 
 
 def test_the_private_variable_wins_over_the_shared_one_in_the_register(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
@@ -602,6 +616,28 @@ def test_a_config_file_that_cannot_be_parsed_reports_itself(tmp_path: Path, unsh
 
     assert found[0].verdict is Verdict.STALE
     assert found[0].repair is Repair.BY_HAND
+
+
+def test_one_report_never_both_rejects_the_config_file_and_resolves_through_it(tmp_path: Path, unshelled: Path) -> None:
+    """Every rung is read in `observe`, so a repair landing after it cannot reach `diff`.
+
+    Reading the config file again inside `diff` produced a report that contradicted
+    itself: one row said the file cannot be read and so answers nothing, and a row
+    below it resolved the registry through that same file.
+    """
+    config = unshelled / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('repos_file = "unterminated\n')
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+    observed = env_resource.RESOURCE.observe(live, live.plan)
+
+    name_registry(unshelled, tmp_path / 'gone.json')
+    found = env_resource.RESOURCE.diff(live.plan, observed)
+
+    assert [change for change in found if change.item == str(settings.config_file())], 'the file observe read is the file diff reports'
+    registry = [change for change in found if change.item == '$REPOS_JSON']
+    assert registry[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

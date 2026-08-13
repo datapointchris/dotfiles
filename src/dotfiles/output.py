@@ -211,11 +211,16 @@ def render_change(change: Change) -> None:
     under it: the two answer different questions — what is wrong, and what to do
     about it — and a reader scanning a screen of rows for the instruction wants
     it in one column, not folded into a sentence of varying length.
+
+    `source` rides inside the same parenthesis as `observed` rather than taking a
+    column, because it is meaningless without it and is set on a handful of rows:
+    a column would be blank on nearly every line of a real run.
     """
     if not showing_evidence():
         return
     colour = CHANGE_COLOURS[str(change.verdict)]
-    observed = f' (is {change.observed!r})' if change.observed else ''
+    attribution = f' from {change.source}' if change.source else ''
+    observed = f' (is {change.observed!r}{attribution})' if change.observed else ''
     err_console.print(
         f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{SUBJECT_COLUMN}} {change.detail}{observed}'
     )

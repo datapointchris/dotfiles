@@ -23,6 +23,7 @@ from dotfiles import reconcile
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import status
+from dotfiles.commands import config
 from dotfiles.commands import machines
 from dotfiles.commands import manage
 from dotfiles.commands import network
@@ -52,6 +53,7 @@ app.add_typer(resources.auth_app, name='auth', rich_help_panel='Resources')
 app.add_typer(resources.credentials_app, name='credentials', rich_help_panel='Resources')
 
 app.add_typer(machines.app, name='machines', rich_help_panel='Declaration')
+app.add_typer(config.app, name='config', rich_help_panel='Declaration')
 app.add_typer(report.app, name='report', rich_help_panel='History')
 app.add_typer(network.app, name='network', rich_help_panel='Staging')
 app.add_typer(staging.bundle_app, name='bundle', rich_help_panel='Staging')

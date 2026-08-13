@@ -35,6 +35,8 @@ import dataclasses as dc
 import os
 import re
 import tomllib
+from collections.abc import Iterable
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -114,13 +116,21 @@ class Resolution:
     """
 
 
-def resolve(declared: str) -> Resolution | None:
+def resolve(declared: str, config: Config) -> Resolution | None:
     """The value for a declared name, or None when nothing names it.
 
-    Empty counts as unset at every rung. `Path('')` is the current directory,
-    which always exists, so a variable exported as nothing would otherwise
-    resolve a declared file to something present while the machine had answered
-    nothing at all.
+    Empty counts as unset at every rung, which is why each is a walrus on a
+    truthiness test rather than a `in os.environ`. `Path('')` is the current
+    directory and always exists, so a variable exported as nothing would resolve a
+    declared file to something present while the machine had answered nothing at
+    all — and every rung below the empty one would be skipped on the strength of
+    it. Falling through instead means a set-but-empty variable reads exactly like
+    an unset one at every layer that consumes this.
+
+    `config` is a parameter rather than a read, so one reading of the file answers
+    every name in a register. Re-reading per name let a repair land between two
+    answers in one report, which is how a check came to reject the config file and
+    resolve a path through it in the same breath.
 
     A name with no `SHARED_PATHS` entry has one rung, its own variable: the extra
     two exist to locate a file shared with other tools, and a machine fact like a
@@ -133,7 +143,7 @@ def resolve(declared: str) -> Resolution | None:
         return Resolution(value, f'${shared.private_env}')
     if value := os.environ.get(shared.shared_env):
         return Resolution(value, f'${shared.shared_env}')
-    if value := read_config().values.get(shared.config_key):
+    if value := config.values.get(shared.config_key):
         return Resolution(str(value), str(config_file()))
     return None
 
@@ -146,46 +156,71 @@ def variables(text: str) -> tuple[str, ...]:
     return tuple(match.group(1) or match.group(2) for match in VARIABLE.finditer(text))
 
 
-def expand(text: str) -> str:
-    """A declared path with `~` and every `$VAR` resolved through all three rungs.
+@dc.dataclass(frozen=True, slots=True)
+class Resolved:
+    """Every name a register declares, answered from one reading of the rungs.
 
-    A variable nothing answers is left literal, which is what keeps the failure
-    loud rather than plausible: no file is named `$REPOS_JSON`, so the check
-    reports the declaration unanswered instead of resolving to a path that
-    happens to exist.
-
-    Not `os.path.expandvars`, which reads `os.environ` alone — that is precisely
-    how the scheduled unit came to report a present registry as missing.
+    A snapshot rather than a resolver, so the half of a run that decides what is
+    wrong touches nothing: `resources/__init__.py` gives `observe` the reads and
+    keeps `diff` pure, and a resolution that reaches for the config file is a read
+    inside `diff` however it is spelled.
     """
 
-    def substitute(match: re.Match[str]) -> str:
-        found = resolve(match.group(1) or match.group(2))
-        return found.value if found else match.group(0)
+    answers: Mapping[str, Resolution | None]
 
-    return os.path.expanduser(VARIABLE.sub(substitute, text))
+    def of(self, declared: str) -> Resolution | None:
+        """What answered this name, or None when no rung did.
+
+        A name the snapshot was never asked for raises rather than reading as
+        unanswered. The two are opposite findings — a machine that declared
+        nothing, against a caller that resolved the wrong set of names — and only
+        the first should ever reach a report.
+        """
+        return self.answers[declared]
+
+    def expand(self, text: str) -> str:
+        """A declared path with `~` and every `$VAR` resolved through the rungs it has.
+
+        A variable nothing answers is left literal, which is what keeps the failure
+        loud rather than plausible: no file is named `$REPOS_JSON`, so the check
+        reports the declaration unanswered instead of resolving to a path that
+        happens to exist.
+
+        Not `os.path.expandvars`, which reads `os.environ` alone — that is precisely
+        how the scheduled unit came to report a present registry as missing.
+        """
+
+        def substitute(match: re.Match[str]) -> str:
+            found = self.of(match.group(1) or match.group(2))
+            return found.value if found else match.group(0)
+
+        return os.path.expanduser(VARIABLE.sub(substitute, text))
+
+    def unresolved(self, text: str) -> tuple[str, ...]:
+        """The variables in a declaration that no rung answered."""
+        return tuple(name for name in variables(text) if self.of(name) is None)
+
+    def source(self, text: str) -> str:
+        """Which rungs answered a declared path, empty when it names no variable.
+
+        Deduplicated in order rather than as a set, so a declaration referencing one
+        variable twice reads as one source and the sentence stays stable.
+        """
+        found = [answer.source for name in variables(text) if (answer := self.of(name))]
+        return ', '.join(dict.fromkeys(found))
 
 
-def unresolved(text: str) -> tuple[str, ...]:
-    """The variables in a declaration that no rung answered."""
-    return tuple(name for name in variables(text) if resolve(name) is None)
-
-
-def path_source(text: str) -> str:
-    """Which rungs answered a declared path, empty when it names no variable.
-
-    Deduplicated in order rather than as a set, so a declaration referencing one
-    variable twice reads as one source and the sentence stays stable.
-    """
-    found = [answer.source for name in variables(text) if (answer := resolve(name))]
-    return ', '.join(dict.fromkeys(found))
+def resolve_all(names: Iterable[str], config: Config) -> Resolved:
+    """Answer every declared name against one reading of the config file."""
+    return Resolved({name: resolve(name, config) for name in names})
 
 
 def where_to_name(declared: str, env_file: Path) -> str:
     """Every place a machine can supply a declared value, for a change's advice.
 
-    All three rather than the one this tool would prefer. The reader is looking
-    at a check that found nothing, so the actionable fact is the whole set of
-    places it looked — naming one of them turns a complete answer into a guess
+    Every one of them rather than the one this tool would prefer. The reader is
+    looking at a check that found nothing, so the actionable fact is the whole set
+    of places it looked — naming one of them turns a complete answer into a guess
     about which the machine was supposed to use.
     """
     shared = SHARED_PATHS.get(declared)
@@ -195,3 +230,53 @@ def where_to_name(declared: str, env_file: Path) -> str:
         f'set {shared.private_env} or {shared.shared_env} below the OVERRIDES marker in {env_file}, '
         f'or {shared.config_key} in {config_file()}'
     )
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Setting:
+    """One thing this tool's config can answer, as this machine currently answers it."""
+
+    name: str
+    value: str
+    source: str
+    exists: bool
+    advice: str
+    """Where to answer it, on a machine that has not — empty once one has.
+
+    Carried on the record rather than assembled by whichever surface is printing,
+    so the terminal and `--json` cannot come to say different things about the
+    same machine. It is also the half a reader arrives for: a setting nothing
+    names is a question about where to put the answer, not about the value.
+    """
+
+    @property
+    def answered(self) -> bool:
+        return bool(self.source)
+
+
+def describe(config: Config, env_file: Path) -> tuple[Setting, ...]:
+    """Every setting this tool's config can answer, with the rung that answered it.
+
+    Built by calling `resolve`, never by re-walking the rungs beside it, so the
+    attribution a reader is shown cannot drift from the value the tool will use —
+    standards/configuration.md § "A resolved value reports which layer set it".
+
+    The value is expanded, because the question this answers is what the tool will
+    do rather than what someone typed: `repos_file = "~/dev/repos.json"` is a
+    perfectly ordinary thing to write in the config file, and printing it back
+    unexpanded answers a question nobody asked.
+    """
+    described = []
+    for name in SHARED_PATHS:
+        found = resolve(name, config)
+        value = os.path.expanduser(found.value) if found else ''
+        described.append(
+            Setting(
+                name=name,
+                value=value,
+                source=found.source if found else '',
+                exists=bool(value) and Path(value).exists(),
+                advice='' if found else where_to_name(name, env_file),
+            )
+        )
+    return tuple(described)

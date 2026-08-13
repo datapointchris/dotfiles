@@ -137,6 +137,28 @@ def test_the_observed_value_appears_only_when_there_is_one(capsys: pytest.Captur
     assert '(is ' not in capsys.readouterr().err
 
 
+def test_the_layer_that_supplied_a_value_is_named_only_when_there_is_one(capsys: pytest.CaptureFixture) -> None:
+    """A registry absent at a path this machine's shells chose and one absent at a
+    path its config file chose are different problems with one word for the
+    outcome, so the value alone leaves the reader where they started.
+
+    Asserted on the token rather than on its adjacency to `observed`, because the
+    width that decides where the row wraps belongs to whoever ran the command.
+    """
+    output.render_change(a_change(observed='14.1.0', source='$REPOS_JSON'))
+    assert '$REPOS_JSON' in capsys.readouterr().err
+
+    output.render_change(a_change(observed='14.1.0'))
+    assert 'from' not in capsys.readouterr().err
+
+
+def test_a_source_with_no_observed_value_is_refused(capsys: pytest.CaptureFixture) -> None:
+    """It renders as nothing, since the attribution rides inside the parenthesis
+    `observed` opens — so the row would silently drop the half a reader came for."""
+    with pytest.raises(ValueError, match='source with no observed value'):
+        a_change(source='$REPOS_JSON')
+
+
 @pytest.mark.parametrize('label', [*[str(verdict) for verdict in Verdict], 'invalid'])
 def test_every_label_fits_the_column_it_is_padded_into(label: str) -> None:
     """A label wider than its column pushes the subject out of line for that row

@@ -110,6 +110,17 @@ class Change:
     desired: DesiredItem | None = None
     observed: str = ''
 
+    source: str = ''
+    """Which layer supplied `observed`, where it resolved through a precedence chain.
+
+    A field rather than a phrase inside `detail`, because it is the half of the
+    answer that separates two findings sharing a verdict: a registry absent at a
+    path this machine's shells chose and one absent at a path its config file
+    chose are different problems with the same word for the outcome. Empty
+    everywhere an address answers for itself, which is most of them —
+    standards/configuration.md § "A resolved value reports which layer set it".
+    """
+
     advice: str = ''
     """The next step, kept apart from `detail` on purpose.
 
@@ -142,6 +153,8 @@ class Change:
             raise ValueError(f'{self.resource}/{self.item}: repair=BY_HAND with no advice — apply cannot fix this, so a reader must')
         if self.desired is not None and self.item != self.desired.address:
             raise ValueError(f'{self.resource}: item {self.item!r} is not the plan address {self.desired.address!r}')
+        if self.source and not self.observed:
+            raise ValueError(f'{self.resource}/{self.item}: source with no observed value — a layer that supplied nothing supplied nothing')
 
     @property
     def drifted(self) -> bool:
@@ -163,6 +176,7 @@ class Change:
             'detail': self.detail,
             'advice': self.advice,
             'observed': self.observed,
+            'source': self.source,
             'privileged': str(self.privileged).lower(),
         }
 
