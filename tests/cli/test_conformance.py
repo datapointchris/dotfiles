@@ -128,12 +128,19 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
         assert '--offline' not in names, f'{"/".join(path) or "root"} declares --offline on the group'
 
 
-SELECTORS = ('--machine', '--source', '--owner')
+SELECTORS = ('--machine', '--source', '--owner', '--offline')
 """Options that narrow *what* a verb covers, rather than how it writes.
 
-`--offline` and `--reinstall` are deliberately absent: both describe how to
-perform a write and have no meaning for a read, which is why their absence from
-`plan` is correct rather than the same gap.
+`--offline` was in the second group until 2026-08-13, on the reasoning that it
+describes how to perform a write. That was wrong, and the way it was wrong is worth
+keeping: under the flag the staged bundle *is* the upstream every currency verdict
+is measured against, so it does not narrow the write — it changes what the answer
+is. A plan that ignores it rehearses a different run, which is the same defect this
+test was written for.
+
+`--reinstall` stays absent and is the genuine member of that group. It names work to
+do again whatever measuring concludes, so there is no reading of a machine it could
+change.
 """
 
 

@@ -88,6 +88,7 @@ def root(
 
 SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
+OfflineOption = typer.Option(False, '--offline', help='Measure against a staged offline bundle instead of the network')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 VerboseOption = commands.VerboseOption
@@ -124,6 +125,7 @@ def plan(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
+    offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
     verbose: int = VerboseOption,
@@ -140,6 +142,13 @@ def plan(
 
     `--owner` is `apply`'s and means the same, because a scope the write accepts
     and the read cannot express is not a narrower preview but no preview at all.
+
+    **`--offline` is the same argument, arrived at the hard way.** It was ruled
+    write-only on the grounds that it describes *how* to write, and that reading was
+    wrong: under this flag the staged bundle *is* the upstream every currency verdict
+    is decided against, so a plan that ignores it previews a different run. What it
+    does not do is stage — unpacking a tarball is a write, so this reports the bundle
+    it finds and names the absence of one as the finding it is.
     """
     commands.verbosity(verbose, quiet)
     skipped = _skipped(skip)
@@ -147,9 +156,11 @@ def plan(
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
     lens = reconcile.Lens.PLAN
-    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, owner=owner, report=None if as_json else render_result)
+    walked = reconcile.survey(
+        lens, skipped, machine, refresh=refresh, owner=owner, offline=offline, report=None if as_json else render_result
+    )
     results = walked.results
-    sinks.keep(walked.events, identity, {'skip': sorted(skipped)})
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
 
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
@@ -163,6 +174,7 @@ def plan(
 def check(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
+    offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
     verbose: int = VerboseOption,
@@ -177,6 +189,12 @@ def check(
     is what left the scheduled unit permanently failed on a healthy box.
 
     Exits 3 when it finds something, and never 1.
+
+    `--offline` measures against the staged bundle, as `plan` does. It is here and
+    not withheld on the symmetry argument that kept the selectors off this verb,
+    because the question it changes is this verb's own: a machine whose bundle
+    carries nothing for the tools it has installed is a machine nothing can speak
+    for, which is exactly what `check` exists to say.
     """
     commands.verbosity(verbose, quiet)
     skipped = _skipped(skip)
@@ -185,9 +203,9 @@ def check(
     when = identity.started
     sinks.open_log(identity)
     lens = reconcile.Lens.CHECK
-    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, report=None if as_json else render_result)
+    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, offline=offline, report=None if as_json else render_result)
     results = walked.results
-    sinks.keep(walked.events, identity, {'skip': sorted(skipped)})
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge
@@ -257,7 +275,13 @@ def apply_command(
             machine=machine,
             offline=offline,
             owner=owner,
-            flags={'skip': sorted(skipped), 'through': through} if through else {'skip': sorted(skipped)},
+            # `offline` unconditionally, `through` only when given. The first decides
+            # what every currency verdict in the record was measured against, so a
+            # record that omits it cannot be read back: wsl-failures.json is a real
+            # `apply --offline` whose flags say `{"skip": []}`, and nothing in it says
+            # the bundle was the upstream. The second is a ceiling and its absence
+            # means "all the way", which the missing key already says.
+            flags={'skip': sorted(skipped), 'offline': offline, **({'through': through} if through else {})},
             as_json=as_json,
         )
     )

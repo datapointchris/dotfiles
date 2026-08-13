@@ -166,6 +166,34 @@ class Change:
         """Whether `apply` has something it can do about it."""
         return self.repair is Repair.AUTOMATIC and self.verdict in (Verdict.MISSING, Verdict.STALE)
 
+    @property
+    def unmeasured(self) -> bool:
+        """Whether nothing could establish anything about this one either way.
+
+        Here rather than only inside `reconcile.sift`, because three readers need the
+        same answer and two of them did not have it. The fold classified correctly;
+        `sinks.record` wrote the literal `'planned'` over every change whatever its
+        kind, so eleven items nothing could measure were recorded as work the run
+        intended to do — and `apply` printed none of them.
+
+        Not `verdict is UNKNOWN` alone. The pair is the definition: an unmeasurable
+        item is one with no verdict *and* nobody to repair it, which `repair_for`
+        guarantees by answering `NONE` for `UNKNOWN`. Testing the verdict alone would
+        be a second opinion that happens to agree today.
+        """
+        return self.verdict is Verdict.UNKNOWN and self.repair is Repair.NONE
+
+    @property
+    def declined(self) -> bool:
+        """Whether this differs and only a person can fix it.
+
+        The third kind, and the one `apply` reports without counting: a machine-local
+        value nobody set, a file only safekeep restores, a tool whose credentials are
+        absent. `apply` is not failing when it leaves one alone, so it must not exit
+        non-zero — and it must not call the item planned either.
+        """
+        return self.repair is Repair.BY_HAND and self.drifted
+
     def as_dict(self) -> dict[str, str]:
         return {
             'resource': self.resource,

@@ -42,6 +42,33 @@ def open_log(identity: runs.Identity) -> None:
     logging.bind_run(identity.id, identity.host or identity.machine)
 
 
+def intention(change: Change) -> str:
+    """What the run meant to do about one measured item.
+
+    `'planned'` was written for every `Change` whatever it was, because the match
+    dispatches on the payload's *type* and never asked the change itself. The engine
+    is right to yield everything it measured; the record was wrong to call all of it
+    planned. Three categories the run never intended to touch were recorded as work
+    it intended to do — items nothing could measure, items only a person can repair,
+    and, on a `plan` or `check`, every row in the whole walk.
+
+    Measured on wsl-failures.json: eighteen `planned` rows, eleven of them carrying
+    `verdict: unknown`, against five `done` and one `failed`. Nothing was ever going
+    to be done about the eleven, and the record was the only artefact a person could
+    have read afterwards to find that out.
+
+    New values rather than a new field, and no schema bump: `RunOutcome.action` is a
+    bare `str`, so every existing reader absorbs these. Deliberately not members of
+    `OutcomeStatus` — that enum is what `perform` did, and none of these ever reaches
+    `perform`.
+    """
+    if change.unmeasured:
+        return 'unmeasured'
+    if change.declined:
+        return 'declined'
+    return 'planned' if change.actionable else 'observed'
+
+
 def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> runs.RunRecord:
     """Accumulate one run's events into the record `dotfiles report` reads.
 
@@ -59,10 +86,18 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
     for event in events:
         match event.payload:
             case Change() as change:
-                written.record_outcome(f'{event.resource}/{change.item}', str(change.verdict), 'planned', _timing(event))
+                written.record_outcome(f'{event.resource}/{change.item}', str(change.verdict), intention(change), _timing(event))
             case Outcome() as outcome:
                 address = f'{event.resource}/{outcome.change.item}'
                 written.record_outcome(address, str(outcome.change.verdict), str(outcome.status), _timing(event), outcome.message)
+                # A failed write is an Issue too. `issues` held Refusals alone, which
+                # are raised exceptions — and a provider answering `Result(ok=False)`
+                # returns normally, so the record of a run that failed an install
+                # carried `issues: []`. Measured on wsl-failures.json: the claude-code
+                # install failed, the terminal said so, the run exited 3, and the
+                # record a person would send to the fleet claimed nothing was wrong.
+                if not outcome.ok:
+                    written.record_issue(event.resource, str(outcome.status), f'{outcome.change.item}: {outcome.message}')
             case Refusal() as refusal:
                 written.record_issue(event.resource, 'refused', refusal.reason)
             case Summary():

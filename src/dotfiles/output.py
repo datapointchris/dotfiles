@@ -422,10 +422,9 @@ def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
     """
     if not showing_evidence():
         return
-    colour = CHANGE_COLOURS[str(change.verdict)]
     attribution = f' from {change.source}' if change.source else ''
     observed = f' (is {quoted(change.observed)}{attribution})' if change.observed else ''
-    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{width}} {change.detail}{observed}')
+    render_row(str(change.verdict), change.item, f'{change.detail}{observed}', CHANGE_COLOURS[str(change.verdict)], width)
     # One row per line, because advice is now assembled from what a diagnosis
     # measured — the owning package, then the command that removes it — and a
     # reader scanning for the command wants it on a line of its own rather than
@@ -441,10 +440,40 @@ def render_examined(row: Examined, width: int = SUBJECT_COLUMN) -> None:
     the resource had anything to say about it — so a section reads as one list of
     every item, with the interesting ones coloured rather than segregated.
     """
+    render_row(MATCHED, row.item, row.detail, CHANGE_COLOURS[MATCHED], width)
+
+
+def render_row(label: str, subject: str, detail: str, colour: str = '', width: int = SUBJECT_COLUMN) -> None:
+    """One evidence row: a label, the thing it is about, and what there is to say.
+
+    The column contract in one place. A change's row, a matched row and a declaration
+    finding were three f-strings repeating the same three widths, and the alignment
+    that makes a section read as one list held only while all three agreed — which is
+    what `SUBJECT_COLUMN`'s own docstring says the named constants exist to prevent,
+    one level below where they were doing it.
+
+    Public because the bundle verbs render rows for things that are not `Change`es.
+    Synthesising a `Change` to reach a renderer would put a unit of work into the
+    record vocabulary for a file listing, which is what `Examined` exists to avoid.
+    """
     if not showing_evidence():
         return
-    colour = CHANGE_COLOURS[MATCHED]
-    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{MATCHED:<{VERDICT_COLUMN}}[/] {row.item:<{width}} {row.detail}')
+    marked = f'[{colour}]{label:<{VERDICT_COLUMN}}[/]' if colour else f'{label:<{VERDICT_COLUMN}}'
+    err_console.print(f'{EVIDENCE_INDENT}{marked} {subject:<{width}} {detail}')
+
+
+def render_note(text: str) -> None:
+    """A plain line in the evidence column, for a fact with no verdict to carry.
+
+    The staged bundle's per-category counts are the case: they are evidence for the
+    line above rather than a finding about an item, so they take the indent and none
+    of the verdict column. Printed through here rather than as a bare
+    `err_console.print` so `-q` removes it with the rest of the evidence — a run
+    asked for less must not keep one section's rows on a rule of its own.
+    """
+    if not showing_evidence():
+        return
+    err_console.print(f'{EVIDENCE_INDENT}{text}')
 
 
 def render_finding(section: str, message: str) -> None:
@@ -454,9 +483,7 @@ def render_finding(section: str, message: str) -> None:
     a resource's, so it reads as one list rather than two — and it goes to stderr
     for the reason every diagnostic here does: `--json` is what a caller parses.
     """
-    if not showing_evidence():
-        return
-    err_console.print(f'{EVIDENCE_INDENT}[red]{"invalid":<{VERDICT_COLUMN}}[/] {section:<{SUBJECT_COLUMN}} {message}')
+    render_row('invalid', section, message, 'red')
 
 
 def heading(text: str) -> None:

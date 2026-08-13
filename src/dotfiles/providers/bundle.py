@@ -16,6 +16,7 @@ shared is only how to find the row.
 from __future__ import annotations
 
 import dataclasses as dc
+import re
 
 from dotfiles.providers import bundle_file
 
@@ -41,17 +42,66 @@ def rows() -> tuple[Staged, ...]:
     An unreadable manifest is the same answer as an absent one — no bundle —
     because that answer is already correct and already handled by every caller.
     """
-    try:
-        lines = (bundle_file(MANIFEST)).read_text().splitlines()
-    except OSError:
-        return ()
+    return _parse(_text())[1]
 
-    staged = []
-    for line in lines:
+
+def _text() -> str:
+    """The manifest, or '' where there is none. One reader, so the header and the
+    rows are read from the same bytes rather than from two opens that can disagree."""
+    try:
+        return bundle_file(MANIFEST).read_text()
+    except OSError:
+        return ''
+
+
+HEADER_FIELD = re.compile(r'^#\s*(Created|Platform):\s*(.+)$')
+"""The two header lines `create_bundle` writes that describe the bundle itself.
+
+Read rather than ignored because they answer the question a person asks first of a
+bundle they did not build: when, and for what. Every other `#` line is prose or the
+format legend, so this matches the two by name instead of counting lines — a
+bundler that adds a third comment must not shift what the second one means."""
+
+
+def described() -> tuple[str, str]:
+    """When this bundle was built and for which platform, from its own header.
+
+    Empty strings where there is no bundle or the header does not say, which is the
+    same answer every caller already handles: a bundle that cannot describe itself is
+    still a bundle, and its rows are what installs from it.
+    """
+    return _parse(_text())[0]
+
+
+def _parse(text: str) -> tuple[tuple[str, str], tuple[Staged, ...]]:
+    """The header pair and every row, from one pass over one string.
+
+    Pure and taking the text, so both public readers above are one call each and a
+    test can hand it a manifest without a bundle on disk.
+    """
+    built, platform, staged = '', '', []
+    for line in text.splitlines():
+        if found := HEADER_FIELD.match(line):
+            key, value = found.group(1), found.group(2).strip()
+            built, platform = (value, platform) if key == 'Created' else (built, value)
+            continue
         fields = line.split('|')
         if len(fields) >= FIELDS and not line.startswith('#'):
             staged.append(Staged(*fields[:FIELDS]))
-    return tuple(staged)
+    return (built, platform), tuple(staged)
+
+
+def counted(carried: tuple[Staged, ...]) -> dict[str, int]:
+    """How many files the bundle carries per category, in category order.
+
+    A count per category rather than a total, because the total answers nothing a
+    person asks: a bundle with 60 wheels and no binaries and one with 40 binaries are
+    both "61 files", and only the first is useless for installing tools.
+    """
+    tally: dict[str, int] = {}
+    for row in carried:
+        tally[row.category] = tally.get(row.category, 0) + 1
+    return {category: tally[category] for category in sorted(tally)}
 
 
 def staged(name: str, *categories: str) -> Staged | None:

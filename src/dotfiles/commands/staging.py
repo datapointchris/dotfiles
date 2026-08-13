@@ -11,6 +11,7 @@ staging would imply the machine is left untouched, and it is not.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import datetime as dt
 from pathlib import Path
 
@@ -18,15 +19,20 @@ import typer
 
 from dotfiles import offline_bundle
 from dotfiles import paths
+from dotfiles import reconcile
 from dotfiles import windows
 from dotfiles import windows_bundle
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
 from dotfiles.output import console
+from dotfiles.output import emit_json
 from dotfiles.output import error
 from dotfiles.output import hint
+from dotfiles.output import render_row
 from dotfiles.output import success
+from dotfiles.session import NoMachine
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
@@ -77,19 +83,91 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
 
 
 @bundle_app.command('check')
-def check(verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
-    """Report whether a usable bundle is staged."""
+def check(
+    machine: str = typer.Option(None, '--machine', help='Machine manifest to resolve the plan from'),
+    as_json: bool = JsonOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Report which declared tools a staged bundle can and cannot install.
+
+    The question `apply --offline` could not answer and had no business answering
+    mid-run: an offline apply measures every installed tool against the bundle, so a
+    bundle carrying nothing for a tool makes that tool unmeasurable — and eleven of
+    those in a row read as a machine with nothing to say for itself. Asked here, the
+    same fact is one line.
+
+    Resolved against this machine's plan rather than against the whole declaration,
+    so a tool this machine never subscribes to is not reported as a gap. That is the
+    same narrowing `network check` makes, for the same reason: a miss has to name
+    something this machine would really have failed to install.
+    """
     verbosity(verbose, quiet)
-    error('bundle check is not built: it diffs a staged bundle against the plan the resolver produces')
-    hint('the resolver it was waiting on has landed; what it reads is the document `dotfiles plan --json` emits')
-    raise typer.Exit(ExitCode.ISSUE)
+    try:
+        session = Session.resolve(machine, offline=True)
+    except NoMachine as unnamed:
+        error(str(unnamed))
+        raise typer.Exit(ExitCode.USAGE) from unnamed
+
+    staged = offline_bundle.describe()
+    if not staged.readable:
+        error(f'no readable bundle at {paths.under_home(staged.directory)}')
+        hint('stage one with: dotfiles bundle stage PATH')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    found = offline_bundle.coverage(staged, session.plan)
+    if as_json:
+        emit_json(
+            {
+                'bundle': str(staged.directory),
+                'built': staged.built,
+                'covered': list(found.covered),
+                'uncovered': list(found.uncovered),
+                'outside': found.outside,
+            }
+        )
+        raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
+
+    reconcile.report_bundle(staged)
+    for name in found.uncovered:
+        render_row('uncovered', name, 'the bundle carries no file for it, so an offline run cannot measure or install it', 'yellow')
+    bundlable = len(found.covered) + len(found.uncovered)
+    console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
+    if found.uncovered:
+        hint('build a newer bundle where the network reaches: dotfiles bundle create --platform PLATFORM')
+    raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
 
 @bundle_app.command('show')
-def show() -> None:
-    """List what a staged bundle contains."""
-    error('bundle show is not built: it renders the rows `providers.bundle` already reads')
-    raise typer.Exit(ExitCode.ISSUE)
+def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+    """List what a staged bundle contains, by category.
+
+    Sorted by category then name rather than in manifest order, because the manifest
+    is written in the order the bundler downloaded things and a reader is looking for
+    one tool.
+    """
+    verbosity(verbose, quiet)
+    staged = offline_bundle.describe()
+    if not staged.readable:
+        error(f'no readable bundle at {paths.under_home(staged.directory)}')
+        hint('stage one with: dotfiles bundle stage PATH')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    if as_json:
+        emit_json(
+            {
+                'bundle': str(staged.directory),
+                'built': staged.built,
+                'platform': staged.platform,
+                'files': [dc.asdict(row) for row in staged.carried],
+            }
+        )
+        raise typer.Exit(ExitCode.CONVERGED)
+
+    reconcile.report_bundle(staged)
+    for row in sorted(staged.carried, key=lambda one: (one.category, one.name)):
+        render_row(row.category, row.name, f'{row.version}  {row.filename}')
+    raise typer.Exit(ExitCode.CONVERGED)
 
 
 @bundle_app.command('prune')
