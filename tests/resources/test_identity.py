@@ -121,6 +121,50 @@ def test_a_local_override_elsewhere_is_not_this_checkouts_problem(
     assert changes(session) == ()
 
 
+def personal_identity_by_remote(gitconfig: Path, session: Session) -> None:
+    """The nonfleet arrangement: an employer default, and personal repos matched
+    back to a second identity by their remote. What the work box actually runs."""
+    (gitconfig.parent / 'personal.gitconfig').write_text('[user]\n\tname = Chris\n\temail = chris@example.com\n')
+    gitconfig.write_text(
+        '[user]\n\tname = Work Self\n\temail = work@employer.com\n'
+        '[includeIf "hasconfig:remote.*.url:https://github.com/datapointchris/**"]\n'
+        f'\tpath = {gitconfig.parent / "personal.gitconfig"}\n'
+    )
+    subprocess.run(['git', 'init', '-q'], cwd=session.repo, check=True)
+    subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/datapointchris/dotfiles.git'], cwd=session.repo, check=True)
+
+
+def test_an_include_this_checkout_matches_is_not_a_local_override(gitconfig: Path, session: Session) -> None:
+    """The arrangement working, reported as drift. A nonfleet box is *meant* to
+    commit personal repos under a different identity from its default, and the
+    advice this used to produce — `git config --local --unset` — would have
+    removed nothing, because nothing local was set."""
+    personal_identity_by_remote(gitconfig, session)
+
+    assert changes(session) == ()
+
+
+def test_the_identity_reported_is_the_one_this_checkout_commits_under(gitconfig: Path, session: Session) -> None:
+    """A `--global` read cannot evaluate `hasconfig:`, so the machine default is
+    the employer address even standing inside a personal repo. Reporting that as
+    the identity named the wrong person at the top of every run here."""
+    personal_identity_by_remote(gitconfig, session)
+
+    observed = identity.RESOURCE.observe(session, session.plan)
+
+    assert observed.who == 'Chris <chris@example.com>'
+
+
+def test_a_field_decided_by_an_include_names_the_machine_default_beside_it(gitconfig: Path, session: Session) -> None:
+    """Both, because either alone is misleading here: the effective value looks
+    like the machine's, and the default looks like what the next commit carries."""
+    personal_identity_by_remote(gitconfig, session)
+
+    observed = identity.RESOURCE.observe(session, session.plan)
+
+    assert observed.reading('user.name') == 'Chris — from an include this checkout matches; machine default Work Self'
+
+
 @pytest.mark.parametrize(
     ('local_name', 'local_email', 'expected'),
     [
@@ -212,7 +256,8 @@ def test_the_config_chain_is_listed_tilde_rooted_and_in_the_order_git_reads_it(t
             Setting(home / '.config/git/personal.gitconfig', 'user.email', 'c@e.st'),
         )
     )
-    observed = identity.Observed({'user.name': 'Chris Birch', 'user.email': 'c@e.st'}, {}, layering=chain, home=home)
+    address = {'user.name': 'Chris Birch', 'user.email': 'c@e.st'}
+    observed = identity.Observed(address, address, dict.fromkeys(address, ''), layering=chain, home=home)
 
     listed = {row.item: row.detail for row in observed.inventory}
 

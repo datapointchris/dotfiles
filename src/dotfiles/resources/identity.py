@@ -28,9 +28,13 @@ unset machine — which is exactly what would happen when the check runs from
 inside a clone that sets its own. `--includes` because `--global` implies
 `--no-includes`: identity now always arrives through an include, so without it
 this reads the entry-point stub, which carries no [user] by design, and calls
-every machine unset. The pair also ignores the nonfleet machine's `includeIf`,
+every machine unset. The pair also skips the nonfleet machine's `includeIf`,
 which is what makes this report the machine's default rather than whatever the
-current directory happens to resolve to.
+current directory happens to resolve to. That holds because of how the condition
+is spelled and not because the read is global: a `gitdir:` condition *is*
+evaluated by the same command, since the working directory is enough to decide
+it. `hasconfig:remote.*.url` is not, and that is the spelling the trust overlay
+uses.
 
 That answers "does this machine have an identity at all" and nothing about
 "will a commit made *in this checkout* carry it" — a different question, and
@@ -39,11 +43,26 @@ the one that actually failed on 2026-08-09: a repo-local override sat in
 while every commit it produced was attributed to something else. So this also
 reads the effective value git would use for a commit made right here — a plain
 `--get` scoped with `-C` at `session.repo`, local winning over global exactly as
-`git commit` resolves it — and compares it to the global identity above. A
-repo-local identity is legitimate in other clones (an employer address kept out
-of a personal repo, deliberately); only a mismatch inside this checkout, the one
-the fleet's own commits come from, is drift. Nothing outside `session.repo` is
-ever examined.
+`git commit` resolves it.
+
+**The two differing is not itself drift**, and reading it that way was wrong on
+the very machine the arrangement was built for. A nonfleet box defaults to the
+employer identity and matches personal repos back to `personal.gitconfig` with
+`includeIf hasconfig:remote.*.url`, so inside `~/dotfiles` the effective identity
+is *meant* to differ from the machine default. A `--global` read cannot evaluate
+that condition either: git needs a repository's own config to know its remotes,
+and `--global` is exactly the read that excludes it. Measured on git 2.55 — a
+`gitdir:` condition is evaluated by that read, a `hasconfig:` one is not. So the
+comparison reported the arrangement working as a local override, named the
+employer identity as the one in effect inside a personal checkout, and advised a
+`git config --local --unset` that would have removed nothing.
+
+What is drift is a value this checkout sets *for itself*. That is what `--local`
+reads, it is the only thing `--unset` can remove, and it is now measured directly
+rather than inferred from a difference. A repo-local identity is legitimate in
+other clones (an employer address kept out of a personal repo, deliberately);
+only one inside `session.repo`, the checkout the fleet's own commits come from,
+is drift. Nothing outside it is ever examined.
 """
 
 from __future__ import annotations
@@ -77,9 +96,19 @@ class Observed:
     values: dict[str, str]
     """The machine's identity — global config, includes resolved."""
 
-    local: dict[str, str]
-    """What a commit made inside `session.repo` would actually carry — local
-    config winning over global, the way git itself resolves it."""
+    effective: dict[str, str]
+    """What a commit made inside `session.repo` would actually carry — every
+    source resolved the way git itself resolves them, conditional includes
+    included."""
+
+    override: dict[str, str]
+    """What this checkout sets for itself, read with `--local`.
+
+    The narrow question, kept separate from `effective` because the two answers
+    only coincide when nothing conditional fired. This one is the drift: a value
+    written into `.git/config` here, which nothing in the arrangement put there
+    and which `git config --local --unset` can actually remove.
+    """
 
     layering: gitconfig.Layering = dc.field(default_factory=lambda: gitconfig.Layering(()))
     """Every file the configuration is assembled from, and how."""
@@ -95,7 +124,32 @@ class Observed:
 
     @property
     def who(self) -> str:
-        return f'{self.values["user.name"]} <{self.values["user.email"]}>'
+        """The identity a commit made in this checkout would carry.
+
+        The effective value rather than the machine default, because a person
+        reading this is standing in a repo and asking what their next commit gets
+        attributed to. On a nonfleet box the two differ by design, and naming the
+        default here put the employer identity at the top of a check run inside a
+        personal repo. `inventory` names the default beside it where they differ.
+        """
+        name = self.effective['user.name'] or self.values['user.name']
+        email = self.effective['user.email'] or self.values['user.email']
+        return f'{name} <{email}>'
+
+    def reading(self, field: str) -> str:
+        """One field's value, and what decided it when that is not obvious.
+
+        Silent while the checkout agrees with the machine, which is every machine
+        that hosts one kind of work. Where they differ the difference is the whole
+        content of the row, and which of the two ways it happened decides whether
+        anything is wrong.
+        """
+        effective, default = self.effective[field], self.values[field]
+        if not effective or effective == default:
+            return effective or default
+        if self.override[field]:
+            return f'{effective} — set on this checkout, over the machine default {default}'
+        return f'{effective} — from an include this checkout matches; machine default {default}'
 
     @property
     def summary(self) -> str:
@@ -123,7 +177,7 @@ class Observed:
         shape of a table with nothing in it.
         """
         files = self.layering.files
-        fields = tuple(Examined(field, self.values[field]) for field in FIELDS if self.values[field])
+        fields = tuple(Examined(field, self.reading(field)) for field in FIELDS if self.values[field] or self.effective[field])
         chain = tuple(
             Examined(paths.under_home(path, self.home), f'read {position} of {len(files)}') for position, path in enumerate(files, start=1)
         )
@@ -138,6 +192,7 @@ class IdentityResource:
         return Observed(
             {field: _global(field) for field in FIELDS},
             {field: _effective(field, session.repo) for field in FIELDS},
+            {field: _override(field, session.repo) for field in FIELDS},
             layering=gitconfig.read(),
             # `is_symlink` as well as `exists`, because `exists` follows a link and
             # a dangling one reads as absent — while git still picks it as the file
@@ -167,15 +222,15 @@ class IdentityResource:
                 Stage.IDENTITY,
                 field,
                 Verdict.STALE,
-                detail=f"this checkout commits under a local override, not the machine's {observed.values[field]!r}",
+                detail=f"this checkout sets its own {field}, over the machine's {quoted(observed.values[field])}",
                 repair=Repair.BY_HAND,
                 advice=(
                     f'remove it with `git config --local --unset {field}` from inside this checkout, or update it to match if intentional'
                 ),
-                observed=observed.local[field],
+                observed=observed.override[field],
             )
             for field in FIELDS
-            if observed.values[field] and observed.local[field] != observed.values[field]
+            if observed.values[field] and observed.override[field] and observed.override[field] != observed.values[field]
         )
         return missing + overridden + _layering_changes(observed)
 
@@ -263,6 +318,18 @@ def _global(field: str) -> str:
 
 def _effective(field: str, repo: Path) -> str:
     result = run(['git', '-C', str(repo), 'config', '--includes', '--get', field], output=Output.QUIET)
+    return result.stdout.strip() if result.ok else ''
+
+
+def _override(field: str, repo: Path) -> str:
+    """What this checkout sets for itself, and nothing it merely inherits.
+
+    `--local` is the whole point: it reads `.git/config` alone, so a conditional
+    include firing here cannot reach it. That is what makes this the drift test
+    rather than a comparison of two resolved values, and it is the only read whose
+    answer `git config --local --unset` can act on.
+    """
+    result = run(['git', '-C', str(repo), 'config', '--local', '--get', field], output=Output.QUIET)
     return result.stdout.strip() if result.ok else ''
 
 
