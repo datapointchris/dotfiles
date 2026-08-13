@@ -449,8 +449,8 @@ def test_a_present_required_file_reports_nothing(tmp_path: Path) -> None:
 
 def test_a_required_file_declared_through_a_variable_resolves(tmp_path: Path, monkeypatch) -> None:
     """A file whose location differs per machine is declared as a variable this repo also
-    declares, never as a literal. The registry is the case: ~/.env set REPOS_JSON to one
-    file while the register named another, and only a symlink between them hid it."""
+    declares, never as a literal. A literal disagreed with the declaration the moment the
+    two pointed at different files, and only a symlink between them hid it."""
     present = tmp_path / 'repos.json'
     present.write_text('{"repos": []}\n')
     monkeypatch.setenv('DECLARED_REGISTRY', str(present))
@@ -479,26 +479,32 @@ def test_a_required_file_whose_variable_is_empty_is_reported_missing(tmp_path: P
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # The scheduled check is a systemd user unit and a LaunchAgent, and neither
-# sources a profile. Every variable ~/.env exports is unset there, so the
-# registry entry resolved to the literal `$REPOS_JSON`, and four times a day the
+# sources a profile. Every variable ~/.env exports is unset there, so an entry
+# declared through one resolved to the literal `$NAME`, and four times a day the
 # timer reported this machine's repo registry missing and advised restoring a
 # file that was on disk. These pin the rung that survives into that unit, and
 # the split between the two reports that were previously one.
+#
+# `REPOS_REGISTRY` is a synthetic declaration: no register ships it any more,
+# because the registry is a fleet file and dotfiles neither owns nor checks one.
+# What is pinned here is the resolution order, which every other declared path
+# still walks.
 
-REGISTRY_VALUE: dict[str, Any] = {**FLAGS, 'required': [{'name': 'REPOS_JSON', 'description': 'the registry', 'machine': 'box'}]}
-REGISTRY_FILE: dict[str, Any] = {**FLAGS, 'required_files': [{'name': 'repos.json', 'path': '$REPOS_JSON', 'machine': 'box'}]}
+REGISTRY_VALUE: dict[str, Any] = {**FLAGS, 'required': [{'name': 'REPOS_REGISTRY', 'description': 'the registry', 'machine': 'box'}]}
+REGISTRY_FILE: dict[str, Any] = {**FLAGS, 'required_files': [{'name': 'repos.json', 'path': '$REPOS_REGISTRY', 'machine': 'box'}]}
 
 
 @pytest.fixture
 def unshelled(tmp_path: Path, monkeypatch) -> Path:
     """A run with no shell behind it, and a scratch config home to answer in.
 
-    Both variables are dropped rather than merely left alone: the suite runs from
-    an interactive shell that exports $REPOS_JSON, so without this every test
-    below would pass on the machine's own answer.
+    The prefixed variable and the retired unprefixed one are both dropped rather
+    than merely left alone: the suite runs from an interactive shell that exports
+    the second, so without this every test below could pass on the machine's own
+    answer through a rung that no longer exists.
     """
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg'))
-    monkeypatch.delenv('DOTFILES_REPOS_JSON', raising=False)
+    monkeypatch.delenv('DOTFILES_REPOS_REGISTRY', raising=False)
     monkeypatch.delenv('REPOS_JSON', raising=False)
     return tmp_path / 'xdg'
 
@@ -506,7 +512,7 @@ def unshelled(tmp_path: Path, monkeypatch) -> Path:
 def name_registry(config_home: Path, registry: Path) -> None:
     config = config_home / 'dotfiles' / 'config.toml'
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(f'repos_file = "{registry}"\n')
+    config.write_text(f'repos_registry = "{registry}"\n')
 
 
 def test_a_required_file_is_found_through_the_config_file_with_no_variable_set(tmp_path: Path, unshelled: Path) -> None:
@@ -534,10 +540,10 @@ def test_a_required_value_nothing_answers_is_advised_at_every_rung(tmp_path: Pat
     live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
     envfile.write(live.env_file, live.machine)
 
-    found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == 'REPOS_JSON']
+    found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == 'REPOS_REGISTRY']
 
     assert found[0].verdict is Verdict.MISSING
-    assert found[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
+    assert found[0].advice == settings.where_to_name('REPOS_REGISTRY', live.env_file)
 
 
 def test_a_registry_nothing_names_is_not_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
@@ -549,7 +555,7 @@ def test_a_registry_nothing_names_is_not_advised_as_a_restore(tmp_path: Path, un
     found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
 
     assert found[0].source == ''
-    assert found[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
+    assert found[0].advice == settings.where_to_name('REPOS_REGISTRY', live.env_file)
 
 
 def test_a_registry_named_but_absent_is_still_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
@@ -569,14 +575,14 @@ def test_a_named_but_absent_registry_reports_the_path_and_the_rung(tmp_path: Pat
     """A registry reported absent is a different problem depending on which rung
     chose the path, so the finding carries both — as fields, because the two file
     findings share a verdict and nothing else could tell them apart."""
-    monkeypatch.setenv('REPOS_JSON', str(tmp_path / 'gone.json'))
+    monkeypatch.setenv('DOTFILES_REPOS_REGISTRY', str(tmp_path / 'gone.json'))
     live = session(tmp_path, MANIFEST, REGISTRY_FILE)
     envfile.write(live.env_file, live.machine)
 
     found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
 
     assert found[0].observed == str(tmp_path / 'gone.json')
-    assert found[0].source == '$REPOS_JSON'
+    assert found[0].source == '$DOTFILES_REPOS_REGISTRY'
 
 
 def test_a_literal_declaration_carries_no_resolved_path(tmp_path: Path, unshelled: Path) -> None:
@@ -592,15 +598,30 @@ def test_a_literal_declaration_carries_no_resolved_path(tmp_path: Path, unshelle
     assert found[0].source == ''
 
 
-def test_the_private_variable_wins_over_the_shared_one_in_the_register(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
-    private = tmp_path / 'private.json'
-    private.write_text('{"repos": []}\n')
-    monkeypatch.setenv('REPOS_JSON', str(tmp_path / 'gone.json'))
-    monkeypatch.setenv('DOTFILES_REPOS_JSON', str(private))
+def test_the_prefixed_variable_answers_the_register(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
+    declared = tmp_path / 'declared.json'
+    declared.write_text('{"repos": []}\n')
+    monkeypatch.setenv('DOTFILES_REPOS_REGISTRY', str(declared))
     live = session(tmp_path, MANIFEST, REGISTRY_FILE)
     envfile.write(live.env_file, live.machine)
 
     assert changes(tmp_path, flags=REGISTRY_FILE) == ()
+
+
+def test_the_unprefixed_variable_answers_nothing_in_the_register(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
+    """The rung that came out. `$REPOS_JSON` named this file for every tool at once
+    and sat above the config key, so a leftover export on a machine whose shells
+    predate the change has to be ignored rather than obeyed."""
+    present = tmp_path / 'repos.json'
+    present.write_text('{"repos": []}\n')
+    monkeypatch.setenv('REPOS_JSON', str(present))
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
+
+    assert found, 'an unprefixed variable must not answer a declaration'
+    assert found[0].source == ''
 
 
 def test_a_config_file_that_cannot_be_parsed_reports_itself(tmp_path: Path, unshelled: Path) -> None:
@@ -608,7 +629,7 @@ def test_a_config_file_that_cannot_be_parsed_reports_itself(tmp_path: Path, unsh
     answer, and none naming the broken file that lost them."""
     config = unshelled / 'dotfiles' / 'config.toml'
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text('repos_file = "unterminated\n')
+    config.write_text('repos_registry = "unterminated\n')
     live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
     envfile.write(live.env_file, live.machine)
 
@@ -627,7 +648,7 @@ def test_one_report_never_both_rejects_the_config_file_and_resolves_through_it(t
     """
     config = unshelled / 'dotfiles' / 'config.toml'
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text('repos_file = "unterminated\n')
+    config.write_text('repos_registry = "unterminated\n')
     live = session(tmp_path, MANIFEST, REGISTRY_FILE)
     envfile.write(live.env_file, live.machine)
     observed = env_resource.RESOURCE.observe(live, live.plan)
@@ -636,8 +657,8 @@ def test_one_report_never_both_rejects_the_config_file_and_resolves_through_it(t
     found = env_resource.RESOURCE.diff(live.plan, observed)
 
     assert [change for change in found if change.item == str(settings.config_file())], 'the file observe read is the file diff reports'
-    registry = [change for change in found if change.item == '$REPOS_JSON']
-    assert registry[0].advice == settings.where_to_name('REPOS_JSON', live.env_file)
+    registry = [change for change in found if change.item == '$REPOS_REGISTRY']
+    assert registry[0].advice == settings.where_to_name('REPOS_REGISTRY', live.env_file)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

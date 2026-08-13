@@ -378,3 +378,106 @@ def test_a_tree_with_no_git_overlays_says_nothing(tmp_path: Path) -> None:
     a missing common.gitconfig has to be silent rather than a finding about a
     scheme the tree is not using."""
     assert validate.declaration(tree(tmp_path)) == ()
+
+
+def registry_tree(root: Path, *, configs: dict[str, str]) -> Path:
+    """A configs/ tree whose files are written verbatim.
+
+    `configs` maps a path under `configs/` to the file's whole text. Verbatim
+    rather than assembled from a key and a value, because half of what the check
+    has to get right is what is *not* a declaration — a commented-out example, an
+    empty document — and a helper that only writes real keys cannot express one.
+    """
+    tree(root)
+    for relative, text in configs.items():
+        config = root / 'configs' / relative
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text(text)
+    return root
+
+
+FLEET_REGISTRY = '~/.local/share/terminal-library-fleet/repos.json'
+NONFLEET_REGISTRY = '~/.config/repos.json'
+
+
+def test_one_registry_per_trust_overlay_is_silent(tmp_path: Path) -> None:
+    """The shape the fleet actually deploys: every tool in a trust overlay naming
+    the same file, and the two overlays deliberately naming different ones."""
+    root = registry_tree(
+        tmp_path,
+        configs={
+            'trust/fleet/.config/indy/config.toml': f'repos_registry = "{FLEET_REGISTRY}"\n',
+            'trust/fleet/.config/fleet/config.yml': f'repos_registry: {FLEET_REGISTRY}\n',
+            'trust/nonfleet/.config/syncer/config.toml': f'repos_registry = "{NONFLEET_REGISTRY}"\n',
+        },
+    )
+
+    assert validate.declaration(root) == ()
+
+
+def test_two_registries_in_one_trust_overlay_is_an_error(tmp_path: Path) -> None:
+    """The drift a repeated literal invites, and the only thing standing against it.
+
+    Both files deploy to the same machine, so a tool reading the odd one out
+    answers about a different set of repos and says nothing about having done so.
+    """
+    root = registry_tree(
+        tmp_path,
+        configs={
+            'trust/fleet/.config/indy/config.toml': f'repos_registry = "{FLEET_REGISTRY}"\n',
+            'trust/fleet/.config/forge/config.yml': 'repos_registry: ~/dev/repos.json\n',
+        },
+    )
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        'the fleet overlay names more than one registry — '
+        'configs/trust/fleet/.config/forge/config.yml says ~/dev/repos.json; '
+        f'configs/trust/fleet/.config/indy/config.toml says {FLEET_REGISTRY}'
+    ]
+
+
+@pytest.mark.parametrize('layer', ['common', 'host/wsl'])
+def test_a_registry_named_outside_the_trust_overlays_is_an_error(tmp_path: Path, layer: str) -> None:
+    """Every layer but `trust/` reaches both trust domains, so one path in one
+    cannot be right for both — which is exactly how the fleet's registry came to be
+    named in a config the work box also deploys."""
+    relative = f'{layer}/.config/syncer/config.toml'
+    root = registry_tree(tmp_path, configs={relative: f'repos_registry = "{FLEET_REGISTRY}"\n'})
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        f'configs/{relative} names repos_registry outside configs/trust/, so it deploys the same registry '
+        f'to both trust domains; move the file into the trust overlay that wants it'
+    ]
+
+
+def test_a_commented_out_registry_is_not_a_declaration(tmp_path: Path) -> None:
+    """Parsed rather than matched. Every one of these files carries a comment block
+    explaining the key, and a check that grepped would read its own documentation as
+    a second declaration."""
+    root = registry_tree(
+        tmp_path,
+        configs={
+            'common/.config/syncer/config.toml': f'# repos_registry = "{FLEET_REGISTRY}"\ndefault_policy = "standard"\n',
+            'common/.config/gh-dash/config.yml': '# repos_registry: somewhere\n',
+        },
+    )
+
+    assert validate.declaration(root) == ()
+
+
+def test_a_yaml_config_that_is_not_a_mapping_is_not_a_declaration(tmp_path: Path) -> None:
+    """An empty document parses to None and a list parses to a list. Neither
+    declares a key, and `.get` on either raises rather than reporting."""
+    root = registry_tree(tmp_path, configs={'common/.config/aerc/accounts.yml': '', 'common/.config/zk/tags.yaml': '- one\n- two\n'})
+
+    assert validate.declaration(root) == ()
+
+
+def test_a_config_that_will_not_parse_is_an_error(tmp_path: Path) -> None:
+    """Reported rather than raised, so one unparseable file is a finding beside the
+    others instead of a traceback that loses every check after it."""
+    root = registry_tree(tmp_path, configs={'trust/fleet/.config/indy/config.toml': 'repos_registry = "unterminated\n'})
+
+    assert [message.split(' — ')[0] for message in messages(validate.declaration(root), Severity.ERROR)] == [
+        'configs/trust/fleet/.config/indy/config.toml cannot be read'
+    ]

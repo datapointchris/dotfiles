@@ -190,9 +190,9 @@ class Requirement:
         """`path` with $VARIABLES and ~ resolved, for touching the filesystem here.
 
         A declared entry may name its own location through a variable this repo also
-        declares — `$REPOS_JSON` is the registry, whose path differs per machine and
-        which the repo must never carry. Read as a literal, `check` reports a missing
-        file named `$REPOS_JSON`, which is the failure this exists to avoid.
+        declares, for a file whose path differs per machine and which the repo must
+        never carry. Read as a literal, `check` reports a missing file named `$NAME`,
+        which is the failure this exists to avoid.
 
         Answered from a snapshot rather than resolved here, and that is what makes it
         a method: the rungs include a config file, so an entry that resolved itself
@@ -210,8 +210,8 @@ class Requirement:
     def is_present(self, resolved: settings.Resolved) -> bool:
         """Whether the declared file is actually on this machine.
 
-        A declaration nothing answers keeps its `$REPOS_JSON` literal, and no file is
-        named that — so an unanswered entry reports absent rather than resolving to
+        A declaration nothing answers keeps its `$NAME` literal, and no file is named
+        that — so an unanswered entry reports absent rather than resolving to
         something plausible. A set-but-empty variable takes the same road, because
         `settings.resolve` skips a falsy rung instead of substituting it.
         """

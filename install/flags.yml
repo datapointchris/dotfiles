@@ -50,7 +50,7 @@ required:
   # SHARED_PATHS. A Windows account name and the domain it authenticates against
   # are facts about the machine rather than settings of this tool: prefixing them
   # would claim a name that is not ours, and the shell code reading them would
-  # not find the prefixed spelling. The three rungs are for a *shared file* whose
+  # not find the prefixed spelling. The extra rung is for a *shared file* whose
   # location differs per machine, which is neither of these.
   - name: WINDOWS_USER
     description: Windows account name, for the /mnt/c/Users path
@@ -63,22 +63,6 @@ required:
     host: wsl
     consumers:
       - shell/host/wsl/wsl.sh
-
-  # Every workstation has a repo registry and they are different files; where
-  # this one keeps it is its own fact, so the repo declares that it needs the
-  # answer and never carries one. Absence qualifies as silent despite pr-list
-  # dying on an empty path: unset falls back to $XDG_CONFIG_HOME/repos.json, and
-  # a stale file sitting there reports PRs for the wrong set of repos rather
-  # than failing. Narrowed on capacity because a server has no registry to name,
-  # not on trust — a machine outside the fleet has one too, listing its own work.
-  #
-  # A machine naming this in the config file alone is fully declared and `check`
-  # says so, which is what `capacity: workstation` now means here.
-  - name: REPOS_JSON
-    description: Absolute path to this machine's repo registry
-    capacity: workstation
-    consumers:
-      - apps/common/pr-list
 
   # Two axes because two things have to hold: a machine outside the fleet has no
   # homelab to name, and a server is not where anybody edits an inventory. Its
@@ -137,34 +121,6 @@ required_files:
     machine: wsl-work-workstation
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig
-
-  # Private on both sides of the trust split rather than on one, which is what
-  # keeps it out of the repo entirely: the fleet's registry and the work box's
-  # are different files, so no overlay could carry either. The path is uniform so
-  # that everything reading it is, and only the transport differs — Syncthing on
-  # the fleet, safekeep off it.
-  #
-  # Declared through $REPOS_JSON rather than as a literal, and it is the same
-  # value REPOS_JSON above carries — the repo names the variable twice and the
-  # path never. A literal disagreed with the declaration the moment the two
-  # pointed at different files, which is exactly what happened: ~/.env set
-  # REPOS_JSON to the clone while this said ~/dev/repos.json, and only an intact
-  # symlink between them hid it.
-  #
-  # No deployed config names the path any more. Each tool resolves $REPOS_JSON
-  # for itself, below its own config key and above its own compiled default,
-  # which keeps the registry a file they happen to share rather than a coupling
-  # between them.
-  #
-  # $REPOS_JSON is written here rather than $DOTFILES_REPOS_JSON because this
-  # entry is about the file every reader shares, not about which of them is
-  # asking. `settings.expand` walks all three rungs for whichever variable a
-  # declaration names, so the private one still wins where a machine sets it.
-  - name: repos.json
-    path: $REPOS_JSON
-    description: The repo registry the cross-repo tools read, hand-edited and never generated
-    capacity: workstation
-    tags: [rebuild]
 
   # Off the fleet only, which is the axis that actually decides it. safekeep is
   # how a machine outside Syncthing gets the files above back; on the fleet the

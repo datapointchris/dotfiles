@@ -1,0 +1,21 @@
+# dotfiles — this machine's answers to what install/flags.yml declares and the
+# repo deliberately never carries.
+#
+# Deployed rather than hand-written, and here rather than in configs/common/,
+# because the registry's location is a fact about the *trust domain*: every fleet
+# machine keeps it at the same path, and the machine outside the fleet keeps it
+# somewhere else. configs/trust/nonfleet/ carries that other answer. A path that
+# genuinely differed per machine would still be hand-written below the OVERRIDES
+# marker in ~/.env; this one does not.
+#
+# A config file rather than a variable, because nothing exported from ~/.env
+# survives into a process that sources no profile. The scheduled `dotfiles check`
+# is a systemd user unit and sees none of it — see standards/data.md § "A shared
+# file is named in config; only the tool's own default is compiled in".
+#
+# `dotfiles config show` reports what each key resolved to and which rung answered.
+
+# The clone itself rather than the ~/dev symlink that resolves into it. ~/dev is
+# a Syncthing folder, so pointing at the link would make this line depend on a
+# second hop that a rebuilt machine has not restored yet.
+repos_registry = "~/.local/share/terminal-library-fleet/repos.json"

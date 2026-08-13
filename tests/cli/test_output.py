@@ -166,8 +166,8 @@ def test_the_layer_that_supplied_a_value_is_named_only_when_there_is_one(capsys:
     Asserted on the token rather than on its adjacency to `observed`, because the
     width that decides where the row wraps belongs to whoever ran the command.
     """
-    output.render_change(a_change(observed='14.1.0', source='$REPOS_JSON'))
-    assert '$REPOS_JSON' in capsys.readouterr().err
+    output.render_change(a_change(observed='14.1.0', source='$DOTFILES_REPOS_REGISTRY'))
+    assert '$DOTFILES_REPOS_REGISTRY' in capsys.readouterr().err
 
     output.render_change(a_change(observed='14.1.0'))
     assert 'from' not in capsys.readouterr().err
@@ -177,7 +177,7 @@ def test_a_source_with_no_observed_value_is_refused(capsys: pytest.CaptureFixtur
     """It renders as nothing, since the attribution rides inside the parenthesis
     `observed` opens — so the row would silently drop the half a reader came for."""
     with pytest.raises(ValueError, match='source with no observed value'):
-        a_change(source='$REPOS_JSON')
+        a_change(source='$DOTFILES_REPOS_REGISTRY')
 
 
 @pytest.mark.parametrize('label', [*[str(verdict) for verdict in Verdict], 'invalid'])

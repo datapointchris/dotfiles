@@ -1,10 +1,15 @@
-"""Resolving a shared path through three rungs, and reporting which one answered.
+"""Resolving a shared path through two rungs, and reporting which one answered.
 
-The order is the whole contract, so every rung is asserted winning over each one
+The order is the whole contract, so each rung is asserted winning over the one
 below it and the empty case is asserted separately. That matters more here than
 the count of tests suggests: the rungs are indistinguishable from their result —
-every one of them yields a path — so a reordering is invisible to any test that
-only checks a path came back.
+both yield a path — so a reordering is invisible to any test that only checks a
+path came back.
+
+A rung was deleted rather than reordered: the unprefixed `$REPOS_JSON` every
+reader of the registry used to consult. It is asserted *absent* here, because the
+shell this suite runs from still exports it and nothing else would notice it
+answering.
 """
 
 from __future__ import annotations
@@ -16,22 +21,23 @@ import pytest
 from dotfiles import paths
 from dotfiles import settings
 
-DECLARED = 'REPOS_JSON'
-PRIVATE = 'DOTFILES_REPOS_JSON'
-KEY = 'repos_file'
+DECLARED = 'REPOS_REGISTRY'
+ENV = 'DOTFILES_REPOS_REGISTRY'
+KEY = 'repos_registry'
+RETIRED = 'REPOS_JSON'
 
 
 @pytest.fixture
 def config_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A scratch `$XDG_CONFIG_HOME` with neither variable set.
+    """A scratch `$XDG_CONFIG_HOME` with no variable set that could answer.
 
-    The suite runs from an interactive shell that exports $REPOS_JSON, so every
-    test here would otherwise pass on the machine's own answer rather than the
-    one it wrote.
+    The suite runs from an interactive shell that exports both the prefixed
+    variable and the retired shared one, so every test here would otherwise pass
+    on the machine's own answer rather than the one it wrote.
     """
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
-    monkeypatch.delenv(PRIVATE, raising=False)
-    monkeypatch.delenv(DECLARED, raising=False)
+    monkeypatch.delenv(ENV, raising=False)
+    monkeypatch.delenv(RETIRED, raising=False)
     return tmp_path / 'config'
 
 
@@ -70,8 +76,9 @@ def describe() -> tuple[settings.Setting, ...]:
 
 
 def test_nothing_names_it_and_nothing_is_invented(config_home: Path) -> None:
-    """No fourth rung. A default naming a path outside this tool's own XDG dirs is
-    what standards/data.md forbids, so the honest answer to silence is silence."""
+    """No third rung. A default naming a path outside this tool's own XDG dirs is
+    what standards/data.md forbids, and one inside them would be dotfiles claiming
+    to own the fleet's registry — so the honest answer to silence is silence."""
     assert resolve() is None
 
 
@@ -84,51 +91,22 @@ def test_the_config_key_answers_when_no_variable_does(config_home: Path) -> None
     assert found.source == str(config)
 
 
-def test_the_shared_variable_beats_the_config_key(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_prefixed_variable_beats_the_config_key(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     write_config(config_home, f'{KEY} = "/from/config.json"\n')
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
     found = answered()
 
-    assert found.value == '/from/shared.json'
-    assert found.source == f'${DECLARED}'
+    assert found.value == '/from/variable.json'
+    assert found.source == f'${ENV}'
 
 
-def test_the_private_variable_beats_the_shared_one(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
-    monkeypatch.setenv(PRIVATE, '/from/private.json')
-
-    found = answered()
-
-    assert found.value == '/from/private.json'
-    assert found.source == f'${PRIVATE}'
-
-
-def test_the_private_variable_beats_every_rung_below_it(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    write_config(config_home, f'{KEY} = "/from/config.json"\n')
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
-    monkeypatch.setenv(PRIVATE, '/from/private.json')
-
-    assert answered().value == '/from/private.json'
-
-
-def test_the_shared_variable_beats_the_config_key_with_all_three_present(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The middle rung is the one an ordering bug lands on, because it wins in one
-    direction and loses in the other."""
-    write_config(config_home, f'{KEY} = "/from/config.json"\n')
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
-    monkeypatch.delenv(PRIVATE, raising=False)
-
-    assert answered().value == '/from/shared.json'
-
-
-@pytest.mark.parametrize('rung', [PRIVATE, DECLARED])
-def test_an_empty_variable_falls_through_rather_than_answering(rung: str, config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_empty_variable_falls_through_rather_than_answering(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Path('') is the current directory, which always exists — so a variable
     exported as nothing would resolve a declared file to something present while
     the machine had answered nothing at all."""
     write_config(config_home, f'{KEY} = "/from/config.json"\n')
-    monkeypatch.setenv(rung, '')
+    monkeypatch.setenv(ENV, '')
 
     assert answered().value == '/from/config.json'
 
@@ -137,6 +115,35 @@ def test_an_empty_config_value_is_unset_too(config_home: Path) -> None:
     write_config(config_home, f'{KEY} = ""\n')
 
     assert resolve() is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The rung that was deleted
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_unprefixed_variable_is_never_consulted(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`$REPOS_JSON` named this same file for every tool at once, and it sat above
+    the config key here. It came out because `~/.env` is a shell file: a systemd
+    user unit sources no profile, so the rung was empty in exactly the unattended
+    runs it existed to serve, and the scheduled check reported a registry missing
+    that was on disk the whole time.
+
+    A tool reads no variable that is not prefixed with its own name, which is what
+    stops one fleet's vocabulary being compiled into a generic tool.
+    """
+    monkeypatch.setenv(RETIRED, '/from/the/retired/rung.json')
+
+    assert resolve() is None
+
+
+def test_the_unprefixed_variable_does_not_override_the_config_key(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The rung sat *above* the config key, so a leftover export on a machine that
+    has not restarted its shells has to lose rather than win."""
+    write_config(config_home, f'{KEY} = "/from/config.json"\n')
+    monkeypatch.setenv(RETIRED, '/from/the/retired/rung.json')
+
+    assert answered().value == '/from/config.json'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -173,7 +180,7 @@ def test_an_absent_config_file_is_not_a_problem(config_home: Path) -> None:
 def test_unparseable_toml_reports_a_problem_rather_than_reading_as_empty(config_home: Path) -> None:
     """A file a human hand-edited into invalid TOML must not be indistinguishable
     from a machine that named nothing — the two get opposite advice."""
-    write_config(config_home, 'repos_file = "unterminated\n')
+    write_config(config_home, f'{KEY} = "unterminated\n')
 
     parsed = settings.read_config()
 
@@ -187,25 +194,25 @@ def test_unparseable_toml_reports_a_problem_rather_than_reading_as_empty(config_
 
 
 def test_a_declared_path_expands_through_the_config_file(config_home: Path) -> None:
-    """The rung that fixes the scheduled check: a unit inheriting no shell has
-    neither variable, and the declaration still resolves."""
+    """The rung that fixes the scheduled check: a unit inheriting no shell has no
+    variable at all, and the declaration still resolves."""
     write_config(config_home, f'{KEY} = "/from/config.json"\n')
 
-    assert resolved().expand('$REPOS_JSON') == '/from/config.json'
+    assert resolved().expand(f'${DECLARED}') == '/from/config.json'
 
 
-@pytest.mark.parametrize('declaration', ['$REPOS_JSON', '${REPOS_JSON}'])
+@pytest.mark.parametrize('declaration', [f'${DECLARED}', f'${{{DECLARED}}}'])
 def test_both_variable_spellings_expand(declaration: str, config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
-    assert resolved().expand(declaration) == '/from/shared.json'
+    assert resolved().expand(declaration) == '/from/variable.json'
 
 
 def test_an_unanswered_variable_is_left_literal(config_home: Path) -> None:
-    """Loud rather than plausible: no file is named `$REPOS_JSON`, so the check
+    """Loud rather than plausible: no file is named `$REPOS_REGISTRY`, so the check
     reports the declaration unanswered instead of resolving to a path that exists."""
-    assert resolved().expand('$REPOS_JSON') == '$REPOS_JSON'
-    assert resolved().unresolved('$REPOS_JSON') == (DECLARED,)
+    assert resolved().expand(f'${DECLARED}') == f'${DECLARED}'
+    assert resolved().unresolved(f'${DECLARED}') == (DECLARED,)
 
 
 def test_an_empty_rung_leaves_the_declaration_literal_rather_than_blank(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -216,9 +223,9 @@ def test_an_empty_rung_leaves_the_declaration_literal_rather_than_blank(config_h
     is skipped rather than substituted, so the `$NAME` survives and no file is
     named that.
     """
-    monkeypatch.setenv(DECLARED, '')
+    monkeypatch.setenv(ENV, '')
 
-    assert resolved().expand('$REPOS_JSON') == '$REPOS_JSON'
+    assert resolved().expand(f'${DECLARED}') == f'${DECLARED}'
 
 
 def test_a_literal_path_still_expands_its_tilde(config_home: Path) -> None:
@@ -231,9 +238,9 @@ def test_a_literal_path_names_no_source(config_home: Path) -> None:
 
 
 def test_the_source_names_the_rung_that_answered(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(PRIVATE, '/from/private.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
-    assert resolved().source('$REPOS_JSON') == f'${PRIVATE}'
+    assert resolved().source(f'${DECLARED}') == f'${ENV}'
 
 
 def test_a_snapshot_refuses_a_name_it_was_never_asked_for(config_home: Path) -> None:
@@ -261,16 +268,23 @@ def test_one_reading_answers_every_name_in_a_snapshot(config_home: Path) -> None
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_advice_for_a_shared_path_names_all_three_rungs(config_home: Path) -> None:
+def test_the_advice_for_a_shared_path_names_both_rungs(config_home: Path) -> None:
     """Asserted as membership checks rather than a sentence: the reader is looking
     at a check that found nothing, so the places it looked are the value and the
     wording around them is not. The rungs come from `SHARED_PATHS` rather than
-    being spelled out, so a fourth one added there fails here until it is advised."""
+    being spelled out, so a third one added there fails here until it is advised."""
     shared = settings.SHARED_PATHS[DECLARED]
     advice = settings.where_to_name(DECLARED, Path('/home/someone/.env'))
 
-    assert all(rung in advice for rung in (shared.private_env, shared.shared_env, shared.config_key))
+    assert all(rung in advice for rung in (shared.env_var, shared.config_key))
     assert str(settings.config_file()) in advice
+
+
+def test_the_advice_names_no_retired_rung(config_home: Path) -> None:
+    """Advice is what a reader acts on, so a variable nothing consults any more is
+    worse there than anywhere else — it sends them to set something that will be
+    ignored."""
+    assert RETIRED not in settings.where_to_name(DECLARED, Path('/home/someone/.env'))
 
 
 def test_the_advice_for_an_ordinary_value_names_only_the_env_file(config_home: Path) -> None:
@@ -289,12 +303,12 @@ def test_the_advice_for_an_ordinary_value_names_only_the_env_file(config_home: P
 def test_every_setting_carries_the_rung_that_answered_it(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The value alone is the plausible-wrong-answer case: a registry read from a
     stale export and one read from the config file look identical."""
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
     described = {setting.name: setting for setting in describe()}
 
-    assert described[DECLARED].value == '/from/shared.json'
-    assert described[DECLARED].source == f'${DECLARED}'
+    assert described[DECLARED].value == '/from/variable.json'
+    assert described[DECLARED].source == f'${ENV}'
 
 
 def test_a_setting_nothing_answers_is_reported_unanswered_rather_than_omitted(config_home: Path) -> None:
@@ -307,7 +321,7 @@ def test_a_setting_nothing_answers_is_reported_unanswered_rather_than_omitted(co
 
 
 def test_a_settings_value_is_expanded_rather_than_echoed(config_home: Path) -> None:
-    """`repos_file = "~/dev/repos.json"` is an ordinary thing to write, and the
+    """`repos_registry = "~/dev/repos.json"` is an ordinary thing to write, and the
     question this answers is what the tool will do, not what somebody typed."""
     write_config(config_home, f'{KEY} = "~/dev/repos.json"\n')
 
@@ -319,7 +333,7 @@ def test_a_settings_value_is_expanded_rather_than_echoed(config_home: Path) -> N
 def test_a_setting_reports_whether_the_file_it_names_is_there(config_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     registry = tmp_path / 'repos.json'
     registry.write_text('{}')
-    monkeypatch.setenv(DECLARED, str(registry))
+    monkeypatch.setenv(ENV, str(registry))
 
     assert describe()[0].exists
 

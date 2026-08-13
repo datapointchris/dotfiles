@@ -2,31 +2,30 @@
 
 `~/.env` is a shell file, so everything that answers from it is a shell. The
 scheduled check is not one: a systemd user unit and a LaunchAgent both start
-with an environment that has never sourced a profile, so `$REPOS_JSON` is unset
-there and the registry entry in `install/flags.yml` resolved to the literal
-string `$REPOS_JSON`. Four times a day the timer reported this machine's repo
-registry missing and advised restoring it with safekeep, about a file that was
-on disk the whole time. A machine's answer has to survive into a process with no
-shell, and this config file is where it does.
+with an environment that has never sourced a profile, so a variable exported
+there is unset and a declaration referencing one resolved to the literal string
+`$NAME`. Four times a day the timer reported this machine's repo registry
+missing and advised restoring it with safekeep, about a file that was on disk
+the whole time. A machine's answer has to survive into a process with no shell,
+and this config file is where it does.
 
-Three rungs, highest first, per standards/data.md § "A shared file is named in
-config; only the tool's own default is compiled in": a private variable only
-this tool reads, the shared variable every reader of the same file consults, then
-the config key. Each answers a different question — this invocation, this
-machine's shells, this machine.
+Two rungs, highest first, per standards/data.md § "A shared file is named in
+config; only the tool's own default is compiled in": this tool's own
+`DOTFILES_`-prefixed variable, then the config key. One answers this invocation
+and the other answers this machine.
 
-**There is no fourth rung, and that is deliberate.** A default naming a path
-outside this tool's own XDG directories is what that standard forbids, and the
-registry it would have to guess at moved twice in six hours on 2026-08-12. A
-compiled-in path would have been wrong before the commit carrying it landed.
+**A shared unprefixed variable used to sit between them and is gone.** It was
+how every reader of one file was told its location at once, and it could only
+ever answer in a shell — which is the half of the fleet this file exists for.
+The prefix rule is what replaced it: a tool reads no variable that is not its
+own, so one fleet's vocabulary can never be compiled into a generic tool.
 
-**The shared variable sits above the config key here and below it in indy**,
-which is that standard's canonical source. The difference is deliberate and is
-what this tool's situation asks for: indy's config key exists so one reader can
-be pointed at a different registry from everyone else, whereas this file exists
-only so a shell-less unit gets the same answer the shells already have. Putting
-the config above the variable would let a stale config.toml silently override
-the value every other reader on the machine is using.
+**There is no third rung, and that is deliberate.** A default naming a path
+outside this tool's own XDG directories is what that standard forbids, and a
+default *inside* them would be dotfiles claiming to own a registry that is the
+fleet's data — which `CLAUDE.md` § "dotfiles does not manage fleet data" rules
+out. The registry also moved twice in six hours on 2026-08-12, so a compiled-in
+path would have been wrong before the commit carrying it landed.
 """
 
 from __future__ import annotations
@@ -81,18 +80,22 @@ def read_config() -> Config:
 
 @dc.dataclass(frozen=True, slots=True)
 class Shared:
-    """The three rungs that can name one file this tool reads but does not own."""
+    """The two rungs that can name one file this tool reads but does not own.
 
-    private_env: str
-    shared_env: str
+    `env_var` carries this tool's name, always. That prefix is the invariant the
+    whole resolution order rests on: a tool that reads an unprefixed variable is
+    reading a name somebody else can set for a different file, and it has no way
+    to tell the two apart.
+    """
+
+    env_var: str
     config_key: str
 
 
 SHARED_PATHS: dict[str, Shared] = {
-    'REPOS_JSON': Shared('DOTFILES_REPOS_JSON', 'REPOS_JSON', 'repos_file'),
+    'REPOS_REGISTRY': Shared('DOTFILES_REPOS_REGISTRY', 'repos_registry'),
 }
-"""Declared values this tool's own config can also answer, keyed by the name
-`install/flags.yml` declares and every other reader of the same file consults.
+"""Files this tool reads and does not own, keyed by what the file is.
 
 `WINDOWS_USER` and `WINDOWS_DOMAIN` belong here in shape and deliberately are
 not, and neither takes a `DOTFILES_` twin. A Windows account name and the domain
@@ -132,17 +135,16 @@ def resolve(declared: str, config: Config) -> Resolution | None:
     answers in one report, which is how a check came to reject the config file and
     resolve a path through it in the same breath.
 
-    A name with no `SHARED_PATHS` entry has one rung, its own variable: the extra
-    two exist to locate a file shared with other tools, and a machine fact like a
-    Windows account name is neither shared nor this tool's to rename.
+    A name with no `SHARED_PATHS` entry has one rung, the variable spelled exactly
+    as declared: the second exists to locate a file shared with other tools, and a
+    machine fact like a Windows account name is neither shared nor this tool's to
+    rename.
     """
     shared = SHARED_PATHS.get(declared)
     if shared is None:
         return Resolution(value, f'${declared}') if (value := os.environ.get(declared)) else None
-    if value := os.environ.get(shared.private_env):
-        return Resolution(value, f'${shared.private_env}')
-    if value := os.environ.get(shared.shared_env):
-        return Resolution(value, f'${shared.shared_env}')
+    if value := os.environ.get(shared.env_var):
+        return Resolution(value, f'${shared.env_var}')
     if value := config.values.get(shared.config_key):
         return Resolution(str(value), str(config_file()))
     return None
@@ -182,9 +184,9 @@ class Resolved:
         """A declared path with `~` and every `$VAR` resolved through the rungs it has.
 
         A variable nothing answers is left literal, which is what keeps the failure
-        loud rather than plausible: no file is named `$REPOS_JSON`, so the check
-        reports the declaration unanswered instead of resolving to a path that
-        happens to exist.
+        loud rather than plausible: no file is named `$NAME`, so the check reports
+        the declaration unanswered instead of resolving to a path that happens to
+        exist.
 
         Not `os.path.expandvars`, which reads `os.environ` alone — that is precisely
         how the scheduled unit came to report a present registry as missing.
@@ -226,10 +228,7 @@ def where_to_name(declared: str, env_file: Path) -> str:
     shared = SHARED_PATHS.get(declared)
     if shared is None:
         return f'set {declared} below the OVERRIDES marker in {env_file}'
-    return (
-        f'set {shared.private_env} or {shared.shared_env} below the OVERRIDES marker in {env_file}, '
-        f'or {shared.config_key} in {config_file()}'
-    )
+    return f'set {shared.env_var} below the OVERRIDES marker in {env_file}, or {shared.config_key} in {config_file()}'
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -262,7 +261,7 @@ def describe(config: Config, env_file: Path) -> tuple[Setting, ...]:
     standards/configuration.md § "A resolved value reports which layer set it".
 
     The value is expanded, because the question this answers is what the tool will
-    do rather than what someone typed: `repos_file = "~/dev/repos.json"` is a
+    do rather than what someone typed: `repos_registry = "~/dev/repos.json"` is a
     perfectly ordinary thing to write in the config file, and printing it back
     unexpanded answers a question nobody asked.
     """

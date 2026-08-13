@@ -24,7 +24,12 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import tomllib
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from dotfiles import catalog as catalogs
 from dotfiles import machine as machines
@@ -81,6 +86,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_unbuildable_assets(declared))
     findings.extend(_unreferenced(declared, manifests))
     findings.extend(_git_overlays(root))
+    findings.extend(_registry_paths(root))
     return tuple(findings)
 
 
@@ -291,4 +297,80 @@ def _git_overlays(root: Path) -> list[Finding]:
     # named here and goes looking for the overlay that no longer ships it.
     for name in sorted(included - shipped):
         findings.append(Finding('gitconfig', Severity.WARNING, f'{COMMON_GITCONFIG} includes {name!r}, which no overlay ships'))
+    return findings
+
+
+def _yaml_mapping(text: str) -> dict[str, Any]:
+    """A YAML config as a mapping, empty for anything that is not one.
+
+    An empty document parses to None and a list parses to a list; neither declares
+    a key, and `.get` on either is an AttributeError rather than a finding.
+    """
+    parsed = yaml.safe_load(text)
+    return parsed if isinstance(parsed, dict) else {}
+
+
+REGISTRY_KEY = 'repos_registry'
+PARSEABLE_CONFIGS: dict[str, Callable[[str], dict[str, Any]]] = {
+    '.toml': tomllib.loads,
+    '.yml': _yaml_mapping,
+    '.yaml': _yaml_mapping,
+}
+
+
+def _registry_paths(root: Path) -> list[Finding]:
+    """Every deployed config naming the repo registry has to name the same file.
+
+    The deploy model is symlinks, so the deployed file *is* the repo file and there
+    is no templating to interpolate a path with. Each tool that reads the registry
+    therefore carries the literal, and the fleet side writes it out once per tool.
+    Repeating it is the accepted cost; this is what keeps the copies from drifting,
+    which is the failure the shared `$REPOS_JSON` variable existed to prevent and
+    could not — it was unset in every process that sourced no profile.
+
+    Two rules, both of which fail silently without one. The path may be named only
+    under `configs/trust/`, because a machine loads exactly one trust overlay while
+    every other layer reaches both domains — a registry named in `configs/common/`
+    is the fleet's answer deployed to the machine that is not on the fleet. And
+    within one trust value every copy must be the same string, because they all
+    resolve on the same machine and a tool reading the odd one out just answers
+    about a different set of repos.
+
+    Only `.toml`, `.yml` and `.yaml` are read, which is every format a tool config
+    here is written in. Parsed rather than matched, so a commented-out example is
+    correctly not a declaration.
+    """
+    findings: list[Finding] = []
+    by_trust: dict[str, dict[str, str]] = {}
+    for config in sorted((root / 'configs').rglob('*')):
+        parse = PARSEABLE_CONFIGS.get(config.suffix)
+        if parse is None or not config.is_file():
+            continue
+        try:
+            declared = parse(config.read_text()).get(REGISTRY_KEY)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, yaml.YAMLError) as unreadable:
+            findings.append(Finding('registry', Severity.ERROR, f'{config.relative_to(root)} cannot be read — {unreadable}'))
+            continue
+        if not declared:
+            continue
+        relative = str(config.relative_to(root))
+        layer = config.relative_to(root / 'configs').parts
+        if layer[0] != 'trust':
+            findings.append(
+                Finding(
+                    'registry',
+                    Severity.ERROR,
+                    f'{relative} names {REGISTRY_KEY} outside configs/trust/, so it deploys the same registry '
+                    f'to both trust domains; move the file into the trust overlay that wants it',
+                )
+            )
+            continue
+        by_trust.setdefault(layer[1], {})[relative] = str(declared)
+
+    for trust in sorted(by_trust):
+        named = by_trust[trust]
+        if len(set(named.values())) <= 1:
+            continue
+        disagreement = '; '.join(f'{where} says {path}' for where, path in sorted(named.items()))
+        findings.append(Finding('registry', Severity.ERROR, f'the {trust} overlay names more than one registry — {disagreement}'))
     return findings

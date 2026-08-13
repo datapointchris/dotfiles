@@ -1,0 +1,24 @@
+# syncer tool config. Every option, annotated: syncer config example config
+#
+# Trust-scoped rather than common, because the registry's location differs by
+# trust domain and there is no merge step — a config that names it cannot sit in
+# configs/common/. configs/trust/nonfleet/ carries the other machine's answer and
+# is otherwise identical to this file.
+#
+# Named as a literal. A shared unprefixed variable used to carry it, and ~/.env is
+# a shell file, so nothing that sources no profile ever saw it. See
+# standards/data.md § "A shared file is named in config; only the tool's own
+# default is compiled in".
+#
+# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
+# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
+# yet, while the clone is what `dotfiles apply` puts there.
+repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
+
+default_policy = "standard"
+
+# Prune a feature branch once its remote is gone and the merge target provably holds its work.
+# standard's own default:gone = report still wins on the default branch, since a role selector
+# beats "*".
+[policies.standard.rules]
+"*:gone" = "delete_local"

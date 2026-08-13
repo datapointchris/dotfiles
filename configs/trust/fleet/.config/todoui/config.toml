@@ -1,0 +1,26 @@
+# todoui — machine config.
+#
+# Trust-scoped rather than common, because the registry's location differs by
+# trust domain and there is no merge step. configs/trust/nonfleet/ carries the
+# other machine's answer and is otherwise identical to this file.
+#
+# Named as a literal. A shared unprefixed variable used to carry it, and ~/.env is
+# a shell file, so nothing that sources no profile ever saw it. See
+# standards/data.md § "A shared file is named in config; only the tool's own
+# default is compiled in".
+#
+# A bare key, so it has to stay above the first [section] — TOML reads anything
+# after one as belonging to it.
+#
+# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
+# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
+# yet, while the clone is what `dotfiles apply` puts there.
+repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
+
+# api_key is deliberately absent and belongs in $TODOUI_SYNC_KEY below the
+# OVERRIDES marker in ~/.env. It is a personal API key, so it cannot enter this
+# repo, and this file is deployed rather than hand-written — a secret here would
+# either be committed or block the symlink.
+[sync]
+enabled = true
+api_url = "https://api.ichrisbirch.com"

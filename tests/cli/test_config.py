@@ -21,20 +21,22 @@ from dotfiles.vocabulary import ExitCode
 
 runner = CliRunner()
 
-DECLARED = 'REPOS_JSON'
-PRIVATE = 'DOTFILES_REPOS_JSON'
+DECLARED = 'REPOS_REGISTRY'
+ENV = 'DOTFILES_REPOS_REGISTRY'
+RETIRED = 'REPOS_JSON'
 
 
 @pytest.fixture
 def config_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A scratch `$XDG_CONFIG_HOME` with neither variable set.
+    """A scratch `$XDG_CONFIG_HOME` with no variable set that could answer.
 
-    The suite runs from an interactive shell that exports $REPOS_JSON, so without
-    this every case here would report the machine's own answer.
+    The suite runs from an interactive shell that exports both the prefixed
+    variable and the retired shared one, so without this every case here would
+    report the machine's own answer.
     """
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
-    monkeypatch.delenv(PRIVATE, raising=False)
-    monkeypatch.delenv(DECLARED, raising=False)
+    monkeypatch.delenv(ENV, raising=False)
+    monkeypatch.delenv(RETIRED, raising=False)
     return tmp_path / 'config'
 
 
@@ -56,24 +58,24 @@ def described(*args: str) -> dict:
 
 
 def test_a_resolved_setting_reports_the_rung_that_answered(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
     settings_shown = described()['settings']
 
-    assert settings_shown[0]['value'] == '/from/shared.json'
-    assert settings_shown[0]['source'] == f'${DECLARED}'
+    assert settings_shown[0]['value'] == '/from/variable.json'
+    assert settings_shown[0]['source'] == f'${ENV}'
 
 
 def test_the_config_file_rung_is_named_by_its_path(config_home: Path) -> None:
     """The rung a shell-less unit resolves through, and the one whose name is not a
     variable — so a reader seeing it knows no shell was involved."""
-    config = write_config(config_home, 'repos_file = "/from/config.json"\n')
+    config = write_config(config_home, 'repos_registry = "/from/config.json"\n')
 
     assert described()['settings'][0]['source'] == str(config)
 
 
 def test_a_setting_nothing_answers_reports_no_source_rather_than_a_default(config_home: Path) -> None:
-    """There is no fourth rung, so silence is the honest answer and the command has
+    """There is no third rung, so silence is the honest answer and the command has
     to show it as one — a blank row invites the reader to look for the file."""
     entry = described()['settings'][0]
 
@@ -89,7 +91,7 @@ def test_an_unanswered_setting_is_told_where_it_can_be_answered(config_home: Pat
 
 def test_an_answered_setting_is_advised_nothing(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Advice on a converged row is noise, and reads as a fault where there is none."""
-    monkeypatch.setenv(DECLARED, '/from/shared.json')
+    monkeypatch.setenv(ENV, '/from/variable.json')
 
     assert described()['settings'][0]['advice'] == ''
 
@@ -98,7 +100,7 @@ def test_a_config_file_that_cannot_be_read_says_so_rather_than_reading_as_empty(
     """Unparseable and absent produce the same empty resolution, and opposite
     remedies. Without the problem on the record the command reports a machine that
     named nothing, about a file naming everything."""
-    write_config(config_home, 'repos_file = "unterminated\n')
+    write_config(config_home, 'repos_registry = "unterminated\n')
 
     assert described()['problem']
 
@@ -116,9 +118,9 @@ def test_a_named_registry_that_is_not_there_is_distinguished_from_one_nobody_nam
 ) -> None:
     """The same split `check` reports. A path nobody named is answered by naming
     one; a path named with no file there is answered by a restore."""
-    monkeypatch.setenv(DECLARED, str(tmp_path / 'gone.json'))
+    monkeypatch.setenv(ENV, str(tmp_path / 'gone.json'))
 
     entry = described()['settings'][0]
 
-    assert entry['source'] == f'${DECLARED}'
+    assert entry['source'] == f'${ENV}'
     assert not entry['exists']

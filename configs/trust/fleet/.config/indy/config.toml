@@ -1,15 +1,16 @@
 # indy — machine config. Everything here is a property of this fleet, not of the tool,
 # which is why none of it ships as an indy default.
 
-# The repo registry is deliberately NOT named here. $REPOS_JSON carries it, declared once
-# in install/flags.yml under `required:`, and indy resolves it below this file's repos_file
-# and above its own data directory — the same order every other reader now uses.
+# Both registries are named here as literals. A shared unprefixed variable used to
+# carry the repo one, which meant this file said nothing and the answer came from
+# ~/.env — invisible to any process that sources no profile. See standards/data.md
+# § "A shared file is named in config; only the tool's own default is compiled in".
 #
-# The exemplar registry stays named here, and the asymmetry is deliberate. Only REPOS_JSON
-# is declared; a config naming an undeclared variable would resolve to nothing and drop
-# silently to indy's own directory. The exemplar clones are fleet-only, so this
-# fleet-scoped file is where that path belongs anyway.
-exemplar_repos_file = "~/dev/exemplar-repos.json"
+# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
+# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
+# yet, while the clone is what `dotfiles apply` puts there.
+repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
+exemplar_registry = "~/.local/share/terminal-library-fleet/exemplar-repos.json"
 
 # data_dir is deliberately unset: the index is derived state and belongs in
 # $XDG_DATA_HOME/indy, which Syncthing replicates as its own folder.

@@ -20,12 +20,25 @@
 
 set -euo pipefail
 
-# $REPOS_JSON is declared in install/flags.yml as a machine-local value, because
-# where a machine keeps its registry is that machine's fact and not this repo's.
-# There is deliberately no fallback to a known location: a default would be the
-# hardcoded path one indirection later, and it fails by reading the wrong file
-# rather than by saying the value is unset.
-REGISTRY="${REPOS_JSON:-${XDG_CONFIG_HOME:-$HOME/.config}/repos.json}"
+# The registry comes from dotfiles' own config, which the trust overlay deploys —
+# ~/.config/dotfiles/config.toml on the fleet, and the same path off it naming a
+# different file. Read from there rather than from a variable, because ~/.env is
+# a shell file: an unattended caller sources no profile and saw nothing, which is
+# the whole reason the shared $REPOS_JSON came out.
+#
+# yq rather than a grep, and it is on every machine including the work box. There
+# is no fallback to a known location: a default would be the hardcoded path one
+# indirection later, and it fails by reading the wrong file rather than by saying
+# nothing named one. An unset value leaves REGISTRY empty and the -f test below
+# reports it.
+DOTFILES_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml"
+REGISTRY=""
+if [ -f "$DOTFILES_CONFIG" ]; then
+  # -oy is not cosmetic: without it yq warns on stderr that its default output
+  # format changed, on every single invocation.
+  REGISTRY="$(yq -p toml -oy -r '.repos_registry // ""' "$DOTFILES_CONFIG")"
+  REGISTRY="${REGISTRY/#\~/$HOME}"
+fi
 LANE=""
 
 die() {
@@ -52,6 +65,7 @@ EOF
 }
 
 command -v jq >/dev/null 2>&1 || die "jq is required"
+command -v yq >/dev/null 2>&1 || die "yq is required, to read repos_registry from $DOTFILES_CONFIG"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -71,6 +85,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+[ -n "$REGISTRY" ] || die "nothing names a registry: set repos_registry in $DOTFILES_CONFIG"
 [ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
 
 # status is required, so it is matched plainly rather than defaulted. Supplying a

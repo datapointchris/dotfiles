@@ -1,41 +1,41 @@
-# fleet's machine config. Its first: fleet carried ~/dev/repos.json compiled in
-# until the fleet settled on one resolution order for every reader of a shared
-# file, and this is the layer that replaced it.
+# fleet's machine config: where this machine keeps each of the shared files
+# fleet reads, as opposed to what those files say.
+#
+# Every one of them is named here as a literal. A shared unprefixed variable used
+# to carry the registry and the standards directory, and it could never answer
+# where it mattered: ~/.env is a shell file, so `fleet schedule run --due` under a
+# systemd timer resolved the registry to a data directory that does not exist,
+# reported the miss, and exited 0. See standards/data.md § "A shared file is
+# named in config; only the tool's own default is compiled in".
+#
+# Five keys rather than one section, because the five are different files with
+# different lifetimes and a machine may share one and not another.
+#
+# Each names the terminal-library-fleet clone rather than the ~/dev symlink that
+# resolves into it. ~/dev is a Syncthing folder, so the link is a second hop a
+# rebuilt machine has not restored yet, while the clone is what `dotfiles apply`
+# puts there.
 
-# The registry is deliberately NOT named here — see the note in
-# ../forge/config.yml. $REPOS_JSON carries it, and fleet resolves it below this
-# file's repos_file and above its own data directory. Set repos_file only to
-# point fleet at a different registry from every other reader on this machine.
+repos_registry: ~/.local/share/terminal-library-fleet/repos.json
 
 # The fleet's machines, named separately from its repos because the two are
-# different files with different lifetimes. Named here rather than left to
-# $FLEET_MACHINES because this file is the fleet-scoped layer and the roster is
-# fleet-only, where the registry is a file every workstation has.
-machines_file: ~/dev/machines.json
+# different files with different lifetimes.
+machines_registry: ~/.local/share/terminal-library-fleet/machines.json
 
-# The homelab inventory /etc/hosts is rendered from. Named here as well as in
-# $HOSTS_JSON because the two answer different questions: the variable is set in
-# an interactive shell, which is where homelab's deploys read it, and a systemd
-# timer running `fleet hosts check` inherits nothing.
-hosts_file: ~/dev/hosts.json
+# The homelab inventory /etc/hosts is rendered from. A fifth shared file rather
+# than a section of one of the others: homelab's deploys read this one and
+# nothing else here.
+hosts_registry: ~/.local/share/terminal-library-fleet/hosts.json
 
-# The standards `fleet audit` grades against. Named here and not left to
-# $STANDARDS_DIR, per standards/data.md § "A shared file is named in config;
-# only the tool's own default is compiled in" — the same reason repos_file is
-# above it. $STANDARDS_DIR is set in interactive shells only: measured
-# 2026-08-12, a clean `zsh -lic` reports it empty, and a systemd timer inherits
-# nothing, so resolving through it would leave every unattended sweep broken
-# while a hand-run one worked.
-#
-# This pointed at ~/dev/standards until that symlink was retired on 2026-08-12,
-# and every grade then failed on a missing file while `fleet audit plan` went on
-# reporting 16 standards — the plan counts them from the registry and never
-# opens the directory. The lesson is that the value went stale, not that naming
-# it here was wrong.
+# The standards `fleet audit` grades against. This pointed at ~/dev/standards
+# until that symlink was retired on 2026-08-12, and every grade then failed on a
+# missing file while `fleet audit plan` went on reporting its count from the
+# registry without ever opening the directory. The lesson is that the value went
+# stale, not that naming it here was wrong.
 standards_dir: ~/.local/share/terminal-library-fleet/standards
 
 # What the fleet runs unattended. A declaration — which machine owns a job and
 # how often it runs — so it sits with the registries rather than in state. What
 # each machine actually ran is per-machine state under $XDG_STATE_HOME, and
 # deliberately not here.
-schedule_file: ~/dev/schedule.json
+schedule_file: ~/.local/share/terminal-library-fleet/schedule.json
