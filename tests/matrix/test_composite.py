@@ -426,26 +426,6 @@ def test_an_apply_scoped_to_an_owner_that_matches_nothing_refuses(sandbox: Sandb
     assert 'nothing selected for owner nobody' in ran.stderr
 
 
-def test_a_plan_scoped_to_an_owner_that_matches_nothing_reports_a_converged_machine(
-    sandbox: Sandbox, cli: Callable[..., Invocation]
-) -> None:
-    """Current behaviour, and it is wrong — see the xfail below.
-
-    Encoded so the defect is a measured fact rather than a gap: the walk covers no
-    resource, the document carries no row, and the verdict is `converged` with exit
-    0. A caller branching on that exit code reads a typo in `--owner` as a machine
-    with nothing to change.
-    """
-    sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
-
-    ran = cli('plan', '--owner', 'nobody', '--json')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['resources'] == []
-    assert ran.document['verdict'] == 'converged'
-
-
-@pytest.mark.xfail(strict=True, reason='plan reports converged for an owner that selects nothing, where apply exits 2')
 def test_a_plan_scoped_to_an_owner_that_matches_nothing_refuses_as_apply_does(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`plan`'s own docstring says `--owner` "is `apply`'s and means the same,
     because a scope the write accepts and the read cannot express is not a narrower

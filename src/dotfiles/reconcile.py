@@ -33,6 +33,7 @@ from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import refusal
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import validate
@@ -383,6 +384,37 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
     return results
 
 
+class NothingSelected(refusal.Refusal):
+    """An `--owner` that no entry this machine declares answers to.
+
+    A usage error rather than a verdict, for the reason `engine._valid` makes a
+    misspelt `--skip` one: a run that accepts a scope it cannot honour reports
+    success for work it never looked at.
+    """
+
+    code = ExitCode.USAGE
+
+
+def for_owner(selection: engine.Selection, providers: frozenset[str], owner: str | None) -> engine.Selection:
+    """This selection, narrowed to the providers that owner's entries need.
+
+    One function for all three doors, because they had come apart on exactly the
+    case it refuses. `apply` said `nothing selected for owner X` and exited 2 while
+    both read verbs walked the empty selection and folded it to converged — so a
+    misspelt `--owner` answered `nothing to change` about a machine nothing had
+    measured, which is the one thing `plan` must never say.
+
+    Why the narrowing has to reach the walk and not only the plan is
+    `Selection.narrowed_to`'s, and stays there.
+    """
+    if owner is None:
+        return selection
+    narrowed = selection.narrowed_to(providers)
+    if not narrowed.resources:
+        raise NothingSelected(f'nothing selected for owner {owner}')
+    return narrowed
+
+
 @dataclass(frozen=True)
 class Surveyed:
     """One read-only walk, in both the shapes its readers want.
@@ -416,10 +448,9 @@ def survey(
     leaves the resource in the walk with that provider gone, so the row is still
     there and is honest about the narrower thing it measured.
 
-    `owner` narrows the walk exactly as it does in `apply_machine`, and for the
-    same reason: a resource with no provider has no entry to narrow, so an
-    owner-narrowed plan would otherwise still report every symlink and `~/.env` as
-    part of what one person's tools cover.
+    `owner` goes through the same `for_owner` `apply_machine` does, refusal
+    included: a rehearsal that walked an owner the write refuses is a rehearsal of
+    a run that never happens.
 
     **Reported a resource at a time, not once at the end.** The walk is a generator
     and materialising it is what made a slow resource indistinguishable from a hung
@@ -439,9 +470,7 @@ def survey(
     if offline:
         report_bundle(offline_bundle.describe())
     session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, offline=offline)
-    selection = engine.Selection.excluding(skip)
-    if owner is not None:
-        selection = selection.narrowed_to(session.plan.providers)
+    selection = for_owner(engine.Selection.excluding(skip), session.plan.providers, owner)
 
     results: list[ResourceResult] = []
 
@@ -745,15 +774,14 @@ def apply_machine(
         warn('nothing selected')
         return ExitCode.USAGE
 
-    # The walk, not only the plan. An owner narrows which *entries* are wanted,
-    # and a resource with no provider — symlinks, env, identity, auth — has no entry to
-    # narrow, so it survives an owner-narrowed plan untouched and gets deployed
-    # by a command that asked for one person's tools.
-    if owner is not None:
-        selection = selection.narrowed_to(plan.providers)
-        if not selection.resources:
-            warn(f'nothing selected for owner {owner}')
-            return ExitCode.USAGE
+    try:
+        selection = for_owner(selection, plan.providers, owner)
+    except NothingSelected as refused:
+        # Reported here rather than raised past this frame, so the function keeps
+        # answering in exit codes. A run that completed and found drift is a
+        # result, and one idiom covering both would make the ordinary outcome an
+        # exception.
+        return refusal.report(refused)
 
     if offline and (unstaged := _stage_bundle()):
         return unstaged

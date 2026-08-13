@@ -124,17 +124,27 @@ class Observed:
 
     @property
     def who(self) -> str:
-        """The identity a commit made in this checkout would carry.
+        """The identity a commit made in this checkout would carry, or what it lacks.
 
         The effective value rather than the machine default, because a person
         reading this is standing in a repo and asking what their next commit gets
         attributed to. On a nonfleet box the two differ by design, and naming the
         default here put the employer identity at the top of a check run inside a
         personal repo. `inventory` names the default beside it where they differ.
+
+        A field that is not set is named rather than formatted. Interpolating two
+        empty strings printed `<>`, which is an address of nobody wearing the shape
+        of an address — and the row carrying it is a tick, on a machine where
+        `user.useConfigOnly` means the next commit is refused. One field missing is
+        the same fault at half strength, so the absent one is named either way.
         """
         name = self.effective['user.name'] or self.values['user.name']
         email = self.effective['user.email'] or self.values['user.email']
-        return f'{name} <{email}>'
+        if name and email:
+            return f'{name} <{email}>'
+        named = name or 'no name'
+        addressed = f'<{email}>' if email else 'no email'
+        return f'{named} and {addressed}'
 
     def reading(self, field: str) -> str:
         """One field's value, and what decided it when that is not obvious.
@@ -194,10 +204,7 @@ class IdentityResource:
             {field: _effective(field, session.repo) for field in FIELDS},
             {field: _override(field, session.repo) for field in FIELDS},
             layering=gitconfig.read(),
-            # `is_symlink` as well as `exists`, because `exists` follows a link and
-            # a dangling one reads as absent — while git still picks it as the file
-            # to write to, which is the whole failure.
-            masked=gitconfig.home_config(session.home).exists() or gitconfig.home_config(session.home).is_symlink(),
+            masked=gitconfig.masking(session.home) is not None,
             linked_entry_point=gitconfig.entry_point(session.home).is_symlink(),
             home=session.home,
         )

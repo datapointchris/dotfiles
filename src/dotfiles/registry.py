@@ -115,6 +115,17 @@ class Provider:
     a password prompt for a system reconfiguration nobody asked for.
     """
 
+    def browses(self) -> str:
+        """The declaration section a reader looks this provider's items up under.
+
+        The section it plans from, wherever a manifest subscribes to one — and a
+        separate question rather than the same one, because `section` answers what
+        a *subscription* names. `ToolchainProvider` has no subscription and still
+        has rows a reader can list, so a `list` built on `section` would answer
+        emptily for the noun those rows belong to.
+        """
+        return self.section
+
     def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
         """What this machine should have from this provider, fully resolved.
 
@@ -515,19 +526,25 @@ class CloneProvider(CatalogProvider):
     """
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
-        """Clone what is missing, pull what is behind.
+        """Clone what is missing, pull what is behind, and reach no network offline.
 
         Two repairs behind one verb because the verdict already separates them,
         and the alternative was `update.sh` pulling every plugin on every run to
         find out whether any of them had moved.
+
+        Both repairs are a git transfer and the bundle stages no checkout, so an
+        offline run refuses rather than attempting one — the answer rustup and Node
+        already give one resource over. Without this, `--offline` on a fresh
+        machine ran `git clone https://github.com/...` for every declared plugin
+        and reached the network the flag exists to promise it would not.
         """
         landed = clone.destination(item, session.home)
-        if change.verdict is Verdict.STALE:
-            result = clone.pull(item, session.home)
-        elif landed.is_dir():
+        if change.verdict is not Verdict.STALE and landed.is_dir():
             return Outcome(change, OutcomeStatus.SKIPPED, f'{landed} appeared since the check')
-        else:
-            result = clone.clone(item, session.home)
+        if session.offline:
+            unstaged = f'{item.name} is a checkout of {clone.repository(item)}, and the offline bundle stages no plugin'
+            return Outcome(change, OutcomeStatus.REFUSED, unstaged)
+        result = clone.pull(item, session.home) if change.verdict is Verdict.STALE else clone.clone(item, session.home)
         return Outcome.from_result(change, result)
 
 
@@ -630,6 +647,11 @@ class TmuxSyncProvider(PluginSyncProvider):
         directory = tmux_plugins_dir(session)
         if directory is None:
             return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares TPM, so there is nowhere to install its plugins')
+        if session.offline:
+            # Ahead of `blocked`, which names a precondition an earlier stage of
+            # this run could still supply. Being offline is settled for the run.
+            unstaged = 'TPM clones the plugins tmux.conf declares, and the offline bundle stages none of them'
+            return Outcome(change, OutcomeStatus.REFUSED, unstaged)
         if reason := pluginsync.blocked(session.home, directory):
             return Outcome(change, OutcomeStatus.REFUSED, f'{reason}, and the stage that supplies it has not')
         result = pluginsync.sync_tmux(session.home, directory)
@@ -660,9 +682,13 @@ class NvimSyncProvider(PluginSyncProvider):
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Refused rather than failed where nvim is absent, because it is a package
-        an earlier stage of this same run installs."""
+        an earlier stage of this same run installs — and refused offline, because a
+        sync is lazy cloning from GitHub and the bundle stages no plugin."""
         if not shutil.which('nvim'):
             return Outcome(change, OutcomeStatus.REFUSED, 'neovim is not installed, and the stage that installs it has not')
+        if session.offline:
+            unstaged = 'lazy clones the plugins the Neovim config declares, and the offline bundle stages none of them'
+            return Outcome(change, OutcomeStatus.REFUSED, unstaged)
         result = pluginsync.sync_nvim()
         return Outcome.from_result(change, result)
 
@@ -831,12 +857,21 @@ class ToolchainProvider(Provider):
     covers.
     """
 
+    def browses(self) -> str:
+        """`runtimes`, which nothing subscribes to and every runtime is declared in.
+
+        Taken from the catalog rather than spelled again, so the section these
+        rows carry and the section `toolchains list` and `toolchains show` read
+        cannot come apart.
+        """
+        return catalogs.Runtime.section
+
     def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
         if self.needed_by and not any(item.section == self.needed_by for item in planned):
             return ()
         return (
             DesiredItem(
-                section='runtimes',
+                section=self.browses(),
                 provider=self.name,
                 resource=self.resource,
                 stage=self.stage,
@@ -845,7 +880,7 @@ class ToolchainProvider(Provider):
                 evidence_path=self.installed_at,
                 precondition=resolve.Precondition.NONE,
                 entry=declared_runtime(declaration, self.runtime),
-                reason=Reason('runtimes', f'section:{self.needed_by}' if self.needed_by else 'every machine'),
+                reason=Reason(self.browses(), f'section:{self.needed_by}' if self.needed_by else 'every machine'),
             ),
         )
 
@@ -912,7 +947,7 @@ def declared_runtime(declaration: catalogs.Catalog, name: str) -> catalogs.Runti
     an install method and no version, so any rustc satisfies it. An absent row
     means "no floor", which is a legitimate state and not a broken plan.
     """
-    for entry in declaration.section('runtimes'):
+    for entry in declaration.section(catalogs.Runtime.section):
         if entry.name == name and isinstance(entry, catalogs.Runtime):
             return entry
     return None
@@ -1124,6 +1159,21 @@ def serving(section: str) -> tuple[Provider, ...]:
 
 def for_resource(resource: str) -> tuple[Provider, ...]:
     return tuple(provider for provider in PROVIDERS if provider.resource == resource)
+
+
+def sections_for(resource: str) -> tuple[str, ...]:
+    """Every declaration section this resource's `list` and `show` answer for.
+
+    `browses` rather than `section`, because a toolchain subscribes to nothing and
+    would be left with no section at all — see `ToolchainProvider.browses`.
+
+    Derived from the registry rather than typed into the command that needs it.
+    `plugins list` named `shell_plugins` and nothing else, so the tmux and yazi
+    plugins the same resource plans, measures and clones were absent from the list
+    its own noun printed.
+    """
+    browsed = (provider.browses() for provider in for_resource(resource))
+    return tuple(dict.fromkeys(section for section in browsed if section))
 
 
 def evidence_for(item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:

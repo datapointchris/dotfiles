@@ -315,18 +315,62 @@ def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print(f'  {tag:<16} {count:3d} packages')
 
 
+def sections_named(args: argparse.Namespace) -> list[str]:
+    """Which sections this invocation was narrowed to, refusing any that is not one.
+
+    Repeatable, because a CLI noun owns however many sections it owns: `plugins`
+    covers three and `toolchains` covers one, and `registry.sections_for` is what
+    each of them reads to say which.
+    """
+    named = list(args.section or ())
+    unknown = [section for section in named if section not in PACKAGE_SECTIONS]
+    if unknown:
+        raise Refusal(
+            f'unknown section {", ".join(unknown)}',
+            code=ExitCode.USAGE,
+            advice=f'available: {", ".join(PACKAGE_SECTIONS)}',
+        )
+    return named
+
+
+def _listing(named: list[str]) -> str:
+    """The command that lists what this invocation was narrowed to, as typed.
+
+    `--section` is this bridge's own flag and the front door spells it `--source`,
+    so advice built from the internal name named a command the CLI rejects with
+    exit 2 — `standards/help.md` § "Audit help from outside the source" calls that
+    the Paste fault, an example that does not run as written.
+
+    One section or none, because `--source` takes a value rather than a list and a
+    repeated flag would keep only the last. Where a noun owns several the narrowing
+    is dropped rather than half-applied: the refusal above already names the scope
+    in prose, and a command that runs and lists too much beats one that does not
+    run.
+    """
+    return f'dotfiles packages list --source {named[0]}' if len(named) == 1 else 'dotfiles packages list'
+
+
 def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Show details for a specific package."""
+    """Show details for a specific package, inside whatever sections were named.
+
+    Unnarrowed for `packages show`, which is the door onto the whole declaration.
+    A noun owning part of it narrows to its own sections — `toolchains show`
+    answering for a cargo package makes the address vocabulary a suggestion.
+    """
+    named = sections_named(args)
+    within = [pkg for pkg in get_all_packages(data) if not named or pkg['_section'] in named]
+
     name_lower = args.name.lower()
-    matches = [p for p in get_all_packages(data) if p.get('name', '').lower() == name_lower]
+    matches = [p for p in within if p.get('name', '').lower() == name_lower]
 
     if not matches:
-        similar = [p for p in get_all_packages(data) if name_lower in p.get('name', '').lower()]
+        similar = [p for p in within if name_lower in p.get('name', '').lower()]
         near = ', '.join(pkg['name'] for pkg in similar[:5])
+        scope = f' in {", ".join(named)}' if named else ''
         raise Refusal(
-            f'no package named {args.name}',
+            f'no package named {args.name}{scope}',
             code=ExitCode.USAGE,
-            advice=f'did you mean: {near}' if near else 'list them with: dotfiles packages list',
+            advice=f'did you mean: {near}' if near else f'list them with: {_listing(named)}',
         )
 
     # Sort with available-on-this-platform first
@@ -395,17 +439,11 @@ def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List packages with optional filters."""
-    # Validate section filter
-    if args.section and args.section not in PACKAGE_SECTIONS:
-        raise Refusal(
-            f'unknown section {args.section}',
-            code=ExitCode.USAGE,
-            advice=f'available: {", ".join(PACKAGE_SECTIONS)}',
-        )
+    named = sections_named(args)
 
     # Determine which sections to query
-    if args.section:
-        sections = [args.section]
+    if named:
+        sections = named
     elif args.platform == 'macos':
         sections = [s for s in PACKAGE_SECTIONS if s != 'flatpak_apps']
     elif args.platform == 'linux':
@@ -525,6 +563,7 @@ def main(argv: list[str] | None = None) -> None:
     # show command
     show_parser = subparsers.add_parser('show', help='Show package details')
     show_parser.add_argument('name', help='Package name')
+    show_parser.add_argument('--section', action='append', help='Only look in this section (repeatable)')
     show_parser.set_defaults(func=cmd_show)
 
     # search command
@@ -534,7 +573,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # list command
     list_parser = subparsers.add_parser('list', aliases=['ls'], help='List packages')
-    list_parser.add_argument('--section', help='Filter by section')
+    list_parser.add_argument('--section', action='append', help='Filter by section (repeatable)')
     list_parser.add_argument('--tag', help='Filter by tag')
     list_parser.add_argument('--platform', choices=['macos', 'linux', 'all'], help='Filter by platform')
     list_parser.add_argument('--verbose', '-v', action='store_true', help='Show details')

@@ -650,29 +650,18 @@ def test_check_reports_a_dangling_home_gitconfig_as_masking(sandbox: Sandbox, cl
     assert '~/.gitconfig' in ran.document['detail']
 
 
-def test_show_is_silent_about_a_dangling_home_gitconfig(sandbox: Sandbox, cli: Run) -> None:
-    """Current behaviour, and the inconsistency: the same file, the same machine,
-    named by one surface and unmentioned by the other."""
-    dangling_home_gitconfig(sandbox)
-
-    ran = cli('identity', 'show', '--json')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['masked_by'] is None
-
-
-@pytest.mark.xfail(strict=True, reason='identity show tests exists() alone, which a dangling symlink answers False')
 def test_show_names_the_dangling_home_gitconfig_that_check_reports(sandbox: Sandbox, cli: Run) -> None:
-    """The fault: `identity_show` decides masking with `home_config().exists()`,
-    and `IdentityResource.observe` decides it with `exists() or is_symlink()`.
+    """The two surfaces answer the same question with one predicate.
 
-    The second carries the reason in a comment beside it — a dangling link reads as
-    absent to `exists` and is still the file git writes an identity into. `show` is
-    the command a person runs *because* `check` named the file, so it is the one
-    surface that must not disagree, and it draws a tree with the masking file
-    missing from it.
+    `identity show` decided masking with `home_config().exists()` and the resource
+    decided it with `exists() or is_symlink()`, so the same file on the same
+    machine in the same minute was named by `check` and drawn out of `show`'s tree
+    — and `show` is the command a person runs *because* `check` named the file.
 
-    Correctly, `show` measures masking the way the resource does.
+    One fact derived at two sites that can disagree, which is the cause behind more
+    of these faults than any other. Both now read `gitconfig.masking`, which
+    carries the reason: a dangling link answers `exists` False and is still the
+    file git writes an identity into.
     """
     dangling_home_gitconfig(sandbox)
 
@@ -737,33 +726,46 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(san
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_identity_row_prints_an_empty_address_where_the_machine_has_none(sandbox: Sandbox, cli: Run) -> None:
-    """Current behaviour. `plan` is right that there is nothing to change and says
-    so with a sentence naming nobody."""
+def test_the_identity_row_names_both_missing_fields_where_the_machine_has_none(sandbox: Sandbox, cli: Run) -> None:
+    """`plan` is right that there is nothing to change, and the sentence beside the
+    tick says which fields the machine is missing rather than laying them out as an
+    address. The file count stays, because how many files were read and set no
+    identity is the difference between an unconfigured machine and a broken chain."""
     git_config(sandbox, 'config', '[core]\n\tpager = less\n')
 
     ran = cli('identity', 'plan', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document['detail'] == ' <>, from 1 config file(s)'
+    assert ran.document['detail'] == 'no name and no email, from 1 config file(s)'
 
 
-@pytest.mark.xfail(strict=True, reason='Observed.who formats an empty name and email into `<>` rather than saying there is none')
 def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sandbox, cli: Run) -> None:
-    """The fault: `Observed.who` builds `f'{name} <{email}>'` from two values that
-    may both be empty, and `summary` is what the converged row prints.
+    """An empty address is never rendered as one.
 
-    A row reading `✓ identity  <>` is a tick beside an identity of nobody, on a
-    machine where `user.useConfigOnly` means the next commit is refused. `check`
-    reports it properly one verb away, which is what makes the tick misread as the
-    whole answer rather than as half of a pair.
+    `Observed.who` built `f'{name} <{email}>'` from two values that may both be
+    empty, and `summary` is what the converged row prints — so a machine with none
+    got `✓ identity  <>`, a tick beside an identity of nobody, on a machine where
+    `user.useConfigOnly` means the next commit is refused. `check` reports it
+    properly one verb away, which is what made the tick misread as the whole answer
+    rather than as half of a pair.
 
-    Correctly, the sentence says the machine has no identity — the row's verdict
-    stays converged, because there is still nothing for `apply` to write.
+    The verdict stays converged either way, because there is still nothing for
+    `apply` to write.
     """
     git_config(sandbox, 'config', '[core]\n\tpager = less\n')
 
     assert '<>' not in cli('identity', 'plan', '--json').document['detail']
+
+
+def test_the_identity_row_names_the_one_field_a_machine_is_missing(sandbox: Sandbox, cli: Run) -> None:
+    """Half an identity is the same fault at half strength, and it is the state a
+    machine reaches by setting `user.name` and stopping. `Synthetic Box <>` reads as
+    an address that is empty rather than as one that was never set."""
+    only_a_name(sandbox)
+
+    ran = cli('identity', 'plan', '--json')
+
+    assert ran.document['detail'] == 'Synthetic Box and no email, from 1 config file(s)'
 
 
 def generated_line(sandbox: Sandbox, line: str) -> None:

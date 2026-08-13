@@ -11,6 +11,8 @@ remaining work is legible as a list of callers.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import typer
 
 from dotfiles import bridge
@@ -39,13 +41,27 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-def _report(result: reconcile.ResourceResult, as_json: bool) -> None:
-    """Print one resource's verdict and exit with the code it earns."""
+def _report(results: Sequence[reconcile.ResourceResult], as_json: bool) -> None:
+    """Print every resource the walk covered, and exit with the code all of them earn.
+
+    Every one, because a selection can hold more than the noun it was typed under:
+    `needed_by` puts a runtime in it whenever the section wanting that runtime
+    resolves, so `packages plan --source cargo_packages` measures the Rust
+    toolchain too. Reporting the first row alone exited 0 on a machine whose
+    rehearsed write would have had a whole toolchain to install.
+
+    One object for one row and an array for several. A reader tells those apart on
+    the first byte, which two objects carrying different keys could not — and the
+    single row is what every call but a cross-resource `--source` produces, so
+    wrapping the common case in the versioned whole-machine document to spare the
+    branch would rewrite the contract for a shape that arrives from one flag.
+    """
     if as_json:
-        emit_json(result.as_dict())
+        emit_json(results[0].as_dict() if len(results) == 1 else [result.as_dict() for result in results])
     else:
-        render_result(result)
-    raise typer.Exit(reconcile.exit_code([result]))
+        for result in results:
+            render_result(result)
+    raise typer.Exit(reconcile.exit_code(list(results)))
 
 
 def _survey(
@@ -58,7 +74,11 @@ def _survey(
     owner: str | None = None,
     offline: bool = False,
 ) -> None:
-    """One resource, through the same engine and the same fold the composite uses.
+    """One noun's selection, through the same engine and the same fold the composite uses.
+
+    One noun, not always one resource: `--source` selects by address, and an
+    address carries its own resource, so a section whose runtime is declared
+    `needed_by` puts that runtime in the walk. `_report` prints all of it.
 
     Narrowed by address rather than by a per-resource function, so a resource
     cannot answer one way here and another way under `dotfiles plan` — which is
@@ -77,13 +97,8 @@ def _survey(
     if offline:
         reconcile.report_bundle(offline_bundle.describe())
     session = _session(machine, owner=owner, offline=offline)
-    selection = engine.Selection.of(*_selected(address, source))
-    if owner is not None:
-        selection = selection.narrowed_to(session.plan.providers)
-    if not selection.resources:
-        error(f'nothing selected for owner {owner}')
-        raise typer.Exit(ExitCode.USAGE)
-    _report(reconcile.fold(engine.assess(session, selection), lens)[0], as_json)
+    selection = reconcile.for_owner(engine.Selection.of(*_selected(address, source)), session.plan.providers, owner)
+    _report(reconcile.fold(engine.assess(session, selection), lens), as_json)
 
 
 def _session(machine: str | None, owner: str | None = None, offline: bool = False) -> Session:
@@ -116,6 +131,18 @@ def _selected(resource: str, source: str | None) -> tuple[str, ...]:
         error(f'{source} belongs to {provider.resource}, not {resource}')
         raise typer.Exit(ExitCode.USAGE)
     return tuple(addressed(one.resource, one.name) for one in registry.serving(source))
+
+
+def _within(resource: str) -> tuple[str, ...]:
+    """`--section` flags naming every declaration section this noun covers.
+
+    Read off the registry rather than typed at each command, which is where the
+    two nouns below had come apart from the resource they name: `plugins list` was
+    fixed to `shell_plugins` while the resource plans three sections, and
+    `toolchains show` was narrowed to nothing at all and answered for any package
+    in the file.
+    """
+    return tuple(flag for section in registry.sections_for(resource) for flag in ('--section', section))
 
 
 def available_sources() -> list[str]:
@@ -354,15 +381,20 @@ def toolchains_apply(
 @toolchains_app.command('list')
 def toolchains_list(as_json: bool = JsonOption) -> None:
     """List the declared toolchains."""
-    arguments = ['list', '--section', 'runtimes', *(('--json',) if as_json else ())]
+    arguments = ['list', *_within('toolchains'), *(('--json',) if as_json else ())]
     bridge.declaration(*arguments)
     raise typer.Exit(ExitCode.CONVERGED)
 
 
 @toolchains_app.command('show')
 def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> None:
-    """Show one toolchain's declaration."""
-    bridge.declaration('show', name)
+    """Show one toolchain's declaration.
+
+    Scoped the way `list` beside it is. Unscoped this was the same call as
+    `packages show`, so the noun answered for a cargo package as readily as for a
+    runtime — and `packages show` is the door that is meant to.
+    """
+    bridge.declaration('show', name, *_within('toolchains'))
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -410,8 +442,8 @@ def plugins_apply(
 
 @plugins_app.command('list')
 def plugins_list(as_json: bool = JsonOption) -> None:
-    """List the declared plugins."""
-    arguments = ['list', '--section', 'shell_plugins', *(('--json',) if as_json else ())]
+    """List every declared plugin, in all of the sections this resource owns."""
+    arguments = ['list', *_within('plugins'), *(('--json',) if as_json else ())]
     bridge.declaration(*arguments)
     raise typer.Exit(ExitCode.CONVERGED)
 
@@ -610,9 +642,7 @@ def identity_show(as_json: bool = JsonOption) -> None:
         error('git would not report its configuration')
         raise typer.Exit(ExitCode.ISSUE)
 
-    masking = gitconfig.home_config()
-    if not masking.exists():
-        masking = None
+    masking = gitconfig.masking()
 
     if as_json:
         emit_json(gitconfig.document(layering, masking))

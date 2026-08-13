@@ -55,6 +55,22 @@ def home_config(home: Path | None = None) -> Path:
     return (home or Path.home()) / '.gitconfig'
 
 
+def masking(home: Path | None = None) -> Path | None:
+    """The `~/.gitconfig` outranking the chain above, or None where none sits there.
+
+    `is_symlink` as well as `exists`, because `exists` follows a link and a
+    dangling one reads as absent — while git still picks it as the file to write an
+    identity into, which is the whole failure.
+
+    One predicate rather than the test written at each surface that needs it.
+    `check` reported a dangling link and `show` drew a tree with the deciding file
+    missing from it, on the same machine in the same minute — and `show` is the
+    command a person runs *because* `check` named the file.
+    """
+    path = home_config(home)
+    return path if path.exists() or path.is_symlink() else None
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Setting:
     """One key, its value, and the file git took it from."""

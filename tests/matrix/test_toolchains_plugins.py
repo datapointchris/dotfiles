@@ -464,23 +464,6 @@ def test_showing_a_toolchain_prints_the_runtimes_row_it_names(sandbox: Sandbox, 
     assert 'Section:     runtimes' in ran.stdout
 
 
-def test_toolchains_show_answers_for_a_package_that_is_not_a_runtime(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, and it is wrong. `toolchains show` and `packages show`
-    are the same call — `bridge.declaration('show', name)` — which searches every
-    section, so this noun answers for a cargo package as readily as for a runtime.
-
-    Encoded as it stands so the fix has something to break. The xfail below is the
-    behaviour the command's own help promises.
-    """
-    sandbox.declare(packages=RUNTIMES, manifest=BARE)
-
-    ran = cli('toolchains', 'show', 'ripgrep')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert 'Section:     cargo_packages' in ran.stdout
-
-
-@pytest.mark.xfail(strict=True, reason='toolchains show is bridge.declaration("show", name), which is scoped to no section')
 def test_toolchains_show_is_scoped_to_the_runtimes_it_is_the_noun_for(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`dotfiles toolchains show ripgrep` should say that no runtime is called that,
     the way `toolchains list` already refuses to list anything but runtimes. A noun
@@ -491,23 +474,6 @@ def test_toolchains_show_is_scoped_to_the_runtimes_it_is_the_noun_for(sandbox: S
     assert cli('toolchains', 'show', 'ripgrep', catch_exceptions=True).exit_code != ExitCode.CONVERGED
 
 
-def test_the_plugin_list_covers_only_the_shell_plugins(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, and it is wrong. `plugins list` is hard-coded to
-    `--section shell_plugins`, so the tmux and yazi plugins this same resource
-    plans, measures and clones are absent from the list its own noun prints.
-
-    The resource's help says "shell, tmux and yazi plugins, and the managers that
-    own their own lists". Two thirds of that is unlistable.
-    """
-    sandbox.declare(packages=PLUGINS, manifest={**BARE, 'shell_plugins': True, 'tmux_plugins': True, 'yazi_plugins': True})
-
-    ran = cli('plugins', 'list', '--json')
-
-    assert [row['name'] for row in ran.document] == ['forgit']
-    assert {row['section'] for row in ran.document} == {'shell_plugins'}
-
-
-@pytest.mark.xfail(strict=True, reason='plugins list is hard-coded to --section shell_plugins')
 def test_the_plugin_list_covers_every_plugin_section_the_resource_owns(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A declared plugin that `plugins plan` reports and `plugins apply` clones has
     to be nameable by `plugins list`, or the list is a different roster from the
@@ -732,33 +698,6 @@ def test_applying_clones_each_declared_plugin_to_the_path_its_program_reads(sand
     assert cli('plugins', 'plan').exit_code == ExitCode.CONVERGED
 
 
-def test_an_offline_plugins_apply_shells_out_to_git_clone_anyway(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
-) -> None:
-    """Current behaviour, and it is wrong. `CloneProvider.install` never reads
-    `session.offline`, and no bundle stages a plugin checkout — so `--offline` on a
-    fresh machine runs `git clone https://github.com/...` for every declared plugin
-    and reaches the network the flag exists to promise it will not.
-
-    Proven without reaching one: `git` is shadowed by a stub that records its argv
-    and fails, so what the run attempted is on disk and nothing left the machine.
-    Every other provider takes `offline=session.offline` and refuses instead.
-    """
-    only_the_sandbox_on_path(sandbox, monkeypatch)
-    attempts = sandbox.root / 'git-argv'
-    monkeypatch.setenv('RECORDED_ARGV', str(attempts))
-    sandbox.stage_bundle({'lazygit': '0.45.0'})
-    sandbox.shadow('git', RECORDS_ARGV)
-    declares(sandbox, shell_plugins=True)
-
-    ran = cli('plugins', 'apply', '--offline')
-
-    assert 'clone' in attempts.read_text()
-    assert 'https://github.com/wfxr/forgit.git' in attempts.read_text()
-    assert ran.exit_code == ExitCode.ISSUE
-
-
-@pytest.mark.xfail(strict=True, reason='CloneProvider.install never reads session.offline')
 def test_an_offline_plugins_apply_refuses_the_clone_nothing_staged(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
@@ -804,32 +743,6 @@ def test_narrowing_a_write_to_a_section_reaches_the_runtime_that_section_needs(
     assert reached_through(reached, 'toolchain.py')
 
 
-def test_narrowing_a_read_to_a_section_reports_one_resource_and_drops_the_other(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
-) -> None:
-    """Current behaviour, and it is wrong. `_survey` selects both resources — the
-    section's provider and the runtime `needed_by` names — walks both, and then
-    reports `fold(...)[0]`, which is whichever comes first in
-    `vocabulary.RESOURCES`. That is `packages`, so the runtime row is measured and
-    thrown away.
-
-    The cost is not cosmetic: with the section's own package installed, the
-    rehearsal exits 0 on a machine where the write it rehearses would have to
-    install a whole toolchain. `plan` is documented as the rehearsal of exactly this
-    write, and the two disagree.
-    """
-    only_the_sandbox_on_path(sandbox, monkeypatch)
-    sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
-    sandbox.installed('rg', 'ripgrep 14.1.1')
-
-    ran = cli('packages', 'plan', '--source', 'cargo_packages', '--json')
-
-    assert ran.document['address'] == 'packages'
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert 'rust-toolchain/rust' not in unwrapped(ran.output)
-
-
-@pytest.mark.xfail(strict=True, reason='commands/resources.py:_survey reports fold(...)[0] and discards every other resource')
 def test_narrowing_a_read_to_a_section_reports_the_runtime_it_selected(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
