@@ -27,7 +27,6 @@ from typing import Any
 
 import pytest
 
-from dotfiles import machine as machines
 from dotfiles.vocabulary import ExitCode
 from matrix import harness
 from matrix.harness import Invocation
@@ -710,56 +709,38 @@ READ_VERBS = [
 ]
 
 
-@pytest.mark.parametrize('argv', READ_VERBS)
-def test_a_read_verb_raises_on_a_machine_with_no_manifest(sandbox: Sandbox, cli: Run, argv: tuple[str, ...]) -> None:
-    """Current behaviour. `MachineError` reaches the caller as a traceback rather
-    than as a report, on every read verb these two resources have."""
-    with pytest.raises(machines.MachineError, match='has no manifest at'):
-        cli(*argv, *UNKNOWN_MACHINE)
-
-
-@pytest.mark.parametrize('argv', READ_VERBS)
-def test_the_crash_reaches_the_shell_as_the_one_code_check_cannot_return(sandbox: Sandbox, cli: Run, argv: tuple[str, ...]) -> None:
-    """What a caller sees, which is worse than the traceback. An uncaught exception
-    is exit 1 — `DRIFT` — so `check --machine nosuch` answers with the code it
-    documents itself as never returning, and prints not one word about why."""
-    ran = cli(*argv, *UNKNOWN_MACHINE, catch_exceptions=True)
-
-    assert ran.exit_code == ExitCode.DRIFT
-    assert ran.output == ''
-
-
 def test_the_write_verb_names_the_missing_manifest_and_the_ones_that_exist(sandbox: Sandbox, cli: Run) -> None:
-    """The handled path, and the evidence that the read verbs are the ones wrong:
-    `apply_machine` catches `MachineError` and reports it, so the same typo on the
-    same machine is a legible refusal here and a traceback one verb away."""
+    """The write verb names the manifest it looked for and the ones that exist, and
+    answers the code every read verb answers.
+
+    The write verb and the read verbs answer alike, because the typo is the same
+    typo whichever verb is given it. A verb diagnosing it as an Issue would be
+    reporting a fault in the machine, and the machine is fine.
+    """
     ran = cli('env', 'apply', *UNKNOWN_MACHINE)
 
-    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.exit_code == ExitCode.USAGE
     assert 'nosuch: has no manifest at' in unwrapped(ran.stderr)
     assert 'Available: box' in unwrapped(ran.stderr)
 
 
-@pytest.mark.xfail(strict=True, reason='engine.assess resolves session.plan outside the per-resource try, so MachineError escapes the walk')
-def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(sandbox: Sandbox, cli: Run) -> None:
-    """The fault: `assess` evaluates `session.plan` in the loop body at the call to
-    `covered.plan_for(...)`, outside the `try` that `_measure` wraps each resource
-    in — so the declaration failing to load is not the refusal the walk was built
-    to turn every exception into.
+@pytest.mark.parametrize('argv', READ_VERBS)
+def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(sandbox: Sandbox, cli: Run, argv: tuple[str, ...]) -> None:
+    """A `--machine` naming no manifest is reported with the name, under exit 2.
 
     `Session.machine` is lazy precisely so a run that never asks about a machine
-    pays nothing, which puts the first read of the manifest inside the walk rather
-    than at `Session.resolve`, where `_session` is watching for it. `apply` avoids
-    it by catching `MachineError` around its own `session.plan` before the walk
-    starts; nothing does that for `plan`, `check` or `show`.
+    pays nothing, and that once put the first read of the manifest inside the walk
+    rather than at `Session.resolve`. `assess` evaluates `session.plan` outside the
+    `try` that `_measure` wraps each resource in, so the declaration failing to
+    load was not the refusal the walk turns every exception into — it escaped as a
+    traceback. `Session.resolve` now reads the manifest itself, which is what puts
+    the failure back in front of the handler.
 
-    Correctly, a `--machine` naming no manifest is reported with the name and the
-    manifests that do exist — the message `apply` already produces — under exit 2,
-    which is what `machines show <typo>` answers today. The code is the one claim
-    this file shares with `test_symlinks.py`, `test_auth_credentials.py` and
-    `test_composite.py`, and the latter carries the reasoning.
+    The code is the one claim this file shares with `test_symlinks.py`,
+    `test_auth_credentials.py` and `test_composite.py`, and the latter carries the
+    reasoning.
     """
-    ran = cli('env', 'check', *UNKNOWN_MACHINE, catch_exceptions=True)
+    ran = cli(*argv, *UNKNOWN_MACHINE, catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
     assert 'nosuch' in ran.stderr

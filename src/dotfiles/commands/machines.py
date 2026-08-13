@@ -66,10 +66,39 @@ def _resolve_machine(name: str | None) -> str:
 
 
 def _manifest_path(name: str) -> Path:
-    path = paths.MANIFESTS_DIR / f'{name}.yml'
-    if not path.exists():
-        raise typer.BadParameter(f'no manifest named {name!r}. Known: {", ".join(manifest_names())}')
-    return path
+    """The path, with a name nothing declares refused the way every door refuses it.
+
+    The sentence is `machine.manifest_path`'s, so this is the conversion to a usage
+    error and nothing else. Wording it here is what let one tool answer the same
+    question two ways depending on which verb was asked.
+    """
+    try:
+        return machines.manifest_path(name)
+    except machines.NoSuchMachine as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
+
+
+def _loaded(name: str) -> machines.Machine:
+    """One manifest, with both ways of not getting one answered as they are elsewhere.
+
+    A name nothing declares is a usage error. A manifest that exists and will not
+    parse is an Issue, with every reason printed — the same split `_plan` makes,
+    and the same one `commands.resolved` makes for the verbs that want a Session.
+
+    A caller wanting only the exception should reach for this rather than calling
+    `manifest_path` for its side effect: that answers whether the *file* is there
+    and says nothing about whether it reads, so an unparseable manifest went
+    straight through it and out of the leaf as exit 1 with both streams empty.
+    """
+    try:
+        return machines.load(name)
+    except machines.NoSuchMachine as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
+    except machines.MachineError as refused:
+        error(f'{name} cannot be resolved:')
+        for issue in refused.issues:
+            console.print(f'  {issue}', markup=False, highlight=False)
+        raise typer.Exit(ExitCode.ISSUE) from refused
 
 
 @app.command('list')
@@ -122,6 +151,8 @@ def _plan(name: str, owner: str | None = None) -> resolver.Plan:
     """
     try:
         return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
+    except machines.NoSuchMachine as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
     except (catalog.CatalogError, machines.MachineError) as refused:
         error(f'{name} cannot be resolved:')
         for issue in refused.issues:
@@ -177,7 +208,7 @@ def machine_requirements(
     if as_json and as_safekeep:
         raise typer.BadParameter('--json and --safekeep are two formats of one answer; pick one')
 
-    machine = machines.load(_resolve_machine(name))
+    machine = _loaded(_resolve_machine(name))
 
     if as_json:
         emit_json([_requirement_dict(entry) for entry in machine.requirements])

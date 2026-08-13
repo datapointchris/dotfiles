@@ -69,6 +69,8 @@ def check(
     verbosity(verbose, quiet)
     try:
         machine = machines.load(machine_name) if machine_name else Session.resolve().machine
+    except machines.NoSuchMachine as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
     except (machines.MachineError, FileNotFoundError) as unresolved:
         error(str(unresolved))
         raise typer.Exit(ExitCode.ISSUE) from unresolved

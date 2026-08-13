@@ -33,7 +33,6 @@ from dotfiles.commands import staging
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
 from dotfiles.output import render_verdict
-from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(
@@ -154,7 +153,7 @@ def plan(
     if offline and refresh:
         commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
-    named = Session.resolve(machine).machine_name
+    named = commands.resolved(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
     lens = reconcile.Lens.PLAN
@@ -202,7 +201,7 @@ def check(
     if offline and refresh:
         commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
-    checked_machine = Session.resolve(machine).machine_name
+    checked_machine = commands.resolved(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)

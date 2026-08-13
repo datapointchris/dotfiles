@@ -23,7 +23,6 @@ from pathlib import Path
 
 import pytest
 
-from dotfiles import machine as machines
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS as RUNS_AND_SAYS_NOTHING
 from matrix.harness import REFUSED
@@ -824,37 +823,20 @@ def test_the_machine_option_is_honoured_where_the_name_resolves(
 
 @pytest.mark.parametrize('noun', ['auth', 'credentials'])
 @pytest.mark.parametrize('verb', ['plan', 'check', 'show'])
-def test_a_machine_name_nothing_declares_escapes_as_a_traceback(cli: Callable[..., Invocation], noun: str, verb: str) -> None:
-    """The bug, pinned as it behaves today so the fix has something to break.
-
-    `_session` catches `NoMachine`, which is raised when *no* name could be found
-    at all. A name that was given and has no manifest is a different exception —
-    `MachineError`, raised by `Session.machine`, which is a cached property nothing
-    touches until the walk is already running. By then the `try` in `_session` has
-    returned and `engine.assess` evaluates `session.plan` outside `_measure`'s
-    `except Exception`, so nothing on either side catches it.
-    """
-    with pytest.raises(machines.MachineError, match='no-such-machine'):
-        cli(noun, verb, '--machine', 'no-such-machine')
-
-
-@pytest.mark.xfail(strict=True, reason='MachineError escapes every read-only leaf; only `apply` catches it')
-@pytest.mark.parametrize('noun', ['auth', 'credentials'])
-@pytest.mark.parametrize('verb', ['plan', 'check', 'show'])
 def test_a_machine_name_nothing_declares_should_be_diagnosed_rather_than_raised(
     cli: Callable[..., Invocation], noun: str, verb: str
 ) -> None:
-    """What the caller should get: exit 2, and the name on stderr.
+    """The caller gets exit 2, and the name on stderr.
 
-    Exit 1 is the specific harm today. It means `DRIFT`, and `check` cannot drift —
-    its range is 0 and 3 — so a scheduled caller branching on the status reads a
-    mistyped `--machine` as a machine that has work pending. The traceback goes to
-    the console rather than to stderr's diagnostic channel, so the run also says
+    Exit 1 was the specific harm. It means `DRIFT`, and `check` cannot drift —
+    its range is 0 and 3 — so a scheduled caller branching on the status read a
+    mistyped `--machine` as a machine that has work pending. The traceback went to
+    the console rather than to stderr's diagnostic channel, so the run also said
     nothing about which name was wrong.
 
-    Exit 2 rather than the 3 `reconcile.apply_machine` answers, because
+    Exit 2 rather than the 3 `reconcile.apply_machine` once answered, because
     `_manifest_path` already settles this for the `machines` noun and `machines
-    show <typo>` exits 2 today. The reasoning is one shared claim across this file,
+    show <typo>` exits 2. The reasoning is one shared claim across this file,
     `test_symlinks.py` and `test_composite.py`; it is written out in the latter's
     `test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing`.
     """

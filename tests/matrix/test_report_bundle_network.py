@@ -950,10 +950,14 @@ def test_the_human_rendering_names_only_what_is_blocked(sandbox: Sandbox, cli: C
 
 def test_an_unknown_machine_is_reported_rather_than_probed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`--machine` measures what a manifest would install, so a name that resolves
-    to nothing is answered before a single request is made."""
+    to nothing is answered before a single request is made.
+
+    Exit 2 rather than 3: the name is retryable, and nothing has been learnt about
+    the machine to report as an Issue.
+    """
     ran = cli('network', 'check', '--machine', 'nosuch', catch_exceptions=True)
 
-    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.exit_code == ExitCode.USAGE
     assert 'nosuch: has no manifest' in ran.stderr
 
 

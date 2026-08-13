@@ -678,7 +678,7 @@ def apply_machine(
     try:
         session = Session.resolve(machine, offline=offline, owner=owner, refresh=not offline, force=force, reinstall=reinstall)
         plan = session.plan
-    except NoMachine as unnamed:
+    except (NoMachine, machines.NoSuchMachine) as unnamed:
         warn(str(unnamed))
         return ExitCode.USAGE
     except (catalog.CatalogError, machines.MachineError) as refused:
