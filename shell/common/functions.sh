@@ -321,13 +321,11 @@ gh-watch() {
 #@git-alias
 #--> Every git alias in effect here, from every config scope
 git-alias() {
-  git config --get-regexp '^alias\.' \
-    | sed 's/^alias\.//' \
-    | sort \
-    | awk '{ name = $1; $1 = ""
-             names[NR] = name; bodies[NR] = substr($0, 2)
-             if (length(name) > width) width = length(name) }
-           END { for (i = 1; i <= NR; i++) printf "%-*s  %s\n", width, names[i], bodies[i] }'
+  local blue=$'\033[34m' reset=$'\033[0m' width
+  width=$(git config --name-only --get-regexp '^alias\.' | sed 's/^alias\.//' | wc -L)
+  git config --get-regexp '^alias\.' | sort | while read -r key body; do
+    printf '%-*s  %s%s%s\n' "$width" "${key#alias.}" "$blue" "$body" "$reset"
+  done
 }
 
 # tm - create new tmux session, or switch to existing one. Works from within tmux too. (@bag-man)
