@@ -42,11 +42,9 @@
 # one stays undeclared.
 #
 # ~/.env is not the only place an entry can be answered. A name listed in
-# `settings.SHARED_PATHS` is also read from $DOTFILES_<name> above it and from
-# repos_file in ~/.config/dotfiles/config.toml below it, and `dotfiles check`
-# passes on any of the three. The config file is the rung that survives into a
-# process with no shell, which is the whole reason it exists — see the module
-# docstring in src/dotfiles/settings.py.
+# `settings.SHARED_PATHS` resolves through several rungs and `dotfiles check`
+# passes on any of them; `dotfiles config show` says which one this machine used.
+# The order and the reasoning are the module docstring in src/dotfiles/settings.py.
 required:
   # Neither of these takes a DOTFILES_ twin, and neither belongs in
   # SHARED_PATHS. A Windows account name and the domain it authenticates against
@@ -74,11 +72,8 @@ required:
   # than failing. Narrowed on capacity because a server has no registry to name,
   # not on trust — a machine outside the fleet has one too, listing its own work.
   #
-  # Answerable at three rungs, which is what `capacity: workstation` now means
-  # here: $DOTFILES_REPOS_JSON for this tool alone, $REPOS_JSON for every reader
-  # of the same file, then repos_file in ~/.config/dotfiles/config.toml. A
-  # machine naming it in the config file alone is fully declared and `check`
-  # says so.
+  # A machine naming this in the config file alone is fully declared and `check`
+  # says so, which is what `capacity: workstation` now means here.
   - name: REPOS_JSON
     description: Absolute path to this machine's repo registry
     capacity: workstation
