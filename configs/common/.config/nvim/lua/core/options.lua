@@ -63,10 +63,10 @@ vim.opt.undofile = true
 -- Enable mouse support in all modes
 vim.opt.mouse = 'a'
 
--- Use win32yank if on wsl. Keyed on the host rather than the platform: there is
--- a Windows clipboard to reach whenever WSL is the host, whatever distro runs
--- inside it.
-if vim.env.DOTFILES_HOST == 'wsl' then
+-- Use win32yank if on wsl. WSL sets $WSL_DISTRO_NAME itself, so the answer comes
+-- from the thing being detected rather than from a coordinate the machine had to
+-- declare — which is what tmux.conf already does for this same clipboard.
+if vim.env.WSL_DISTRO_NAME then
   vim.g.clipboard = {
     name = 'win32yank-wsl',
     copy = {

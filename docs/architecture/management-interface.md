@@ -234,11 +234,15 @@ so a machine without one writes nothing, and `setup()` creates no directories. T
 existed only because a `dir =` local checkout errors on every startup when the directory is
 absent, which is a fact about local specs rather than about machines.
 
-`core/options.lua` keeps its check and now spells it `DOTFILES_HOST == 'wsl'`, because
-win32yank genuinely is a fact about the host rather than a stand-in for one. The test: if
-the condition can be stated as something the code needs, state that; reach for a
-coordinate only when the difference really is which kind of machine this is — and then
-reach for the *one* axis that decides it, not the whole point.
+`core/options.lua` keeps its check and spells it `WSL_DISTRO_NAME`, which WSL sets
+itself. It read `DOTFILES_HOST == 'wsl'` first, on the reasoning that win32yank genuinely
+is a fact about the host rather than a stand-in for one — true, and still the wrong
+source, because a declared coordinate is a second description of something the runtime
+already states and `tmux.conf` was solving the identical problem the direct way three
+files over. The test survives the correction and gains a clause: if the condition can be
+stated as something the code needs, state that; if the machine already announces it,
+read the announcement; reach for a coordinate only when the difference really is which
+kind of machine this is, and no process on it says so.
 
 tmux gets nothing. Every conditional in `tmux.conf` is real runtime detection — is this
 pane running vim, is `$WSL_DISTRO_NAME` set, does the theme file exist, is tpm cloned —
