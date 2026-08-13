@@ -40,7 +40,20 @@
 # /mnt/c/Users// and mounts a share with an empty username; an unset
 # JIRA_API_TOKEN just makes `jira` print an auth error, which names itself — that
 # one stays undeclared.
+#
+# ~/.env is not the only place an entry can be answered. A name listed in
+# `settings.SHARED_PATHS` is also read from $DOTFILES_<name> above it and from
+# repos_file in ~/.config/dotfiles/config.toml below it, and `dotfiles check`
+# passes on any of the three. The config file is the rung that survives into a
+# process with no shell, which is the whole reason it exists — see the module
+# docstring in src/dotfiles/settings.py.
 required:
+  # Neither of these takes a DOTFILES_ twin, and neither belongs in
+  # SHARED_PATHS. A Windows account name and the domain it authenticates against
+  # are facts about the machine rather than settings of this tool: prefixing them
+  # would claim a name that is not ours, and the shell code reading them would
+  # not find the prefixed spelling. The three rungs are for a *shared file* whose
+  # location differs per machine, which is neither of these.
   - name: WINDOWS_USER
     description: Windows account name, for the /mnt/c/Users path
     host: wsl
@@ -60,6 +73,12 @@ required:
   # a stale file sitting there reports PRs for the wrong set of repos rather
   # than failing. Narrowed on capacity because a server has no registry to name,
   # not on trust — a machine outside the fleet has one too, listing its own work.
+  #
+  # Answerable at three rungs, which is what `capacity: workstation` now means
+  # here: $DOTFILES_REPOS_JSON for this tool alone, $REPOS_JSON for every reader
+  # of the same file, then repos_file in ~/.config/dotfiles/config.toml. A
+  # machine naming it in the config file alone is fully declared and `check`
+  # says so.
   - name: REPOS_JSON
     description: Absolute path to this machine's repo registry
     capacity: workstation
@@ -141,6 +160,11 @@ required_files:
   # for itself, below its own config key and above its own compiled default,
   # which keeps the registry a file they happen to share rather than a coupling
   # between them.
+  #
+  # $REPOS_JSON is written here rather than $DOTFILES_REPOS_JSON because this
+  # entry is about the file every reader shares, not about which of them is
+  # asking. `settings.expand` walks all three rungs for whichever variable a
+  # declaration names, so the private one still wins where a machine sets it.
   - name: repos.json
     path: $REPOS_JSON
     description: The repo registry the cross-repo tools read, hand-edited and never generated

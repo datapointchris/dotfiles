@@ -19,6 +19,8 @@ import dataclasses as dc
 from pathlib import Path
 
 from dotfiles import envfile
+from dotfiles import settings
+from dotfiles.machine import Requirement
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -58,6 +60,13 @@ class Observed:
     value drift anywhere and call the machine converged.
     """
 
+    config_problem: str = ''
+    """Why this tool's own config.toml could not be read, empty when it could.
+
+    Defaulted where `generated` is not, and for the opposite reason: empty is the
+    honest reading of a machine with no config file at all, which is most of them.
+    """
+
     @property
     def summary(self) -> str:
         return '~/.env matches the manifest and the declared flags'
@@ -75,6 +84,7 @@ class EnvResource:
             values=envfile.read(path),
             present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present),
             generated=envfile.read_generated(path),
+            config_problem=settings.read_config().problem,
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -94,6 +104,7 @@ class EnvResource:
         changes: list[Change] = []
         changes.extend(_identity(machine, observed))
         changes.extend(_flags(machine, observed))
+        changes.extend(_config(observed))
         changes.extend(_requirements(machine, observed))
         changes.extend(_undeclared(machine, observed))
         return tuple(changes)
@@ -190,6 +201,30 @@ def _flags(machine, observed: Observed) -> list[Change]:
     return changes
 
 
+def _config(observed: Observed) -> list[Change]:
+    """This tool's own config.toml, when it exists and cannot be parsed.
+
+    Reported before the register below it, because it is the reason every entry
+    the file was supposed to answer is about to report missing. Without this the
+    machine gets N findings naming the values and none naming the broken file
+    that lost them, and the advice on each is to write the answer somewhere it
+    already is.
+    """
+    if not observed.config_problem:
+        return []
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            str(settings.config_file()),
+            Verdict.STALE,
+            detail=f'cannot be read, so it answers nothing — {observed.config_problem}',
+            repair=Repair.BY_HAND,
+            advice='fix the TOML, or delete the file to fall back to ~/.env alone',
+        )
+    ]
+
+
 def _requirements(machine, observed: Observed) -> list[Change]:
     """Values and files the repo declares and deliberately never contains.
 
@@ -197,35 +232,71 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     wrong path at the point of use rather than failing anywhere you would look.
     A required file is restored by safekeep, so it is legitimately absent between
     an install and the restore — reported, never written.
+
+    A missing file gets one of two findings, and conflating them is what made the
+    scheduled check's advice wrong. *Nothing names its location* is a machine that
+    never answered, and the remedy is to answer; *absent at a named path* is a
+    machine that answered and has no file there, and the remedy is a restore. Only
+    the second is what safekeep can fix.
     """
     changes = []
     for entry in machine.required_values:
-        if not observed.values.get(entry.name):
-            changes.append(
-                Change(
-                    NAME,
-                    Stage.ENVIRONMENT,
-                    entry.name,
-                    Verdict.MISSING,
-                    detail=f'not set — {entry.description or "a machine-local value"}',
-                    repair=Repair.BY_HAND,
-                    advice=f'set it below the marker in {observed.path}',
-                )
+        if observed.values.get(entry.name) or settings.resolve(entry.name):
+            continue
+        changes.append(
+            Change(
+                NAME,
+                Stage.ENVIRONMENT,
+                entry.name,
+                Verdict.MISSING,
+                detail=f'not set — {entry.description or "a machine-local value"}',
+                repair=Repair.BY_HAND,
+                advice=settings.where_to_name(entry.name, observed.path),
             )
+        )
     for entry in machine.required_files:
-        if entry.path not in observed.present_files:
+        if entry.path in observed.present_files:
+            continue
+        description = entry.description or 'a machine-local file'
+        if unnamed := settings.unresolved(entry.path):
             changes.append(
                 Change(
                     NAME,
                     Stage.ENVIRONMENT,
                     entry.path,
                     Verdict.MISSING,
-                    detail=f'absent — {entry.description or "a machine-local file"}',
+                    detail=f'nothing names its location — {description}',
                     repair=Repair.BY_HAND,
-                    advice=entry.restore or RESTORE,
+                    advice=settings.where_to_name(unnamed[0], observed.path),
                 )
             )
+            continue
+        changes.append(
+            Change(
+                NAME,
+                Stage.ENVIRONMENT,
+                entry.path,
+                Verdict.MISSING,
+                detail=f'absent{_where_it_resolved(entry)} — {description}',
+                repair=Repair.BY_HAND,
+                advice=entry.restore or RESTORE,
+            )
+        )
     return changes
+
+
+def _where_it_resolved(entry: Requirement) -> str:
+    """The path a variable-declared entry resolved to, and the rung that said so.
+
+    Only where the declaration does not already say it: an entry naming a literal
+    path reads worse with its own `~` expanded back at it. For one naming a
+    variable, the resolved path is the whole finding — a registry reported absent
+    is a different problem depending on whether the path came from this machine's
+    shells or from its config file.
+    """
+    if not (source := settings.path_source(entry.path)):
+        return ''
+    return f' at {entry.resolved_path} (from {source})'
 
 
 def _undeclared(machine, observed: Observed) -> list[Change]:

@@ -40,7 +40,7 @@ def _repo_root() -> Path:
     return walked if _looks_like_repo(walked) else (Path.home() / 'dotfiles').resolve()
 
 
-def _xdg_home(variable: str, fallback: str) -> Path:
+def xdg_home(variable: str, fallback: str) -> Path:
     declared = os.environ.get(variable)
     return Path(declared).expanduser().resolve() if declared else (Path.home() / fallback).resolve()
 
@@ -61,7 +61,7 @@ FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 # Run records already carry the machine in the filename. The three below did not,
 # and sharing the directory without them would have four machines overwriting one
 # another's "what happened last" and one box's nudge reporting another's failure.
-STATE_HOME = _xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
+STATE_HOME = xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
 RUNS_DIR = STATE_HOME / 'runs'
 
 
@@ -103,7 +103,7 @@ def cache_home() -> Path:
     that already means that — the same reasoning as `evidence.uv_tool_dir`. A
     constant bound at import cannot be redirected without patching this module.
     """
-    return _xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
+    return xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
 
 
 CACHE_HOME = cache_home()

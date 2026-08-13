@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
-import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -31,6 +30,7 @@ import yaml
 from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import paths
+from dotfiles import settings
 from dotfiles.catalog import DeclarationIssue
 
 
@@ -184,13 +184,18 @@ class Requirement:
         which the repo must never carry. Read as a literal, `check` reports a missing
         file named `$REPOS_JSON`, which is the failure this exists to avoid.
 
+        Through `settings.expand` rather than `os.path.expandvars`, which reads the
+        process environment alone: the scheduled check runs from a unit that has
+        sourced no profile, so every variable `~/.env` exports is unset there and this
+        reported the registry missing on a machine holding it.
+
         Only for *this* machine, and only where the filesystem is actually touched.
         Everything that shows the path shows the declaration instead: a listing and the
         ~/.env comment block are more useful naming the variable, and the safekeep block
         is generated for a named machine and pasted on it — expanding there would write
         the generating machine's answer into another machine's config.
         """
-        return os.path.expanduser(os.path.expandvars(self.path))
+        return settings.expand(self.path)
 
     @property
     def is_present(self) -> bool:

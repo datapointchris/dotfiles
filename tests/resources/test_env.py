@@ -22,6 +22,7 @@ import yaml
 
 from dotfiles import envfile
 from dotfiles import machine as machines
+from dotfiles import settings
 from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -471,6 +472,136 @@ def test_a_required_file_whose_variable_is_empty_is_reported_missing(tmp_path: P
 
     found = [change for change in changes(tmp_path, flags=declared) if change.verdict is Verdict.MISSING]
     assert found, 'an empty variable must report the file missing, not converged'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Answering the register from this tool's own config file
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The scheduled check is a systemd user unit and a LaunchAgent, and neither
+# sources a profile. Every variable ~/.env exports is unset there, so the
+# registry entry resolved to the literal `$REPOS_JSON`, and four times a day the
+# timer reported this machine's repo registry missing and advised restoring a
+# file that was on disk. These pin the rung that survives into that unit, and
+# the split between the two reports that were previously one.
+
+REGISTRY_VALUE: dict[str, Any] = {**FLAGS, 'required': [{'name': 'REPOS_JSON', 'description': 'the registry', 'machine': 'box'}]}
+REGISTRY_FILE: dict[str, Any] = {**FLAGS, 'required_files': [{'name': 'repos.json', 'path': '$REPOS_JSON', 'machine': 'box'}]}
+
+
+@pytest.fixture
+def unshelled(tmp_path: Path, monkeypatch) -> Path:
+    """A run with no shell behind it, and a scratch config home to answer in.
+
+    Both variables are dropped rather than merely left alone: the suite runs from
+    an interactive shell that exports $REPOS_JSON, so without this every test
+    below would pass on the machine's own answer.
+    """
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg'))
+    monkeypatch.delenv('DOTFILES_REPOS_JSON', raising=False)
+    monkeypatch.delenv('REPOS_JSON', raising=False)
+    return tmp_path / 'xdg'
+
+
+def name_registry(config_home: Path, registry: Path) -> None:
+    config = config_home / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(f'repos_file = "{registry}"\n')
+
+
+def test_a_required_file_is_found_through_the_config_file_with_no_variable_set(tmp_path: Path, unshelled: Path) -> None:
+    """The bug, at the resource: a unit inheriting no environment still resolves
+    the declaration, because the config file is a rung a shell is not needed for."""
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    name_registry(unshelled, registry)
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    assert changes(tmp_path, flags=REGISTRY_FILE) == ()
+
+
+def test_a_required_value_is_answered_by_the_config_file(tmp_path: Path, unshelled: Path) -> None:
+    registry = tmp_path / 'repos.json'
+    name_registry(unshelled, registry)
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    assert changes(tmp_path, flags=REGISTRY_VALUE) == ()
+
+
+def test_a_required_value_nothing_answers_is_advised_at_every_rung(tmp_path: Path, unshelled: Path) -> None:
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == 'REPOS_JSON']
+
+    assert found[0].verdict is Verdict.MISSING
+    assert 'DOTFILES_REPOS_JSON' in found[0].advice
+    assert str(settings.config_file()) in found[0].advice
+
+
+def test_a_registry_nothing_names_is_not_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
+    """The wrong half of the old report. Nothing named the file, so there is no path
+    for safekeep to restore to and the remedy is to name one."""
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
+
+    assert found[0].advice != env_resource.RESTORE
+    assert str(settings.config_file()) in found[0].advice
+
+
+def test_a_registry_named_but_absent_is_still_advised_as_a_restore(tmp_path: Path, unshelled: Path) -> None:
+    """The right half. The machine answered and has no file there, which is exactly
+    the state between an install and safekeep's restore."""
+    name_registry(unshelled, tmp_path / 'gone.json')
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
+
+    assert found[0].advice == env_resource.RESTORE
+
+
+def test_a_named_but_absent_registry_reports_the_path_and_the_rung(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
+    """A registry reported absent is a different problem depending on which rung
+    chose the path, so the finding carries both."""
+    monkeypatch.setenv('REPOS_JSON', str(tmp_path / 'gone.json'))
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_FILE) if change.verdict is Verdict.MISSING]
+
+    assert str(tmp_path / 'gone.json') in found[0].detail
+    assert '$REPOS_JSON' in found[0].detail
+
+
+def test_the_private_variable_wins_over_the_shared_one_in_the_register(tmp_path: Path, unshelled: Path, monkeypatch) -> None:
+    private = tmp_path / 'private.json'
+    private.write_text('{"repos": []}\n')
+    monkeypatch.setenv('REPOS_JSON', str(tmp_path / 'gone.json'))
+    monkeypatch.setenv('DOTFILES_REPOS_JSON', str(private))
+    live = session(tmp_path, MANIFEST, REGISTRY_FILE)
+    envfile.write(live.env_file, live.machine)
+
+    assert changes(tmp_path, flags=REGISTRY_FILE) == ()
+
+
+def test_a_config_file_that_cannot_be_parsed_reports_itself(tmp_path: Path, unshelled: Path) -> None:
+    """Without this the machine gets one finding per value the file was meant to
+    answer, and none naming the broken file that lost them."""
+    config = unshelled / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('repos_file = "unterminated\n')
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == str(settings.config_file())]
+
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].repair is Repair.BY_HAND
 
 
 # ─────────────────────────────────────────────────────────────────────────────
