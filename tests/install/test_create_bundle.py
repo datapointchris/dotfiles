@@ -21,6 +21,7 @@ from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import bundle as bundle_manifest
 from dotfiles.providers import cargo
+from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.resolve import DesiredItem
@@ -304,6 +305,116 @@ class TestFailureDetail:
     def test_blank_lines_do_not_consume_the_budget(self):
         detail = create_bundle.tail_lines('cause\n\n\n\n\n', limit=2)
         assert detail == 'cause'
+
+
+def vendor(**fields) -> catalog.CustomInstaller:
+    return catalog.CustomInstaller.from_mapping({'description': 'a tool that ships itself', 'bundle_install_script': True, **fields})
+
+
+class TestInstallScriptVersions:
+    """A script row records the version its script installs, or records nothing.
+
+    It recorded the literal `latest`, which reads back through
+    `ghrelease.bundle_version` into a tag comparison — so offline, where the
+    bundle *is* the upstream, every one of these rows asserted that `latest` was
+    the newest release and then failed to parse it. Unmeasurable dressed as
+    measured, which is the one answer `currency_of` exists to refuse.
+    """
+
+    def stage(self, tmp_path, monkeypatch, entries, latest=None, uv_version='0.9.7'):
+        """Stage the script rows for some entries, and hand back the manifest."""
+        staging = tmp_path / 'installers'
+        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64')
+
+        monkeypatch.setattr(create_bundle, 'download', lambda url, destination: destination.write_text('#!/bin/sh\n'))
+        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: (latest or {})[repo])
+
+        items = tuple(planned(entry, 'custom_installers') for entry in entries)
+        create_bundle.add_install_scripts(bundle, items, uv_version)
+        bundle.write_metadata()
+
+        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        return bundle
+
+    def test_the_version_is_what_the_repo_released_not_the_tag_pinning_the_script(self, tmp_path, monkeypatch):
+        """`install_url` pins the *script*, and every one of these scripts then clones
+        its repo and moves to the newest tag — so the tool the bundle delivers is
+        whatever upstream released, and that is what the row has to say."""
+        font = vendor(
+            name='font', repo='datapointchris/font', install_url='https://raw.githubusercontent.com/datapointchris/font/v4.0.0/install.sh'
+        )
+        self.stage(tmp_path, monkeypatch, [font], latest={'datapointchris/font': 'v4.1.0'})
+
+        staged = bundle_manifest.staged('font', 'script')
+
+        assert staged is not None
+        assert staged.version == 'v4.1.0'
+        assert staged.filename == 'font-install.sh'
+
+    def test_the_provider_reads_the_version_back(self, tmp_path, monkeypatch):
+        """The round trip that matters: what the bundler wrote is what an offline run
+        compares an installed tool against."""
+        theme = vendor(name='theme', repo='datapointchris/theme', install_url='https://example.invalid/theme/install.sh')
+        self.stage(tmp_path, monkeypatch, [theme], latest={'datapointchris/theme': 'v6.5.0'})
+
+        assert ghrelease.bundle_version('theme') == 'v6.5.0'
+
+    def test_a_release_tag_prefix_is_stripped_as_it_is_for_a_release_binary(self, tmp_path, monkeypatch):
+        """`add_github_releases` records the tag without its prefix, and a script row
+        is read back by the same function, so it cannot spell the version differently."""
+        cli = vendor(name='cli', repo='owner/monorepo', release_tag_prefix='cli/', install_url='https://example.invalid/cli/install.sh')
+        self.stage(tmp_path, monkeypatch, [cli], latest={'owner/monorepo': 'cli/v0.9.0'})
+
+        assert ghrelease.bundle_version('cli') == 'v0.9.0'
+
+    def test_an_entry_naming_no_repo_records_no_version_at_all(self, tmp_path, monkeypatch):
+        """claude.ai serves one unversioned script and the entry names no repo, so
+        nothing recorded the fact and the field is absent.
+
+        Absent is the honest answer: `bundle_version` reads it as None, and an
+        offline row then says the bundle carries no version for this tool instead
+        of asserting a release nobody published.
+        """
+        claude = vendor(name='claude-code', command='claude', install_url='https://claude.ai/install.sh')
+        self.stage(tmp_path, monkeypatch, [claude])
+
+        staged = bundle_manifest.staged('claude-code', 'script')
+
+        assert staged is not None
+        assert staged.version == ''
+        assert ghrelease.bundle_version('claude-code') is None
+
+    def test_the_uv_row_carries_the_uv_the_bundle_staged(self, tmp_path, monkeypatch):
+        """astral.sh serves one unversioned script that installs the newest uv, and
+        `add_uv` already resolved which one that is. Asking again would let the two
+        rows describing one uv disagree."""
+        self.stage(tmp_path, monkeypatch, [], uv_version='0.9.7')
+
+        staged = bundle_manifest.staged('uv', 'script')
+
+        assert staged is not None
+        assert staged.version == '0.9.7'
+
+    def test_no_row_says_latest(self, tmp_path, monkeypatch):
+        """The regression itself. `latest` parses as neither a version nor an absence,
+        which is how it survived: `versions.parse` answers None and the row reports a
+        tool unmeasurable while claiming to have measured it."""
+        entries = [
+            vendor(name='font', repo='datapointchris/font', install_url='https://example.invalid/font/install.sh'),
+            vendor(name='claude-code', command='claude', install_url='https://claude.ai/install.sh'),
+        ]
+        bundle = self.stage(tmp_path, monkeypatch, entries, latest={'datapointchris/font': 'v4.1.0'})
+
+        assert [row for row in bundle.entries if 'latest' in row.split('|')] == []
+
+    def test_an_entry_that_does_not_opt_in_stages_nothing(self, tmp_path, monkeypatch):
+        """`bundle_install_script` is the opt-in, and an entry without it must not be
+        asked for a version either — awscli declares a repo it publishes no release
+        for, and resolving one would fail a build over a script nobody staged."""
+        awscli = catalog.CustomInstaller.from_mapping({'name': 'awscli', 'repo': 'aws/aws-cli', 'description': 'aws'})
+        bundle = self.stage(tmp_path, monkeypatch, [awscli])
+
+        assert [row for row in bundle.entries if row.startswith('script|awscli|')] == []
 
 
 class TestBundleRoundTrip:

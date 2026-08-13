@@ -710,12 +710,17 @@ def declared_closure() -> list[tuple[str, str]]:
     return closure
 
 
-def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
+def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
     """The uv binary, which install.sh copies onto PATH before anything else.
 
     The bundle carries the binary rather than the installer script every other
     bootstrap uses: astral.sh is unreachable from the network this exists for,
     and a script that downloads uv is no more use there than no script at all.
+
+    Returns the version staged, which is also what the uv install script beside it
+    installs — astral.sh serves one unversioned script that fetches the newest
+    release. Resolved once and handed on rather than asked for twice, so the two
+    rows describing one uv cannot disagree about which one this bundle is.
     """
     log.info('Downloading uv...')
     version = fetch_latest_version(UV_REPO)
@@ -738,6 +743,7 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
     (bundle.bin / 'uv').chmod(0o755)
     archive.unlink()
     bundle.record('uv', 'uv', version, 'uv')
+    return version
 
 
 def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
@@ -775,7 +781,32 @@ def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
             bundle.record('wheel', name, version, file['filename'])
 
 
-def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
+def version_the_script_installs(entry: catalog.CustomInstaller) -> str:
+    """The tool version a staged install script produces, or '' where nothing says.
+
+    Not the tag in `install_url`, which pins the *script*: every one of these
+    clones its repo and moves to the newest tag, so what running it installs is
+    whatever that repo has released. Asked of the release API, which is how every
+    other category here resolves what it stages.
+
+    An entry naming no repo has nothing to ask — claude.ai serves one unversioned
+    script — and the field is then absent rather than filled with a word. `latest`
+    stood here, and `ghrelease.bundle_version` hands whatever it finds to a tag
+    comparison, so offline the row read as a release nobody published.
+
+    Info rather than a warning for the repo-less case, because it is the permanent
+    and correct state of a vendor script rather than a fault. A warning that fires
+    on every build for something no commit can fix is what teaches a reader to skip
+    the warnings that mean something. `_has_currency` already gates on `repo`, so
+    nothing downstream ever asks these for a verdict.
+    """
+    if not entry.repo:
+        log.info('  %s names no repo, so the bundle records no version for it', entry.name)
+        return ''
+    return fetch_latest_version(entry.repo).removeprefix(entry.release_tag_prefix)
+
+
+def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_version: str) -> None:
     """Install scripts, from two sources.
 
     uv is named here rather than declared, because it is bootstrap infrastructure
@@ -790,7 +821,9 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
     stage.
 
     These are never cached: every one is served from an unversioned URL, so a
-    URL-keyed hit would pin whatever was current the first time.
+    URL-keyed hit would pin whatever was current the first time. Which is also why
+    the version on the row cannot come from the URL, and `uv_version` arrives from
+    `add_uv` rather than being fetched a second time.
     """
     log.info('Downloading install scripts...')
 
@@ -803,11 +836,11 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
             raise BundleError(f"packages.yml custom_installers entry '{entry.name}' opts into bundling but declares no install_url")
         log.info('  %s...', entry.name)
         download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
-        bundle.record('script', entry.name, 'latest', f'{entry.name}-install.sh')
+        bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
 
     log.info('  uv...')
     download(toolchain.UV_INSTALL_URL, bundle.scripts / 'uv-install.sh')
-    bundle.record('script', 'uv', 'latest', 'uv-install.sh')
+    bundle.record('script', 'uv', uv_version, 'uv-install.sh')
 
 
 def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None = None) -> Path:
@@ -849,12 +882,12 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / 'installers', os_name, arch)
 
-        add_uv(bundle, cache)
+        uv_version = add_uv(bundle, cache)
         add_wheels(bundle, cache)
         add_github_releases(bundle, cache, plan.for_section('github_releases'))
         add_go_binaries(bundle, cache, plan.for_section('go_tools'))
         add_cargo_binaries(bundle, cache, plan.for_section('cargo_packages'))
-        add_install_scripts(bundle, plan.for_section('custom_installers'))
+        add_install_scripts(bundle, plan.for_section('custom_installers'), uv_version)
         bundle.write_metadata()
 
         log.info('Creating tarball...')
