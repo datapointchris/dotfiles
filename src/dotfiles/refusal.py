@@ -25,7 +25,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import click
 import typer
 from typer.core import TyperGroup
 
@@ -84,13 +83,22 @@ class Boundary(TyperGroup):
     one, so a single handler here sees every command's failure. Sub-apps
     therefore need no `cls=` of their own, and a new one cannot forget it.
 
-    Deliberately not a `try` around `app()` in the console-script entry point.
-    That is outside click's context, so `standalone_mode` has already converted
-    the exception into output and a status by the time it would be seen — and it
-    would miss anything raised while a `--help` or a callback is being processed.
+    **Inside click rather than around `app()` in the console script.** A wrapper
+    there does catch a `Refusal` — measured, `standalone_mode` re-raises anything
+    that is not a click exception — but `typer.testing.CliRunner` never calls the
+    entry point. Every test asserting an exit code invokes the app directly, so a
+    handler outside click is a handler the suite cannot reach, on the one branch
+    where being wrong is silent. `declaration.cli` is the wrapper form, and it
+    exists only because that door has no click group at all.
+
+    `ctx` is untyped because its type is whichever click the installed typer
+    carries. typer 0.24 subclasses the real `click.Context`; 0.27 vendors its own
+    and ships no `click` at all. Naming either narrows the supertype's parameter
+    on the version that has the other, and importing `click` to name it is the
+    dependency this file was changed to stop having.
     """
 
-    def invoke(self, ctx: click.Context) -> Any:
+    def invoke(self, ctx: Any) -> Any:
         try:
             return super().invoke(ctx)
         except Refusal as refused:

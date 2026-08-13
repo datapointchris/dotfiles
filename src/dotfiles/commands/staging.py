@@ -17,7 +17,6 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-import click
 import typer
 
 from dotfiles import coordinates as axes
@@ -45,6 +44,14 @@ windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL 
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
+ArchOption = typer.Option(None, '--arch', help='CPU of the machine that will install this bundle')
+"""Module scope because the annotation is an enum.
+
+B008 exempts a call in a default only where the annotation is an immutable
+builtin, which `str` and `bool` are and `axes.Arch` cannot be shown to be. The
+singleton is what its message asks for and what every other option here already
+is."""
+
 
 def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool) -> str:
     """The value a flag carries, or the one a person points at in a list.
@@ -61,9 +68,9 @@ def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: 
 
     A value that was passed is returned unexamined. Whether it names something
     real is the caller's question and is answered where that question already
-    has one sentence — `machines.manifest_path` for a machine, click's `Choice`
-    for an arch. Checking here as well is how one tool comes to answer "no such
-    machine" two different ways.
+    has one sentence — `machines.manifest_path` for a machine, the `axes.Arch`
+    annotation for a CPU. Checking here as well is how one tool comes to answer
+    "no such machine" two different ways.
     """
     if value is not None:
         return value
@@ -72,19 +79,20 @@ def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: 
 
     for index, option in enumerate(options, start=1):
         err_console.print(f'  [bold]{index}[/]  {option}')
-    picked = typer.prompt(question, err=True, type=click.IntRange(1, len(options)))
+    picked = typer.prompt(question, err=True, type=int)
+    if not 1 <= picked <= len(options):
+        raise typer.BadParameter(f'{flag}: pick 1 to {len(options)}, or pass the flag')
     return options[picked - 1]
 
 
 @bundle_app.command('create')
 def create(
     machine: str = typer.Option(None, '--machine', help='Machine manifest to build for'),
-    arch: str = typer.Option(
-        None,
-        '--arch',
-        click_type=click.Choice([str(value) for value in axes.Arch]),
-        help='CPU of the machine that will install this bundle',
-    ),
+    # Typed as the enum rather than narrowed by a `click.Choice`, which is what it
+    # was: typer renders `<x86_64|arm64>` in the help and rejects anything else
+    # with exit 2 from the enum alone, and importing click to say the same thing
+    # is a direct dependency on a package typer 0.27 stopped having.
+    arch: axes.Arch = ArchOption,
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
     no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
@@ -112,7 +120,8 @@ def create(
     from dotfiles import create_bundle
 
     chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
-    chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU", no_input=no_input)
+    offered = [str(value) for value in axes.Arch]
+    chosen_arch = _pointed_at(str(arch) if arch else None, '--arch', offered, "That machine's CPU", no_input=no_input)
     # The one sentence this tool has for a name nothing declares, rather than a
     # second one worded here. It names where it looked and lists what exists, and
     # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
