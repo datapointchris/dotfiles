@@ -1,8 +1,8 @@
 # Hyprland
 
 The Arch desktop's compositor. Config lives in `configs/display/wayland/.config/hypr/`
-and deploys with the rest of that coordinate overlay — Hyprland discovers it by path
-and cannot branch on a feature flag, which is why it is an overlay rather than an
+and deploys with the rest of that coordinate variant — Hyprland discovers it by path
+and cannot branch on a feature flag, which is why it is a variant rather than an
 entry in `install/flags.yml`.
 
 `hyprland.conf` holds only the environment variables and one `source` line per

@@ -14,7 +14,7 @@ and collapsing the two states stops macOS installing casks at all.
 **What the machine is.** `MACHINE` selects the manifest and everything else is
 derived from it — the platform, the coordinates, every flag's value. Nothing is
 detected, because a fresh machine has no `~/.env` to read and guessing instead is
-how a wsl manifest once deployed the linux shell overlay for a whole install.
+how a wsl manifest once deployed the linux shell layer for a whole install.
 """
 
 from __future__ import annotations

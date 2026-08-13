@@ -282,7 +282,7 @@ def test_the_scan_reaches_the_deepest_deployed_darwin_path(tmp_path):
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
 
 
-def test_the_darwin_overlay_still_deploys_that_path():
+def test_the_darwin_variant_still_deploys_that_path():
     """The fixture above is a copy of a path in the repo, and a copy drifts."""
     deployed = paths.REPO_ROOT / 'configs' / 'os' / 'darwin' / DARWIN_DEPLOYED_EXTENSION
 

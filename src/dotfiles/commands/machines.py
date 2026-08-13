@@ -1,7 +1,8 @@
 """The declaration side: what a machine resolves to, before anything checks it.
 
 `machines show` is the resolve command — the one `machine-axes.md` § 8 insists
-must exist *before* any overlay layering, or the system becomes unauditable. It
+must exist *before* anything varies per coordinate, or the system becomes
+unauditable. It
 renders the whole `Plan`: the coordinates, the flags, and every item with the
 selector that pulled it in. Nothing about an install is decided outside that
 object, so what this prints is what a run will do.

@@ -195,8 +195,8 @@ def test_a_platform_bundle_and_direct_coordinates_reach_the_same_shape(sandbox: 
 
 
 def test_every_item_names_the_selector_that_pulled_it_in(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The property that makes this an audit rather than a listing: under overlays,
-    "what does this machine get" stops being answerable by reading one directory."""
+    """The property that makes this an audit rather than a listing: under coordinate
+    directories, "what does this machine get" stops being answerable by reading one place."""
     sandbox.declare(packages=TWO_OWNERS, manifest=DECLARES_BOTH)
 
     selectors = {item['name']: item['selector'] for item in cli('machines', 'show', '--json').document['items']}
@@ -402,7 +402,7 @@ SOUND = [
     ),
     pytest.param(
         Declared(files={GITCONFIG: '[user]\n', COMMON: INCLUDES_FLEET}),
-        id='an-overlay-gitconfig-an-include-names',
+        id='a-variant-gitconfig-an-include-names',
     ),
     pytest.param(
         Declared(files={'configs/trust/fleet/.config/dotfiles/config.yml': 'repos_registry: ~/dev/repos.json\n'}),
@@ -435,8 +435,8 @@ WARNED = [
     pytest.param(
         Declared(files={COMMON: '[include]\n\tpath = ~/.config/git/gone.gitconfig\n'}),
         'gitconfig',
-        "includes 'gone.gitconfig', which no overlay ships",
-        id='an-include-naming-an-overlay-that-was-removed',
+        "includes 'gone.gitconfig', which no variant ships",
+        id='an-include-naming-a-variant-that-was-removed',
     ),
 ]
 
@@ -522,20 +522,20 @@ BROKEN = [
     pytest.param(
         Declared(files={GITCONFIG: '[user]\n'}),
         'gitconfig',
-        'common.gitconfig is missing, so no overlay gitconfig is reachable',
-        id='an-overlay-with-nothing-to-include-it',
+        'common.gitconfig is missing, so no variant gitconfig is reachable',
+        id='a-variant-with-nothing-to-include-it',
     ),
     pytest.param(
         Declared(files={GITCONFIG: '[user]\n', COMMON: '[core]\n'}),
         'gitconfig',
         'is deployed but no include names it',
-        id='an-overlay-no-include-names',
+        id='a-variant-no-include-names',
     ),
     pytest.param(
         Declared(files={'configs/trust/fleet/.config/git/trust.gitconfig': '[user]\n', COMMON: INCLUDES_FLEET}),
         'gitconfig',
         "the trust value here is 'fleet', so it must be fleet.gitconfig",
-        id='an-overlay-named-for-its-axis-instead-of-its-value',
+        id='a-variant-named-for-its-axis-instead-of-its-value',
     ),
     pytest.param(
         Declared(files={'configs/common/.config/dotfiles/config.yml': 'repos_registry: ~/dev/repos.json\n'}),
@@ -551,7 +551,7 @@ BROKEN = [
             }
         ),
         'registry',
-        'the fleet overlay names more than one registry',
+        'the fleet variant names more than one registry',
         id='two-copies-of-one-registry-path-that-disagree',
     ),
 ]

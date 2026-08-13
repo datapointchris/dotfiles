@@ -137,7 +137,7 @@ def test_a_fleet_machine_is_told_to_delete_rather_than_to_rescue(
 ) -> None:
     """The repo already ships that address in personal.gitconfig, so there is
     nothing to preserve. Naming a rescue file here sent one Mac looking for a
-    destination its trust overlay never includes."""
+    destination its trust variant never includes."""
     home_gitconfig.write_text(IDENTITY)
 
     deploy._ensure_git_config_entry(FLEET)

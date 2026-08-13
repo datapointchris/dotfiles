@@ -40,7 +40,7 @@ rare enough that it is never what someone notices about their machine."""
 
 INSTALLED = Path.home() / '.local' / 'bin' / 'dotfiles'
 """Where `uv tool install` puts the console script — `uv tool dir --bin`, the same
-directory `symlinks/core.py` names for the apps layer."""
+directory `symlinks/core.py` names for the apps tree."""
 
 
 def _executable() -> str:
@@ -225,7 +225,7 @@ def _is_darwin() -> bool:
 
     Everything else in the resolver takes the OS from the manifest, because a
     fresh machine has no `~/.env` and guessing is how a wsl manifest once
-    deployed the linux overlay. Here the question is not "what kind of machine is
+    deployed the linux shell layer. Here the question is not "what kind of machine is
     this" — the row is already narrowed to one — but "which init system is on the
     box", and launchd is not something a manifest can be wrong about.
     """

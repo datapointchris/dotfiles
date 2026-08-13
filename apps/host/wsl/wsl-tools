@@ -10,7 +10,7 @@ set -euo pipefail
 # name that lists its own verbs is findable; a family of them is a thing you go
 # looking for.
 #
-# One *file*, too. The shell overlay at ~/.local/shell/host/wsl is sourced by
+# One *file*, too. The shell layer at ~/.local/shell/host/wsl is sourced by
 # every interactive shell, so an implementation library there would put `clean`
 # and `report` in the shell's namespace and pay for parsing them at every prompt.
 

@@ -85,14 +85,20 @@ class Coordinates:
         return INSTALLER_FAMILIES[self.package_manager]
 
     @property
-    def overlays(self) -> tuple[str, ...]:
-        """The `<axis>/<value>` directories this machine loads, in axis order.
+    def directories(self) -> tuple[str, ...]:
+        """The `<axis>/<value>` directories this machine selects, in axis order.
 
         One per axis, always — a machine is at exactly one point on each. Which
         of them exist on disk is a separate question, and most do not: an axis
         earns a directory only when something differs along it.
+
+        Named for what it is rather than for what a tree does with it, because
+        the three trees do different things. `shell/` **layers** them: every one
+        that exists is sourced, additively. `configs/` and `apps/` hold
+        **variants**: one file wins and nothing merges. The same tuple feeds
+        both, so it can be neither word.
         """
-        return tuple(f'{directory}/{getattr(self, axis)}' for axis, directory in OVERLAY_DIRS.items())
+        return tuple(f'{directory}/{getattr(self, axis)}' for axis, directory in AXIS_DIRS.items())
 
     def as_dict(self) -> dict[str, str]:
         return {field.name: str(getattr(self, field.name)) for field in dc.fields(self)}
@@ -144,7 +150,7 @@ def platform_label(declared: Coordinates) -> str:
 
     Keyed on the package manager, with apt split by host, which is the whole of
     what the four labels distinguish. It selects nothing: what reads a label is a
-    run's header and the shell overlays that are still keyed by one.
+    run's header and the shell layers that are still keyed by one.
 
     Derived rather than read off `Machine.platform_label`, because a manifest may
     declare `coordinates:` *instead of* `platform:` and then carries no label to
@@ -172,7 +178,7 @@ AXIS_TYPES: dict[str, type[enum.StrEnum]] = {
 
 AXES = tuple(AXIS_TYPES)
 
-OVERLAY_DIRS: dict[str, str] = {
+AXIS_DIRS: dict[str, str] = {
     'package_manager': 'pkg',
     'os_family': 'os',
     'display_stack': 'display',
@@ -186,19 +192,18 @@ and `apps/`.
 Short rather than the field name, because these appear in every deployed path
 and `package_manager/pacman/.config/…` reads worse than `pkg/pacman/…` for no
 extra information. The mapping is a design constant — six axes, fixed — so it is
-written once here and read everywhere else, including by `.zshrc`, which spells
-the same six pairs to build its source list.
+written once here and read everywhere else.
 """
 
 
-def overlay_names() -> frozenset[str]:
+def directory_names() -> frozenset[str]:
     """Every `<axis>/<value>` directory a tree may legally contain.
 
     The tree validator's whole vocabulary: anything under `configs/`, `shell/` or
     `apps/` that is neither `common` nor one of these is a typo that would
     otherwise deploy to nobody and say nothing.
     """
-    return frozenset(f'{directory}/{value}' for axis, directory in OVERLAY_DIRS.items() for value in AXIS_TYPES[axis])
+    return frozenset(f'{directory}/{value}' for axis, directory in AXIS_DIRS.items() for value in AXIS_TYPES[axis])
 
 
 class Arch(enum.StrEnum):
@@ -242,7 +247,7 @@ def target_for(declared: Coordinates) -> Target:
     The OS is taken from the manifest and the CPU is measured, which is the split
     the two halves are: a fresh machine has no `~/.env` to read its platform from
     and detecting it instead is how a wsl manifest once deployed the linux shell
-    overlay for a whole install — while no manifest anywhere says what processor
+    layer for a whole install — while no manifest anywhere says what processor
     a box has.
     """
     return Target(declared.os_family, detect_arch())
@@ -312,7 +317,7 @@ def disagreements(declared: Coordinates, detected: Detected) -> list[str]:
 
     The declaration always wins — a fresh machine has no `~/.env` and detecting
     the platform instead is how a wsl manifest once deployed the linux shell
-    overlay for a whole install. But a mismatch is worth *reporting*, which
+    layer for a whole install. But a mismatch is worth *reporting*, which
     nothing does today: a manifest saying pacman on an apt box currently installs
     nothing and says nothing.
     """

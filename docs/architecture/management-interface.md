@@ -154,8 +154,8 @@ explicit fetch, and exits 1 when there is something to pull.
 and it also carries secrets and machine-local values that must never be checked in.
 
 `MACHINE` is the chosen one: it names a manifest, and everything else is derived from that
-manifest by the resolver. The coordinates that manifest declares select the overlay
-directories under `configs/`, `shell/` and `apps/`, and none of that reaches this file.
+manifest by the resolver. The coordinates that manifest declares select the
+`<axis>/<value>` directories under `configs/`, `shell/` and `apps/`, and none of that reaches this file.
 `.zshrc` and `.bashrc` glob the deployed tree instead, because the symlink manager already
 put exactly this machine's directories there. Placing this file by
 hand is therefore the whole of the pre-install bootstrap: `session.resolve_machine` reads
@@ -188,7 +188,7 @@ environment still wins for a single shell — `ZSHRC_DEBUG=1 zsh` and
 Flags are for behavior that is present and cheap, where the only question is whether this
 machine wants it. Payload that is expensive to install stays a manifest tool list, and
 config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays
-a coordinate overlay under `configs/`.
+a coordinate variant under `configs/`.
 
 ### Which gates are flags
 

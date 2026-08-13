@@ -28,14 +28,14 @@ def test_the_bundles_are_distinct_points() -> None:
     assert len({tuple(bundle.as_dict().items()) for bundle in axes.PLATFORM_BUNDLES.values()}) == len(axes.PLATFORM_BUNDLES)
 
 
-def test_every_axis_names_an_overlay_directory() -> None:
-    """A machine has a value on every axis, so every axis can carry an overlay.
+def test_every_axis_names_a_directory() -> None:
+    """A machine has a value on every axis, so every axis can carry a directory.
     Missing one here means a coordinate that silently selects nothing."""
-    assert set(axes.OVERLAY_DIRS) == set(axes.AXES)
+    assert set(axes.AXIS_DIRS) == set(axes.AXES)
 
 
-def test_a_machine_loads_one_overlay_per_axis_in_axis_order() -> None:
-    assert axes.PLATFORM_BUNDLES['archlinux'].overlays == (
+def test_a_machine_selects_one_directory_per_axis_in_axis_order() -> None:
+    assert axes.PLATFORM_BUNDLES['archlinux'].directories == (
         'pkg/pacman',
         'os/linux',
         'display/wayland',

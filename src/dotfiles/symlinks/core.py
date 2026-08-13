@@ -229,7 +229,7 @@ def console_script_names(pyproject: Path | None = None) -> set[str]:
     has to be the same either way — the declaration is what reserves the name,
     not the state of the machine.
 
-    `uv tool dir --bin` is ~/.local/bin, the same directory the apps layer links
+    `uv tool dir --bin` is ~/.local/bin, the same directory the apps tree links
     into, so a console script and an apps/ file of the same name are two things
     competing for one path. The declaration wins; linking the other over it would
     replace the executable that is running.
@@ -295,7 +295,7 @@ def is_untouched_skeleton(target_path: Path) -> bool:
 
 def remove_symlinks(
     source_dir: Path,
-    layer: str,
+    origin: str,
     *,
     verbose: bool = False,
     target_dir: Path | None = None,
@@ -309,7 +309,7 @@ def remove_symlinks(
     _target_dir = (target_dir or TARGET_DIR).resolve()
     source_dir = source_dir.resolve()
 
-    err_console.print(f'[blue]Removing {layer} symlinks...[/]')
+    err_console.print(f'[blue]Removing {origin} symlinks...[/]')
     count = 0
 
     for symlink in _find_symlinks(_target_dir):

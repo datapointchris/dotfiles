@@ -5,12 +5,12 @@ than on a machine:
 
 **A directory nobody selects deploys to nobody and says nothing.** `configs/`,
 `shell/` and `apps/` are keyed on coordinates rather than on one `PLATFORM`
-string. Keyed on one string, a misspelled overlay is one of four known values away
+string. Keyed on one string, a misspelled directory is one of four known values away
 from working; keyed on six axes, `configs/display/wayand/` is a plausible typo
 that would silently reach no machine ever.
 
-**Two overlays claiming one target is last-write-wins, silently.** Deployment is
-ordered, so a conflict does not fail — it deploys whichever layer comes later
+**Two variants claiming one target is last-write-wins, silently.** Deployment is
+ordered, so a conflict does not fail — it deploys whichever directory comes later
 and reports success. That is exactly how the git config nearly ended up split
 across `pkg/` and `host/`, with the WSL box getting one of the two at random.
 Checked against every expressible machine rather than the four that exist,
@@ -32,19 +32,19 @@ from dotfiles.symlinks import core
 
 TREES = tuple(name for name, _, _ in symlinks.TREES)
 
-NOT_OVERLAYS = {'common', 'git-bash'}
-"""`common` is every machine's layer. `git-bash` is payload for a different
+NOT_COORDINATES = {'common', 'git-bash'}
+"""`common` is every machine's base. `git-bash` is payload for a different
 computer — `sync-windows-shell.sh` copies it onto the Windows host beside WSL —
-and is deliberately outside the coordinate scheme so that it is visibly not a
-machine overlay."""
+and is deliberately outside the coordinate scheme so that it is visibly not
+something a machine selects."""
 
 
-def overlay_directories(tree: Path) -> set[str]:
+def coordinate_directories(tree: Path) -> set[str]:
     """Every `<axis>/<value>` a tree actually contains, two levels deep."""
     return {
         f'{axis.name}/{value.name}'
         for axis in tree.iterdir()
-        if axis.is_dir() and axis.name not in NOT_OVERLAYS
+        if axis.is_dir() and axis.name not in NOT_COORDINATES
         for value in axis.iterdir()
     }
 
@@ -54,8 +54,8 @@ def test_every_directory_in_a_tree_is_common_or_a_real_coordinate(tree: str) -> 
     root = paths.REPO_ROOT / tree
     top_level = {path.name for path in root.iterdir() if path.is_dir()}
 
-    assert top_level - NOT_OVERLAYS <= set(axes.OVERLAY_DIRS.values())
-    assert overlay_directories(root) <= axes.overlay_names()
+    assert top_level - NOT_COORDINATES <= set(axes.AXIS_DIRS.values())
+    assert coordinate_directories(root) <= axes.directory_names()
 
 
 def every_expressible_machine() -> list[axes.Coordinates]:
@@ -73,9 +73,9 @@ def every_expressible_machine() -> list[axes.Coordinates]:
 
 @functools.cache
 def deployed_paths(source: Path) -> tuple[Path, ...]:
-    """What one layer contributes, relative to its destination.
+    """What one coordinate directory contributes, relative to its destination.
 
-    Cached because `configs/common` is every machine's layer and this runs once
+    Cached because `configs/common` is every machine's base and this runs once
     per expressible machine: walked per case it is the same tree read a hundred
     times over.
     """
@@ -87,11 +87,11 @@ def deployed_paths(source: Path) -> tuple[Path, ...]:
 
 
 @pytest.mark.parametrize('coordinates', every_expressible_machine(), ids=lambda point: '-'.join(point.as_dict().values()))
-def test_no_two_overlays_ever_claim_one_target(coordinates: axes.Coordinates, tmp_path: Path) -> None:
+def test_no_two_variants_ever_claim_one_target(coordinates: axes.Coordinates, tmp_path: Path) -> None:
     claimed: dict[Path, str] = {}
 
-    for source, destination, layer in symlinks.layers(paths.REPO_ROOT, coordinates, tmp_path):
+    for source, destination, origin in symlinks.sources(paths.REPO_ROOT, coordinates, tmp_path):
         for relative in deployed_paths(source):
             target = destination / relative
-            assert target not in claimed, f'{layer} and {claimed[target]} both deploy {target}'
-            claimed[target] = layer
+            assert target not in claimed, f'{origin} and {claimed[target]} both deploy {target}'
+            claimed[target] = origin

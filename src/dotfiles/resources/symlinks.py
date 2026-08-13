@@ -13,7 +13,7 @@ only what differs.
 Two refusals are load-bearing and are carried here unchanged. A target this
 manager did not create is never replaced without `--force`, because the write is
 an unlink and `uv tool install` puts real executables in the same `~/.local/bin`
-the apps layer links into. And a name `[project.scripts]` declares is skipped
+the apps tree links into. And a name `[project.scripts]` declares is skipped
 outright, force or not — the two are competing for one path, the declaration
 wins, and linking over it would replace the executable currently running.
 """
@@ -48,14 +48,20 @@ class Link:
 
     source: Path
     target: Path
-    layer: str
+    origin: str
+    """Which `<tree>/<directory>` declared it — `shell/pkg/pacman`, `configs/common`.
+
+    Not `layer`: only `shell/` layers. For `configs/` and `apps/` this names the
+    variant that won, and there is nothing underneath it.
+    """
+
     root: Path
     """The tree being linked, so `link_ownership` recognises this manager's own
     links when the caller is pointed at a tree that is not the installed repo."""
 
     @property
     def address(self) -> str:
-        return f'{self.layer}/{self.source.relative_to(self.root)}'
+        return f'{self.origin}/{self.source.relative_to(self.root)}'
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -108,8 +114,8 @@ TREES: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ('shell', ('.local', 'shell'), True),
     ('apps', ('.local', 'bin'), False),
 )
-"""The three deployed trees: name, destination below `$HOME`, and whether an
-overlay keeps its `<axis>/<value>` path at the destination.
+"""The three deployed trees: name, destination below `$HOME`, and whether a
+coordinate directory keeps its `<axis>/<value>` path at the destination.
 
 `shell/` nests and the other two flatten. A config has to land where the program
 reading it looks, so `configs/display/wayland/.config/hypr/` deploys to
@@ -129,19 +135,26 @@ purpose and not the way to deploy one file.
 """
 
 
-def layers(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[tuple[Path, Path, str]]:
-    """The declared (source tree, destination, layer) triples, in deployment order.
+def sources(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[tuple[Path, Path, str]]:
+    """The declared (source tree, destination, origin) triples, in deployment order.
 
-    `common` first, then one directory per coordinate axis. Every overlay is
-    optional and most are absent: an axis earns a directory only when something
-    actually differs along it, and implying a directory per axis value is the
-    overlay explosion this design exists to avoid.
+    `common` first, then one directory per coordinate axis. Every coordinate
+    directory is optional and most are absent: an axis earns one only when
+    something actually differs along it, and implying a directory per axis value
+    is the explosion this design exists to avoid.
+
+    One walk for three trees that mean different things by it, which is why
+    nothing here is called a layer or a variant. `nested` is the difference:
+    `shell/` keeps the coordinate in its deployed path and every directory it has
+    is sourced together, so those are layers. `configs/` and `apps/` flatten, so
+    one file arrives at the destination and the others are variants of it that
+    this machine did not select.
     """
     for tree, below, nested in TREES:
         destination = home.joinpath(*below)
         yield repo / tree / 'common', destination, f'{tree}/common'
-        for overlay in coordinates.overlays:
-            yield repo / tree / overlay, destination / overlay if nested else destination, f'{tree}/{overlay}'
+        for directory in coordinates.directories:
+            yield repo / tree / directory, destination / directory if nested else destination, f'{tree}/{directory}'
 
 
 def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...]:
@@ -150,7 +163,7 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
     home = session.home.resolve()
 
     links = []
-    for source_dir, destination, layer in layers(session.repo, coordinates, home):
+    for source_dir, destination, origin in sources(session.repo, coordinates, home):
         if not source_dir.exists():
             continue
         for item in sorted(source_dir.rglob('*')):
@@ -159,7 +172,7 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
             relative = item.relative_to(source_dir)
             if core.should_exclude(relative) or relative.name in reserved:
                 continue
-            links.append(Link(source=item, target=destination / relative, layer=layer, root=source_dir))
+            links.append(Link(source=item, target=destination / relative, origin=origin, root=source_dir))
     return tuple(links)
 
 
@@ -212,7 +225,7 @@ class SymlinksResource:
         foreign between the report and the write is still not overwritten.
 
         An orphan is told apart by what it is addressed by. A declared link's
-        address is `layer/path-in-the-repo`; an orphan has nothing declaring it,
+        address is `origin/path-in-the-repo`; an orphan has nothing declaring it,
         so it is addressed by its absolute path in `$HOME`.
         """
         link = _link_for(session, change)
@@ -289,7 +302,7 @@ def _index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link
 
     `perform` is handed a `Change` and not the `Observation` that produced it, so
     the link has to be found again — and `declared()` is an `rglob` of three
-    source trees per overlay plus a `pyproject.toml` parse. Re-deriving it per
+    source trees per coordinate directory plus a `pyproject.toml` parse. Re-deriving it per
     change meant that walk ran once *per link*, which on a fresh machine is every
     link walking every tree.
 

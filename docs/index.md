@@ -1,8 +1,8 @@
 # Dotfiles
 
 Cross-platform machine configuration for macOS, WSL Ubuntu, and Arch Linux.
-Manifest-driven installation, with shared configs and one overlay per machine
-coordinate on top.
+Manifest-driven installation, with shared configs and one directory per machine
+coordinate beside them.
 
 ## Install
 
@@ -32,8 +32,8 @@ Rebuilding a machine from scratch, including what the automation cannot do:
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` each layer `<axis>/<value>/` overlays over a
-shared `common/` base — `eza -1 -D configs apps shell` shows which exist, and
+`configs/`, `apps/`, and `shell/` each carry `<axis>/<value>/` directories beside
+a shared `common/` base — `eza -1 -D configs apps shell` shows which exist, and
 most do not. An axis earns a directory only where something actually differs
 along it. `MACHINE` is the only value chosen by hand anywhere in the repo; it
 selects a manifest, and the manifest declares the coordinates.

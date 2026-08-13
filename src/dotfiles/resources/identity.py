@@ -2,7 +2,7 @@
 
 Identity is the part that matters most, and it arrives through an arrangement:
 the configuration is a chain of includes — entry point, shared config, one file
-per coordinate axis, then the trust overlay that supplies the address. Two
+per coordinate axis, then the trust variant that supplies the address. Two
 failures in that chain are silent, and both change what a commit carries, which
 is why this resource measures the chain as well as the address at the end of it.
 
@@ -33,7 +33,7 @@ which is what makes this report the machine's default rather than whatever the
 current directory happens to resolve to. That holds because of how the condition
 is spelled and not because the read is global: a `gitdir:` condition *is*
 evaluated by the same command, since the working directory is enough to decide
-it. `hasconfig:remote.*.url` is not, and that is the spelling the trust overlay
+it. `hasconfig:remote.*.url` is not, and that is the spelling the trust variant
 uses.
 
 That answers "does this machine have an identity at all" and nothing about

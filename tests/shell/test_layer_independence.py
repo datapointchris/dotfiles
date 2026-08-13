@@ -56,7 +56,7 @@ def layers_for(name: str) -> list[Path]:
     silently skips and are not a fault.
     """
     machine = machines.load(name)
-    return [REPO / 'shell' / selected for selected in machine.coordinates.overlays if (REPO / 'shell' / selected).is_dir()]
+    return [REPO / 'shell' / selected for selected in machine.coordinates.directories if (REPO / 'shell' / selected).is_dir()]
 
 
 @pytest.mark.parametrize('name', machines.names())

@@ -22,7 +22,8 @@ set -euo pipefail
 # ================================================================
 
 # MACHINE is read, never detected. A detector answered `linux` inside a container
-# modelling WSL, and then failed on an overlay that machine never deploys. It
+# modelling WSL, and then failed on a coordinate directory that machine never
+# deploys. It
 # cannot answer the trust or capacity axes at all, because nothing on a box knows
 # them.
 if [[ -f "$HOME/.env" ]]; then
@@ -37,7 +38,7 @@ fi
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
-# Whether the machine deploys a given `<axis>/<value>` overlay, asked of the
+# Whether the machine deploys a given `<axis>/<value>` layer, asked of the
 # deployed tree. `dotfiles symlinks apply` deploys the directories this machine's
 # coordinates select and prunes the ones it no longer does, so the tree is the
 # resolved answer and no list has to be carried alongside it.
@@ -145,12 +146,12 @@ test_file "error-handling.sh exists" "$HOME/.local/shell/error-handling.sh"
 test_file "colors.sh exists" "$HOME/.local/shell/colors.sh"
 test_file "functions.sh exists" "$HOME/.local/shell/functions.sh"
 test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
-# Every machine has a package manager and every package manager has an
-# overlay, so this is the one coordinate directory that must always deploy.
+# Every machine has a package manager and every package manager has a
+# layer, so this is the one coordinate directory that must always deploy.
 # Empty when none did, which names a path nothing can be at and so reports the
 # absence through the tracker rather than aborting the run.
 PKG=$(layer_value pkg) || PKG=''
-test_file "the ${PKG:-pkg} overlay is deployed" "$SHELL_DIR/pkg/${PKG}/${PKG}.sh"
+test_file "the ${PKG:-pkg} layer is deployed" "$SHELL_DIR/pkg/${PKG}/${PKG}.sh"
 
 # Test they can be sourced
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"
@@ -179,7 +180,7 @@ test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
 # nothing is designed to write. `dotfiles check`'s identity row is what reports a
 # genuinely missing one, on the machines where that is a fault.
 #
-# Gated on the file the fleet trust overlay ships rather than on the layer: no
+# Gated on the file the fleet trust variant ships rather than on the layer: no
 # shell code differs along that axis, so `$SHELL_DIR` has nothing to say about it.
 # The gate and the assertion are different claims — the include being on disk does
 # not mean git resolves an address through the chain.

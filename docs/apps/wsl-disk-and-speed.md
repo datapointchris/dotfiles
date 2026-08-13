@@ -16,7 +16,7 @@ So a bare `wsl-tools` prints the verb list rather than doing any work, and the
 verbs are flat — `status`, `doctor`, `clean`, `compact`, `rebuild`, `bench` —
 because two levels of subcommand is where this would get unwieldy.
 
-It is one *file* as well as one binary. The shell overlay at
+It is one *file* as well as one binary. The shell layer at
 `~/.local/shell/host/wsl` is sourced by every interactive shell, so splitting
 the implementation into a library there would put `clean` and `report` into the
 shell's namespace and pay to parse them at every prompt.

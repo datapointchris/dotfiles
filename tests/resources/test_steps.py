@@ -220,7 +220,7 @@ def windows(tmp_path: Path, home: Path, fake_bin: Path, monkeypatch: pytest.Monk
 
 
 def test_no_windows_filesystem_is_nothing_to_do_rather_than_an_error(home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A container or a plain Linux box running the wsl overlay. Erroring here
+    """A container or a plain Linux box at the wsl host coordinate. Erroring here
     put an [ERROR] in every Docker rehearsal, which is how a real error comes to
     be scrolled past."""
     monkeypatch.setattr(steps, 'WINDOWS_MOUNT', tmp_path / 'absent')

@@ -7,7 +7,7 @@ platform: the staging and `.bashrc` generation are the script's own functions,
 and the loading is a real `bash --norc --noprofile` against the generated tree.
 
 Git Bash is not a machine this repo deploys to and has no coordinates, so the
-files that are overlay-keyed on the fleet arrive as siblings in one directory and
+files that are coordinate-keyed on the fleet arrive as siblings in one directory and
 the load order is a literal list rather than something derived.
 """
 
@@ -23,7 +23,7 @@ from shells import shell_out
 
 SCRIPT = str(REPO / 'install' / 'wsl' / 'sync-windows-shell.sh')
 
-LOCAL_OVERLAY = 'machine-local-marker() { echo local-loaded; }\n'
+LOCAL_FILE = 'machine-local-marker() { echo local-loaded; }\n'
 """Stands in for the deployed ~/.local/shell/local.sh a work box would have. It
 exists nowhere in the repo by design — it holds employer hostnames and the like."""
 
@@ -53,15 +53,15 @@ def shell_files() -> list[str]:
 
 @pytest.fixture
 def windows(tmp_path: Path) -> Windows:
-    overlay = tmp_path / 'local-src.sh'
-    overlay.write_text(LOCAL_OVERLAY)
+    local_file = tmp_path / 'local-src.sh'
+    local_file.write_text(LOCAL_FILE)
     home = tmp_path / 'win-home'
 
     result = sync(
         home,
         'stage_shell_files "$2" >/dev/null; stage_local_file "$2" "$3" >/dev/null; write_bashrc "$4"',
         str(home / '.local' / 'shell'),
-        str(overlay),
+        str(local_file),
         str(home),
     )
     assert result.ok, result.stderr
@@ -136,7 +136,7 @@ def test_a_missing_file_is_skipped_rather_than_fatal(windows: Windows) -> None:
     assert 'No such file' not in result.stderr
 
 
-def test_the_machine_local_overlay_is_staged_and_loads(windows: Windows) -> None:
+def test_the_machine_local_file_is_staged_and_loads(windows: Windows) -> None:
     assert shell_out('bash -n "$1"', str(windows.staged / 'local.sh')).ok
 
     result = load(windows, 'declare -F machine-local-marker >/dev/null || exit 1\nmachine-local-marker\n')
@@ -145,17 +145,17 @@ def test_the_machine_local_overlay_is_staged_and_loads(windows: Windows) -> None
     assert 'local-loaded' in result.stdout
 
 
-def test_the_overlay_loads_after_the_platform_files_it_builds_on(windows: Windows) -> None:
-    """The work box's aws-login reads $winchris, exported by wsl.sh, so the overlay
-    has to be sourced last rather than anywhere in the file list."""
+def test_the_local_file_loads_after_the_platform_files_it_builds_on(windows: Windows) -> None:
+    """The work box's aws-login reads $winchris, exported by wsl.sh, so the local
+    file has to be sourced last rather than anywhere in the file list."""
     lines = windows.bashrc.read_text().splitlines()
-    overlay = next(number for number, line in enumerate(lines) if 'SHELL_DIR/local.sh' in line)
+    local_file = next(number for number, line in enumerate(lines) if 'SHELL_DIR/local.sh' in line)
     files = next(number for number, line in enumerate(lines) if 'unset shell_file SHELL_FILES' in line)
 
-    assert overlay > files
+    assert local_file > files
 
 
-def test_a_machine_with_no_overlay_is_skipped_rather_than_fatal(windows: Windows) -> None:
+def test_a_machine_with_no_local_file_is_skipped_rather_than_fatal(windows: Windows) -> None:
     """Every machine but the work box, and the work box itself between an install
     and its safekeep restore."""
     (windows.staged / 'local.sh').unlink()
@@ -167,7 +167,7 @@ def test_a_machine_with_no_overlay_is_skipped_rather_than_fatal(windows: Windows
     assert 'No such file' not in result.stderr
 
 
-def test_staging_is_a_no_op_when_the_source_overlay_does_not_exist(windows: Windows) -> None:
+def test_staging_is_a_no_op_when_the_source_file_does_not_exist(windows: Windows) -> None:
     (windows.staged / 'local.sh').unlink()
 
     result = sync(windows.home, 'stage_local_file "$2" "$3"', str(windows.staged), str(windows.home / 'absent.sh'))
@@ -176,7 +176,7 @@ def test_staging_is_a_no_op_when_the_source_overlay_does_not_exist(windows: Wind
     assert not (windows.staged / 'local.sh').exists()
 
 
-def test_staging_never_deletes_an_overlay_that_exists_nowhere_else(windows: Windows) -> None:
+def test_staging_never_deletes_a_local_file_that_exists_nowhere_else(windows: Windows) -> None:
     """The Windows copy may be the only one left — the repo cannot regenerate it."""
     (windows.staged / 'local.sh').write_text('echo out-of-repo\n')
 
@@ -250,7 +250,7 @@ def test_drift_names_the_file_that_is_missing_or_behind(tmp_path: Path) -> None:
     assert 'stale: .inputrc' in drift.stdout
 
 
-def test_a_windows_only_overlay_is_not_drift(tmp_path: Path) -> None:
+def test_a_windows_only_file_is_not_drift(tmp_path: Path) -> None:
     """Staging never deletes local.sh or ~/.env, so a Windows copy the WSL side no
     longer has must not read as being behind — it is the only copy left."""
     home = tmp_path / 'win-home'

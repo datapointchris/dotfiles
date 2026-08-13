@@ -44,7 +44,7 @@ SHELL_FILES=(
 )
 
 # Where each file comes from. The repo splits them across configs/ and the
-# coordinate overlays under shell/; on the Windows side they are siblings in one
+# coordinate layers under shell/; on the Windows side they are siblings in one
 # directory, because Git Bash is not a machine this repo deploys to and has no
 # coordinates of its own.
 shell_file_source() {
@@ -78,7 +78,7 @@ stage_shell_files() {
   rm -f "$dest/combined.sh"
 }
 
-# The machine-local overlay, staged from the deployed ~/.local/shell rather than
+# The machine-local file, staged from the deployed ~/.local/shell rather than
 # from the repo — it exists nowhere in this clone by design, holding shell code
 # that must not be committed (employer hostnames and the like). This is the only
 # place both sides can see it.
@@ -148,7 +148,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # The libraries resolve each other through SHELL_DIR, so it precedes the load
 # below. No coordinate is read here: the files are named in SHELL_FILES rather
 # than found by one, which is what makes this side work without the machine
-# declaration the fleet reads its overlays from.
+# declaration the fleet reads its layers from.
 export SHELL_DIR="$HOME/.local/shell"
 
 # One source per file, in dependency order. These were concatenated into a
@@ -171,7 +171,7 @@ for shell_file in "${SHELL_FILES[@]}"; do
 done
 unset shell_file SHELL_FILES
 
-# Machine-local overlay last, so it can build on what the platform files exported.
+# Machine-local file last, so it can build on what the platform files exported.
 [[ -r "$SHELL_DIR/local.sh" ]] && source "$SHELL_DIR/local.sh"
 
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"

@@ -506,9 +506,9 @@ def test_no_part_of_a_run_hands_work_to_a_shell(name: str, monkeypatch: pytest.M
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
 def test_every_platform_bundle_round_trips_to_its_label(label: str) -> None:
-    """The overlay is keyed on coordinates now, and the four labels are only a
+    """Deployment is keyed on coordinates now, and the four labels are only a
     convenience bundle over them — so each must still come out with the name the
-    scripts and the shell overlays know it by."""
+    scripts and the shell layers know it by."""
     assert coordinates.platform_label(coordinates.PLATFORM_BUNDLES[label]) == label
 
 

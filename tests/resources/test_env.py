@@ -176,7 +176,7 @@ def test_the_generated_section_omits_the_block_when_nothing_applies(tmp_path: Pa
 
 def test_the_generated_section_names_where_a_restored_file_goes(tmp_path: Path) -> None:
     """A rebuild reads `~/.env`, so this is the only place saying where safekeep
-    should put an overlay the repo never contains."""
+    should put a file the repo never contains."""
     section = envfile.render(machine(tmp_path, MANIFEST, REQUIRED_FILES))
 
     assert '~/.local/shell/local.sh - Employer shell code' in section

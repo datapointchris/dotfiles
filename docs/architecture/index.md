@@ -14,16 +14,16 @@ How the dotfiles repository is organized and why.
 
 ## Symlink System
 
-A common base plus one overlay per coordinate axis, across three trees:
-`configs/` into `$HOME`, `apps/` into `~/.local/bin/`, `shell/` into
-`~/.local/shell/`. Which overlays a machine loads is decided by its coordinates
+A common base plus one `<axis>/<value>` directory per coordinate axis, across
+three trees: `configs/` into `$HOME`, `apps/` into `~/.local/bin/`, `shell/` into
+`~/.local/shell/`. Which of them a machine takes is decided by its coordinates
 rather than by a platform string, so the Wayland tree lives once under
 `display/wayland/` regardless of which Linux is underneath it, and the apt
 helpers reach the Ubuntu work box as well as the LXC.
 
 Driven through `dotfiles symlinks`, which works from any directory; `task` is equivalent
 but only from inside the repo — see [Management Interface](management-interface.md).
-The layer scheme, and why two overlays may never claim one target, is
+The scheme, and why two variants may never claim one target, is
 [Symlinks Manager](../reference/tools/symlinks.md).
 
 ## Package Management
@@ -77,11 +77,11 @@ and prunes the ones it no longer does, so the tree is the resolved answer. Most
 of the six axes have no directory at all, because an axis earns one only where
 something actually differs along it.
 
-The axes replaced a single fused `PLATFORM` string, which could not say that the apt helpers belong to Ubuntu-on-WSL *and* to the Debian LXC, or that the Wayland config belongs to any Linux running it rather than to Arch. A `MACHINE_ROLE` axis (work, personal, server) was tried alongside `PLATFORM` and removed before the split: it was rendered from the same manifest, so it carried no information `MACHINE` did not, and it declared three values while shipping a single file that served a single machine. That file was employer infrastructure, which the machine-local overlay handles instead — a better fit, because that code was never shareable in the first place.
+The axes replaced a single fused `PLATFORM` string, which could not say that the apt helpers belong to Ubuntu-on-WSL *and* to the Debian LXC, or that the Wayland config belongs to any Linux running it rather than to Arch. A `MACHINE_ROLE` axis (work, personal, server) was tried alongside `PLATFORM` and removed before the split: it was rendered from the same manifest, so it carried no information `MACHINE` did not, and it declared three values while shipping a single file that served a single machine. That file was employer infrastructure, which the machine-local file handles instead — a better fit, because that code was never shareable in the first place.
 
-### The machine-local overlay
+### The machine-local file
 
-`~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the coordinate overlays exported.
+`~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the coordinate layers exported.
 
 The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env apply` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles check` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
 
@@ -89,7 +89,7 @@ It is restored by `safekeep`, not installed, so it is legitimately absent betwee
 
 The split to hold to is mechanism versus values: mounting a Windows share is a WSL capability, so `mount-cifs` lives in `shell/host/wsl/wsl.sh` and takes the share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
 
-A second test sits beside it, and it is the one that is easy to miss: a workaround only an employer's network forces is theirs too, however generic it looks. `update-tldr` installs tldr pages from a zip downloaded by hand, and read as a mechanism it is plainly a WSL function — it reaches the Windows Downloads folder through `$winchris`. But no personal WSL box would ever run it, because every one of them can just fetch the pages. It sat in the overlay for months on the strength of the mechanism test alone.
+A second test sits beside it, and it is the one that is easy to miss: a workaround only an employer's network forces is theirs too, however generic it looks. `update-tldr` installs tldr pages from a zip downloaded by hand, and read as a mechanism it is plainly a WSL function — it reaches the Windows Downloads folder through `$winchris`. But no personal WSL box would ever run it, because every one of them can just fetch the pages. It sat in the layer for months on the strength of the mechanism test alone.
 
 ### The register, and the backup that feeds it
 
@@ -103,7 +103,7 @@ Each entry carries a `restore:` — how to get that one back — defaulting to s
 
 So a declared name resolves through more than one rung, and the lowest is a config file a process with no shell can still read. The order, why it is that order, and why there is no compiled-in default under it are the module docstring in `src/dotfiles/settings.py`, which is the resolver; `standards/data.md` § "A shared file is named in config; only the tool's own default is compiled in" is the rule it implements. `dotfiles config show` prints what each one resolved to on this machine and which rung answered.
 
-A rung between those two was deleted rather than reordered: a single unprefixed variable naming a shared file for every tool that reads it. It was exported from `~/.env`, so it was empty in exactly the unattended runs the config file exists for, and a tool reading an unprefixed name cannot tell its own file from somebody else's. Each tool now reads only its own `<TOOL>_`-prefixed variable above its own config key. The repo registry is the file that variable named, and it is no longer in the register at all — a trust overlay deploys `repos_registry` into each tool's config, because where the registry lives is a fact about the trust domain rather than about one machine. `validate._registry_paths` is what holds those copies to one answer, since the deploy model has no templating to write the path once.
+A rung between those two was deleted rather than reordered: a single unprefixed variable naming a shared file for every tool that reads it. It was exported from `~/.env`, so it was empty in exactly the unattended runs the config file exists for, and a tool reading an unprefixed name cannot tell its own file from somebody else's. Each tool now reads only its own `<TOOL>_`-prefixed variable above its own config key. The repo registry is the file that variable named, and it is no longer in the register at all — a trust variant deploys `repos_registry` into each tool's config, because where the registry lives is a fact about the trust domain rather than about one machine. `validate._registry_paths` is what holds those copies to one answer, since the deploy model has no templating to write the path once.
 
 That split is also why a missing file reports two different findings. *Nothing names its location* is a machine that never answered, and the advice names every place it could; *absent at a path, from a named rung* is a machine that answered and has no file there, which is the state between an install and safekeep's restore. Only the second is something safekeep can fix, and reporting both as the first is what made the timer's advice wrong. They share a verdict, so the rung is carried as a field on the finding rather than a phrase inside it — the report is read by `--json` as well as by a person.
 
@@ -126,16 +126,16 @@ into the `<axis>/<value>` directories it selects and writes them into `~/.env`
 and deploys them. Nothing about that point reaches `~/.env`.
 
 No coordinate variable at all, which took two goes to arrive at. Six existed
-first, one per axis, so each shell could reassemble a list `Coordinates.overlays`
+first, one per axis, so each shell could reassemble a list `Coordinates.directories`
 had already built — six exports and two hand-written loops spelling the axis
-names again, with nothing holding either copy to `OVERLAY_DIRS`. Collapsing them
+names again, with nothing holding either copy to `AXIS_DIRS`. Collapsing them
 to one resolved list fixed the disagreement between the copies and left the copy
 itself. That list named six directories on a machine that had one, because it
 recorded what the coordinates *select* while the tree holds what actually
 differs. A shell that globs the tree needs neither.
 
 Detection was tried and is what the declaration replaced: a wsl manifest whose
-`~/.env` was missing fell back to a guess and deployed the linux shell overlay
+`~/.env` was missing fell back to a guess and deployed the linux shell layer
 for a whole install. A guess also cannot answer half the axes — nothing on a box
 knows whether it is on a fleet or nonfleet network, or whether it is meant to be a
 workstation or a server.
@@ -143,9 +143,12 @@ workstation or a server.
 `dotfiles machines show <name>` prints the resolved tuple for any manifest,
 including ones this machine is not.
 
-## Configuration Layers
+## Configuration Variants
 
-Configurations use inheritance: a shared base with coordinate overlays on top.
+`configs/` deploys variants, never a merge: exactly one file arrives at each
+destination and the rest are versions this machine did not select. Git is the
+exception, and it builds its own layering on top of what arrived — the deployed
+files are chained together by `include.path`, last-wins.
 
 **Example: Git Config**
 
@@ -157,7 +160,7 @@ checkout would commit an identity into the repo the first time anyone followed g
 tell me who you are" hint.
 
 Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships from
-`configs/common/.config/git/common.gitconfig`. Below it sits one include per overlay, each named for
+`configs/common/.config/git/common.gitconfig`. Below it sits one include per variant, each named for
 the coordinate **value** that supplies it rather than the axis: `wsl.gitconfig` carries
 `core.autocrlf` from `configs/host/wsl/`, because a checkout on the Linux side is edited from
 Windows tools too, and `fleet.gitconfig` or `nonfleet.gitconfig` carries identity. All are ignored
@@ -167,12 +170,12 @@ overrides a default with an `includeIf`, and git resolves last-wins.
 Naming the value is what makes `ls ~/.config/git/` answer what the machine is. `trust.gitconfig`
 said only that the trust axis had been resolved; `nonfleet.gitconfig` says which way. The cost is
 that `common.gitconfig` has to spell every value out, because git expands nothing but `~` in an
-`include.path` — `.zshrc` reaches the same overlays by globbing the deployed tree and needs no list,
+`include.path` — `.zshrc` reaches its own layers by globbing the deployed tree and needs no list,
 which is the asymmetry that lets `shell/` keep `<axis>/<value>/` in its deployed path while
-`configs/` flattens. `dotfiles machines check` fails on an overlay gitconfig no include names, since
+`configs/` flattens. `dotfiles machines check` fails on a variant gitconfig no include names, since
 git would otherwise ignore the missing line without a word.
 
-The `gh` credential helper used to be in that overlay and is now common, which is what collapsed
+The `gh` credential helper used to be in that variant and is now common, which is what collapsed
 three near-identical files into one. It was per-platform only because it named an absolute path —
 `/usr/bin/gh` on Linux, `/usr/local/bin/gh` on an Intel Mac, and `/opt/homebrew/bin/gh` on an Apple
 Silicon one, a distinction no platform string draws. `gh` unqualified resolves everywhere git runs
@@ -194,7 +197,7 @@ condition matches the URL literally and HTTPS and SSH spell the same remote diff
 
 Four levels of include is more than prose can keep anyone oriented in, so
 `dotfiles identity show` draws the chain this machine actually resolved — which file
-contributed what, which overlay is legitimately absent, and which conditional include did not fire
+contributed what, which variant is legitimately absent, and which conditional include did not fire
 here. `dotfiles check` reports the two ways the arrangement fails silently: a `~/.gitconfig`, which
 git prefers over the entry point for reads and writes both, and one key given different values by
 two different files, where nothing on screen says which one won.
@@ -215,7 +218,7 @@ Platform-specific (optional): platform LSP configs
 
 ## Design Decisions
 
-**Symlinks over Stow**: Custom tool provides better two-layer linking, clearer error messages, platform awareness.
+**Symlinks over Stow**: Custom tool provides better two-level linking, clearer error messages, platform awareness.
 
 **Taskfile over Makefile**: Cross-platform consistency, better syntax for complex commands, modular includes, self-documenting.
 
@@ -223,9 +226,9 @@ Platform-specific (optional): platform LSP configs
 
 **Unified Theme System**: The `theme` CLI generates consistent configs for ghostty, tmux, btop, and Neovim from a single `theme.yml` source file per theme.
 
-## The cost of the layering
+## The cost of the split
 
-The two-layer scheme buys one shared edit reaching every platform, and charges
+The common-plus-coordinate scheme buys one shared edit reaching every platform, and charges
 one recurring question: does this belong in `configs/common/` or in the platform
 directory? Getting it wrong is quiet — a setting lands in `common/` that only
 one OS can honour, and the others carry it harmlessly until the day one does
