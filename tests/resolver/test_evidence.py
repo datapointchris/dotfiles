@@ -78,38 +78,73 @@ def test_a_non_go_binary_with_unparseable_output_is_returned_verbatim(monkeypatc
     assert asked == []
 
 
-def test_a_go_installed_binary_with_a_parseable_banner_is_trusted_without_asking_go(monkeypatch, gobin) -> None:
-    """`task --version` already prints `3.52.0` — the module version `go version
-    -m` would say is no more correct, and asking anyway would be a wasted
-    subprocess on every current, well-behaved Go tool."""
-    binary = gobin / 'task'
-    monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'task' else None)
-    probed(monkeypatch, (0, '3.52.0'))
-    asked = module_version(monkeypatch, 'unused')
+@pytest.mark.parametrize(
+    'banner',
+    ['3.52.0', 'Version:\t development\n', 'docker-language-server version 0.0.0'],
+    ids=['a-real-version', 'an-unparseable-placeholder', 'a-placeholder-that-parses'],
+)
+def test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_says(monkeypatch, gobin, banner) -> None:
+    """The banner is not read, and which of the three it is does not matter.
 
-    assert evidence.reported_version('task') == '3.52.0'
-    assert asked == []
+    This inverted. The banner used to win wherever it parsed, and `go version -m`
+    answered only where it did not — which is a version string being interrogated
+    about whether it is a real version, the move `standards/release.md` § "Never
+    detect a dev build from a version string" forbids, for the reason it gives
+    there: a valid-looking string carries no evidence about what produced it.
 
+    The three ids are the whole argument. `go install` never passes the
+    `-ldflags -X` a release build stamps a version with, so `gdu` prints
+    `development` and `docker-language-server` prints `0.0.0`. Only the second
+    failed to parse, so only the second reached the toolchain — and
+    docker-language-server measured as permanently behind and reinstalled on
+    three consecutive applies before anyone noticed. Telling the first from the
+    third means reading the string, which is the thing that cannot be done.
 
-def test_a_go_installed_binary_with_no_parseable_banner_falls_back_to_the_module_version(monkeypatch, gobin) -> None:
-    """`gdu --version` prints `Version:\tdevelopment` for every copy `go install`
-    has ever produced, because the flag a release build stamps a real one with is
-    exactly what `go install` never passes."""
-    binary = gobin / 'gdu'
-    monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'gdu' else None)
-    probed(monkeypatch, (0, 'Version:\t development\n'), (1, ''))
+    A well-behaved tool loses nothing. `task`'s banner and its module version are
+    the same fact, and the one from the toolchain is the one that cannot be a
+    placeholder — as long as the toolchain resolved a tag, which
+    `test_a_pseudo_versioned_module_is_not_an_answer` is the other half of.
+    """
+    binary = gobin / 'tool'
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'tool' else None)
+    probes = probed(monkeypatch, (0, banner))
     asked = module_version(monkeypatch, 'v5.36.1')
 
-    assert evidence.reported_version('gdu') == 'v5.36.1'
+    assert evidence.reported_version('tool') == 'v5.36.1'
     assert asked == [binary]
+    assert probes == [], 'the banner was run, and not running it is the point'
 
 
-def test_falling_back_never_fabricates_a_version(monkeypatch, gobin) -> None:
+def test_a_pseudo_versioned_module_is_not_an_answer(monkeypatch, gobin) -> None:
+    """`go install` resolved a commit, so the binary's own banner is what is left.
+
+    Measured on `cheat`: `go version -m` answers
+    `v0.0.0-20260216134545-b8098dc1b9de`, which `versions.parse` reads as
+    `(0, 0, 0)` — below every release anyone publishes — while `cheat --version`
+    prints the correct `5.1.0`. Preferring the module unconditionally made `cheat`
+    permanently STALE on all three fleet machines, which is exactly the
+    docker-language-server failure moved onto a different tool.
+
+    Neither record is authoritative and each fails its own way. The asymmetry that
+    makes this decidable is that only the module's failure announces itself: a
+    pseudo-version is a format the toolchain defines, where telling a placeholder
+    `0.0.0` from a real one means guessing.
+    """
+    binary = gobin / 'cheat'
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'cheat' else None)
+    probed(monkeypatch, (0, '5.1.0'))
+    asked = module_version(monkeypatch, 'v0.0.0-20260216134545-b8098dc1b9de')
+
+    assert evidence.reported_version('cheat') == '5.1.0'
+    assert asked == [binary], 'the toolchain is still asked first; its answer is what is rejected'
+
+
+def test_a_go_binary_go_cannot_name_is_unknown_rather_than_its_banner(monkeypatch, gobin) -> None:
     """`go` missing, or a binary it does not recognise, is "cannot say" — not a
-    reason to hand back the unparseable banner this whole path exists to avoid."""
+    reason to hand back the placeholder this whole path exists to avoid."""
     binary = gobin / 'gdu'
     monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'gdu' else None)
-    probed(monkeypatch, (0, 'Version:\t development\n'), (1, ''))
+    probed(monkeypatch, (0, 'Version:\t development\n'))
     module_version(monkeypatch, None)
 
     assert evidence.reported_version('gdu') is None

@@ -30,7 +30,6 @@ from pathlib import Path
 from typing import Protocol
 
 from dotfiles import catalog
-from dotfiles import versions
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.providers import gotool
@@ -477,27 +476,50 @@ def reported_version(executable: str) -> str | None:
     `versions.parse` would otherwise read as a version and report as behind. A
     probe that runs past `PROBE_SECONDS` is one more way of not saying.
 
-    A probe that exits 0 and prints nothing `versions.parse` can read is the same
-    problem wearing a passing exit code, and it is the every-time case for a
-    `go install`-ed binary: `go install` never runs the `-ldflags -X` a release
-    build uses to stamp a real one in, so the banner prints whatever placeholder
-    the source hardcodes instead. Only there — `found` sitting in `gotool.gobin()`
-    is what "a `go install`-ed binary" means — is `gotool.module_version` worth
-    asking, because it is the one case where the toolchain that built the binary
-    knows better than the binary's own banner does. Everywhere else this is
-    unchanged: whatever the first probe printed, read or not.
+    A `go install`-ed binary is asked its toolchain first, and its own banner only
+    where the toolchain resolved a commit rather than a tag. `found` sitting in
+    `gotool.gobin()` is what "a `go install`-ed binary" means; everywhere else this
+    is unchanged, whatever the first probe printed, read or not.
+
+    Asking the banner first and falling back only where nothing could *parse* was
+    what this replaced, and it is the failure `standards/release.md` § "Never
+    detect a dev build from a version string" names — a placeholder that happens to
+    look like a version carries no evidence about what produced it. `0.0.0` parses,
+    so it won, and docker-language-server measured as permanently behind and
+    reinstalled on three consecutive applies.
+
+    **Neither record is authoritative, and preferring the module unconditionally
+    moved the fault rather than fixing it.** `go install` never passes the
+    `-ldflags -X` a release build stamps a version with, so a banner is whatever
+    placeholder the source hardcodes. But `go install <module>@latest` resolves a
+    *commit* wherever no tag matches the module path, and then the toolchain's
+    answer is a pseudo-version that reads `(0, 0, 0)` — measured on `cheat`, whose
+    banner is the correct `5.1.0`. What separates them is that only the module's
+    failure announces itself: `gotool.tagged` reads a format the toolchain defines,
+    where telling `0.0.0` from a real `0.0.0` means guessing.
+
+    **Three answers from the toolchain, not two.** A tag is the answer. A
+    pseudo-version is `go` saying there was no tag, which leaves the banner as the
+    only remaining record and is why `cheat` measures correctly. Silence — `go`
+    absent, or a binary it does not recognise as one it built — is `go` saying
+    nothing, and then there is no second record to weigh a placeholder against. The
+    banner is not promoted by being the only string available, and `by_currency`'s
+    UNKNOWN says so where a fabricated number would read as a measurement.
     """
     found = shutil.which(executable)
     if not found:
         return None
-    go_installed = Path(found).resolve().parent == gotool.gobin().resolve()
+    if Path(found).resolve().parent == gotool.gobin().resolve():
+        module = gotool.module_version(Path(found))
+        if module is None:
+            return None
+        if gotool.tagged(module):
+            return module
     for probe in VERSION_PROBES:
         result = run([found, probe], output=Output.QUIET, timeout=PROBE_SECONDS)
         if result.ok and result.stdout.strip():
-            reported = result.stdout.strip()
-            if not go_installed or versions.parse(reported) is not None:
-                return reported
-    return gotool.module_version(Path(found)) if go_installed else None
+            return result.stdout.strip()
+    return None
 
 
 def have_github_credentials() -> bool:

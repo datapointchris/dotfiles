@@ -20,6 +20,7 @@ that needs it.
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -82,6 +83,36 @@ def module_version(binary: Path) -> str | None:
         if len(fields) >= 3 and fields[0] == 'mod':
             return fields[2]
     return None
+
+
+PSEUDO_VERSION = re.compile(r'-\d{14}-[0-9a-f]{12}$')
+"""The suffix `go` appends where it resolved a commit rather than a tag.
+
+A timestamp and a commit prefix, specified at golang.org/ref/mod#pseudo-versions.
+Matched as a format the toolchain defines, which is not the same act as reading a
+version string to guess what produced it — this is the toolchain saying, in its
+own notation, that there was no tag to resolve.
+"""
+
+
+def tagged(version: str | None) -> bool:
+    """Whether `go` resolved this binary from a release rather than a commit.
+
+    The half of `module_version` that decides whether its answer is a version at
+    all. `cheat` installs at `v0.0.0-20260216134545-b8098dc1b9de`, which
+    `versions.parse` reads as `(0, 0, 0)` — below every release anyone publishes,
+    so a currency comparison makes it permanently behind and reinstalls it on
+    every apply. That is the same failure `0.0.0` in a vendor banner produces, one
+    record over, and preferring the module unconditionally moved it rather than
+    fixed it.
+
+    Measured 2026-08-13 across the three fleet machines: `cheat` pseudo-versioned
+    with a correct `5.1.0` banner, `docker-language-server` tagged `v0.20.1` with a
+    `0.0.0` banner, `gdu` tagged `v5.36.1` with a `development` banner. No single
+    record is authoritative; each fails in its own way, and only the module's
+    failure announces itself.
+    """
+    return bool(version) and PSEUDO_VERSION.search(version or '') is None
 
 
 def installed_modules(directory: Path) -> dict[str, str]:

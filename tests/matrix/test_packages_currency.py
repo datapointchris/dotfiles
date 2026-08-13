@@ -228,15 +228,27 @@ def test_a_json_run_counts_the_relation_and_prints_no_rows(
 
 
 def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A tool answering `0.0.0` produces the row a genuinely old one produces.
+    """A release-installed tool answering `0.0.0` produces the row a genuinely old
+    one produces, and nothing here can tell them apart.
 
     `versions.parse` reads `0.0.0` as `(0, 0, 0)`, which is below every release
     anyone publishes, so `at_least` answers False and the row is `stale` — the same
     verdict, the same detail and the same repair as a tool one version behind. The
     only thing separating them on screen is the measured value in parentheses.
 
-    Current behaviour, pinned so a change to it is visible. `icb` 486 is where it is
-    filed, with the three ways it could fork.
+    **The limit, not an open fault.** `icb` 486 settled it by asking whatever
+    recorded the fact rather than reading the string, and for a `go install`-ed
+    binary that is `go version -m` — see
+    `tests/resolver/test_evidence.py::test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_says`.
+    A binary unpacked from a GitHub release has no second source: nothing but the
+    banner ever knew what it is. Widening the parse to treat `0.0.0` as unparseable
+    is the same forbidden move one step further out, and it would misread a project
+    genuinely at 0.0.0.
+
+    So the remedy here is the declaration. `reports_version: false` on the entry
+    says this artifact cannot be asked, which is a fact about the artifact rather
+    than a guess about its output, and it is why that field survived 486 removing
+    its other user.
     """
     behind, placeholder = CACHED[1], CACHED[3]
     machine(sandbox, behind)
@@ -249,31 +261,37 @@ def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox
     assert "(is '0.0.0')" in was_placeholder
 
 
-@pytest.mark.xfail(strict=True, reason='icb 486: a placeholder banner that parses is read as a real version')
-def test_a_placeholder_that_parses_is_not_reported_as_merely_behind(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A version nothing was ever released at is not evidence that a tool is old.
+UNASKABLE = {'github_releases': [{'name': TOOL, 'repo': REPO, 'reports_version': False}]}
+"""The same entry declaring that its artifact cannot be asked its version.
 
-    `0.0.0` is what a build prints when nothing stamped a version into it, and
-    reading it as a number is how `docker-language-server` was reinstalled on three
-    consecutive applies without ever converging. `development` — the same
-    placeholder from a build that happens not to look numeric — is already answered
-    `unknown`, so the fault is the shape of the string rather than the state of the
-    tool.
+The remedy `icb` 486 leaves for a release-installed placeholder, and a fact about
+the artifact rather than a guess about its output.
+"""
 
-    Asserted as *distinguishable* rather than as one particular verdict, because
-    `icb` 486 has not settled which fix it gets: preferring the toolchain's answer
-    over the banner, widening the unparseable test, or declaring
-    `reports_version: false` per entry. Every one of the three stops these two
-    machines producing the same row.
+
+def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`reports_version: false` is what separates the two rows the parse cannot.
+
+    A tool one version behind and one printing `0.0.0` produce the identical row,
+    which the test above pins as the limit. Nothing can read the difference off the
+    string — that is the move `standards/release.md` forbids, and widening the
+    parse would misread a project genuinely at 0.0.0.
+
+    So the difference is declared. An entry saying its artifact cannot be asked is
+    never compared, and the churn stops: `docker-language-server` reinstalled on
+    three consecutive applies before this was reached for, and it stops without any
+    reader inspecting a version string to decide.
     """
-    behind, placeholder = CACHED[1], CACHED[3]
-    machine(sandbox, behind)
-    was_behind = said(cli('packages', 'plan'))
+    placeholder = CACHED[3]
+    machine(sandbox, placeholder)
+    was_asked = said(cli('packages', 'plan'))
 
-    sandbox.installed(TOOL, placeholder.reported)
-    was_placeholder = said(cli('packages', 'plan'))
+    machine(sandbox, placeholder, packages=UNASKABLE)
+    was_unaskable = said(cli('packages', 'plan'))
 
-    assert ROW.sub('', was_behind) != ROW.sub('', was_placeholder)
+    assert 'stale' in was_asked, 'the placeholder reads as behind while the entry is still asked'
+    assert ROW.sub('', was_asked) != ROW.sub('', was_unaskable)
+    assert 'stale' not in was_unaskable
 
 
 def test_nothing_could_be_measured_says_which_refresh_would_fix_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
