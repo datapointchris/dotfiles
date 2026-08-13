@@ -122,6 +122,8 @@ def _plan(name: str, owner: str | None = None) -> resolver.Plan:
     """
     try:
         return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
+    except machines.NoSuchMachine as unknown:
+        raise typer.BadParameter(str(unknown)) from unknown
     except (catalog.CatalogError, machines.MachineError) as refused:
         error(f'{name} cannot be resolved:')
         for issue in refused.issues:
@@ -177,7 +179,13 @@ def machine_requirements(
     if as_json and as_safekeep:
         raise typer.BadParameter('--json and --safekeep are two formats of one answer; pick one')
 
-    machine = machines.load(_resolve_machine(name))
+    resolved = _resolve_machine(name)
+    # Before loading, for the reason `machine_show` states: a typo is a usage
+    # error naming the machines that exist, not a report about this one's
+    # declaration. Three of the four leaves here did that and this one did not,
+    # so a name nothing declares left it as a traceback.
+    _manifest_path(resolved)
+    machine = machines.load(resolved)
 
     if as_json:
         emit_json([_requirement_dict(entry) for entry in machine.requirements])

@@ -29,7 +29,6 @@ from typing import Any
 import pytest
 import yaml
 
-from dotfiles.machine import MachineError
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
@@ -710,13 +709,7 @@ def test_a_leaf_with_no_machine_and_no_environment_says_which_machines_exist(
         'show',
         'check',
         'edit',
-        pytest.param(
-            'requirements',
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason='`machines requirements` resolves the name and loads it, with no `_manifest_path` guard between the two',
-            ),
-        ),
+        'requirements',
     ],
     ids=['show', 'check', 'edit', 'requirements'],
 )
@@ -724,9 +717,9 @@ def test_a_leaf_given_a_machine_that_does_not_exist_names_the_ones_that_do(verb:
     """A typo is a usage error naming the known machines, never a report that this
     machine's declaration cannot be read.
 
-    `requirements` is the one leaf that does not do this, and it is the reason this
-    is a matrix. The three that pass call `_manifest_path` before loading; it calls
-    `machines.load` directly and lets the `MachineError` out.
+    All four call `_manifest_path` before loading. `requirements` was the one that
+    did not, and it let the `MachineError` out as a traceback — which is the reason
+    this is a matrix rather than one test about one leaf.
     """
     ran = cli('machines', verb, 'ghost', catch_exceptions=True)
 
@@ -735,25 +728,16 @@ def test_a_leaf_given_a_machine_that_does_not_exist_names_the_ones_that_do(verb:
     assert 'box' in ran.stderr
 
 
-def test_requirements_lets_a_bad_machine_name_out_as_a_traceback(cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned so the fix above is what changes it.
-
-    Exit 1 with both streams empty. Nothing tells the caller what was wrong, and
-    the code collides with `plan`'s drift — a caller branching on 1 reads a typo as
-    a machine with something to install.
-    """
-    ran = cli('machines', 'requirements', 'ghost', catch_exceptions=True)
-
-    assert ran.exit_code == 1
-    assert ran.output == ''
-    with pytest.raises(MachineError):
-        cli('machines', 'requirements', 'ghost')
-
-
 def test_requirements_lets_an_unresolvable_manifest_out_the_same_way(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The same missing guard, reached from the other direction: the manifest exists
-    and will not load. `machines show` reports this as an Issue with the reasons
-    printed; `requirements` reports nothing at all."""
+    """`_manifest_path` answers whether the file is *there*, which leaves the other
+    half open: a manifest that exists and will not load still escapes this leaf.
+
+    `machines show` reports it as an Issue with the reasons printed, because it
+    loads through `_plan` and that has a handler. `requirements` calls
+    `machines.load` bare and reports nothing at all. One exception type, two
+    meanings, and a per-site decision about which — the shape a boundary handler
+    reading the code off the exception is meant to end.
+    """
     sandbox.declare(manifest={'machine': 'box'})
 
     assert cli('machines', 'requirements', catch_exceptions=True).exit_code == 1

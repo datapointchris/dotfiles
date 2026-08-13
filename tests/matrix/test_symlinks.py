@@ -22,11 +22,11 @@ from pathlib import Path
 
 import pytest
 
-from dotfiles.machine import MachineError
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
+from matrix.harness import unwrapped
 
 REPO_COPY = 'the repo copy\n'
 SOMEBODY_ELSE = 'somebody else wrote this\n'
@@ -418,15 +418,16 @@ def test_show_lists_the_named_machines_links_rather_than_this_ones(sandbox: Sand
     assert 'configs/pkg/apt' not in ran.stderr
 
 
-def test_apply_reports_an_unknown_machine_as_an_issue(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_apply_reports_an_unknown_machine_as_a_usage_error(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`apply_machine` catches it, names the manifest it looked for, and lists what
-    it could have been."""
+    it could have been. Writing nothing is the other half of the answer."""
     declare(sandbox)
 
     ran = cli('symlinks', 'apply', '--machine', 'nosuch')
 
-    assert ran.exit_code == ExitCode.ISSUE
-    assert 'has no manifest' in ran.stderr
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'nosuch: has no manifest' in unwrapped(ran.stderr)
+    assert 'Available: box' in unwrapped(ran.stderr)
     assert not destination(sandbox).exists()
 
 
@@ -434,27 +435,13 @@ READ_VERBS = [('plan',), ('check',), ('show',), ('unlink', '--force')]
 
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=[argv[0] for argv in READ_VERBS])
-def test_an_unknown_machine_reaches_every_other_leaf_as_a_traceback(verb: tuple[str, ...], cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned so the fix below is a visible change.
-
-    `_session` catches `NoMachine` — nothing named a machine — and turns it into a
-    `BadParameter`. A name that is simply not a manifest is a different exception
-    raised later, when the lazy `session.machine` is first read, and no leaf but
-    `apply` catches it.
-    """
-    with pytest.raises(MachineError, match='has no manifest'):
-        cli('symlinks', *verb, '--machine', 'nosuch')
-
-
-@pytest.mark.xfail(strict=True, reason='only `apply` handles a machine name with no manifest; every other leaf tracebacks')
-@pytest.mark.parametrize('verb', READ_VERBS, ids=[argv[0] for argv in READ_VERBS])
 def test_an_unknown_machine_is_a_usage_error_on_every_leaf(verb: tuple[str, ...], cli: Callable[..., Invocation]) -> None:
     """A name that matches no manifest is the caller mistyping, which is exit 2.
 
-    `apply` already answers — exit 3 with the manifest it looked for and the names
-    it could have been — so the information exists and only the read verbs cannot
-    reach it. A traceback is the one answer a caller cannot branch on, and it is
-    what `dotfiles symlinks plan --machine <typo>` prints today.
+    `apply` answered first — with the manifest it looked for and the names it could
+    have been — so the information existed and only the read verbs could not reach
+    it. A traceback is the one answer a caller cannot branch on, and it is what
+    `dotfiles symlinks plan --machine <typo>` printed.
     """
     assert cli('symlinks', *verb, '--machine', 'nosuch', catch_exceptions=True).exit_code == ExitCode.USAGE
 

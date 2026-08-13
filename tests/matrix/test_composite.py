@@ -24,7 +24,6 @@ from collections.abc import Callable
 
 import pytest
 
-from dotfiles import machine as machines
 from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import DECLARES_LAZYGIT
@@ -677,18 +676,6 @@ def test_skipping_the_resource_that_is_wrong_clears_the_nudge_it_left(sandbox: S
 
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
-def test_a_read_verb_crashes_on_a_machine_with_no_manifest(verb: str, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, and it is wrong — see the xfail below.
-
-    `MachineError` escapes the leaf uncaught. Under a real terminal that is a
-    traceback and exit 1, which is a code `check` is documented never to produce.
-    """
-    with pytest.raises(machines.MachineError, match='nosuch: has no manifest'):
-        cli(verb, '--machine', 'nosuch')
-
-
-@pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
-@pytest.mark.xfail(strict=True, reason='MachineError escapes every read-only leaf; only `apply` catches it')
 def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(verb: str, cli: Callable[..., Invocation]) -> None:
     """Exit 2, and the same answer `machines show <typo>` already gives.
 
@@ -701,16 +688,16 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(ver
     case: a caller has to be able to tell "you typed it wrong" from "it ran and
     failed", and only the first is worth retrying.
 
-    `apply` and `network check` answer 3 instead, which is the inconsistency this
-    row records rather than the precedent to copy — both reach it by rescuing an
-    exception around a load, neither by deciding a typo is a machine fault. Exit 3
-    means something is wrong with the *machine*, and nothing is: `check` is
-    documented to answer 0 or 3, so a mistyped `--machine` answering 3 is a
-    scheduled caller reading a typo as an issue to page about.
+    `apply` and `network check` answered 3 until `NoSuchMachine` split the typo out
+    from the machine fault — both reached it by rescuing an exception around a
+    load, neither by deciding a typo is a machine fault. Exit 3 means something is
+    wrong with the *machine*, and nothing is: `check` is documented to answer 0 or
+    3, so a mistyped `--machine` answering 3 is a scheduled caller reading a typo
+    as an issue to page about.
 
-    Today it is worse than either — an uncaught exception is exit 1, `DRIFT`, the
-    one code `check` promises never to return, with nothing on stderr saying which
-    name was wrong.
+    A manifest that exists and will not parse keeps exit 3. That is the whole
+    distinction `NoSuchMachine` carries, and
+    `test_a_read_verb_reports_an_unreadable_manifest_as_an_issue` below pins it.
     """
     ran = cli(verb, '--machine', 'nosuch', catch_exceptions=True)
 
@@ -719,16 +706,33 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(ver
 
 
 def test_apply_reports_a_machine_with_no_manifest(cli: Callable[..., Invocation]) -> None:
-    """`apply`'s own answer, which is a legible refusal and the wrong code.
+    """The write verb answers the code every read verb answers.
 
-    Pinned as current behaviour: it proves the diagnosis exists and only the read
-    verbs cannot reach it. The code it uses is the half the row above declines to
-    copy.
+    `apply` was the leaf that always diagnosed this, and it diagnosed it as an
+    Issue. Uniformity is the point: a typo is retryable wherever it is typed, so
+    the code cannot depend on which verb caught the name.
     """
     ran = cli('apply', '--machine', 'nosuch')
 
-    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.exit_code == ExitCode.USAGE
     assert 'nosuch: has no manifest' in ran.stderr
+
+
+def test_a_read_verb_reports_an_unreadable_manifest_as_an_issue(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The other half of the split, and the reason the split exists.
+
+    A name with no manifest is a typo and exits 2. A manifest that exists and will
+    not parse is a fault in the machine, exits 3, and is not worth retyping — so
+    `NoSuchMachine` is a subclass and only the sites that care separate the two.
+    Collapsing them would send a caller hunting for a misspelling in a name that is
+    spelt correctly.
+    """
+    sandbox.declare(manifest={'machine': sandbox.machine})
+
+    ran = cli('check', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'declares neither a platform nor coordinates' in ran.output
 
 
 def test_the_run_record_is_filed_under_the_resolved_machine_rather_than_the_argument(

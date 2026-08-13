@@ -126,8 +126,22 @@ class Session:
         exec` and cron all inherit no `~/.env`, so a scheduled `check` failed
         with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
         was. Found by installing the timer and reading its first failure.
+
+        **The manifest is read here, so a Session this returns has one.** Naming
+        a machine and proving the name means something are the same act, and
+        splitting them is what let `MachineError` surface from wherever the
+        `machine` property happened to be touched first — inside `survey`, past
+        every handler, as a traceback and exit 1. A name that resolves to no
+        manifest is not a resolved machine.
+
+        Deliberately not in `__init__`: constructing a Session directly is the
+        bootstrap and test affordance, where the caller supplies the repo and
+        knows what is on disk. This is the front door, and only the front door
+        carries the guarantee.
         """
-        return cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
+        session = cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
+        _ = session.machine
+        return session
 
     @functools.cached_property
     def catalog(self) -> catalogs.Catalog:

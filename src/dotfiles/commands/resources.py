@@ -22,6 +22,7 @@ from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import CHANGE_COLOURS
 from dotfiles.output import SUBJECT_COLUMN
@@ -33,7 +34,6 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_result
 from dotfiles.output import warn
-from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
@@ -87,10 +87,7 @@ def _survey(
 
 
 def _session(machine: str | None, owner: str | None = None, offline: bool = False) -> Session:
-    try:
-        return Session.resolve(machine, owner=owner, offline=offline)
-    except NoMachine as unresolved:
-        raise typer.BadParameter(str(unresolved)) from unresolved
+    return resolved(machine, owner, offline=offline)
 
 
 def _selected(resource: str, source: str | None) -> tuple[str, ...]:

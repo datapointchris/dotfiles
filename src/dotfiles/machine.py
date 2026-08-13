@@ -42,6 +42,24 @@ class MachineError(Exception):
         super().__init__('\n'.join(str(issue) for issue in issues))
 
 
+class NoSuchMachine(MachineError):
+    """No manifest carries this name, which is a typo rather than a fault.
+
+    Split from its parent because the two ask different things of a caller. A
+    name nothing declares is worth retrying with a different name, and every
+    front door already answers that with `ExitCode.USAGE` — `_manifest_path` in
+    `commands/machines.py` has done so for `machines show` all along, by testing
+    `exists()` before loading rather than by catching anything.
+
+    A manifest that will not parse is not retryable, so it stays `MachineError`
+    and `ExitCode.ISSUE`. Reporting it as a typo would send a caller looking for
+    a misspelling in a name that is spelt correctly.
+
+    A subclass rather than a second exception, so the five sites that catch
+    `MachineError` keep catching both and only the ones that care split it out.
+    """
+
+
 class Coverage(enum.Enum):
     ALL = enum.auto()
     NAMED = enum.auto()
@@ -285,7 +303,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     source = install / 'manifests' / f'{name}.yml'
     if not source.is_file():
         available = ', '.join(names(root)) or 'none found'
-        raise MachineError((DeclarationIssue(name, f'has no manifest at {source}. Available: {available}'),))
+        raise NoSuchMachine((DeclarationIssue(name, f'has no manifest at {source}. Available: {available}'),))
 
     declared = yaml.safe_load(source.read_text()) or {}
     flags_file = install / 'flags.yml'
