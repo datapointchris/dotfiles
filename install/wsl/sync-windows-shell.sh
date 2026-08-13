@@ -146,9 +146,9 @@ export PATH="$HOME/.local/bin:$PATH"
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
 # The libraries resolve each other through SHELL_DIR, so it precedes the load
-# below. There is no PLATFORM here: the files are named in SHELL_FILES rather
-# than found by a coordinate, which is what makes this side work without the
-# machine declaration the fleet reads its overlays from.
+# below. No coordinate is read here: the files are named in SHELL_FILES rather
+# than found by one, which is what makes this side work without the machine
+# declaration the fleet reads its overlays from.
 export SHELL_DIR="$HOME/.local/shell"
 
 # One source per file, in dependency order. These were concatenated into a

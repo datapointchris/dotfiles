@@ -187,18 +187,6 @@ cleanup_container() {
 # ENVIRONMENT SETUP HELPERS
 # ================================================================
 
-# Create .env file in container
-create_container_env() {
-  local container=$1
-  local platform=$2
-  local home_dir=$3
-
-  docker exec "$container" bash -c "cat > ${home_dir}/.env <<EOF
-PLATFORM=${platform}
-DOTFILES_DOCKER_TEST=true
-EOF"
-}
-
 # Copy dotfiles to writable location in container
 copy_dotfiles_writable() {
   local container=$1

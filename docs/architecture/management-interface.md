@@ -150,8 +150,8 @@ explicit fetch, and exits 1 when there is something to pull.
 
 `~/.env` is the first thing `.zshrc` sources, and where every command that is not given
 `--machine` learns which machine it is on. It answers three questions — which machine this is (`MACHINE`), where it sits on each of
-the six coordinate axes (the `DOTFILES_*` block, plus `PLATFORM` where the tuple has a
-bundle name), and which features it wants running (the flags from `install/flags.yml`) —
+the six coordinate axes (the `DOTFILES_*` block), and which features it wants running
+(the flags from `install/flags.yml`) —
 and it also carries secrets and machine-local values that must never be checked in.
 
 `MACHINE` is the only one of the three that is chosen: it names a manifest, and
@@ -183,7 +183,7 @@ generates `~/.env` — so a bare machine still has one line to type by hand. Onl
 
 Every generated line is written as `export NAME="${NAME:-value}"`, so the ambient
 environment still wins for a single shell — `ZSHRC_DEBUG=1 zsh` and
-`PLATFORM=wsl ./install.sh` both keep working without editing the file.
+`MACHINE=other ./install.sh` both keep working without editing the file.
 
 Flags are for behavior that is present and cheap, where the only question is whether this
 machine wants it. Payload that is expensive to install stays a manifest tool list, and

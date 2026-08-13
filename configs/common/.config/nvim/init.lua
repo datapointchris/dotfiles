@@ -4,30 +4,6 @@
 -- vim.notify below.
 require('core.early-notify')()
 
--- ================================================================== --
--- Environment Validation
--- ================================================================== --
--- Validate required environment variables for proper configuration
--- PLATFORM comes from ~/.env, which `dotfiles env sync` generates. It decides
--- the plugin profile (see core.profiles), so a missing one silently changes
--- which plugins load.
-local required_env_vars = {
-  'PLATFORM',
-}
-
-local missing_vars = {}
-for _, var in ipairs(required_env_vars) do
-  if not vim.env[var] then table.insert(missing_vars, var) end
-end
-
-if #missing_vars > 0 then
-  vim.notify(
-    'Missing required environment variables: ' .. table.concat(missing_vars, ', ') .. '\nPlease check your ~/.env file',
-    vim.log.levels.ERROR,
-    { title = 'Environment Error' }
-  )
-end
-
 local profiles = require('core.profiles')
 
 -- Always load core configuration

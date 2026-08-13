@@ -54,13 +54,6 @@ formatting_file="$SHELL_DIR/formatting.sh"
 prompt_lib_file="$SHELL_DIR/prompt-lib.sh"
 [[ -f $prompt_lib_file ]] && source $prompt_lib_file && log "Load" "$prompt_lib_file" || log_error "Load" "$prompt_lib_file"
 
-# Validate required environment variables
-if [[ -n "$PLATFORM" ]]; then
-  log "Env" "$(color_cyan "PLATFORM")=$(color_green "$PLATFORM")"
-else
-  log_error "Env" "PLATFORM not set in .env"
-fi
-
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #

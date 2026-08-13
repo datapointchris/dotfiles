@@ -142,11 +142,6 @@ STEP_START=$(date +%s)
   echo "Copying dotfiles to test user's home directory..."
   sudo -u "$TEST_USER" cp -r "$DOTFILES_DIR" "/Users/${TEST_USER}/dotfiles"
 
-  echo "Creating ~/.env..."
-  sudo -u "$TEST_USER" bash -c "cat > /Users/${TEST_USER}/.env <<EOF
-PLATFORM=macos
-EOF"
-
   log_success "Test environment ready"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)

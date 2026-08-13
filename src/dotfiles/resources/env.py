@@ -2,8 +2,8 @@
 
 The first stage of every run, because everything below it reads the file: a
 botched migration leaves a machine with a broken interactive shell independently,
-as each box migrates — `.zshrc` sources `~/.env` before anything else and errors
-when `PLATFORM` is unset.
+as each box migrates — `.zshrc` sources `~/.env` before anything else and reads
+its coordinates from nothing else.
 
 Two kinds of drift live here and must not be collapsed. A flag whose value does
 not match the declaration is ours to repair, and `apply` does. A machine-local
@@ -185,7 +185,7 @@ def _identity(machine, observed: Observed) -> list[Change]:
     reports DONE, a fresh `.env.bak` over the last one, and a machine that has not
     moved.
     """
-    expected_values = {'MACHINE': machine.name, 'PLATFORM': machine.platform_label, **envfile.coordinate_exports(machine)}
+    expected_values = {'MACHINE': machine.name, **envfile.coordinate_exports(machine)}
 
     changes = []
     for key, expected in expected_values.items():
