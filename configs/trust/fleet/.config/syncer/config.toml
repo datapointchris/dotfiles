@@ -2,8 +2,8 @@
 #
 # Trust-scoped rather than common, because the registry's location differs by
 # trust domain and there is no merge step — a config that names it cannot sit in
-# configs/common/. configs/trust/nonfleet/ carries the other machine's answer and
-# is otherwise identical to this file.
+# configs/common/. configs/trust/nonfleet/ carries the other machine's answer, and
+# also raises git_timeout for a network this one does not have.
 #
 # Named as a literal. A shared unprefixed variable used to carry it, and ~/.env is
 # a shell file, so nothing that sources no profile ever saw it. See

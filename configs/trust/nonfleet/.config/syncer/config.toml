@@ -1,9 +1,9 @@
 # syncer tool config. Every option, annotated: syncer config example config
 #
 # The nonfleet twin of configs/trust/fleet/.config/syncer/config.toml, differing
-# only in where the registry lives. A machine outside the fleet has no ~/dev and
-# no terminal-library-fleet clone; it keeps its own registry, listing its own
-# work, at the XDG config path every machine has.
+# in where the registry lives and in how long a git call gets. A machine outside
+# the fleet has no ~/dev and no terminal-library-fleet clone; it keeps its own
+# registry, listing its own work, at the XDG config path every machine has.
 #
 # Duplicated rather than layered because there is no merge step: the same relative
 # path in configs/common/ and an overlay is a collision producing two links at one
@@ -11,6 +11,10 @@
 repos_registry = "~/.config/repos.json"
 
 default_policy = "standard"
+
+# Three minutes rather than the default two. This box reaches every remote through the
+# corporate firewall and its mirrors, so a call needs longer before it counts as dead.
+git_timeout = 180
 
 # Prune a feature branch once its remote is gone and the merge target provably holds its work.
 # standard's own default:gone = report still wins on the default branch, since a role selector
