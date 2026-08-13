@@ -28,10 +28,12 @@ no way to tell which one won.
 from __future__ import annotations
 
 import dataclasses as dc
+import fnmatch
 from pathlib import Path
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.output import quoted
 
 
 def entry_point(home: Path | None = None) -> Path:
@@ -75,6 +77,42 @@ reads and why a condition cannot be believed from its presence.
 
 def _is_include(key: str) -> bool:
     return key == INCLUDE_KEY or (key.startswith(CONDITIONAL_PREFIX) and key.endswith('.path'))
+
+
+ACCUMULATING = (
+    'credential.helper',
+    'credential.*.helper',
+    'http.extraheader',
+    'http.*.extraheader',
+    'url.*.insteadof',
+    'url.*.pushinsteadof',
+    'remote.*.fetch',
+    'remote.*.push',
+    'push.pushoption',
+    'safe.directory',
+)
+"""Keys git collects rather than resolves, as `fnmatch` patterns.
+
+**A second value for one of these is not a second opinion.** Git keeps them all
+and uses them all, so two files each naming a credential helper produce two
+helpers — tried in the order the files were read, and the first that answers
+supplies the credential. Measured against git 2.55 with a silent helper and an
+answering one configured in that order: both were executed, and the answer came
+from the second.
+
+Reading that as an override is wrong twice over. It names a winner that never
+won anything, and the advice it carries is to consolidate into one file, which
+on this key means deleting a helper that works. The credential resource had it
+right already and lists every helper separately; this detector was the one
+calling a healthy stack a conflict.
+
+Matched against the key lowercased, because a listing lowercases the section and
+the key and leaves a subsection's case alone — `credential.https://GitHub.com.helper`.
+"""
+
+
+def _accumulates(key: str) -> bool:
+    return any(fnmatch.fnmatchcase(key.lower(), pattern) for pattern in ACCUMULATING)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -179,10 +217,15 @@ class Layering:
         conflict with itself. That was this detector's first output on a machine
         with nothing wrong with it, which is precisely how a detector earns being
         ignored.
+
+        An `ACCUMULATING` key is excluded for the same reason one layer down. Git
+        resolves nothing there either — it runs every value — so a second one is
+        an addition and not an override, and the winner this would name does not
+        exist.
         """
         by_key: dict[str, list[Setting]] = {}
         for setting in self.settings:
-            if not _is_include(setting.key):
+            if not _is_include(setting.key) and not _accumulates(setting.key):
                 by_key.setdefault(setting.key, []).append(setting)
 
         found = []
@@ -297,8 +340,8 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
         # are the evidence for the finding — the one that must stay legible is
         # the value being overridden, not the one already in effect.
         for setting in conflict.losers:
-            console.print(f'    {setting.origin.name:<22} {setting.value!r}  overridden')
-        console.print(f'    [green]{conflict.winner.origin.name:<22} {conflict.winner.value!r}[/]  wins')
+            console.print(f'    {setting.origin.name:<22} {quoted(setting.value)}  overridden')
+        console.print(f'    [green]{conflict.winner.origin.name:<22} {quoted(conflict.winner.value)}[/]  wins')
 
 
 def _state(path: Path, contributed: dict[Path, int]) -> str:

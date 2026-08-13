@@ -55,6 +55,7 @@ from dotfiles import gitconfig
 from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.output import quoted
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -243,8 +244,8 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
             repair=Repair.BY_HAND,
             advice='\n'.join(
                 [
-                    *(f'{setting.origin}: {setting.value!r} (overridden)' for setting in conflict.losers),
-                    f'{conflict.winner.origin}: {conflict.winner.value!r} (in effect)',
+                    *(f'{setting.origin}: {quoted(setting.value)} (overridden)' for setting in conflict.losers),
+                    f'{conflict.winner.origin}: {quoted(conflict.winner.value)} (in effect)',
                     'set it in one file, or `dotfiles identity show` for the include order that decides it',
                 ]
             ),

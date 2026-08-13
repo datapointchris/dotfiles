@@ -66,6 +66,38 @@ def test_agreeing_files_are_not_a_conflict(tmp_path: Path) -> None:
     assert read(tmp_path / 'entry.cfg').conflicts == ()
 
 
+def test_two_files_each_adding_a_credential_helper_are_not_a_conflict(tmp_path: Path) -> None:
+    """Git keeps both and runs both, in the order the files were read, so neither
+    one overrode anything. Naming the second a winner would advise consolidating
+    into one file, which on this key deletes a helper that works."""
+    (tmp_path / 'entry.cfg').write_text('[credential]\n\thelper = /usr/bin/true\n[include]\n\tpath = leaf.cfg\n')
+    (tmp_path / 'leaf.cfg').write_text('[credential]\n\thelper = !gh auth git-credential\n')
+
+    assert read(tmp_path / 'entry.cfg').conflicts == ()
+
+
+def test_a_scoped_helper_accumulates_the_same_way_an_unscoped_one_does(tmp_path: Path) -> None:
+    """The subsection keeps its case in a listing while the section and key are
+    lowercased, so the pattern has to be matched case-insensitively or a helper
+    keyed on a capitalised host slips back through as a conflict."""
+    (tmp_path / 'entry.cfg').write_text('[credential "https://GitHub.com"]\n\thelper = /usr/bin/true\n[include]\n\tpath = leaf.cfg\n')
+    (tmp_path / 'leaf.cfg').write_text('[credential "https://GitHub.com"]\n\thelper = !gh auth git-credential\n')
+
+    assert read(tmp_path / 'entry.cfg').conflicts == ()
+
+
+def test_an_ordinary_key_in_the_same_section_still_conflicts(tmp_path: Path) -> None:
+    """`credential.helper` accumulates; `credential.useHttpPath` does not. Excluding
+    the section wholesale would lose a real override on the keys git does resolve."""
+    (tmp_path / 'entry.cfg').write_text('[credential]\n\tuseHttpPath = true\n[include]\n\tpath = leaf.cfg\n')
+    (tmp_path / 'leaf.cfg').write_text('[credential]\n\tuseHttpPath = false\n')
+
+    (conflict,) = read(tmp_path / 'entry.cfg').conflicts
+
+    assert conflict.key == 'credential.usehttppath'
+    assert conflict.winner.value == 'false'
+
+
 def test_the_includes_holding_the_chain_together_are_not_themselves_a_conflict(layered: Path) -> None:
     """Every include in a chain is spelled `include.path`, so treating them as one
     key made the whole layering read as one enormous conflict with itself. That
