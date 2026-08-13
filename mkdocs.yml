@@ -153,6 +153,7 @@ nav:
       - Minimal Manifest for Servers: learnings/minimal-manifest-for-servers.md
       - Arch Git libpcre2 Warning: learnings/arch-git-libpcre2-warning.md
       - Testing Bootstrap Dependencies: learnings/testing-bootstrap-dependencies.md
+      - Undeclared Transitive Dependency: learnings/undeclared-transitive-dependency.md
       - Symlinks Path Gotchas: learnings/symlinks-path-gotchas.md
       - WSL PowerShell Stdin Consumption: learnings/wsl-powershell-stdin-consumption.md
       - WSL Credential Helper Exec Format Error: learnings/wsl-credential-helper-exec-format-error.md
