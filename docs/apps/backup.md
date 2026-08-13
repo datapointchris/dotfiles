@@ -19,8 +19,8 @@ is a single file you can copy anywhere and unpack months later.
 packup -n dotfiles -d ~/Documents --exclude .git dotfiles
 ```
 
-**`safekeep`** backs up what a config file declares, as dated snapshots on a
-network drive, and restores them onto a rebuilt machine. Every snapshot carries a
+**`safekeep`** backs up what a config file declares, as one timestamped snapshot
+per run on a network drive, and restores them onto a rebuilt machine. Every snapshot carries a
 manifest recording its groups, tags and file modes, so it restores without the
 config that made it — which is the disaster-recovery case, where the config died
 with the machine. Unchanged files are hard links into the previous snapshot, so
