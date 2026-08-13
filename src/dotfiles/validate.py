@@ -32,8 +32,11 @@ from typing import Any
 import yaml
 
 from dotfiles import catalog as catalogs
+from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles.resources import symlinks
+from dotfiles.symlinks import core
 
 
 class Severity(enum.StrEnum):
@@ -86,6 +89,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_unbuildable_assets(declared))
     findings.extend(_unreferenced(declared, manifests))
     findings.extend(_git_variants(root))
+    findings.extend(_colliding_variants(root))
     findings.extend(_registry_paths(root))
     return tuple(findings)
 
@@ -232,6 +236,75 @@ def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Mach
 GIT_VARIANT_GLOB = 'configs/*/*/.config/git/*.gitconfig'
 COMMON_GITCONFIG = 'configs/common/.config/git/common.gitconfig'
 GIT_INCLUDE_PREFIX = 'path = ~/.config/git/'
+
+
+FLATTENING_TREES = tuple(name for name, _destination, nested in symlinks.TREES if not nested)
+"""The trees where a coordinate directory drops its `<axis>/<value>` at the
+destination, so two of them can land on one path.
+
+`shell/` keeps the axis in its deployed path and is therefore incapable of a
+collision — nothing but `.zshrc` reads there and it globs the directories by name.
+Derived from `TREES` rather than listed, so a fourth tree is covered by whichever
+half it declares itself to be."""
+
+
+def _coselectable(first: str, second: str) -> bool:
+    """Whether one machine can select both of these directories.
+
+    `common` is on every machine, so it collides with anything. Two values of the
+    *same* axis never co-occur — a machine sits at exactly one point per axis, so
+    `pkg/apt` and `pkg/pacman` cannot both be selected and declaring one path in
+    both is the normal way to write a per-manager config. Two different axes can,
+    which is the case that is a mistake.
+    """
+    if 'common' in (first, second):
+        return True
+    return first.split('/')[0] != second.split('/')[0]
+
+
+def _colliding_variants(root: Path) -> list[Finding]:
+    """Two directories declaring one destination, which no machine can resolve.
+
+    Deployment is ordered and appends without deduplicating, so a collision does
+    not fail — `apply` writes both links at one target, the later one wins, and the
+    next `plan` reports the loser as ordinary drift and repairs it, unseating the
+    winner. The file alternates between the two on every run, for ever, while
+    `check` reports a healthy machine: a link pointing at the wrong source *is*
+    drift, and drift is what `apply` is for rather than something wrong.
+
+    An ERROR because the gate before the walk is what makes it safe. A collision
+    that stopped one target and let the rest proceed would leave the machine half
+    converged against a declaration nobody can satisfy, which is the state this
+    check exists to prevent rather than to describe.
+
+    Pairwise on directories rather than by enumerating every expressible machine.
+    The question is only whether two directories can co-occur, which is a fact
+    about the axes and needs no coordinates resolved.
+    """
+    findings = []
+    for tree in FLATTENING_TREES:
+        declaring: dict[str, list[str]] = {}
+        base = root / tree
+        for directory in sorted(base.glob('*/')) + sorted(base.glob('*/*/')):
+            relative = str(directory.relative_to(base))
+            if relative != 'common' and relative not in axes.directory_names():
+                continue
+            for item in sorted(directory.rglob('*')):
+                if item.is_file() and not core.should_exclude(item.relative_to(directory)):
+                    declaring.setdefault(str(item.relative_to(directory)), []).append(relative)
+
+        for deployed, sources in sorted(declaring.items()):
+            clash = sorted({(a, b) for a in sources for b in sources if a < b and _coselectable(a, b)})
+            for first, second in clash:
+                findings.append(
+                    Finding(
+                        'symlinks',
+                        Severity.ERROR,
+                        f'{tree}/{deployed} is declared in both {first} and {second}, which one machine selects together — '
+                        f'move it out of whichever should not carry it',
+                    )
+                )
+    return findings
 
 
 def _git_variants(root: Path) -> list[Finding]:

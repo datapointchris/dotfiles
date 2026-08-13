@@ -33,10 +33,10 @@ from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
-from dotfiles import registry
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import validate
+from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
@@ -641,6 +641,41 @@ def report_bundle(staged: offline_bundle.Staging) -> None:
         render_note(f'{bundle.MANIFEST} lists no files, so every tool will report its own miss')
 
 
+def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
+    """Which declaration errors stop this run.
+
+    A finding names the thing it is about, in one of two vocabularies. A fault in
+    `packages.yml` carries that file's *section* — `github_releases`, `go_tools` —
+    and a fault elsewhere carries a resource, like `auth` or `symlinks`. The
+    section-to-resource map is read off `registry.PROVIDERS`, which is where a
+    provider already declares which section it plans from, so nothing here decides
+    it a second time.
+
+    Whatever a finding resolves to, it gates a run that selected that resource and
+    lets a run aimed elsewhere proceed. A whole-machine `apply` therefore refuses
+    on any error, and `dotfiles symlinks apply` still works on a machine whose
+    `packages.yml` is broken — which is a deliberate narrowing, unlike converging
+    everything against a declaration nobody can satisfy.
+
+    What resolves to no resource — a manifest that will not parse, a broken git
+    include chain, a registry declared in the wrong place — gates every run. Not
+    because each was traced to every resource, but because it was traced to none,
+    and a fault nobody can attribute is one nobody can rule out.
+    """
+    # Imported here for the reason `resolve.plan_for` gives: the providers build
+    # item types defined in `resolve`, so asking for the registry at module scope
+    # closes the loop.
+    from dotfiles import registry
+
+    owner = {provider.section: provider.resource for provider in registry.PROVIDERS if provider.section}
+    selected = set(selection.resources)
+
+    def concerns(finding: validate.Finding) -> str:
+        return owner.get(finding.section, finding.section)
+
+    return tuple(finding for finding in broken if concerns(finding) not in vocabulary.RESOURCES or concerns(finding) in selected)
+
+
 def apply_machine(
     selection: engine.Selection,
     machine: str | None = None,
@@ -660,15 +695,21 @@ def apply_machine(
 
     The declaration check, the machine's own resolution and the offline check are
     all before the walk. A run measured against a declaration that will not hold
-    together installs whatever survived the parse and reports success — which is
-    why the gate is scoped to the resources that *read* the declaration, and why
-    `symlinks apply` still works on a machine whose `packages.yml` is broken.
+    together installs whatever survived the parse and reports success.
+
+    **A whole-machine apply refuses on any error; a scoped one refuses on the
+    errors that concern what it was asked to converge.** The gate used to be keyed
+    on whether the selection held a resource with a *provider*, which is a fact
+    about how a resource is implemented rather than about what the fault is — so
+    `symlinks apply` ran against a `packages.yml` that would not parse, and would
+    have run against a symlink collision too. Narrowing to one resource is a
+    deliberate act and stays possible; converging the whole machine against a
+    declaration nobody can satisfy is not.
     """
     began = dt.datetime.now(dt.UTC)
     checkout.report_stray_branch()
 
-    reads_declaration = {provider.resource for provider in registry.PROVIDERS}
-    if set(selection.resources) & reads_declaration and (broken := validate.errors(validate.declaration())):
+    if broken := _gating(validate.errors(validate.declaration()), selection):
         warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
         for finding in broken:
             render_finding(finding.section, finding.message)

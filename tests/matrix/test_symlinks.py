@@ -543,49 +543,39 @@ def collides(sandbox: Sandbox) -> Path:
     return destination(sandbox)
 
 
-def test_a_path_declared_in_two_variants_deploys_twice_and_the_last_one_wins(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour. `declared()` appends without deduplicating, so two links
-    are planned at one target and `perform` runs both in deployment order."""
-    target = collides(sandbox)
+def test_a_collision_stops_the_apply_before_it_writes_anything(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Two directories claiming one destination is an error, and an error stops the
+    run rather than converging part of it.
 
-    ran = cli('symlinks', 'apply', '--json')
+    It used to deploy both. `declared()` appends without deduplicating, so two links
+    were planned at one target and `perform` ran both in order — the later one won,
+    the next `plan` reported the loser as ordinary drift and repaired it, unseating
+    the winner, and the file alternated between the two on every run for ever while
+    `check` reported a healthy machine.
 
-    assert len(wrote(ran)) == 2
-    assert target.read_text() == 'from apt\n'
-
-
-def test_a_collision_is_reported_by_neither_verb_as_something_wrong(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour. `check` exists to report what a person has to deal with,
-    and two variants claiming one path is exactly that — but the losing link reads as
-    ordinary repairable drift, so `check` says nothing is wrong."""
-    collides(sandbox)
-    cli('symlinks', 'apply')
-
-    assert cli('symlinks', 'check', '--json').exit_code == ExitCode.CONVERGED
-    assert cli('symlinks', 'plan', '--json').document['pending'] == 1
-
-
-@pytest.mark.xfail(strict=True, reason='two variants declaring one path make apply flip the link between them for ever')
-def test_applying_twice_leaves_a_collision_converged(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`apply` never converges a collision, and nothing says so.
-
-    Both links are planned at one target, so whichever `perform` runs last wins and
-    the other is left pointing at a file that is not its source. The next `plan`
-    reports that one as stale, repairs it, and unseats the winner — the content
-    alternates between the two variants on every run, for ever, with `check`
-    reporting a healthy machine throughout.
-
-    Converging is one of two things: refuse the collision as an Issue naming both
-    variants, or make the variant an override of `common` rather than a second entry.
-    The second is a design change; the first is what `check` is for.
+    Refusing before the walk rather than skipping the one target: a machine
+    converged against a declaration nobody can satisfy is in a state neither the
+    repo nor the run describes, and the caller finds out one resource at a time.
     """
     target = collides(sandbox)
-    cli('symlinks', 'apply')
 
-    cli('symlinks', 'apply')
+    ran = cli('apply', '--json', catch_exceptions=True)
 
-    assert cli('symlinks', 'plan', '--json').document['pending'] == 0
-    assert target.read_text() == 'from apt\n'
+    assert ran.exit_code == ExitCode.ISSUE
+    assert not target.exists()
+
+
+def test_a_collision_names_both_directories_that_declared_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The message has to say which two, because the repair is deleting one of them
+    and nothing else in the run points at either."""
+    collides(sandbox)
+
+    ran = cli('machines', 'check', '--json', catch_exceptions=True)
+
+    said = ' '.join(finding['message'] for finding in ran.document)
+    assert 'common' in said
+    assert 'pkg/apt' in said
+    assert '.config/app/app.conf' in said
 
 
 def test_a_check_that_found_an_undeployed_link_does_not_say_it_is_deployed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

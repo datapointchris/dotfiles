@@ -28,6 +28,7 @@ from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles import resolve
 from dotfiles import sinks
+from dotfiles import validate
 from dotfiles.effects import Completed
 from dotfiles.event import Event
 from dotfiles.event import Refusal
@@ -764,3 +765,47 @@ class TestTheRecordSaysWhatTheRunMeant:
         reconcile.apply_machine(engine.Selection.everything())
 
         assert json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())['issues'] == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Which declaration errors stop which run
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+GATING = [
+    ('github_releases', ('packages', 'symlinks'), True, 'a packages.yml fault stops a run that installs packages'),
+    ('github_releases', ('symlinks',), False, 'and not one aimed only at symlinks'),
+    ('symlinks', ('symlinks',), True, 'a collision stops the run that would deploy it'),
+    ('symlinks', ('packages',), False, 'and not one aimed only at packages'),
+    ('manifest', ('symlinks',), True, 'a manifest nothing can load stops everything'),
+]
+
+
+@pytest.mark.parametrize(('section', 'resources', 'stops', 'why'), GATING, ids=[case[3] for case in GATING])
+def test_a_declaration_error_stops_the_runs_it_concerns(section: str, resources: tuple[str, ...], stops: bool, why: str) -> None:
+    """A whole-machine apply selects every resource, so any error stops it.
+
+    Narrowing to one resource is a deliberate act and keeps working — the case
+    that motivated it is a broken `packages.yml` on a machine whose symlinks still
+    need deploying. Converging everything against a declaration nobody can satisfy
+    is the thing that is never wanted.
+
+    A `packages.yml` fault carries that file's *section* rather than a resource
+    name, and the map between them is read off `registry.PROVIDERS`. `manifest`
+    maps to neither, and gates every run because it was traced to no resource
+    rather than to all of them.
+    """
+    broken = (validate.Finding(section, validate.Severity.ERROR, 'measured elsewhere'),)
+
+    gated = reconcile._gating(broken, engine.Selection(resources=resources))
+
+    assert bool(gated) is stops, why
+
+
+def test_every_gated_section_is_one_something_really_emits() -> None:
+    """Guards the table above: a section nothing produces would pass vacuously and
+    say nothing about the rule."""
+    emitted = {section for section, _ in ((p.section, p.resource) for p in registry.PROVIDERS if p.section)}
+    emitted |= {'manifest', 'gitconfig', 'registry', 'auth', 'symlinks'}
+
+    assert {case[0] for case in GATING} <= emitted
