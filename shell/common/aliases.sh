@@ -101,5 +101,3 @@ alias gst='git status'
 # ga/gd deliberately omitted: forgit claims them for interactive add/diff.
 alias gp='git push'
 alias gl='git pull'
-
-alias git-alias='cat ~/.gitconfig | grep --after-context=50 "\[alias\]"'

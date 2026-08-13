@@ -313,6 +313,23 @@ gh-watch() {
     | fzf -1 -0 | awk '{print $1}' | xargs gh run watch
 }
 
+# Ask git rather than read a config file. git resolves system, global, local and
+# every [include]/[includeIf] in the chain, so this reports the aliases actually
+# in effect here — including a repo-local one, which no single file can show. The
+# version this replaced grepped ~/.gitconfig, which the XDG move deleted, and
+# took 50 lines of context after [alias] whether there were 7 or 70.
+#@git-alias
+#--> Every git alias in effect here, from every config scope
+git-alias() {
+  git config --get-regexp '^alias\.' \
+    | sed 's/^alias\.//' \
+    | sort \
+    | awk '{ name = $1; $1 = ""
+             names[NR] = name; bodies[NR] = substr($0, 2)
+             if (length(name) > width) width = length(name) }
+           END { for (i = 1; i <= NR; i++) printf "%-*s  %s\n", width, names[i], bodies[i] }'
+}
+
 # tm - create new tmux session, or switch to existing one. Works from within tmux too. (@bag-man)
 # `tm` will allow you to select your tmux session via fzf.
 # `tm irc` will attach to the irc session (if it exists), else it will create it.
