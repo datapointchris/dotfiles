@@ -61,8 +61,11 @@ Each object: repo, slug, number, title, url, branch, base, draft, created_at,
 age_days, path. `branch` is the identifier to type — a number is a per-repo
 counter and collides across the registry, whereas `gh` and `bbkt` both accept a
 branch anywhere they accept a number. `base` is what the PR targets, so a PR
-stacked on another names its parent rather than the default branch. `path` is
-empty when the repo is not checked out on this machine.
+stacked on another names its parent rather than the default branch. `slug` is
+`owner/name` and is the only field that identifies a repository uniquely; `repo`
+is a bare basename and can collide with an upstream project. `path` is empty when
+the repo is not checked out here, and equally when the checkout of that name turns
+out to be a different repository.
 
 --lane emits doit's lane document instead, so `doit dashboard` can read this
 directly and no consumer has to carry a copy of the shape.
@@ -116,6 +119,56 @@ paths_json() {
       | {key: .name, value: (.path | sub("^~"; $home))}
     ] | from_entries
   ' "$REGISTRY"
+}
+
+# origin's owner/name, from either remote spelling. The trailing `[:/]` in the
+# pattern is what makes one expression cover both: it eats `git@host:` and
+# `https://host/` alike, leaving the last two components.
+remote_slug() {
+  git -C "$1" remote get-url origin 2>/dev/null \
+    | sed -e 's|\.git$||' -e 's|^.*[:/]\([^/]*\)/\([^/]*\)$|\1/\2|' \
+    | tr '[:upper:]' '[:lower:]'
+}
+
+# slug → path, but only where the checkout of that name really is that repository.
+#
+# The registry identifies a repo by BASENAME, and the GitHub query searches all of
+# GitHub, so a PR you authored against someone else's project of the same name
+# resolves to your own clone. `typos` is the live case — the registry holds
+# ~/code/typos and `crate-ci/typos` is a real upstream. Handing that row a path is
+# worse than handing it nothing: `prs` fetches `pull/<number>/head` from YOUR
+# origin, which is a different PR or none, and then diffs whatever it got.
+#
+# Costed per PR rather than per registry entry, which is what makes the git call
+# affordable — this runs for the handful of repos with an open PR, not for all of
+# them. That is the objection which sank deriving owners registry-wide.
+#
+# Bitbucket rows carry a bare name as their slug, since bbkt is repo-scoped and
+# already ran inside the checkout. Those are trusted without a remote lookup;
+# `*/*` is the test for a slug that actually names an owner.
+verified_paths() {
+  local rows="$1" paths="$2" slug name path out='{}'
+
+  while IFS=$'\t' read -r slug name; do
+    [ -n "$slug" ] || continue
+    path=$(jq -r --arg n "$name" '.[$n] // ""' <<<"$paths")
+    [ -n "$path" ] || continue
+
+    # A registered path that is not on disk passes straight through, unverified.
+    # Nothing can be asked of a checkout that does not exist, and withholding the
+    # path here would cost `prs` its more precise "registered at X, which does
+    # not exist" — a repo you have not cloned yet, reported as one you have not
+    # registered. It is also harmless: that row dies before it can fetch.
+    if [ -d "$path" ]; then
+      case "$slug" in
+        */*) [ "$(remote_slug "$path")" = "$(tr '[:upper:]' '[:lower:]' <<<"$slug")" ] || continue ;;
+      esac
+    fi
+
+    out=$(jq --arg s "$slug" --arg p "$path" '. + {($s): $p}' <<<"$out")
+  done < <(jq -r '.[] | [.slug, .repo] | @tsv' <<<"$rows" | sort -u)
+
+  printf '%s\n' "$out"
 }
 
 # GraphQL rather than `gh search prs`, whose field set has no headRefName or
@@ -226,23 +279,30 @@ from_bitbucket() {
   done < <(repos_for bitbucket)
 }
 
-{
-  from_github
-  from_bitbucket
-} | jq -s --argjson paths "$(paths_json)" '
-  map(
-    . + {
-      age_days: (
-        if (.created_at | length) > 0
-        then ((now - (.created_at | fromdateiso8601)) / 86400 | floor)
-        else 0
-        end
-      ),
-      path: ($paths[.repo] // ""),
-    }
-  )
-  | sort_by(.created_at)
-' | if [ -n "$LANE" ]; then
+# Two passes, because the path a row deserves depends on the row: the set of
+# repositories to verify is not known until the PRs are in hand.
+rows=$(
+  {
+    from_github
+    from_bitbucket
+  } | jq -s '
+    map(
+      . + {
+        age_days: (
+          if (.created_at | length) > 0
+          then ((now - (.created_at | fromdateiso8601)) / 86400 | floor)
+          else 0
+          end
+        ),
+      }
+    )
+    | sort_by(.created_at)
+  '
+)
+
+jq --argjson verified "$(verified_paths "$rows" "$(paths_json)")" '
+  map(. + {path: ($verified[.slug] // "")})
+' <<<"$rows" | if [ -n "$LANE" ]; then
   # doit's contract, emitted here so the dashboard needs no adapter and no copy
   # of this shape. Thresholds are short on purpose: a PR is meant to be read the
   # day it lands, not eventually.

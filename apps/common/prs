@@ -44,6 +44,12 @@ EOF
 # paired with it. `open_pr_heads` reads the whole listing, so it is built once
 # and passed in rather than rebuilt per row.
 #
+# `repo_cell` is the display half of that same collision. pr-list only fills
+# `path` once it has confirmed the local checkout really is the PR's repository,
+# so an empty one means this row is not the registry repo it shares a name with —
+# and the cell widens to the full `owner/name` to say so. Showing the slug on
+# every row instead would charge every line for the rare case.
+#
 # A quoted heredoc rather than a single-quoted string: shellcheck reads jq's own
 # `$heads` and `$p` in a bare assignment as shell expansions it should warn about
 # (SC2016), and it does not follow them into the jq call that consumes them.
@@ -57,6 +63,8 @@ def branch_cell($heads):
   | ($heads[.slug][.base // ""] // null) as $parent
   | if $parent == null or $parent == .number then $cell
     else "\($cell) ← #\($parent)" end;
+def repo_cell:
+  if (.path // "") == "" then .slug else .repo end;
 JQ
 )
 
@@ -81,7 +89,7 @@ case "${1:-}" in
         open_pr_heads as $heads
         | ["REPO", "PR", "AGE", "BRANCH", "TITLE"],
         (.[] | [
-          .repo,
+          repo_cell,
           "#\(.number)",
           "\(.age_days)d",
           branch_cell($heads),
@@ -119,7 +127,7 @@ chosen=$(jq -r "$branch_cell_jq"'
   | to_entries[]
   | [
     .key,
-    .value.repo,
+    (.value | repo_cell),
     "#\(.value.number)",
     "\(.value.age_days)d",
     (.value | branch_cell($heads)),

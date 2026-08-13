@@ -187,3 +187,62 @@ def test_an_unauthenticated_gh_skips_github_rather_than_failing_the_run(run) -> 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == []
     assert 'gh auth status' in result.stderr
+
+
+def checkout_with_origin(path: Path, origin: str) -> None:
+    """A real git repo, because the thing under test is what git reports."""
+    path.mkdir(parents=True)
+    subprocess.run(['git', 'init', '-q'], cwd=path, check=True)
+    subprocess.run(['git', 'remote', 'add', 'origin', origin], cwd=path, check=True)
+
+
+def test_a_pr_against_an_upstream_of_the_same_name_gets_no_local_path(run, tmp_path: Path) -> None:
+    """The registry identifies a repo by basename and the search covers all of
+    GitHub, so `crate-ci/typos` passes a filter meant for `~/code/typos`. Handing
+    that row the local path is worse than handing it nothing: `prs` would fetch
+    `pull/7/head` from the wrong origin and diff whatever came back."""
+    checkout = tmp_path / 'typos'
+    checkout_with_origin(checkout, 'git@github.com:datapointchris/typos.git')
+    result = run(
+        registry('github', ('typos', str(checkout))),
+        gh=github_stub(
+            graphql_node(
+                'typos',
+                7,
+                'their-branch',
+                repository={'name': 'typos', 'nameWithOwner': 'crate-ci/typos'},
+            )
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['slug'] == 'crate-ci/typos'
+    assert pr['path'] == ''
+
+
+def test_your_own_repo_resolves_to_its_checkout(run, tmp_path: Path) -> None:
+    """The other direction of the same check, in the https remote spelling — the
+    verification must not cost a real row its path."""
+    checkout = tmp_path / 'typos'
+    checkout_with_origin(checkout, 'https://github.com/datapointchris/typos')
+    result = run(
+        registry('github', ('typos', str(checkout))),
+        gh=github_stub(graphql_node('typos', 3, 'mine')),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['path'] == str(checkout)
+
+
+def test_a_registered_repo_that_is_not_cloned_keeps_its_path(run, tmp_path: Path) -> None:
+    """Nothing can be asked of a checkout that does not exist, and withholding the
+    path would cost `prs` its "registered at X, which does not exist" — a repo you
+    have not cloned reported as one you never registered."""
+    absent = tmp_path / 'not-cloned'
+    result = run(
+        registry('github', ('dotfiles', str(absent))),
+        gh=github_stub(graphql_node('dotfiles', 1, 'a-branch')),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['path'] == str(absent)

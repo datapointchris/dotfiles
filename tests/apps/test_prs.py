@@ -285,3 +285,23 @@ def test_an_empty_backlog_says_so_rather_than_printing_a_bare_header(listing) ->
     """An empty backlog is a real and good answer, and a lone header row reads as
     output that got cut off."""
     assert listing() == ['No open PRs.']
+
+
+def test_a_row_with_no_verified_checkout_widens_to_owner_and_name(listing) -> None:
+    """The display half of the basename collision. pr-list fills `path` only once
+    it has confirmed the checkout really is that PR's repository, so an empty one
+    means this row is not the registry repo it shares a name with — and a REPO
+    cell reading `typos` for both would be indistinguishable."""
+    lines = listing(
+        pr('typos', 4, 'align-config'),
+        pr('typos', 1188, 'their-work', slug='crate-ci/typos', path=''),
+    )
+    assert cells(lines[1])[0] == 'typos'
+    assert cells(lines[2])[0] == 'crate-ci/typos'
+
+
+def test_the_picker_widens_the_same_row_the_listing_does(picker) -> None:
+    """The picker is where a PR is chosen for review, so a row that misnames its
+    repository there is the one that costs a wrong review rather than a wrong read."""
+    lines = picker(pr('typos', 1188, 'their-work', slug='crate-ci/typos', path=''))
+    assert fields(lines[0])[1] == 'crate-ci/typos'
