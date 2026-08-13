@@ -195,8 +195,10 @@ def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quie
         raise typer.Exit(ExitCode.ISSUE) from unreachable
 
     absent = windows.missing(into)
-    for name in absent:
-        console.print(f'[red]missing[/red]  {name}')
+    for name in sorted(absent):
+        render_row('missing', name, f'not in {into}', 'yellow')
+    for name in sorted(set(windows.TOOLS) - set(absent)):
+        render_row('matched', name, '', 'green')
     console.print(f'{len(windows.TOOLS) - len(absent)} of {len(windows.TOOLS)} Windows tools in {into}')
     raise typer.Exit(ExitCode.DRIFT if absent else ExitCode.CONVERGED)
 
@@ -226,8 +228,8 @@ def windows_apply(
         error(str(unreachable))
         raise typer.Exit(ExitCode.ISSUE) from unreachable
 
-    for name in unresolved:
-        error(f'{name} did not land in {into}')
+    for name in sorted(unresolved):
+        render_row('failed', name, f'did not land in {into}', 'red')
     console.print(f'{len(windows.TOOLS) - len(unresolved)} of {len(windows.TOOLS)} Windows tools in {into}')
     raise typer.Exit(ExitCode.ISSUE if unresolved else ExitCode.CONVERGED)
 

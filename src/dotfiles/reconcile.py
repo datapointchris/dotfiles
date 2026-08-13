@@ -49,9 +49,11 @@ from dotfiles.output import err_console
 from dotfiles.output import heading
 from dotfiles.output import hint
 from dotfiles.output import measured
+from dotfiles.output import render_advice
 from dotfiles.output import render_change
 from dotfiles.output import render_finding
 from dotfiles.output import render_note
+from dotfiles.output import render_row
 from dotfiles.output import retract
 from dotfiles.output import warn
 from dotfiles.providers import bundle
@@ -893,18 +895,41 @@ def _render(event: Event) -> None:
     payload = event.payload
     if isinstance(payload, Refusal):
         warn(payload.reason)
-    elif isinstance(payload, Outcome) and payload.status in (OutcomeStatus.REFUSED, OutcomeStatus.SKIPPED):
-        err_console.print(f'[yellow]-[/] {payload.message or payload.change.item}')
-    elif isinstance(payload, Outcome) and payload.ok:
-        err_console.print(f'[green]✓[/] {payload.message or payload.change.item}')
-    elif isinstance(payload, Outcome):
-        # One row per line: a diagnosed failure carries the cause and the command
-        # that fixes it under the provider's own message, and the command wants a
-        # line of its own rather than a place inside a paragraph.
-        cause, *diagnosed = payload.message.splitlines() or ['']
-        err_console.print(f'[red]✗[/] {payload.change.item}: {cause}')
-        for line in diagnosed:
-            err_console.print(f'  [blue]→[/] {line}')
+        return
+    if not isinstance(payload, Outcome):
+        return
+
+    label, colour = OUTCOME_MARKS[payload.status]
+    cause, *diagnosed = (payload.message or payload.change.item).splitlines() or ['']
+    render_row(label, payload.change.item, cause, colour)
+    # One row per line: a diagnosed failure carries the cause and the command that
+    # fixes it under the provider's own message, and the command wants a line of its
+    # own rather than a place inside a paragraph. Aligned through the shared
+    # continuation, because this indented by two and `render_change` by the width of
+    # the two columns above — so one run's failures and its findings hung their
+    # advice in different places.
+    for line in diagnosed:
+        render_advice(line)
+
+
+OUTCOME_MARKS = {
+    OutcomeStatus.DONE: ('done', 'green'),
+    OutcomeStatus.SKIPPED: ('skipped', 'yellow'),
+    OutcomeStatus.REFUSED: ('refused', 'yellow'),
+    OutcomeStatus.FAILED: ('failed', 'red'),
+    OutcomeStatus.ABSENT: ('absent', 'red'),
+}
+"""The word each outcome carries in the verdict column, and its colour.
+
+A word rather than a bare tick, dash or cross. Those three had to cover five
+statuses, so `refused` and `skipped` shared a dash and `failed` and `absent` shared
+a cross — and the pairs are exactly the ones whose distinction decides where to go
+and look. `ABSENT` means read the declaration where `FAILED` means read the command,
+which is a difference its own docstring spells out and the mark erased.
+
+A refusal keeps a colour that is not red: it wrote nothing and did nothing wrong,
+and an offline machine skipping a source the bundle was never built to stage must
+not read as a broken install."""
 
 
 def _unsuccessful(events: Iterable[Event]) -> list[str]:

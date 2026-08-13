@@ -430,7 +430,7 @@ def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
     # reader scanning for the command wants it on a line of its own rather than
     # inside a sentence.
     for line in change.advice.splitlines():
-        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{width}} [blue]→[/] {line}')
+        render_advice(line, width)
 
 
 def render_examined(row: Examined, width: int = SUBJECT_COLUMN) -> None:
@@ -460,6 +460,20 @@ def render_row(label: str, subject: str, detail: str, colour: str = '', width: i
         return
     marked = f'[{colour}]{label:<{VERDICT_COLUMN}}[/]' if colour else f'{label:<{VERDICT_COLUMN}}'
     err_console.print(f'{EVIDENCE_INDENT}{marked} {subject:<{width}} {detail}')
+
+
+def render_advice(line: str, width: int = SUBJECT_COLUMN) -> None:
+    """The next step, hung under the row it belongs to rather than beside it.
+
+    One continuation shared by the two renderers that produce these. `render_change`
+    aligned advice under the detail column and `apply`'s outcome renderer indented it
+    by two, so a single run's findings and its failures put the same kind of
+    instruction in two different places — and a reader scanning a column for the
+    command found half of them.
+    """
+    if not showing_evidence():
+        return
+    err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{width}} [blue]→[/] {line}')
 
 
 def render_note(text: str) -> None:
