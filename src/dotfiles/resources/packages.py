@@ -139,13 +139,20 @@ class Observed:
 
     @property
     def summary(self) -> str:
-        """What the row says when nothing drifted.
+        """What the row says when nothing drifted, counted through the verdict
+        `diff` reads for the same row.
+
+        It read `all N declared packages are installed` — a count of the
+        declaration with the word `installed` attached, so a machine missing four
+        tools said every one of them was there. A second predicate here would be
+        free to disagree with the rows it is summarising.
 
         Lives here rather than in the walk because it is a sentence about *this*
         observation: the walk reaching into `evidence` to count it is the walk
         knowing a field it has no other reason to know.
         """
-        return f'all {len(self.evidence)} declared packages are installed'
+        installed = sum(1 for found in self.evidence.values() if found.verdict is Verdict.MATCHED)
+        return f'{installed} of {len(self.evidence)} declared packages installed'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:

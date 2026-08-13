@@ -670,7 +670,7 @@ def test_a_staged_bundle_satisfies_the_offline_gate(sandbox: Sandbox, cli: Calla
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# What the summary sentence claims, which is not what the counts say
+# What the summary sentence claims, counted from what was measured
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -679,12 +679,14 @@ def a_machine_missing_its_declared_package(sandbox: Sandbox) -> None:
     sandbox.shadow('dpkg-query', NOTHING_INSTALLED)
 
 
-def test_the_package_summary_counts_what_is_declared_and_says_it_is_installed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned because it is wrong and a fix has to move it.
+def test_the_package_summary_does_not_claim_an_install_the_counts_contradict(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The sentence and the numbers beside it are one document and agree.
 
-    `Observed.summary` builds `all {self.packages} declared system packages
-    installed`, and `packages` is how many rows were *examined* — so the sentence
-    is a count of the declaration wearing the word "installed". `check` prints it
+    It read `all N declared system packages installed`, where `N` was how many
+    rows were *examined* — a count of the declaration wearing the word
+    "installed". `check --json` answered `pending: 1` beside it in the same
+    object, and the human run prints the sentence alone, so a reader who believed
+    the prose was told the opposite of what was measured. `check` prints it
     whenever nothing needs a person, which is the common case for a machine that
     is merely missing a package.
     """
@@ -693,51 +695,22 @@ def test_the_package_summary_counts_what_is_declared_and_says_it_is_installed(sa
     ran = cli('system', 'check', '--json')
 
     assert ran.document['pending'] == 1, 'the machine is missing the one package it declares'
-    assert 'all 1 declared system packages installed' in ran.document['detail']
-
-
-@pytest.mark.xfail(strict=True, reason='Observed.summary counts declared rows and calls them installed')
-def test_the_package_summary_does_not_claim_an_install_the_counts_contradict(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The sentence and the numbers beside it are one document and disagree.
-
-    `check --json` answers `pending: 1` and `detail: all 1 declared system
-    packages installed (asked apt)` in the same object, and the human run prints
-    the sentence alone. A reader who believes the prose is told the opposite of
-    what was measured.
-    """
-    a_machine_missing_its_declared_package(sandbox)
-
-    ran = cli('system', 'check', '--json')
-
+    assert '0 of 1 declared system packages installed' in ran.document['detail']
     assert 'all 1 declared system packages installed' not in ran.document['detail']
 
 
-def test_the_configuration_summary_counts_every_row_and_says_they_match(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned for the same reason.
+def test_the_configuration_summary_counts_only_the_rows_that_match(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """One declared row, MISSING, and the count says none matched.
 
-    `Observed.config` holds one state per declared row whatever that state turned
-    out to be, and the summary reports `len(...)` of it as the number that match.
+    The count was `len(self.config)`, which is every row `_observe_config`
+    answered for whatever that answer turned out to be — so a machine with nine
+    rows and three of them drifted said nine match.
     """
     declare_system(sandbox, managed_whole(sandbox))
 
     ran = cli('system', 'check', '--json')
 
     assert ran.document['pending'] == 1, 'the declared file does not exist'
-    assert '1 configuration item(s) match' in ran.document['detail']
-
-
-@pytest.mark.xfail(strict=True, reason='Observed.summary counts every config row as matching, drifted ones included')
-def test_the_configuration_summary_counts_only_the_rows_that_match(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """One declared row, MISSING, reported as one row that matches.
-
-    The count is `len(self.config)`, which is every row `_observe_config`
-    answered for. A machine with nine rows and three of them drifted says nine
-    match.
-    """
-    declare_system(sandbox, managed_whole(sandbox))
-
-    ran = cli('system', 'check', '--json')
-
     assert '0 configuration item(s) match' in ran.document['detail']
 
 
@@ -769,23 +742,6 @@ def test_a_row_declaring_it_needs_no_root_is_planned_as_needing_none(sandbox: Sa
     assert ran.document['privileged'] == 0
 
 
-def test_a_row_declaring_it_needs_no_root_still_escalates_at_the_write(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour on the write side, pinned because it contradicts the read.
-
-    `_apply_file` runs `install -D` through `Privilege` whatever the row said, so
-    a plan that promised no password produces a run that asks for one and fails
-    without it.
-    """
-    log = a_file_declaring_it_needs_no_root(sandbox)
-
-    ran = cli('system', 'apply')
-
-    assert ran.exit_code == ExitCode.ISSUE
-    assert 'authorization was declined' in ran.output
-    assert not log.exists()
-
-
-@pytest.mark.xfail(strict=True, reason='sysconfig writes through Privilege whatever needs_root says')
 def test_a_row_declaring_it_needs_no_root_is_written_without_root(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`needs_root` says whether repairing this row escalates, and the repair does
     not read it.

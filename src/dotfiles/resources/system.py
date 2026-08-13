@@ -69,18 +69,34 @@ class Observed:
     and the row that says so is here rather than in `packages`.
     """
 
-    packages: int = 0
-    """How many of the observed rows are declared packages.
+    packages: frozenset[str] = frozenset()
+    """Which of the observed rows are declared packages, by address.
 
-    Counted rather than derived from `len(self.evidence)`, which also holds one
-    row per package manager — those are what upgrades a manager, not something
-    `packages.yml` declares, and folding them in made a 96-package machine report
-    99.
+    Held apart from `self.evidence`, which also carries one row per package
+    manager — those are what upgrades a manager, not something `packages.yml`
+    declares, and folding them in made a 96-package machine report 99. Addresses
+    rather than the count that was here, so `summary` can ask each row how it
+    turned out instead of being handed a number with nothing behind it.
     """
 
     @property
     def summary(self) -> str:
-        """Names which managers answered, because a machine whose manager is
+        """How much of each half is settled, counted through the verdict `diff`
+        reads for the same row.
+
+        It said `all N declared system packages installed` and `N configuration
+        item(s) match` over counts of the *declaration* — the first printed by a
+        `check` that had just found the package missing, the second by one that had
+        just found the file absent. `check` is right to report converged, because
+        either is `plan`'s drift rather than something wrong; the detail was the
+        false half, and it is the half a reader keeps. A second predicate here
+        would be free to disagree with the rows it is summarising.
+
+        Only the package half names its total. Nine `system.yml` rows are few
+        enough to read against the tally beside them, and a hundred packages are
+        not — while `all N` had no truthful form at all.
+
+        Names which managers answered, because a machine whose manager is
         absent reports UNKNOWN rather than reporting every package missing — and
         a row saying "all installed" without saying who was asked would read as a
         measurement when it was a shrug.
@@ -92,8 +108,10 @@ class Observed:
         is the whole reason a summary may hold a newline at all.
         """
         asked = ', '.join(sorted(self.asked)) or 'nothing'
-        line = f'all {self.packages} declared system packages installed (asked {asked})'
-        return f'{line}\n{len(self.config)} configuration item(s) match' if self.config else line
+        installed = sum(1 for address in self.packages if self.evidence[address].verdict is Verdict.MATCHED)
+        matched = sum(1 for state in self.config.values() if state.verdict is Verdict.MATCHED)
+        line = f'{installed} of {len(self.packages)} declared system packages installed (asked {asked})'
+        return f'{line}\n{matched} configuration item(s) match' if self.config else line
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
@@ -127,7 +145,7 @@ class SystemResource:
             config=_observe_config(_config_items(plan)),
             described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
             met=session.preconditions,
-            packages=sum(1 for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
+            packages=frozenset(item.address for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
