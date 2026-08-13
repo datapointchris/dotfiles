@@ -160,12 +160,11 @@ def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
 class BundleAsset:
     """One downloadable file, and what it *is* rather than where it came from.
 
-    The cache used to key on the URL. That is the same thing only for as long as
-    an asset has exactly one URL — and the release API hands back a
-    `browser_download_url` whose host varies, so the moment anything resolves a
-    download that way the key starts depending on which server answered and every
-    warm entry misses. The identity is the release coordinate; the URL is one way
-    to reach it.
+    The identity is the release coordinate; the URL is one way to reach it. Keying
+    the cache on the URL is the same thing only for as long as an asset has exactly
+    one — and the release API hands back a `browser_download_url` whose host varies,
+    so anything resolving a download that way makes the key depend on which server
+    answered and every warm entry misses.
     """
 
     url: str

@@ -1,17 +1,15 @@
 """`packages.yml`, parsed once into typed rows.
 
 One dataclass per section, rather than one generic row plus a table of
-`required` / `forbidden` / `id_field` rules. The table existed because nothing
-else pinned a section's shape, and it only ever described the fields someone
-remembered to describe: `install_script` sat on all 23 `github_releases` entries
-naming scripts that half of them no longer had, and `binary_pattern` drifted into
-naming assets that no longer existed. Both were invisible for the same reason —
-no reader consumed them, and nothing said one had to.
+`required` / `forbidden` / `id_field` rules. A field on a dataclass is either
+read by its provider or visibly unused, and a key that is not a field is an error
+at load time rather than decoration — so a section's schema and its reader cannot
+be two documents that disagree.
 
-A field on a dataclass is either read by its provider or visibly unused, and a
-key that is not a field is an error at load time rather than decoration. That is
-the whole argument for the rewrite: the section's schema and the section's reader
-stop being two documents that can disagree.
+A rules table cannot hold that line. Nothing consumes its entries, so it
+describes only the fields someone remembered to describe and the descriptions rot
+unread: `install_script` naming scripts that `github_releases` entries do not
+have, `binary_pattern` naming assets that do not exist.
 
 Everything is collected before anything is raised. A caller fixing `packages.yml`
 wants every problem in it, not the first one — which is also what lets

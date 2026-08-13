@@ -256,10 +256,10 @@ def _lead(kept: Sequence[Change]) -> str:
 def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult]:
     """One row per resource, from the stream the engine yielded.
 
-    Seven near-identical `check_*` functions used to do this, each building its
-    own converged sentence by reaching into a field of another module's
-    observation. The sentence is the observation's own now, and this only has to
-    know the three payload kinds.
+    The converged sentence belongs to each observation, so this has to know only
+    the three payload kinds. Folding per resource instead means one near-identical
+    function each, every one of them reaching into a field of another module's
+    observation to build that sentence for itself.
 
     A refusal is an Issue under either lens: `check` because a checker that could
     not run is exactly what it exists to report, and `plan` because a resource

@@ -1,18 +1,16 @@
 """The language runtimes: whether each one this machine needs is there and current.
 
-*Which* of them it needs is not decided here any more. A toolchain is a provider
-like every other mechanism, planned by `registry.ToolchainProvider` from what the
-tool providers resolved, so the table that used to sit in this file — name, probe,
-stage, the section that pulls it in — is the registry's. It was the fifth keying
-of the provider concept and the one the A3 collapse did not reach.
+*Which* of them it needs belongs to the registry, not here: a toolchain is a
+provider like every other mechanism, planned by `registry.ToolchainProvider` from
+what the tool providers resolved.
 
-What is left is the resource: ask the provider whether each one is there, compare
+What is left is the resource — ask the provider whether each one is there, compare
 the versions against the floors the plan carries, and say what differs. Presence
-is the provider's answer and never a second `which` here — that duplicate is what
-let a packaged `go` satisfy a toolchain unpacked to a path nothing checked. uv is ungated and always planned,
-because everything installed later resolves through it — before the CLI existed
-the symlink phase itself shelled out to `uv run` and died with exit 127 on
-`linux-lxc-server`.
+is the provider's answer and never a second `which` here: two independent probes
+let a packaged `go` satisfy a toolchain unpacked to a path nothing checked.
+
+uv is ungated and always planned, because everything installed later resolves
+through it — the symlink phase included, which shells out to `uv run`.
 """
 
 from __future__ import annotations

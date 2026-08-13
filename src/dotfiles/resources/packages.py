@@ -634,10 +634,10 @@ def _unmeasurable_advice(observed: Observed) -> str:
 def _undeclared_advice(strays: Iterable[str], manager: PackageManager) -> str:
     """What to do about a copy nothing declares — asked of the machine, not guessed.
 
-    This row used to end at "remove the undeclared copy yourself", which is an
-    instruction rather than a step. Acting on it meant leaving the tool to find
-    out what owned the file, and `pacman -Qo` answers that in one bounded call
-    the run could make itself.
+    The row names what owns the file rather than telling a person to go and find
+    out, because `pacman -Qo` answers that in one bounded call the run can make
+    itself. "Remove the undeclared copy yourself" is an instruction rather than a
+    step.
 
     The alternative stays on the row, because it is still a judgement only a
     person can make: the two copies are often the same version, and which
