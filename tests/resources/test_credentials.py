@@ -190,9 +190,9 @@ def test_a_helper_under_an_escaped_path_is_measured_rather_than_called_missing(g
     """The work-box shape, end to end from the config file git actually parses.
 
     `\\\\` in the file is one backslash in the value, and that backslash is the
-    shell's rather than the filename's. Reported `missing` for months while git
-    ran the helper on every push, which is how it masked the login failure
-    underneath it.
+    shell's rather than the filename's. Reported `missing` on the first run of
+    this resource against a real machine, while git ran the same helper on every
+    push — which is how it masked the login failure underneath it.
     """
     directory = tmp_path / 'Program Files'
     directory.mkdir()
