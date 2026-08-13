@@ -257,6 +257,31 @@ class OutcomeStatus(enum.StrEnum):
     change in the same batch repaired it."""
 
 
+APPLY_FAILED = frozenset({OutcomeStatus.FAILED, OutcomeStatus.ABSENT})
+"""Where a write was attempted and the item is still not what was asked for.
+
+`ABSENT` belongs here and not beside `DONE` because the command's exit status is
+not the question: `brew install pkg-config` exiting 0 with the formula still
+missing is a failed install that lied about itself, which is the whole reason the
+status exists.
+"""
+
+UNCONVERGED = APPLY_FAILED | {OutcomeStatus.REFUSED}
+"""Where the item is still not what the declaration asks for, however it got there.
+
+Two questions, so two sets, and they agree everywhere but `REFUSED`. `apply` is
+not failing when a precondition it cannot meet stops it — an offline machine
+reporting itself unconverged for doing exactly what the bundle was built for is
+what `Outcome.ok` forgives — and the item is still not installed, so anything
+reading the run history afterwards has to see it.
+
+Derived from `APPLY_FAILED` rather than listed again, because two literals is
+what let them disagree in both directions: this half was written `{FAILED,
+REFUSED}` and omitted `ABSENT` for as long as `ABSENT` existed, so the one
+outcome the run history was shared to make visible rendered green.
+"""
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Outcome:
     change: Change
@@ -265,7 +290,7 @@ class Outcome:
 
     @property
     def ok(self) -> bool:
-        return self.status not in (OutcomeStatus.FAILED, OutcomeStatus.ABSENT)
+        return self.status not in APPLY_FAILED
 
     @classmethod
     def from_result(cls, change: Change, result: providers.Result) -> Outcome:

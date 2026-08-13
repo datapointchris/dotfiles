@@ -195,32 +195,33 @@ def test_the_listing_filters_narrow_by_what_the_filename_carries(
     assert ran.document == expected
 
 
-def test_a_limit_of_zero_lists_every_run_there_is(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned so the fix below is a change rather than a
-    discovery. `runs.list_runs` ends `found[:limit] if limit else found`, and zero
-    is falsy — so the one value that asks for nothing is read as no limit at all."""
-    three_runs(sandbox)
-
-    ran = cli('report', 'list', '--limit', '0', '--json')
-
-    assert ran.document == [BOX_CHECK, MBP_APPLY, BOX_PLAN]
-
-
-@pytest.mark.xfail(strict=True, reason='list_runs tests `if limit` rather than `if limit is not None`, so 0 means unlimited')
 def test_a_limit_of_zero_lists_nothing(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`--limit 0` asks for no runs and is answered with all of them.
+    """`--limit 0` asks for no runs and gets none.
 
-    The fault is a falsy-versus-absent conflation in `runs.list_runs`: `limit` is
-    typed `int | None` and only `None` means unlimited, but the guard is `if
-    limit`. Nothing else in the CLI is bounded this way, so a caller that computes
-    its limit — `--limit "$(remaining)"` — gets the whole shared fleet directory at
-    the moment it asked for none of it.
+    The falsy-versus-absent conflation this pins against: `limit` is typed `int |
+    None` and only `None` means unlimited, so the guard has to be `is not None`.
+    Nothing else in the CLI is bounded this way, and the caller that computes its
+    limit — `--limit "$(remaining)"` — is the one that reaches zero, so under `if
+    limit` it got the whole shared fleet directory at the moment it asked for none
+    of it.
     """
     three_runs(sandbox)
 
     ran = cli('report', 'list', '--limit', '0', '--json')
 
     assert ran.document == []
+
+
+def test_a_negative_limit_is_a_usage_error_rather_than_a_slice(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The other end of the same conflation. A bound below zero is not a smaller
+    answer — `found[:-1]` drops the *newest* run, which is the one a reader asking
+    for a listing wants most, and it does it silently."""
+    three_runs(sandbox)
+
+    ran = cli('report', 'list', '--limit', '-1', '--json', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert ran.document is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -258,28 +259,16 @@ def test_the_listing_names_what_kept_a_run_from_converging(
     assert expected in ran.stdout
 
 
-def test_an_install_that_left_the_item_absent_is_marked_ok(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned. `UNSUCCESSFUL` holds FAILED and REFUSED, and an
-    ABSENT outcome is neither — so the run renders green."""
-    record(sandbox, identifier='aaaaaaaaaaaa', absent=('packages:pkg-config',))
-
-    ran = cli('report', 'list')
-
-    assert 'ok' in ran.stdout
-    assert 'pkg-config' not in ran.stdout
-
-
-@pytest.mark.xfail(strict=True, reason='report._unsuccessful omits OutcomeStatus.ABSENT, so a succeeded-but-absent install lists as ok')
 def test_an_install_that_left_the_item_absent_is_named_in_the_listing(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """ABSENT is the exact failure the run history was shared to make visible, and
-    it is the one unsuccessful action the listing calls `ok`.
+    """ABSENT is the exact failure the run history was shared to make visible, so
+    the listing names it rather than rendering the run green.
 
     `OutcomeStatus.ABSENT` means the install command exited 0 and the thing is
     still not there — `brew install pkg-config` landing a formula renamed to
     `pkgconf`, thirteen times. `_never_converged` says that case is now caught on
     the first run rather than the third, because `_transact` re-observes and
     records `absent`. The listing is where a reader goes to find which run went
-    wrong, and it is the one reader that does not count it.
+    wrong, and it counted every unsuccessful action but this one.
     """
     record(sandbox, identifier='aaaaaaaaaaaa', absent=('packages:pkg-config',))
 
@@ -505,26 +494,44 @@ def corrupt_store(sandbox: Sandbox) -> None:
     `sinks.keep` catches the OSError so the run itself reports nothing. The link is
     removed so the corrupt record is the one `latest` selects, which is the state a
     machine reading a fleet-shared directory is already in.
+
+    The readable record carries an outcome so that it has something to contribute
+    to every verb below. Without one it contributes no duration, and `stats` then
+    exits ISSUE for having nothing to total — which reads identically to exiting
+    ISSUE over the file it could not open.
     """
-    record(sandbox, identifier='aaaaaaaaaaaa', verb='plan', when='20260101T000000Z')
+    record(sandbox, identifier='aaaaaaaaaaaa', verb='plan', when='20260101T000000Z', done=('packages:ruff',))
     (sandbox.runs / '20260103T000000Z-box-check.json').write_text('')
     unlink_the_latest_link(sandbox)
 
 
 @pytest.mark.parametrize(
-    'argv',
-    [('report', 'list'), ('report', 'stats'), ('report', 'latest'), ('report', 'show', '20260103')],
+    ('argv', 'exit_code'),
+    [
+        (('report', 'list'), ExitCode.CONVERGED),
+        (('report', 'stats'), ExitCode.CONVERGED),
+        (('report', 'latest'), ExitCode.ISSUE),
+        (('report', 'show', '20260103'), ExitCode.ISSUE),
+    ],
     ids=['list', 'stats', 'latest', 'show'],
 )
-def test_one_unreadable_record_takes_down_every_verb_that_opens_a_record(
-    argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
+def test_a_verb_answering_about_one_record_refuses_where_a_verb_answering_about_the_set_skips(
+    argv: tuple[str, ...], exit_code: ExitCode, sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
-    """Current behaviour, pinned. `runs.read` calls `json.loads` on whatever is
-    there and nothing above it catches a parse error."""
+    """Which half of the split each verb is on, and it is easy to get backwards.
+
+    `list` and `stats` are asked about the whole directory, so a file they cannot
+    open costs them one row and they still have an answer. `latest` and `show`
+    were asked about that file, so there is nothing else for them to say — and
+    reporting a run they never read as converged would be the worst of the three
+    available answers.
+    """
     corrupt_store(sandbox)
 
-    with pytest.raises(json.JSONDecodeError):
-        cli(*argv)
+    ran = cli(*argv, catch_exceptions=True)
+
+    assert ran.exit_code == exit_code
+    assert '20260103T000000Z-box-check' in ran.stderr
 
 
 @pytest.mark.parametrize(
@@ -550,18 +557,17 @@ def test_a_verb_that_only_names_a_record_survives_an_unreadable_one(
         assert ran.document == expected
 
 
-@pytest.mark.xfail(strict=True, reason='runs.read lets json.JSONDecodeError out, so one truncated record ends the whole listing')
 def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """One unreadable record makes the entire run history unreadable.
+    """One unreadable record costs the listing that row and nothing else.
 
     `runs/` is a Syncthing folder shared by the whole fleet, and a record is
     written with a plain `write_text` — so an interrupted process or a full disk
-    leaves a truncated file that every reading verb then dies on. The companion
-    event log is already tolerated exactly this way: `_slow_commands` catches its
+    leaves a truncated file that every reading verb used to die on. The companion
+    event log was already tolerated exactly this way: `_slow_commands` catches its
     own parse errors line by line and says so, on the grounds that a run must not
     refuse to render because an optional file is malformed. The record's own reader
-    has no such guard, and the blast radius is larger — `list`, `stats`, `latest`
-    and `show` all stop answering about the runs that are fine.
+    had no such guard, and the blast radius was larger — `list`, `stats`, `latest`
+    and `show` all stopped answering about the runs that are fine.
     """
     corrupt_store(sandbox)
 
@@ -570,22 +576,11 @@ def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callabl
     assert '20260101T000000Z-box-plan' in ran.stdout
 
 
-def test_a_file_that_is_not_a_run_record_breaks_the_machine_filter(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned. `--machine` splits the stem on the hyphens it
-    expects and indexes the result without checking that they were there."""
-    record(sandbox, identifier='aaaaaaaaaaaa', verb='plan', when='20260101T000000Z')
-    (sandbox.runs / 'notes.json').write_text('{}')
-
-    with pytest.raises(IndexError):
-        cli('report', 'list', '--machine', 'box', '--json')
-
-
-@pytest.mark.xfail(strict=True, reason='list_runs indexes stem.split("-", 1)[1] without checking the name has the shape it assumes')
 def test_the_machine_filter_ignores_a_file_it_cannot_name(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Any `.json` in `runs/` that is not named like a run crashes `--machine`.
+    """Any `.json` in `runs/` that is not named like a run is simply not a match.
 
     The unfiltered listing tolerates it and so does `--verb`, which uses `rsplit`
-    and cannot raise. Only `--machine` indexes into a split that may have one
+    and cannot raise. Only `--machine` indexed into a split that may have one
     element. A filter's job is to decide whether a row matches, and a row it cannot
     parse does not match — raising `IndexError` out of the CLI is the one answer
     that is neither.

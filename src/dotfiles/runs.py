@@ -38,6 +38,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from dotfiles import paths
+from dotfiles.refusal import Refusal
 from dotfiles.resources import Verdict
 
 SCHEMA = 4
@@ -306,11 +307,35 @@ def write(record: RunRecord, runs_dir: Path | None = None) -> Path:
     return destination
 
 
+class Unreadable(Refusal):
+    """A file in `runs/` that will not parse back into a record.
+
+    A refusal rather than the parser's own exception, because the two kinds of
+    reader want opposite things from it: `report list` and `report stats` answer
+    about the whole directory, so a file neither can parse is one row missing,
+    while `report latest` and `report show` were asked about that file and have
+    nothing else to say. Neither can decide that from a `JSONDecodeError` without
+    knowing which parser `read` happens to use.
+
+    Reached by an ordinary accident rather than by corruption: `runs/` is a
+    Syncthing folder, a record is written with a plain `write_text`, and an
+    interrupted process or a full disk leaves a truncated file behind that
+    outlives the run that wrote it.
+    """
+
+
 def read(path: Path) -> RunRecord:
-    payload = json.loads(path.read_text())
-    outcomes = [RunOutcome(**{**outcome, 'timing': Timing.from_record(outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
-    issues = [Issue(**issue) for issue in payload.pop('issues', [])]
-    return RunRecord(**payload, outcomes=outcomes, issues=issues)
+    try:
+        payload = json.loads(path.read_text())
+        outcomes = [RunOutcome(**{**outcome, 'timing': Timing.from_record(outcome['timing'])}) for outcome in payload.pop('outcomes', [])]
+        issues = [Issue(**issue) for issue in payload.pop('issues', [])]
+        return RunRecord(**payload, outcomes=outcomes, issues=issues)
+    except (ValueError, TypeError, KeyError) as unparseable:
+        # Not `JSONDecodeError` alone. A record from a schema this build does not
+        # know reaches the constructor as a keyword it will not take, which is the
+        # same answer — this file is not a record this reader can open — arriving
+        # as a TypeError instead.
+        raise Unreadable(f'{path}: not a readable run record ({unparseable})') from unparseable
 
 
 def list_runs(
@@ -327,6 +352,11 @@ def list_runs(
     records: that would cost a parse of every file in a shared directory to
     answer a question the filename already answers, and the old names stay
     findable under the only identity they ever had.
+
+    `limit` bounds the answer only where one is given. `None` is unlimited and
+    `0` asks for nothing, which is a distinction a falsy test cannot make — and
+    the caller computing its own bound, `--limit "$(remaining)"`, is the one that
+    reaches zero.
     """
     directory = runs_dir or paths.RUNS_DIR
     if not directory.exists():
@@ -334,12 +364,24 @@ def list_runs(
 
     found = sorted(directory.glob('*.json'), reverse=True)
     if machine:
-        # The stem is <timestamp>-<machine>-<verb>, and a machine name contains
-        # hyphens of its own, so it is what remains after both ends come off.
-        found = [path for path in found if path.stem.split('-', 1)[1].rsplit('-', 1)[0] == machine]
+        found = [path for path in found if _machine_of(path.stem) == machine]
     if verb:
         found = [path for path in found if path.stem.rsplit('-', 1)[-1] == verb]
-    return found[:limit] if limit else found
+    return found if limit is None else found[:limit]
+
+
+def _machine_of(stem: str) -> str:
+    """The machine a run filename names, or '' where the name is not a run's.
+
+    The stem is `<timestamp>-<machine>-<verb>` and a machine name carries hyphens
+    of its own, so the machine is what remains after both ends come off. A name
+    with no middle is not a run record: `runs/` is a synced directory anything
+    can drop a `.json` into, and a filter asked about such a file answers that it
+    does not match, which is the only answer a filter has.
+    """
+    _, _, rest = stem.partition('-')
+    machine, _, _ = rest.rpartition('-')
+    return machine
 
 
 def latest(runs_dir: Path | None = None) -> Path | None:

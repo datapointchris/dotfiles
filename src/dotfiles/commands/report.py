@@ -17,6 +17,8 @@ import dataclasses as dc
 import json
 import statistics
 from collections import defaultdict
+from collections.abc import Iterable
+from collections.abc import Iterator
 from pathlib import Path
 
 import typer
@@ -27,12 +29,20 @@ from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
-from dotfiles.resources import OutcomeStatus
+from dotfiles.output import warn
+from dotfiles.resources import UNCONVERGED
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
 
-UNSUCCESSFUL = {str(OutcomeStatus.FAILED), str(OutcomeStatus.REFUSED)}
+UNSUCCESSFUL = {str(status) for status in UNCONVERGED}
+"""`UNCONVERGED` as `RunOutcome.action` spells it.
+
+An action is a bare string, and `sinks.intention` writes values that are
+deliberately not `OutcomeStatus` members at all, so the comparison is against
+text. Derived rather than written out a second time — written out, this half said
+`{FAILED, REFUSED}` and silently disagreed with `Outcome.ok` in both directions.
+"""
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -54,6 +64,25 @@ def _unsuccessful(record: runs.RunRecord) -> str:
     return f'{len(named)} unconverged: {shown}' + (', …' if len(named) > 3 else '')
 
 
+def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
+    """Every record in a set that parses, saying on stderr which ones did not.
+
+    The split `runs.Unreadable` exists for. A verb answering about the whole
+    directory has an answer left when one file will not open — the runs that are
+    fine — so it skips that file and names it. A verb answering about one record
+    has nothing left, so it lets the refusal reach the boundary and exits ISSUE:
+    the broken file is the question it was asked.
+
+    Stderr rather than a row, because `--json` on this stream is a contract and a
+    skipped record is not part of the answer.
+    """
+    for path in found:
+        try:
+            yield path, runs.read(path)
+        except runs.Unreadable as unreadable:
+            warn(str(unreadable))
+
+
 def _find(identifier: str | None) -> Path:
     """Resolve a run id to its record, or the newest run when none is given."""
     if identifier is None:
@@ -68,7 +97,7 @@ def _find(identifier: str | None) -> Path:
         # in the filename the stem match reads — so the one identifier a reader has
         # in front of them was the only one that did not resolve. Second, because
         # this reads every record and the stem match reads none.
-        matches = [path for path in runs.list_runs() if runs.read(path).id.startswith(identifier)]
+        matches = [path for path, record in _readable(runs.list_runs()) if record.id.startswith(identifier)]
     if not matches:
         raise typer.BadParameter(f'no run matching {identifier!r}')
     if len(matches) > 1:
@@ -194,7 +223,7 @@ def latest(as_json: bool = JsonOption) -> None:
 def list_runs(
     machine: str = typer.Option(None, '--machine', help='Only runs on this machine'),
     verb: str = typer.Option(None, '--verb', help='Only runs of this verb'),
-    limit: int = typer.Option(20, '--limit', help='How many to show'),
+    limit: int = typer.Option(20, '--limit', min=0, help='How many to show'),
     as_json: bool = JsonOption,
 ) -> None:
     """List recorded runs, newest first."""
@@ -210,8 +239,8 @@ def list_runs(
     table = Table(box=None, pad_edge=False)
     table.add_column('run')
     table.add_column('outcome')
-    for path in found:
-        wrong = _unsuccessful(runs.read(path))
+    for path, record in _readable(found):
+        wrong = _unsuccessful(record)
         colour = 'red' if wrong else 'green'
         table.add_row(path.stem, f'[{colour}]{wrong or "ok"}[/]')
     console.print(table)
@@ -239,7 +268,7 @@ def stats(as_json: bool = JsonOption) -> None:
     than a flag on `show`.
     """
     durations: defaultdict[str, list[float]] = defaultdict(list)
-    records = [runs.read(path) for path in runs.list_runs()]
+    records = [record for _, record in _readable(runs.list_runs())]
     for record in records:
         for outcome in record.outcomes:
             durations[outcome.address].append(outcome.timing.duration_seconds)
