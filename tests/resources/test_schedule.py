@@ -212,7 +212,7 @@ def test_the_schedule_runs_the_check_and_nothing_else(linux: Path, fake_bin: Pat
     steps.apply('check-schedule', Privilege())
     execstart = next(line for line in (linux / 'dotfiles-check.service').read_text().splitlines() if line.startswith('ExecStart='))
 
-    assert execstart == f'ExecStart={schedule.INSTALLED} check'
+    assert execstart == f'ExecStart={schedule.INSTALLED} check --refresh'
 
 
 def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
@@ -283,7 +283,7 @@ def test_the_agent_is_serialised_by_plistlib_on_both_sides(darwin: Path, fake_bi
 
     assert written['Label'] == schedule.LABEL
     assert written['StartInterval'] == schedule.INTERVAL_SECONDS
-    assert written['ProgramArguments'][-1] == 'check'
+    assert written['ProgramArguments'][1:] == ['check', '--refresh']
 
 
 def test_the_nudge_path_keeps_its_longest_match_trim(state: Path) -> None:

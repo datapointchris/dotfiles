@@ -80,7 +80,23 @@ def _service_content() -> str:
     # ignored. Splitting the verbs removed the reason rather than the symptom:
     # drift is `plan`'s answer now, `check` exits 0 or 3, and a red unit means
     # something is actually wrong.
-    return f'[Unit]\nDescription=Report anything wrong with this machine\n\n[Service]\nType=oneshot\nExecStart={_executable()} check\n'
+    #
+    # `--refresh`, because this is the run that can afford it and the one where it
+    # matters. Several findings are gated on `latest` having been measured this
+    # run rather than read from a cache — a version *ahead* of the newest release
+    # is the sharp one, since a cached figure cannot tell a tool that self-updated
+    # from a repo that re-versioned downwards and stranded the machine on bytes no
+    # declaration reproduces. Without it the scheduled check, which is the only
+    # one that runs unattended, was the only one that never looked.
+    #
+    # Measured 2026-08-13: a plain `check` called this machine converged while
+    # todoui sat ahead of its newest release; `check --refresh` minutes later
+    # reported it. Nobody is waiting on a timer, and an unanswering upstream
+    # already degrades to "upstream did not answer" rather than failing the run.
+    return (
+        '[Unit]\nDescription=Report anything wrong with this machine\n\n'
+        f'[Service]\nType=oneshot\nExecStart={_executable()} check --refresh\n'
+    )
 
 
 def _timer_content() -> str:
@@ -152,7 +168,10 @@ def _agent_content() -> bytes:
     return plistlib.dumps(
         {
             'Label': LABEL,
-            'ProgramArguments': [_executable(), 'check'],
+            # --refresh for the reason in _service_content: the findings gated on
+            # a freshly measured `latest` are invisible on every other run, and
+            # this is the one nobody is waiting on.
+            'ProgramArguments': [_executable(), 'check', '--refresh'],
             'StartInterval': INTERVAL_SECONDS,
             'RunAtLoad': True,
             # launchd has no notion of "log somewhere sensible"; without these the
