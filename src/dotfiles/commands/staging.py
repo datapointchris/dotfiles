@@ -13,10 +13,15 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+import sys
+from collections.abc import Sequence
 from pathlib import Path
 
+import click
 import typer
 
+from dotfiles import coordinates as axes
+from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
@@ -27,6 +32,7 @@ from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
 from dotfiles.output import console
 from dotfiles.output import emit_json
+from dotfiles.output import err_console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_row
@@ -40,22 +46,79 @@ windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL 
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
-PLATFORMS = ('linux-x86_64', 'linux-arm64', 'darwin-x86_64', 'darwin-arm64')
+
+def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str) -> str:
+    """The value a flag carries, or the one a person points at in a list.
+
+    Click's own `prompt=` does this in one argument and is not used, for a reason
+    that showed up the moment it was tried: a prompt reaching EOF raises `Abort`,
+    which click exits 1 on, and 1 is `DRIFT` here — the machine differs from its
+    declaration. A pipeline that forgot a flag would report pending changes. A
+    missing required value is `USAGE`, and `BadParameter` is what says so.
+
+    Listed by number rather than asking for the name, because a manifest name is
+    long, hyphenated and easy to typo, and the whole point of asking is that the
+    caller did not have one to hand.
+
+    A name that was passed is checked here too, so a typo is `USAGE` rather than
+    the `ISSUE` it becomes once `build` reports it as a machine that will not
+    load. That is the distinction `commands.resolved` already draws for every
+    other `--machine`: retryable with a different name, or genuinely wrong.
+    """
+    if value is not None:
+        if value not in options:
+            raise typer.BadParameter(f'{flag} {value!r} is not declared. Valid: {", ".join(options)}')
+        return value
+    if not sys.stdin.isatty():
+        raise typer.BadParameter(f'{flag} is required when stdin is not a terminal. Valid: {", ".join(options)}')
+
+    for index, option in enumerate(options, start=1):
+        err_console.print(f'  [bold]{index}[/]  {option}')
+    picked = typer.prompt(question, err=True, type=click.IntRange(1, len(options)))
+    return options[picked - 1]
 
 
 @bundle_app.command('create')
 def create(
-    platform: str = typer.Option('linux-x86_64', '--platform', help=f'Target: {", ".join(PLATFORMS)}'),
+    machine: str = typer.Option(None, '--machine', help='Machine manifest to build for'),
+    arch: str = typer.Option(
+        None,
+        '--arch',
+        click_type=click.Choice([str(value) for value in axes.Arch]),
+        help='CPU of the machine that will install this bundle',
+    ),
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
 ) -> None:
-    """Download every installer this repo needs into one archive."""
-    if platform not in PLATFORMS:
-        raise typer.BadParameter(f'unknown platform {platform!r}. Valid: {", ".join(PLATFORMS)}')
+    """Download every installer this repo needs into one archive.
 
+    Neither value has a default, and it is the same reason for both: this runs
+    where the network is, for a machine that is not this one. A default silently
+    builds for whichever box was convenient when the default was written, and the
+    only signal is a bundle that installs the wrong tools, days later, somewhere
+    else.
+
+    The OS is not asked for because the manifest declares it. The CPU is asked for
+    because a manifest deliberately never says one — `coordinates.Arch` is
+    measured, never declared, since no machine file states what processor a box
+    has.
+
+    Both are offered as a numbered list on a terminal. Neither blocks without one:
+    a scripted caller gets the usage error naming the flag.
+    """
     from dotfiles import create_bundle
 
-    arguments = ['--platform', platform, *(('--print-path',) if print_path else ())]
-    raise typer.Exit(create_bundle.main(arguments))
+    chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for')
+    chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU")
+
+    try:
+        built = create_bundle.build(chosen_machine, chosen_arch, use_cache=True)
+    except create_bundle.BundleError as unbuilt:
+        error(str(unbuilt))
+        raise typer.Exit(ExitCode.ISSUE) from unbuilt
+
+    if print_path:
+        print(built)
+    raise typer.Exit(ExitCode.CONVERGED)
 
 
 @bundle_app.command('stage')
@@ -134,7 +197,7 @@ def check(
     bundlable = len(found.covered) + len(found.uncovered)
     console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
     if found.uncovered:
-        hint('build a newer bundle where the network reaches: dotfiles bundle create --platform PLATFORM')
+        hint(f'build a newer bundle where the network reaches: dotfiles bundle create --machine {session.machine_name} --arch ARCH')
     raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
 
@@ -241,10 +304,11 @@ def windows_apply(
 def windows_create(archive: str = typer.Argument(None, help='Output archive (default: dated, in the repo root)')) -> None:
     """Download the Windows executables into an archive, from any machine.
 
-    Its own verb rather than a `bundle create --platform windows`, because the
-    two carry different things: `bundle create` packs this repo's installers for
-    a Linux or macOS machine, and this packs Windows executables that WSL copies
-    onto its PATH. Collapsing them would make `--platform` mean two things.
+    Its own verb rather than a value of one of `bundle create`'s flags, because
+    the two carry different things: `bundle create` packs this repo's installers
+    for a machine a manifest declares, and this packs Windows executables that WSL
+    copies onto its PATH. Windows is neither a manifest nor a CPU, so it has
+    nowhere to go in that grammar.
 
     There is deliberately no `windows sync`: the `windows-shell` step converges
     the Git Bash tree under `dotfiles apply`, so a separate verb would be the same

@@ -5,21 +5,14 @@ script a manifest asks for, verifies each against the checksum its release
 published, and writes them into one tarball for a machine that cannot reach the
 network.
 
-Usage:
-    create_bundle.py                                    # wsl-work-workstation, linux-x86_64
-    create_bundle.py --platform linux-arm64
-    create_bundle.py --manifest archlinux-personal-workstation
-    create_bundle.py --no-cache                         # re-download everything
-    create_bundle.py --print-path                       # print the tarball path on stdout
+Reached only through `dotfiles bundle create`, which calls `build` directly.
 
 Output:
     dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
 
-Runs under the interpreter the CLI runs under, which is the only way it is
-reached: `dotfiles bundle create` imports `main` in-process. It was written for
-the macOS system python3, still 3.9, back when bash invoked it, and kept a
-stdlib-only rule long after `dotfiles_python` stopped ever being that
-interpreter. The rule was dropped on 2026-08-08 — it named a constraint no
+It was written for the macOS system python3, still 3.9, back when bash invoked
+it, and kept a stdlib-only rule long after `dotfiles_python` stopped ever being
+that interpreter. The rule was dropped on 2026-08-08 — it named a constraint no
 caller imposes, and this file had long since been importing the package anyway.
 
 Streams: everything a person reads goes to stderr, and stdout carries the
@@ -29,7 +22,6 @@ into whatever consumes the bundle.
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import gzip
 import json
@@ -38,7 +30,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import tarfile
 import tempfile
 import tomllib
@@ -80,17 +71,6 @@ DOWNLOAD_ATTEMPTS = 3
 # failure states its cause on the last lines, under however much progress
 # preceded it.
 FAILURE_DETAIL_MAX_LINES = 25
-
-PLATFORMS = {
-    'linux-x86_64': ('linux', 'x86_64'),
-    'linux-amd64': ('linux', 'x86_64'),
-    'linux-arm64': ('linux', 'arm64'),
-    'linux-aarch64': ('linux', 'arm64'),
-    'darwin-x86_64': ('darwin', 'x86_64'),
-    'macos-x86_64': ('darwin', 'x86_64'),
-    'darwin-arm64': ('darwin', 'arm64'),
-    'macos-arm64': ('darwin', 'arm64'),
-}
 
 BUNDLE_README = """\
 Dotfiles Offline Installers
@@ -142,13 +122,6 @@ that is how a firewalled machine moves off the version it was built with.
 
 class BundleError(Exception):
     """A failure that should end the build with a message rather than a traceback."""
-
-
-def parse_platform(target: str) -> tuple[str, str]:
-    if target not in PLATFORMS:
-        supported = ', '.join(sorted(PLATFORMS))
-        raise BundleError(f'Unsupported platform: {target}\nSupported: {supported}')
-    return PLATFORMS[target]
 
 
 def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
@@ -836,14 +809,18 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
     bundle.record('script', 'uv', 'latest', 'uv-install.sh')
 
 
-def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.date | None = None) -> Path:
+def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None = None) -> Path:
     """Build the bundle and return the tarball's path.
 
     A return value, not a printed side effect: that is the whole reason this
     file is not a shell script.
-    """
-    os_name, arch = parse_platform(target_platform)
 
+    The OS is read off the manifest and only the CPU is passed in, which is the
+    split `Target` already makes: a manifest declares what a machine is, and no
+    manifest anywhere says what processor it runs on. Taking both from a caller
+    let them contradict each other, and a linux manifest asked for with a darwin
+    target built a tarball of the wrong binaries without saying so.
+    """
     # The same resolution the install performs, for a machine that is not this one
     # and a target that need not be its own. Asking the resolver rather than
     # re-reading the manifest is what stops the bundle staging one set of tools
@@ -851,10 +828,15 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
     # what makes a coordinate the manifest declares (`requires_wsl_host`) narrow
     # the bundle, which the name-list filters this replaces could not see.
     try:
-        plan = resolve.resolve(catalog.load(), machines.load(manifest_name))
+        machine = machines.load(manifest_name)
+        plan = resolve.resolve(catalog.load(), machine)
     except (catalog.CatalogError, machines.MachineError) as refused:
         raise BundleError(str(refused)) from refused
 
+    if arch not in set(Arch):
+        raise BundleError(f'Unsupported arch: {arch}\nSupported: {", ".join(Arch)}')
+
+    os_name = str(machine.coordinates.os_family)
     name = bundle_name(manifest_name, os_name, arch, today or dt.date.today())
     log.info('Creating offline bundle: %s', name)
     log.info('Target platform: %s/%s', os_name, arch)
@@ -895,35 +877,3 @@ def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.d
         cache.prune()
 
     return tarball_path
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog='create_bundle.py',
-        description='Create an offline installation bundle for dotfiles.',
-    )
-    parser.add_argument('--platform', default='linux-x86_64', help='target platform (default: linux-x86_64)')
-    parser.add_argument('--manifest', default='wsl-work-workstation', help='machine manifest to bundle for')
-    parser.add_argument('--no-cache', action='store_true', help='re-download every asset, ignoring the download cache')
-    parser.add_argument('--print-path', action='store_true', help="print the finished tarball's path on stdout")
-    args = parser.parse_args(argv)
-
-    logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stderr)
-
-    try:
-        tarball_path = build(args.manifest, args.platform, use_cache=not args.no_cache)
-    except BundleError as error:
-        log.error('%s', error)
-        return 1
-    except KeyboardInterrupt:
-        log.error('Interrupted')
-        return 130
-
-    # Last, so a consumer only ever receives a path whose bundle is complete.
-    if args.print_path:
-        print(tarball_path)
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

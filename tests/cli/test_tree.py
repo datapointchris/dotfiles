@@ -70,7 +70,7 @@ def nameless(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ['packages', 'list', '--source', 'no_such_section'],
         ['machines', 'show', 'no-such-machine'],
         ['machines', 'edit', 'no-such-machine'],
-        ['bundle', 'create', '--platform', 'plan9-vax'],
+        ['bundle', 'create', '--machine', 'box', '--arch', 'vax'],
         ['windows', 'apply', '--offline'],
         ['shell-init', 'fish'],
         ['check', '--skip', 'sytem'],

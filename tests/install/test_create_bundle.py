@@ -52,19 +52,6 @@ def planned(entry, section):
 
 
 class TestPlatform:
-    def test_every_supported_platform_splits_into_os_and_arch(self):
-        assert create_bundle.parse_platform('linux-x86_64') == ('linux', 'x86_64')
-        assert create_bundle.parse_platform('linux-arm64') == ('linux', 'arm64')
-        assert create_bundle.parse_platform('darwin-arm64') == ('darwin', 'arm64')
-        # The aliases exist because both spellings appear in the wild.
-        assert create_bundle.parse_platform('linux-amd64') == create_bundle.parse_platform('linux-x86_64')
-        assert create_bundle.parse_platform('macos-arm64') == create_bundle.parse_platform('darwin-arm64')
-
-    def test_an_unknown_platform_names_the_supported_ones(self):
-        with pytest.raises(create_bundle.BundleError) as error:
-            create_bundle.parse_platform('solaris-sparc')
-        assert 'linux-x86_64' in str(error.value)
-
     def test_the_bundle_name_carries_date_manifest_and_platform(self):
         name = create_bundle.bundle_name('wsl-work-workstation', 'linux', 'x86_64', dt.date(2026, 8, 7))
         assert name == 'dotfiles-offline-v20260807-wsl-work-workstation-linux-x86_64'

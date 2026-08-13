@@ -25,9 +25,15 @@ firewall rules change.
 
 `dotfiles bundle create` downloads every GitHub release binary, cargo binary and
 install script into a single tarball, on a machine that *has* the network.
-`--platform` targets the machine you are building for, not the one you are on —
-the default is `linux-x86_64`, so building on a Mac for WSL needs no flag, and
-building for Apple Silicon does.
+`--machine` names the manifest to build for and `--arch` its CPU. Neither has a
+default: this runs on a machine that is deliberately not the one being built for,
+so a default silently targets whichever box was convenient when it was written.
+Both offer a numbered list on a terminal, and a scripted caller that omits one
+gets a usage error rather than a prompt.
+
+The OS is not asked for. The manifest declares it, and the CPU is the only thing
+a manifest never states — which is why building for Apple Silicon differs from
+building for an Intel Mac by `--arch` alone.
 
 It also carries what the bootstrap itself needs before any of that can run: the
 `uv` binary for the target platform, and a wheelhouse holding the CLI's whole
@@ -43,7 +49,7 @@ handing it to something else means retyping a name that changes every build.
 substitution rather than a copy-paste:
 
 ```bash
-ifiles upload "$(dotfiles bundle create --print-path)"
+ifiles upload "$(dotfiles bundle create --machine wsl-work-workstation --arch x86_64 --print-path)"
 ```
 
 The build log is unaffected — it goes to stderr either way, so it still reaches

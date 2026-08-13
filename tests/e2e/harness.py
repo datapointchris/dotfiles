@@ -860,22 +860,47 @@ def copy_repo(machine: Machine) -> None:
     machine.exec(f'cd {home}/dotfiles && git init -q', check=True)
 
 
-def newest_bundle() -> Path | None:
-    """The most recent bundle an earlier run left in the repo root, if any."""
-    existing = sorted(UNDER_TEST.glob('dotfiles-offline-*-linux-x86_64.tar.gz'), key=lambda path: path.stat().st_mtime)
+def newest_bundle(manifest: str) -> Path | None:
+    """The most recent bundle an earlier run left in the repo root, if any.
+
+    Keyed on the manifest as well as the arch, because a bundle carries what one
+    machine's plan resolves to. Reusing another environment's would stage the
+    wrong set of tools and the install would fail on something the bundle was
+    never asked to carry.
+    """
+    existing = sorted(UNDER_TEST.glob(f'dotfiles-offline-*-{manifest}-linux-x86_64.tar.gz'), key=lambda path: path.stat().st_mtime)
     return existing[-1] if existing else None
 
 
-def build_bundle() -> Path:
+def build_bundle(manifest: str) -> Path:
     """Half a gigabyte and several minutes, on the machine that has the network.
 
     `--print-path` makes the archive's name the build's return value: it is named
-    after the date, the manifest and the target platform, so anything downstream
-    would otherwise have to reconstruct a name that changes every build. The log
-    goes to stderr, leaving stdout carrying the path alone.
+    after the date, the manifest and the target CPU, so anything downstream would
+    otherwise have to reconstruct a name that changes every build. The log goes to
+    stderr, leaving stdout carrying the path alone.
+
+    The OS is not passed: `bundle create` reads it off the manifest, so an
+    environment cannot ask for a bundle whose OS contradicts the machine it is
+    about to be staged onto.
     """
     built = subprocess.run(
-        ['uv', 'run', '--project', str(UNDER_TEST), 'dotfiles', 'bundle', 'create', '--platform', 'linux-x86_64', '--print-path'],
+        # fmt: off
+        [
+            'uv',
+            'run',
+            '--project',
+            str(UNDER_TEST),
+            'dotfiles',
+            'bundle',
+            'create',
+            '--machine',
+            manifest,
+            '--arch',
+            'x86_64',
+            '--print-path',
+        ],
+        # fmt: on
         check=True,
         capture_output=True,
         text=True,
@@ -897,7 +922,8 @@ def stage_bundle(machine: Machine, *, reuse: bool = False) -> Path:
     bundle is exactly what would hide a change to the bundle format: the install
     would pass against the old layout and the format change would ship untested.
     """
-    archive = (newest_bundle() if reuse else None) or build_bundle()
+    manifest = machine.environment.manifest
+    archive = (newest_bundle(manifest) if reuse else None) or build_bundle(manifest)
     docker('cp', str(archive), f'{machine.container}:{machine.environment.home}/', check=True)
     machine.exec(f'chown {machine.environment.user} {machine.environment.home}/{archive.name}', user='root', check=True)
     return archive
