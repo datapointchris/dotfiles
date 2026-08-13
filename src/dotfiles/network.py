@@ -387,7 +387,7 @@ LANDED_COLUMN = 'LANDED'
 """The header word that says a file records where each probe ended.
 
 Read by `tests/e2e/harness.py` to decide whether it can derive the blocked hosts
-from the rows or has to fall back to the CDN names it used to hardcode. Named here
+from the rows or has to fall back to the CDN names it hardcodes. Named here
 because the file that writes the column is the one that should say what identifies
 it."""
 

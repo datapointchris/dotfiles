@@ -87,7 +87,7 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
 
 
 def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
-    """Remove the `~/.gitconfig` this used to create, now that the entry point is XDG.
+    """Remove any `~/.gitconfig`, since the entry point is XDG.
 
     git prefers it over `~/.config/git/config` for reads and writes both, so one
     left behind silently out-ranks the entire include chain — the identity a trust
@@ -137,9 +137,9 @@ def epilogue(session: Session) -> None:
     copied onto the Windows host beside it, and Hyprland has to reload the files the
     pass just deployed.
 
-    The deploying itself is the engine's now. This used to carry its own
-    observe/diff/perform loop beside the resource's, which is one of the reasons
-    there were thirteen of them; what is left here is genuinely not the walk.
+    The deploying itself belongs to the engine. What is left here is genuinely not
+    the walk — carrying it would mean a second observe/diff/perform loop beside the
+    resource's.
     """
     _ensure_git_config_entry(session.machine.coordinates)
     _sync_windows_shell(session.machine.coordinates)

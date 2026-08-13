@@ -1,10 +1,9 @@
-"""macOS preferences: 73 write-only `defaults write` calls, read back as state.
+"""macOS preferences: write-only `defaults write` calls, read back as state.
 
-The old script could not be asked anything. It wrote 73 keys and told you it had
-done so, and there was no way to find out whether a Mac still matched — a setting
-changed by hand in System Settings, or reset by an OS upgrade, was invisible
-until someone noticed the behaviour. `defaults` has a native, unprivileged, exact
-read side; it was simply never used.
+`defaults` has a native, unprivileged, exact read side, so a Mac can be asked
+whether it still matches. Writing the keys and reporting that the writes happened
+answers nothing: a setting changed by hand in System Settings, or reset by an OS
+upgrade, stays invisible until someone notices the behaviour.
 
 **One export per domain, not one read per key.** `defaults export <domain> -`
 prints the whole domain as an XML plist, which `plistlib` parses into real

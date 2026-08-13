@@ -68,8 +68,8 @@ class Spelling(enum.Enum):
 
     DERIVED = enum.auto()
     """Not subscribed to at all: something else's presence decides. A machine gets
-    the Go toolchain because it declared `go_tools`, which is why the manifest
-    booleans that used to gate it — `go:`, `rust:`, `nvm:` — were removed."""
+    the Go toolchain because it declared `go_tools`, which is why no manifest
+    boolean gates it."""
 
 
 SUBSCRIPTIONS: dict[str, tuple[Spelling, str]] = {
@@ -198,8 +198,8 @@ class Requirement:
 
         Empty is checked before the filesystem is, because `Path('')` is `.` and a
         current directory always exists — so a variable that is *set but empty* would
-        report the registry present while nothing had been declared at all. That is the
-        precise failure this register exists to catch, arriving through the fix for it.
+        report the registry present while nothing had been declared at all. That is
+        the precise failure this register exists to catch.
 
         An unset variable needs no special case: expandvars leaves `$REPOS_JSON`
         literal, and no file is named that.

@@ -6,10 +6,10 @@ there — which is what makes them a resource rather than three scripts that eac
 re-read `packages.yml` through an interpreter of their own.
 
 The yazi plugins are here rather than in the yazi install because they are
-plugins, not part of a binary. `ya pkg add` used to run inside the release
-installer, six stages before the symlink pass, and wrote yazi's own state file to
-a path this repo deployed a file to — two writers on one path, and every fresh
-install failed the symlink phase. Splitting the plugins out is what makes that a
+plugins, not part of a binary. Running `ya pkg add` inside the release installer
+puts it six stages before the symlink pass, writing yazi's own state file to a
+path this repo deploys a file to — two writers on one path, and every fresh
+install fails the symlink phase. Splitting the plugins out is what makes that a
 question about plugins; moving the whole yazi install after the symlinks would
 only have reordered the collision.
 

@@ -146,11 +146,10 @@ def check_declaration() -> ResourceResult:
     machine checked against an invalid declaration produces a verdict that means
     nothing.
 
-    It used to run `packages verify` in-process and read its exit status, so all
-    this could say was that something was wrong and where to go and look. The
-    findings are values now, so the row names them and `--json` carries them —
-    and the whole `SystemExit`-catching, stdout-redirecting ceremony that made a
-    printing command answerable is gone with it.
+    The findings are values, so the row names them and `--json` carries them.
+    Running `packages verify` in-process and reading its exit status could say
+    only that something was wrong and where to go and look — and it would need
+    `SystemExit` caught and stdout redirected to say even that.
     """
     findings = validate.declaration()
     broken = validate.errors(findings)
@@ -296,8 +295,8 @@ def survey(
 
     Returned rather than folded here because there is more than one reader: the
     console wants rows, `--json` wants a document and `runs.py` wants outcomes with
-    their timings. Walking it once per reader is how `check` used to be three
-    measurements pretending to be one.
+    their timings. Walking it once per reader is three measurements pretending to
+    be one.
 
     A skipped address is absent rather than present as a fourth verdict: it was not
     examined, so it has nothing to report, and inventing a row for it would put

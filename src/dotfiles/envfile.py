@@ -1,9 +1,9 @@
 """`~/.env`: rendering it, reading it back, and writing it without losing anything.
 
 The file tells a machine which machine it is and which features it wants running.
-It used to be hand-authored, which made it the one piece of machine setup with no
-source of truth: a flag added to the repo reached no existing machine, and nothing
-could say which machines had drifted.
+Hand-authoring it leaves the one piece of machine setup with no source of truth:
+a flag added to the repo reaches no existing machine, and nothing can say which
+machines have drifted.
 
 Everything above the OVERRIDES marker is generated from the manifest and
 `flags.yml`; everything below it is preserved verbatim. That split is the whole

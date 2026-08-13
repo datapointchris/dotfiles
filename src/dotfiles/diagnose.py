@@ -1,10 +1,10 @@
 """Why something is wrong, asked of the machine rather than guessed at.
 
-A refusal used to arrive as the exception that caused it — `[Errno 26] Text file
-busy: '/home/chris/.local/bin/ntfy'`. That names the subject and discards
-everything needed to act on it: which process held the file, what manages that
-process, and what to type next. Three commands answered all of it, and every one
-of them was run by hand after the fact, twice, on two different days.
+A refusal arriving as the exception that caused it — `[Errno 26] Text file busy:
+'/home/chris/.local/bin/ntfy'` — names the subject and discards everything needed
+to act on it: which process holds the file, what manages that process, and what to
+type next. Three commands answer all of it, and this module runs them rather than
+leaving them to be typed by hand afterwards.
 
 Three rules, in the order they were wanted.
 

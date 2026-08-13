@@ -157,10 +157,9 @@ def _config_items(plan: Plan) -> list[DesiredItem]:
 def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
     """Every configuration row's state, each provider reading its own.
 
-    This used to branch on the entry class three ways, in a function that also
-    knew a `defaults` read is cheaper in bulk. Both are the provider's — the bulk
-    read is a hook on one of them — so what is left here is grouping the items by
-    who planned them.
+    Branching on the entry class and knowing a `defaults` read is cheaper in bulk
+    are both the provider's — the bulk read is a hook on one of them — so what is
+    left here is grouping the items by who planned them.
     """
     grouped: dict[str, list[DesiredItem]] = {}
     for item in items:

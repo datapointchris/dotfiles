@@ -527,8 +527,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if args.version:
-        # One distribution now, so one version — read from its metadata rather
-        # than a literal this file used to maintain separately.
+        # One distribution, so one version — read from its metadata rather than a
+        # literal maintained separately here.
         print(f'packages {dotfiles.__version__}')
         return
 

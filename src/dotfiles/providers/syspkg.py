@@ -286,8 +286,7 @@ packages, but only yay knows an AUR package's upstream version, so pacman report
 every one of them current forever.
 
 `--greedy` on the casks because an auto-updating cask is excluded otherwise, and
-this repo installed it and would like to know. That is the flag `update.sh` used
-and the reason it used it.
+this repo installed it and would like to know.
 """
 
 EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})

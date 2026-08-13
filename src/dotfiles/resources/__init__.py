@@ -209,14 +209,14 @@ class Outcome:
     def from_result(cls, change: Change, result: providers.Result) -> Outcome:
         """The one place a provider's `Result` becomes a status.
 
-        Every provider that installs through `providers/` ends this way, and this
-        used to be a three-line conditional written out at each of them. Eleven of
-        the twelve dropped `refused` on the floor, so a source the offline bundle
-        was never designed to stage — go.dev, rustup.rs, nodejs.org, awscli — came
-        out `FAILED` and made an offline machine report itself unconverged for doing
-        exactly what it was built to do. `terraform-ls` had worked around the same
-        gap from the other side by answering `Result(True, ...)`, which put a green
-        tick in front of "not bundled, so it is skipped".
+        Every provider that installs through `providers/` ends this way, in one
+        place rather than a three-line conditional written out at each of them.
+        Written out, almost every one drops `refused` on the floor: a source the
+        offline bundle was never designed to stage — go.dev, rustup.rs, nodejs.org,
+        awscli — comes out `FAILED` and makes an offline machine report itself
+        unconverged for doing exactly what it was built to do. Answering
+        `Result(True, ...)` works around that gap from the other side, and puts a
+        green tick in front of "not bundled, so it is skipped".
         """
         if result.refused:
             return cls(change, OutcomeStatus.REFUSED, result.detail)
@@ -234,9 +234,9 @@ class Observation(Protocol):
 
     Except for one sentence. `summary` is what a resource's row says when nothing
     drifted, and it belongs to the observation because that is the only thing that
-    knows how much was examined — the walk used to build all of these
-    itself, reaching into `evidence`, `links`, `present` and `installed` from a
-    module that had no other reason to know those fields existed.
+    knows how much was examined. Building it in the walk instead means reaching
+    into `evidence`, `links`, `present` and `installed` from a module that has no
+    other reason to know those fields exist.
     """
 
     @property

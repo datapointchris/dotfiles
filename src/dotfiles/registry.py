@@ -15,9 +15,9 @@ One class per mechanism, and the tables become its fields and its methods.
 **Planning is two-pass, and the signature says so.** `plan` is handed what the
 providers before it planned, because the second pass genuinely depends on the
 first: the docker group applies to a machine whose plan installs docker, which is
-not knowable until the packages have resolved. That ordering used to be an
-argument threaded into one private function in `resolve.py`; it is the protocol
-now, and a third pass needs no new plumbing.
+not knowable until the packages have resolved. That ordering is the protocol
+rather than an argument threaded into one private function in `resolve.py`, so a
+third pass needs no new plumbing.
 
 **Only `plan` is handed the Catalog.** `evidence` and `install` take a resolved
 `DesiredItem` and cannot reach back for a fact the item does not carry, which
@@ -780,16 +780,14 @@ class ToolchainProvider(Provider):
     """A language runtime, in the plan because the tools that need it are.
 
     Nothing subscribes to a toolchain. A machine gets Go because it declared
-    `go_tools` and Rust because it declared `cargo_packages`, which is why the
-    manifest booleans that used to gate them (`go:`, `rust:`, `nvm:`, `tenv:`) were
-    removed — they said nothing the tool lists did not, and a machine could set one
-    without declaring a single tool for it.
+    `go_tools` and Rust because it declared `cargo_packages`, which is why no
+    manifest boolean gates them. One would say nothing the tool lists do not, and
+    would let a machine claim a runtime without declaring a single tool for it.
 
     That derivation is what the two-pass signature exists for, so this is the
     provider it was written for rather than a special case beside it: `planned`
     carries what the tool providers resolved, and reading it is the whole of what
-    `resources/toolchains.py` kept as a table of its own — the fifth keying of the
-    provider concept, and the one the A3 collapse did not reach.
+    `resources/toolchains.py` would otherwise keep as a table of its own.
     """
 
     runtime: str = ''

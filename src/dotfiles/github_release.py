@@ -213,9 +213,9 @@ def authorized_host(url: str) -> bool:
 def request(url: str, accept: str | None = None) -> bytes:
     """Fetch one URL, sending a credential only where one belongs.
 
-    The token used to go on every request this module made, whatever the host —
-    so `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
-    `pypi.org` all received a GitHub PAT, and S3 rejected the download outright
+    Sending it on every request this module makes, whatever the host, hands a
+    GitHub PAT to `s3.amazonaws.com`, `releases.hashicorp.com`,
+    `awscli.amazonaws.com` and `pypi.org` — and S3 rejects the download outright
     because of it.
 
     **Redirects are the other half, and httpx2 already handles it**: it pops

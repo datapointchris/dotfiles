@@ -93,10 +93,8 @@ def update(
     venv resolved against the old one, so it is reinstalled — last, because it
     replaces the virtualenv this interpreter is running from.
 
-    Neither repair happens in this process, and an earlier draft of this
-    docstring claiming the symlink pass ran "while this process is still whole"
-    is what the crash on macmini disproved: after the pull, nothing about this
-    interpreter is whole. It holds modules imported from the old source and will
+    Neither repair happens in this process. After the pull, nothing about this
+    interpreter is whole: it holds modules imported from the old source and will
     load any not yet imported from the new.
     """
     if check_only:

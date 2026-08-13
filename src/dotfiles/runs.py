@@ -132,8 +132,7 @@ class Timing:
         kind of schema change a default cannot absorb: `host` was *absent* on old
         records so an empty default answered for it, whereas an unexpected
         `phases=` reaches the constructor and raises. Translating here rather than
-        in `read` keeps the knowledge of what this type used to look like on the
-        type itself.
+        in `read` keeps the knowledge of the older spelling on the type itself.
         """
         carried = dict(payload)
         if 'phases' in carried:

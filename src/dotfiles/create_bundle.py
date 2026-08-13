@@ -537,11 +537,10 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
 def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
     """Stage every declared release, named by the same functions that install it.
 
-    The bundler used to ask each installer script what it would download, over a
-    `name|version|url` pipe, because bash could not hand back anything richer.
-    Asking `providers.releases` directly removes that pipe and the twenty-three
-    subprocesses behind it — and removes the way a bundle could stage one asset
-    while the installer went looking for another.
+    Asked of `providers.releases` directly, rather than of each installer script
+    over a `name|version|url` pipe that bash could not hand back anything richer
+    than. The pipe costs a subprocess per declared release, and it lets a bundle
+    stage one asset while the installer goes looking for another.
 
     The version recorded is the tag without its prefix, which is what
     `ghrelease.resolve_tag` reads back when installing offline. Recording the
@@ -630,7 +629,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
     Recorded under the *crate* name rather than the binary's, because that is what
     `providers.cargo` looks the row up by — a declaration agreeing with itself,
-    where the two halves used to agree by convention.
+    rather than two halves agreeing by convention.
     """
     log.info('Downloading Cargo tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
