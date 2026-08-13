@@ -140,6 +140,18 @@ def flag_nothing_declares(sandbox: Sandbox) -> None:
     below_the_marker(sandbox, 'export NVIM_AI_ENABLED=false\n')
 
 
+def flag_nothing_declares_in_the_generated_section(sandbox: Sandbox) -> None:
+    """The same name, in the other half of the file, and a different answer.
+
+    Above the marker it is `apply`'s to remove, so it is drift and no person is
+    needed. Below it, `apply` owns nothing and only a person can act, which is the
+    row above this one. The pair is here rather than in two standalone tests
+    because the question is which of `plan` and `check` claims it — one, never
+    both.
+    """
+    generated_line(sandbox, 'export NVIM_AI_ENABLED=false')
+
+
 def unreadable_config_toml(sandbox: Sandbox) -> None:
     config = sandbox.config / 'dotfiles' / 'config.toml'
     config.parent.mkdir(parents=True, exist_ok=True)
@@ -157,6 +169,14 @@ ENV_STATES = [
     pytest.param(required_file_absent, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-file-absent'),
     pytest.param(required_file_present, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='required-file-present'),
     pytest.param(flag_nothing_declares, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='flag-nothing-declares'),
+    pytest.param(
+        flag_nothing_declares_in_the_generated_section,
+        ExitCode.DRIFT,
+        1,
+        ExitCode.CONVERGED,
+        0,
+        id='flag-nothing-declares-generated',
+    ),
     pytest.param(unreadable_config_toml, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='unreadable-config-toml'),
 ]
 """One machine state per row, with what each verb makes of it.
@@ -766,15 +786,11 @@ def test_a_generated_line_the_declaration_no_longer_writes_is_drift(sandbox: San
     """Reported by name, and repairable, because `apply` rebuilds the section.
 
     The managed half is regenerated from `render` in full, so a line nothing
-    declares is one rewrite from gone. Nothing found it: the check iterated what
-    the declaration expects and asked each whether the file agreed, so a key in
-    the file that the declaration never mentions was never asked about. It reached
-    the report through `Observed.inventory`, which lists every generated key as
-    examined — a row saying it had been looked at and was fine.
+    declares is one rewrite from gone.
 
-    `DOTFILES_LAYERS` is the real instance and the reason the name here is not
-    flag-shaped. `_undeclared` catches a stray `*_ENABLED` or `*_DEBUG` by
-    convention, which is why a coordinate variable walked past it.
+    The name here is deliberately not flag-shaped. `_undeclared` identifies a
+    stray by whether it ends `_ENABLED` or `_DEBUG`, which is a convention rather
+    than the declaration, so a variable named anything else is invisible to it.
     """
     sandbox.declare()
     generated_line(sandbox, 'export DOTFILES_LAYERS="pkg/apt os/linux"')
