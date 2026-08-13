@@ -45,6 +45,24 @@ def xdg_home(variable: str, fallback: str) -> Path:
     return Path(declared).expanduser().resolve() if declared else (Path.home() / fallback).resolve()
 
 
+def under_home(path: Path, home: Path | None = None) -> str:
+    """A path written the way a person would type it, `~`-rooted where it can be.
+
+    For a screen, never for a filesystem call. `/home/chris/.config/git/config`
+    spends fourteen characters saying whose machine it is, on every row of a
+    column that has to align with its neighbours — and a fleet of five machines
+    reads the same file at the same place under a different absolute prefix.
+
+    Left absolute when it is not under this home, because a path outside it is a
+    finding on its own and rewriting it would hide that.
+    """
+    root = home or Path.home()
+    try:
+        return f'~/{path.relative_to(root)}'
+    except ValueError:
+        return str(path)
+
+
 REPO_ROOT = _repo_root()
 
 PYPROJECT_FILE = REPO_ROOT / 'pyproject.toml'

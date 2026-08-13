@@ -444,3 +444,96 @@ def test_the_verdict_survives_quiet(capsys: pytest.CaptureFixture) -> None:
         logging.choose_console()
 
     assert 'all installed' in capsys.readouterr().out
+
+
+def test_the_section_heading_is_the_resource_name_not_its_verdict(capsys: pytest.CaptureFixture) -> None:
+    """Spelled out on every section, `converged` was the word nine deep down the
+    one column a reader scans for the name of the thing. The verdict is a mark
+    here and the word appears once, on the closing line."""
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.CONVERGED, detail='all 96 installed'))
+
+    written = capsys.readouterr().out
+    assert 'converged' not in written
+    assert written.startswith(f'{output.VERDICT_MARKS["converged"]} packages')
+
+
+def test_every_resource_verdict_has_a_mark_as_well_as_a_colour() -> None:
+    """`NO_COLOR` is a preference this fleet honours, so a report carrying its
+    verdict only in an escape code answers nothing on a machine that asked for
+    none."""
+    assert set(output.VERDICT_MARKS) == set(output.VERDICT_COLOURS)
+
+
+def test_a_section_ends_with_a_blank_line(capsys: pytest.CaptureFixture) -> None:
+    """Nine sections run together read as one list of rows rather than as nine
+    answers. After rather than before, so the closing line sits below a gap too and
+    nothing has to remember whether it is first."""
+    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 173 deployed'))
+
+    assert capsys.readouterr().out.endswith('\n\n')
+
+
+def test_a_summary_with_two_sentences_aligns_the_second_and_carries_the_counts(capsys: pytest.CaptureFixture) -> None:
+    """`system` measures a hundred packages and nine configuration rows, and joined
+    by a comma they made the longest row in the report. The counts ride on the last
+    line, because a tally wedged between two halves of a sentence separates them."""
+    result = ResourceResult(
+        address='system',
+        verdict=ResourceVerdict.CONVERGED,
+        detail='all 100 declared system packages installed\n9 configuration item(s) match',
+        lens=Lens.CHECK,
+        unmeasured=1,
+    )
+
+    output.render_result(result)
+
+    first, second, *_ = capsys.readouterr().out.splitlines()
+    assert '·' not in first
+    assert second.strip().startswith('9 configuration item(s) match')
+    assert '1 unmeasured' in second
+
+
+def test_a_group_small_enough_to_read_lists_while_its_neighbour_stays_a_count(capsys: pytest.CaptureFixture) -> None:
+    """One threshold over the whole resource could only suppress both, and the nine
+    `system.yml` rows are worth naming on every run where a hundred packages are
+    not."""
+    result = ResourceResult(
+        address='system',
+        verdict=ResourceVerdict.CONVERGED,
+        detail='all installed',
+        examined=(
+            *(Examined(f'pacman/pkg{index}', 'installed', group='system') for index in range(output.LISTED_MAX + 1)),
+            Examined('group/docker', 'Docker socket access without sudo', group='configuration'),
+        ),
+    )
+
+    output.render_result(result)
+
+    written = capsys.readouterr().err
+    assert 'group/docker' in written
+    assert 'pacman/pkg0' not in written
+
+
+def test_a_section_widens_its_subject_column_to_the_longest_item_in_it(capsys: pytest.CaptureFixture) -> None:
+    """An alignment that holds for most rows and breaks for a few reads as a broken
+    table rather than as a wide word."""
+    rows = (Examined('shell-plugin/zsh-syntax-highlighting', 'cloned'), Examined('tpm/tpm', 'cloned'))
+    result = ResourceResult(address='plugins', verdict=ResourceVerdict.CONVERGED, detail='all present', examined=rows)
+
+    output.render_result(result)
+
+    long, short = (line for line in capsys.readouterr().err.splitlines() if 'cloned' in line)
+    assert long.index('cloned') == short.index('cloned')
+
+
+def test_the_subject_column_stops_widening_for_one_very_long_item(capsys: pytest.CaptureFixture) -> None:
+    """Past the ceiling the column costs every other row more than the long one
+    gains, and the detail is pushed off a narrow terminal entirely."""
+    rows = (Examined('a' * 200, 'here'), Examined('tpm/tpm', 'here'))
+    result = ResourceResult(address='plugins', verdict=ResourceVerdict.CONVERGED, detail='all present', examined=rows)
+
+    output.render_result(result)
+
+    short = next(line for line in capsys.readouterr().err.splitlines() if line.strip().startswith('matched') and 'tpm' in line)
+    columns = (output.EVIDENCE_INDENT, ' ' * output.VERDICT_COLUMN, ' ', ' ' * output.SUBJECT_CEILING, ' ')
+    assert short.index('here') == len(''.join(columns))

@@ -52,6 +52,7 @@ import dataclasses as dc
 from pathlib import Path
 
 from dotfiles import gitconfig
+from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.privilege import Privilege
@@ -113,9 +114,19 @@ class Observed:
         The files are the half worth itemising. "from 5 config file(s)" is a count
         of the exact thing that makes this arrangement hard to follow, and which
         five it means is the question the count provokes.
+
+        `~`-rooted, and each says where it sits in the chain rather than repeating
+        one sentence five times. The absolute paths spent fourteen characters a row
+        saying whose machine this is, in the column that has to align, and the
+        detail beside them was the same eight words on every line — which is the
+        shape of a table with nothing in it.
         """
+        files = self.layering.files
         fields = tuple(Examined(field, self.values[field]) for field in FIELDS if self.values[field])
-        return fields + tuple(Examined(str(path), 'read by git, in this order') for path in self.layering.files)
+        chain = tuple(
+            Examined(paths.under_home(path, self.home), f'read {position} of {len(files)}') for position, path in enumerate(files, start=1)
+        )
+        return fields + chain
 
 
 class IdentityResource:

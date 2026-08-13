@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import paths
 from dotfiles import settings
 
 DECLARED = 'REPOS_JSON'
@@ -325,3 +326,16 @@ def test_a_setting_reports_whether_the_file_it_names_is_there(config_home: Path,
     registry.unlink()
 
     assert not describe()[0].exists
+
+
+def test_a_path_under_this_home_is_written_the_way_a_person_types_it() -> None:
+    """For a screen, never for a filesystem call. `/home/chris/.config/git/config`
+    spends fourteen characters saying whose machine it is, on every row of a column
+    that has to align."""
+    assert paths.under_home(Path('/home/someone/.config/git/config'), Path('/home/someone')) == '~/.config/git/config'
+
+
+def test_a_path_outside_this_home_is_left_absolute() -> None:
+    """A path outside it is a finding on its own, and rewriting it would hide
+    that."""
+    assert paths.under_home(Path('/etc/zshenv'), Path('/home/someone')) == '/etc/zshenv'

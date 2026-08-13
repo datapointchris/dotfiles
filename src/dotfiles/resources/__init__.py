@@ -263,6 +263,18 @@ class Examined:
     item: str
     detail: str = ''
 
+    group: str = ''
+    """Which part of a resource this belongs to, for a resource that measures more
+    than one kind of thing.
+
+    `system` is the case: a hundred declared packages and nine `system.yml` rows,
+    counted apart in its own summary because they are different questions. The
+    renderer decides whether to list per group rather than per resource, so the
+    nine are named while the hundred stay a count — which one threshold over the
+    whole resource could not express, and which is the honest reading of it
+    anyway. Empty for a resource that measures one kind, which is most of them.
+    """
+
 
 class Observation(Protocol):
     """Whatever a resource measured. Opaque to everything but its own `diff`.

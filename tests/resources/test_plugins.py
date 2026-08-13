@@ -22,6 +22,7 @@ from dotfiles.providers import clone
 from dotfiles.providers import pluginsync
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import plugins
 from dotfiles.session import Session
@@ -455,3 +456,79 @@ def test_a_subdirectory_plugin_is_never_reported_behind(tmp_path: Path, monorepo
 
     assert clone.tracked(item, live.home) is None
     assert changes(refreshing(tmp_path, packages, manifest)) == ()
+
+
+def observation(live: Session) -> plugins.Observed:
+    return plugins.RESOURCE.observe(live, live.plan)
+
+
+def test_a_plugin_present_with_no_checkout_is_reported_rather_than_read_as_current(tmp_path: Path) -> None:
+    """Measured on the Arch box: `~/.config/yazi/plugins/what-size.yazi` held three
+    read-only files and no repository, which is the shape `ya pkg add` leaves.
+    `clone.behind` needs a checkout to fetch, so it answered None and the plugin
+    read as current on every run — a plugin this repo declares and can never move.
+    """
+    live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': 'https://github.com/wfxr/forgit.git'}]})
+    installed = live.home / '.config' / 'zsh' / 'plugins' / 'forgit'
+    installed.mkdir(parents=True)
+    (installed / 'forgit.plugin.zsh').write_text('# put here by something else\n')
+
+    (found,) = changes(live)
+
+    assert found.verdict is Verdict.STALE
+    assert found.repair is Repair.BY_HAND
+    assert str(installed) in found.advice
+
+
+def test_a_subdirectory_plugin_has_no_checkout_and_that_is_not_a_fault(tmp_path: Path, monorepo: Path) -> None:
+    """`clone.py` copies one plugin out of a shallow checkout and deletes the rest,
+    so there was never going to be a `.git`. Both reach `clone.tracked` as None,
+    which is why the two are told apart in the resource rather than there."""
+    live = session(
+        tmp_path,
+        packages={'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]},
+        manifest={'machine': 'box', 'platform': 'linux', 'yazi_plugins': True},
+    )
+    installed = live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi'
+    installed.mkdir(parents=True)
+
+    assert changes(live) == ()
+
+
+def test_each_plugin_says_where_its_directory_came_from(tmp_path: Path, monorepo: Path) -> None:
+    """Measured, not read off the declaration. Saying `cloned` because the entry
+    declares a clone is restating an intention as a finding."""
+    live = session(
+        tmp_path,
+        packages={'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]},
+        manifest={'machine': 'box', 'platform': 'linux', 'yazi_plugins': True},
+    )
+    (live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi').mkdir(parents=True)
+
+    (row,) = observation(live).inventory
+
+    assert row.item == 'yazi-plugin/git'
+    assert row.detail.startswith('copied from ')
+
+
+def test_the_summary_no_longer_calls_every_declared_plugin_a_clone(tmp_path: Path, monorepo: Path) -> None:
+    """Two of the nine on this machine never were clones, so the word was wrong on
+    the one line a nudge or a scheduled run carries by itself."""
+    live = session(
+        tmp_path,
+        packages={'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]},
+        manifest={'machine': 'box', 'platform': 'linux', 'yazi_plugins': True},
+    )
+    (live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi').mkdir(parents=True)
+
+    assert observation(live).summary == 'all 1 declared plugins are present'
+
+
+def test_a_repository_is_named_the_way_a_person_says_it(tmp_path: Path) -> None:
+    """The host is the same on every entry and cost nineteen characters a row in
+    the column that has to align."""
+    live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': 'https://github.com/wfxr/forgit.git'}]})
+
+    (found,) = changes(live)
+
+    assert found.detail == 'not cloned from wfxr/forgit'

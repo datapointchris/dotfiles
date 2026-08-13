@@ -371,3 +371,48 @@ def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None
     line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
 
     assert line == 'nothing wrong; 3 item(s) differ from the declaration — run: dotfiles plan'
+
+
+def test_a_row_no_longer_says_unmeasurable_beside_a_tally_that_says_unmeasured() -> None:
+    """`output.tallies` prints that count on every row of both verbs, so the clause
+    in the sentence was the same fact in two spellings three words apart."""
+    folded = reconcile.from_changes('packages', [change(Verdict.UNKNOWN, Repair.NONE)], 'all installed')
+
+    assert folded.detail == 'all installed'
+    assert folded.unmeasured == 1
+
+
+@pytest.mark.parametrize(
+    ('verdicts', 'expected'),
+    [
+        ([], ResourceVerdict.CONVERGED),
+        ([ResourceVerdict.CONVERGED], ResourceVerdict.CONVERGED),
+        ([ResourceVerdict.CONVERGED, ResourceVerdict.DRIFT], ResourceVerdict.DRIFT),
+        ([ResourceVerdict.DRIFT, ResourceVerdict.ISSUE], ResourceVerdict.ISSUE),
+    ],
+)
+def test_one_verdict_from_many(verdicts: list[ResourceVerdict], expected: ResourceVerdict) -> None:
+    """Three readers now — the exit code, the interchange document and the closing
+    line — and written out at each of them it was the same fold three times."""
+    assert reconcile.worst([result(verdict) for verdict in verdicts]) is expected
+
+
+def test_a_long_shared_fix_is_left_to_the_row_below_rather_than_wrapping_the_heading() -> None:
+    """A sentence naming an absolute path to delete is not a heading, and it is
+    already printed in full on its own row directly under this one."""
+    directory = '/home/chris/.config/yazi/plugins/what-size.yazi'
+    long = change(Verdict.STALE, Repair.BY_HAND, item='yazi-plugin/what-size', advice=f'remove {directory} and re-run to clone it')
+
+    folded = reconcile.from_changes('plugins', [long], 'all present', reconcile.Lens.CHECK)
+
+    assert folded.detail == '1 item(s) need a person: yazi-plugin/what-size'
+
+
+def test_a_short_shared_fix_still_rides_on_the_heading() -> None:
+    """It is the whole answer, and the line a nudge or a scheduled summary carries
+    on its own with no rows under it."""
+    short = change(Verdict.MISSING, Repair.BY_HAND, item='atuin', advice='log in with `atuin login`')
+
+    folded = reconcile.from_changes('auth', [short], '3 of 7 authenticated', reconcile.Lens.CHECK)
+
+    assert folded.detail == '1 item(s) need a person: atuin — log in with `atuin login`'

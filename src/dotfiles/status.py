@@ -27,6 +27,7 @@ import json
 from collections.abc import Sequence
 
 from dotfiles import paths
+from dotfiles import reconcile
 from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
@@ -88,10 +89,7 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
 
 
 def _worst(results: Sequence[ResourceResult]) -> str:
-    verdicts = {result.verdict for result in results}
-    if ResourceVerdict.ISSUE in verdicts:
-        return str(ResourceVerdict.ISSUE)
-    return str(ResourceVerdict.DRIFT if ResourceVerdict.DRIFT in verdicts else ResourceVerdict.CONVERGED)
+    return str(reconcile.worst(results))
 
 
 def _write_nudge(results: Sequence[ResourceResult]) -> None:

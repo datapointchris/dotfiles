@@ -275,16 +275,19 @@ def from_changes(
         privileged=root_needed,
         seconds=seconds,
     )
-    gap = f', {len(unmeasured)} unmeasurable' if unmeasured else ''
+    # No clause here for what nothing could measure. `output.tallies` prints that
+    # count on every row of both verbs, so a sentence saying "1 unmeasurable"
+    # beside a tally saying "1 unmeasured" was the same fact in two spellings,
+    # three words apart.
     if not kept:
-        return row(verdict=ResourceVerdict.CONVERGED, detail=converged + gap)
+        return row(verdict=ResourceVerdict.CONVERGED, detail=converged)
 
     if lens is Lens.PLAN:
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
-        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from the declaration{root}{gap}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need a person{_lead(kept)}{gap}')
+        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from the declaration{root}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need a person{_lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -319,12 +322,23 @@ def _lead(kept: Sequence[Change]) -> str:
     names = shown if len(kept) <= 4 else f'{shown} and {len(kept) - 4} more'
     distinct_fixes = {change.advice for change in kept if change.advice}
     only = next(iter(distinct_fixes)) if len(distinct_fixes) == 1 else ''
-    # A one-line summary takes a one-line fix. Advice is assembled from what a
-    # diagnosis measured and runs to several lines — the owning package, then the
-    # command that removes it — and folded in here it wrapped this row over five,
-    # pushing the item names it exists to carry off the first of them.
-    fix = f' — {only}' if only and '\n' not in only else ''
+    # A one-line heading takes a short one-line fix, and only that. Advice is
+    # assembled from what a diagnosis measured — the owning package, then the
+    # command that removes it, or a path to delete — so it runs long and sometimes
+    # over several lines. Folded in whole it wrapped this row across five and
+    # pushed the item names it exists to carry off the first of them, which is a
+    # heading that has stopped being one.
+    fix = f' — {only}' if 0 < len(only) <= SHORT_FIX and '\n' not in only else ''
     return f': {names}{fix}'
+
+
+SHORT_FIX = 60
+"""How long a shared fix may be before the heading names the items alone.
+
+Both halves matter. `log in with \\`atuin login\\`` is the whole answer and belongs
+where a nudge or a scheduled summary will carry this line with no rows under it;
+a sentence naming an absolute path to delete is not, and it is already printed in
+full on its own row directly below."""
 
 
 def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult]:
@@ -508,19 +522,32 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     return f'nothing wrong{drift}'
 
 
+def worst(results: Sequence[ResourceResult]) -> ResourceVerdict:
+    """One verdict from many. An Issue outranks drift, and drift outranks nothing.
+
+    Three readers now: the exit code, the interchange document, and the closing
+    line — which is the only place the word itself is printed, since a run's
+    answer is about the run rather than about each part of it. Written out at each
+    of them it was the same three-branch fold three times.
+    """
+    verdicts = {result.verdict for result in results}
+    if ResourceVerdict.ISSUE in verdicts:
+        return ResourceVerdict.ISSUE
+    return ResourceVerdict.DRIFT if ResourceVerdict.DRIFT in verdicts else ResourceVerdict.CONVERGED
+
+
 def exit_code(results: list[ResourceResult]) -> ExitCode:
-    """One number from many verdicts. An Issue outranks drift.
+    """One number from many verdicts.
 
     Both read-only verbs use it, and after the split each reaches only part of its
     range: `plan` answers 0 or 1, and 3 when something refused to be measured;
     `check` answers 0 or 3 and never 1, because drift is not its subject.
     """
-    verdicts = {result.verdict for result in results}
-    if ResourceVerdict.ISSUE in verdicts:
-        return ExitCode.ISSUE
-    if ResourceVerdict.DRIFT in verdicts:
-        return ExitCode.DRIFT
-    return ExitCode.CONVERGED
+    return {
+        ResourceVerdict.CONVERGED: ExitCode.CONVERGED,
+        ResourceVerdict.DRIFT: ExitCode.DRIFT,
+        ResourceVerdict.ISSUE: ExitCode.ISSUE,
+    }[worst(results)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

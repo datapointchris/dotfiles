@@ -36,6 +36,7 @@ from dotfiles.resolve import Plan
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
@@ -67,33 +68,58 @@ class Observed:
     unsynced: tuple[tuple[str, str], ...] = ()
     """The managers with something outstanding, each with what was measured."""
 
+    unmanaged: dict[str, str] = dc.field(default_factory=dict)
+    """Address → the directory it has, for a plugin declared as a clone with no `.git`.
+
+    Present, working, and outside this repo's reach: `clone.behind` needs a
+    checkout to fetch, so it answers None and the plugin reads as current forever.
+    Measured on the Arch box, where `~/.config/yazi/plugins/what-size.yazi` holds
+    three read-only files and no repository — the shape `ya pkg add` leaves — while
+    `packages.yml` declares it a plain clone of `pirafrank/what-size.yazi`.
+
+    Distinct from a subdirectory plugin, which also has no `.git` and is not a
+    fault: `clone.py` copies one out of a shallow checkout it then deletes, so
+    there was never going to be one. `clone.tracked` answers None for both, which
+    is why the two are told apart here rather than there.
+    """
+
+    origins: dict[str, str] = dc.field(default_factory=dict)
+    """Address → where its directory came from, in the words that are true of it.
+
+    Measured rather than read off the declaration. Saying `cloned` because the
+    entry declares a clone is restating an intention as a finding, which is the
+    error this whole row exists to correct.
+    """
+
     @property
     def summary(self) -> str:
-        """Says *cloned* deliberately, and counts the managers separately.
+        """Says *declared* rather than *cloned*, and counts the managers separately.
 
-        The two are different questions with different confidence. The checkouts
-        are declared here and were looked at one by one; the managers' lists are
-        theirs, and only TPM's could be read — `pluginsync` explains why lazy's
-        could not be.
+        The two are different questions with different confidence. These were
+        declared here and looked at one by one; the managers' lists are theirs, and
+        only TPM's could be read — `pluginsync` explains why lazy's could not be.
+        That distinction is what the sentence is for, and `cloned` was the wrong
+        word to carry it: a subdirectory plugin is copied out of a checkout that is
+        then deleted, so two of the nine never were clones.
         """
-        cloned = f'all {len(self.present)} cloned plugins are present'
+        present = f'all {len(self.present)} declared plugins are present'
         if not self.managers:
-            return cloned
+            return present
         named = sorted(name for _, name in self.managers)
-        return f'{cloned}, and {" and ".join(named)} have nothing pending'
+        return f'{present}, and {" and ".join(named)} have nothing pending'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
-        """The checkouts on disk, then the managers with nothing outstanding.
+        """Each plugin with where it came from, then the managers with nothing outstanding.
 
         A checkout that is behind is left out, because `diff` already gives it a
         row of its own — and `behind` is only ever populated by a run that spent
-        the network, so on a `check` this is every present clone.
+        the network, so on a `check` this is every present plugin.
         """
         pending = {address for address, _ in self.unsynced}
-        clones = tuple(Examined(address, 'cloned') for address in sorted(self.present - self.behind))
+        found = tuple(Examined(address, self.origins.get(address, '')) for address in sorted(self.present - self.behind))
         managers = tuple(Examined(address, 'nothing pending') for address, _ in sorted(self.managers) if address not in pending)
-        return clones + managers
+        return found + managers
 
 
 class PluginsResource:
@@ -105,6 +131,11 @@ class PluginsResource:
         syncs = tuple((item, provider) for item, provider in _units(plan) if isinstance(provider, PluginSyncProvider))
 
         present = frozenset(item.address for item in clones if clone.destination(item, session.home).is_dir())
+        unmanaged = {
+            item.address: str(clone.destination(item, session.home))
+            for item in clones
+            if item.address in present and not clone.subdirectory(item) and clone.tracked(item, session.home) is None
+        }
         return Observed(
             present=present,
             behind=frozenset(item.address for item in clones if item.address in present and clone.behind(item, session.home))
@@ -112,6 +143,8 @@ class PluginsResource:
             else frozenset(),
             managers=tuple((item.address, item.name) for item, _ in syncs),
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
+            unmanaged=unmanaged,
+            origins={item.address: _origin(item, item.address in unmanaged) for item in clones},
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -128,14 +161,66 @@ class PluginsResource:
                 if outstanding := pending.get(item.address, ''):
                     changes.append(_change(item, Verdict.MISSING, outstanding))
             elif item.address not in observed.present:
-                changes.append(_change(item, Verdict.MISSING, f'not cloned from {clone.repository(item)}'))
+                changes.append(_change(item, Verdict.MISSING, f'not cloned from {_short(clone.repository(item))}'))
+            elif directory := observed.unmanaged.get(item.address, ''):
+                changes.append(_unmanaged(item, directory))
             elif item.address in observed.behind:
-                changes.append(_change(item, Verdict.STALE, f'behind {clone.repository(item)}'))
+                changes.append(_change(item, Verdict.STALE, f'behind {_short(clone.repository(item))}'))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it clones it or syncs it, or says why it cannot."""
         return registry.install(session, change, privilege)
+
+
+def _origin(item: DesiredItem, unmanaged: bool) -> str:
+    """Where this plugin's directory came from, said the way it actually happened.
+
+    A subdirectory plugin is not a clone and must not claim to be. `clone.py`
+    shallow-clones the repo, copies one directory out and deletes the rest, so
+    there is no `.git` to pull and `clone.tracked` returns None — which is the
+    same fact this sentence carries to a reader.
+    """
+    repository = _short(clone.repository(item))
+    if subdirectory := clone.subdirectory(item):
+        return f'copied from {repository}/{subdirectory}'
+    return f'no checkout, so {repository} cannot be pulled' if unmanaged else f'cloned from {repository}'
+
+
+def _short(repo: str) -> str:
+    """`wfxr/forgit`, from the URL the declaration carries.
+
+    The host is the same on every entry and costs nineteen characters a row in the
+    column that has to align. Stripped by prefix rather than by taking the last two
+    segments, so a repo somewhere other than GitHub keeps the part that says where
+    it is.
+    """
+    return repo.removeprefix('https://github.com/').removesuffix('.git')
+
+
+def _unmanaged(item: DesiredItem, directory: str) -> Change:
+    """A declared plugin that is there and is not a checkout of what declares it.
+
+    `BY_HAND`, because the repair is a deletion. `clone.install` runs `git clone`
+    into the path, which fails against a directory that already exists, and doing
+    it properly means removing whatever is there — which on a plugin somebody
+    installed by another route may be the only copy of a local edit. Same
+    judgement `symlinks` makes about a foreign target, for the same reason.
+
+    Reported rather than tolerated because the alternative is silence: without a
+    checkout `clone.behind` cannot fetch, so it answers None, and the plugin reads
+    as current on every run for as long as it exists.
+    """
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        Verdict.STALE,
+        detail='present, but not a git checkout, so nothing here can update it',
+        repair=Repair.BY_HAND,
+        advice=f'remove {directory} and re-run to clone it, or drop the entry if another tool owns this plugin',
+        desired=item,
+    )
 
 
 def _change(item: DesiredItem, verdict: Verdict, detail: str) -> Change:

@@ -46,6 +46,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from dotfiles import evidence
+from dotfiles import paths
 from dotfiles.effects import NOT_FOUND
 from dotfiles.effects import TIMED_OUT
 from dotfiles.effects import Completed
@@ -338,7 +339,7 @@ def _aws(session: Session) -> Credential:
     declared = os.environ.get('AWS_SHARED_CREDENTIALS_FILE')
     credentials = Path(declared) if declared else session.home / '.aws' / 'credentials'
     if _holds_something(credentials):
-        return Credential(Verdict.MATCHED, f'{credentials} holds a profile')
+        return Credential(Verdict.MATCHED, f'{paths.under_home(credentials, session.home)} holds a profile')
 
     cache = session.home / '.aws' / 'sso' / 'cache'
     if cache.is_dir() and any(cache.iterdir()):
@@ -370,7 +371,7 @@ def _bbkt(session: Session) -> Credential:
         return unanswered
     token = Path(located.stdout.strip()) if located.ok and located.stdout.strip() else None
     if token is not None and _holds_something(token):
-        return Credential(Verdict.MATCHED, f'{token} holds a token')
+        return Credential(Verdict.MATCHED, f'{paths.under_home(token, session.home)} holds a token')
     return Credential(Verdict.MISSING, 'no token file and no BBKT_TOKEN', advice='run `bbkt config init`, or set BBKT_TOKEN')
 
 
@@ -394,7 +395,7 @@ def _jira(session: Session) -> Credential:
     declared = os.environ.get('JIRA_CONFIG_FILE')
     config = Path(declared) if declared else _config_home(session) / '.jira' / '.config.yml'
     if _holds_something(config):
-        return Credential(Verdict.MATCHED, f'{config} holds a configured account')
+        return Credential(Verdict.MATCHED, f'{paths.under_home(config, session.home)} holds a configured account')
     return Credential(Verdict.MISSING, 'no jira config and no JIRA_API_TOKEN', advice='run `jira init`')
 
 

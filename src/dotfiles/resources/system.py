@@ -53,6 +53,14 @@ class Observed:
     config: dict[str, sysconfig.State]
     """One state per `system.yml` row, keyed by address."""
 
+    described: dict[str, str] = dc.field(default_factory=dict)
+    """Address → the `description` its `system.yml` row carries.
+
+    Carried because a matched `State` has nothing to say: its `detail` is what went
+    wrong, so a settled row has none and a listing of them was nine addresses beside
+    an empty column. The description is what the entry is *for*, which is the thing
+    worth reading once nothing is wrong with it."""
+
     met: Preconditions = Preconditions()
     """Which declared preconditions this machine meets.
 
@@ -75,21 +83,33 @@ class Observed:
         """Names which managers answered, because a machine whose manager is
         absent reports UNKNOWN rather than reporting every package missing — and
         a row saying "all installed" without saying who was asked would read as a
-        measurement when it was a shrug."""
+        measurement when it was a shrug.
+
+        One line per kind. This resource covers two, and joined by a comma they
+        made the longest row in the report — a sentence that wrapped twice, so the
+        managers it names and the configuration count both landed mid-line where
+        nothing lines up. The renderer aligns a continuation under the first, which
+        is the whole reason a summary may hold a newline at all.
+        """
         asked = ', '.join(sorted(self.asked)) or 'nothing'
         line = f'all {self.packages} declared system packages installed (asked {asked})'
-        return f'{line}, and {len(self.config)} configuration item(s) match' if self.config else line
+        return f'{line}\n{len(self.config)} configuration item(s) match' if self.config else line
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
-        """The declared packages, then the `system.yml` rows, both by address.
+        """The declared packages, then the `system.yml` rows, grouped apart.
 
-        Two kinds under one resource, and the summary already counts them apart —
-        so they list apart too, packages first, in the order the sentence names
-        them.
+        Two kinds under one resource, counted apart in the summary because they are
+        different questions — so the renderer decides to list them apart too. Nine
+        configuration rows are worth naming on every run and a hundred packages are
+        not, which one threshold over the resource could only answer by suppressing
+        both.
         """
-        packages = tuple(Examined(address, found.detail) for address, found in sorted(self.evidence.items()))
-        configuration = tuple(Examined(address, state.detail) for address, state in sorted(self.config.items()))
+        packages = tuple(Examined(address, found.detail, group=NAME) for address, found in sorted(self.evidence.items()))
+        # The declaration's own description, because a `State` that matched carries
+        # no detail — its `detail` exists to say what went wrong, so every settled
+        # configuration row rendered as an address beside an empty column.
+        configuration = tuple(Examined(address, self.described.get(address, ''), group='configuration') for address in sorted(self.config))
         return packages + configuration
 
 
@@ -105,6 +125,7 @@ class SystemResource:
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
             config=_observe_config(_config_items(plan)),
+            described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
             met=session.preconditions,
             packages=sum(1 for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
         )

@@ -22,6 +22,9 @@ from rich.control import Control
 from rich.segment import ControlType
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from dotfiles.reconcile import Lens
     from dotfiles.reconcile import ResourceResult
     from dotfiles.resources import Change
     from dotfiles.resources import Examined
@@ -40,7 +43,20 @@ A literal rather than `str(Verdict.MATCHED)`, so this module keeps its runtime
 distance from `resources`: nothing about presentation should be a reason to import
 the logic. `tests/cli/test_output.py` asserts the two agree."""
 
-EVIDENCE_INDENT = '  '
+VERDICT_MARKS = {'converged': '✓', 'drift': '~', 'issue': '✗'}
+"""What stands in front of a section's name, since the name itself is the heading.
+
+A mark rather than the verdict word, which now appears once, on the closing line
+that is the run's actual answer. Spelled out on every section it was a column of
+`converged` nine deep, in the position where the reader is looking for the name of
+the thing.
+
+A mark and not colour alone. `NO_COLOR` is a preference this fleet honours, so a
+report that carries its verdict only in an escape code answers nothing on a machine
+that asked for none — and the marks match `_render`'s, which have meant this for
+as long as `apply` has printed them."""
+
+EVIDENCE_INDENT = '    '
 VERDICT_COLUMN = 11
 SUBJECT_COLUMN = 28
 """The two columns every evidence row shares — a change's, a finding's, and the
@@ -50,7 +66,19 @@ Named because they are the property, not a detail of one f-string. A finding
 reading as part of the same list as the changes above it is what makes the output
 one list rather than two, and that only holds while all three agree. Repeated as
 literals they had already been copied four times, and nothing would have failed if
-one of the copies drifted."""
+one of the copies drifted.
+
+`SUBJECT_COLUMN` is a floor rather than the width. A section sets its own from the
+longest item in it, so `shell-plugin/zsh-syntax-highlighting` no longer shoves one
+row's detail three columns right of its neighbours' — an alignment that holds for
+most rows and breaks for a few reads as a broken table rather than a wide word."""
+
+SUBJECT_CEILING = 44
+"""Where a section stops widening for one long item.
+
+Past this the column costs every other row more than the long one gains, and the
+detail is pushed off a narrow terminal entirely. The over-long item takes the hit
+alone, which is the same trade `announce` makes by cropping."""
 
 
 def showing_evidence() -> bool:
@@ -128,7 +156,13 @@ def tallies(result: ResourceResult) -> str:
 
 
 def render_result(result: ResourceResult) -> None:
-    """One resource's section: its verdict, then the rows that verdict is made of.
+    """One resource's section: its name, what it found, and the rows behind that.
+
+    **The resource's name is the heading.** The left column spelled the verdict on
+    every section, so a healthy run was the word `converged` nine deep in the one
+    position a reader scans for the name of the thing. The verdict is a mark now,
+    and the word itself appears once, on the closing line where it is the run's
+    answer rather than a label on each part of it.
 
     The heading goes to stdout because it is the answer to the question asked, and
     the rows go to stderr because they are the evidence for it — the same split
@@ -146,23 +180,87 @@ def render_result(result: ResourceResult) -> None:
     be a reason for the logic to be loaded.
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
-    console.print(
-        f'[{colour}]{result.verdict:<9}[/] [bold]{result.address:<11}[/] {result.detail}{tallies(result)}{elapsed(result.seconds)}'
-    )
+    mark = VERDICT_MARKS[str(result.verdict)]
+    # A summary may hold a newline where the resource measures more than one kind
+    # of thing, and `system` joined its two with a comma into the longest row in
+    # the report. Continuations align under the first, so they read as the same
+    # sentence rather than as items — and the counts ride on the *last* of them,
+    # since a tally wedged between two halves of a sentence separates them.
+    lines = result.detail.split('\n')
+    trailer = f'{tallies(result)}{elapsed(result.seconds)}'
+    console.print(f'[{colour}]{mark}[/] [bold]{result.address:<11}[/] {lines[0]}{trailer if len(lines) == 1 else ""}')
+    for position, line in enumerate(lines[1:], start=2):
+        console.print(f'  {"":<11} {line}{trailer if position == len(lines) else ""}')
+
+    deferred, listed = _listed(result)
+    width = _width([change.item for change in result.findings] + [change.item for change in deferred] + [row.item for row in listed])
     for section, message in result.invalid:
         render_finding(section, message)
-    for change in result.findings:
-        render_change(change)
-    if not listing(result):
-        return
-    for change in result.others:
-        render_change(change)
+    for change in [*result.findings, *deferred]:
+        render_change(change, width)
+    for row in listed:
+        render_examined(row, width)
+    # After the section rather than before it, so the closing line sits below a gap
+    # too and nothing has to remember whether it is first.
+    console.print()
+
+
+def render_verdict(results: Sequence[ResourceResult], lens: Lens) -> None:
+    """The run's answer, and the one place the verdict word is spelled out.
+
+    It was the left column of every section, which put `converged` nine deep on a
+    healthy machine and said nothing about the run as a whole. It is the run as a
+    whole that a person came for, and it belongs at the bottom, where the terminal
+    stops scrolling.
+
+    Imported from `reconcile` at call time rather than at module scope. This module
+    sits below it on purpose — `reconcile` renders through this one — and the
+    sentence is the fold's to compose, since only it knows what the two verbs keep.
+    """
+    from dotfiles import reconcile
+
+    verdict = str(reconcile.worst(results))
+    colour = VERDICT_COLOURS[verdict]
+    console.print(f'[{colour}]{verdict:<9}[/] {reconcile.verdict_line(results, lens)}')
+
+
+def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:
+    """What this section lists beyond its own findings, after the size threshold.
+
+    Two lists rather than one merged sequence, so nothing here has to construct a
+    `resources` type: presentation should not be a reason to import the logic, which
+    is the same rule `MATCHED` is a literal for.
+
+    The threshold is per group rather than per resource, because `system` measures a
+    hundred declared packages and nine `system.yml` rows and they are different
+    questions — which its own summary already says in two sentences. One threshold
+    over the whole resource could only answer by suppressing both.
+    """
+    if not showing_evidence():
+        return (), ()
+
+    grouped: dict[str, list[Examined]] = {}
     for row in result.examined:
-        render_examined(row)
+        grouped.setdefault(row.group, []).append(row)
+
+    kept = [row for rows in grouped.values() if _fits(len(rows)) for row in rows]
+    # The other verb's findings are changes, so they carry no group and are weighed
+    # as one — which is right, since a resource never splits *what differs* into
+    # kinds the way it splits what it merely holds.
+    return (result.others if _fits(len(result.others)) else ()), tuple(kept)
+
+
+def _fits(count: int) -> bool:
+    return listing_everything() or count <= LISTED_MAX
+
+
+def _width(items: list[str]) -> int:
+    """How wide this section's subject column is, from the longest thing in it."""
+    return min(max([SUBJECT_COLUMN, *(len(item) for item in items)]), SUBJECT_CEILING)
 
 
 LISTED_MAX = 24
-"""How many items a resource may have before its default row is a count.
+"""How many items a group may have before its default row is a count.
 
 A reading threshold rather than a performance one. Below it the summary sentence
 *is* the list, only worse — "go, node, rust, uv" names four runtimes and drops
@@ -171,21 +269,10 @@ what the file says this machine is. Above it the sentence is a genuine collapse
 of something nobody wants unasked, and `-v` expands it.
 
 The number is where a section stops reading as one block and starts being a page.
-It leaves the three declared inventories — packages, symlinks, the system half —
-as counts, which is right for a different reason too: each is long enough that
+It leaves the three declared inventories — packages, symlinks and the system half
+— as counts, which is right for a different reason too: each is long enough that
 its own `list` verb is the better door.
 """
-
-
-def listing(result: ResourceResult) -> bool:
-    """Whether this resource names its items or counts them.
-
-    `-v` is the flag, per cli-design.md § "`-a` is not a substitute for `-v`": the
-    work is identical either way and only what reaches the screen changes.
-    """
-    if not showing_evidence():
-        return False
-    return listing_everything() or len(result.others) + len(result.examined) <= LISTED_MAX
 
 
 def listing_everything() -> bool:
@@ -299,7 +386,7 @@ def measured(address: str, detail: str, seconds: float) -> None:
     err_console.print(f'[green]✓[/] [bold]{address:<11}[/] {detail}{elapsed(seconds)}')
 
 
-def render_change(change: Change) -> None:
+def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
     """One item's verdict, on stderr — and, where there is one, the next step.
 
     Below a composite `check`, these are the evidence for the row that follows,
@@ -321,18 +408,16 @@ def render_change(change: Change) -> None:
     colour = CHANGE_COLOURS[str(change.verdict)]
     attribution = f' from {change.source}' if change.source else ''
     observed = f' (is {change.observed!r}{attribution})' if change.observed else ''
-    err_console.print(
-        f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{SUBJECT_COLUMN}} {change.detail}{observed}'
-    )
+    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{change.verdict:<{VERDICT_COLUMN}}[/] {change.item:<{width}} {change.detail}{observed}')
     # One row per line, because advice is now assembled from what a diagnosis
     # measured — the owning package, then the command that removes it — and a
     # reader scanning for the command wants it on a line of its own rather than
     # inside a sentence.
     for line in change.advice.splitlines():
-        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [blue]→[/] {line}')
+        err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{width}} [blue]→[/] {line}')
 
 
-def render_examined(row: Examined) -> None:
+def render_examined(row: Examined, width: int = SUBJECT_COLUMN) -> None:
     """One item a resource looked at and was happy with, in the changes' columns.
 
     `matched` is the label, which is the verdict a `Change` would have carried had
@@ -342,7 +427,7 @@ def render_examined(row: Examined) -> None:
     if not showing_evidence():
         return
     colour = CHANGE_COLOURS[MATCHED]
-    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{MATCHED:<{VERDICT_COLUMN}}[/] {row.item:<{SUBJECT_COLUMN}} {row.detail}')
+    err_console.print(f'{EVIDENCE_INDENT}[{colour}]{MATCHED:<{VERDICT_COLUMN}}[/] {row.item:<{width}} {row.detail}')
 
 
 def render_finding(section: str, message: str) -> None:

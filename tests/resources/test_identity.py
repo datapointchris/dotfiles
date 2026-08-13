@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles.gitconfig import Layering
+from dotfiles.gitconfig import Setting
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import identity
@@ -197,3 +199,22 @@ def test_a_machine_whose_config_is_in_one_file_reports_no_layering_findings(gitc
     gitconfig.write_text(IDENTITY)
 
     assert changes(session) == ()
+
+
+def test_the_config_chain_is_listed_tilde_rooted_and_in_the_order_git_reads_it(tmp_path: Path) -> None:
+    """The absolute paths spent fourteen characters a row saying whose machine this
+    is, in the column that has to align, and the detail beside them was the same
+    eight words on every line — a table with nothing in it."""
+    home = tmp_path / 'home'
+    chain = Layering(
+        (
+            Setting(home / '.config/git/config', 'user.name', 'Chris Birch'),
+            Setting(home / '.config/git/personal.gitconfig', 'user.email', 'c@e.st'),
+        )
+    )
+    observed = identity.Observed({'user.name': 'Chris Birch', 'user.email': 'c@e.st'}, {}, layering=chain, home=home)
+
+    listed = {row.item: row.detail for row in observed.inventory}
+
+    assert listed['~/.config/git/config'] == 'read 1 of 2'
+    assert listed['~/.config/git/personal.gitconfig'] == 'read 2 of 2'
