@@ -24,7 +24,7 @@ holds, which is why the capture step comes first.
 ## Capture what no git repo holds
 
 `safekeep` takes dated, tagged snapshots of exactly this; `safekeep --help`
-covers the verbs and `safekeep tags` says what a given tag would bring back.
+covers the verbs and `safekeep tags list` says what a given tag would bring back.
 
 Getting the capture *set* right is the hard part, because what dies in a wipe is
 unobvious. `dotfiles machines requirements` answers the half the repo can prove —

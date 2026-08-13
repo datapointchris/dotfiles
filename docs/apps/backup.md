@@ -27,7 +27,7 @@ with the machine. Unchanged files are hard links into the previous snapshot, so
 keeping every snapshot forever costs only what changed.
 
 ```sh
-safekeep backup
+safekeep backup run
 ```
 
 The distinction that matters is imperative versus declarative, not archive versus
