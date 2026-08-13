@@ -3,34 +3,34 @@
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
-[[ -f "$SHELL_DIR/colors.sh" ]] && source "$SHELL_DIR/colors.sh"
-[[ -f "$SHELL_DIR/formatting.sh" ]] && source "$SHELL_DIR/formatting.sh"
-[[ -f "$SHELL_DIR/functions.sh" ]] && source "$SHELL_DIR/functions.sh"
-[[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh"
+# Deployed by `dotfiles symlinks apply`, and sourced without testing for them.
+# Whether they are there is the declaration's question, and `dotfiles symlinks
+# check` answers it by name rather than by a path this file happened to try.
+source "$SHELL_DIR/colors.sh"
+source "$SHELL_DIR/formatting.sh"
+source "$SHELL_DIR/functions.sh"
+source "$SHELL_DIR/aliases.sh"
+source "$SHELL_DIR/prompt.bash"
 
-[[ -f "$SHELL_DIR/prompt.bash" ]] && source "$SHELL_DIR/prompt.bash"
-
-# ~/.env carries the coordinates. Sourced here as well as in .bash_profile, so a
-# non-login interactive bash gets the same overlays a login one does.
+# Guarded, and deliberately: `~/.env` is written by `dotfiles env apply`, which
+# runs after this file is deployed. A fresh box has a shell before it has this,
+# and bootstrap ordering is not a fault to report.
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
-# The overlay directories this machine loads, resolved by `dotfiles env apply`
-# and shipped as one space-separated list. The detector this replaced guessed
-# from uname and /proc/version and got two of the axes wrong by construction —
-# it had no way to know a machine's trust or capacity, and no machine ever told
-# it. Nothing loads when ~/.env is absent, which is the honest answer.
-#
-# Read into an array rather than looped over unquoted: the split is deliberate,
-# and spelling it this way says so instead of relying on word splitting nobody
-# can tell from an accident.
-read -ra dotfiles_layers <<<"${DOTFILES_LAYERS:-}"
-for overlay in "${dotfiles_layers[@]}"; do
-  for overlay_file in "$SHELL_DIR/$overlay"/*.sh; do
-    [[ -r "$overlay_file" ]] && source "$overlay_file"
-  done
+# The coordinate layers, read off the disk. `symlinks apply` deploys only the
+# directories this machine's coordinates select and prunes the ones it no longer
+# does, so this tree is the resolved answer — no list in `~/.env`, and nothing to
+# fall out of step with it. nullglob keeps an unmatched pattern from arriving as
+# a literal, which is bash's default and the reason the old loop tested -r.
+shopt -s nullglob
+for layer_file in "$SHELL_DIR"/*/*/*.sh; do
+  source "$layer_file"
 done
-unset dotfiles_layers overlay overlay_file
+shopt -u nullglob
+unset layer_file
 
+# Guarded: rustup writes this, dotfiles never deploys it, so its absence says
+# nothing about whether this machine is converged.
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"

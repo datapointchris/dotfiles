@@ -5,7 +5,7 @@ and flag lines, so the property that actually matters is that a regeneration
 never loses anything below the OVERRIDES marker. Most of this pins that down.
 
 It is deliberately permanent rather than scaffolding: `.zshrc` sources `~/.env`
-before anything else and reads its coordinates from nothing else, so a botched
+before anything else and gates every feature on what it reads there, so a botched
 migration leaves a machine with a broken interactive shell — independently, as
 each box migrates. These are the exact states that has to survive.
 """
@@ -32,16 +32,6 @@ from dotfiles.session import Session
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MANIFEST: dict[str, Any] = {'machine': 'box', 'platform': 'macos'}
-
-MACOS_LAYERS = 'pkg/brew os/darwin display/aqua host/native trust/fleet capacity/workstation'
-LINUX_LAYERS = 'pkg/apt os/linux display/none host/native trust/fleet capacity/server'
-"""What the two platform bundles resolve to, spelled out rather than derived.
-
-Derived from `Coordinates.overlays`, these would assert that the renderer agrees
-with itself. Written out, a seventh axis or a reordering fails here and has to be
-looked at — which is the whole reason `.zshrc` may read one variable instead of
-six.
-"""
 
 FLAGS: dict[str, Any] = {
     'flags': [
@@ -97,7 +87,6 @@ def test_the_generated_section_carries_identity_from_the_manifest(tmp_path: Path
     values = envfile.parse_env_assignments(envfile.render(machine(tmp_path)))
 
     assert values['MACHINE'] == 'box'
-    assert values['DOTFILES_LAYERS'] == MACOS_LAYERS
 
 
 def test_every_declared_flag_is_written_explicitly(tmp_path: Path) -> None:
@@ -120,7 +109,7 @@ def test_generated_lines_are_exported(tmp_path: Path) -> None:
     """nvim reads these through `vim.env`, so a bare assignment would not reach it."""
     section = envfile.render(machine(tmp_path))
 
-    assert 'export DOTFILES_LAYERS=' in section
+    assert 'export MACHINE=' in section
     assert 'export ALPHA_FLAG=' in section
 
 
@@ -129,7 +118,7 @@ def test_generated_lines_let_the_ambient_environment_win(tmp_path: Path) -> None
     sources this file — a bare assignment would clobber the ambient value."""
     section = envfile.render(machine(tmp_path))
 
-    assert f'export DOTFILES_LAYERS="${{DOTFILES_LAYERS:-{MACOS_LAYERS}}}"' in section
+    assert 'export MACHINE="${MACHINE:-box}"' in section
     assert 'export ALPHA_FLAG="${ALPHA_FLAG:-true}"' in section
 
 
@@ -137,14 +126,14 @@ def test_the_ambient_override_actually_wins_in_a_real_shell(tmp_path: Path, env_
     envfile.write(env_file, machine(tmp_path))
 
     result = subprocess.run(
-        ['bash', '-c', f'source "{env_file}"; echo "$DOTFILES_LAYERS"'],
+        ['bash', '-c', f'source "{env_file}"; echo "$MACHINE"'],
         capture_output=True,
         text=True,
-        env={**os.environ, 'DOTFILES_LAYERS': 'os/linux'},
+        env={**os.environ, 'MACHINE': 'elsewhere'},
         check=True,
     )
 
-    assert result.stdout.strip() == 'os/linux'
+    assert result.stdout.strip() == 'elsewhere'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,10 +223,10 @@ def test_a_refresh_replaces_the_generated_section_and_nothing_else(tmp_path: Pat
     env_file.write_text('export OPENAI_API_KEY=sk-secret\n')
     envfile.write(env_file, machine(tmp_path))
 
-    envfile.write(env_file, machine(tmp_path, {**MANIFEST, 'platform': 'linux'}))
+    envfile.write(env_file, machine(tmp_path, {**MANIFEST, 'flags': {'ALPHA_FLAG': False}}))
 
     values = envfile.read(env_file)
-    assert values['DOTFILES_LAYERS'] == LINUX_LAYERS
+    assert values['ALPHA_FLAG'] == 'false'
     assert values['OPENAI_API_KEY'] == 'sk-secret'
 
 
@@ -344,37 +333,41 @@ def test_a_hand_edited_override_below_the_marker_is_not_drift(tmp_path: Path) ->
     assert changes(tmp_path) == ()
 
 
-def test_identity_drift_from_the_manifest_is_stale(tmp_path: Path) -> None:
-    live = session(tmp_path, {**MANIFEST, 'platform': 'linux'})
-    envfile.write(live.env_file, live.machine)
+def test_identity_drift_from_the_manifest_is_stale(tmp_path: Path, env_file: Path) -> None:
+    """A generated section naming another machine, written by the real renderer.
+    `MACHINE` selects the manifest every other resource resolves against, so the
+    machine is measuring itself against someone else's declaration."""
+    build(tmp_path)
+    (tmp_path / 'install' / 'manifests' / 'other.yml').write_text(yaml.safe_dump({'machine': 'other', 'platform': 'linux'}))
+    envfile.write(env_file, machines.load('other', tmp_path))
 
-    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_LAYERS']
+    found = [change for change in changes(tmp_path) if change.item == 'MACHINE']
 
     assert found[0].verdict is Verdict.STALE
+    assert found[0].observed == 'other'
     assert found[0].actionable
 
 
-def test_an_overridden_coordinate_is_named_but_is_not_ours_to_write(tmp_path: Path) -> None:
-    """A coordinate selects which overlay directories every shell sources, so an
-    override is the machine saying it is a different machine than its manifest —
-    worth naming, unlike the flag override a marker exists to allow. Not
-    repairable: the assignment is below the marker and `apply` owns only what is
-    above it."""
+def test_an_overridden_identity_is_named_but_is_not_ours_to_write(tmp_path: Path) -> None:
+    """`MACHINE` selects the manifest, so an override is the machine saying it is a
+    different machine than the one it was installed as — worth naming, unlike the
+    flag override a marker exists to allow. Not repairable: the assignment is below
+    the marker and `apply` owns only what is above it."""
     live = session(tmp_path)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write(f'export DOTFILES_LAYERS="{LINUX_LAYERS}"\n')
+        target.write('export MACHINE="elsewhere"\n')
 
-    found = [change for change in changes(tmp_path) if change.item == 'DOTFILES_LAYERS']
+    found = [change for change in changes(tmp_path) if change.item == 'MACHINE']
 
     assert found[0].verdict is Verdict.STALE
-    assert found[0].observed == LINUX_LAYERS
+    assert found[0].observed == 'elsewhere'
     assert found[0].repair is Repair.BY_HAND
     assert not found[0].actionable
     assert str(live.env_file) in found[0].advice
 
 
-def test_an_overridden_coordinate_settles_rather_than_being_rewritten_each_run(tmp_path: Path, unprivileged: Privilege) -> None:
+def test_an_overridden_identity_settles_rather_than_being_rewritten_each_run(tmp_path: Path, unprivileged: Privilege) -> None:
     """The loop a whole-file comparison produces: STALE, apply, DONE, STALE again,
     with a fresh `.env.bak` taken over the last one every round until the backup is
     of nothing. `perform`'s re-observation guard never fires, because the finding
@@ -382,14 +375,14 @@ def test_an_overridden_coordinate_settles_rather_than_being_rewritten_each_run(t
     live = session(tmp_path)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write(f'export DOTFILES_LAYERS="{LINUX_LAYERS}"\n')
+        target.write('export MACHINE="elsewhere"\n')
 
     for _ in range(3):
         for change in [found for found in changes(tmp_path) if found.actionable]:
             env_resource.RESOURCE.perform(session(tmp_path), change, unprivileged)
 
     assert not (tmp_path / '.env.bak').exists()
-    assert envfile.read(live.env_file)['DOTFILES_LAYERS'] == LINUX_LAYERS
+    assert envfile.read(live.env_file)['MACHINE'] == 'elsewhere'
 
 
 def test_a_flag_nothing_declares_is_undeclared_and_unrepairable(tmp_path: Path, env_file: Path) -> None:

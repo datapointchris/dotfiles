@@ -44,25 +44,25 @@ def assignment(name: str, value: str) -> str:
 
 
 def coordinate_exports(machine: Machine) -> dict[str, str]:
-    """The coordinate variable `~/.env` carries, and what it should say.
+    """The coordinate variables `~/.env` carries, and what they should say.
 
-    One function for both halves: `render` writes this and `resources/env.py`
-    checks a machine against it, so the file `apply` produces and the file
+    One function for both halves: `render` writes these and `resources/env.py`
+    checks a machine against them, so the file `apply` produces and the file
     `check` demands cannot disagree about a name or a spelling.
 
-    One variable rather than one per axis. The six existed only so `.zshrc` and
-    `.bashrc` could reassemble `<axis>/<value>` pairs that `Coordinates.overlays`
-    had already resolved — six exports, two hand-written lists spelling the axis
-    names again, and nothing holding either list to `OVERLAY_DIRS`. Shipping the
-    resolved list is the same information with one place to be wrong.
+    **Empty, and that is the design.** A shell needs no coordinate to know what
+    to load: `symlinks apply` deploys only the directories this machine's
+    coordinates select and prunes the rest, so `~/.local/shell/` *is* the
+    resolved answer and a glob over it reads that answer directly. Shipping the
+    list as well made `~/.env` a second copy of a fact the filesystem already
+    held, free to disagree with it — and it did, naming six directories where one
+    existed.
 
-    A dict of one rather than a bare string, because both callers want a mapping
-    of name to expected value and a second coordinate export would land here.
-
-    Named `DOTFILES_LAYERS` because a bare `LAYERS` is not safe in a shell, and
-    for the reason the six were prefixed before it: zsh sets `HOST` itself.
+    Kept as a function rather than deleted because the seam is the point: a
+    coordinate value a shell genuinely cannot derive from what is on disk lands
+    here, and `render` and `check` pick it up together.
     """
-    return {'DOTFILES_LAYERS': ' '.join(machine.coordinates.overlays)}
+    return {}
 
 
 def render(machine: Machine) -> str:
@@ -84,10 +84,6 @@ def render(machine: Machine) -> str:
         '# Identity. MACHINE selects the manifest and is read by install.sh before',
         '# anything else, so this file is also the install bootstrap.',
         assignment('MACHINE', machine.name),
-        '',
-        '# Coordinates, resolved to the overlay directories they select under configs/,',
-        '# shell/ and apps/. .zshrc and .bashrc source from exactly this list rather than',
-        '# rebuilding it from one variable per axis. Prefixed because zsh already sets HOST.',
     ]
 
     lines += [assignment(name, value) for name, value in coordinate_exports(machine).items()]

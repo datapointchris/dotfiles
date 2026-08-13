@@ -36,18 +36,6 @@ from matrix.harness import unwrapped
 Run = Callable[..., Invocation]
 Arrange = Callable[[Sandbox], None]
 
-LINUX_LAYERS = 'pkg/apt os/linux display/none host/native trust/fleet capacity/server'
-ARCH_LAYERS = 'pkg/pacman os/linux display/wayland host/native trust/fleet capacity/workstation'
-MACOS_LAYERS = 'pkg/brew os/darwin display/aqua host/native trust/fleet capacity/workstation'
-"""What three platform bundles resolve to, written out rather than derived.
-
-Derived from `Coordinates.overlays` these would assert that the renderer agrees
-with itself. Written out, a seventh axis or a reordering fails here and has to be
-looked at — which is the whole reason `.zshrc` may read one variable instead of
-six. `tests/resources/test_env.py` spells two of them for the same reason.
-"""
-
-ARCHLINUX: dict[str, Any] = {'machine': 'box', 'platform': 'archlinux'}
 MACOS_MACHINE: dict[str, Any] = {'machine': 'other', 'platform': 'macos'}
 
 ALPHA_ON: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'description': 'first flag', 'default': True}]}
@@ -78,7 +66,7 @@ def redeclare(sandbox: Sandbox, manifest: dict[str, Any] | None = None, flags: d
     `sandbox.declare` settles afterwards, so it can express what a machine
     declares and never what one has fallen behind. This is the other half: the
     repo moved and the machine has not regenerated, which is how a flag's new
-    default reaches nothing and how a manifest's coordinates go stale.
+    default reaches nothing.
     """
     harness.write_declaration(sandbox.repo, manifest=manifest or harness.MINIMAL_MANIFEST, flags=flags, machine=sandbox.machine)
 
@@ -115,10 +103,6 @@ def no_env_file(sandbox: Sandbox) -> None:
     sandbox.env_file.unlink()
 
 
-def manifest_moved_the_layers(sandbox: Sandbox) -> None:
-    redeclare(sandbox, manifest=ARCHLINUX)
-
-
 def flag_default_moved(sandbox: Sandbox) -> None:
     sandbox.declare(flags=ALPHA_OFF)
     redeclare(sandbox, flags=ALPHA_ON)
@@ -129,8 +113,8 @@ def flag_overridden_below_the_marker(sandbox: Sandbox) -> None:
     below_the_marker(sandbox, 'export ALPHA_FLAG=false\n')
 
 
-def coordinate_overridden_below_the_marker(sandbox: Sandbox) -> None:
-    below_the_marker(sandbox, f'export DOTFILES_LAYERS="{ARCH_LAYERS}"\n')
+def identity_overridden_below_the_marker(sandbox: Sandbox) -> None:
+    below_the_marker(sandbox, 'export MACHINE="elsewhere"\n')
 
 
 def required_value_unset(sandbox: Sandbox) -> None:
@@ -164,10 +148,9 @@ def unreadable_config_toml(sandbox: Sandbox) -> None:
 ENV_STATES = [
     pytest.param(converged, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='converged'),
     pytest.param(no_env_file, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='no-env-file'),
-    pytest.param(manifest_moved_the_layers, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='manifest-moved-the-layers'),
     pytest.param(flag_default_moved, ExitCode.DRIFT, 1, ExitCode.CONVERGED, 0, id='flag-default-moved'),
     pytest.param(flag_overridden_below_the_marker, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='flag-overridden-by-hand'),
-    pytest.param(coordinate_overridden_below_the_marker, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='coordinate-overridden-by-hand'),
+    pytest.param(identity_overridden_below_the_marker, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='identity-overridden-by-hand'),
     pytest.param(required_value_unset, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-value-unset'),
     pytest.param(required_value_answered, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='required-value-answered'),
     pytest.param(required_file_absent, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-file-absent'),
@@ -213,9 +196,8 @@ def test_plan_and_check_keep_opposite_halves_of_one_env_measurement(
     ('arrange', 'checked'),
     [
         pytest.param(no_env_file, ExitCode.CONVERGED, id='no-env-file'),
-        pytest.param(manifest_moved_the_layers, ExitCode.CONVERGED, id='manifest-moved-the-layers'),
         pytest.param(flag_default_moved, ExitCode.CONVERGED, id='flag-default-moved'),
-        pytest.param(coordinate_overridden_below_the_marker, ExitCode.ISSUE, id='coordinate-overridden-by-hand'),
+        pytest.param(identity_overridden_below_the_marker, ExitCode.ISSUE, id='identity-overridden-by-hand'),
         pytest.param(required_value_unset, ExitCode.ISSUE, id='required-value-unset'),
         pytest.param(required_file_absent, ExitCode.ISSUE, id='required-file-absent'),
     ],
@@ -239,17 +221,17 @@ def test_an_apply_settles_what_plan_planned_and_reports_the_rest_unchanged(
 
 def test_a_regeneration_keeps_every_hand_written_line_below_the_marker(sandbox: Sandbox, cli: Run) -> None:
     """The property the whole marker design exists for. The real file carries API
-    tokens beside the generated coordinates, so a regeneration that lost the half
-    below the marker would take a machine's secrets with it — and the drift being
+    tokens beside the generated flags, so a regeneration that lost the half below
+    the marker would take a machine's secrets with it — and the drift being
     repaired here is precisely the one that rewrites the half above."""
     below_the_marker(sandbox, SECRET)
-    redeclare(sandbox, manifest=ARCHLINUX)
+    redeclare(sandbox, flags=ALPHA_ON)
 
     cli('env', 'apply')
 
     written = sandbox.env_file.read_text()
     assert SECRET in written
-    assert ARCH_LAYERS in written
+    assert 'export ALPHA_FLAG="${ALPHA_FLAG:-true}"' in written
 
 
 def test_an_apply_with_nothing_to_repair_takes_no_backup_over_the_last_one(sandbox: Sandbox, cli: Run) -> None:
@@ -260,21 +242,11 @@ def test_an_apply_with_nothing_to_repair_takes_no_backup_over_the_last_one(sandb
     nothing. The absent backup is the evidence, because `envfile.write` copies the
     file before it touches it — so a backup existing means the file was rewritten.
     """
-    coordinate_overridden_below_the_marker(sandbox)
+    identity_overridden_below_the_marker(sandbox)
 
     cli('env', 'apply')
 
     assert not (sandbox.home / '.env.bak').exists()
-
-
-def test_the_machine_a_manifest_names_decides_which_layers_the_file_carries(sandbox: Sandbox, cli: Run) -> None:
-    """`DOTFILES_LAYERS` is the one thing `.zshrc` reads its overlays from, so a
-    manifest changing it changes which files every shell on the machine sources."""
-    redeclare(sandbox, manifest=ARCHLINUX)
-
-    cli('env', 'apply')
-
-    assert f'export DOTFILES_LAYERS="${{DOTFILES_LAYERS:-{ARCH_LAYERS}}}"' in sandbox.env_file.read_text()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -283,18 +255,18 @@ def test_the_machine_a_manifest_names_decides_which_layers_the_file_carries(sand
 
 
 @pytest.mark.parametrize(
-    ('named', 'layers'),
+    'named',
     [
-        pytest.param('box', LINUX_LAYERS, id='this-machine'),
-        pytest.param('other', MACOS_LAYERS, id='another-machine'),
+        pytest.param('box', id='this-machine'),
+        pytest.param('other', id='another-machine'),
     ],
 )
-def test_show_renders_the_generated_section_for_the_machine_named(sandbox: Sandbox, cli: Run, named: str, layers: str) -> None:
+def test_show_renders_the_generated_section_for_the_machine_named(sandbox: Sandbox, cli: Run, named: str) -> None:
     """`--machine` selects a manifest, so `show` answers for a box this one is not.
 
     That is what makes it useful before an install: the file it prints is the file
-    `apply` would write on the machine named, and neither this machine's `~/.env`
-    nor its coordinates take any part in it.
+    `apply` would write on the machine named, and this machine's own `~/.env` takes
+    no part in it.
     """
     harness.write_declaration(sandbox.repo, manifest=MACOS_MACHINE, machine='other')
 
@@ -302,7 +274,6 @@ def test_show_renders_the_generated_section_for_the_machine_named(sandbox: Sandb
 
     assert ran.exit_code == ExitCode.CONVERGED
     assert f'export MACHINE="${{MACHINE:-{named}}}"' in ran.stdout
-    assert layers in ran.stdout
 
 
 def test_show_writes_nothing_at_all(sandbox: Sandbox, cli: Run) -> None:
@@ -577,14 +548,13 @@ def test_a_human_run_prints_the_verdict_on_stdout_and_its_evidence_on_stderr(san
 
 def test_a_check_lists_what_it_looked_at_and_was_happy_with(sandbox: Sandbox, cli: Run) -> None:
     """The other half of a measurement. `diff` returns only what differs, so
-    everything a healthy machine holds was invisible — and the coordinate a shell
-    reads its overlays from is exactly what someone looking at this file wants to
-    see the value of."""
+    everything a healthy machine holds was invisible — and the name selecting the
+    manifest every other resource resolves against is exactly what someone looking
+    at this file wants to see the value of."""
     required_value_unset(sandbox)
 
     ran = cli('env', 'check')
 
-    assert f'matched DOTFILES_LAYERS {LINUX_LAYERS}' in unwrapped(ran.stderr)
     assert 'matched MACHINE box' in unwrapped(ran.stderr)
 
 
