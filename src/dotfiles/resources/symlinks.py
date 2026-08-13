@@ -93,10 +93,21 @@ class Observed:
 
     @property
     def summary(self) -> str:
-        """Counts *declared* links, not deployed ones. The previous pass answered
-        only "is anything broken", so a file added to `configs/` and never
-        deployed read as converged."""
-        return f'all {len(self.links)} declared symlinks are deployed'
+        """How many declared links are actually in place, out of how many exist.
+
+        It read `all N declared symlinks are deployed` — a count of what the repo
+        declares with the word `deployed` attached, printed by a `check` that had
+        just found one missing. `check` is right to report converged, because a
+        missing link is `plan`'s drift and not something wrong; the *detail* was
+        the false half, and it is the half a reader keeps. `apply` printed it too,
+        above the writes creating the links it had just called deployed.
+
+        Counted through `_verdict`, which is what decides the same question for
+        every row below. A second predicate here would be free to disagree with the
+        rows it is summarising.
+        """
+        in_place = sum(1 for link in self.links if _verdict(link, self) is None)
+        return f'{in_place} of {len(self.links)} declared symlinks in place'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
@@ -181,6 +192,14 @@ class SymlinksResource:
     help = 'deployed dotfiles: the repo linked into $HOME'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
+        # `_index` is keyed on the Session, and two Sessions in one process compare
+        # equal by value — so a second run in the same interpreter got the first
+        # run's declaration index. A file added to the repo between them was
+        # planned correctly by this walk and then refused by `perform` as an orphan
+        # "nothing in the repo declares any more", which is the opposite of true.
+        # Cleared here because this is the one place that re-reads the repo, so it
+        # is where a run's idea of what is declared begins.
+        _index.cache_clear()
         links = declared(session, plan.machine.coordinates)
         ownership: dict[Path, str] = {}
         pointing_at: dict[Path, Path | None] = {}

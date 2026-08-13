@@ -179,7 +179,12 @@ def show(session: Session) -> None:
     for path in observed.orphans:
         err_console.print(f'  [red]✗[/] {path} (source gone)')
 
-    err_console.print(f'\n{len(observed.links)} declared, {len(verdicts)} not deployed as declared')
+    # Only the declared links that drifted. `verdicts` also holds a row per orphan,
+    # and an orphan is by definition not declared — that is why it is pruned rather
+    # than repaired — so counting it here reported a healthy machine as having a
+    # declared link that did not land, and sent a reader looking for it.
+    undeployed = sum(1 for link in observed.links if link.address in verdicts)
+    err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 
 
 def _reload_compositor(coordinates: axes.Coordinates) -> None:

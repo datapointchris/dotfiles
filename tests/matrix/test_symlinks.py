@@ -588,49 +588,28 @@ def test_applying_twice_leaves_a_collision_converged(sandbox: Sandbox, cli: Call
     assert target.read_text() == 'from apt\n'
 
 
-def test_the_converged_sentence_claims_every_declared_link_is_deployed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour. `Observed.summary` is a count of what the repo declares
-    with the word `deployed` attached, and it is what a converged row prints."""
-    nothing_deployed(sandbox, cli)
-
-    assert cli('symlinks', 'check', '--json').document['detail'] == 'all 1 declared symlinks are deployed'
-
-
-@pytest.mark.xfail(strict=True, reason='the converged detail says `deployed` about links the same observation found missing')
 def test_a_check_that_found_an_undeployed_link_does_not_say_it_is_deployed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`check --json` states, in the field a caller reads, that a link is deployed
-    when the run that produced the sentence found it missing.
+    """The detail counts what is in place, so it cannot claim a link the same run
+    found missing.
 
-    The sentence is `Observed.summary`, built where the diff is not known — so it
-    can count what is declared and cannot know what landed. `check` is right to
-    report converged, because a missing link is `plan`'s drift and not something
-    wrong; the *detail* is the part that is false, and it is the half a reader
-    keeps. `apply` prints it too, above the writes that go on to create the links
-    it has just called deployed.
+    It read `all N declared symlinks are deployed` — the declared count with the
+    word attached. `check` is right to report converged, because a missing link is
+    `plan`'s drift and not something wrong; the detail was the false half, and it
+    is the half a reader keeps.
     """
     nothing_deployed(sandbox, cli)
 
+    assert cli('symlinks', 'check', '--json').document['detail'] == '0 of 1 declared symlinks in place'
     assert 'deployed' not in cli('symlinks', 'check', '--json').document['detail']
 
 
-def test_show_counts_an_orphan_against_the_declared_links(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour. The trailer counts the verdict dict, which holds a row per
-    declared link that drifted *and* a row per orphan."""
-    declare(sandbox, 'configs/common/.config/kept.conf')
-    declare(sandbox, 'configs/common/.config/gone.conf')
-    cli('symlinks', 'apply')
-    (sandbox.repo / 'configs' / 'common' / '.config' / 'gone.conf').unlink()
-
-    assert '1 declared, 1 not deployed as declared' in cli('symlinks', 'show').stderr
-
-
-@pytest.mark.xfail(strict=True, reason='the trailer counts orphans as declared links that failed to deploy')
 def test_show_says_a_fully_deployed_machine_has_nothing_undeployed(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`show` reports a healthy machine as having an undeployed link.
 
-    One declared link, correctly deployed, and one orphan beside it: the trailer
-    reads `1 declared, 1 not deployed as declared`, which says the one declared
-    link did not land. An orphan is by definition not declared — that is why it is
+    One declared link, correctly deployed, and one orphan beside it. The trailer
+    counted the verdict dict, which holds a row per drifted link *and* a row per
+    orphan, so it read `1 declared, 1 not deployed as declared` — saying the one
+    declared link did not land. An orphan is by definition not declared — that is why it is
     pruned rather than repaired — so it cannot be part of this count. Reading the
     line the obvious way sends someone looking for a deployment failure that is not
     there.
@@ -643,41 +622,28 @@ def test_show_says_a_fully_deployed_machine_has_nothing_undeployed(sandbox: Sand
     assert '1 declared, 0 not deployed as declared' in cli('symlinks', 'show').stderr
 
 
-def test_a_second_apply_in_one_process_refuses_a_link_declared_since_the_first(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour. `_index` is an `lru_cache` keyed on the Session, and a
-    Session is a frozen dataclass — so two applies with the same flags are one key
-    and the second reads the first's index of the repo."""
+def test_an_apply_deploys_a_link_declared_since_the_last_one_in_this_process(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A file added to the repo between two applies used to be refused, with a
+    message saying the repo no longer declares it — the opposite of true.
+
+    `observe` re-reads the repo every run, so the change was planned correctly.
+    `perform` is handed a `Change` rather than the observation and looks the link up
+    in `_index`, whose cache key is the Session — equal by value across the two
+    runs, so the second got the first's answer, found no link at that address, and
+    fell into the branch for pruning an orphan. The run exited 0 and reported
+    converged, having deployed nothing.
+
+    Not reachable from a shell, where one process runs one apply. Reachable from
+    anything driving the CLI in process, which is this suite — so the fixture that
+    would have caught it was also the thing that could trigger it.
+    """
     already_deployed(sandbox, cli)
     declare(sandbox, 'configs/common/.config/added.conf')
 
     ran = cli('symlinks', 'apply', '--json')
 
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert wrote(ran) == []
-    assert 'nothing in the repo declares this link any more' in ran.stderr
-    assert not (sandbox.home / '.config' / 'added.conf').exists()
-
-
-@pytest.mark.xfail(strict=True, reason='`_index` caches the declared links per Session, and two applies in one process share a key')
-def test_an_apply_deploys_a_link_declared_since_the_last_one_in_this_process(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A file added to the repo between two applies is refused, with a message
-    saying the repo no longer declares it — which is the opposite of true.
-
-    `observe` re-reads the repo every run, so the change is planned correctly.
-    `perform` is handed a `Change` rather than the observation, and looks the link
-    up in `_index`, whose cache key is the Session — equal by value across the two
-    runs, so the second gets the first's answer, finds no link at that address, and
-    falls into the branch for pruning an orphan. Not reachable from a shell, where
-    one process runs one apply; reachable from anything driving the CLI in process,
-    which is this suite. The run exits 0 and reports converged, having deployed
-    nothing.
-    """
-    already_deployed(sandbox, cli)
-    declare(sandbox, 'configs/common/.config/added.conf')
-
-    cli('symlinks', 'apply')
-
     assert (sandbox.home / '.config' / 'added.conf').is_symlink()
+    assert 'nothing in the repo declares this link any more' not in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────
