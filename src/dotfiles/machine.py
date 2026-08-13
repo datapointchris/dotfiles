@@ -32,9 +32,11 @@ from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import settings
 from dotfiles.catalog import DeclarationIssue
+from dotfiles.refusal import Refusal
+from dotfiles.vocabulary import ExitCode
 
 
-class MachineError(Exception):
+class MachineError(Refusal):
     """A manifest declares something no reader can consume, or omits something one needs."""
 
     def __init__(self, issues: tuple[DeclarationIssue, ...]) -> None:
@@ -57,7 +59,12 @@ class NoSuchMachine(MachineError):
 
     A subclass rather than a second exception, so the five sites that catch
     `MachineError` keep catching both and only the ones that care split it out.
+
+    `code` is what that split was always for, and until it existed the difference
+    lived in whichever caller happened to remember it.
     """
+
+    code = ExitCode.USAGE
 
 
 class Coverage(enum.Enum):

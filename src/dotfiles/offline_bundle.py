@@ -25,12 +25,13 @@ from dotfiles import effects
 from dotfiles import paths
 from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
+from dotfiles.refusal import Refusal
 
 ARCHIVES = 'dotfiles-offline-*.tar.gz'
 """What `bundle create` names its output, which is how one is recognised."""
 
 
-class StagingError(Exception):
+class StagingError(Refusal):
     """An archive that cannot be staged, carrying the reason a person needs."""
 
 

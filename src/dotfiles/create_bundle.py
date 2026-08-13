@@ -52,6 +52,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import toolchain
+from dotfiles.refusal import Refusal
 from dotfiles.resolve import DesiredItem
 
 log = logging.getLogger('create-bundle')
@@ -120,7 +121,7 @@ that is how a firewalled machine moves off the version it was built with.
 """
 
 
-class BundleError(Exception):
+class BundleError(Refusal):
     """A failure that should end the build with a message rather than a traceback."""
 
 

@@ -25,6 +25,7 @@ import tempfile
 from pathlib import Path
 
 from dotfiles import effects
+from dotfiles.refusal import Refusal
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -65,7 +66,7 @@ that entry exists to avoid.
 """
 
 
-class WindowsSideError(Exception):
+class WindowsSideError(Refusal):
     """A failure to report with a message rather than a traceback.
 
     Not `WindowsError`: that is a builtin, an `OSError` alias defined on Windows,

@@ -20,6 +20,7 @@ from dotfiles import commands
 from dotfiles import engine
 from dotfiles import logging
 from dotfiles import reconcile
+from dotfiles import refusal
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import status
@@ -37,6 +38,7 @@ from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(
     name='dotfiles',
+    cls=refusal.Boundary,
     no_args_is_help=True,
     rich_markup_mode='rich',
     help='Reconcile this machine with the dotfiles repo.',

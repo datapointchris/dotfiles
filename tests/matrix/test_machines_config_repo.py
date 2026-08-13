@@ -743,7 +743,7 @@ def test_an_unreadable_manifest_is_an_issue_whichever_door_asks(verb: str, sandb
     ran = cli('machines', verb, catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
-    assert 'cannot be resolved' in ran.stderr
+    assert 'declares neither a platform nor coordinates' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -759,24 +759,27 @@ def test_an_unresolvable_machine_is_an_issue_with_every_reason_printed(sandbox: 
     ran = cli('machines', 'show', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
-    assert 'box cannot be resolved' in ran.stderr
-    assert 'declares go' in ran.output
-    assert 'declares rust' in ran.output
+    assert 'declares go' in ran.stderr
+    assert 'declares rust' in ran.stderr
 
 
-def test_the_reasons_a_machine_cannot_resolve_are_printed_on_stdout(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, and it splits one diagnostic across both streams: the
-    `cannot be resolved` header goes to stderr and the reasons under it to
-    stdout."""
+def test_the_reasons_a_machine_cannot_resolve_are_printed_on_one_stream(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """One diagnostic, one stream. It used to be split: a `cannot be resolved`
+    header on stderr and the reasons under it on stdout, so neither half was the
+    whole message and the machine channel carried prose.
+
+    The header is gone with the hand-written handlers that printed it. Nothing is
+    lost — every reason names its own subject, so the header repeated the machine
+    name that is already on each line.
+    """
     sandbox.declare(manifest={'machine': 'box'})
 
     ran = cli('machines', 'show', '--json', catch_exceptions=True)
 
-    assert 'cannot be resolved' in ran.stderr
-    assert 'declares neither a platform nor coordinates' in ran.stdout
+    assert 'declares neither a platform nor coordinates' in ran.stderr
+    assert 'declares neither a platform nor coordinates' not in ran.stdout
 
 
-@pytest.mark.xfail(strict=True, reason='`_plan` prints its issue lines through `console`, which is stdout, on a --json run')
 def test_a_json_run_that_cannot_answer_leaves_stdout_empty(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """stdout is the machine channel and carries the document or nothing.
 

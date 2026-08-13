@@ -37,7 +37,6 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_row
 from dotfiles.output import success
-from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -110,11 +109,7 @@ def create(
     chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for')
     chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU")
 
-    try:
-        built = create_bundle.build(chosen_machine, chosen_arch, use_cache=True)
-    except create_bundle.BundleError as unbuilt:
-        error(str(unbuilt))
-        raise typer.Exit(ExitCode.ISSUE) from unbuilt
+    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=True)
 
     if print_path:
         print(built)
@@ -136,11 +131,7 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
         hint('build one on a networked machine with: dotfiles bundle create')
         raise typer.Exit(ExitCode.ISSUE)
 
-    try:
-        staged = offline_bundle.stage(found)
-    except offline_bundle.StagingError as unreadable:
-        error(str(unreadable))
-        raise typer.Exit(ExitCode.ISSUE) from unreadable
+    staged = offline_bundle.stage(found)
 
     success(f'staged {found.name} at {staged}')
 
@@ -166,11 +157,7 @@ def check(
     something this machine would really have failed to install.
     """
     verbosity(verbose, quiet)
-    try:
-        session = Session.resolve(machine, offline=True)
-    except NoMachine as unnamed:
-        error(str(unnamed))
-        raise typer.Exit(ExitCode.USAGE) from unnamed
+    session = Session.resolve(machine, offline=True)
 
     staged = offline_bundle.describe()
     if not staged.readable:
@@ -251,11 +238,7 @@ def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quie
     inside a shell script that could only install.
     """
     verbosity(verbose, quiet)
-    try:
-        into = windows.destination()
-    except windows.WindowsSideError as unreachable:
-        error(str(unreachable))
-        raise typer.Exit(ExitCode.ISSUE) from unreachable
+    into = windows.destination()
 
     absent = windows.missing(into)
     for name in sorted(absent):
@@ -287,12 +270,8 @@ def windows_apply(
     if offline and not source:
         raise typer.BadParameter('--offline needs --source naming the bundle to install from')
 
-    try:
-        into = windows.destination()
-        unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
-    except windows.WindowsSideError as unreachable:
-        error(str(unreachable))
-        raise typer.Exit(ExitCode.ISSUE) from unreachable
+    into = windows.destination()
+    unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
 
     for name in sorted(unresolved):
         render_row('failed', name, f'did not land in {into}', 'red')
@@ -318,11 +297,7 @@ def windows_create(archive: str = typer.Argument(None, help='Output archive (def
     building the bundle is deliberately not the machine that will install it.
     """
     default = paths.REPO_ROOT / f'dotfiles-windows-tools-v{dt.date.today():%Y%m%d}.tar.gz'
-    try:
-        built = windows_bundle.build(Path(archive) if archive else default)
-    except windows_bundle.BundleError as unbuilt:
-        error(str(unbuilt))
-        raise typer.Exit(ExitCode.ISSUE) from unbuilt
+    built = windows_bundle.build(Path(archive) if archive else default)
 
     success(f'{built}')
     raise typer.Exit(ExitCode.CONVERGED)

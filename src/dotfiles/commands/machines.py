@@ -73,10 +73,7 @@ def _manifest_path(name: str) -> Path:
     error and nothing else. Wording it here is what let one tool answer the same
     question two ways depending on which verb was asked.
     """
-    try:
-        return machines.manifest_path(name)
-    except machines.NoSuchMachine as unknown:
-        raise typer.BadParameter(str(unknown)) from unknown
+    return machines.manifest_path(name)
 
 
 def _loaded(name: str) -> machines.Machine:
@@ -91,15 +88,7 @@ def _loaded(name: str) -> machines.Machine:
     and says nothing about whether it reads, so an unparseable manifest went
     straight through it and out of the leaf as exit 1 with both streams empty.
     """
-    try:
-        return machines.load(name)
-    except machines.NoSuchMachine as unknown:
-        raise typer.BadParameter(str(unknown)) from unknown
-    except machines.MachineError as refused:
-        error(f'{name} cannot be resolved:')
-        for issue in refused.issues:
-            console.print(f'  {issue}', markup=False, highlight=False)
-        raise typer.Exit(ExitCode.ISSUE) from refused
+    return machines.load(name)
 
 
 @app.command('list')
@@ -150,15 +139,7 @@ def _plan(name: str, owner: str | None = None) -> resolver.Plan:
     A traceback would be the wrong shape for both: an invalid declaration is a
     finding about the repo, not a crash in the tool reading it.
     """
-    try:
-        return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
-    except machines.NoSuchMachine as unknown:
-        raise typer.BadParameter(str(unknown)) from unknown
-    except (catalog.CatalogError, machines.MachineError) as refused:
-        error(f'{name} cannot be resolved:')
-        for issue in refused.issues:
-            console.print(f'  {issue}', markup=False, highlight=False)
-        raise typer.Exit(ExitCode.ISSUE) from refused
+    return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
 
 
 def _render(plan: resolver.Plan) -> None:
