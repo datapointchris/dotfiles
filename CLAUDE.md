@@ -287,7 +287,7 @@ table, which is why the rule above is to not write one.
 - **dotfiles** (`dotfiles`) — the front door, usable from any directory. Three reconcile verbs, Terraform-shaped: `plan` (what `apply` would change), `apply`, and `check` (what is *wrong*, which a machine merely behind on versions is not). All three sit at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
 - **Symlinks Manager** — `dotfiles symlinks apply`
 - **Theme** (`theme`) — unified theming; `theme list` names the themes and `ls ~/tools/theme/lib/generators/` the apps
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools. The registry has moved to `terminal-library`, which `doit` reads; the copy here at `configs/common/.local/share/toolbox/registry.yml` is the one `toolbox` reads and is a deliberate temporary duplicate. Add a tool to both, and see `docs/apps/toolbox.md`
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools. The registry has moved to `terminal-library`, which `doit` reads; the copy here at `configs/common/.local/share/toolbox/registry.yml` is the one `toolbox` reads and is a deliberate duplicate that `icb` 309 removes. Add a tool to both, and see `docs/apps/toolbox.md`
 - **tmux Sessions** (`tmux-sessions`) — session switching, creation, and the cross-session window finder behind the two-line status bar. See `docs/architecture/tmux-sessions.md`
 - **Task** — `task --list-all` from inside the repo; nearly every task is a thin `uv run dotfiles ...` onto `src/dotfiles/`, so both front doors reach one implementation
 
