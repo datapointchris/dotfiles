@@ -679,16 +679,19 @@ def test_a_probe_refuses_to_let_a_helper_prompt(sandbox: Sandbox, cli: Callable[
     assert os.environ.get('GIT_TERMINAL_PROMPT') is None, 'the probe leaked its environment into this process'
 
 
-def test_a_probe_of_a_helper_naming_no_command_runs_the_operation_word_instead(
+def test_a_probe_never_executes_the_operation_word_as_a_command(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """The bug, pinned as it behaves today so the fix has something to break.
+    """`--probe` must start nothing for a helper that names no command.
 
-    `credentials_show` probes every listed helper, including one `_asked` has
-    already ruled `stale` for naming no command. `Helper.invocation` assembles the
-    shell form as `sh -c '<command> get'`, so an empty command leaves `sh -c ' get'`
-    — and the shell looks `get` up on PATH and runs whatever it finds. Here it
-    finds a script this test put there.
+    `Helper.invocation` assembles the shell form as `sh -c '<command> get'`, so an
+    empty command left `sh -c ' get'` — and the shell resolved `get` on PATH and
+    ran whatever was there. `--probe` executed a binary the configuration never
+    named, on the one entry `_asked` had already ruled `stale` for naming no
+    command.
+
+    The witness is a real script on PATH, so this fails by the fault occurring
+    rather than by inspecting an argv that might be assembled somewhere else.
     """
     witness = sandbox.root / 'ran-get'
     sandbox.shadow('get', f'#!/bin/sh\necho ran > {witness}\nexit 0\n')
@@ -696,30 +699,10 @@ def test_a_probe_of_a_helper_naming_no_command_runs_the_operation_word_instead(
 
     (row,) = cli('credentials', 'show', '--probe', '--json').document
 
-    assert row['verdict'] == 'stale'
-    assert witness.is_file()
-
-
-@pytest.mark.xfail(strict=True, reason='probe builds `sh -c " get"` for a helper whose command is empty')
-def test_a_probe_should_never_execute_the_operation_word_as_a_command(
-    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
-) -> None:
-    """What the run should do: report the empty value and start nothing.
-
-    Two faults, and the second is the one that matters. The answer names a command
-    called `get` rather than the helper, which contradicts the `stale` verdict
-    printed on the same row — and reaching it at all means `--probe` executed a
-    PATH binary the configuration never named. The resource had already decided
-    there was no program to run, so nothing here needs a new judgement about what
-    the value means.
-    """
-    witness = sandbox.root / 'ran-get'
-    sandbox.shadow('get', f'#!/bin/sh\necho ran > {witness}\nexit 0\n')
-    a_helper_naming_no_command(sandbox, monkeypatch)
-
-    cli('credentials', 'show', '--probe', '--json')
-
     assert not witness.exists()
+    assert row['verdict'] == 'stale'
+    assert row['probed'] is False
+    assert 'names no command' in row['probe_detail']
 
 
 def test_show_without_the_flag_carries_no_probe_fields_at_all(
@@ -762,29 +745,13 @@ def test_two_helpers_sharing_a_label_are_both_listed(sandbox: Sandbox, cli: Call
     assert [Path(row['program']).name for row in rows] == ['git-credential-first', 'git-credential-second']
 
 
-def test_a_probe_answer_is_currently_keyed_on_the_label_and_so_collides(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The bug, pinned as it behaves today so the fix has something to break.
-
-    `credentials_show` builds `{entry.helper.label: probe(entry.helper)}`, and a
-    label is the scope or `every remote`. Two helpers on one scope collapse to one
-    entry, so both rows print the *last* helper's answer — here the silent helper
-    is reported as holding a credential it never returned.
-    """
-    two_unscoped_helpers(sandbox)
-
-    first, second = cli('credentials', 'show', '--probe', '--json').document
-
-    assert first['probed'] is True
-    assert second['probed'] is True
-    assert first['probe_detail'] == second['probe_detail']
-
-
-@pytest.mark.xfail(strict=True, reason='probed is keyed on the helper label, which two helpers on one scope share')
-def test_each_helper_should_report_its_own_probe_answer(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_each_helper_reports_its_own_probe_answer(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """What the row should say: the silent helper returned nothing.
 
-    Keying on the label loses the association between a row and the answer that
-    row is evidence for, and it does so silently — the run is correct about the
+    The answers were keyed on `helper.label`, which is the scope or `every
+    remote`, so two helpers on one scope collapsed to a single entry and both rows
+    printed the last helper's answer. Keying lost the association between a row
+    and the evidence for it, and did so silently — the run is correct about the
     verdicts printed beside it and wrong about the probe, which is the field a
     reader turned `--probe` on for. Two helpers on one scope is the ordinary
     accumulating case git documents, not a misconfiguration.

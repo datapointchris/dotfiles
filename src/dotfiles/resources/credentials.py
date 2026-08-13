@@ -155,6 +155,11 @@ class Helper:
         `!gh auth git-credential` asking for a credential is
         `sh -c 'gh auth git-credential get'` — never `gh get`, which is not a
         command and would report every `!` helper as broken.
+
+        **A caller must establish there is a command before asking for one.** This
+        appends unconditionally, so an empty value yields `sh -c ' get'` and the
+        shell runs whatever `get` resolves to on PATH. `probe` is the only caller
+        and checks `program` first.
         """
         value = self.value.strip()
         if self.shell_form:
@@ -348,6 +353,15 @@ def probe(helper: Helper) -> tuple[bool, str]:
     nothing and exits 0, which is indistinguishable from success on the exit code
     alone and is why the output is what gets read.
     """
+    # A helper naming no command has no program to ask, and `invocation` cannot
+    # say so: it appends the operation word, so an empty command assembles
+    # `sh -c ' get'` and the shell resolves `get` on PATH and runs whatever is
+    # there. `--probe` then executes a binary the configuration never named, on the
+    # one entry the resource had already ruled unusable. `program` is where that
+    # judgement already lives, so this asks it rather than re-deciding.
+    if not helper.program:
+        return False, 'the helper names no command, so there is nothing to ask'
+
     scope = helper.scope or 'https://github.com'
     protocol, _, rest = scope.partition('://')
     host = rest or protocol

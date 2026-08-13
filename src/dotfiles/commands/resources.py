@@ -724,7 +724,12 @@ def credentials_show(
 
     session = _session(machine)
     found = credentials.RESOURCE.observe(session, session.plan).found
-    probed = {entry.helper.label: credentials.probe(entry.helper) for entry in found} if probe else {}
+    # Positional, not keyed. It was `{entry.helper.label: ...}`, and a label is the
+    # scope or `every remote` — so two helpers on one scope, which is the ordinary
+    # accumulating case git documents, collapsed to one entry and both rows printed
+    # the last helper's answer. A row and the evidence for it belong together, and
+    # nothing here needs a key to say so.
+    answers = [credentials.probe(entry.helper) for entry in found] if probe else [(False, '')] * len(found)
 
     if as_json:
         emit_json(
@@ -736,19 +741,18 @@ def credentials_show(
                     'origin': str(entry.helper.origin),
                     'verdict': str(entry.verdict),
                     'detail': entry.detail,
-                    **({'probed': probed[entry.helper.label][0], 'probe_detail': probed[entry.helper.label][1]} if probe else {}),
+                    **({'probed': answered, 'probe_detail': why} if probe else {}),
                 }
-                for entry in found
+                for entry, (answered, why) in zip(found, answers, strict=True)
             ]
         )
         return
     if not found:
         emit_text('git is configured with no credential helper on this machine')
         return
-    for entry in found:
+    for entry, (answered, why) in zip(found, answers, strict=True):
         colour = CHANGE_COLOURS[str(entry.verdict)]
         console.print(f'[{colour}]{entry.verdict:<{VERDICT_COLUMN}}[/] {entry.helper.label:<{SUBJECT_COLUMN}} {entry.detail}')
         console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} set in {entry.helper.origin}')
         if probe:
-            answered, why = probed[entry.helper.label]
             console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [{"green" if answered else "yellow"}]probe:[/] {why}')
