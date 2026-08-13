@@ -937,6 +937,26 @@ class Catalog:
             yield from self.entries[section]
 
 
+def _parsed(source: Path) -> dict[str, Any]:
+    """One declaration file as a mapping, or a refusal naming where it broke.
+
+    A file that will not parse as YAML is the same kind of answer as one that
+    parses and declares something no reader can consume, and it has to arrive as
+    the same kind of exception. Untried, `yaml.safe_load` raised a `YAMLError`
+    that no handler here catches: `validate.declaration` catches `CatalogError`
+    alone, so the parser's own exception reached the boundary as a traceback and
+    exit 1 — which is `DRIFT`, the code for a machine that merely differs from a
+    declaration nothing could read.
+
+    The parser's message carries the line and column, so it is kept whole rather
+    than summarised. `problem_mark` is what makes it worth keeping.
+    """
+    try:
+        return yaml.safe_load(source.read_text()) or {}
+    except yaml.YAMLError as unparseable:
+        raise CatalogError((DeclarationIssue(source.name, f'will not parse as YAML — {unparseable}'),)) from unparseable
+
+
 def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     """Parse and validate the whole declaration, or raise with every problem in it.
 
@@ -948,8 +968,8 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     source = path or paths.PACKAGES_FILE
     system_source = system or (source.parent / 'system.yml')
     declared = {
-        source: yaml.safe_load(source.read_text()) or {},
-        system_source: (yaml.safe_load(system_source.read_text()) or {}) if system_source.is_file() else {},
+        source: _parsed(source),
+        system_source: _parsed(system_source) if system_source.is_file() else {},
     }
 
     issues: list[DeclarationIssue] = []

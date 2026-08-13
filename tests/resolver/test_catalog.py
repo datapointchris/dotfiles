@@ -62,6 +62,30 @@ def test_the_repo_declaration_parses() -> None:
     assert set(loaded.entries) == set(catalog.ALL_SECTIONS)
 
 
+@pytest.mark.parametrize('file', ['packages.yml', 'system.yml'])
+def test_a_declaration_that_will_not_parse_refuses_rather_than_escaping(file: str, tmp_path: Path) -> None:
+    """A file that is not YAML is a `CatalogError`, the same as one that is YAML
+    and declares something no reader can consume.
+
+    Untried, `yaml.safe_load` raised a `YAMLError` no handler here catches —
+    `validate.declaration` catches `CatalogError` alone — so it reached the
+    boundary as a traceback and exit 1. That is `DRIFT`, which says the machine
+    differs from a declaration that in fact could not be read at all.
+
+    Both files, because they are loaded on separate lines and only one of them
+    was ever exercised by a test.
+    """
+    (tmp_path / 'packages.yml').write_text('github_releases: []\n')
+    (tmp_path / 'system.yml').write_text('managed_files: []\n')
+    (tmp_path / file).write_text('github_releases: [unclosed\n')
+
+    with pytest.raises(catalog.CatalogError) as refused:
+        catalog.load(tmp_path / 'packages.yml')
+
+    assert file in str(refused.value)
+    assert 'will not parse as YAML' in str(refused.value)
+
+
 @pytest.mark.parametrize(('file', 'known'), [('packages.yml', catalog.SECTIONS), ('system.yml', catalog.SYSTEM_SECTIONS)])
 def test_every_section_in_a_declaration_file_has_a_class(file: str, known: dict[str, type[catalog.Entry]]) -> None:
     """A section with no dataclass is not validated leniently but not at all.
