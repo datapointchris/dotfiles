@@ -1,1 +1,1 @@
-"""Dotfiles symlink manager with layered architecture."""
+"""Dotfiles symlink manager: a common base plus the coordinate directories."""

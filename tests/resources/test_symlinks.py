@@ -48,7 +48,7 @@ def session(repo: Path, home: Path) -> Session:
 
 
 def declare(repo: Path, relative: str, content: str = 'config\n') -> Path:
-    """Put a file in the repo, in whichever layer the path names."""
+    """Put a file in the repo, in whichever directory the path names."""
     source = repo / relative
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(content)
@@ -76,7 +76,7 @@ def apply(session: Session) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_layer_is_deployed_to_its_own_destination(session: Session, repo: Path, home: Path) -> None:
+def test_every_tree_is_deployed_to_its_own_destination(session: Session, repo: Path, home: Path) -> None:
     declare(repo, 'configs/common/.config/tmux/tmux.conf')
     declare(repo, 'shell/common/functions.sh')
     declare(repo, 'apps/common/notes')
@@ -90,18 +90,18 @@ def test_every_layer_is_deployed_to_its_own_destination(session: Session, repo: 
     }
 
 
-def test_every_overlay_is_optional(session: Session, repo: Path) -> None:
+def test_every_coordinate_directory_is_optional(session: Session, repo: Path) -> None:
     """A machine sits on all six axes and has a directory for two or three of
-    them. An absent overlay is the normal case, not a gap."""
+    them. An absent directory is the normal case, not a gap."""
     declare(repo, 'configs/common/.bashrc')
 
     assert len(symlinks.RESOURCE.observe(session, session.plan).links) == 1
 
 
-def test_an_overlay_the_coordinates_select_is_deployed(session: Session, repo: Path, home: Path) -> None:
+def test_the_variant_the_coordinates_select_is_deployed(session: Session, repo: Path, home: Path) -> None:
     """`box` declares `platform: linux`, which is `{apt, linux, none, native,
-    fleet, server}` — so the apt overlay is its overlay, and no other machine's
-    is."""
+    fleet, server}` — so the apt variant is the one it selects, and no other
+    machine's is."""
     declare(repo, 'configs/pkg/apt/.config/apt/preferences')
     declare(repo, 'configs/pkg/pacman/.config/pacman/makepkg.conf')
 
@@ -110,8 +110,8 @@ def test_an_overlay_the_coordinates_select_is_deployed(session: Session, repo: P
     assert targets == {home / '.config/apt/preferences'}
 
 
-def test_a_configs_overlay_flattens_and_a_shell_overlay_keeps_its_axis(session: Session, repo: Path, home: Path) -> None:
-    """A config has to land where the program reading it looks; a shell overlay
+def test_a_configs_variant_flattens_and_a_shell_layer_keeps_its_axis(session: Session, repo: Path, home: Path) -> None:
+    """A config has to land where the program reading it looks; a shell layer
     is read only by `.zshrc`, which walks the axis directories by name."""
     declare(repo, 'configs/host/native/.config/foo/foo.conf')
     declare(repo, 'shell/pkg/apt/apt.sh')
@@ -175,7 +175,7 @@ def test_a_link_pointing_at_the_wrong_file_is_stale(session: Session, repo: Path
 
 def test_a_target_this_manager_did_not_create_is_reported_and_not_ours_to_replace(session: Session, repo: Path, home: Path) -> None:
     """The write is an unlink, and `uv tool install` puts real executables in the
-    same ~/.local/bin the apps layer links into."""
+    same ~/.local/bin the apps tree links into."""
     declare(repo, 'apps/common/notes')
     (home / '.local' / 'bin').mkdir(parents=True)
     (home / '.local' / 'bin' / 'notes').write_text('#!/bin/sh\n# somebody else wrote this\n')
@@ -245,7 +245,7 @@ def test_applying_replaces_a_link_this_manager_owns(session: Session, repo: Path
 
 def test_applying_never_replaces_a_foreign_target(session: Session, repo: Path, home: Path) -> None:
     """`uv tool install` writes an executable into the same ~/.local/bin the apps
-    layer links into, and the write here is an unlink."""
+    tree links into, and the write here is an unlink."""
     declare(repo, 'apps/common/notes')
     (home / '.local' / 'bin').mkdir(parents=True)
     theirs = home / '.local' / 'bin' / 'notes'
@@ -397,7 +397,7 @@ def test_the_source_trees_are_walked_once_however_many_links_are_missing(
 ) -> None:
     """`perform` is handed a Change and not the observation that produced it, so
     it has to find the link again — and `declared()` is an rglob of three source
-    trees per overlay plus a pyproject parse. Deriving it per change ran that
+    trees per coordinate directory plus a pyproject parse. Deriving it per change ran that
     walk once *per link*, which on a fresh machine is every link walking every
     tree.
 

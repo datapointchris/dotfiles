@@ -84,7 +84,7 @@ def the_epilogue_cannot_leave_this_sandbox(sandbox: Sandbox, monkeypatch: pytest
 
 
 def declare(sandbox: Sandbox, relative: str = DECLARED, content: str = REPO_COPY) -> Path:
-    """Put a file in the repo, in whichever layer the path names."""
+    """Put a file in the repo, in whichever directory the path names."""
     source = sandbox.repo / relative
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(content)
@@ -92,7 +92,7 @@ def declare(sandbox: Sandbox, relative: str = DECLARED, content: str = REPO_COPY
 
 
 def destination(sandbox: Sandbox, relative: str = DECLARED) -> Path:
-    """Where that file lands, derived the way `layers()` derives it."""
+    """Where that file lands, derived the way `sources()` derives it."""
     return sandbox.home / Path(relative).relative_to('configs/common')
 
 
@@ -380,7 +380,7 @@ def test_what_unlink_removes_apply_puts_back(sandbox: Sandbox, cli: Callable[...
 
 
 def two_machines(sandbox: Sandbox) -> None:
-    """`box` is apt on Linux; `mac` is brew on Darwin. One overlay each."""
+    """`box` is apt on Linux; `mac` is brew on Darwin. One variant each."""
     sandbox.declare(manifest=MACOS, machine='mac')
     sandbox.declare()
     declare(sandbox, 'configs/pkg/apt/.config/apt.conf', 'apt\n')
@@ -395,7 +395,7 @@ def two_machines(sandbox: Sandbox) -> None:
     ],
     ids=['the-machine-in-the-environment', 'the-machine-named-on-the-line'],
 )
-def test_the_machine_decides_which_overlay_is_deployed(
+def test_the_machine_decides_which_variant_is_deployed(
     argv: tuple[str, ...], wanted: str, unwanted: str, sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
     """`--machine` selects a manifest, and the manifest is the only thing that says
@@ -537,15 +537,15 @@ def test_show_marks_every_declared_link_and_names_the_orphans_under_them(sandbox
 
 
 def collides(sandbox: Sandbox) -> Path:
-    """One relative path declared in two layers, which `box` selects both of."""
+    """One relative path declared in two variants, which `box` selects both of."""
     declare(sandbox, 'configs/common/.config/app/app.conf', 'from common\n')
     declare(sandbox, 'configs/pkg/apt/.config/app/app.conf', 'from apt\n')
     return destination(sandbox)
 
 
-def test_a_path_declared_in_two_layers_deploys_twice_and_the_last_layer_wins(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_a_path_declared_in_two_variants_deploys_twice_and_the_last_one_wins(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Current behaviour. `declared()` appends without deduplicating, so two links
-    are planned at one target and `perform` runs both in layer order."""
+    are planned at one target and `perform` runs both in deployment order."""
     target = collides(sandbox)
 
     ran = cli('symlinks', 'apply', '--json')
@@ -556,7 +556,7 @@ def test_a_path_declared_in_two_layers_deploys_twice_and_the_last_layer_wins(san
 
 def test_a_collision_is_reported_by_neither_verb_as_something_wrong(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Current behaviour. `check` exists to report what a person has to deal with,
-    and two layers claiming one path is exactly that — but the losing link reads as
+    and two variants claiming one path is exactly that — but the losing link reads as
     ordinary repairable drift, so `check` says nothing is wrong."""
     collides(sandbox)
     cli('symlinks', 'apply')
@@ -565,18 +565,18 @@ def test_a_collision_is_reported_by_neither_verb_as_something_wrong(sandbox: San
     assert cli('symlinks', 'plan', '--json').document['pending'] == 1
 
 
-@pytest.mark.xfail(strict=True, reason='two layers declaring one path make apply flip the link between them for ever')
+@pytest.mark.xfail(strict=True, reason='two variants declaring one path make apply flip the link between them for ever')
 def test_applying_twice_leaves_a_collision_converged(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`apply` never converges a collision, and nothing says so.
 
     Both links are planned at one target, so whichever `perform` runs last wins and
     the other is left pointing at a file that is not its source. The next `plan`
     reports that one as stale, repairs it, and unseats the winner — the content
-    alternates between the two layers on every run, for ever, with `check`
+    alternates between the two variants on every run, for ever, with `check`
     reporting a healthy machine throughout.
 
     Converging is one of two things: refuse the collision as an Issue naming both
-    layers, or make the overlay an override of `common` rather than a second entry.
+    variants, or make the variant an override of `common` rather than a second entry.
     The second is a design change; the first is what `check` is for.
     """
     target = collides(sandbox)

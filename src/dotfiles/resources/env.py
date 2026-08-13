@@ -86,11 +86,12 @@ class Observed:
     def inventory(self) -> tuple[Examined, ...]:
         """Every assignment the file makes, then the required files that are there.
 
-        The generated half carries its value, because a coordinate is what selects
-        which overlays a shell sources and reading it back is the whole point of
-        looking. The half below the marker is named without one: a required value
-        is machine-local precisely because the repo must never hold it, and
-        printing it on a screen somebody screenshots undoes that.
+        The generated half carries its value, because that value is the answer: a
+        flag says whether a machine wants something running, and `MACHINE` names
+        the manifest everything else derives from. The half below the marker is
+        named without one: a required value is machine-local precisely because the
+        repo must never hold it, and printing it on a screen somebody screenshots
+        undoes that.
 
         Nothing here asks what drifted. `diff` decides that, and `reconcile.sift`
         drops any item it reported — so a stale flag appears once, as a finding,
@@ -169,14 +170,14 @@ class EnvResource:
 
 
 def _identity(machine, observed: Observed) -> list[Change]:
-    """What machine this is, and where it sits on each axis.
+    """What machine this is.
 
-    The coordinates are identity rather than configuration: they select which
-    overlays every shell sources, so one of them missing or stale is a machine
-    loading someone else's files, not a preference that drifted. That is the
-    whole of why an override below the marker is named here and stays silent in
-    `_flags` — the marker exists to let a machine hold a preference of its own,
-    and a coordinate is not a preference.
+    `MACHINE` is identity rather than configuration: it selects the manifest every
+    coordinate, package list and flag is derived from, so a machine holding the
+    wrong one is a machine converging on somebody else's declaration, not a
+    preference that drifted. That is the whole of why an override below the marker
+    is named here and stays silent in `_flags` — the marker exists to let a machine
+    hold a preference of its own, and an identity is not a preference.
 
     Which half disagrees decides who can repair it. A generated value that no
     longer matches the manifest is one rewrite away and `apply` makes it. An

@@ -308,10 +308,10 @@ def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> Non
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def git_tree(root: Path, *, overlays: dict[str, str], includes: list[str]) -> Path:
-    """A configs/ tree carrying overlay gitconfigs and the common file naming them.
+def git_tree(root: Path, *, variants: dict[str, str], includes: list[str]) -> Path:
+    """A configs/ tree carrying variant gitconfigs and the common file naming them.
 
-    `overlays` maps an `<axis>/<value>` directory to the gitconfig basename it
+    `variants` maps an `<axis>/<value>` directory to the gitconfig basename it
     ships, so a test can put the wrong name in the right place — which is the
     misnaming this check exists to catch and is not otherwise expressible.
     """
@@ -319,21 +319,21 @@ def git_tree(root: Path, *, overlays: dict[str, str], includes: list[str]) -> Pa
     common = root / 'configs' / 'common' / '.config' / 'git'
     common.mkdir(parents=True, exist_ok=True)
     (common / 'common.gitconfig').write_text('\n'.join(f'[include]\npath = ~/.config/git/{name}' for name in includes))
-    for coordinate, filename in overlays.items():
-        overlay = root / 'configs' / coordinate / '.config' / 'git'
-        overlay.mkdir(parents=True, exist_ok=True)
-        (overlay / filename).write_text('[core]\nautocrlf = input')
+    for coordinate, filename in variants.items():
+        variant = root / 'configs' / coordinate / '.config' / 'git'
+        variant.mkdir(parents=True, exist_ok=True)
+        (variant / filename).write_text('[core]\nautocrlf = input')
     return root
 
 
-def test_an_overlay_gitconfig_named_for_its_value_and_included_is_silent(tmp_path: Path) -> None:
-    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig'])
+def test_a_variant_gitconfig_named_for_its_value_and_included_is_silent(tmp_path: Path) -> None:
+    root = git_tree(tmp_path, variants={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig'])
 
     assert validate.declaration(root) == ()
 
 
-def test_an_overlay_gitconfig_named_for_its_axis_is_an_error(tmp_path: Path) -> None:
-    """The scheme this replaced. An overlay named for its axis, deployed to
+def test_a_variant_gitconfig_named_for_its_axis_is_an_error(tmp_path: Path) -> None:
+    """The scheme this replaced. A variant named for its axis, deployed to
     `~/.config/git/`, says a side of the trust split was chosen and never which one.
 
     The expected path is assembled from the coordinate the fixture was handed
@@ -342,7 +342,7 @@ def test_an_overlay_gitconfig_named_for_its_axis_is_an_error(tmp_path: Path) -> 
     would otherwise read as a reference the rename left behind.
     """
     coordinate, misnamed = 'trust/nonfleet', 'trust.gitconfig'
-    root = git_tree(tmp_path, overlays={coordinate: misnamed}, includes=[misnamed])
+    root = git_tree(tmp_path, variants={coordinate: misnamed}, includes=[misnamed])
 
     assert messages(validate.declaration(root), Severity.ERROR) == [
         f'configs/{coordinate}/.config/git/{misnamed} is named for neither its value nor anything else: '
@@ -350,11 +350,11 @@ def test_an_overlay_gitconfig_named_for_its_axis_is_an_error(tmp_path: Path) -> 
     ]
 
 
-def test_an_overlay_gitconfig_no_include_names_is_an_error(tmp_path: Path) -> None:
+def test_a_variant_gitconfig_no_include_names_is_an_error(tmp_path: Path) -> None:
     """The failure the enumeration in `common.gitconfig` introduced, and the whole
     reason this check exists. git ignores an include whose target is absent, so a
     file nothing includes deploys, is never read, and reports nothing."""
-    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=[])
+    root = git_tree(tmp_path, variants={'host/wsl': 'wsl.gitconfig'}, includes=[])
 
     assert messages(validate.declaration(root), Severity.ERROR) == [
         'configs/host/wsl/.config/git/wsl.gitconfig is deployed but no include names it, so git never reads it; '
@@ -362,18 +362,18 @@ def test_an_overlay_gitconfig_no_include_names_is_an_error(tmp_path: Path) -> No
     ]
 
 
-def test_an_include_no_overlay_ships_is_a_warning(tmp_path: Path) -> None:
+def test_an_include_no_variant_ships_is_a_warning(tmp_path: Path) -> None:
     """Harmless to git and misleading to a reader, which is the warning/error line
     everywhere else in this module."""
-    root = git_tree(tmp_path, overlays={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig', 'native.gitconfig'])
+    root = git_tree(tmp_path, variants={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig', 'native.gitconfig'])
 
     findings = validate.declaration(root)
 
     assert messages(findings, Severity.ERROR) == []
-    assert messages(findings, Severity.WARNING) == [f"{validate.COMMON_GITCONFIG} includes 'native.gitconfig', which no overlay ships"]
+    assert messages(findings, Severity.WARNING) == [f"{validate.COMMON_GITCONFIG} includes 'native.gitconfig', which no variant ships"]
 
 
-def test_a_tree_with_no_git_overlays_says_nothing(tmp_path: Path) -> None:
+def test_a_tree_with_no_git_variants_says_nothing(tmp_path: Path) -> None:
     """Every other test in this module builds a tree with no `configs/` at all, so
     a missing common.gitconfig has to be silent rather than a finding about a
     scheme the tree is not using."""
@@ -400,9 +400,9 @@ FLEET_REGISTRY = '~/.local/share/terminal-library-fleet/repos.json'
 NONFLEET_REGISTRY = '~/.config/repos.json'
 
 
-def test_one_registry_per_trust_overlay_is_silent(tmp_path: Path) -> None:
-    """The shape the fleet actually deploys: every tool in a trust overlay naming
-    the same file, and the two overlays deliberately naming different ones."""
+def test_one_registry_per_trust_variant_is_silent(tmp_path: Path) -> None:
+    """The shape the fleet actually deploys: every tool in a trust variant naming
+    the same file, and the two variants deliberately naming different ones."""
     root = registry_tree(
         tmp_path,
         configs={
@@ -415,7 +415,7 @@ def test_one_registry_per_trust_overlay_is_silent(tmp_path: Path) -> None:
     assert validate.declaration(root) == ()
 
 
-def test_two_registries_in_one_trust_overlay_is_an_error(tmp_path: Path) -> None:
+def test_two_registries_in_one_trust_variant_is_an_error(tmp_path: Path) -> None:
     """The drift a repeated literal invites, and the only thing standing against it.
 
     Both files deploy to the same machine, so a tool reading the odd one out
@@ -430,23 +430,23 @@ def test_two_registries_in_one_trust_overlay_is_an_error(tmp_path: Path) -> None
     )
 
     assert messages(validate.declaration(root), Severity.ERROR) == [
-        'the fleet overlay names more than one registry — '
+        'the fleet variant names more than one registry — '
         'configs/trust/fleet/.config/forge/config.yml says ~/dev/repos.json; '
         f'configs/trust/fleet/.config/indy/config.toml says {FLEET_REGISTRY}'
     ]
 
 
-@pytest.mark.parametrize('layer', ['common', 'host/wsl'])
-def test_a_registry_named_outside_the_trust_overlays_is_an_error(tmp_path: Path, layer: str) -> None:
-    """Every layer but `trust/` reaches both trust domains, so one path in one
+@pytest.mark.parametrize('directory', ['common', 'host/wsl'])
+def test_a_registry_named_outside_the_trust_variants_is_an_error(tmp_path: Path, directory: str) -> None:
+    """Every directory but `trust/` reaches both trust domains, so one path in one
     cannot be right for both — which is exactly how the fleet's registry came to be
     named in a config the work box also deploys."""
-    relative = f'{layer}/.config/syncer/config.toml'
+    relative = f'{directory}/.config/syncer/config.toml'
     root = registry_tree(tmp_path, configs={relative: f'repos_registry = "{FLEET_REGISTRY}"\n'})
 
     assert messages(validate.declaration(root), Severity.ERROR) == [
         f'configs/{relative} names repos_registry outside configs/trust/, so it deploys the same registry '
-        f'to both trust domains; move the file into the trust overlay that wants it'
+        f'to both trust domains; move the file into the trust variant that wants it'
     ]
 
 

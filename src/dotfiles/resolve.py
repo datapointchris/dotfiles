@@ -13,8 +13,8 @@ installer, which is why nine bats files approximated them by running bash.
 downstream needs the Machine again: if a fact is not on the `DesiredItem`, it
 does not affect the install. That is the property that makes
 `dotfiles machines show` an audit rather than a summary — and it is a
-precondition for the overlay layering, where "what does this machine get" stops
-being answerable by reading one directory.
+precondition for the coordinate directories, where "what does this machine get"
+stops being answerable by reading one place.
 """
 
 from __future__ import annotations
@@ -198,9 +198,9 @@ class Preconditions:
 class Reason:
     """Why this item is in the plan.
 
-    A precondition rather than a nicety: under overlays, "what does this machine
-    get" stops being answerable by reading one directory, and every overlay system
-    worth copying fails exactly there. If the resolver cannot name what pulled
+    A precondition rather than a nicety: under coordinate directories, "what does
+    this machine get" stops being answerable by reading one place, and every such
+    scheme worth copying fails exactly there. If the resolver cannot name what pulled
     something in, the audit command is a listing.
     """
 

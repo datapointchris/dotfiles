@@ -5,9 +5,10 @@
 # the fleet has no ~/dev and no terminal-library-fleet clone; it keeps its own
 # registry, listing its own work, at the XDG config path every machine has.
 #
-# Duplicated rather than layered because there is no merge step: the same relative
-# path in configs/common/ and an overlay is a collision producing two links at one
-# target, so a file naming a trust-scoped value carries the whole config.
+# Duplicated rather than layered because there is no merge step: the same
+# relative path in configs/common/ and a coordinate directory is a collision
+# producing two links at one target, so a file naming a trust-scoped value
+# carries the whole config.
 repos_registry = "~/.config/repos.json"
 
 default_policy = "standard"

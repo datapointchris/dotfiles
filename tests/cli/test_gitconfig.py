@@ -29,7 +29,7 @@ def read(config: Path) -> gitconfig.Layering:
 
 def test_the_chain_is_read_out_of_the_configuration_itself(layered: Path) -> None:
     """Never assembled here. A second description of the layering, kept by hand,
-    is one that disagrees with the deployment the first time an overlay moves."""
+    is one that disagrees with the deployment the first time a variant moves."""
     edges = {(include.source.name, include.target.name) for include in read(layered).includes}
 
     assert edges == {('entry.cfg', 'middle.cfg'), ('middle.cfg', 'leaf.cfg')}
@@ -134,7 +134,7 @@ def test_the_includes_holding_the_chain_together_are_not_themselves_a_conflict(l
 
 
 def test_an_absent_include_target_costs_nothing(tmp_path: Path) -> None:
-    """An overlay exists only where a coordinate needs one, so git ignoring an
+    """A variant exists only where a coordinate needs one, so git ignoring an
     include whose target is not there is what makes the scheme optional per
     axis."""
     config = tmp_path / 'entry.cfg'

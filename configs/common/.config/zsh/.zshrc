@@ -401,7 +401,7 @@ for layer_file in "$SHELL_DIR"/*/*/*.sh(N); do
 done
 unset layer_file
 
-# Machine-local overlay, last so it can build on what the platform exported (the
+# Machine-local file, last so it can build on what the layers exported (the
 # work box's aws-login reads $winchris from wsl.sh). A real file, not a symlink:
 # it holds shell code that deliberately never enters this repo — employer
 # hostnames and the like — and it is restored by safekeep rather than installed.

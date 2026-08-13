@@ -7,7 +7,7 @@ needs pacman from `archlinux` and the Windows-host interop from `wsl` at once.
 Naming either loses the other; there was no third value to write.
 
 That is the claim step 8 exists to settle, so it is asserted here rather than
-described in a planning document. A probe resolving with the right overlays on
+described in a planning document. A probe resolving with the right directories on
 both axes *is* the proof, and it fails the moment a coordinate stops selecting
 independently.
 
@@ -108,7 +108,7 @@ def test_a_probe_machine_resolves_at_all(probe: Probe, probe_root: Path) -> None
     assert axes.incoherent(loaded.coordinates) == ()
 
 
-def test_arch_on_wsl_loads_both_overlays_one_string_had_to_choose_between(probe_root: Path) -> None:
+def test_arch_on_wsl_selects_both_directories_one_string_had_to_choose_between(probe_root: Path) -> None:
     """The whole exercise, in one assertion.
 
     As `platform: archlinux` this machine lost win32yank, mount-cifs, autocrlf
@@ -118,8 +118,8 @@ def test_arch_on_wsl_loads_both_overlays_one_string_had_to_choose_between(probe_
     """
     loaded = machines.load('archlinux-work-workstation', probe_root)
 
-    assert 'pkg/pacman' in loaded.coordinates.overlays
-    assert 'host/wsl' in loaded.coordinates.overlays
+    assert 'pkg/pacman' in loaded.coordinates.directories
+    assert 'host/wsl' in loaded.coordinates.directories
 
 
 def test_a_probe_is_told_about_the_machine_local_values_its_host_needs(probe_root: Path) -> None:

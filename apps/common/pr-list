@@ -21,7 +21,7 @@
 set -euo pipefail
 
 # $DOTFILES_REPOS_REGISTRY, then repos_registry in dotfiles' own config, which
-# the trust overlay deploys — ~/.config/dotfiles/config.toml on the fleet, and the
+# the trust variant deploys — ~/.config/dotfiles/config.toml on the fleet, and the
 # same path off it naming a different file. Both rungs, in that order, because
 # src/dotfiles/settings.py SHARED_PATHS declares both for this one setting and a
 # reader honouring only one of them answers differently from `dotfiles config

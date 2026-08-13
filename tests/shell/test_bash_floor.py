@@ -34,14 +34,14 @@ from dotfiles.symlinks import core
 def scanned_directories() -> tuple[Path, ...]:
     """Every source directory that deploys to a machine running bash 3.2.
 
-    Asked of `symlinks.layers` against the declared machines, because a list of
+    Asked of `symlinks.sources` against the declared machines, because a list of
     trees is the same drift one level up from the list of files this guard
     replaced — and it had already happened: `shell/common/` reaches every machine
     and is sourced by every interactive zsh, while `shell/os/darwin/` and
-    `shell/pkg/brew/` are overlays a Mac's coordinates rule *in*, and a
+    `shell/pkg/brew/` are layers a Mac's coordinates rule *in*, and a
     hand-written list named none of the three.
 
-    An overlay a Mac's coordinates rule out is absent because `layers` never
+    A layer a Mac's coordinates rule out is absent because `sources` never
     yields it, not because anything here exempts it by name. `home` only shapes
     the destination, which nothing in this file reads.
     """
@@ -50,7 +50,7 @@ def scanned_directories() -> tuple[Path, ...]:
         coordinates = machines.load(name, REPO).coordinates
         if coordinates.os_family is not OSFamily.DARWIN:
             continue
-        for source, _destination, _layer in symlinks.layers(REPO, coordinates, Path('/')):
+        for source, _destination, _origin in symlinks.sources(REPO, coordinates, Path('/')):
             if source.is_dir():
                 directories[source] = None
     return tuple(directories)

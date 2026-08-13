@@ -2,7 +2,7 @@
 
 The configuration reaches git through a chain of includes rather than a file:
 the entry point includes the repo's shared config, that includes one file per
-coordinate axis, and a trust overlay includes the identity — conditionally, on a
+coordinate axis, and a trust variant includes the identity — conditionally, on a
 machine that keeps more than one. Every hop is deliberate and none of it is
 visible. `git config --list --show-origin` prints the leaves with no indication
 of how any of them was reached, and a key set in two files appears as two rows
@@ -11,7 +11,7 @@ that look like a repetition rather than an override.
 **The chain is read out of the configuration itself, never assembled here.** An
 `include.path` is a setting like any other, so the listing already carries which
 file named which — a second description of the layering, kept in this module by
-hand, is one that would disagree with the deployment the first time an overlay
+hand, is one that would disagree with the deployment the first time a variant
 moved. That is also what makes this correct on a machine whose layers this repo
 has never seen.
 
@@ -368,7 +368,7 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
 def _state(path: Path, contributed: dict[Path, int]) -> str:
     """What one file is doing, in the three states worth telling apart.
 
-    Absent is a normal state rather than a fault. Each overlay gitconfig is named
+    Absent is a normal state rather than a fault. Each variant gitconfig is named
     for the coordinate value that ships it, and `common.gitconfig` names every one
     it knows of, so a machine lists the values it is not as well as the ones it
     is: `wsl.gitconfig` absent on a native machine is the design working. git

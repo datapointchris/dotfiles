@@ -29,9 +29,9 @@ go_tools:
 **Location**: `apps/common/`, plus `apps/<axis>/<value>/` for one that only makes
 sense at a coordinate — the rofi menus are under `apps/display/wayland/`.
 
-**Installation**: every layer the machine's coordinates select is symlinked into
+**Installation**: every variant the machine's coordinates select is symlinked into
 `~/.local/bin/` by `dotfiles symlinks apply`. Directories are skipped, so only
-executable files are linked, and the layers flatten onto one destination because
+executable files are linked, and the variants flatten onto one destination because
 a command has to be on `PATH` rather than under a directory naming why it exists.
 
 **An app that has to change the calling shell is two pieces: a command and a function.** A

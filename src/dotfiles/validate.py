@@ -85,7 +85,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_unprobeable(manifests))
     findings.extend(_unbuildable_assets(declared))
     findings.extend(_unreferenced(declared, manifests))
-    findings.extend(_git_overlays(root))
+    findings.extend(_git_variants(root))
     findings.extend(_registry_paths(root))
     return tuple(findings)
 
@@ -229,16 +229,16 @@ def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Mach
     return findings
 
 
-GIT_OVERLAY_GLOB = 'configs/*/*/.config/git/*.gitconfig'
+GIT_VARIANT_GLOB = 'configs/*/*/.config/git/*.gitconfig'
 COMMON_GITCONFIG = 'configs/common/.config/git/common.gitconfig'
 GIT_INCLUDE_PREFIX = 'path = ~/.config/git/'
 
 
-def _git_overlays(root: Path) -> list[Finding]:
+def _git_variants(root: Path) -> list[Finding]:
     """The two rules holding the git include scheme together, neither of which git
     can enforce.
 
-    An overlay gitconfig is named for the coordinate *value* that ships it, so
+    A variant gitconfig is named for the coordinate *value* that ships it, so
     `ls ~/.config/git/` answers what the machine is rather than which axes were
     resolved — `nonfleet.gitconfig`, not `trust.gitconfig`. And every one of them
     has to be named by an include in `common.gitconfig`, because git expands
@@ -249,31 +249,31 @@ def _git_overlays(root: Path) -> list[Finding]:
     them worth a check rather than a convention. git ignores an include whose
     target is absent — deliberately, since that is the mechanism letting one
     shared file name every value — so a file nothing includes is
-    indistinguishable from a value this machine simply is not. The overlay
+    indistinguishable from a value this machine simply is not. The variant
     deploys, git never reads it, and `identity show` draws a tree it does not
     appear in.
 
     Errors rather than warnings, because both produce a machine configured
     differently from what the repo says it is.
     """
-    overlays = sorted(root.glob(GIT_OVERLAY_GLOB))
+    variants = sorted(root.glob(GIT_VARIANT_GLOB))
     common = root / COMMON_GITCONFIG
     if not common.exists():
         # Only a fault when something is waiting to be included. A tree with no
-        # git overlays at all has nothing to say about the scheme either way.
-        if not overlays:
+        # git variants at all has nothing to say about the scheme either way.
+        if not variants:
             return []
-        return [Finding('gitconfig', Severity.ERROR, f'{COMMON_GITCONFIG} is missing, so no overlay gitconfig is reachable')]
+        return [Finding('gitconfig', Severity.ERROR, f'{COMMON_GITCONFIG} is missing, so no variant gitconfig is reachable')]
 
     lines = [line.strip() for line in common.read_text().splitlines()]
     included = {line.removeprefix(GIT_INCLUDE_PREFIX) for line in lines if line.startswith(GIT_INCLUDE_PREFIX)}
 
     findings, shipped = [], set()
-    for overlay in overlays:
-        axis, value = overlay.relative_to(root / 'configs').parts[:2]
-        shipped.add(overlay.name)
-        relative = overlay.relative_to(root)
-        if overlay.stem != value:
+    for variant in variants:
+        axis, value = variant.relative_to(root / 'configs').parts[:2]
+        shipped.add(variant.name)
+        relative = variant.relative_to(root)
+        if variant.stem != value:
             findings.append(
                 Finding(
                     'gitconfig',
@@ -282,21 +282,21 @@ def _git_overlays(root: Path) -> list[Finding]:
                     f'the {axis} value here is {value!r}, so it must be {value}.gitconfig',
                 )
             )
-        elif overlay.name not in included:
+        elif variant.name not in included:
             findings.append(
                 Finding(
                     'gitconfig',
                     Severity.ERROR,
                     f'{relative} is deployed but no include names it, so git never reads it; '
-                    f'add `{GIT_INCLUDE_PREFIX}{overlay.name}` to {COMMON_GITCONFIG}',
+                    f'add `{GIT_INCLUDE_PREFIX}{variant.name}` to {COMMON_GITCONFIG}',
                 )
             )
 
     # The stale half, and only a warning: git ignores the line, so nothing is
     # misconfigured. What it costs is a reader trusting the file, who sees a value
-    # named here and goes looking for the overlay that no longer ships it.
+    # named here and goes looking for the variant that no longer ships it.
     for name in sorted(included - shipped):
-        findings.append(Finding('gitconfig', Severity.WARNING, f'{COMMON_GITCONFIG} includes {name!r}, which no overlay ships'))
+        findings.append(Finding('gitconfig', Severity.WARNING, f'{COMMON_GITCONFIG} includes {name!r}, which no variant ships'))
     return findings
 
 
@@ -329,8 +329,8 @@ def _registry_paths(root: Path) -> list[Finding]:
     could not — it was unset in every process that sourced no profile.
 
     Two rules, both of which fail silently without one. The path may be named only
-    under `configs/trust/`, because a machine loads exactly one trust overlay while
-    every other layer reaches both domains — a registry named in `configs/common/`
+    under `configs/trust/`, because a machine selects exactly one trust variant while
+    every other directory reaches both domains — a registry named in `configs/common/`
     is the fleet's answer deployed to the machine that is not on the fleet. And
     within one trust value every copy must be the same string, because they all
     resolve on the same machine and a tool reading the odd one out just answers
@@ -354,23 +354,23 @@ def _registry_paths(root: Path) -> list[Finding]:
         if not declared:
             continue
         relative = str(config.relative_to(root))
-        layer = config.relative_to(root / 'configs').parts
-        if layer[0] != 'trust':
+        axis, *within = config.relative_to(root / 'configs').parts
+        if axis != 'trust':
             findings.append(
                 Finding(
                     'registry',
                     Severity.ERROR,
                     f'{relative} names {REGISTRY_KEY} outside configs/trust/, so it deploys the same registry '
-                    f'to both trust domains; move the file into the trust overlay that wants it',
+                    f'to both trust domains; move the file into the trust variant that wants it',
                 )
             )
             continue
-        by_trust.setdefault(layer[1], {})[relative] = str(declared)
+        by_trust.setdefault(within[0], {})[relative] = str(declared)
 
     for trust in sorted(by_trust):
         named = by_trust[trust]
         if len(set(named.values())) <= 1:
             continue
         disagreement = '; '.join(f'{where} says {path}' for where, path in sorted(named.items()))
-        findings.append(Finding('registry', Severity.ERROR, f'the {trust} overlay names more than one registry — {disagreement}'))
+        findings.append(Finding('registry', Severity.ERROR, f'the {trust} variant names more than one registry — {disagreement}'))
     return findings

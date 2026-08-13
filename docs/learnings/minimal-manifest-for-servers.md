@@ -46,14 +46,14 @@ A first-class `linux` platform plus a tiered system-package model:
   saying `system_packages: core` plans only the core entries and one provider
   installs them whatever the platform is.
 
-- **Optional overlays.** The server ships only a shell overlay and no configs of
-  its own, and the symlinks manager treats every overlay as optional. Those
-  overlays are keyed on coordinates now rather than on the platform string, so
+- **Optional coordinate directories.** The server ships only a shell layer and no
+  configs of its own, and the symlinks manager treats every coordinate directory
+  as optional. They are keyed on coordinates now rather than on the platform string, so
   the apt helpers this called `shell/linux/linux.sh` are `shell/pkg/apt/apt.sh`
   and reach the Ubuntu work box too — see `docs/reference/tools/symlinks.md`.
 
 Provision one with `install.sh --machine linux-lxc-server`. The interactive zsh
-overlays load from the `DOTFILES_*` coordinates in `~/.env`, which the install
+layers load from the `DOTFILES_*` coordinates in `~/.env`, which the install
 writes from the manifest rather than leaving to be typed by hand — see
 `docs/architecture/management-interface.md` § "The machine environment".
 
@@ -77,5 +77,5 @@ writes from the manifest rather than leaving to be typed by hand — see
 - `install/manifests/linux-lxc-server.yml` — the minimal profile
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
 - `src/dotfiles/machine.py` — `Subscription.wants`, where the tier narrows the single `system_packages` list
-- `shell/pkg/apt/apt.sh` — the apt overlay these helpers moved to
-- `src/dotfiles/resources/symlinks.py` — `layers()`, where an overlay is optional
+- `shell/pkg/apt/apt.sh` — the apt layer these helpers moved to
+- `src/dotfiles/resources/symlinks.py` — `sources()`, where a coordinate directory is optional

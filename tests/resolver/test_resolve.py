@@ -436,8 +436,8 @@ def test_every_narrowing_on_an_entry_has_to_hold(tmp_path: Path) -> None:
 
 
 def test_the_reason_names_what_put_the_row_in_the_plan(tmp_path: Path) -> None:
-    """`machines show` is an audit, not a listing: under overlays "what does this
-    machine get" stops being answerable by reading one directory."""
+    """`machines show` is an audit, not a listing: under coordinate directories
+    "what does this machine get" stops being answerable by reading one place."""
     declared = {'group_memberships': [{'name': 'docker', 'requires_package': 'docker'}]}
     plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
 

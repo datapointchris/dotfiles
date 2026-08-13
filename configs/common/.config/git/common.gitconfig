@@ -84,7 +84,7 @@ path = ~/.config/delta/current.gitconfig
 	helper =
 	helper = !gh auth git-credential
 
-# Whatever one coordinate needs that the rest do not, one include per overlay
+# Whatever one coordinate needs that the rest do not, one include per variant
 # that exists, each named for the coordinate *value* rather than the axis. So
 # `ls ~/.config/git/` says what this machine is: nonfleet.gitconfig names which
 # side of the trust split this box sits on, where trust.gitconfig said only that
@@ -92,11 +92,11 @@ path = ~/.config/delta/current.gitconfig
 #
 # The values are written out because git cannot expand a variable in an
 # include.path — `~` is the only substitution it does. .zshrc sources the same
-# overlays by globbing the deployed tree and needs no such list, which is why
+# layers by globbing the deployed tree and needs no such list, which is why
 # shell/ keeps the axis/value directory in its deployed path and this cannot.
 #
 # That enumeration is the one cost, and it is guarded: `dotfiles machines check`
-# fails when an overlay ships a gitconfig no line here names, because git ignores
+# fails when a variant ships a gitconfig no line here names, because git ignores
 # a missing include silently and a forgotten line would deploy a file nothing
 # ever reads.
 #

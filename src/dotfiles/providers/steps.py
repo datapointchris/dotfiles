@@ -286,7 +286,7 @@ def _fontconfig_content(fonts: Path) -> str:
 def _windows_fonts() -> State:
     """Nothing to do without a mounted Windows filesystem, and that is not drift.
 
-    A container or a plain Linux box running the wsl overlay has no `/mnt/c`.
+    A container or a plain Linux box at the wsl host coordinate has no `/mnt/c`.
     Erroring there put an `[ERROR]` in every Docker rehearsal, which is how a real
     error comes to be scrolled past.
     """

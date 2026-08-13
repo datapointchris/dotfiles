@@ -91,7 +91,7 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
 
     git prefers it over `~/.config/git/config` for reads and writes both, so one
     left behind silently out-ranks the entire include chain — the identity a trust
-    overlay supplies would resolve, and then lose to whatever is in here.
+    variant supplies would resolve, and then lose to whatever is in here.
 
     An identity in it is never deleted, but where it should go depends on the
     machine. Off the fleet it is the only copy of an address the repo
@@ -99,7 +99,7 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
     On a fleet machine the repo already ships that address in
     personal.gitconfig, so there is nothing to preserve and the file is simply
     in the way — advising a rescue file there sent one Mac looking for a
-    destination its trust overlay never includes.
+    destination its trust variant never includes.
     """
     if not HOME_GITCONFIG.exists():
         # `exists()` follows a link, so a dangling one reads as absent here and
@@ -147,16 +147,16 @@ def epilogue(session: Session) -> None:
 
 
 def unlink(session: Session) -> bool:
-    """Remove every link this repo deployed, overlay first.
+    """Remove every link this repo deployed, coordinate directories first.
 
-    Driven by the same `layers()` the deployment is, so a tree gaining an overlay
-    cannot leave a layer that only one of the two halves knows about.
+    Driven by the same `sources()` the deployment is, so a tree gaining a
+    coordinate directory cannot leave links only one of the two halves knows about.
     """
     err_console.print('[bold blue]Removing symlinks[/]')
-    triples = list(symlinks.layers(session.repo, session.machine.coordinates, session.home.resolve()))
-    for source, _, layer in reversed(triples):
+    triples = list(symlinks.sources(session.repo, session.machine.coordinates, session.home.resolve()))
+    for source, _, origin in reversed(triples):
         if source.is_dir():
-            core.remove_symlinks(source, layer)
+            core.remove_symlinks(source, origin)
     return True
 
 

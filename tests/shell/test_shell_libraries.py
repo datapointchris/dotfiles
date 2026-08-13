@@ -31,8 +31,8 @@ opposite property of them. Everything below a root is derived."""
 NOT_A_LIBRARY = {'git-bash'}
 """`shell/git-bash/` is payload for a different computer — `sync-windows-shell.sh`
 copies it onto the Windows host beside WSL — so nothing here ever sources it and
-it has no caller of ours to protect. `tests/symlinks/test_overlays.py` exempts it
-by name for the same reason."""
+it has no caller of ours to protect. `tests/symlinks/test_coordinate_directories.py`
+exempts it by name for the same reason."""
 
 
 def library_directories() -> tuple[str, ...]:

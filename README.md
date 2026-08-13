@@ -4,7 +4,7 @@ Cross-platform dotfiles that work across macOS, WSL Ubuntu, and Arch Linux. Beca
 
 ## What This Is
 
-A dotfiles setup that prioritizes shared configuration, with a per-coordinate overlay only where a machine genuinely needs a different file. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
+A dotfiles setup that prioritizes shared configuration, with a per-coordinate directory only where a machine genuinely needs a different file. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
 
 Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`toolbox`) so you can actually remember what you installed.
 
@@ -39,20 +39,20 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base with `<axis>/<value>/` overlays layered on top, where the axes are the six a machine varies along (`src/dotfiles/coordinates.py`). `eza -1 -D configs apps shell` shows which overlays exist, and most do not — an axis earns a directory only where something actually differs along it. `install/` handles provisioning — machine manifests in `install/manifests/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
+`configs/`, `apps/`, and `shell/` all follow the same pattern: a `common/` base beside `<axis>/<value>/` directories, where the axes are the six a machine varies along (`src/dotfiles/coordinates.py`). They mean opposite things by it — `shell/` holds **layers** and sources every one a machine selects, while `configs/` and `apps/` hold **variants** and exactly one file arrives. `eza -1 -D configs apps shell` shows which directories exist, and most do not — an axis earns one only where something actually differs along it. `install/` handles provisioning — machine manifests in `install/manifests/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 
 - `toolbox`: Go app via `go install github.com/datapointchris/...`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
-The core rule: a deployed path lives in exactly one layer. `declared()` in `src/dotfiles/resources/symlinks.py` walks each layer and appends without deduplicating, so the same relative path in `common/` and an overlay is a collision producing two links at one target — never an override. There is no merge step, which is why a config that differs on one coordinate moves out of `common/` whole rather than being patched on top of it.
+The core rule: a deployed path lives in exactly one directory. `declared()` in `src/dotfiles/resources/symlinks.py` walks each coordinate directory and appends without deduplicating, so the same relative path in `common/` and a coordinate directory is a collision producing two links at one target — never an override. There is no merge step, which is why a config that differs on one coordinate moves out of `common/` whole rather than being patched on top of it.
 
 ## Dotfiles Philosophy
 
 This setup follows some opinionated principles that make maintenance easier:
 
-**Nothing Is Detected**: a manifest declares where a machine sits on each of the six axes in `src/dotfiles/coordinates.py`, and `dotfiles env apply` writes them into `~/.env` for every shell and overlay to read. OS detection was the earlier design and it could not answer the questions that actually decide a config — whether a box is on a trusted network, or whether it is meant to be a workstation or a server.
+**Nothing Is Detected**: a manifest declares where a machine sits on each of the six axes in `src/dotfiles/coordinates.py`, and `dotfiles env apply` writes them into `~/.env` for every shell and layer to read. OS detection was the earlier design and it could not answer the questions that actually decide a config — whether a box is on a trusted network, or whether it is meant to be a workstation or a server.
 
 **Fail Fast in the Provider, Keep Going in the Engine**: a provider returns a result rather than raising, so one blocked download costs that row and nothing else. `src/dotfiles/engine.py` turns a provider that does raise into a refusal and finishes the plan. You get the full error context for what broke AND a working system with just a few missing pieces.
 

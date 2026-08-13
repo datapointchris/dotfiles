@@ -1,7 +1,7 @@
 # Symlinks Manager
 
-Deploys this repo into `$HOME` as symlinks, in layers: a common base and one
-overlay per coordinate axis on top of it.
+Deploys this repo into `$HOME` as symlinks: a common base, plus one
+`<axis>/<value>` directory per coordinate axis the machine sits on.
 
 `dotfiles symlinks --help` lists the verbs. There is one deployment verb —
 `apply` — because reconciling means the machine ends up matching the
@@ -22,23 +22,26 @@ watching its own config used to regenerate a default inside.
 
 Each of the three trees — `configs/`, `shell/`, `apps/` — is `common/` plus
 `<axis>/<value>/` directories, one per coordinate axis the machine sits on.
-`common` links first and the overlays follow in axis order.
+`common` links first and the coordinate directories follow in axis order.
 
-Which directory names are legal is `OVERLAY_DIRS` in `src/dotfiles/coordinates.py`,
+Which directory names are legal is `AXIS_DIRS` in `src/dotfiles/coordinates.py`,
 and a machine's own list is the `DOTFILES_*` block of `~/.env`. Nearly all of
 them are absent on disk: an axis earns a directory only where something actually
-differs along it, and implying one per axis value is the overlay explosion this
+differs along it, and implying one per axis value is the directory explosion this
 scheme exists to avoid.
 
-Overlays flatten onto the destination in `configs/` and `apps/`, because a config
-has to land where the program reading it looks. `shell/` keeps the
-`<axis>/<value>` path, because the only thing that reads `~/.local/shell` is
-`.zshrc`, which walks those directories by name.
+The three trees mean two opposite things by their directories. `configs/` and
+`apps/` hold **variants**: they flatten onto the destination, so exactly one file
+arrives and the rest are versions this machine did not select. `shell/` holds
+**layers**: it keeps the `<axis>/<value>` path and every directory that exists is
+sourced together, because the only thing that reads `~/.local/shell` is `.zshrc`,
+which walks those directories by name.
 
-Two overlays are never allowed to claim one target. Deployment is ordered, so a
-conflict would not fail — it would deploy whichever layer comes later and report
-success — which is why `tests/symlinks/test_overlays.py` asserts it against every
-machine the axes can express rather than the four that exist.
+Two variants are never allowed to claim one target. Deployment is ordered, so a
+conflict would not fail — it would deploy whichever directory comes later and
+report success — which is why `tests/symlinks/test_coordinate_directories.py`
+asserts it against every machine the axes can express rather than the four that
+exist.
 
 ## Targets this manager did not create
 
@@ -49,7 +52,7 @@ untouched**, and the run exits non-zero.
 
 This is not politeness about a user's files. The write is an unlink followed by a
 symlink, so it removes whatever is at the path, and `uv tool dir --bin` is
-`~/.local/bin` — the same directory the apps layer links into. Without the check,
+`~/.local/bin` — the same directory the apps tree links into. Without the check,
 installing this project as a uv tool and then running a link pass means the
 second silently deletes the executable that the first installed.
 
@@ -65,15 +68,15 @@ has to be the same either way.
 
 ## Directories that do not map to `$HOME`
 
-Most of `configs/` mirrors into `$HOME` directly. Two trees do not, and are
-declared as their own layers with a different destination:
+Most of `configs/` mirrors into `$HOME` directly. Two trees do not, and name a
+different destination:
 
 **`apps/`** → `~/.local/bin/`. An app whose job is to change the calling shell
 adds a function in `shell/common/functions.sh` instead; a symlinked command
 cannot export into the shell that ran it.
 
 **`shell/`** → `~/.local/shell/`. Shell *code* — functions and aliases — rather
-than config, which is why it does not sit under `~/.config`. Only the overlays
+than config, which is why it does not sit under `~/.config`. Only the layers
 this machine's coordinates select are linked, and each keeps its `<axis>/<value>`
 path so a sourced file says which coordinate asked for it.
 
@@ -115,7 +118,7 @@ exclusion on the parent takes the deployed tree with it. `Messages/Attachments`
 and `Mail` are named individually for the cost: the walk runs inside every plan,
 apply and check, and neither is reachable as a deployment target.
 
-### The depth ceiling is a live constraint on the darwin overlay
+### The depth ceiling is a live constraint on the darwin variant
 
 `SEARCH_DEPTH` bounds that walk at five components below `$HOME`, and the
 deepest path this repo deploys sits exactly on it —
@@ -154,10 +157,11 @@ They sat in `symlinks/tests/` until 2026-08-08 and were collected by nothing —
 directory outside the collected root is worse than no tests, because the count
 reads as coverage.
 
-There was a second `symlinks` console script until 2026-08-08, taking a layer per
-invocation. It went with the pass it drove: it was a front door with different
-semantics from the one everything actually called, including a `check` whose
-`--auto-fix` defaulted to true — a read verb that deleted files.
+There was a second `symlinks` console script until 2026-08-08, taking one
+coordinate directory per invocation. It went with the pass it drove: it was a
+front door with different semantics from the one everything actually called,
+including a `check` whose `--auto-fix` defaulted to true — a read verb that
+deleted files.
 
 ## See Also
 

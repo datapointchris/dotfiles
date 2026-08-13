@@ -109,7 +109,7 @@ def render(machine: Machine) -> str:
         lines += [f'#   {entry.name} - {entry.description}'.rstrip(' -') for entry in values]
 
     # Named for the same reason, and here rather than in a doc because a rebuild
-    # reads this file: it is the only place that says where a restored overlay goes.
+    # reads this file: it is the only place that says where a restored file goes.
     if files := machine.required_files:
         lines += [
             '',

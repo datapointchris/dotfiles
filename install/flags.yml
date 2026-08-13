@@ -23,8 +23,8 @@
 # NOTE: a flag belongs here only when the code is present and cheap and the
 # only question is whether this machine wants it. Payload that is expensive to
 # install belongs in a manifest tool list; config a program discovers by path
-# and cannot branch on (hyprland, waybar, ghostty) belongs in a platform
-# overlay under configs/.
+# and cannot branch on (hyprland, waybar, ghostty) belongs in a coordinate
+# variant under configs/.
 
 # Machine-local values that must be set by hand below the OVERRIDES marker. The
 # repo knows a machine needs them; it must never know their values, because they
@@ -129,7 +129,7 @@ required_files:
   # at first, which required it on all three workstations and reported the two
   # Macs short of a file neither needs.
   #
-  # A machine-local file rather than a repo overlay, because the key that matters
+  # A machine-local file rather than a repo variant, because the key that matters
   # is where the snapshots go and that is a property of the machine. Absence is
   # silent in the way this register is for: safekeep with no config copies
   # nothing, and nothing runs it interactively to notice.
