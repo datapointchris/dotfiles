@@ -27,6 +27,7 @@ from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import success
+from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
 repo_app = typer.Typer(no_args_is_help=True, help='The dotfiles repository itself')
@@ -45,10 +46,27 @@ files are the whole of what a rebuild can be needed for."""
 
 @repo_app.command('show')
 def show() -> None:
-    """Show the working tree and the last commit."""
+    """Show the working tree and the last commit.
+
+    Both calls are checked. Neither was, so outside a git repository this printed
+    git's own `fatal: not a git repository` and exited 0 — a command reporting
+    success while its whole output is an error message.
+
+    Both also run *before* either is printed. A repository with no commits answers
+    `git status` fine and `git log -1` with 128, so checking each just before
+    printing it put a status line on stdout and then exited non-zero — a caller
+    reading the code is told nothing was produced while the pipe holds half a
+    document.
+    """
     status = bridge.git('status', '-sb')
-    console.print(status.transcript, end='', markup=False, highlight=False)
+    if not status.ok:
+        raise Refusal(f'could not read the working tree at {paths.REPO_ROOT}', advice='is DOTFILES_DIR pointing at the checkout?')
+
     last = bridge.git('log', '-1', '--format=%h %s (%cr)')
+    if not last.ok:
+        raise Refusal(f'no commit to show in {paths.REPO_ROOT}')
+
+    console.print(status.transcript, end='', markup=False, highlight=False)
     console.print(last.transcript, end='', markup=False, highlight=False)
 
 
@@ -102,16 +120,16 @@ def update(
 
     before = bridge.git('rev-parse', 'HEAD')
     if not before.ok:
-        error('could not read HEAD — is this a git repository?')
-        raise typer.Exit(ExitCode.ISSUE)
+        raise Refusal('could not read HEAD — is this a git repository?')
 
     # `--ff-only` rather than a plain pull: a merge commit here is a divergence
     # nobody meant to create, and a self-update that resolves it silently is the
     # same trap as checking out a tag over a working copy. It refuses, and the
     # person decides.
-    if not (pulled := bridge.git('pull', '--ff-only', output=Output.STREAM)).ok:
-        error('pull refused, and git said why above — a self-update never forces or resets')
-        raise typer.Exit(pulled.returncode)
+    # git's return code, not this tool's: a refused pull exits 1, which here means
+    # DRIFT — the machine differs from its declaration, and nothing is wrong.
+    if not bridge.git('pull', '--ff-only', output=Output.STREAM).ok:
+        raise Refusal('pull refused, and git said why above — a self-update never forces or resets')
 
     was, now = before.stdout.strip(), bridge.git('rev-parse', 'HEAD').stdout.strip()
     if was == now:

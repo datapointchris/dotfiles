@@ -26,8 +26,9 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import coordinates as axes
+from dotfiles import create_bundle
 from dotfiles import runs
-from dotfiles.commands import staging
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
 from matrix.harness import DECLARES_LAZYGIT
@@ -658,66 +659,93 @@ def test_a_built_bundle_verb_with_nothing_staged_names_the_path_and_the_fix(verb
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('platform', staging.PLATFORMS)
-def test_every_offered_platform_is_accepted_and_stops_at_the_manifest(
-    platform: str, sandbox: Sandbox, cli: Callable[..., Invocation]
-) -> None:
-    """Read off `staging.PLATFORMS` rather than written down, so a platform added
-    there is measured here without an edit.
+@pytest.mark.parametrize('arch', [str(value) for value in axes.Arch])
+def test_every_offered_arch_is_accepted_and_stops_at_the_machine(arch: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Read off `axes.Arch` rather than written down, so a CPU added there is
+    measured here without an edit.
 
-    Each gets past validation and dies resolving the manifest, which is what proves
-    the platform itself was accepted — the sandbox declares only `box`, and the
-    error names the manifest the leaf asked for.
+    Each gets past click's `Choice` and dies on the machine name, which is what
+    proves the arch itself was accepted — an arch it rejected would fail during
+    parsing, before the machine is ever looked at.
     """
-    ran = cli('bundle', 'create', '--platform', platform, catch_exceptions=True)
+    ran = cli('bundle', 'create', '--machine', 'nope', '--arch', arch, catch_exceptions=True)
 
-    assert 'has no manifest' in ran.stderr
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'nope: has no manifest' in ran.stderr
+
+
+def test_an_unknown_arch_is_a_usage_error_naming_the_ones_that_exist(cli: Callable[..., Invocation]) -> None:
+    ran = cli('bundle', 'create', '--machine', 'box', '--arch', 'sparc', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    # The rejected value, not click's sentence around it: the wording is click's to
+    # change, and spelling the valid ones out here duplicates the `axes.Arch` the
+    # test above derives its parametrization from — so a third member would break
+    # this for a reason it does not assert.
+    assert 'sparc' in ran.stderr
+    for offered in axes.Arch:
+        assert str(offered) in ran.stderr
+
+
+def test_neither_value_is_defaulted_when_there_is_no_terminal_to_ask(cli: Callable[..., Invocation]) -> None:
+    """A default here targets whichever machine was convenient when it was written,
+    and the only symptom is a bundle that installs the wrong tools somewhere else.
+
+    Scripted, so nothing prompts. The usage error names the flag rather than
+    blocking on a stdin that will never answer.
+    """
+    ran = cli('bundle', 'create', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert '--machine is required without a terminal to ask' in ran.stderr
+
+
+def test_a_machine_nothing_declares_is_a_usage_error_rather_than_a_broken_build(cli: Callable[..., Invocation]) -> None:
+    """A typo is retryable with a different name, which is what `USAGE` means.
+
+    Refused before `build`, where a name nothing declares arrives as a
+    `BundleError` and would exit ISSUE — sending the caller to look for a fault in
+    a machine that simply is not spelt that way.
+
+    The sentence is `machines.manifest_path`'s, which every other `--machine` door
+    already answers with: it names where it looked and lists what exists. A second
+    wording here is how one tool comes to answer one question two ways.
+    """
+    ran = cli('bundle', 'create', '--machine', 'nope', '--arch', 'x86_64', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'nope: has no manifest at' in ran.stderr
     assert 'Available: box' in ran.stderr
 
 
-def test_an_unknown_platform_is_a_usage_error_naming_the_ones_that_exist(cli: Callable[..., Invocation]) -> None:
-    ran = cli('bundle', 'create', '--platform', 'sunos-sparc', catch_exceptions=True)
+def test_no_input_refuses_from_a_terminal_rather_than_asking(cli: Callable[..., Invocation]) -> None:
+    """A wrapper script runs from a terminal, so the TTY gate alone leaves it no way
+    to make a missing flag fail instead of block. `--no-input` is that way."""
+    ran = cli('bundle', 'create', '--no-input', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert "unknown platform 'sunos-sparc'" in ran.stderr
+    assert '--machine is required without a terminal to ask' in ran.stderr
 
 
-def test_bundle_create_always_builds_for_the_work_box_manifest(cli: Callable[..., Invocation]) -> None:
-    """`create_bundle.main` takes `--manifest` and the leaf never passes it, so the
-    manifest is fixed at `wsl-work-workstation` whatever machine runs the command.
+def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exit 1 is DRIFT — the machine differs from its declaration, which is what
+    apply is for and is not a problem worth reporting.
 
-    Pinned rather than corrected: which manifests the front door should offer is an
-    interface question. What this asserts is only that the manifest is not the
-    running machine's — the sandbox is `box` and the failure names the other one.
+    A bundle that could not be built is an Issue by that same vocabulary, and
+    `windows create` — the sibling verb in this file, failing the same way on a
+    `BundleError` — has always exited ISSUE. The two disagreed for as long as this
+    leaf passed an argparse return value straight to `typer.Exit`.
     """
-    ran = cli('bundle', 'create', catch_exceptions=True)
 
-    assert 'wsl-work-workstation: has no manifest' in ran.stderr
+    def refuse(*_args: object, **_kwargs: object) -> Path:
+        raise create_bundle.BundleError('no network')
 
+    monkeypatch.setattr(create_bundle, 'build', refuse)
 
-def test_a_bundle_that_cannot_be_built_exits_one(cli: Callable[..., Invocation]) -> None:
-    """Current behaviour, pinned. `create_bundle.main` returns 1 for a `BundleError`
-    and the leaf raises `typer.Exit` on that return value directly."""
-    ran = cli('bundle', 'create', catch_exceptions=True)
-
-    assert ran.exit_code == ExitCode.DRIFT
-
-
-@pytest.mark.xfail(strict=True, reason='bundle create returns create_bundle.main verbatim, so a build failure exits DRIFT')
-def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation]) -> None:
-    """A failed build reports itself as drift, which in the machine contract means
-    the opposite of a problem.
-
-    Exit 1 is DRIFT: the machine differs from its declaration, which is what apply
-    is for and is not worth reporting as wrong. A bundle that could not be built is
-    an Issue by the same vocabulary, and `windows create` — the sibling verb in this
-    same file, failing the same way on a `BundleError` — exits `ExitCode.ISSUE`. The
-    two disagree because this one passes `create_bundle.main`'s argparse-era return
-    value straight through to `typer.Exit`.
-    """
-    ran = cli('bundle', 'create', catch_exceptions=True)
+    ran = cli('bundle', 'create', '--machine', 'box', '--arch', 'x86_64', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
+    assert 'no network' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

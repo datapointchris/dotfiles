@@ -32,6 +32,7 @@ import yaml
 
 from dotfiles import coordinates as axes
 from dotfiles import paths
+from dotfiles.refusal import Refusal
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -45,7 +46,7 @@ class DeclarationIssue:
         return f'{self.section}: {self.message}'
 
 
-class CatalogError(Exception):
+class CatalogError(Refusal):
     """`packages.yml` declares something no reader can consume."""
 
     def __init__(self, issues: tuple[DeclarationIssue, ...]) -> None:

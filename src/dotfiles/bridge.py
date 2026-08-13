@@ -33,17 +33,19 @@ def git(*args: str, output: Output = Output.QUIET) -> Completed:
     return run(['git', '-C', str(paths.REPO_ROOT), *args], output=output)
 
 
-def declaration(*args: str, output: Output = Output.DATA) -> int:
-    """Query the declaration, in-process, returning its exit status.
+def declaration(*args: str, output: Output = Output.DATA) -> None:
+    """Query the declaration, in-process, letting its refusals travel.
 
     A call rather than a subprocess because it is already part of this package.
     A subprocess would have to reach it as `uv run packages`, which needs a uv
     project on disk — true in the repo, false for the installed tool this CLI is
     becoming.
 
-    `declaration.main` signals through `sys.exit`, so the SystemExit it raises is
-    the return value and not an error, and converting it here is what keeps an
-    argparse refusal from reading as a crash.
+    It used to signal through `sys.exit`, and the status was returned here and
+    handed straight to `typer.Exit` by six leaves. argparse's 1 is this tool's
+    `DRIFT`, so a misspelt package name reported the machine as having changes
+    pending. It raises a `Refusal` now, which carries whether it is a typo or a
+    broken declaration, and travels to the boundary untouched.
 
     Only browsing is left behind this — `list`, `show`, `search`. Validation was
     the caller that made the SystemExit conversion load-bearing, because a finding
@@ -67,9 +69,5 @@ def declaration(*args: str, output: Output = Output.DATA) -> int:
     redirect: contextlib.AbstractContextManager = (
         contextlib.redirect_stdout(sys.stderr) if output is Output.STREAM else contextlib.nullcontext()
     )
-    try:
-        with redirect:
-            declaration_module.main(list(args))
-    except SystemExit as requested:
-        return int(requested.code or 0)
-    return 0
+    with redirect:
+        declaration_module.main(list(args))

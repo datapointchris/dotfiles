@@ -13,10 +13,14 @@ touches the machine.
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import click
 import pytest
 from typer.main import get_command
 
+import dotfiles
 from dotfiles import vocabulary
 from dotfiles.main import app
 
@@ -261,3 +265,71 @@ def test_no_check_offers_an_owner() -> None:
     for path, options in ACCEPTED.items():
         if path[-1] == 'check':
             assert '--owner' not in options, f'{"/".join(path)} is a check offering --owner'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# No leaf decides an exit status for itself
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+SOURCE = sorted((Path(dotfiles.__file__).parent).rglob('*.py'))
+
+
+def exit_arguments() -> list[tuple[str, int, ast.expr | None]]:
+    """Every `typer.Exit(...)` in the package, with what it was handed."""
+    found = []
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'Exit':
+                found.append((path.name, node.lineno, node.args[0] if node.args else None))
+    return found
+
+
+def returns_an_exit_code(name: str) -> bool:
+    """Whether a function in this package is annotated `-> ExitCode`.
+
+    Asked of the source rather than kept as a list, so a helper that stops
+    returning one is caught here instead of quietly widening what a leaf may hand
+    to `typer.Exit`. mypy already holds each of them to its annotation, so the two
+    together are the whole claim.
+    """
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.FunctionDef) and node.name == name:
+                return node.returns is not None and ast.unparse(node.returns) == 'ExitCode'
+    return False
+
+
+def names_an_exit_code(argument: ast.expr | None) -> bool:
+    if isinstance(argument, ast.Attribute):
+        return ast.unparse(argument).startswith('ExitCode.')
+    if isinstance(argument, ast.IfExp):
+        return names_an_exit_code(argument.body) and names_an_exit_code(argument.orelse)
+    if isinstance(argument, ast.Call):
+        callee = argument.func
+        return returns_an_exit_code(callee.attr if isinstance(callee, ast.Attribute) else getattr(callee, 'id', ''))
+    return False
+
+
+def test_no_leaf_hands_typer_exit_an_integer_from_somewhere_else() -> None:
+    """The invariant the boundary created, which the boundary's own tests do not
+    assert.
+
+    Nine hand-written handlers used to map an exception to an exit code, and being
+    nine is what made a wrong one visible beside its right siblings. One handler
+    replaced them and put nothing in place of that redundancy — so a tenth leaf
+    written afterwards can hand `typer.Exit` argparse's status or git's return
+    code, land on 1, and mean DRIFT while the suite stays green. That is exactly
+    what `bundle create`, `manage update` and six `bridge.declaration` callers did.
+
+    An integer is not forbidden because it is an integer. It is forbidden because
+    nothing about it says which of the four codes it is, and `ExitCode` is an
+    `IntEnum` — so the wrong answer type-checks, runs, and exits.
+    """
+    for where, line, argument in exit_arguments():
+        assert names_an_exit_code(argument), f'{where}:{line} hands typer.Exit `{ast.unparse(argument) if argument else "nothing"}`'
+
+
+def test_the_exit_scan_finds_the_calls_it_is_asserting_about() -> None:
+    """Guards the test above: a walk that finds nothing passes vacuously."""
+    assert len(exit_arguments()) > 30

@@ -13,10 +13,15 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+import sys
+from collections.abc import Sequence
 from pathlib import Path
 
+import click
 import typer
 
+from dotfiles import coordinates as axes
+from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
@@ -27,11 +32,11 @@ from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
 from dotfiles.output import console
 from dotfiles.output import emit_json
+from dotfiles.output import err_console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_row
 from dotfiles.output import success
-from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -40,22 +45,84 @@ windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL 
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
-PLATFORMS = ('linux-x86_64', 'linux-arm64', 'darwin-x86_64', 'darwin-arm64')
+
+def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool) -> str:
+    """The value a flag carries, or the one a person points at in a list.
+
+    Click's own `prompt=` does this in one argument and is not used, for a reason
+    that showed up the moment it was tried: a prompt reaching EOF raises `Abort`,
+    which click exits 1 on, and 1 is `DRIFT` here — the machine differs from its
+    declaration. A pipeline that forgot a flag would report pending changes. A
+    missing required value is `USAGE`, and `BadParameter` is what says so.
+
+    Listed by number rather than asking for the name, because a manifest name is
+    long, hyphenated and easy to typo, and the whole point of asking is that the
+    caller did not have one to hand.
+
+    A value that was passed is returned unexamined. Whether it names something
+    real is the caller's question and is answered where that question already
+    has one sentence — `machines.manifest_path` for a machine, click's `Choice`
+    for an arch. Checking here as well is how one tool comes to answer "no such
+    machine" two different ways.
+    """
+    if value is not None:
+        return value
+    if no_input or not sys.stdin.isatty():
+        raise typer.BadParameter(f'{flag} is required without a terminal to ask. Valid: {", ".join(options)}')
+
+    for index, option in enumerate(options, start=1):
+        err_console.print(f'  [bold]{index}[/]  {option}')
+    picked = typer.prompt(question, err=True, type=click.IntRange(1, len(options)))
+    return options[picked - 1]
 
 
 @bundle_app.command('create')
 def create(
-    platform: str = typer.Option('linux-x86_64', '--platform', help=f'Target: {", ".join(PLATFORMS)}'),
+    machine: str = typer.Option(None, '--machine', help='Machine manifest to build for'),
+    arch: str = typer.Option(
+        None,
+        '--arch',
+        click_type=click.Choice([str(value) for value in axes.Arch]),
+        help='CPU of the machine that will install this bundle',
+    ),
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
+    no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
+    no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
 ) -> None:
-    """Download every installer this repo needs into one archive."""
-    if platform not in PLATFORMS:
-        raise typer.BadParameter(f'unknown platform {platform!r}. Valid: {", ".join(PLATFORMS)}')
+    """Download every installer this repo needs into one archive.
 
+    Neither value has a default, and it is the same reason for both: this runs
+    where the network is, for a machine that is not this one. A default silently
+    builds for whichever box was convenient when the default was written, and the
+    only signal is a bundle that installs the wrong tools, days later, somewhere
+    else.
+
+    The OS is not asked for because the manifest declares it. The CPU is asked for
+    because a manifest deliberately never says one — `coordinates.Arch` is
+    measured, never declared, since no machine file states what processor a box
+    has.
+
+    Both are offered as a numbered list on a terminal. Neither blocks without one:
+    without a TTY, or under `--no-input`, the usage error names the flag instead.
+
+    `--no-cache` re-downloads every asset. Assets are kept for 90 days, so the
+    one thing no other flag can reach is a cached file that is wrong — truncated,
+    or a release republished under a tag it already used.
+    """
     from dotfiles import create_bundle
 
-    arguments = ['--platform', platform, *(('--print-path',) if print_path else ())]
-    raise typer.Exit(create_bundle.main(arguments))
+    chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
+    chosen_arch = _pointed_at(arch, '--arch', [str(value) for value in axes.Arch], "That machine's CPU", no_input=no_input)
+    # The one sentence this tool has for a name nothing declares, rather than a
+    # second one worded here. It names where it looked and lists what exists, and
+    # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
+    machines.manifest_path(chosen_machine)
+
+    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache)
+
+    if print_path:
+        print(built)
+    raise typer.Exit(ExitCode.CONVERGED)
 
 
 @bundle_app.command('stage')
@@ -73,11 +140,7 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
         hint('build one on a networked machine with: dotfiles bundle create')
         raise typer.Exit(ExitCode.ISSUE)
 
-    try:
-        staged = offline_bundle.stage(found)
-    except offline_bundle.StagingError as unreadable:
-        error(str(unreadable))
-        raise typer.Exit(ExitCode.ISSUE) from unreadable
+    staged = offline_bundle.stage(found)
 
     success(f'staged {found.name} at {staged}')
 
@@ -103,11 +166,7 @@ def check(
     something this machine would really have failed to install.
     """
     verbosity(verbose, quiet)
-    try:
-        session = Session.resolve(machine, offline=True)
-    except NoMachine as unnamed:
-        error(str(unnamed))
-        raise typer.Exit(ExitCode.USAGE) from unnamed
+    session = Session.resolve(machine, offline=True)
 
     staged = offline_bundle.describe()
     if not staged.readable:
@@ -134,7 +193,13 @@ def check(
     bundlable = len(found.covered) + len(found.uncovered)
     console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
     if found.uncovered:
-        hint('build a newer bundle where the network reaches: dotfiles bundle create --platform PLATFORM')
+        # Both values real, so the line pastes. `ARCH` sat here and exited USAGE on
+        # the very flag the hint was teaching. This runs on the machine that will
+        # install, so its own CPU is the answer.
+        hint(
+            'build a newer bundle where the network reaches: '
+            f'dotfiles bundle create --machine {session.machine_name} --arch {axes.detect_arch()}'
+        )
     raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
 
@@ -188,11 +253,7 @@ def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quie
     inside a shell script that could only install.
     """
     verbosity(verbose, quiet)
-    try:
-        into = windows.destination()
-    except windows.WindowsSideError as unreachable:
-        error(str(unreachable))
-        raise typer.Exit(ExitCode.ISSUE) from unreachable
+    into = windows.destination()
 
     absent = windows.missing(into)
     for name in sorted(absent):
@@ -224,12 +285,8 @@ def windows_apply(
     if offline and not source:
         raise typer.BadParameter('--offline needs --source naming the bundle to install from')
 
-    try:
-        into = windows.destination()
-        unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
-    except windows.WindowsSideError as unreachable:
-        error(str(unreachable))
-        raise typer.Exit(ExitCode.ISSUE) from unreachable
+    into = windows.destination()
+    unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
 
     for name in sorted(unresolved):
         render_row('failed', name, f'did not land in {into}', 'red')
@@ -241,10 +298,11 @@ def windows_apply(
 def windows_create(archive: str = typer.Argument(None, help='Output archive (default: dated, in the repo root)')) -> None:
     """Download the Windows executables into an archive, from any machine.
 
-    Its own verb rather than a `bundle create --platform windows`, because the
-    two carry different things: `bundle create` packs this repo's installers for
-    a Linux or macOS machine, and this packs Windows executables that WSL copies
-    onto its PATH. Collapsing them would make `--platform` mean two things.
+    Its own verb rather than a value of one of `bundle create`'s flags, because
+    the two carry different things: `bundle create` packs this repo's installers
+    for a machine a manifest declares, and this packs Windows executables that WSL
+    copies onto its PATH. Windows is neither a manifest nor a CPU, so it has
+    nowhere to go in that grammar.
 
     There is deliberately no `windows sync`: the `windows-shell` step converges
     the Git Bash tree under `dotfiles apply`, so a separate verb would be the same
@@ -254,11 +312,7 @@ def windows_create(archive: str = typer.Argument(None, help='Output archive (def
     building the bundle is deliberately not the machine that will install it.
     """
     default = paths.REPO_ROOT / f'dotfiles-windows-tools-v{dt.date.today():%Y%m%d}.tar.gz'
-    try:
-        built = windows_bundle.build(Path(archive) if archive else default)
-    except windows_bundle.BundleError as unbuilt:
-        error(str(unbuilt))
-        raise typer.Exit(ExitCode.ISSUE) from unbuilt
+    built = windows_bundle.build(Path(archive) if archive else default)
 
     success(f'{built}')
     raise typer.Exit(ExitCode.CONVERGED)

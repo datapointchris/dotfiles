@@ -32,13 +32,14 @@ import zipfile
 from pathlib import Path
 
 from dotfiles import github_release
+from dotfiles.refusal import Refusal
 from dotfiles.windows import TOOLS
 from dotfiles.windows import Tool
 
 log = logging.getLogger('windows-bundle')
 
 
-class BundleError(Exception):
+class BundleError(Refusal):
     """A failure that should end the build with a message rather than a traceback."""
 
 

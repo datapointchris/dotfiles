@@ -23,13 +23,22 @@ from dotfiles import envfile
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve as resolver
+from dotfiles.refusal import Refusal
+from dotfiles.vocabulary import ExitCode
 
 if TYPE_CHECKING:
     from dotfiles import evidence
 
 
-class NoMachine(Exception):
-    """Nothing named a machine, and `~/.env` does not either."""
+class NoMachine(Refusal):
+    """Nothing named a machine, and `~/.env` does not either.
+
+    `USAGE`, for the same reason `NoSuchMachine` is: naming one is what fixes it,
+    so a caller can act on it by retyping. It is the twin of that error, from the
+    other side — one is a name nothing declares, this is no name at all.
+    """
+
+    code = ExitCode.USAGE
 
 
 def declared_machine() -> str:

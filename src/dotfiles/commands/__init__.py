@@ -77,32 +77,22 @@ def verbosity(verbose: int, quiet: bool) -> None:
 
 
 def resolved(machine: str | None, owner: str | None = None, *, offline: bool = False) -> Session:
-    """One machine's Session, with every way of not having one answered here.
+    """One machine's Session, for every leaf that takes `--machine`.
 
-    Here for the reason `verbosity` is: every leaf taking `--machine` asks the
-    same question and has to answer it identically. Asking `Session.resolve` bare
-    lets a name with no manifest escape as a traceback — exit 1, which is `DRIFT`,
-    so a caller reads a misspelt `--machine` as changes pending and `check`
-    returns the one code it is documented never to return.
-
-    Three failures, two answers. `NoMachine` is nothing named at all and
-    `NoSuchMachine` is a name nothing declares; both are retryable with a
-    different name, which is what `ExitCode.USAGE` means. A manifest that exists
-    and will not parse is `ExitCode.ISSUE` — the machine really is wrong and no
-    amount of retyping helps, which is the distinction `NoSuchMachine` carries.
+    Three failures, two answers, and none of them is decided here any more.
+    `NoMachine` is nothing named at all and `NoSuchMachine` is a name nothing
+    declares; both are retryable by naming a different one, which is what
+    `ExitCode.USAGE` means, and both now say so themselves. A manifest that
+    exists and will not parse is `ExitCode.ISSUE` — the machine really is wrong
+    and no amount of retyping helps.
 
     Every one of them is raised by `Session.resolve`, which reads the manifest
     rather than only naming it. That is why the guarantee belongs there: a helper
     reaching for a lazy property to provoke an error is loading the manifest for a
     reason it does not otherwise have, and the next reader deletes the line as
     dead.
+
+    What is left is a one-line alias, kept because twenty leaves name it and
+    because the paragraph above is the thing worth having in one place.
     """
-    try:
-        return Session.resolve(machine, owner=owner, offline=offline)
-    except (NoMachine, machine_declaration.NoSuchMachine) as unresolved:
-        raise typer.BadParameter(str(unresolved)) from unresolved
-    except machine_declaration.MachineError as refused:
-        error(f'{machine} cannot be resolved:')
-        for issue in refused.issues:
-            console.print(f'  {issue}', markup=False, highlight=False)
-        raise typer.Exit(ExitCode.ISSUE) from refused
+    return Session.resolve(machine, owner=owner, offline=offline)

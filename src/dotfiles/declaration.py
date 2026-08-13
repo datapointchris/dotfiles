@@ -25,6 +25,9 @@ import yaml
 import dotfiles
 from dotfiles import catalog
 from dotfiles import paths
+from dotfiles import refusal
+from dotfiles.refusal import Refusal
+from dotfiles.vocabulary import ExitCode
 
 SECTION_STRUCTURES = {section: cls.structure for section, cls in catalog.SECTIONS.items()}
 """How each section is spelled, for the raw-dict walks below. `catalog.SECTIONS`
@@ -110,14 +113,12 @@ def get_packages_file(root: Path | None = None) -> Path:
         packages_file = root / 'install' / 'packages.yml'
         if packages_file.exists():
             return packages_file
-        print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
-        sys.exit(1)
+        raise Refusal(f'packages.yml not found at {packages_file}')
 
     if paths.PACKAGES_FILE.exists():
         return paths.PACKAGES_FILE
 
-    print('Error: packages.yml not found', file=sys.stderr)
-    sys.exit(1)
+    raise Refusal('packages.yml not found')
 
 
 def load_packages(root: Path | None = None) -> dict[str, Any]:
@@ -320,12 +321,13 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     matches = [p for p in get_all_packages(data) if p.get('name', '').lower() == name_lower]
 
     if not matches:
-        print(f'Error: Package not found: {args.name}', file=sys.stderr)
-        print('\nSimilar packages:', file=sys.stderr)
         similar = [p for p in get_all_packages(data) if name_lower in p.get('name', '').lower()]
-        for pkg in similar[:5]:
-            print(f'  {pkg["name"]:<28} {pkg.get("description", "")}', file=sys.stderr)
-        sys.exit(1)
+        near = ', '.join(pkg['name'] for pkg in similar[:5])
+        raise Refusal(
+            f'no package named {args.name}',
+            code=ExitCode.USAGE,
+            advice=f'did you mean: {near}' if near else 'list them with: dotfiles packages list',
+        )
 
     # Sort with available-on-this-platform first
     matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)
@@ -395,11 +397,11 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List packages with optional filters."""
     # Validate section filter
     if args.section and args.section not in PACKAGE_SECTIONS:
-        print(f'Error: Unknown section: {args.section}', file=sys.stderr)
-        print('\nAvailable sections:', file=sys.stderr)
-        for s in PACKAGE_SECTIONS:
-            print(f'  {s}', file=sys.stderr)
-        sys.exit(1)
+        raise Refusal(
+            f'unknown section {args.section}',
+            code=ExitCode.USAGE,
+            advice=f'available: {", ".join(PACKAGE_SECTIONS)}',
+        )
 
     # Determine which sections to query
     if args.section:
@@ -477,8 +479,23 @@ def iter_section_entries(data: dict[str, Any], section: str):
                 yield {'name': key, **entry}
 
 
+def cli() -> None:
+    """The `packages` console script, which is the other door onto `main`.
+
+    `main` raises `Refusal` and does not report it, because the `dotfiles` CLI
+    calls it in-process and wants the refusal to travel to `refusal.Boundary`.
+    This door has no click group to carry one, so it reports here — through the
+    same `refusal.report` the boundary uses, so a misspelt package name reads
+    identically whichever binary was typed.
+    """
+    try:
+        main()
+    except Refusal as refused:
+        sys.exit(refusal.report(refused))
+
+
 def main(argv: list[str] | None = None) -> None:
-    """Main entry point with argument parsing.
+    """Parse arguments and run one query, raising rather than reporting.
 
     `argv` defaults to `sys.argv[1:]` for the console script, and is passed
     explicitly by the `dotfiles` CLI, which calls this in-process. The
@@ -543,4 +560,4 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == '__main__':
-    main()
+    cli()
