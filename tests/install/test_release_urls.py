@@ -234,6 +234,64 @@ def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Which install scripts this fleet fetches and executes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _fleet_install_urls() -> list[tuple[str, str]]:
+    """Every `custom_installers` entry whose install script comes from a repo here.
+
+    Off the declaration rather than a list, because the whole property being
+    guarded is that nobody adds a fifth one on a branch ref. A list would pass
+    while the new entry went unmeasured.
+
+    Scoped to `raw.githubusercontent.com/datapointchris/` on purpose. A vendor URL
+    like `https://claude.ai/install.sh` carries no ref this repo could pin — the
+    vendor decides what that path serves, and pretending otherwise would fail the
+    test for something no commit here can fix.
+    """
+    entries = catalog.load(PACKAGES_YML).section('custom_installers')
+    prefix = 'https://raw.githubusercontent.com/datapointchris/'
+    return sorted((entry.name, entry.install_url) for entry in entries if entry.install_url.startswith(prefix))
+
+
+@pytest.mark.parametrize(('name', 'url'), _fleet_install_urls())
+def test_an_install_script_is_fetched_from_a_tag_rather_than_a_branch(name, url):
+    """`providers/custom.py` downloads this URL and executes it, which is the
+    widest reach anything in the install engine has.
+
+    standards/dependencies.md § "Classify a dependency by what it can reach" puts
+    repo code at "reputable registries and taps, pinned". A `main` ref met the
+    first half and not the second: two machines converging a day apart executed
+    whatever had been pushed in between, and neither run could say what it ran.
+
+    No network, because the fault is visible in the declaration. This is the test
+    that catches the fifth entry being added on a branch — the e2e one below only
+    proves the tag that *is* written resolves.
+    """
+    ref = url.removeprefix('https://raw.githubusercontent.com/datapointchris/').split('/')[1]
+
+    assert ref != 'main', f'{name} fetches its installer from main; name a release tag'
+    assert ref.startswith('v'), f'{name} fetches from {ref!r}, which is not a release tag'
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize(('name', 'url'), _fleet_install_urls())
+def test_the_pinned_install_script_still_resolves(name, url, http):
+    """A tag deleted or renamed upstream breaks a fresh machine build and nothing
+    else, so without this it surfaces on a rebuild rather than in CI.
+
+    Asserting it comes back as a script, not merely as 200: raw.githubusercontent
+    answers 200 with an HTML error page for some ref shapes, and a bundle staging
+    that page would hand `bash` an install that fails halfway through.
+    """
+    response = http.get(url)
+
+    assert response.status_code == 200, f'{name}: {url} answered {response.status_code}'
+    assert response.text.startswith('#!'), f'{name}: {url} did not come back as a script'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Which releases can be checksum-verified at all
 # ─────────────────────────────────────────────────────────────────────────────
 #

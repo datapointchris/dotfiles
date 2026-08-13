@@ -1011,6 +1011,25 @@ custom_installers:
   # GitHub release at all — `releases/latest` answers 404. Without it the entry
   # could name no repo, and the only way to move an installed awscli was a
   # `--reinstall` flag that measured nothing.
+  #
+  # An `install_url` on datapointchris/* names a release tag, never `main`. The
+  # provider fetches that URL and executes it, which is the widest reach anything
+  # in this engine has — standards/dependencies.md § "Classify a dependency by
+  # what it can reach" puts repo code at "reputable registries and taps, pinned",
+  # and a branch ref was the one place this repo did not meet the second half.
+  # On `main` a fresh machine executed whatever had been pushed that morning.
+  #
+  # What the tag pins is the INSTALLER, not the version installed. Each of these
+  # scripts clones its repo and calls `bashselfupdate_checkout_latest`, so it
+  # lands on the newest release whatever tag served the script. Pinning buys the
+  # capability half and not reproducibility, and a reader expecting the second
+  # from the first would be wrong about what the machine ends up with.
+  #
+  # So there is no bump on every release. A pinned tag stays valid as long as the
+  # release exists, and it moves only when the installer script itself changes.
+  # tests/install/test_release_urls.py checks the ref is a tag with no network;
+  # its --e2e half fetches each one, so a tag deleted upstream fails there rather
+  # than on a rebuild.
   - name: awscli
     command: aws
     repo: aws/aws-cli
@@ -1053,7 +1072,7 @@ custom_installers:
   # ordering here is a convenience rather than a hard dependency.
   - name: bashselfupdate
     repo: datapointchris/bashselfupdate
-    install_url: https://raw.githubusercontent.com/datapointchris/bashselfupdate/main/install.sh
+    install_url: https://raw.githubusercontent.com/datapointchris/bashselfupdate/v1.1.1/install.sh
     # Sourced library, no binary on PATH — the checkout is the only evidence it
     # is installed, so `packages missing` and the installer both read it here.
     installed_path: ~/.local/lib/bashselfupdate
@@ -1062,19 +1081,19 @@ custom_installers:
 
   - name: theme
     repo: datapointchris/theme
-    install_url: https://raw.githubusercontent.com/datapointchris/theme/main/install.sh
+    install_url: https://raw.githubusercontent.com/datapointchris/theme/v6.5.0/install.sh
     bundle_install_script: true
     description: Unified theme manager across ghostty, tmux, btop, Neovim
 
   - name: font
     repo: datapointchris/font
-    install_url: https://raw.githubusercontent.com/datapointchris/font/main/install.sh
+    install_url: https://raw.githubusercontent.com/datapointchris/font/v4.0.0/install.sh
     bundle_install_script: true
     description: Font management CLI with terminal/platform awareness
 
   - name: zmk-build
     repo: datapointchris/zmk-build
-    install_url: https://raw.githubusercontent.com/datapointchris/zmk-build/main/install.sh
+    install_url: https://raw.githubusercontent.com/datapointchris/zmk-build/v1.0.0/install.sh
     bundle_install_script: true
     description: Docker-based ZMK firmware builder with per-repo west workspaces
 

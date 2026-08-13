@@ -243,12 +243,13 @@ class TestCheckoutTools:
     """theme, font and zmk-build: cloned by a vendor script, updated by themselves."""
 
     def test_an_absent_checkout_runs_the_vendor_script(self, declared, home, bundle, effected):
+        entry = declared.find('custom_installers', 'theme')
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'theme'), LINUX)
+        result = custom.install(entry, LINUX)
 
         assert result.ok, result.detail
-        assert fetches.urls == ['https://raw.githubusercontent.com/datapointchris/theme/main/install.sh']
+        assert fetches.urls == [entry.install_url]
         assert runs.ran('install.sh')
 
     def test_a_live_checkout_delegates_to_the_tool_rather_than_reinstalling(self, declared, home, bundle, effected):
