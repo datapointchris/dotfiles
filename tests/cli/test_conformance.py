@@ -35,6 +35,15 @@ LEAVES = [(path, cmd) for path, cmd in TREE if not isinstance(cmd, click.Group)]
 GROUPS = [(path, cmd) for path, cmd in TREE if isinstance(cmd, click.Group)]
 
 
+ACCEPTED = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
+"""Every leaf's option names, derived once.
+
+Built here rather than inside each test because five of them ask the same
+question of the whole tree, and a policy asserted against its own private copy of
+the surface is a policy that can disagree with its neighbour about what the
+surface is.
+"""
+
 RECONCILING = [(path, command) for path, command in LEAVES if path[-1] in {'plan', 'check', 'apply'}]
 """Every `plan`, `check` and `apply` in the tree, with no exceptions carved out.
 
@@ -151,9 +160,8 @@ def test_plan_accepts_every_selector_its_apply_does() -> None:
     pair, because the gap opened by adding a selector to one verb and forgetting
     the other, and nothing but this notices.
     """
-    accepted = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
-    for path, options in accepted.items():
-        if path[-1] != 'apply' or (preview := accepted.get((*path[:-1], 'plan'))) is None:
+    for path, options in ACCEPTED.items():
+        if path[-1] != 'apply' or (preview := ACCEPTED.get((*path[:-1], 'plan'))) is None:
             continue
         missing = {selector for selector in SELECTORS if selector in options} - preview
         assert not missing, f'{"/".join(path)} accepts {sorted(missing)}, which its plan cannot express'
@@ -184,11 +192,10 @@ def test_check_takes_offline_wherever_apply_does() -> None:
     `dotfiles packages check --offline` did not, and the test written for exactly
     this class of gap could not see it.
     """
-    accepted = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
-    for path, options in accepted.items():
+    for path, options in ACCEPTED.items():
         if path[-1] != 'apply' or '--offline' not in options or path[:-1] in OFFLINE_MEANS_NOTHING_TO_CHECK:
             continue
-        examined = accepted.get((*path[:-1], 'check'))
+        examined = ACCEPTED.get((*path[:-1], 'check'))
         if examined is None:
             continue
         assert '--offline' in examined, f'{"/".join(path)} takes --offline, which its check cannot express'
@@ -200,3 +207,57 @@ def test_no_leaf_offers_dry_run() -> None:
     for path, command in LEAVES:
         names = {option for parameter in command.params for option in parameter.opts}
         assert '--dry-run' not in names, f'{"/".join(path)} offers --dry-run'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Which verb may take which flag
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Each of these was pinned by one literal invocation in `tests/matrix/`, asserting
+# that one command rejected one flag. The rule in every case is about the whole
+# tree, and a three-row list is silent about a fourth resource in exactly the way
+# a fourth that conforms is — so the list cannot tell "nobody added one" from
+# "somebody added one and nothing looked".
+
+
+def test_no_read_verb_offers_a_ceiling() -> None:
+    """A ceiling bounds how far a machine *converges*, and neither read verb
+    converges anything. Offering one would preview a subset of a walk that reads
+    the whole machine either way.
+
+    Asserted of `plan` and `check` rather than of `apply`, because the rule is
+    what a read verb may not have. Only the top-level `apply` offers one today and
+    a resource-scoped ceiling would be meaningless, but that is a separate claim
+    and stating it here would make this test fail for the wrong reason.
+    """
+    for path, options in ACCEPTED.items():
+        if path[-1] in {'plan', 'check'}:
+            assert '--through' not in options, f'{"/".join(path)} is a read verb offering a ceiling'
+
+
+def test_no_apply_offers_refresh_because_every_apply_already_refreshes() -> None:
+    """`apply` resolves with `refresh=not offline`, so being current is not
+    something a caller opts into. An install writes a version onto the machine, and
+    the cached answer it would otherwise trust is the one it was just told to
+    distrust.
+
+    That `apply` really does reach upstream is behaviour and cannot be derived from
+    the tree; `tests/matrix/test_composite.py` measures it.
+    """
+    for path, options in ACCEPTED.items():
+        if path[-1] == 'apply':
+            assert '--refresh' not in options, f'{"/".join(path)} offers --refresh, which it cannot decline to do'
+
+
+def test_no_check_offers_an_owner() -> None:
+    """`check` asks whether anything is *wrong*, and an owner does not narrow that:
+    a logged-out CLI and an unset machine-local value belong to no one.
+
+    `--owner` is in `SELECTORS`, and the selector test above asserts plan ⊇ apply
+    and says nothing about `check` — deliberately, since `check` takes neither
+    `--source` nor `--owner`. This is the other half of that decision, and without
+    it nothing prevented an `--owner` appearing on one `check`.
+    """
+    for path, options in ACCEPTED.items():
+        if path[-1] == 'check':
+            assert '--owner' not in options, f'{"/".join(path)} is a check offering --owner'

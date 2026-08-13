@@ -332,17 +332,6 @@ def test_an_unknown_stage_is_a_usage_error_naming_the_stages_that_exist(cli: Cal
     assert 'symlinks' in ran.stderr
 
 
-@pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
-def test_a_read_verb_has_no_ceiling_to_offer(verb: str, cli: Callable[..., Invocation]) -> None:
-    """A ceiling is a bound on how far a machine *converges*, and neither read verb
-    converges anything. Offering one would be a preview of a subset of a walk that
-    reads the whole machine either way."""
-    ran = cli(verb, '--through', 'symlinks')
-
-    assert ran.exit_code == ExitCode.USAGE
-    assert 'No such option: --through' in ran.stderr
-
-
 def test_the_run_record_carries_the_ceiling_only_when_one_was_named(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Absent rather than null, so a record of an uncapped run cannot be read as a
     run capped at nothing."""
@@ -386,21 +375,19 @@ def test_refresh_asks_nothing_about_a_tool_that_is_not_installed(verb: str, sand
     assert row(ran, 'packages')['unmeasured'] == 0
 
 
-def test_apply_has_no_refresh_to_offer_because_it_always_refreshes(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_apply_reaches_upstream_without_being_asked_to(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`apply` resolves with `refresh=not offline`, so being current is not
     something a caller opts into — an install writes a version onto the machine and
-    the cached answer it would otherwise write is the one it was told to distrust.
+    the cached answer it would otherwise trust is the one it was just told to
+    distrust.
 
-    Both halves asserted together: the flag is rejected, and a plain `apply` on the
-    same machine reaches upstream anyway.
+    That no `apply` *offers* `--refresh` is a fact about the command tree, and
+    `tests/cli/test_conformance.py` derives it across every leaf. What only a run
+    can show is the other half: that the network is reached anyway.
     """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
 
-    rejected = cli('apply', '--refresh')
-
-    assert rejected.exit_code == ExitCode.USAGE
-    assert 'No such option: --refresh' in rejected.stderr
     with pytest.raises(ReachedTheNetwork):
         cli('apply')
 
@@ -477,15 +464,6 @@ def test_a_plan_scoped_to_an_owner_that_matches_nothing_refuses_as_apply_does(sa
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
 
     assert cli('plan', '--owner', 'nobody').exit_code == ExitCode.USAGE
-
-
-def test_check_has_no_owner_to_offer(cli: Callable[..., Invocation]) -> None:
-    """`check` asks whether anything is *wrong*, and an owner does not narrow that:
-    a logged-out CLI and an unset machine-local value belong to no one."""
-    ran = cli('check', '--owner', 'jesseduffield')
-
-    assert ran.exit_code == ExitCode.USAGE
-    assert 'No such option: --owner' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────
