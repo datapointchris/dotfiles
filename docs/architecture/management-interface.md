@@ -154,11 +154,11 @@ explicit fetch, and exits 1 when there is something to pull.
 and it also carries secrets and machine-local values that must never be checked in.
 
 `MACHINE` is the chosen one: it names a manifest, and everything else is derived from that
-manifest by the resolver. The coordinates that manifest declares select the
-`<axis>/<value>` directories under `configs/`, `shell/` and `apps/`, and none of that reaches this file.
+manifest by the resolver. The coordinates that manifest declares select the `<axis>/<value>`
+directories under `configs/`, `shell/` and `apps/`, and none of that reaches this file.
 `.zshrc` and `.bashrc` glob the deployed tree instead, because the symlink manager already
-put exactly this machine's directories there. Placing this file by
-hand is therefore the whole of the pre-install bootstrap: `session.resolve_machine` reads
+put exactly this machine's directories there. Placing this file by hand is therefore the
+whole of the pre-install bootstrap: `session.resolve_machine` reads
 the file itself when `$MACHINE` is unset, so a rebuild that restores `~/.env` first never
 needs `--machine` on anything. Reading the file rather than only the environment is what
 makes that work outside a login shell — a scheduled `check` inherits no `~/.env` at all.

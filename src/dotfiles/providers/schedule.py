@@ -225,8 +225,9 @@ def _is_darwin() -> bool:
 
     Everything else in the resolver takes the OS from the manifest, because a
     fresh machine has no `~/.env` and guessing is how a wsl manifest once
-    deployed the linux shell layer. Here the question is not "what kind of machine is
-    this" — the row is already narrowed to one — but "which init system is on the
-    box", and launchd is not something a manifest can be wrong about.
+    deployed the linux shell layer. Here the question is not "what kind of
+    machine is this" — the row is already narrowed to one — but "which init
+    system is on the box", and launchd is not something a manifest can be wrong
+    about.
     """
     return axes.detect().os_family is axes.OSFamily.DARWIN

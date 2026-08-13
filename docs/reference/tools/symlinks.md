@@ -30,17 +30,18 @@ them are absent on disk: an axis earns a directory only where something actually
 differs along it, and implying one per axis value is the directory explosion this
 scheme exists to avoid.
 
-The two trees mean opposite things by their directories. `configs/` and `apps/`
-hold **variants**: they flatten onto the destination, so exactly one file arrives
-and the rest are versions this machine did not select. `shell/` holds **layers**:
-it keeps the `<axis>/<value>` path and every directory that exists is sourced
-together, because the only thing that reads `~/.local/shell` is `.zshrc`, which
-walks those directories by name.
+The three trees mean two opposite things by their directories. `configs/` and
+`apps/` hold **variants**: they flatten onto the destination, so exactly one file
+arrives and the rest are versions this machine did not select. `shell/` holds
+**layers**: it keeps the `<axis>/<value>` path and every directory that exists is
+sourced together, because the only thing that reads `~/.local/shell` is `.zshrc`,
+which walks those directories by name.
 
 Two variants are never allowed to claim one target. Deployment is ordered, so a
-conflict would not fail — it would deploy whichever directory comes later and report
-success — which is why `tests/symlinks/test_coordinate_directories.py` asserts it
-against every machine the axes can express rather than the four that exist.
+conflict would not fail — it would deploy whichever directory comes later and
+report success — which is why `tests/symlinks/test_coordinate_directories.py`
+asserts it against every machine the axes can express rather than the four that
+exist.
 
 ## Targets this manager did not create
 
@@ -157,9 +158,10 @@ directory outside the collected root is worse than no tests, because the count
 reads as coverage.
 
 There was a second `symlinks` console script until 2026-08-08, taking one
-coordinate directory per invocation. It went with the pass it drove: it was a front door with different
-semantics from the one everything actually called, including a `check` whose
-`--auto-fix` defaulted to true — a read verb that deleted files.
+coordinate directory per invocation. It went with the pass it drove: it was a
+front door with different semantics from the one everything actually called,
+including a `check` whose `--auto-fix` defaulted to true — a read verb that
+deleted files.
 
 ## See Also
 

@@ -76,7 +76,7 @@ def apply(session: Session) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_layer_is_deployed_to_its_own_destination(session: Session, repo: Path, home: Path) -> None:
+def test_every_tree_is_deployed_to_its_own_destination(session: Session, repo: Path, home: Path) -> None:
     declare(repo, 'configs/common/.config/tmux/tmux.conf')
     declare(repo, 'shell/common/functions.sh')
     declare(repo, 'apps/common/notes')

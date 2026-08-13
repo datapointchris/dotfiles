@@ -354,8 +354,8 @@ def _registry_paths(root: Path) -> list[Finding]:
         if not declared:
             continue
         relative = str(config.relative_to(root))
-        directory = config.relative_to(root / 'configs').parts
-        if directory[0] != 'trust':
+        axis, *within = config.relative_to(root / 'configs').parts
+        if axis != 'trust':
             findings.append(
                 Finding(
                     'registry',
@@ -365,7 +365,7 @@ def _registry_paths(root: Path) -> list[Finding]:
                 )
             )
             continue
-        by_trust.setdefault(directory[1], {})[relative] = str(declared)
+        by_trust.setdefault(within[0], {})[relative] = str(declared)
 
     for trust in sorted(by_trust):
         named = by_trust[trust]

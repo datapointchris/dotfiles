@@ -301,10 +301,10 @@ def _index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link
     """Declared links by address, derived once for the run.
 
     `perform` is handed a `Change` and not the `Observation` that produced it, so
-    the link has to be found again — and `declared()` is an `rglob` of three
-    source trees per coordinate directory plus a `pyproject.toml` parse. Re-deriving it per
-    change meant that walk ran once *per link*, which on a fresh machine is every
-    link walking every tree.
+    the link has to be found again — and `declared()` is an `rglob` of three source
+    trees per coordinate directory plus a `pyproject.toml` parse. Re-deriving it
+    per change meant that walk ran once *per link*, which on a fresh machine is
+    every link walking every tree.
 
     Safe to hold for the run because `declared()` reads the repo and never `$HOME`:
     the links `perform` creates cannot change its answer. Bounded to one entry, so

@@ -149,8 +149,8 @@ def platform_label(declared: Coordinates) -> str:
     """Which of the four labels these coordinates carry.
 
     Keyed on the package manager, with apt split by host, which is the whole of
-    what the four labels distinguish. It selects nothing: what reads a label is a
-    run's header and the shell layers that are still keyed by one.
+    what the four labels distinguish. It selects nothing that deploys: a label is
+    printed in a run's header and matched by a `platform:` narrowing.
 
     Derived rather than read off `Machine.platform_label`, because a manifest may
     declare `coordinates:` *instead of* `platform:` and then carries no label to

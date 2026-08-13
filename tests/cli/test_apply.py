@@ -506,9 +506,10 @@ def test_no_part_of_a_run_hands_work_to_a_shell(name: str, monkeypatch: pytest.M
 
 @pytest.mark.parametrize('label', sorted(coordinates.PLATFORM_BUNDLES))
 def test_every_platform_bundle_round_trips_to_its_label(label: str) -> None:
-    """Deployment is keyed on coordinates now, and the four labels are only a
-    convenience bundle over them — so each must still come out with the name the
-    scripts and the shell layers know it by."""
+    """Deployment is keyed on coordinates, and the four labels are only a
+    convenience bundle over them. Each has to come back out of its tuple, because
+    a label is what a run's header prints and what a `platform:` narrowing
+    matches."""
     assert coordinates.platform_label(coordinates.PLATFORM_BUNDLES[label]) == label
 
 
