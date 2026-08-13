@@ -7,19 +7,33 @@ name. `load_app` loads one by path so its functions can still be called directly
 rather than only exercised through a subprocess.
 """
 
-import importlib.machinery
-import importlib.util
 import os
-import shutil
-import stat
-import sys
-from pathlib import Path
-from types import ModuleType
 
-import levels
-import pytest
+# Before typer is imported, because typer.rich_utils reads both of these at
+# module scope and never again. `FORCE_TERMINAL` is True whenever GITHUB_ACTIONS
+# is set, so on a runner typer renders usage errors in colour and rich's
+# highlighter splits the option name — `--source` arrives as
+# `-\x1b[0m\x1b[1;36m-source`, and `assert 'No such option: --source' in stderr`
+# cannot match. Locally it always matches, so the whole class of assertion passes
+# on a desk and fails in CI. Eight tests did exactly that.
+#
+# `_TYPER_FORCE_DISABLE_TERMINAL` is typer's own escape hatch for this, read one
+# line above the variable it overrides. Set here rather than in a fixture: by the
+# time any fixture runs, the module-level constant is already computed.
+os.environ.setdefault('_TYPER_FORCE_DISABLE_TERMINAL', '1')
 
-from dotfiles.privilege import Privilege
+import importlib.machinery  # noqa: E402
+import importlib.util  # noqa: E402
+import shutil  # noqa: E402
+import stat  # noqa: E402
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+from types import ModuleType  # noqa: E402
+
+import levels  # noqa: E402
+import pytest  # noqa: E402
+
+from dotfiles.privilege import Privilege  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 

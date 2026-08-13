@@ -381,6 +381,26 @@ credentials and a machine without does not — the exact inversion `fake_bin`'s
 shadowing exists to prevent.
 """
 
+PACKAGE_MANAGERS = ('apt', 'apt-get', 'apt-cache', 'dpkg', 'pacman', 'brew', 'flatpak', 'snap', 'mas')
+"""Every OS package manager, shadowed as REFUSED so the host's distro cannot answer.
+
+The same argument as `gh` and `curl` one docstring up, and it was left out. The
+`system` resource carries one row per package manager, so whether that row is
+measurable depended on which manager the box running the suite happens to have.
+On Arch `apt` is absent and the row is UNMEASURED; on the Ubuntu runner `apt` is
+real, the row is measurable, and it reports upgrades — so `pending` came back one
+higher and ten cases asserting an exact count failed in CI and passed on every
+desk.
+
+REFUSED rather than ANSWERS, measured both ways: a present-but-failing manager
+gives `pending=2 unmeasured=1`, identical to an absent one, so every existing
+assertion holds unchanged. Shadowing them as answering would have moved the row
+from UNMEASURED to MATCHED and rewritten assertions that are not wrong.
+
+A test wanting a manager that answers shadows it itself, which is the same
+override `dpkg-query` already uses.
+"""
+
 ANSWERS = '#!/bin/sh\nexit 0\n'
 """A shadow that is present and answers yes, and `shadow`'s own default.
 
@@ -439,7 +459,7 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     write_declaration(box.repo, machine=box.machine)
     rebind(box, monkeypatch)
 
-    for refused in ('gh', 'curl'):
+    for refused in ('gh', 'curl', *PACKAGE_MANAGERS):
         box.shadow(refused, REFUSED)
     box.settle()
     return box
