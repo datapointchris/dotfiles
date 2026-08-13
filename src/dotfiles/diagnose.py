@@ -293,39 +293,61 @@ second as the first is what sends somebody to build a tarball for a two-minute f
 """
 
 
-def _intercepted(message: str) -> Diagnosis:
+TRUST_STORES = {
+    '/usr/local/share/ca-certificates': 'sudo update-ca-certificates',
+    '/etc/ca-certificates/trust-source/anchors': 'sudo trust extract-compat',
+    '/etc/pki/ca-trust/source/anchors': 'sudo update-ca-trust',
+}
+"""Where a machine takes an extra CA, and the command that rebuilds its bundle.
+
+One mapping rather than a tuple of paths beside a dict of commands. Two structures
+that have to stay in lockstep drift, and the drift lands inside the error path: the
+lookup for the refresh command ran while composing a diagnosis, so a store added to
+one and not the other raised `KeyError` in the middle of explaining a failure.
+
+Probed for existence rather than selected from the package-manager coordinate: a
+container and a WSL distribution can disagree with the coordinate their manifest
+declares, and the directory being there is the fact that matters. Ordered
+most-specific first, and dicts keep insertion order.
+
+**No macOS entry, and its absence is the answer rather than a gap.** The trust store
+there is the Keychain, reached through `security add-trusted-cert` against a
+keychain path this cannot know — so a Mac takes the branch that names no fix and
+says why, which is honest, where naming a directory it does not have would send a
+reader to conclude the certificate was not the problem.
+"""
+
+INTERCEPTED_CAUSE = 'the TLS certificate presented is not signed by a CA this machine trusts, which is what a corporate proxy does'
+"""What an intercepted connection is, written once.
+
+Read by `network.py` as well, which reports the same condition about a probe. It was
+written out at both, and the closing hint in `network check` then tested one against
+the other with a substring — so rewording either sentence silently stopped the hint
+firing, with nothing asserting it.
+"""
+
+
+def _intercepted(stores: dict[str, str] | None = None) -> Diagnosis:
     """A certificate this machine will not trust, and where its trust store is.
 
     The extra CA path is asked of the machine rather than written down, because the
     answer differs per distribution and a wrong path is worse than none: a reader
     told to drop a file somewhere Debian does not look will conclude the CA was not
     the problem.
+
+    `stores` is a parameter so both branches are reachable from a test. The
+    no-store branch is not a rare one — it is what both Macs take, since none of
+    these directories exists there — and a test that could only run on the machine
+    it happened to be written on asserted nothing about it.
     """
-    stores = [Path(candidate) for candidate in TRUST_STORES if Path(candidate).is_dir()]
-    cause = 'the TLS certificate presented is not signed by a CA this machine trusts, which is what a corporate proxy does'
-    if not stores:
-        return Diagnosis(cause=cause, unavailable=('where to install a CA: no known trust-store directory on this machine',))
-    return Diagnosis(cause=cause, fix=f'install the proxy CA into {stores[0]}, then: {REFRESH_TRUST[stores[0].as_posix()]}')
-
-
-TRUST_STORES = ('/usr/local/share/ca-certificates', '/etc/ca-certificates/trust-source/anchors', '/etc/pki/ca-trust/source/anchors')
-"""Where a machine takes an extra CA, most specific distribution first.
-
-Probed for existence rather than selected from the package-manager coordinate: a
-container and a WSL distribution can disagree with the coordinate their manifest
-declares, and the directory being there is the fact that matters.
-"""
-
-REFRESH_TRUST = {
-    '/usr/local/share/ca-certificates': 'sudo update-ca-certificates',
-    '/etc/ca-certificates/trust-source/anchors': 'sudo trust extract-compat',
-    '/etc/pki/ca-trust/source/anchors': 'sudo update-ca-trust',
-}
-"""The command that rebuilds the bundle after a CA lands, per store.
-
-Keyed by the directory rather than by distribution for the reason above — the store
-that exists is what decides, and each of the three has its own refresh command.
-"""
+    known = TRUST_STORES if stores is None else stores
+    found = [candidate for candidate in known if Path(candidate).is_dir()]
+    if not found:
+        return Diagnosis(
+            cause=INTERCEPTED_CAUSE,
+            unavailable=('where to install a CA: no known trust-store directory on this machine',),
+        )
+    return Diagnosis(cause=INTERCEPTED_CAUSE, fix=f'install the proxy CA into {found[0]}, then: {known[found[0]]}')
 
 
 WRITE_FAILURES = (
@@ -364,7 +386,7 @@ def explain(item: str, message: str) -> str:
     from a download and this one had nothing to match on.
     """
     if any(marker in message for marker in INTERCEPTED):
-        found = _intercepted(message)
+        found = _intercepted()
         return '\n'.join((message, *found.lines())) if found else message
 
     for marker, interpret in WRITE_FAILURES:

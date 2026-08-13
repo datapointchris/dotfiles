@@ -12,8 +12,6 @@ These pin the four places the reason now survives.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import httpx2
 import pytest
 
@@ -68,13 +66,33 @@ class TestTheDiagnosisNamesTheFix:
         assert 'not signed by a CA this machine trusts' in explained
         assert 'proxy' in explained
 
-    def test_the_fix_names_a_trust_store_that_exists_on_this_machine(self) -> None:
+    def test_the_fix_names_a_store_that_exists_and_the_command_that_refreshes_it(self, tmp_path) -> None:
         """A reader told to drop a CA where their distribution does not look will
-        conclude the certificate was not the problem."""
-        explained = diagnose.explain('packages/ghrelease/fd', f'ConnectError: {INTERCEPTED}')
-        named = [store for store in diagnose.TRUST_STORES if store in explained]
+        conclude the certificate was not the problem.
 
-        assert all(Path(store).is_dir() for store in named)
+        The stores are passed rather than read off this machine, so the assertion is
+        about the branch rather than about whichever distribution runs the suite."""
+        store = tmp_path / 'anchors'
+        store.mkdir()
+        found = diagnose._intercepted({str(tmp_path / 'absent'): 'never', str(store): 'sudo refresh-trust'})
+
+        assert found.fix == f'install the proxy CA into {store}, then: sudo refresh-trust'
+        assert not found.unavailable
+
+    def test_a_machine_with_no_known_store_says_so_rather_than_naming_a_wrong_one(self, tmp_path) -> None:
+        """The branch both Macs take, since none of the three Linux trust-store
+        directories exists there — macOS keeps its in the Keychain. Read off the real
+        machine, this was asserted by `all([])` and passed without reaching it."""
+        found = diagnose._intercepted({str(tmp_path / 'absent'): 'never'})
+
+        assert found.fix == ''
+        assert found.unavailable
+        assert 'no known trust-store directory' in found.unavailable[0]
+
+    def test_every_store_carries_the_command_that_rebuilds_it(self) -> None:
+        """Two structures that must stay in lockstep drift, and the drift lands inside
+        the error path — the lookup ran while composing a diagnosis."""
+        assert all(command.startswith('sudo ') for command in diagnose.TRUST_STORES.values())
 
     def test_an_ordinary_failure_is_returned_unchanged(self) -> None:
         assert diagnose.explain('packages/ghrelease/fd', 'could not download fd') == 'could not download fd'
@@ -101,20 +119,23 @@ class TestTheProbeSaysWhichKindOfNo:
         measured = network.measure(probe)
 
         assert not measured.reachable
-        assert 'CA this machine trusts' in measured.refusal
+        assert measured.refusal is network.Refusal.INTERCEPTED
 
     def test_a_refused_connection_carries_curls_own_meaning(self, monkeypatch) -> None:
         probe = network.Probe('github_release', 'fd', 'https://github.com/x/fd/releases/latest')
         monkeypatch.setattr(effects, 'run', lambda *args, **kwargs: effects.Completed(command=('curl',), returncode=7, transcript=''))
 
-        assert 'refused or filtered' in network.measure(probe).refusal
+        measured = network.measure(probe)
+
+        assert measured.refusal is network.Refusal.BLOCKED
+        assert 'refused or filtered' in measured.detail
 
     def test_a_reachable_host_carries_no_reason(self, monkeypatch) -> None:
         """A reason invented for every row is a reason nobody reads."""
         probe = network.Probe('github_release', 'fd', 'https://github.com/x/fd/releases/latest')
         monkeypatch.setattr(effects, 'run', lambda *args, **kwargs: effects.Completed(command=('curl',), returncode=0, transcript=''))
 
-        assert network.measure(probe).refusal == ''
+        assert network.measure(probe).refusal is network.Refusal.NONE
 
 
 class TestAFailedScriptSaysWhatItSaid:

@@ -724,10 +724,10 @@ class TestWhatApplyDeclinedToTouch:
 
 class TestTheRecordSaysWhatTheRunMeant:
     def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """wsl-failures.json holds eighteen `planned` rows, eleven of them carrying
-        `verdict: unknown`, against five `done` and one `failed`. Nothing was ever
-        going to be done about the eleven, and the record was the only artefact a
-        person could read afterwards to find that out."""
+        """Measured 2026-08-13 on the work box: one record held eighteen `planned`
+        rows, eleven of them carrying `verdict: unknown`, against five `done` and one
+        `failed`. Nothing was ever going to be done about the eleven, and the record
+        was the only artefact a person could read afterwards to find that out."""
         monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), drift('ripgrep'), outcomes=()))
 

@@ -92,7 +92,8 @@ def check(
                         'reach': str(verdict.probe.reach),
                         'reachable': verdict.reachable,
                         'landed': verdict.landed,
-                        'refusal': verdict.refusal,
+                        'refusal': str(verdict.refusal),
+                        'refusal_detail': verdict.detail,
                     }
                     for verdict in verdicts
                 ],
@@ -111,13 +112,16 @@ def check(
             # longest field on a line that has to stay scannable, and the reason is
             # what turns a NO into an action — a refused connection wants a bundle
             # and an untrusted certificate wants a CA.
-            if verdict.refusal:
-                render_advice(verdict.refusal, width)
+            if verdict.detail:
+                render_advice(verdict.detail, width)
         for reason in measurement.unprobed:
             # Nothing to ask rather than asked and refused, which is the same
             # distinction `unmeasured` carries everywhere else in this report.
             render_row('unprobed', '', reason, 'magenta', width)
-        intercepted = [verdict for verdict in blocked if verdict.refusal and 'CA this machine trusts' in verdict.refusal]
+        # On the member, never on its prose. This compared a substring of an English
+        # sentence written out in two modules, so rewording either one stopped the
+        # hint firing with nothing asserting it.
+        intercepted = [verdict for verdict in blocked if verdict.refusal is network.Refusal.INTERCEPTED]
         console.print(f'{len(verdicts) - len(blocked)} reachable, {len(blocked)} blocked')
         if intercepted:
             # Said once at the end as well as per row, because this is the one

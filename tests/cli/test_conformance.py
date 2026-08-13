@@ -131,16 +131,13 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
 SELECTORS = ('--machine', '--source', '--owner', '--offline')
 """Options that narrow *what* a verb covers, rather than how it writes.
 
-`--offline` was in the second group until 2026-08-13, on the reasoning that it
-describes how to perform a write. That was wrong, and the way it was wrong is worth
-keeping: under the flag the staged bundle *is* the upstream every currency verdict
-is measured against, so it does not narrow the write — it changes what the answer
-is. A plan that ignores it rehearses a different run, which is the same defect this
-test was written for.
+`--offline` belongs here despite reading as a write instruction: under the flag the
+staged bundle *is* the upstream every currency verdict is measured against, so it
+changes what the answer is rather than narrowing the write. A plan that ignores it
+rehearses a different run, which is the defect this test exists for.
 
-`--reinstall` stays absent and is the genuine member of that group. It names work to
-do again whatever measuring concludes, so there is no reading of a machine it could
-change.
+`--reinstall` is the genuine member of the other group. It names work to do again
+whatever measuring concludes, so there is no reading of a machine it could change.
 """
 
 
@@ -160,6 +157,41 @@ def test_plan_accepts_every_selector_its_apply_does() -> None:
             continue
         missing = {selector for selector in SELECTORS if selector in options} - preview
         assert not missing, f'{"/".join(path)} accepts {sorted(missing)}, which its plan cannot express'
+
+
+OFFLINE_MEANS_NOTHING_TO_CHECK = {('windows',)}
+"""Verbs whose `check` reaches no network, so a bundle cannot change its answer.
+
+`windows check` asks which of a fixed set of filenames exist in one directory. It
+needs neither winget nor a network, which is what let it become a real checker at
+all — so `--offline` would be a flag that changes nothing. Its `apply` takes one
+because installing is where winget is reached.
+
+Named rather than left to fall out of the loop, so the next reader knows the pair
+was considered rather than missed.
+"""
+
+
+def test_check_takes_offline_wherever_apply_does() -> None:
+    """`--offline` swaps the upstream for a staged bundle, so it changes what every
+    verb *answers* rather than narrowing what one covers.
+
+    Asserted for this flag alone, and not by widening the selector test above.
+    `check` deliberately does not take `--source` or `--owner` — that was decided
+    against on the symmetry argument, because narrowing what is examined is a
+    different act from changing what the examination compares against. Nothing
+    pinned this pair, so `dotfiles check --offline` existed while
+    `dotfiles packages check --offline` did not, and the test written for exactly
+    this class of gap could not see it.
+    """
+    accepted = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
+    for path, options in accepted.items():
+        if path[-1] != 'apply' or '--offline' not in options or path[:-1] in OFFLINE_MEANS_NOTHING_TO_CHECK:
+            continue
+        examined = accepted.get((*path[:-1], 'check'))
+        if examined is None:
+            continue
+        assert '--offline' in examined, f'{"/".join(path)} takes --offline, which its check cannot express'
 
 
 def test_no_leaf_offers_dry_run() -> None:

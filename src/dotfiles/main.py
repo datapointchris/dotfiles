@@ -88,7 +88,7 @@ def root(
 
 SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
-OfflineOption = typer.Option(False, '--offline', help='Measure against a staged offline bundle instead of the network')
+OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 VerboseOption = commands.VerboseOption
@@ -151,6 +151,8 @@ def plan(
     it finds and names the absence of one as the finding it is.
     """
     commands.verbosity(verbose, quiet)
+    if offline and refresh:
+        commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
     named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
@@ -197,6 +199,8 @@ def check(
     for, which is exactly what `check` exists to say.
     """
     commands.verbosity(verbose, quiet)
+    if offline and refresh:
+        commands.contradiction('--offline', '--refresh')
     skipped = _skipped(skip)
     checked_machine = Session.resolve(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
@@ -239,7 +243,7 @@ def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
-    offline: bool = typer.Option(False, '--offline', help='Install from a staged offline bundle'),
+    offline: bool = OfflineOption,
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -277,9 +281,9 @@ def apply_command(
             owner=owner,
             # `offline` unconditionally, `through` only when given. The first decides
             # what every currency verdict in the record was measured against, so a
-            # record that omits it cannot be read back: wsl-failures.json is a real
-            # `apply --offline` whose flags say `{"skip": []}`, and nothing in it says
-            # the bundle was the upstream. The second is a ceiling and its absence
+            # record that omits it cannot be read back. Measured 2026-08-13 on the
+            # work box: an `apply --offline` recorded `{"skip": []}` and nothing in it
+            # said the bundle was the upstream. The second is a ceiling and its absence
             # means "all the way", which the missing key already says.
             flags={'skip': sorted(skipped), 'offline': offline, **({'through': through} if through else {})},
             as_json=as_json,

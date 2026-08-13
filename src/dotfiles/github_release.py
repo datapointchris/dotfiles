@@ -388,13 +388,12 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
     """The browser URL 404s on a private repo whatever token is presented; only
     the REST asset endpoint serves those, and only with an octet-stream Accept.
 
-    **The reason travels out, and this is the one place it used to die.** Both
-    handlers caught `(httpx2.HTTPError, OSError)` and answered `False`, so a 404, a
-    captive portal's 403, a TLS certificate rejection, a proxy refusal, ENOSPC and
-    EACCES were one indistinguishable value — and every "could not download X"
-    message in the tree was generic because there was nothing else to print.
-    `create_bundle.download` never had the defect, because it calls `request`
-    directly and keeps the exception; this is that shape, one level lower, where
+    **This is the only place a download's reason exists, so it has to leave here.**
+    Both handlers catch `(httpx2.HTTPError, OSError)`, which spans a 404, a captive
+    portal's 403, a TLS certificate rejection, a proxy refusal, ENOSPC and EACCES —
+    one `False` for all of them makes every "could not download X" in the tree
+    generic, because nothing else is left to print. `create_bundle.download` keeps
+    its exception for the same reason; this is that shape one level lower, where
     every provider reaches it.
 
     Two consequences worth naming. `diagnose.explain` already probes on `Permission

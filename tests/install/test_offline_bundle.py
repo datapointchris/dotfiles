@@ -18,9 +18,12 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import catalog
+from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
+from dotfiles import resolve
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
 
@@ -231,12 +234,8 @@ class TestSayingWhichBundle:
 class TestCoverage:
     """Which declared items a bundle can install, and which it was never built to."""
 
-    def _plan(self, machine: str = 'wsl-work-workstation'):
-        from dotfiles import catalog
-        from dotfiles import machine as machines
-        from dotfiles import resolve
-
-        return resolve.resolve(catalog.load(), machines.load(machine))
+    def _plan(self, name: str = 'wsl-work-workstation'):
+        return resolve.resolve(catalog.load(), machines.load(name))
 
     def test_a_system_package_is_not_a_gap_in_a_bundle(self, staged) -> None:
         """The first version of this reported `apt`, `bash` and `ca-certificates` as

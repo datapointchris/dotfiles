@@ -52,10 +52,10 @@ def intention(change: Change) -> str:
     it intended to do — items nothing could measure, items only a person can repair,
     and, on a `plan` or `check`, every row in the whole walk.
 
-    Measured on wsl-failures.json: eighteen `planned` rows, eleven of them carrying
-    `verdict: unknown`, against five `done` and one `failed`. Nothing was ever going
-    to be done about the eleven, and the record was the only artefact a person could
-    have read afterwards to find that out.
+    Measured 2026-08-13 on the work box: one record held eighteen `planned` rows,
+    eleven of them carrying `verdict: unknown`, against five `done` and one `failed`.
+    Nothing was ever going to be done about the eleven, and the record was the only
+    artefact a person could have read afterwards to find that out.
 
     New values rather than a new field, and no schema bump: `RunOutcome.action` is a
     bare `str`, so every existing reader absorbs these. Deliberately not members of
@@ -93,9 +93,9 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # A failed write is an Issue too. `issues` held Refusals alone, which
                 # are raised exceptions — and a provider answering `Result(ok=False)`
                 # returns normally, so the record of a run that failed an install
-                # carried `issues: []`. Measured on wsl-failures.json: the claude-code
-                # install failed, the terminal said so, the run exited 3, and the
-                # record a person would send to the fleet claimed nothing was wrong.
+                # carried `issues: []`. Measured 2026-08-13: a claude-code install
+                # failed, the terminal said so, the run exited 3, and the record a
+                # person would send to the fleet claimed nothing was wrong.
                 if not outcome.ok:
                     written.record_issue(event.resource, str(outcome.status), f'{outcome.change.item}: {outcome.message}')
             case Refusal() as refusal:

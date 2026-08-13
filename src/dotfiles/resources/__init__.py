@@ -185,14 +185,23 @@ class Change:
 
     @property
     def declined(self) -> bool:
-        """Whether this differs and only a person can fix it.
+        """Whether this differs, can be measured, and `apply` still will not touch it.
 
         The third kind, and the one `apply` reports without counting: a machine-local
         value nobody set, a file only safekeep restores, a tool whose credentials are
         absent. `apply` is not failing when it leaves one alone, so it must not exit
         non-zero — and it must not call the item planned either.
+
+        **The complement of the other two, not a test for `BY_HAND`.** Written that
+        way, this disagreed with the set `reconcile.sift` builds for the screen, and
+        the two are supposed to be one classification: `providers/sysconfig.py`
+        answers `MISSING` with `Repair.NONE` for a declared group nothing here
+        creates, and `resources/env.py` does the same for an undeclared flag. Both
+        printed under "needs a person" and were recorded as `observed`. Deriving it
+        from what the item is *not* leaves no third category for a repair that is
+        neither automatic nor by hand to fall into.
         """
-        return self.repair is Repair.BY_HAND and self.drifted
+        return self.drifted and not self.unmeasured and not self.actionable
 
     def as_dict(self) -> dict[str, str]:
         return {

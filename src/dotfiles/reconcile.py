@@ -237,10 +237,16 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     The alternative was measured on a cold release cache: every declared release
     is unmeasurable until something refreshes it, which would print a screen of
     rows and exit non-zero on a machine with nothing wrong with it.
+
+    Each of the three is read off the change rather than derived by subtracting the
+    other two here. The subtraction was the same classification written a second
+    time, and it disagreed with the first: `sinks.intention` asked the change and
+    this asked the list, so a `MISSING` verdict with no repairer printed under
+    "needs a person" and was recorded as `observed`.
     """
     unmeasured = [change for change in changes if change.unmeasured]
     pending = [change for change in changes if change.actionable]
-    attention = [change for change in changes if change.drifted and change not in unmeasured and change not in pending]
+    attention = [change for change in changes if change.declined]
     return pending, attention, unmeasured
 
 
@@ -582,14 +588,13 @@ def _stage_bundle() -> ExitCode | None:
     offline install has one, and re-reading the archive each run would be work
     for an answer that is already on disk.
 
-    **Reported on both branches, which is the repair.** The already-staged branch
-    returned `None` and printed nothing, so `apply --offline` on a machine that had
-    a bundle said not one word about finding it, where it was, when it was built or
-    what it held — and every provider then measured against it silently. Measured
-    2026-08-13 on the work box: twelve package items came back unmeasurable because
-    the bundle carried no version for them, and the only thing on screen was one
-    failed install. The bundle is the upstream under this flag, so a run that does
-    not name it has withheld the thing every verdict below was decided against.
+    **Both branches report, because both install from a bundle.** The bundle is the
+    upstream under this flag, so a run that does not name it has withheld the thing
+    every verdict below was decided against — and the branch that finds one already
+    staged is the one every run after the first takes. Measured 2026-08-13 on the
+    work box: twelve package items came back unmeasurable because the bundle carried
+    no version for them, with nothing on screen naming the bundle, its location, its
+    date or its contents.
 
     An empty manifest ends the run rather than starting it. Every provider reads
     the bundle through that file, so a staged directory without one installs

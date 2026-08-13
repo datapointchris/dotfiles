@@ -21,6 +21,7 @@ from __future__ import annotations
 import dataclasses as dc
 import json
 import shlex
+from enum import StrEnum
 from urllib.parse import urlsplit
 
 from dotfiles import catalog
@@ -114,6 +115,24 @@ class Probe:
         return f'GIT_TERMINAL_PROMPT=0 {rendered}' if self.cloned else rendered
 
 
+class Refusal(StrEnum):
+    """What kind of no a probe got, where that is known.
+
+    Three kinds and not a sentence, because the caller acts on the kind: an
+    `INTERCEPTED` host is reachable and needs a CA, a `BLOCKED` one needs an offline
+    bundle, and `REPORTED` carries whatever the transport said without claiming to
+    have classified it.
+    """
+
+    NONE = 'none'
+    """No reason established, which is the common answer for a reachable host and
+    for a refusal already fully described by the NO beside it."""
+
+    INTERCEPTED = 'intercepted'
+    BLOCKED = 'blocked'
+    REPORTED = 'reported'
+
+
 @dc.dataclass(frozen=True, slots=True)
 class ProbeResult:
     probe: Probe
@@ -126,8 +145,8 @@ class ProbeResult:
     the harness both see a redirect only where there was one. Defaulted because it
     is a later addition and the constructions that predate it are still correct."""
 
-    refusal: str = ''
-    """Why this probe said no, where the reason is known.
+    refusal: Refusal = Refusal.NONE
+    """Why this probe said no, as a value rather than a sentence.
 
     **A blocked host and an untrusted certificate were one answer, and they need
     opposite responses.** A firewall that drops the connection is what an offline
@@ -137,10 +156,21 @@ class ProbeResult:
     machine read as a blackholed one — measured 2026-08-13, when curl exit 60 was
     reported as a block.
 
+    A member and not the prose it renders as. The closing hint in `network check`
+    fires on `INTERCEPTED`, and it tested a substring of an English sentence written
+    out in two modules — so rewording either one silently stopped the hint, with
+    nothing asserting it.
+
     Deliberately not a column in the committed results file. `tests/e2e/harness.py`
     parses that file by splitting on its pipes to decide which hosts to blackhole, so
-    its grammar is an interface; this rides on the terminal report and in the debug
+    its grammar is an interface; this rides on the terminal report and the debug
     stream instead."""
+
+    detail: str = ''
+    """What the transport actually said, where a member cannot carry it.
+
+    A clone's refusal is git's own last line, which is unbounded prose and belongs
+    beside the member rather than inside it."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -332,14 +362,14 @@ def measure(probe: Probe) -> ProbeResult:
 
     fallback = probe.fallback_command()
     if fallback is None:
-        return ProbeResult(probe, False, _landing(probe, answered.stdout), _refusal(probe, answered))
+        return ProbeResult(probe, False, _landing(probe, answered.stdout), *_refusal(probe, answered))
     retried = effects.run(fallback, output=effects.Output.QUIET)
     if retried.ok:
         return ProbeResult(probe, True, _landing(probe, retried.stdout))
-    return ProbeResult(probe, False, _landing(probe, retried.stdout or answered.stdout), _refusal(probe, retried))
+    return ProbeResult(probe, False, _landing(probe, retried.stdout or answered.stdout), *_refusal(probe, retried))
 
 
-def _refusal(probe: Probe, answered: effects.Completed) -> str:
+def _refusal(probe: Probe, answered: effects.Completed) -> tuple[Refusal, str]:
     """Why one probe said no, from what the command exited with and printed.
 
     The transcript's own words win over the exit status, because git has no code for
@@ -348,15 +378,17 @@ def _refusal(probe: Probe, answered: effects.Completed) -> str:
     verify and for a repository that does not exist, and only the message separates
     them.
 
-    Empty for a plain refusal, which is the common answer and already fully described
+    `NONE` for a plain refusal, which is the common answer and already fully described
     by the NO beside it. A reason invented for every failure is a reason nobody reads.
     """
     if any(marker in answered.transcript for marker in diagnose.INTERCEPTED):
-        return 'the TLS certificate is not signed by a CA this machine trusts'
+        return Refusal.INTERCEPTED, diagnose.INTERCEPTED_CAUSE
     if probe.cloned:
         said = answered.transcript.strip().splitlines()
-        return said[-1].strip() if said else ''
-    return diagnose.curl_cause(answered.returncode)
+        return (Refusal.REPORTED, said[-1].strip()) if said else (Refusal.NONE, '')
+    if cause := diagnose.curl_cause(answered.returncode):
+        return Refusal.BLOCKED, cause
+    return Refusal.NONE, ''
 
 
 def _landing(probe: Probe, written: str) -> str:
