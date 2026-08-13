@@ -37,6 +37,7 @@ answer.
 from __future__ import annotations
 
 import dataclasses as dc
+import shlex
 import shutil
 from pathlib import Path
 
@@ -103,6 +104,32 @@ class Helper:
         return not self.value.strip()
 
     @property
+    def argv(self) -> tuple[str, ...]:
+        """The command git would run, split the way the shell it uses would split it.
+
+        **A helper value is a command line, never a filename.** git starts every
+        one of them through a shell, so a path containing a space is escaped in
+        the config and the escaping belongs to the shell rather than to the file:
+        `/mnt/c/Program\\ Files/...` names one file whose name has a space in it.
+        Taking the value as written looks for a directory called `Program\\`,
+        reports a helper git runs perfectly well as missing, and — because
+        `_asked` stops at the first fault — never reaches the interpreter question
+        this resource was built to ask. Measured on the WSL box, where a real
+        login failure sat behind a fault that was not real.
+
+        Which of git's three rules applies is still decided on the raw value,
+        before any splitting, because that is the order git decides it in. An
+        unescaped space stays broken and is meant to. git cannot run that either,
+        and reporting the first word missing is the error git itself prints.
+        """
+        value = self.value.strip()
+        if self.shell_form:
+            return tuple(_split(value[1:].strip()))
+        if '/' in value or '\\' in value:
+            return tuple(_split(value))
+        return (f'git-credential-{value}',)
+
+    @property
     def program(self) -> str:
         """The executable git would run, by git's own three resolution rules.
 
@@ -112,12 +139,8 @@ class Helper:
         path and is used as written. Everything else is a bare name that git
         expands to `git-credential-<name>` and looks up on PATH.
         """
-        value = self.value.strip()
-        if value.startswith('!'):
-            return value[1:].strip().split()[0] if value[1:].strip() else ''
-        if '/' in value or '\\' in value:
-            return value
-        return f'git-credential-{value}'
+        argv = self.argv
+        return argv[0] if argv else ''
 
     @property
     def shell_form(self) -> bool:
@@ -136,7 +159,7 @@ class Helper:
         value = self.value.strip()
         if self.shell_form:
             return ['sh', '-c', f'{value[1:].strip()} {operation}']
-        return [self.program, operation]
+        return [*self.argv, operation]
 
     @property
     def label(self) -> str:
@@ -286,6 +309,20 @@ def _asked(helper: Helper) -> Found:
             advice=INTERPRETER_HINT if _is_windows_binary(located) else 'check the file is executable and built for this architecture',
         )
     return Found(helper, Verdict.MATCHED, f'{located} runs')
+
+
+def _split(command: str) -> list[str]:
+    """A command line as a shell would split it, leaving an unclosed quote alone.
+
+    `shlex` raises on a value that ends mid-quote. That is a fault in the config
+    and not in the helper, so the value is handed back whole and fails the
+    existence question with the text that was actually written — which is what a
+    reader needs to find the line, and better than a traceback out of `check`.
+    """
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return [command]
 
 
 def _on_path(program: str) -> Path | None:

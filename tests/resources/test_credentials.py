@@ -101,7 +101,7 @@ def test_the_origin_names_the_file_that_set_it(global_config: Path) -> None:
     ('value', 'program'),
     [
         (
-            '/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe',
+            '/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe',
             '/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe',
         ),
         ('!gh auth git-credential', 'gh'),
@@ -127,6 +127,30 @@ def test_a_path_helper_is_invoked_directly() -> None:
     helper = Helper('', '/usr/local/bin/gcm', Path('/dev/null'))
 
     assert helper.invocation('get') == ['/usr/local/bin/gcm', 'get']
+
+
+def test_an_escaped_path_is_one_argument_rather_than_two() -> None:
+    """git runs helpers through a shell, so the backslash is the shell's and the
+    space is part of the filename. Splitting on whitespace would ask the kernel for
+    a program called `/mnt/c/Program`."""
+    helper = Helper('', '/mnt/c/Program\\ Files/Git/git-credential-manager.exe', Path('/dev/null'))
+
+    assert helper.invocation('get') == ['/mnt/c/Program Files/Git/git-credential-manager.exe', 'get']
+
+
+def test_an_unescaped_space_stays_broken_because_git_cannot_run_it_either() -> None:
+    """`sh -c '/mnt/c/Program Files/x get'` fails on the first word, and reporting
+    that word is the same error git prints. Quietly repairing it here would pass a
+    config that no push can use."""
+    helper = Helper('', '/mnt/c/Program Files/Git/git-credential-manager.exe', Path('/dev/null'))
+
+    assert helper.program == '/mnt/c/Program'
+
+
+def test_a_path_helper_keeps_the_arguments_it_was_configured_with() -> None:
+    helper = Helper('', '/usr/local/bin/gcm --config /etc/gcm.toml', Path('/dev/null'))
+
+    assert helper.invocation('get') == ['/usr/local/bin/gcm', '--config', '/etc/gcm.toml', 'get']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +184,27 @@ def test_a_helper_whose_path_does_not_exist_is_missing(global_config: Path) -> N
 
     assert [entry.verdict for entry in found] == [Verdict.MISSING]
     assert 'does not exist' in found[0].detail
+
+
+def test_a_helper_under_an_escaped_path_is_measured_rather_than_called_missing(global_config: Path, tmp_path: Path) -> None:
+    """The work-box shape, end to end from the config file git actually parses.
+
+    `\\\\` in the file is one backslash in the value, and that backslash is the
+    shell's rather than the filename's. Reported `missing` for months while git
+    ran the helper on every push, which is how it masked the login failure
+    underneath it.
+    """
+    directory = tmp_path / 'Program Files'
+    directory.mkdir()
+    helper = directory / 'git-credential-manager.exe'
+    helper.write_text('#!/bin/sh\nexit 0\n')
+    helper.chmod(0o755)
+    escaped = str(helper).replace(' ', r'\\ ')
+    global_config.write_text(f'[credential]\n\thelper = {escaped}\n')
+
+    found = credentials.RESOURCE.observe(None, None).found  # type: ignore[arg-type]
+
+    assert [entry.verdict for entry in found] == [Verdict.MATCHED]
 
 
 def test_a_bare_name_that_is_not_on_path_is_missing(global_config: Path) -> None:
