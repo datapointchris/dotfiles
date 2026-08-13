@@ -27,6 +27,7 @@ from typing import Any
 
 import pytest
 
+from dotfiles import envfile
 from dotfiles.vocabulary import ExitCode
 from matrix import harness
 from matrix.harness import Invocation
@@ -139,6 +140,18 @@ def flag_nothing_declares(sandbox: Sandbox) -> None:
     below_the_marker(sandbox, 'export NVIM_AI_ENABLED=false\n')
 
 
+def flag_nothing_declares_in_the_generated_section(sandbox: Sandbox) -> None:
+    """The same name, in the other half of the file, and a different answer.
+
+    Above the marker it is `apply`'s to remove, so it is drift and no person is
+    needed. Below it, `apply` owns nothing and only a person can act, which is the
+    row above this one. The pair is here rather than in two standalone tests
+    because the question is which of `plan` and `check` claims it — one, never
+    both.
+    """
+    generated_line(sandbox, 'export NVIM_AI_ENABLED=false')
+
+
 def unreadable_config_toml(sandbox: Sandbox) -> None:
     config = sandbox.config / 'dotfiles' / 'config.toml'
     config.parent.mkdir(parents=True, exist_ok=True)
@@ -156,6 +169,14 @@ ENV_STATES = [
     pytest.param(required_file_absent, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='required-file-absent'),
     pytest.param(required_file_present, ExitCode.CONVERGED, 0, ExitCode.CONVERGED, 0, id='required-file-present'),
     pytest.param(flag_nothing_declares, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='flag-nothing-declares'),
+    pytest.param(
+        flag_nothing_declares_in_the_generated_section,
+        ExitCode.DRIFT,
+        1,
+        ExitCode.CONVERGED,
+        0,
+        id='flag-nothing-declares-generated',
+    ),
     pytest.param(unreadable_config_toml, ExitCode.CONVERGED, 0, ExitCode.ISSUE, 1, id='unreadable-config-toml'),
 ]
 """One machine state per row, with what each verb makes of it.
@@ -748,3 +769,52 @@ def test_the_converged_identity_row_says_a_machine_has_no_identity(sandbox: Sand
     git_config(sandbox, 'config', '[core]\n\tpager = less\n')
 
     assert '<>' not in cli('identity', 'plan', '--json').document['detail']
+
+
+def generated_line(sandbox: Sandbox, line: str) -> None:
+    """Insert an assignment into the managed section, above the OVERRIDES marker.
+
+    Where a variable the declaration used to write sits after it stops writing it.
+    `below_the_marker` is the other half of the file and a different question: that
+    is where a machine keeps what is its own, and `apply` never touches it.
+    """
+    text = sandbox.env_file.read_text()
+    sandbox.env_file.write_text(text.replace(envfile.MARKER, f'{line}\n\n{envfile.MARKER}', 1))
+
+
+def test_a_generated_line_the_declaration_no_longer_writes_is_drift(sandbox: Sandbox, cli: Run) -> None:
+    """Reported by name, and repairable, because `apply` rebuilds the section.
+
+    The managed half is regenerated from `render` in full, so a line nothing
+    declares is one rewrite from gone.
+
+    The name here is deliberately not flag-shaped. `_undeclared` identifies a
+    stray by whether it ends `_ENABLED` or `_DEBUG`, which is a convention rather
+    than the declaration, so a variable named anything else is invisible to it.
+    """
+    sandbox.declare()
+    generated_line(sandbox, 'export DOTFILES_LAYERS="pkg/apt os/linux"')
+
+    ran = cli('env', 'plan', '--json')
+
+    assert ran.exit_code == ExitCode.DRIFT
+    assert ran.document['pending'] == 1
+
+
+def test_an_apply_drops_the_line_and_keeps_what_is_below_the_marker(sandbox: Sandbox, cli: Run) -> None:
+    """The repair is the regeneration, so the orphan goes and a secret stays.
+
+    Both halves in one case because they are one act: `apply` rewrites everything
+    above the marker and copies everything below it, so a check that the orphan
+    went is only half an answer without a check that the file was not truncated.
+    """
+    sandbox.declare()
+    generated_line(sandbox, 'export DOTFILES_LAYERS="pkg/apt os/linux"')
+    below_the_marker(sandbox, 'export A_SECRET="keep me"\n')
+
+    assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
+
+    settled = sandbox.env_file.read_text()
+    assert 'DOTFILES_LAYERS' not in settled
+    assert 'A_SECRET' in settled
+    assert cli('env', 'plan').exit_code == ExitCode.CONVERGED

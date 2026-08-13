@@ -144,6 +144,7 @@ class EnvResource:
         changes.extend(_flags(machine, observed))
         changes.extend(_config(observed))
         changes.extend(_requirements(machine, observed))
+        changes.extend(_orphaned(machine, observed))
         changes.extend(_undeclared(machine, observed))
         return tuple(changes)
 
@@ -331,13 +332,52 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     return changes
 
 
+def _orphaned(machine, observed: Observed) -> list[Change]:
+    """Generated lines the declaration no longer writes.
+
+    Repairable, unlike `_undeclared`, and that is the whole difference between
+    them. `apply` rebuilds the managed section from `render`, so an orphan is one
+    rewrite from gone.
+
+    The two also read different halves and ask different questions. `_undeclared`
+    asks the hand-set half whether a name *looks* like a flag, which is a
+    convention and sees nothing spelled otherwise. This asks the generated half
+    whether the declaration still produces the name at all, so a variable named
+    unusually cannot slip past.
+    """
+    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags}
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            name,
+            Verdict.STALE,
+            detail='the declaration no longer writes it, so a regeneration drops it',
+            observed=value,
+        )
+        for name, value in sorted(observed.generated.items())
+        if name not in declared
+    ]
+
+
 def _undeclared(machine, observed: Observed) -> list[Change]:
-    """Flags the shell no longer knows about.
+    """Hand-set flags the declaration does not know about.
+
+    Below the marker only, which is the same split `Observed.inventory` makes and
+    the reason each name carries one verdict. The two checkers read overlapping
+    halves of one file otherwise, and a flag-shaped name in the generated section
+    matches both: `apply` would remove it and `check` would send a person after
+    it. `ENV_STATES` states the invariant that breaks — a state is drift, or it
+    is a finding, and no state is both — and nothing downstream would catch it,
+    because `sift` classifies every change independently and never asks whether a
+    key appeared twice.
 
     Not repaired, because a machine may legitimately carry a flag from a newer
-    commit — but it is exactly how NVIM_AI_ENABLED survived being read by
-    nothing, so it is worth naming.
+    commit, and because `apply` owns only the section above the marker anyway. It
+    is exactly how NVIM_AI_ENABLED survived being read by nothing, so it is worth
+    naming.
     """
+    hand_set = set(observed.values) - set(observed.generated)
     return [
         Change(
             NAME,
@@ -346,9 +386,9 @@ def _undeclared(machine, observed: Observed) -> list[Change]:
             Verdict.UNDECLARED,
             detail='is set but flags.yml declares no such flag',
             repair=Repair.NONE,
-            observed=value,
+            observed=observed.values[name],
         )
-        for name, value in observed.values.items()
+        for name in sorted(hand_set)
         if name.endswith(('_ENABLED', '_DEBUG')) and name not in machine.flags
     ]
 
