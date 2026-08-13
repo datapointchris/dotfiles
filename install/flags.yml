@@ -119,7 +119,7 @@ required_files:
   - name: local.gitconfig
     path: ~/.config/git/local.gitconfig
     description: This machine's default git identity, for repos that are not personal
-    restore: "restore it with safekeep, or rename ~/.config/git/employer.gitconfig which is what this was called"
+    restore: "restore it with safekeep, or rename ~/.config/git/employer.gitconfig if the machine still has one"
     machine: wsl-work-workstation
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig
@@ -143,7 +143,7 @@ required_files:
   # between them.
   - name: repos.json
     path: $REPOS_JSON
-    description: The repo registry forge, fleet, indy, syncer, icb, todoui and relate read, hand-edited and never generated
+    description: The repo registry the cross-repo tools read, hand-edited and never generated
     capacity: workstation
     tags: [rebuild]
 
