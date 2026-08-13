@@ -400,7 +400,7 @@ tmux-reload() {
 #--> Fuzzy man-page browser (Ctrl-H); alt-c for cheat.sh, alt-t for tldr in the preview
 fzf-man-widget() {
   manpage="echo {} | sed 's/\([[:alnum:][:punct:]]*\) (\([[:alnum:]]*\)).*/\2 \1/'"
-  batman="${manpage} | xargs -r man | col -bx | bat --language=man --plain --color always --theme=\"Monokai Extended\""
+  batman="${manpage} | xargs -r man | col -bx | bat --language=man --plain --color always"
   man -k . | sort \
     | awk -v cyan=$(tput setaf 6) -v blue=$(tput setaf 4) -v res=$(tput sgr0) -v bld=$(tput bold) '{ $1=cyan bld $1; $2=res blue $2; } 1' \
     | fzf \
