@@ -78,6 +78,15 @@ class TestDeclaration:
             assert not unknown, f'{tool.name}: {sorted(unknown)}'
             assert '{' not in winget.stage(tool, 'v1.2.3'), tool.name
 
+    def test_the_asset_is_a_zip_or_an_exe_and_never_a_third_shape(self, tools) -> None:
+        """`create_bundle.add_winget_binaries` unpacks the first and copies the
+        second, so those two are the whole vocabulary. A row declaring a `.tar.gz`
+        or a `.7z` is caught here rather than by the bundler, which is the earlier
+        of the two and the one that does not need a network to fail.
+        """
+        for tool in tools:
+            assert tool.asset.endswith(('.zip', '.exe')), f'{tool.name}: {tool.asset}'
+
     def test_the_filename_is_the_command_and_never_the_row_name(self, tools) -> None:
         """The three that differ are the reason `command` is declared at all:
         ripgrep ships rg.exe, and a bundle keyed on the row name carries nothing

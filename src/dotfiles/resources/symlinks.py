@@ -25,12 +25,15 @@ is what both of the refusals and the orphan prune are built out of.
 A copy is a regular file, so `core.link_ownership` can only ever answer `FOREIGN`
 for one. Identity under copy is therefore content equality, and the three things
 that were built on the other answer are each given up in the open rather than
-quietly stopping working. `--force` and `FOREIGN_ADVICE` become unreachable,
-because a copy cannot tell its own output from a stranger's file and so has
-nothing to refuse. `orphans` is empty, because nothing distinguishes a copy this
-manager wrote from a file the user put there — pruning would be guessing, and the
-thing guessed at is somebody's only copy. The name check survives untouched: it
-asks what `pyproject.toml` declares and never looks at the machine.
+quietly stopping working. A copy cannot tell its own output from a stranger's file
+and so has nothing to refuse, which retires `FOREIGN_ADVICE` and `--force`
+together — but only one of the two has a person behind it. Unprinted advice costs
+nobody anything; a flag typed on purpose has to be answered, so `--force` is
+*refused* at the door and `ForceUnavailable` is that answer. `orphans` is empty,
+because nothing distinguishes a copy this manager wrote from a file the user put
+there — pruning would be guessing, and the thing guessed at is somebody's only
+copy. The name check survives untouched: it asks what `pyproject.toml` declares
+and never looks at the machine.
 """
 
 from __future__ import annotations
@@ -45,6 +48,7 @@ from pathlib import Path
 from typing import assert_never
 
 from dotfiles import coordinates as axes
+from dotfiles import refusal
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Stage
@@ -56,6 +60,7 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 from dotfiles.symlinks import core
+from dotfiles.vocabulary import ExitCode
 
 NAME = 'symlinks'
 
@@ -257,6 +262,32 @@ whatever it lands on; a copy machine has the same problem and no way to detect
 it, so it overwrites and says so here instead of printing advice about a flag
 that would change nothing.
 """
+
+FORCE_ADVICE = 'run it without the flag: a copy overwrites whatever is at the target, so no target is ever refused for you to force'
+"""What a person who typed `--force` on a copy machine needs to hear instead."""
+
+
+class ForceUnavailable(refusal.Refusal):
+    """`--force` at a machine that deploys by copy, where the flag decides nothing.
+
+    A usage error rather than a warning, because a warning leaves the run's answer
+    unchanged and the exit code is the part a caller reads. `--force` authorises
+    replacing a target this manager did not create, and `core.link_ownership`
+    answers `FOREIGN` for every regular file a copy machine has — so the refusal
+    the flag exists to answer is one that is never raised there. Accepted, it
+    exits 0 having deployed exactly what a bare apply deploys, and nothing at the
+    terminal separates that from the flag having worked.
+
+    Unlike the other unreachable-on-copy behaviour, this one has a person behind
+    it. `FOREIGN_ADVICE` going unprinted costs nobody anything; a flag typed on
+    purpose and silently discarded is a question that was asked and not answered.
+
+    `USAGE` for the reason `reconcile.Unreachable` is: retyping is what fixes it.
+    Refusing costs the machine nothing, because the composite `dotfiles apply`
+    carries no `--force` — converging this machine never comes through this door.
+    """
+
+    code = ExitCode.USAGE
 
 
 def sources(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[tuple[Path, Path, str]]:

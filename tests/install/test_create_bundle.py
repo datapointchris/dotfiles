@@ -320,6 +320,22 @@ class TestArchives:
         assert destination.read_text() == 'GOFUMPT'
         assert not archive_path.exists()
 
+    @pytest.mark.parametrize('asset', ['task_linux_amd64.zip', 'task_linux_amd64.tar.xz', 'task_linux_amd64.7z'])
+    def test_an_archive_shape_with_no_reader_is_refused_rather_than_staged_as_the_binary(self, tmp_path, asset):
+        """The bare-executable branch is a real shape, so it cannot also absorb the
+        ones nobody wrote code for. Without the refusal a zip is moved under the
+        tool's name and chmod'd 0755, the manifest records it staged, and the
+        machine that reads the bundle is the one with no network to find out why
+        nothing runs.
+        """
+        archive_path = tmp_path / asset
+        archive_path.write_bytes(b'PACKED')
+
+        with pytest.raises(create_bundle.BundleError, match='cannot open'):
+            create_bundle.extract_go_binary(archive_path, 'task', tmp_path / 'task')
+
+        assert not (tmp_path / 'task').exists()
+
 
 class TestFailureDetail:
     def test_the_tail_is_kept_because_that_is_where_the_cause_is(self):
@@ -601,3 +617,15 @@ class TestWingetBundling:
         and fetch it, with the bundle reporting every row staged."""
         with pytest.raises(create_bundle.BundleError, match='rg.exe'):
             self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'rg-{version}.zip'}, 'v14.1.1', holds='README.md')
+
+    def test_a_third_asset_shape_is_refused_rather_than_renamed_to_an_exe(self, tmp_path, monkeypatch):
+        """The zip branch and the exe branch are the whole vocabulary, so an
+        unrecognised suffix has to raise rather than take the copy path.
+
+        A tarball renamed `rg.exe` passes every later assertion — the file is
+        there, the manifest records it staged, the install copies it onto PATH —
+        and Windows declines to execute it. That is discovered on the machine with
+        no route to the tool but this one.
+        """
+        with pytest.raises(create_bundle.BundleError, match='ripgrep-v14.1.1.tar.gz'):
+            self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version}.tar.gz'}, 'v14.1.1')

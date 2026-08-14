@@ -1,11 +1,10 @@
 machine: windows-work-workstation
 
 # The axes written out, rather than a `platform:` bundle naming them. A bundle
-# row is read by tests/resources/test_system.py, which requires every installer
-# any bundle selects to have an INSTALLER_QUERIES entry with a non-empty query
-# behind it — and nothing can yet ask winget what a machine has installed. The
-# label is derived from the tuple anyway (`coordinates.platform_label`), so the
-# bundle would carry no fact these six lines do not.
+# is a shorthand that earned a name, and this point has not: nothing else
+# resolves through it, and the label comes from the tuple either way
+# (`coordinates.platform_label`), so a row in PLATFORM_BUNDLES would carry no
+# fact these six lines do not.
 #
 # nonfleet, because this is the Windows side of the same physical box as
 # wsl-work-workstation. The two halves boot from one disk and sit on one

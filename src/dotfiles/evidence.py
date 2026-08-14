@@ -198,6 +198,7 @@ INSTALLER_QUERIES = {
     'cask': 'cask',
     'flatpak': 'flatpak',
     'mas': 'mas',
+    'winget': '',
 }
 """Which query answers for an installer.
 
@@ -206,6 +207,17 @@ installed. Every installer needs an entry here rather than a `.get` default: a
 missing key and an unqueryable one would look the same, and `flatpak` was exactly
 that, reporting UNKNOWN on a machine where the query works and both apps are
 installed.
+
+`winget` answers with the empty string, which names the second state that table
+has to be able to hold: an installer with no inventory query at all. Every name
+`QUERIES` carries is a manager that lists what the *machine* has; winget lists
+what winget installed, and the row it would answer for is a `.exe` copied out of
+a version-stamped package directory onto PATH — so PATH is the evidence and
+`registry.WingetProvider.measure` is what reads it. Written out rather than left
+out for the reason the paragraph above gives: absent and empty must not look the
+same, and `coordinates.INSTALLER_FAMILIES` makes `winget` a name a manifest can
+select. `diagnose.package_owning` holds the same empty entry for the same
+manager.
 """
 
 

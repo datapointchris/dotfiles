@@ -50,6 +50,14 @@ manager and display stack — and the Wayland one makes `apply` run `hyprctl
 reload`, which on this developer's box reaches the compositor he is looking at.
 """
 
+COPYING = {'machine': 'copybox', 'platform': 'linux', 'deploy_by_copy': True}
+"""A machine deploying by copy, on `box`'s own coordinates.
+
+The same platform deliberately: every declaration these tests make lands at the
+same target either way, so the mechanism is the only difference between the two
+and an assertion about it cannot be an assertion about the coordinates.
+"""
+
 
 @pytest.fixture(autouse=True)
 def the_epilogue_cannot_leave_this_sandbox(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -329,6 +337,40 @@ def test_force_never_reaches_a_name_project_scripts_declares(sandbox: Sandbox, c
 
     assert wrote(ran) == ['symlinks/apps/common/notes']
     assert installed.read_text() == 'the installed console script\n'
+
+
+def test_force_is_a_usage_error_where_a_copy_machine_cannot_honour_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A copy overwrites every target, so nothing is ever refused for the flag to
+    answer — and it exits 0 having deployed what a bare apply deploys.
+
+    Exit 2 is what separates that from the flag having worked. The advice carries
+    the substance, because there is no second way to type this: the person is told
+    the run they wanted is the run they get without it.
+    """
+    sandbox.declare(manifest=COPYING, machine='copybox')
+    sandbox.declare()
+    declare(sandbox)
+
+    ran = cli('symlinks', 'apply', '--machine', 'copybox', '--force', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'deploys by copy' in unwrapped(ran.stderr)
+    assert 'no target is ever refused' in unwrapped(ran.stderr)
+    assert not destination(sandbox).exists()
+
+
+def test_a_copy_machine_still_applies_without_the_flag(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The other half, and the reason refusing costs nothing: the deployment the
+    flag would have authorised is the one an ordinary apply performs."""
+    sandbox.declare(manifest=COPYING, machine='copybox')
+    sandbox.declare()
+    declare(sandbox)
+
+    ran = cli('symlinks', 'apply', '--machine', 'copybox', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert destination(sandbox).read_text() == REPO_COPY
+    assert not destination(sandbox).is_symlink()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

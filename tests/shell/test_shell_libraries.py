@@ -37,11 +37,10 @@ def library_directories() -> tuple[str, ...]:
     day a coordinate needs one, which is exactly the growth a list of directories
     does not track.
 
-    Nothing under a root is exempt. `shell/git-bash/` was, on the grounds that it
-    was copied to a computer this repo did not deploy to and so had no caller of
-    ours to protect; as `shell/os/windows/` it is a layer a machine selects and
-    sources like any other. An exemption outliving its directory is this file's
-    own recorded failure mode, one level up from the list it replaced.
+    Nothing under a root is exempt. Every `*.sh` below one is sourced by a shell
+    this repo deploys, so each has a caller of ours to protect — and an exemption
+    outlives the directory that justified it, which is this file's own recorded
+    failure mode, one level up from the list it replaced.
     """
     return tuple(sorted({str(path.parent.relative_to(REPO)) for root in LIBRARY_ROOTS for path in (REPO / root).rglob('*.sh')}))
 

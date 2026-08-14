@@ -482,11 +482,49 @@ def repackage_zip_as_tarball(zip_path: Path, tool: str, target: str, version_num
     return repackaged
 
 
+PACKED_SUFFIXES = (
+    '.tar.gz',
+    '.tgz',
+    '.tar.xz',
+    '.txz',
+    '.tar.bz2',
+    '.tbz2',
+    '.tar.zst',
+    '.tar',
+    '.gz',
+    '.xz',
+    '.bz2',
+    '.zst',
+    '.zip',
+    '.7z',
+    '.rar',
+)
+"""Every suffix meaning "this asset is packed", whether or not anything here unpacks it.
+
+Named so that "unpacked by a branch below" and "not packed at all" stay two
+answers rather than one fallthrough. A Go release legitimately ships the bare
+executable under a name with no suffix, so `extract_go_binary` cannot make the
+unrecognised case and the bare-binary case the same branch — a `.zip` taking the
+bare-binary path is moved under the tool's name, chmod'd 0755 and recorded staged,
+and the only machine that reads the result is the one with no network to work out
+why nothing runs.
+
+Deliberately wider than what any branch handles. The point is to catch a shape
+nobody wrote code for, so a format arriving with no reader has to be *in* here to
+be refused.
+"""
+
+
 def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -> None:
     """Pull a Go tool's binary out of whatever shape its release ships.
 
-    Some archives name the binary with a platform suffix (gdu_linux_amd64), so
-    an exact match is tried before a prefix match.
+    Three shapes: a tarball, a lone gzipped binary, and the bare executable. Some
+    archives name the binary with a platform suffix (gdu_linux_amd64), so an exact
+    match is tried before a prefix match.
+
+    The bare executable is the *last* branch and not the fallthrough, because it is
+    a real shape rather than the absence of one. Anything carrying a
+    `PACKED_SUFFIXES` this cannot open is refused between the two.
     """
     if archive_path.name.endswith(('.tar.gz', '.tgz')):
         with tempfile.TemporaryDirectory() as workspace:
@@ -503,6 +541,8 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
     elif archive_path.name.endswith('.gz'):
         with gzip.open(archive_path, 'rb') as source, destination.open('wb') as target:
             shutil.copyfileobj(source, target)
+    elif archive_path.name.endswith(PACKED_SUFFIXES):
+        raise BundleError(f'{archive_path.name} is packed in a format this bundler cannot open, so {binary_name} cannot be staged')
     else:
         shutil.move(str(archive_path), destination)
 
@@ -564,13 +604,19 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         verify_against_upstream(bundle, cache, downloaded, asset)
 
         # Staged under the name it has to land on PATH as, so the install is a
-        # copy. Two publishers ship the bare exe and the rest ship a zip, and
-        # which of the two is a fact about the asset rather than about the tool.
+        # copy. A zip or the bare exe, and which one is a fact about the asset
+        # rather than about the tool — so the whole vocabulary is written out and
+        # a third shape is refused. Renaming an unopened `.tar.gz` to `rg.exe`
+        # records it staged, and Windows declines to run it on the one machine
+        # with no other way to get the tool.
         executable = bundle.winget_binaries / entry.filename
         if asset.filename.endswith('.zip'):
             extract_windows_exe(downloaded, entry.filename, executable)
-        elif downloaded != executable:
-            downloaded.replace(executable)
+        elif asset.filename.endswith('.exe'):
+            if downloaded != executable:
+                downloaded.replace(executable)
+        else:
+            raise BundleError(f'{entry.name} declares the asset {asset.filename}, which is neither a .zip nor a .exe')
 
         bundle.record('winget', entry.name, version, entry.filename)
 

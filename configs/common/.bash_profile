@@ -10,6 +10,17 @@ export XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 export SHELL_DIR="$HOME/.local/shell"
 export EDITOR="nvim"
 
+# Readline's own search is `$INPUTRC`, then `~/.inputrc`, then `/etc/inputrc`,
+# and this repo deploys neither of the last two — so without this line every
+# setting in `configs/common/.config/readline/inputrc` is silently absent for
+# any bash that has no zsh above it to inherit the variable from. `.zshrc`
+# exports the same path for the same reason, which is duplication the deployment
+# cannot avoid: `configs/` merges nothing, and the two shells share no file.
+#
+# Read after the startup files, not before them: readline initialises on the
+# first prompt, so exporting it here is in time.
+export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
+
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
 # Prepended onto the PATH this shell was handed, and only where it does not

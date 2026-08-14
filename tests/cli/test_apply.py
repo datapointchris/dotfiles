@@ -450,14 +450,10 @@ def test_a_ceiling_at_the_symlink_stage_still_runs_it(deployments: list[str], mo
 SHELLS = frozenset({'bash', 'sh', 'zsh', 'dash'})
 
 SHELL_SURVIVORS: frozenset[str] = frozenset()
-"""Empty, which is what the conversion was for.
+"""Empty: no part of a run hands work to a shell.
 
-The last entry was the WSL script that staged the Git Bash tree, kept because Git
-Bash reads the `.bashrc` it writes and so its *output* had to be shell. Windows
-became a machine of its own and the script went with the bridge, so no part of a
-run reaches a shell at all and the assertion below carries no exemption. Kept as a
-named set rather than folded into the assertion, so an entry reappearing is
-argued for here.
+A named set rather than an assertion with no exemption slot, so a script
+appearing here has to be argued for in writing beside the reason it needs one.
 """
 
 

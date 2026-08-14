@@ -47,17 +47,15 @@ def test_every_manifest_in_the_repo_loads(name: str) -> None:
     """A typo in linux-lxc-server.yml is invisible from the Mac where the commit
     happens, which is why this reads all of them rather than `$MACHINE`.
 
-    The point has to be one a machine can be, not one of the four bundles. That
-    was the same assertion while every manifest resolved through `platform:`, and
-    stopped being it the moment one declared `coordinates:` directly — which the
-    Windows box does, because a bundle row is read by
-    `tests/resources/test_system.py` as a promise that every installer it selects
-    can be queried, and nothing can yet ask winget what is installed.
+    The point has to be one a machine can *be*, which is not the same as one
+    `PLATFORM_BUNDLES` names. A bundle is a shorthand that earned a name, so the
+    labelled points are a subset of the legal ones, and a manifest declaring its
+    six coordinates directly — the Windows box does — occupies a legal point with
+    no label. Membership would refuse it.
 
-    Coherence rather than membership is also the stronger half for the four that
-    do resolve through a bundle: `machine._from_axes` calls `incoherent` on a
-    direct declaration and `load` raises, so a bundle is the path where nothing
-    else asks.
+    Coherence is the stronger half for the manifests that do resolve through a
+    bundle too: `machine._from_axes` calls `incoherent` on a direct declaration and
+    `load` raises, so a bundle is the path where nothing else asks.
     """
     loaded = machines.load(name, REPO_ROOT)
 

@@ -33,13 +33,12 @@ from dotfiles.symlinks import core
 TREES = tuple(name for name, _, _ in symlinks.TREES)
 
 NOT_COORDINATES = {'common'}
-"""`common` is every machine's base, and it is the only thing a tree may hold
-that no coordinate selects.
+"""`common` is every machine's base, and it is the only thing a tree may hold that
+no coordinate selects.
 
-`git-bash` was the second entry for as long as the Windows side was payload for a
-computer this repo did not deploy to. Windows is a machine now, so that directory
-is `shell/os/windows/` and the exemption is gone — which is the assertion, since
-a name left here would exempt whatever later took it."""
+Everything else below a tree has to be an `<axis>/<value>` a machine can be at,
+which is what the assertion below measures. A second name here exempts whatever
+directory takes it from ever being measured, so the set stays at one."""
 
 
 def coordinate_directories(tree: Path) -> set[str]:

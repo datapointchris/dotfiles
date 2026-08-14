@@ -38,6 +38,7 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_result
 from dotfiles.output import warn
+from dotfiles.resources import symlinks
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
@@ -564,7 +565,9 @@ def symlinks_apply(
     """Deploy every declared symlink, pruning the ones whose source is gone.
 
     Only what differs is written. `--force` is the deliberate answer to a
-    refusal, for adopting a machine that already had dotfiles of its own.
+    refusal, for adopting a machine that already had dotfiles of its own, and a
+    machine that deploys by copy refuses it — there is no refusal to answer
+    where every target is overwritten anyway.
 
     The stray-branch warning and `deploy.epilogue` are `apply_machine`'s, and
     were this command's own until it and the composite verb became one call. The
@@ -573,6 +576,15 @@ def symlinks_apply(
     before measuring anything.
     """
     verbosity(verbose, quiet)
+    # Above the run record and not inside the resource: this is a fact about how
+    # the command was typed, and the run it would authorise is the run that
+    # happens anyway — so a record filed under it would answer for nothing.
+    # `and` short-circuits, leaving an ordinary apply resolving the machine once.
+    if force and (session := _session(machine)).machine.wants(symlinks.DEPLOY_BY_COPY):
+        raise symlinks.ForceUnavailable(
+            f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
+            advice=symlinks.FORCE_ADVICE,
+        )
     _apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 

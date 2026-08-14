@@ -169,15 +169,31 @@ def test_every_installer_maps_to_a_query_that_exists() -> None:
     was exactly that — reporting UNKNOWN on a machine where the query works and
     both apps are installed.
 
-    The last assertion is what an empty value costs. `mas` carried one, so every
-    App Store row fell past its inventory to a PATH probe no `.app` can satisfy,
-    and read MISSING on a machine where `mas list` showed it.
+    The coverage set is the whole `PackageManager` vocabulary, not the installers
+    the bundles happen to select. A manifest may name its six coordinates without
+    naming a bundle, so `PLATFORM_BUNDLES` is a set of shorthands rather than a
+    roster of managers — and `winget` reached the repo through exactly that door,
+    invisible to a set derived from the bundles.
+
+    `flatpak` is asserted separately because no family carries it: it is selected
+    by a manifest boolean rather than by the package-manager coordinate, so
+    deriving from `INSTALLER_FAMILIES` alone would stop covering the installer
+    that motivated this test.
+
+    The last two assertions are what an empty value costs, from each side. `mas`
+    carried one, so every App Store row fell past its inventory to a PATH probe no
+    `.app` can satisfy and read MISSING on a machine where `mas list` showed it —
+    which is why a named query has to resolve to a real command. And an installer
+    with no inventory query at all is a real state rather than an oversight, so
+    the set of them is written out: one joining it silently is the failure the
+    whole table is shaped against.
     """
-    installers = {installer for bundle in axes.PLATFORM_BUNDLES.values() for installer in bundle.installers}
+    installers = {installer for manager in axes.PackageManager for installer in axes.INSTALLER_FAMILIES[manager]}
 
     assert installers <= set(ev.INSTALLER_QUERIES)
     assert {'cask', 'flatpak', 'mas'} <= set(ev.INSTALLER_QUERIES)
-    assert all(ev.QUERIES.get(query) for query in ev.INSTALLER_QUERIES.values()), ev.INSTALLER_QUERIES
+    assert all(ev.QUERIES.get(query) for query in ev.INSTALLER_QUERIES.values() if query), ev.INSTALLER_QUERIES
+    assert {installer for installer, query in ev.INSTALLER_QUERIES.items() if not query} == {'winget'}
 
 
 def test_the_system_resource_takes_only_its_own_items(tmp_path: Path, fake_bin: Path) -> None:
