@@ -450,6 +450,67 @@ def test_a_present_required_file_reports_nothing(tmp_path: Path) -> None:
     assert changes(tmp_path, flags=declared) == ()
 
 
+def declared_with_precondition(present: Path, *, value_applies: bool) -> dict[str, Any]:
+    """A present file that reads a value, on a machine that does or does not declare it."""
+    return {
+        **FLAGS,
+        'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name', 'platform': 'macos' if value_applies else 'linux'}],
+        'required_files': [{'name': 'local.sh', 'path': str(present), 'machine': 'box', 'requires_values': ['WINDOWS_USER']}],
+    }
+
+
+def test_a_present_file_whose_declared_value_is_unset_is_stale(tmp_path: Path) -> None:
+    """Presence is not readiness. The file is there and reads a value nothing set,
+    so it cannot do its job — and measuring presence alone reported converged."""
+    present = tmp_path / 'local.sh'
+    present.write_text('# machine-local\n')
+    declared = declared_with_precondition(present, value_applies=True)
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=declared) if change.item == str(present)]
+
+    assert found[0].verdict is Verdict.STALE
+    assert 'WINDOWS_USER' in found[0].detail
+    assert found[0].repair is Repair.BY_HAND
+
+
+def test_a_precondition_this_machine_does_not_declare_does_not_apply(tmp_path: Path) -> None:
+    """`local.sh` is required on both halves of the work laptop and only the WSL
+    half declares WINDOWS_USER. A name absent from this machine's own register is
+    a precondition that does not apply, never one that failed — the Windows half
+    is `host: native`, reaches no /mnt/c, and needs nothing."""
+    present = tmp_path / 'local.sh'
+    present.write_text('# machine-local\n')
+    declared = declared_with_precondition(present, value_applies=False)
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
+def test_a_satisfied_precondition_reports_nothing(tmp_path: Path) -> None:
+    present = tmp_path / 'local.sh'
+    present.write_text('# machine-local\n')
+    declared = declared_with_precondition(present, value_applies=True)
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export WINDOWS_USER=someone\n')
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
+def test_every_declared_precondition_names_a_value_the_repo_declares() -> None:
+    """A typo in `requires_values` would silently never fire, because a name no
+    machine declares resolves as not applicable everywhere."""
+    flags = yaml.safe_load((REPO_ROOT / 'install' / 'flags.yml').read_text())
+    declared = {entry['name'] for entry in flags.get('required') or ()}
+    named = {name for entry in flags.get('required_files') or () for name in entry.get('requires_values') or ()}
+
+    assert named <= declared
+
+
 def test_a_required_file_declared_through_a_variable_resolves(tmp_path: Path, monkeypatch) -> None:
     """A file whose location differs per machine is declared as a variable this repo also
     declares, never as a literal. A literal disagreed with the declaration the moment the

@@ -109,10 +109,18 @@ required_files:
   # need for a file it reads: `check` never asked whether it was there and
   # `machines requirements --safekeep` emitted no block to restore it, while the
   # shell code it holds names the same employer either side of the WSL boundary.
+  # WINDOWS_USER is the WSL half's precondition and not the Windows half's. The
+  # file's own wrappers reach the Windows-side home through $winchris, which
+  # `shell/host/wsl/wsl.sh` builds from WINDOWS_USER — so on WSL the file can be
+  # present and inert, which is the state `check` was silent about. The Windows
+  # machine is `host: native`, declares no WINDOWS_USER and reaches no /mnt/c, so
+  # the precondition resolves as not applicable there rather than as unmet.
   - name: local.sh
     path: ~/.local/shell/local.sh
     description: Employer infrastructure — the named CIFS mounts and Okta login
     network_trust: nonfleet
+    requires_values:
+      - WINDOWS_USER
     consumers:
       - configs/common/.config/zsh/.zshrc
       - configs/common/.bashrc

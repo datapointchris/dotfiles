@@ -236,6 +236,7 @@ def _requirement_dict(entry: machines.Requirement) -> dict[str, object]:
         'tags': list(entry.tags),
         'consumers': list(entry.consumers),
         'narrowing': dict(entry.narrowing),
+        'requires_values': list(entry.requires_values),
     }
 
 
@@ -257,6 +258,11 @@ def _render_requirements(machine: machines.Machine) -> None:
             # restore is the one that stands out rather than the one that blends in.
             if entry.restore:
                 console.print(f'{EVIDENCE_INDENT}{"":<{width}}  {entry.restore}', markup=False, highlight=False)
+            # Restoring the file is half the job where it reads a value: a rebuild
+            # that puts every file back and none of the values still has a machine
+            # that cannot run them.
+            if needed := [name for name in entry.requires_values if name in {value.name for value in machine.required_values}]:
+                console.print(f'{EVIDENCE_INDENT}{"":<{width}}  needs {", ".join(needed)} set first', markup=False, highlight=False)
 
     if not machine.requirements:
         # A section and an indented row, like the two groups above, rather than a

@@ -353,6 +353,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
         )
     for entry in machine.required_files:
         if entry.path in observed.present_files:
+            changes.extend(_unready(entry, machine, observed))
             continue
         description = entry.description or 'a machine-local file'
         if unnamed := observed.resolved.unresolved(entry.path):
@@ -386,6 +387,39 @@ def _requirements(machine, observed: Observed) -> list[Change]:
             )
         )
     return changes
+
+
+def _unready(entry, machine, observed: Observed) -> list[Change]:
+    """A required file that is there and cannot do its job.
+
+    Presence is not readiness, and the gap reads as success: measuring presence
+    alone reports converged on a machine where the file exists and the value its
+    contents read was never set. That is the one state the whole register exists
+    to make loud, and it was the one state it was silent in.
+
+    `STALE` rather than `MISSING`, because the file is present and something about
+    it is wrong — the two verdicts send a reader to different halves, and a
+    restore is the wrong remedy here.
+
+    Only preconditions this machine declares. A name absent from its own register
+    does not apply rather than failing: `local.sh` is required on both halves of
+    the work laptop, and only the WSL half declares `WINDOWS_USER`.
+    """
+    declared = {value.name for value in machine.required_values}
+    unmet = [name for name in entry.requires_values if name in declared and not (observed.values.get(name) or observed.resolved.of(name))]
+    if not unmet:
+        return []
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            entry.path,
+            Verdict.STALE,
+            repair=Repair.BY_HAND,
+            detail=f'present, and reads {", ".join(unmet)} which nothing sets',
+            advice=settings.where_to_name(unmet[0], observed.path),
+        )
+    ]
 
 
 def _orphaned(machine, observed: Observed) -> list[Change]:

@@ -203,6 +203,27 @@ class Requirement:
     also belongs to, and only earns its place where that is not obvious.
     """
 
+    requires_values: tuple[str, ...] = ()
+    """Values that must be set before this file can do its job.
+
+    Presence is not readiness. A file entry records that a machine needs a file,
+    and a check that only asks whether it is there reports converged on a machine
+    where the file exists and the variable its contents read was never set — so
+    the one mechanism built to make a missing value loud goes quiet at the moment
+    the value is present and useless. `standards/configuration.md` § "A declared
+    requirement states what has to be true, not only that the thing exists".
+
+    On the declaration and never in the file, because such a file is machine-local
+    by construction — it is declared precisely because the repo must not hold it,
+    so it cannot state its own preconditions anywhere the repo can read them.
+
+    Resolved against *this machine's* register, so a name it does not declare is a
+    precondition that does not apply rather than one that failed. `local.sh` is
+    required on both halves of the work laptop and only the WSL half declares
+    `WINDOWS_USER`; the Windows half is native, reaches no `/mnt/c`, and needs
+    nothing.
+    """
+
     @property
     def is_file(self) -> bool:
         return bool(self.path)
@@ -579,6 +600,7 @@ def _requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: 
                     narrowing=narrowing,
                     restore=str(entry.get('restore', '')),
                     tags=tuple(str(tag) for tag in entry.get('tags') or ()),
+                    requires_values=tuple(str(value) for value in entry.get('requires_values') or ()),
                 )
             )
     return tuple(found)
