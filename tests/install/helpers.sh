@@ -6,8 +6,6 @@
 # Source this file at the beginning of platform-specific scripts
 # ================================================================
 
-set -euo pipefail
-
 # Ensure this file is sourced, not executed
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "Error: This file should be sourced, not executed directly"
@@ -20,7 +18,7 @@ fi
 # ================================================================
 
 if ! command -v print_header &>/dev/null; then
-  DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+  DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 fi
