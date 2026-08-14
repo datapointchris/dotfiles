@@ -10,64 +10,53 @@ from dotfiles import paths
 # ─── Utility Tests ────────────────────────────────────────────────────────────
 
 
-def test_should_exclude_git_dir():
-    assert core.should_exclude(Path('.git/config'))
-    assert core.should_exclude(Path('some/path/.git/hooks'))
+EXCLUSIONS: tuple[tuple[str, bool], ...] = (
+    # A directory pattern owns whole path components. `.gitconfig` and `.gitignore`
+    # are dotfiles this repo deploys, and a prefix match on `.git` takes all of them.
+    ('.git/config', True),
+    ('some/path/.git/hooks', True),
+    ('bar/.git/objects/abc123', True),
+    ('.gitconfig', False),
+    ('some/dir/.gitconfig', False),
+    ('.gitignore', False),
+    ('.gitattributes', False),
+    ('.github/workflows/ci.yml', False),
+    ('some/.gitkeep', False),
+    # A plugin directory is cloned by its own manager; the config beside it is ours.
+    ('tmux/plugins/tpm', True),
+    ('.tmux/plugins/vim-tmux-navigator', True),
+    ('tmux/tmux.conf', False),
+    ('tmux.conf', False),
+    ('.config/tmux/tmux.conf', False),
+    # A filename pattern matches the whole name, never a name that starts with it.
+    ('.DS_Store', True),
+    ('some/dir/.DS_Store', True),
+    ('.DSConfig', False),
+    ('node_modules.txt', False),
+    ('my_node_modules.js', False),
+    ('.pytest.ini', False),
+    ('pytest.cfg', False),
+    # An extension pattern matches the extension, never a name containing the word.
+    ('file.tmp', True),
+    ('file.temp', True),
+    ('file.log', True),
+    ('template.txt', False),
+    ('tmp_file.txt', False),
+    ('temporary.md', False),
+    ('.zshrc', False),
+    ('.config/nvim/init.lua', False),
+    ('.local/bin/tools', False),
+)
 
 
-def test_should_not_exclude_gitconfig():
-    """Regression: .gitconfig must NOT be excluded by the .git/ directory pattern."""
-    assert not core.should_exclude(Path('.gitconfig'))
-    assert not core.should_exclude(Path('some/dir/.gitconfig'))
+@pytest.mark.parametrize(('path', 'excluded'), EXCLUSIONS, ids=[path for path, _ in EXCLUSIONS])
+def test_a_pattern_matches_a_whole_component_and_never_a_prefix(path: str, excluded: bool) -> None:
+    """What the deploy refuses to carry into `$HOME`, and what it must not refuse.
 
-
-def test_should_not_exclude_git_related_files():
-    assert not core.should_exclude(Path('.gitignore'))
-    assert not core.should_exclude(Path('.gitattributes'))
-    assert not core.should_exclude(Path('.github/workflows/ci.yml'))
-    assert not core.should_exclude(Path('some/.gitkeep'))
-
-
-def test_should_exclude_git_directory():
-    assert core.should_exclude(Path('.git/config'))
-    assert core.should_exclude(Path('foo/.git/hooks'))
-    assert core.should_exclude(Path('bar/.git/objects/abc123'))
-
-
-def test_should_not_exclude_similar_named_files():
-    assert not core.should_exclude(Path('.DSConfig'))
-    assert not core.should_exclude(Path('node_modules.txt'))
-    assert not core.should_exclude(Path('my_node_modules.js'))
-    assert not core.should_exclude(Path('.pytest.ini'))
-    assert not core.should_exclude(Path('pytest.cfg'))
-    assert not core.should_exclude(Path('template.txt'))
-    assert not core.should_exclude(Path('tmp_file.txt'))
-    assert not core.should_exclude(Path('temporary.md'))
-
-
-def test_tmux_plugin_exclusion():
-    assert core.should_exclude(Path('tmux/plugins/tpm'))
-    assert core.should_exclude(Path('.tmux/plugins/vim-tmux-navigator'))
-    assert not core.should_exclude(Path('tmux/tmux.conf'))
-    assert not core.should_exclude(Path('tmux.conf'))
-    assert not core.should_exclude(Path('.config/tmux/tmux.conf'))
-
-
-def test_should_exclude_ds_store():
-    assert core.should_exclude(Path('.DS_Store'))
-    assert core.should_exclude(Path('some/dir/.DS_Store'))
-
-
-def test_should_exclude_temp_files():
-    assert core.should_exclude(Path('file.tmp'))
-    assert core.should_exclude(Path('file.temp'))
-    assert core.should_exclude(Path('file.log'))
-
-
-def test_should_not_exclude_normal_files():
-    assert not core.should_exclude(Path('.zshrc'))
-    assert not core.should_exclude(Path('.config/nvim/init.lua'))
-    assert not core.should_exclude(Path('.local/bin/tools'))
+    Both halves in one table, because every entry here is a pair: the thing the
+    pattern is for, and the dotfile whose name begins with the same letters.
+    """
+    assert core.should_exclude(Path(path)) is excluded
 
 
 def test_resolve_broken_symlink_absolute(tmp_path):
@@ -95,22 +84,27 @@ def test_resolve_broken_symlink_not_a_symlink(tmp_path):
     assert core.resolve_broken_symlink(regular_file) is None
 
 
-def test_make_relative_symlink_simple():
-    source = Path('/Users/chris/dotfiles/common/.config/nvim/init.lua')
-    target = Path('/Users/chris/.config/nvim/init.lua')
-    assert str(core.make_relative_symlink(source, target)) == '../../dotfiles/common/.config/nvim/init.lua'
-
-
-def test_make_relative_symlink_zshrc():
-    source = Path('/Users/chris/dotfiles/common/.config/zsh/.zshrc')
-    target = Path('/Users/chris/.config/zsh/.zshrc')
-    assert str(core.make_relative_symlink(source, target)) == '../../dotfiles/common/.config/zsh/.zshrc'
-
-
-def test_make_relative_symlink_top_level():
-    source = Path('/Users/chris/dotfiles/macos/.gitconfig')
-    target = Path('/Users/chris/.gitconfig')
-    assert str(core.make_relative_symlink(source, target)) == 'dotfiles/macos/.gitconfig'
+@pytest.mark.parametrize(
+    ('source', 'target', 'link'),
+    [
+        (
+            '/Users/chris/dotfiles/common/.config/nvim/init.lua',
+            '/Users/chris/.config/nvim/init.lua',
+            '../../dotfiles/common/.config/nvim/init.lua',
+        ),
+        (
+            '/Users/chris/dotfiles/common/.config/zsh/.zshrc',
+            '/Users/chris/.config/zsh/.zshrc',
+            '../../dotfiles/common/.config/zsh/.zshrc',
+        ),
+        ('/Users/chris/dotfiles/macos/.gitconfig', '/Users/chris/.gitconfig', 'dotfiles/macos/.gitconfig'),
+    ],
+    ids=['nested', 'nested-dotfile', 'top-level'],
+)
+def test_the_link_is_written_relative_to_the_directory_holding_it(source: str, target: str, link: str) -> None:
+    """A target in `$HOME` itself takes no `../`, which is the case that goes wrong
+    when the depth is counted from the wrong end."""
+    assert str(core.make_relative_symlink(Path(source), Path(target))) == link
 
 
 def test_make_relative_symlink_actually_works(tmp_path):

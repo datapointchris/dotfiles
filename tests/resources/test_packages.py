@@ -837,17 +837,6 @@ def only_change(live: Session) -> Change:
     return found[0]
 
 
-def test_a_missing_release_is_installed(
-    tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
-
-    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
-
-    assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['lazygit']
-
-
 def test_a_stale_release_is_upgraded_rather_than_reported(
     tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
@@ -863,22 +852,6 @@ def test_a_stale_release_is_upgraded_rather_than_reported(
     assert installs == ['lazygit']
 
 
-def test_a_release_that_arrived_since_the_report_is_skipped(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    """`observe` ran before the report was printed and before any earlier stage
-    installed anything. Reinstalling over what turned up would replace a binary
-    nobody asked about with whatever upstream calls latest now."""
-    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
-    change = only_change(live)
-    executable(fake_bin, 'lazygit')
-
-    outcome = packages.RESOURCE.perform(live, change, unprivileged)
-
-    assert outcome.status is OutcomeStatus.SKIPPED
-    assert installs == []
-
-
 # Names no machine can have, because `fake_bin` keeps /usr/bin behind it: a real
 # package would read as installed on whichever box happens to have it, which is the
 # hazard that fixture's docstring names.
@@ -891,78 +864,67 @@ DECLARES_NPM = {'machine': 'box', 'platform': 'linux', 'npm_globals': ['unpublis
 UV_TOOL = {'uv_tools': {'linters': [{'name': 'unreleased-linter'}]}}
 DECLARES_UV = {'machine': 'box', 'platform': 'linux', 'uv_tools': ['unreleased-linter']}
 
-
-def test_a_missing_uv_tool_is_installed_by_its_provider(
-    tmp_path: Path, fake_bin: Path, uv_tools: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    live = session(tmp_path, UV_TOOL, DECLARES_UV)
-
-    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
-
-    assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['unreleased-linter']
-
-
-def test_a_missing_npm_global_is_installed_by_its_provider(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    live = session(tmp_path, NPM_GLOBAL, DECLARES_NPM)
-
-    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
-
-    assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['unpublished-linter']
-
-
-def test_a_missing_cargo_package_is_installed_by_its_provider(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    live = session(tmp_path, CARGO_PACKAGE, DECLARES_CARGO)
-
-    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
-
-    assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['unbuilt-crate']
-
-
-def test_a_missing_go_tool_is_installed_by_its_provider(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
-) -> None:
-    """Through the same function the phase calls, so the two front doors cannot
-    install one tool differently."""
-    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
-
-    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
-
-    assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['task']
-
-
 DECLARES_THEME = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['theme']}
 THEME = {'custom_installers': [{'name': 'theme', 'description': 'theme manager', 'repo': 'datapointchris/theme'}]}
 
+OWNED: tuple[tuple[str, dict, dict, str], ...] = (
+    ('release', LAZYGIT, DECLARES_LAZYGIT, 'lazygit'),
+    ('uv_tool', UV_TOOL, DECLARES_UV, 'unreleased-linter'),
+    ('npm_global', NPM_GLOBAL, DECLARES_NPM, 'unpublished-linter'),
+    ('cargo_package', CARGO_PACKAGE, DECLARES_CARGO, 'unbuilt-crate'),
+    ('go_tool', GO_TOOL, DECLARES_TASK, 'task'),
+    ('custom_installer', THEME, DECLARES_THEME, 'theme'),
+)
+"""One declaration per section, and the name whichever provider owns it installs."""
 
-def test_a_missing_custom_installer_runs_its_own_function(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+
+@pytest.mark.parametrize(('declaration', 'manifest', 'installed'), [row[1:] for row in OWNED], ids=[section for section, *_ in OWNED])
+def test_a_missing_tool_is_installed_by_the_provider_that_owns_it(
+    declaration: dict,
+    manifest: dict,
+    installed: str,
+    tmp_path: Path,
+    fake_bin: Path,
+    release_cache: Path,
+    uv_tools: Path,
+    installs: list[str],
+    unprivileged: Privilege,
 ) -> None:
     """Through the same function the phase calls, so the two front doors cannot
-    install one tool differently."""
-    live = session(tmp_path, THEME, DECLARES_THEME)
+    install one tool differently.
+
+    Every section in one table, because the claim is about the dispatch rather
+    than about any provider: the resource picks the owner off the declaration and
+    the provider it picked is the only one that runs.
+    """
+    live = session(tmp_path, declaration, manifest)
 
     outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
 
     assert outcome.status is OutcomeStatus.DONE
-    assert installs == ['theme']
+    assert installs == [installed]
 
 
-def test_a_custom_installer_that_arrived_since_the_report_is_skipped(
-    tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
+@pytest.mark.parametrize(
+    ('declaration', 'manifest', 'arrived'),
+    [
+        pytest.param(LAZYGIT, DECLARES_LAZYGIT, 'lazygit', id='release'),
+        pytest.param(THEME, DECLARES_THEME, 'theme', id='custom_installer'),
+    ],
+)
+def test_a_tool_that_arrived_since_the_report_is_skipped(
+    declaration: dict, manifest: dict, arrived: str, tmp_path: Path, fake_bin: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
-    live = session(tmp_path, THEME, DECLARES_THEME)
+    """`observe` ran before the report was printed and before any earlier stage
+    installed anything. Reinstalling over what turned up would replace a binary
+    nobody asked about with whatever upstream calls latest now."""
+    live = session(tmp_path, declaration, manifest)
     change = only_change(live)
-    executable(fake_bin, 'theme')
+    executable(fake_bin, arrived)
 
-    assert packages.RESOURCE.perform(live, change, unprivileged).status is OutcomeStatus.SKIPPED
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert outcome.status is OutcomeStatus.SKIPPED
     assert installs == []
 
 
