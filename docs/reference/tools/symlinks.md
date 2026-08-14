@@ -40,8 +40,8 @@ which walks those directories by name.
 Two variants are never allowed to claim one target. Deployment is ordered, so a
 conflict would not fail — it would deploy whichever directory comes later and
 report success — which is why `tests/symlinks/test_coordinate_directories.py`
-asserts it against every machine the axes can express rather than the four that
-exist.
+asserts it against every machine the axes can express rather than only the ones a
+manifest names today.
 
 ## Targets this manager did not create
 
@@ -65,6 +65,38 @@ the machine in which linking an `apps/` file over the console script is right.
 The names are read from `pyproject.toml` rather than from the installed
 distribution, because during a bootstrap nothing is installed yet and the answer
 has to be the same either way.
+
+## Where symlinks are refused, the file is copied instead
+
+A machine whose manifest sets `deploy_by_copy: true` gets the same three trees at
+the same destinations, written as regular files. Group policy on the Windows box
+refuses to create a symlink at all, and copy is the right mechanism there rather
+than a fallback: nothing on that side is ever edited back into the repo, so the
+whole of what it gives up is provenance.
+
+The boolean is declared by the machine and derived from nothing. Windows 10 and
+later can symlink with Developer Mode on, so keying this on `os_family` would
+make the OS the reason when the reason is one employer's administration of one
+box. It is not a column on the tree table either, because nothing about
+`configs/` wants copying that `apps/` does not — the whole of the difference is
+which machine is being deployed to. And it is not an axis: an axis exists to
+select `<axis>/<value>` directories, and the files are identical either way.
+
+Provenance is what the two refusals above and the orphan prune are all built out
+of, so all three are given up together. A copy is a regular file, so ownership
+can only ever answer *foreign* for one, and identity becomes content equality: a
+target with different bytes is stale whether this manager wrote it or somebody
+else did, and `apply` overwrites either. `--force` is therefore unreachable and
+means nothing there. Nothing is ever pruned — a file at a path the repo no longer
+declares is either a copy left behind or something the user put there, and
+nothing on disk says which. The script that staged the Git Bash tree from WSL
+held to that same rule for as long as it existed, for the concrete version of the
+reason: the Windows side may hold the only copy of a file this repo cannot
+regenerate.
+
+`dotfiles symlinks unlink` therefore removes nothing on such a machine, which is
+correct rather than a gap — it unlinks only symlinks resolving into the repo, and
+there are none.
 
 ## Directories that do not map to `$HOME`
 

@@ -226,8 +226,13 @@ def _is_darwin() -> bool:
     Everything else in the resolver takes the OS from the manifest, because a
     fresh machine has no `~/.env` and guessing is how a wsl manifest once
     deployed the linux shell layer. Here the question is not "what kind of
-    machine is this" — the row is already narrowed to one — but "which init
-    system is on the box", and launchd is not something a manifest can be wrong
-    about.
+    machine is this" but "which init system is on the box", and launchd is not
+    something a manifest can be wrong about.
+
+    A two-way branch is enough because the row reaching it is narrowed to two
+    families, which the declaration states and no longer leaves to be inferred:
+    `check-schedule` carries `excludes_os_family: windows`. It said "the row is
+    already narrowed to one" while a third OS family had arrived and was taking
+    the systemd path, held off only by the `which systemctl` guard.
     """
     return axes.detect().os_family is axes.OSFamily.DARWIN

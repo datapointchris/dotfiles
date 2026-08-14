@@ -100,11 +100,16 @@ def probe_root(tmp_path: Path) -> Path:
 
 @pytest.mark.parametrize('probe', PROBES, ids=lambda probe: probe.name)
 def test_a_probe_machine_resolves_at_all(probe: Probe, probe_root: Path) -> None:
-    """`platform:` had no true value for either of these. Naming the axes does."""
+    """`platform:` had no true value for either of these. Naming the axes does.
+
+    The derived label is the closest single word and is deliberately not the whole
+    truth — both probes are Arch-on-WSL, and `archlinux` is the half a fused string
+    could carry. That is why nothing selects on it and the coordinates do the work.
+    """
     loaded = machines.load(probe.name, probe_root)
 
     assert loaded.coordinates.as_dict() == probe.coordinates
-    assert loaded.platform_label == ''
+    assert loaded.platform_label == axes.platform_label(loaded.coordinates)
     assert axes.incoherent(loaded.coordinates) == ()
 
 

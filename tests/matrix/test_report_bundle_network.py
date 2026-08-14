@@ -726,10 +726,9 @@ def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation
     """Exit 1 is DRIFT — the machine differs from its declaration, which is what
     apply is for and is not a problem worth reporting.
 
-    A bundle that could not be built is an Issue by that same vocabulary, and
-    `windows create` — the sibling verb in this file, failing the same way on a
-    `BundleError` — has always exited ISSUE. The two disagreed for as long as this
-    leaf passed an argparse return value straight to `typer.Exit`.
+    A bundle that could not be built is an Issue by that same vocabulary, which
+    this leaf disagreed with for as long as it passed an argparse return value
+    straight to `typer.Exit`.
     """
 
     def refuse(*_args: object, **_kwargs: object) -> Path:

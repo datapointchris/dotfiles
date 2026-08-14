@@ -104,7 +104,7 @@ def test_each_manager_answers_in_its_own_shape(
 @pytest.mark.parametrize('manager', list(PackageManager))
 def test_every_manager_can_generate_a_removal(manager: PackageManager) -> None:
     """The advice is read on every platform this repo installs, so a hardcoded
-    `pacman` line would be wrong on two of the three."""
+    `pacman` line would be wrong on all but one of them."""
     assert 'shellcheck' in diagnose.removal_command('shellcheck', manager)
 
 

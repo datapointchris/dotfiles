@@ -89,17 +89,32 @@ gap it does not have.
 
 ## Windows tools when winget is blocked
 
-`task windows:bundle` and `task windows:offline` are the same idea for the Git
-Bash side. See [Task Reference](../tools/tasks.md).
+The bundle carries them, the same way it carries every other category.
 
-`src/dotfiles/windows_bundle.py` builds it, sharing `src/dotfiles/github_release.py`
-with the Linux bundler — so a Windows asset is now verified against the checksum
-its release published, wherever one exists. The shell version it replaced
-verified nothing at all, which mattered most on exactly the network this page is
-about. Several of these projects publish no Windows checksum (fd, delta, bat,
-zoxide, eza at the time of writing); the build says so per tool rather than
-staying quiet, so what is and is not verified is visible while it is being
-built.
+Each `winget_packages` row in `install/packages.yml` names a GitHub repo and
+asset alongside the Store id, so a row is installable two ways from one
+declaration. `bundle create --machine windows-work-workstation` stages the `.exe`
+from the release and verifies it against the published checksum, and the provider
+reads the staged binary rather than reaching the Store.
+
+It falls back to the bundle when a bundle is present, rather than only under
+`--offline`. Reaching a network is not the same as reaching the Store on that
+box — winget is blocked there while `github.com` is not — so a run that has bytes
+staged uses them whichever way it was invoked.
+
+A separate Windows bundler existed while the Windows side was reached from WSL.
+It went with that bridge, and the capability moved into `create_bundle.py` rather
+than going with it, which is where it belongs now that Windows is an ordinary
+machine rather than something addressed across `/mnt/c`.
+
+Several of those projects publish no Windows checksum at all. That is stated per
+tool rather than passed over, so what was and was not verified stays visible in
+the build output.
+
+**Bootstrapping that box is the half still open.** `install.sh` requires
+`$BUNDLE/bin/uv` and a Windows bundle stages `bin/uv.exe`, so `--offline` there
+fails loudly rather than copying a Linux binary. See
+`docs/reference/rebuilding-a-machine.md` for what a first install needs.
 
 ## Why the Neovim setup does not need any of this
 

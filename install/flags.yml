@@ -101,24 +101,37 @@ required:
 # emitter tags everything `dotfiles` already, so a tag is only worth declaring
 # where the entry belongs to a second one.
 required_files:
+  # Narrowed on trust rather than on the machine, for the same reason as the entry
+  # below and arrived at from the other side of it. There, the consumer is itself
+  # `configs/trust/nonfleet/`; here both consumers sit in `configs/common/`, so
+  # every machine deploys one and the two nonfleet machines are the two halves of
+  # one work laptop. Naming `wsl-work-workstation` had the Windows half declare no
+  # need for a file it reads: `check` never asked whether it was there and
+  # `machines requirements --safekeep` emitted no block to restore it, while the
+  # shell code it holds names the same employer either side of the WSL boundary.
   - name: local.sh
     path: ~/.local/shell/local.sh
     description: Employer infrastructure — the named CIFS mounts and Okta login
-    machine: wsl-work-workstation
+    network_trust: nonfleet
     consumers:
       - configs/common/.config/zsh/.zshrc
-      - install/wsl/sync-windows-shell.sh
+      - configs/common/.bashrc
 
-  # The default identity on the one machine whose default is not the personal one.
+  # The default identity off the fleet, where the default is not the personal one.
   # Declared rather than shipped for the same reason as the values above: it names
   # an employer. Absence is silent in the way that earns a place here — git ignores
   # a missing include without a word, so the machine would fall through to
   # useConfigOnly and refuse every commit while naming nothing.
+  #
+  # Narrowed on trust rather than on the machine, because the file that includes
+  # it is `configs/trust/nonfleet/`: every machine that deploys the consumer needs
+  # the file, and naming one machine meant the second nonfleet box — the Windows
+  # side of the same laptop — deployed an include of a file nothing declared.
   - name: local.gitconfig
     path: ~/.config/git/local.gitconfig
     description: This machine's default git identity, for repos that are not personal
     restore: "restore it with safekeep, or rename ~/.config/git/employer.gitconfig if the machine still has one"
-    machine: wsl-work-workstation
+    network_trust: nonfleet
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig
 

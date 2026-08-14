@@ -151,15 +151,26 @@ def package_owning(path: Path, manager: PackageManager) -> tuple[str, str]:
     Per manager rather than by trying each: the coordinate is already resolved, so
     guessing would only make a wrong answer possible on a machine that has two
     installed.
+
+    Winget carries no query, because it has none to carry: it lists what it
+    installed and never what a file belongs to. That is the module's second rule
+    rather than a gap — a probe that cannot answer says so, and the row reports
+    what could not be checked instead of an owner nobody measured. Written out as
+    an empty entry rather than left to a `.get` default, so a manager added later
+    cannot fall through here unnoticed.
     """
-    queries = {
+    queries: dict[PackageManager, tuple[str, ...]] = {
         PackageManager.PACMAN: ('pacman', '-Qoq', str(path)),
         PackageManager.APT: ('dpkg', '-S', str(path)),
         PackageManager.BREW: ('brew', 'which-formula', str(path)),
+        PackageManager.WINGET: (),
     }
+    query = queries[manager]
+    if not query:
+        return '', f'{manager} cannot be asked which package a file belongs to'
     # Every one of these reports 'no package owns this' as exit 1, which is an
     # answer rather than a broken probe.
-    answered, why = _ask(queries[manager], f'which package owns {path}', absent_when=(1,))
+    answered, why = _ask(query, f'which package owns {path}', absent_when=(1,))
     if why or not answered:
         return '', why
     first = answered.splitlines()[0].strip()
@@ -171,13 +182,16 @@ def package_owning(path: Path, manager: PackageManager) -> tuple[str, str]:
 def removal_command(package: str, manager: PackageManager) -> str:
     """The command that removes a package, for this machine's manager.
 
-    Generated rather than written down, because the advice is read on four
-    platforms and a hardcoded `pacman` line is wrong on three of them.
+    Generated rather than written down, because the advice is read on every
+    platform this repo installs and a hardcoded `pacman` line is wrong on all but
+    one of them. Winget takes no `sudo` and needs none: it asks Windows for
+    elevation itself when the package requires it.
     """
     return {
         PackageManager.PACMAN: f'sudo pacman -Rs {package}',
         PackageManager.APT: f'sudo apt-get remove {package}',
         PackageManager.BREW: f'brew uninstall {package}',
+        PackageManager.WINGET: f'winget uninstall {package}',
     }[manager]
 
 

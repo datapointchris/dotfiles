@@ -109,6 +109,44 @@ def test_a_tool_requiring_a_wsl_host_resolves_only_there(declaration: catalog.Ca
     assert 'win32yank' not in on_arch
 
 
+def test_the_windows_machine_plans_every_winget_row_and_nothing_else_does(declaration: catalog.Catalog) -> None:
+    """Subscription, not availability — which is why the assertion is two-sided.
+
+    `resolve.available` has no rule for these, unlike the three sections beside it
+    that a coordinate rules out. It could: a Mac cannot run winget any more than
+    Arch can run a cask. What stops the rule being written today is that a Linux
+    machine installing winget packages is not hypothetical — the WSL box does
+    exactly that across `/mnt/c`, and forbidding it by `os_family` would decide
+    against that before the verb doing it has been retired.
+
+    So nothing but the manifest keeps these off the other four machines, and this
+    is what says so the day one of them names a row.
+    """
+    declared = {entry.name for entry in declaration.section('winget_packages')}
+    on_windows = {item.name for item in planned(declaration, 'windows-work-workstation').for_section('winget_packages')}
+
+    assert declared, 'nothing declares a winget package, so this asserts nothing'
+    assert on_windows == declared
+    for name in MACHINES:
+        if name != 'windows-work-workstation':
+            assert not planned(declaration, name).for_section('winget_packages'), name
+
+
+def test_every_winget_row_resolves_to_the_binary_it_puts_on_path(declaration: catalog.Catalog) -> None:
+    """Three of the eight are named for the package and ship a differently-named
+    binary — ripgrep/rg, fd-find/fd, git-delta/delta. The item carries what
+    `evidence.by_command` asks PATH about, so a row whose `command` went missing
+    would report itself installed on a machine that has no such executable.
+    """
+    plan = planned(declaration, 'windows-work-workstation')
+    resolved = {item.name: item.executable for item in plan.for_section('winget_packages')}
+
+    assert resolved['ripgrep'] == 'rg'
+    assert resolved['fd-find'] == 'fd'
+    assert resolved['git-delta'] == 'delta'
+    assert all(resolved.values()), 'a row with no executable is measured by nothing'
+
+
 DEPLOYED_TREES = ('apps', 'configs', 'shell')
 """The three trees that get symlinked into `$HOME`, and so the only places a
 caller can invoke a binary from."""

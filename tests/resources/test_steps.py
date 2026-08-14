@@ -373,35 +373,6 @@ def test_the_windows_font_path_is_asked_of_windows_not_read_from_the_environment
     assert 'cmd.exe' in source
 
 
-def test_a_machine_that_is_not_wsl_has_no_windows_tree_to_be_behind() -> None:
-    """The real script, which is where `is_wsl` lives. Every non-WSL machine in
-    the fleet runs this row's observer during `check` and must read converged."""
-    assert steps.observe('windows-shell').verdict is Verdict.MATCHED
-
-
-def test_a_windows_tree_behind_the_repo_names_the_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    script = executable(tmp_path, 'sync.sh', '#!/bin/sh\nprintf "missing: .env\\nstale: .bashrc\\n"\n')
-    monkeypatch.setattr(steps, 'SYNC_WINDOWS_SHELL', script)
-
-    state = steps.observe('windows-shell')
-
-    assert state.verdict is Verdict.STALE
-    assert 'missing: .env' in state.detail
-    assert 'stale: .bashrc' in state.detail
-
-
-def test_a_check_that_cannot_run_is_unknown_rather_than_a_repair_nobody_asked_for(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Syncing on the strength of a check that failed would write the Windows
-    side from a repo state nothing confirmed was readable."""
-    script = executable(tmp_path, 'sync.sh', '#!/bin/sh\nexit 3\n')
-    monkeypatch.setattr(steps, 'SYNC_WINDOWS_SHELL', script)
-
-    state = steps.observe('windows-shell')
-
-    assert state.verdict is Verdict.UNKNOWN
-    assert state.repair is Repair.NONE
-
-
 def test_the_step_module_never_imports_the_environment_for_a_home(home: Path) -> None:
     """Every path here goes through `Path.home()`, which honours `$HOME` — which
     is why these tests can run without a Mac and why a systemd timer running

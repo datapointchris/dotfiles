@@ -45,11 +45,24 @@ LINUX = {'machine': 'box', 'platform': 'linux'}
 @pytest.mark.parametrize('name', machines.names(REPO_ROOT))
 def test_every_manifest_in_the_repo_loads(name: str) -> None:
     """A typo in linux-lxc-server.yml is invisible from the Mac where the commit
-    happens, which is why this reads all of them rather than `$MACHINE`."""
+    happens, which is why this reads all of them rather than `$MACHINE`.
+
+    The point has to be one a machine can be, not one of the four bundles. That
+    was the same assertion while every manifest resolved through `platform:`, and
+    stopped being it the moment one declared `coordinates:` directly — which the
+    Windows box does, because a bundle row is read by
+    `tests/resources/test_system.py` as a promise that every installer it selects
+    can be queried, and nothing can yet ask winget what is installed.
+
+    Coherence rather than membership is also the stronger half for the four that
+    do resolve through a bundle: `machine._from_axes` calls `incoherent` on a
+    direct declaration and `load` raises, so a bundle is the path where nothing
+    else asks.
+    """
     loaded = machines.load(name, REPO_ROOT)
 
     assert loaded.name == name
-    assert loaded.coordinates in axes.PLATFORM_BUNDLES.values()
+    assert axes.incoherent(loaded.coordinates) == ()
 
 
 def test_every_catalog_section_has_a_subscription_rule() -> None:
@@ -175,7 +188,9 @@ def test_coordinates_can_be_declared_directly(tmp_path: Path) -> None:
 
     assert loaded.coordinates.package_manager is axes.PackageManager.PACMAN
     assert loaded.coordinates.host is axes.Host.WSL
-    assert loaded.platform_label == ''
+    # Derived from the tuple, so a manifest that named no bundle still carries a
+    # label — pacman's, which is the half of Arch-on-WSL no single string held.
+    assert loaded.platform_label == 'archlinux'
 
 
 def test_declaring_both_a_platform_and_coordinates_is_refused(tmp_path: Path) -> None:

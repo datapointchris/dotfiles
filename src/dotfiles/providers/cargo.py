@@ -28,6 +28,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
+from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.providers import Result
@@ -62,8 +63,18 @@ def triple(target: Target) -> str:
     matched on: that was a prefix because the glob had to cover both gnu and musl
     entries, and a declaration naming its own target — `ripgrep` and `zoxide` ship
     musl — says which one it is without anything having to guess.
+
+    Windows is answered rather than left to the last expression, which is a
+    fallthrough and not a Linux test. No `cargo_packages` entry ever resolves here
+    for it — Windows CLIs are declared as `winget_packages` — but `create_bundle`
+    also asks this for uv, and a Windows bundle was being handed
+    `x86_64-unknown-linux-gnu` and staging a Linux ELF under a Windows label. That
+    is the failure `coordinates.platform_label` names: a default that reads as an
+    answer.
     """
     machine = 'aarch64' if target.is_arm else 'x86_64'
+    if target.os_family is OSFamily.WINDOWS:
+        return f'{machine}-pc-windows-msvc'
     return f'{machine}-apple-darwin' if target.is_darwin else f'{machine}-unknown-linux-gnu'
 
 

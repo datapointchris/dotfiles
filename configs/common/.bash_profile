@@ -12,10 +12,30 @@ export EDITOR="nvim"
 
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
-PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-[[ -d "$HOME/.local/bin" ]] && PATH="$HOME/.local/bin:$PATH"
-[[ -d "$HOME/bin" ]] && PATH="$HOME/bin:$PATH"
-[[ -d "$HOME/go/bin" ]] && PATH="$HOME/go/bin:$PATH"
+# Prepended onto the PATH this shell was handed, and only where it does not
+# already carry the directory.
+#
+# The first line here used to assign PATH the five Unix system directories
+# outright. That reset was doing real work — it is what kept the unconditional
+# prepends under it from accumulating across nested login shells — and it could
+# afford to throw away what it was handed only because on Unix that was the same
+# five directories. Git Bash reads this file for every login shell, and there the
+# inherited PATH is the only copy of System32, the winget shim directory, and
+# everything else Windows assembles from the registry.
+#
+# Appending `:$PATH` to the reset would save those and hand the accumulation
+# back. A membership test keeps both: nothing is discarded, and running this file
+# a second time changes nothing. It also leaves one file rather than a copy per
+# os value — configs/ deploys whole files and merges nothing, so moving a single
+# line onto the os axis means three .bash_profiles, two of them identical.
+for path_directory in /sbin /usr/sbin /bin /usr/bin /usr/local/bin "$HOME/.local/bin" "$HOME/bin" "$HOME/go/bin"; do
+  if [[ -d "$path_directory" && ":$PATH:" != *":$path_directory:"* ]]; then
+    # The separator is conditional because an empty PATH would otherwise gain a
+    # trailing colon, and an empty PATH entry means the current directory.
+    PATH="$path_directory${PATH:+:$PATH}"
+  fi
+done
+unset path_directory
 export PATH
 
 HISTSIZE=10000

@@ -1,18 +1,18 @@
-"""Offline bundles, and the Windows side of a WSL install.
+"""Offline bundles: this repo's installers, staged for a machine with no network.
 
-Both exist for the same machine: a work box behind a firewall that cannot reach
-GitHub. They are separate resources because they stage different things — one
-carries this repo's installers, the other carries Windows executables that WSL
-copies onto its own PATH.
+It exists for a work box behind a firewall that cannot reach GitHub. The bundle
+is built where the network is, for a machine that is not the one building it,
+which is why neither `--machine` nor `--arch` has a default.
 
-`windows apply --offline` rather than a `stage` verb, because it *installs*:
-staging would imply the machine is left untouched, and it is not.
+A second group sat beside this one until Windows became a machine of its own,
+carrying the Windows executables a WSL box copied onto the Git Bash PATH. It was
+a way to reach a machine the fleet could not address directly; a Windows manifest
+addresses it, so the group and the bridge behind it are gone rather than renamed.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
-import datetime as dt
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -24,8 +24,6 @@ from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
-from dotfiles import windows
-from dotfiles import windows_bundle
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
@@ -40,7 +38,6 @@ from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
-windows_app = typer.Typer(no_args_is_help=True, help='The Windows half of a WSL install')
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -250,78 +247,3 @@ def prune() -> None:
     error('bundle prune is not built, and may never need to be: staging moves to $XDG_RUNTIME_DIR, which empties on reboot')
     hint('a staged bundle today is under ~/installers and is removed by hand')
     raise typer.Exit(ExitCode.ISSUE)
-
-
-@windows_app.command('check')
-def windows_check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
-    """Report which Windows tools are missing from this WSL machine's PATH.
-
-    A real checker as of the conversion, and cheap enough to be one: the question
-    is which declared filenames exist in a single directory, so it needs neither
-    winget nor a network — which is what stopped it existing while the answer lived
-    inside a shell script that could only install.
-    """
-    verbosity(verbose, quiet)
-    into = windows.destination()
-
-    absent = windows.missing(into)
-    for name in sorted(absent):
-        render_row('missing', name, f'not in {into}', 'yellow')
-    # Names on both sides. `windows.TOOLS` holds `Tool`, `windows.missing` returns
-    # their names, so differencing the two removes nothing and then sorts a frozen
-    # dataclass declared without `order=True` — a TypeError on every invocation.
-    for name in sorted({tool.name for tool in windows.TOOLS} - set(absent)):
-        render_row('matched', name, '', 'green')
-    console.print(f'{len(windows.TOOLS) - len(absent)} of {len(windows.TOOLS)} Windows tools in {into}')
-    raise typer.Exit(ExitCode.DRIFT if absent else ExitCode.CONVERGED)
-
-
-@windows_app.command('apply')
-def windows_apply(
-    source: str = typer.Option(None, '--source', help='Bundle archive or directory to install from'),
-    offline: bool = typer.Option(False, '--offline', help='Install from --source rather than winget'),
-    verbose: int = VerboseOption,
-    quiet: bool = QuietOption,
-) -> None:
-    """Install the Windows tools WSL copies onto its PATH.
-
-    The shell tree is deliberately not synced here any more. `setup-windows.sh`
-    ended by running `sync-windows-shell.sh`, which is now the `windows-shell`
-    step — so `dotfiles apply` converges it, and doing it again here would be one
-    act with two owners and no way to tell which had run.
-    """
-    verbosity(verbose, quiet)
-    if offline and not source:
-        raise typer.BadParameter('--offline needs --source naming the bundle to install from')
-
-    into = windows.destination()
-    unresolved = windows.install_from_bundle(Path(source), into) if offline else windows.install_via_winget(into)
-
-    for name in sorted(unresolved):
-        render_row('failed', name, f'did not land in {into}', 'red')
-    console.print(f'{len(windows.TOOLS) - len(unresolved)} of {len(windows.TOOLS)} Windows tools in {into}')
-    raise typer.Exit(ExitCode.ISSUE if unresolved else ExitCode.CONVERGED)
-
-
-@windows_app.command('create')
-def windows_create(archive: str = typer.Argument(None, help='Output archive (default: dated, in the repo root)')) -> None:
-    """Download the Windows executables into an archive, from any machine.
-
-    Its own verb rather than a value of one of `bundle create`'s flags, because
-    the two carry different things: `bundle create` packs this repo's installers
-    for a machine a manifest declares, and this packs Windows executables that WSL
-    copies onto its PATH. Windows is neither a manifest nor a CPU, so it has
-    nowhere to go in that grammar.
-
-    There is deliberately no `windows sync`: the `windows-shell` step converges
-    the Git Bash tree under `dotfiles apply`, so a separate verb would be the same
-    act with one more way to forget it.
-
-    Runs anywhere, unlike its siblings — it only downloads, so the machine
-    building the bundle is deliberately not the machine that will install it.
-    """
-    default = paths.REPO_ROOT / f'dotfiles-windows-tools-v{dt.date.today():%Y%m%d}.tar.gz'
-    built = windows_bundle.build(Path(archive) if archive else default)
-
-    success(f'{built}')
-    raise typer.Exit(ExitCode.CONVERGED)

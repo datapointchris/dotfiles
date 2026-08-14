@@ -1213,6 +1213,86 @@ cargo_packages:
 
 
 # ================================================================
+# WINGET PACKAGES (Windows)
+# ================================================================
+# Installed via: winget install <id>, then the .exe copied onto ~/.local/bin
+# `repo` and `asset` name where the same binary is published on GitHub. Nothing
+# reads them yet; they are the coordinate an offline channel would start from,
+# for a machine whose employer network blocks winget outright
+#
+# Six of these eight are cargo_packages above and would be spelled the same way
+# there if the mechanism carried over. It does not: winget is the manager, and
+# the Windows asset names disagree with the Rust target triple far enough that
+# no shared pattern reaches both — eza publishes eza.exe_x86_64-pc-windows-gnu.zip
+# against a Linux row saying nothing of the sort.
+
+winget_packages:
+  - name: jq
+    command: jq
+    winget: jqlang.jq
+    repo: jqlang/jq
+    asset: jq-windows-amd64.exe
+    description: JSON processor
+    tags: [cli, json]
+
+  - name: fzf
+    command: fzf
+    winget: junegunn.fzf
+    repo: junegunn/fzf
+    asset: "fzf-{version_num}-windows_amd64.zip"
+    description: Fuzzy finder
+    tags: [cli, search]
+
+  - name: ripgrep
+    command: rg
+    winget: BurntSushi.ripgrep
+    repo: BurntSushi/ripgrep
+    asset: "ripgrep-{version}-x86_64-pc-windows-msvc.zip"
+    description: Fast grep alternative
+    tags: [cli, search]
+
+  - name: bat
+    command: bat
+    winget: sharkdp.bat
+    repo: sharkdp/bat
+    asset: "bat-{version}-x86_64-pc-windows-msvc.zip"
+    description: cat with syntax highlighting
+    tags: [cli, files]
+
+  - name: fd-find
+    command: fd
+    winget: sharkdp.fd
+    repo: sharkdp/fd
+    asset: "fd-{version}-x86_64-pc-windows-msvc.zip"
+    description: modern find replacement
+    tags: [cli, search, files]
+
+  - name: eza
+    command: eza
+    winget: eza-community.eza
+    repo: eza-community/eza
+    asset: eza.exe_x86_64-pc-windows-gnu.zip
+    description: modern ls replacement
+    tags: [cli, files]
+
+  - name: zoxide
+    command: zoxide
+    winget: ajeetdsouza.zoxide
+    repo: ajeetdsouza/zoxide
+    asset: "zoxide-{version_num}-x86_64-pc-windows-msvc.zip"
+    description: Smarter cd command
+    tags: [cli]
+
+  - name: git-delta
+    command: delta
+    winget: dandavison.delta
+    repo: dandavison/delta
+    asset: "delta-{version}-x86_64-pc-windows-msvc.zip"
+    description: syntax-highlighting git diff
+    tags: [cli, git]
+
+
+# ================================================================
 # TMUX PLUGINS
 # ================================================================
 # Installed via TPM (Tmux Plugin Manager)

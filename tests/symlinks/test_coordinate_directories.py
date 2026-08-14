@@ -32,11 +32,14 @@ from dotfiles.symlinks import core
 
 TREES = tuple(name for name, _, _ in symlinks.TREES)
 
-NOT_COORDINATES = {'common', 'git-bash'}
-"""`common` is every machine's base. `git-bash` is payload for a different
-computer — `sync-windows-shell.sh` copies it onto the Windows host beside WSL —
-and is deliberately outside the coordinate scheme so that it is visibly not
-something a machine selects."""
+NOT_COORDINATES = {'common'}
+"""`common` is every machine's base, and it is the only thing a tree may hold
+that no coordinate selects.
+
+`git-bash` was the second entry for as long as the Windows side was payload for a
+computer this repo did not deploy to. Windows is a machine now, so that directory
+is `shell/os/windows/` and the exemption is gone — which is the assertion, since
+a name left here would exempt whatever later took it."""
 
 
 def coordinate_directories(tree: Path) -> set[str]:

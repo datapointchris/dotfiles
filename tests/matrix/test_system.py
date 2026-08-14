@@ -1,4 +1,4 @@
-"""`system` and `windows`: the two halves of the machine that answer to somebody else.
+"""`system`: the half of the machine that answers to somebody else.
 
 `system` is the only resource whose repairs need root, and every one of them is
 measured here through the front door with root *declined*. That is not a
@@ -24,10 +24,6 @@ passwd databases are read through `grp` and `pwd`, which answer for the account
 running the suite and have no injectable knob — the same two `tests/resources/
 test_sysconfig.py` patches, for the same reason. Everything else is a real seam:
 `system.yml` on disk, a fake bin dir on `PATH`, files under the sandbox.
-
-`windows` reaches the Windows side through `/proc/version` and `/mnt/c`, and
-those are the one place this module patches `dotfiles` itself. See
-`under_a_windows_side` for what has no seam and why.
 """
 
 from __future__ import annotations
@@ -37,7 +33,6 @@ import grp
 import json
 import os
 import pwd
-import re
 from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
@@ -46,12 +41,10 @@ from typing import Any
 import pytest
 import yaml
 
-from dotfiles import windows
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
 from matrix.harness import REFUSED
 from matrix.harness import Invocation
-from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
 from matrix.harness import resource
 
@@ -834,219 +827,6 @@ def test_a_row_declaring_it_needs_no_root_is_written_without_root(sandbox: Sandb
 
     assert ran.exit_code == ExitCode.CONVERGED
     assert (sandbox.root / 'etc' / 'thing.conf').read_text() == 'hello\n'
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# windows: the Windows side of a WSL install
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def under_a_windows_side(monkeypatch: pytest.MonkeyPatch) -> Callable[[Path | None], None]:
-    """Say whether this machine has a Windows side, and where its home is.
-
-    **The one place this module patches `dotfiles` itself, because there is no
-    seam.** `under_wsl` reads `/proc/version` — chosen deliberately over an
-    environment variable, so that the marker survives `sudo` and a login shell
-    that sets nothing — and `windows_home` builds an absolute path under
-    `/mnt/c/Users`. Neither takes an argument, neither reads a variable, and the
-    CLI calls `destination()` with nothing to pass. A test that read the real
-    `/proc/version` would assert one thing on this box and the opposite on the
-    work box, which is the machine-independence the matrix exists to keep.
-
-    `cmd.exe` stays a real seam and is shadowed rather than patched wherever the
-    question is what Windows answered.
-    """
-
-    def pretend(home: Path | None) -> None:
-        monkeypatch.setattr(windows, 'under_wsl', lambda: home is not None)
-        if home is not None:
-            home.mkdir(parents=True, exist_ok=True)
-            monkeypatch.setattr(windows, 'windows_home', lambda: home)
-
-    return pretend
-
-
-UNREACHABLE: list[tuple[str, str | None, str]] = [
-    ('no-windows-side-at-all', None, 'not running under WSL'),
-    ('windows-will-not-say-who-it-is', ANSWERS_NO, 'could not ask Windows for its username'),
-    ('a-windows-home-that-is-not-there', '#!/bin/sh\nprintf "SYNTHETIC\\r\\n"\n', 'Windows home does not exist at /mnt/c/Users/SYNTHETIC'),
-]
-"""The three ways the Windows side is out of reach, and what each says.
-
-`cmd.exe` is the seam for the last two: `windows_home` asks Windows for
-`%USERNAME%` rather than reusing the WSL account, because the two differ on this
-fleet and the employee id the Windows account is named after is exactly what does
-not go in this repo.
-"""
-
-
-@pytest.mark.parametrize(('shell', 'message'), [row[1:] for row in UNREACHABLE], ids=[row[0] for row in UNREACHABLE])
-@pytest.mark.parametrize('verb', ['check', 'apply'])
-def test_a_windows_command_off_the_windows_side_says_so_rather_than_inventing_a_path(
-    sandbox: Sandbox,
-    cli: Callable[..., Invocation],
-    monkeypatch: pytest.MonkeyPatch,
-    verb: str,
-    shell: str | None,
-    message: str,
-) -> None:
-    """A guess here writes binaries into a directory nothing reads, or reports a
-    machine's Windows tools missing on a machine that has no Windows."""
-    monkeypatch.setattr(windows, 'under_wsl', lambda: shell is not None)
-    if shell is not None:
-        sandbox.shadow('cmd.exe', shell)
-
-    ran = cli('windows', verb)
-
-    assert ran.exit_code == ExitCode.ISSUE
-    assert message in ran.output
-
-
-def test_windows_check_reports_the_declared_filenames_missing_from_one_directory(
-    sandbox: Sandbox, cli: Callable[..., Invocation], under_a_windows_side: Callable[[Path | None], None]
-) -> None:
-    """The whole measurement is which filenames exist in the one directory Git
-    Bash puts on its PATH — no winget, no network, which is what stopped this
-    existing while the answer lived inside a script that could only install."""
-    under_a_windows_side(sandbox.root / 'windows-home')
-
-    ran = cli('windows', 'check')
-
-    assert ran.exit_code == ExitCode.DRIFT
-    assert f'0 of {len(windows.TOOLS)} Windows tools' in ran.output
-    for tool in windows.TOOLS:
-        # By field rather than by sentence. The rows are column-aligned, so the
-        # gap between the state and the name is padding and changes whenever the
-        # widest name does.
-        assert re.search(rf'missing\s+{re.escape(tool.name)}\b', ran.output)
-
-
-def test_windows_check_is_converged_once_every_declared_binary_is_there(
-    sandbox: Sandbox, cli: Callable[..., Invocation], under_a_windows_side: Callable[[Path | None], None]
-) -> None:
-    """Keyed on the declared `exe` rather than the tool name, which differ:
-    ripgrep's binary is `rg.exe`."""
-    home = sandbox.root / 'windows-home'
-    under_a_windows_side(home)
-    destination = home / '.local' / 'bin'
-    destination.mkdir(parents=True)
-    for tool in windows.TOOLS:
-        (destination / tool.exe).write_text('BINARY')
-
-    ran = cli('windows', 'check')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert f'{len(windows.TOOLS)} of {len(windows.TOOLS)} Windows tools' in ran.output
-
-
-def test_an_offline_windows_apply_without_a_source_is_a_usage_error(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`--offline` names *where from*, and a run that accepted it alone would fall
-    through to winget on the one machine that cannot reach it."""
-    ran = cli('windows', 'apply', '--offline', catch_exceptions=True)
-
-    assert ran.exit_code == ExitCode.USAGE
-    assert '--offline needs --source' in ran.output
-
-
-BUNDLES: list[tuple[str, str, ExitCode, str]] = [
-    ('a-bundle-that-is-not-there', 'absent.tar.gz', ExitCode.ISSUE, 'bundle not found'),
-    ('a-bundle-carrying-nothing', 'empty', ExitCode.ISSUE, 'no .exe files'),
-]
-
-
-@pytest.mark.parametrize(('name', 'code', 'message'), [row[1:] for row in BUNDLES], ids=[row[0] for row in BUNDLES])
-def test_an_unusable_bundle_fails_rather_than_reporting_a_clean_install(
-    sandbox: Sandbox,
-    cli: Callable[..., Invocation],
-    under_a_windows_side: Callable[[Path | None], None],
-    name: str,
-    code: ExitCode,
-    message: str,
-) -> None:
-    """An empty directory copies zero files and would otherwise exit as though it
-    had done the job — on the one machine that cannot go and get them."""
-    under_a_windows_side(sandbox.root / 'windows-home')
-    (sandbox.root / 'empty').mkdir()
-
-    ran = cli('windows', 'apply', '--offline', '--source', str(sandbox.root / name))
-
-    assert ran.exit_code == code
-    assert message in ran.output
-
-
-def test_an_offline_windows_apply_installs_what_the_bundle_carries_and_names_the_rest(
-    sandbox: Sandbox, cli: Callable[..., Invocation], under_a_windows_side: Callable[[Path | None], None]
-) -> None:
-    """Exit 3 for a partial bundle, because a tool this machine expects and the
-    bundle lacks is the failure worth naming."""
-    home = sandbox.root / 'windows-home'
-    under_a_windows_side(home)
-    bundle = sandbox.root / 'bundle'
-    bundle.mkdir()
-    (bundle / 'rg.exe').write_text('RIPGREP')
-
-    ran = cli('windows', 'apply', '--offline', '--source', str(bundle))
-
-    assert (home / '.local' / 'bin' / 'rg.exe').read_text() == 'RIPGREP'
-    assert ran.exit_code == ExitCode.ISSUE
-    assert f'1 of {len(windows.TOOLS)} Windows tools' in ran.output
-    assert re.search(r'jq\s+did not land', ran.output)
-
-
-def test_a_complete_bundle_converges_and_reaches_no_windows_side_to_do_it(
-    sandbox: Sandbox, cli: Callable[..., Invocation], under_a_windows_side: Callable[[Path | None], None]
-) -> None:
-    home = sandbox.root / 'windows-home'
-    under_a_windows_side(home)
-    bundle = sandbox.root / 'bundle'
-    bundle.mkdir()
-    for tool in windows.TOOLS:
-        (bundle / tool.exe).write_text('BINARY')
-
-    ran = cli('windows', 'apply', '--offline', '--source', str(bundle))
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert cli('windows', 'check').exit_code == ExitCode.CONVERGED
-
-
-def test_an_online_windows_apply_asks_winget_for_every_declared_package(
-    sandbox: Sandbox, cli: Callable[..., Invocation], under_a_windows_side: Callable[[Path | None], None]
-) -> None:
-    """winget exits non-zero for "already at latest version", so its status is
-    ignored and what decides the outcome is whether the binary landed. A winget
-    that installs nothing therefore has to report every tool unresolved rather
-    than a clean run."""
-    under_a_windows_side(sandbox.root / 'windows-home')
-    asked = sandbox.root / 'winget-calls'
-    sandbox.shadow('cmd.exe', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {asked}\nexit 0\n')
-
-    ran = cli('windows', 'apply')
-
-    requested = asked.read_text()
-    for tool in windows.TOOLS:
-        assert tool.winget in requested
-    assert ran.exit_code == ExitCode.ISSUE
-    assert f'0 of {len(windows.TOOLS)} Windows tools' in ran.output
-
-
-def test_windows_create_runs_off_the_windows_side_and_upstream_is_where_it_stops(
-    sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Unlike its siblings this one only downloads, so the machine building the
-    bundle is deliberately not the machine that will install it.
-
-    Which makes it the one command in this module that must reach GitHub — so the
-    matrix's network guard is the assertion. It gets past the WSL check, creates
-    the directory it was told to write into, and stops at the first release
-    lookup.
-    """
-    monkeypatch.setattr(windows, 'under_wsl', lambda: False)
-
-    with pytest.raises(ReachedTheNetwork):
-        cli('windows', 'create', str(sandbox.root / 'out' / 'tools.tar.gz'))
-
-    assert (sandbox.root / 'out').is_dir()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

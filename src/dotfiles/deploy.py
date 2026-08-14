@@ -1,10 +1,9 @@
-"""Deploying the repo into $HOME, and the three jobs that follow it.
+"""Deploying the repo into $HOME, and the two jobs that follow it.
 
 The deciding is `resources/symlinks.py`. What lives here is the epilogue, which
 belongs with the deployment rather than at the end of a run: git needs somewhere
-to write that is not this repo, WSL needs the shell profile copied onto the
-Windows host beside it, and Hyprland has to reload the files the pass just
-deployed.
+to write that is not this repo, and Hyprland has to reload the files the pass
+just deployed.
 
 There is one deployment verb, because reconciling always prunes. A create-only
 pass leaves a broken link behind whenever a source is deleted, and asks the
@@ -16,7 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from dotfiles import coordinates as axes
-from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import err_console
@@ -118,31 +116,18 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
     hint(f'removed {HOME_GITCONFIG} — the entry point is now {GIT_CONFIG_ENTRY}')
 
 
-def _sync_windows_shell(coordinates: axes.Coordinates) -> None:
-    """Copy the shell profile onto the Windows host beside this one.
-
-    Keyed on the host rather than on `wsl` the platform: there is a Windows side
-    to copy to whenever WSL is the host, whatever distro is running inside it.
-    """
-    if coordinates.host is not axes.Host.WSL:
-        return
-    run(['bash', str(paths.INSTALL_DIR / 'wsl' / 'sync-windows-shell.sh')], cwd=paths.REPO_ROOT)
-
-
 def epilogue(session: Session) -> None:
-    """The three jobs that follow a deployment, and belong with it rather than at
+    """The two jobs that follow a deployment, and belong with it rather than at
     the end of a run.
 
-    git needs somewhere to write that is not this repo, WSL needs the shell profile
-    copied onto the Windows host beside it, and Hyprland has to reload the files the
-    pass just deployed.
+    git needs somewhere to write that is not this repo, and Hyprland has to reload
+    the files the pass just deployed.
 
     The deploying itself belongs to the engine. What is left here is genuinely not
     the walk — carrying it would mean a second observe/diff/perform loop beside the
     resource's.
     """
     _ensure_git_config_entry(session.machine.coordinates)
-    _sync_windows_shell(session.machine.coordinates)
     _reload_compositor(session.machine.coordinates)
 
 

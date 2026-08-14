@@ -52,6 +52,7 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import toolchain
+from dotfiles.providers import winget
 from dotfiles.refusal import Refusal
 from dotfiles.resolve import DesiredItem
 
@@ -98,6 +99,7 @@ Directory Structure:
   |-- wheels/         # the CLI's own dependency closure
   |-- binaries/       # GitHub release binaries + cargo tools
   |-- go-binaries/    # pre-built Go tool binaries
+  |-- winget-binaries/ # Windows .exe files for a machine that cannot reach the Store
   `-- scripts/        # install scripts (theme, font, claude-code)
 
 checksums.txt is what lets the installer verify a cached binary without
@@ -345,13 +347,14 @@ class Bundle:
         self.arch = arch
         self.binaries = staging / 'binaries'
         self.go_binaries = staging / 'go-binaries'
+        self.winget_binaries = staging / winget.BUNDLE_BINARIES
         self.scripts = staging / 'scripts'
         self.bin = staging / 'bin'
         self.wheels = staging / 'wheels'
         self.entries: list[str] = []
         self.checksums: list[str] = []
 
-        for directory in (self.binaries, self.go_binaries, self.scripts, self.bin, self.wheels):
+        for directory in (self.binaries, self.go_binaries, self.winget_binaries, self.scripts, self.bin, self.wheels):
             directory.mkdir(parents=True, exist_ok=True)
 
     def record(self, category: str, name: str, version: str, filename: str) -> None:
@@ -508,6 +511,71 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
         archive_path.unlink()
 
 
+def extract_windows_exe(archive: Path, exe_name: str, destination: Path) -> None:
+    """Pull one `.exe` out of a release zip, and consume the zip.
+
+    Searched rather than read from a known path: these publishers disagree about
+    whether the binary sits at the archive root or under a versioned directory,
+    and a declaration naming the executable says which file is wanted without
+    also having to say where inside the archive each publisher put it.
+    """
+    with tempfile.TemporaryDirectory() as workspace:
+        extracted = Path(workspace)
+        with zipfile.ZipFile(archive) as opened:
+            opened.extractall(extracted)  # noqa: S202
+
+        found = next((path for path in sorted(extracted.rglob(exe_name)) if path.is_file()), None)
+        if found is None:
+            raise BundleError(f'Could not find {exe_name} inside {archive.name}')
+        shutil.move(str(found), destination)
+
+    archive.unlink()
+
+
+def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
+    """Stage every declared Windows CLI's executable, named by its own provider.
+
+    The category whose machine cannot use its declared installer at all. Everywhere
+    else the bundle is an alternative to a slow or unreachable source; here the
+    employer network blocks the Store outright, so a Windows manifest that declares
+    only `winget_packages` has exactly one install route and this is the other end
+    of it. That is what the `repo` and `asset` columns were declared for, and they
+    sat unread from the day the WSL bridge that used to read them was deleted.
+
+    The asset is named by `providers.winget.stage`, which is the module that
+    installs the result — the same arrangement `add_go_binaries` records, for the
+    failure it measured: two sides expanding one declaration in two files, so a
+    change moves one of them and the miss is silent on the only machine affected.
+
+    Verified against the checksum the publisher wrote, like every other GitHub
+    asset here. The machine this is built for cannot reach the release API to
+    resolve which asset carries the checksum, so verification happens on this side
+    or it does not happen.
+    """
+    log.info('Downloading Windows executables...')
+
+    for item in items:
+        entry = item.entry
+        assert isinstance(entry, catalog.WingetPackage)
+        version = fetch_latest_version(entry.repo)
+        asset = github_asset(entry.repo, version, winget.stage(entry, version))
+
+        downloaded = bundle.winget_binaries / asset.filename
+        cache.fetch(asset, downloaded, f'  {entry.name} ({version})')
+        verify_against_upstream(bundle, cache, downloaded, asset)
+
+        # Staged under the name it has to land on PATH as, so the install is a
+        # copy. Two publishers ship the bare exe and the rest ship a zip, and
+        # which of the two is a fact about the asset rather than about the tool.
+        executable = bundle.winget_binaries / entry.filename
+        if asset.filename.endswith('.zip'):
+            extract_windows_exe(downloaded, entry.filename, executable)
+        elif downloaded != executable:
+            downloaded.replace(executable)
+
+        bundle.record('winget', entry.name, version, entry.filename)
+
+
 def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
     """Stage every declared release, named by the same functions that install it.
 
@@ -632,7 +700,18 @@ WHEEL_PLATFORMS = {
     ('linux', 'arm64'): ('manylinux', 'aarch64'),
     ('darwin', 'x86_64'): ('macosx', 'x86_64'),
     ('darwin', 'arm64'): ('macosx', 'arm64'),
+    ('windows', 'x86_64'): ('win', 'amd64'),
+    ('windows', 'arm64'): ('win', 'arm64'),
 }
+"""The `(prefix, suffix)` a wheel's platform tag has to carry, per target.
+
+Total over `OSFamily` x `Arch` rather than over the families that existed when it
+was written. `wheel_matches` subscripts it directly, so a coordinate a manifest
+can legally declare and this cannot answer is a bare `KeyError` from the middle of
+a download loop — which is what a Windows manifest got, on the first wheel PyPI
+serves for any platform. A bundle for that machine could not be built at all,
+which is a strange way for a table to report a missing row.
+"""
 
 
 def python_floor() -> int:
@@ -721,28 +800,41 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
     installs — astral.sh serves one unversioned script that fetches the newest
     release. Resolved once and handed on rather than asked for twice, so the two
     rows describing one uv cannot disagree about which one this bundle is.
+
+    Windows takes the other archive format astral publishes and keeps the `.exe`
+    suffix, because both are facts about the asset rather than decoration: the
+    release carries `uv-{triple}.zip` there and no tarball, and a PE without its
+    suffix is a file Windows declines to execute. `install.sh` looks for `bin/uv`
+    and so does not yet consume this — a bootstrap that has no Git Bash path is a
+    separate gap, and it is loud where staging a Linux ELF under a Windows label
+    was silent.
     """
     log.info('Downloading uv...')
     version = fetch_latest_version(UV_REPO)
-    triple = cargo.triple(Target(OSFamily(bundle.os_name), Arch(bundle.arch)))
-    asset = github_asset(UV_REPO, version, f'uv-{triple}.tar.gz')
+    target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
+    windows = target.os_family is OSFamily.WINDOWS
+    binary = 'uv.exe' if windows else 'uv'
+    asset = github_asset(UV_REPO, version, f'uv-{cargo.triple(target)}.{"zip" if windows else "tar.gz"}')
 
     archive = bundle.bin / asset.filename
     cache.fetch(asset, archive, f'  uv ({version})')
     verify_against_upstream(bundle, cache, archive, asset)
 
-    with tempfile.TemporaryDirectory() as workspace:
-        extracted = Path(workspace)
-        with tarfile.open(archive) as tar:
-            extract_all(tar, extracted)
-        binary = next((path for path in extracted.rglob('uv') if path.is_file()), None)
-        if binary is None:
-            raise BundleError(f'no uv binary inside {asset.filename}')
-        shutil.move(str(binary), bundle.bin / 'uv')
+    if windows:
+        extract_windows_exe(archive, binary, bundle.bin / binary)
+    else:
+        with tempfile.TemporaryDirectory() as workspace:
+            extracted = Path(workspace)
+            with tarfile.open(archive) as tar:
+                extract_all(tar, extracted)
+            found = next((path for path in extracted.rglob(binary) if path.is_file()), None)
+            if found is None:
+                raise BundleError(f'no uv binary inside {asset.filename}')
+            shutil.move(str(found), bundle.bin / binary)
+        archive.unlink()
 
-    (bundle.bin / 'uv').chmod(0o755)
-    archive.unlink()
-    bundle.record('uv', 'uv', version, 'uv')
+    (bundle.bin / binary).chmod(0o755)
+    bundle.record('uv', 'uv', version, binary)
     return version
 
 
@@ -887,6 +979,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
         add_github_releases(bundle, cache, plan.for_section('github_releases'))
         add_go_binaries(bundle, cache, plan.for_section('go_tools'))
         add_cargo_binaries(bundle, cache, plan.for_section('cargo_packages'))
+        add_winget_binaries(bundle, cache, plan.for_section('winget_packages'))
         add_install_scripts(bundle, plan.for_section('custom_installers'), uv_version)
         bundle.write_metadata()
 

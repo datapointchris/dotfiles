@@ -144,7 +144,7 @@ def _plan(name: str, owner: str | None = None) -> resolver.Plan:
 
 def _render(plan: resolver.Plan) -> None:
     machine = plan.machine
-    console.print(f'[bold]{machine.name}[/]  {machine.platform_label or "custom coordinates"}')
+    console.print(f'[bold]{machine.name}[/]  {machine.platform_label}')
     console.print()
 
     for axis, value in machine.coordinates.as_dict().items():

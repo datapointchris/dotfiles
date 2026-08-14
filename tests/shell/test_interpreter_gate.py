@@ -62,10 +62,10 @@ def run_pytest(*arguments: str, path: str | None = None) -> Run:
 COLLECTION_NEEDS = ('bash', 'git')
 """What collecting this directory runs before any test does.
 
-`test_repo_root` shells out to `git ls-files` and `test_windows_shell_sync_sh`
-builds its parameters from a bash run, both at import time. A PATH without these
-dies during collection for the wrong reason, and the refusal under test is never
-reached — so they are carried, and only the interpreters are taken away.
+`test_repo_root` shells out to `git ls-files` at import time, and the library
+tests beside it run bash. A PATH without these dies during collection for the
+wrong reason, and the refusal under test is never reached — so they are carried,
+and only the interpreters are taken away.
 """
 
 

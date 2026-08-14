@@ -421,9 +421,9 @@ def test_a_ceiling_below_the_symlink_stage_deploys_nothing_and_so_runs_no_epilog
     """`--through` has to reach the work and not only the plan.
 
     Every job here is justified by "the pass above just deployed these files": git
-    needs somewhere to write that is not this repo, Hyprland has to reload the
-    config that landed, and WSL copies the shell profile onto the Windows host.
-    Under a ceiling that deploys nothing they act on files nobody wrote.
+    needs somewhere to write that is not this repo, and Hyprland has to reload the
+    config that landed. Under a ceiling that deploys nothing they act on files
+    nobody wrote.
     """
     walked(monkeypatch, Walk())
 
@@ -434,7 +434,7 @@ def test_a_ceiling_below_the_symlink_stage_deploys_nothing_and_so_runs_no_epilog
 
 def test_a_ceiling_at_the_symlink_stage_still_runs_it(deployments: list[str], monkeypatch: pytest.MonkeyPatch) -> None:
     """The inverse mistake: a ceiling that includes the pass must not silently drop
-    the three jobs that finish it."""
+    the jobs that finish it."""
     walked(monkeypatch, Walk())
 
     reconcile.apply_machine(engine.Selection.of('symlinks').capped_at(Stage.SYMLINKS))
@@ -449,12 +449,15 @@ def test_a_ceiling_at_the_symlink_stage_still_runs_it(deployments: list[str], mo
 
 SHELLS = frozenset({'bash', 'sh', 'zsh', 'dash'})
 
-SHELL_SURVIVORS = frozenset({'sync-windows-shell.sh'})
-"""The one script a run may still reach, and only on a WSL host.
+SHELL_SURVIVORS: frozenset[str] = frozenset()
+"""Empty, which is what the conversion was for.
 
-Git Bash reads the `.bashrc` it writes, so its *output* has to be shell; the
-generator does not, and step E converts it. Named here rather than tolerated, so
-that conversion empties this set and anything else appearing in it is new.
+The last entry was the WSL script that staged the Git Bash tree, kept because Git
+Bash reads the `.bashrc` it writes and so its *output* had to be shell. Windows
+became a machine of its own and the script went with the bridge, so no part of a
+run reaches a shell at all and the assertion below carries no exemption. Kept as a
+named set rather than folded into the assertion, so an entry reappearing is
+argued for here.
 """
 
 
@@ -468,8 +471,8 @@ def test_no_part_of_a_run_hands_work_to_a_shell(name: str, monkeypatch: pytest.M
 
     The engine is stubbed rather than exercised: what it does with a plan is its
     own tests' subject, and what this asks is whether the *verb* reaches a shell
-    around it. Every machine, because the two gated calls in `deploy.epilogue`
-    fire on coordinates rather than on anything the walk decided.
+    around it. Every machine, because the gated call in `deploy.epilogue` fires on
+    coordinates rather than on anything the walk decided.
     """
     invoked: list[tuple[str, ...]] = []
 
