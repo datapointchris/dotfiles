@@ -113,8 +113,7 @@ def test_every_ramp_colours_the_shortest_font_end_to_end() -> None:
     shortest = min(banner.FONTS, key=len)
 
     for ramp in banner.RAMPS:
-        used = {ramp[min(position * len(ramp) // len(shortest), len(ramp) - 1)] for position in range(len(shortest))}
-        assert used == set(ramp)
+        assert set(banner.styles(shortest, ramp)) == set(ramp)
 
 
 def test_the_root_group_carries_the_masthead() -> None:

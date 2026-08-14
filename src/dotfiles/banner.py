@@ -114,6 +114,15 @@ def fitting(width: int) -> tuple[tuple[str, ...], ...]:
     return tuple(art for art in FONTS if widest(art) <= width) or (min(FONTS, key=widest),)
 
 
+def styles(art: tuple[str, ...], ramp: tuple[str, ...]) -> tuple[str, ...]:
+    """The colour each row of `art` takes, the ramp spread over however many there are.
+
+    The clamp is for the last row, whose index rounds up to `len(ramp)` once the
+    font has more rows than the ramp has colours.
+    """
+    return tuple(ramp[min(position * len(ramp) // len(art), len(ramp) - 1)] for position in range(len(art)))
+
+
 def show() -> None:
     """Print one banner, in a font and a ramp neither of which is yesterday's.
 
@@ -129,8 +138,7 @@ def show() -> None:
     # precedes it rather than reading as the last line of it.
     err_console.print()
     err_console.print()
-    for position, line in enumerate(art):
-        style = ramp[min(position * len(ramp) // len(art), len(ramp) - 1)]
+    for line, style in zip(art, styles(art, ramp), strict=True):
         err_console.print(Text(line, style=style), no_wrap=True, overflow='crop')
     err_console.print()
     err_console.print()
