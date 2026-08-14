@@ -35,9 +35,9 @@ BUNDLE_SCRIPTS = 'scripts'
 class Script:
     """A vendor install script on disk, or why it is not.
 
-    Truthy when there is one to run, for the reason `github_release.Fetched` is: both
-    call sites already branched on the old `Path | None`, so carrying the reason costs
-    them a field rather than a rewrite.
+    Truthy when there is one to run, for the reason `github_release.Fetched` is: a
+    caller branching on truthiness carries the reason as a field rather than having
+    to unpack a `Path | None`.
     """
 
     path: Path | None

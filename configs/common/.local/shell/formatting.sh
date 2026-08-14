@@ -24,9 +24,9 @@
 
 # These libraries always ship in one directory together, but which directory
 # depends on how the tree is reached: ~/.local/shell on a workstation, the repo
-# itself on a CI runner. Resolving the sibling from this file covers both. The
-# fallback this replaced hardcoded $HOME/dotfiles and failed anywhere the repo
-# is not checked out there, printing a source error onto every caller's stdout.
+# itself on a CI runner. Resolving the sibling from this file covers both; a
+# hardcoded $HOME/dotfiles fails anywhere the repo is not checked out there, and
+# prints a source error onto every caller's stdout.
 #
 # zsh leaves BASH_SOURCE unset and indexes arrays from 1, so ${BASH_SOURCE[0]}
 # is empty under zsh and dirname resolved to the caller's cwd -- ./colors.sh,

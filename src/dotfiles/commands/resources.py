@@ -4,9 +4,8 @@
 structural rather than a promise: nothing here takes a `--dry-run`, because there
 is no code path a flag could switch off.
 
-The leaves are converting one at a time. `env` is driven by the Resource protocol
-in `resources/`; the rest still shell out through `bridge.py`, which is where the
-remaining work is legible as a list of callers.
+Every noun's verbs are driven by the Resource protocol in `resources/`. Only
+browsing — `list`, `show`, `search` — goes through `bridge.py`.
 """
 
 from __future__ import annotations

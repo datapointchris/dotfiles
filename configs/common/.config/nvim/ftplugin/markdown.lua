@@ -1,6 +1,5 @@
--- Soft-wrap prose in every markdown buffer. Buffer-local (opt_local) so it
--- stays with this buffer instead of leaking into others — this replaces the
--- global BufWinEnter/BufWinLeave wrap toggling that used to live in autocmds.
+-- Soft-wrap prose in every markdown buffer. Buffer-local (opt_local) so it stays
+-- with this buffer instead of leaking into others, which a global autocmd would.
 vim.opt_local.wrap = true
 vim.opt_local.linebreak = true
 

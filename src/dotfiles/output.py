@@ -84,9 +84,9 @@ literals they had already been copied four times, and nothing would have failed 
 one of the copies drifted.
 
 `SUBJECT_COLUMN` is a floor rather than the width. A section sets its own from the
-longest item in it, so `shell-plugin/zsh-syntax-highlighting` no longer shoves one
-row's detail three columns right of its neighbours' — an alignment that holds for
-most rows and breaks for a few reads as a broken table rather than a wide word."""
+longest item in it, so one long address cannot shove that row's detail past its
+neighbours' — an alignment that holds for most rows and breaks for a few reads as
+a broken table rather than a wide word."""
 
 SUBJECT_CEILING = 44
 """Where a section stops widening for one long item.

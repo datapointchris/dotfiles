@@ -910,12 +910,11 @@ def apply_machine(
     together installs whatever survived the parse and reports success.
 
     **A whole-machine apply refuses on any error; a scoped one refuses on the
-    errors that concern what it was asked to converge.** The gate used to be keyed
-    on whether the selection held a resource with a *provider*, which is a fact
-    about how a resource is implemented rather than about what the fault is — so
-    `symlinks apply` ran against a `packages.yml` that would not parse, and would
-    have run against a symlink collision too. Narrowing to one resource is a
-    deliberate act and stays possible; converging the whole machine against a
+    errors that concern what it was asked to converge.** Keyed on what the fault
+    is, never on whether the selection holds a resource with a *provider* — that
+    is a fact about how a resource is implemented, and it lets `symlinks apply`
+    run against a `packages.yml` that will not parse. Narrowing to one resource is
+    a deliberate act and stays possible; converging the whole machine against a
     declaration nobody can satisfy is not.
 
     **Every human line this verb prints goes to stderr, the closing verdict

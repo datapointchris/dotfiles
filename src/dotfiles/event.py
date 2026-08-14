@@ -1,10 +1,9 @@
 """What a run emits, and the only vocabulary its consumers share.
 
 One measurement, several readers. The console renders it, `--json` serialises it,
-the run record accumulates it and the shell nudge folds it — and before this they
-were four call sites each reaching into the walk and printing as they went, which
-is why `runs.py` had nothing to record and why the same fold was written in four
-places with four sets of edge cases.
+the run record accumulates it and the shell nudge folds it. A reader that reached
+into the walk and printed as it went would leave the run record nothing to
+accumulate, and the fold would be rewritten once per reader.
 
 The payloads are the types the resources already return. This is an envelope, not
 a second vocabulary: a `Change` is still what `diff` decided and an `Outcome` is

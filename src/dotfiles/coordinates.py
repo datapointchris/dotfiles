@@ -1,9 +1,8 @@
 """The six axes a machine actually varies along, and the labels that bundle them.
 
 A machine reaches its point either way: through a `PLATFORM_BUNDLES` label, or by
-naming its six coordinates directly in the manifest. The Windows box takes the
-second route, so the labels are no longer a roster of the fleet — they are the
-shorthands that happen to have earned a name.
+naming its six coordinates directly in the manifest. The labels are not a roster
+of the fleet — they are the shorthands that happen to have earned a name.
 
 
 `PLATFORM` is not an axis. It is a *fused point* — package manager, OS family,

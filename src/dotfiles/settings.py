@@ -14,11 +14,9 @@ config; only the tool's own default is compiled in": this tool's own
 `DOTFILES_`-prefixed variable, then the config key. One answers this invocation
 and the other answers this machine.
 
-**A shared unprefixed variable used to sit between them and is gone.** It was
-how every reader of one file was told its location at once, and it could only
-ever answer in a shell — which is the half of the fleet this file exists for.
-The prefix rule is what replaced it: a tool reads no variable that is not its
-own, so one fleet's vocabulary can never be compiled into a generic tool.
+**A tool reads no variable that is not its own.** A shared unprefixed one can
+only ever answer in a shell, which is the half of the fleet this file exists for,
+and it compiles one fleet's vocabulary into a generic tool.
 
 **There is no third rung, and that is deliberate.** A default naming a path
 outside this tool's own XDG directories is what that standard forbids, and a

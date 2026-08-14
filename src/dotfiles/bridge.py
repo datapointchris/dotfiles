@@ -41,11 +41,10 @@ def declaration(*args: str, output: Output = Output.DATA) -> None:
     project on disk — true in the repo, false for the installed tool this CLI is
     becoming.
 
-    It used to signal through `sys.exit`, and the status was returned here and
-    handed straight to `typer.Exit` by six leaves. argparse's 1 is this tool's
-    `DRIFT`, so a misspelt package name reported the machine as having changes
-    pending. It raises a `Refusal` now, which carries whether it is a typo or a
-    broken declaration, and travels to the boundary untouched.
+    It raises a `Refusal`, which carries whether it is a typo or a broken
+    declaration and travels to the boundary untouched. Handing argparse's status
+    to `typer.Exit` instead lands on 1, which is this tool's `DRIFT`, so a
+    misspelt package name would report the machine as having changes pending.
 
     Only browsing is left behind this — `list`, `show`, `search`. Validation was
     the caller that made the SystemExit conversion load-bearing, because a finding

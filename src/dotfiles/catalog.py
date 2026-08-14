@@ -993,9 +993,8 @@ nothing."""
 class Catalog:
     """`packages.yml`, parsed once and indexed.
 
-    Nothing downstream re-reads the file and no provider takes a path: the 28
-    bash call sites that each spawned an interpreter and re-parsed 258 entries
-    become attribute access on this object.
+    Nothing downstream re-reads the file and no provider takes a path — every
+    reader gets attribute access on this object instead.
     """
 
     entries: Mapping[str, tuple[Entry, ...]]

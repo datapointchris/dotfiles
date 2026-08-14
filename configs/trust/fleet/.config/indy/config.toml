@@ -1,10 +1,9 @@
 # indy — machine config. Everything here is a property of this fleet, not of the tool,
 # which is why none of it ships as an indy default.
 
-# Both registries are named here as literals. A shared unprefixed variable used to
-# carry the repo one, which meant this file said nothing and the answer came from
-# ~/.env — invisible to any process that sources no profile. See standards/data.md
-# § "A shared file is named in config; only the tool's own default is compiled in".
+# Both registries are literals, never a shared shell variable: ~/.env is invisible
+# to any process that sources no profile. See standards/data.md § "A shared file is
+# named in config; only the tool's own default is compiled in".
 #
 # The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
 # Syncthing folder, so the link is a second hop a rebuilt machine has not restored

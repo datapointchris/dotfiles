@@ -4,10 +4,9 @@
 # reaches no machine outside the fleet — the work box's manifest does not install
 # it, so configs/trust/nonfleet/ carries no counterpart.
 #
-# Named here as a literal. A shared unprefixed variable used to carry it, and
-# ~/.env is a shell file, so nothing that sources no profile ever saw it. See
-# standards/data.md § "A shared file is named in config; only the tool's own
-# default is compiled in".
+# A literal, never a shared shell variable: ~/.env is a shell file, so nothing
+# that sources no profile ever sees it. See standards/data.md § "A shared file is
+# named in config; only the tool's own default is compiled in".
 #
 # The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
 # Syncthing folder, so the link is a second hop a rebuilt machine has not

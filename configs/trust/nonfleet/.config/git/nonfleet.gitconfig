@@ -1,8 +1,7 @@
 # Nonfleet is the default and personal is the exception, never the reverse. A
 # repo that slips through the match then commits under the employer address —
 # wrong, but internal — where the inverse puts a personal address into employer
-# history. Both spellings are already in this repo's log from the arrangement
-# that had it the other way round.
+# history.
 #
 # local.gitconfig is the one identity this repo does not ship, so it is
 # declared in install/flags.yml and `dotfiles check` fails while it is missing.

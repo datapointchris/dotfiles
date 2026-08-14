@@ -1,14 +1,9 @@
 """The only module that touches the world outside this process.
 
-Six doors are planned — `run`, `fetch`, `write`, `link`/`unlink`, `extract`,
-`chmod` — and four exist, arriving as each resource moves. `write` and
-`link`/`unlink` wait on the resources that need them.
-
-The three added for the release engine are deliberately ignorant of what they are
-unpacking. `unpack` sniffs a container rather than reading a declared archive
-kind, so `providers.releases.Archive` stays a statement about what upstream
-publishes and never becomes a second thing that has to be right for extraction to
-work. That vocabulary belongs above this line, not on it.
+The unpacking doors are deliberately ignorant of what they are unpacking.
+`unpack` sniffs a container rather than reading a declared archive kind, so a
+declaration's archive vocabulary stays a statement about what upstream publishes
+and never becomes a second thing that has to be right for extraction to work.
 
 Everything here is a chokepoint on purpose. A resource that reaches the world
 some other way cannot be tested without the world.
@@ -16,9 +11,9 @@ some other way cannot be tested without the world.
 Which is also why the debug event stream is emitted from here and nowhere else.
 The questions asked after a failed install are what did it actually download and
 which step was slow, and both are answered one level *below* the run record — the
-record says an item took nine seconds, and only these lines say which of the four
-commands behind it did. Instrumenting the walk instead would restate the record
-in a second format.
+record says an item took nine seconds, and only these lines say which command
+behind it did. Instrumenting the walk instead would restate the record in a
+second format.
 """
 
 from __future__ import annotations
@@ -208,18 +203,17 @@ def run(
 
     `show` filters what reaches the terminal without touching what is kept:
     returning None swallows a line, and the transcript is whole either way. Both
-    plugin managers need it, and both had a filter in the shell they came from for
-    one measured reason — lazy.nvim's headless output is fifty plugins' raw git
-    spew, and sending that to a file instead left a fresh install with nothing on
+    plugin managers need it — lazy.nvim's headless output is fifty plugins' raw git
+    spew, and sending that to a file instead leaves a fresh install with nothing on
     screen for minutes.
 
     `timeout` is for a caller that is *asking* rather than *installing*: a probe
     that has not answered is not answering, and one that never returns takes the
-    whole run with it. `evidence.reported_version` is the case that proved it —
-    the binary it probes is whatever a declaration names, and a GUI blocks on its
-    event loop until a person closes a window, which on a scheduled check is
-    never. Refused for STREAM, where minutes are a normal install rather than a
-    hang, and where the reader loop would not observe a deadline anyway.
+    whole run with it. A version probe runs whatever binary a declaration names,
+    and a GUI blocks on its event loop until a person closes a window, which on a
+    scheduled check is never. Refused for STREAM, where minutes are a normal
+    install rather than a hang, and where the reader loop would not observe a
+    deadline anyway.
 
     `stdin_text` is the one way to send a child anything, and it is `QUIET` only.
     A git credential helper is the case: its request arrives on stdin as
@@ -244,11 +238,9 @@ def run(
 
     A missing binary is exit 127, not an exception. Every caller here already
     branches on the exit code, and several run something a machine may legitimately
-    not have — `hyprctl` on an Arch box with no compositor is the one that proved
-    it, taking down a whole install with a FileNotFoundError traceback from inside
-    a symlink pass. Raising would mean each of those call sites needs its own
-    `shutil.which` guard, and the one that forgets is a crash rather than a
-    reported failure.
+    not have — `hyprctl` on a box with no compositor. Raising would mean each of
+    those call sites needs its own `shutil.which` guard, and the one that forgets
+    is a crash rather than a reported failure.
     """
     argv = tuple(command)
     environment = {**os.environ, **(env or {})}
@@ -429,8 +421,8 @@ def unpack(archive: Path, into: Path) -> bool:
     needs naming either.
 
     Members are extracted under `filter='data'`, which refuses absolute paths,
-    `..` traversal and device nodes. The tar these unpack came off the internet;
-    the shell `tar -xf` this replaces applied no such filter.
+    `..` traversal and device nodes. The tar these unpack came off the internet,
+    and a plain `tar -xf` applies no such filter.
 
     **A zip's permissions are restored by hand**, because `zipfile` discards them:
     `extractall` writes every member 0644 whatever the archive recorded. Every

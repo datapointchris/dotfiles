@@ -1,16 +1,7 @@
 """Every mechanism that installs something, as one object each.
 
-The provider concept was written five times in five keyings, and none of the five
-knew about the others. `resolve.PROVIDERS` said which section a provider plans
-from and when; `resolve.SYSTEM_PROVIDERS` said the same for the second pass;
-`evidence.EVIDENCE` and `evidence.REGISTRY_PROVIDERS` said how to tell whether one
-of its items is present; `resources/packages.py:PERFORMED` said how to install
-one. Adding a mechanism meant editing four files and remembering the fifth, and
-forgetting one was silent — a section named in no table resolves to nothing and
-installs nothing, which is what `runtimes` did for months before `UNPROVIDED`
-made the absence declarable.
-
-One class per mechanism, and the tables become its fields and its methods.
+One class per mechanism. A section named in no provider resolves to nothing and
+installs nothing, silently, which is what `UNPROVIDED` exists to make declarable.
 
 **Planning is two-pass, and the signature says so.** `plan` is handed what the
 providers before it planned, because the second pass genuinely depends on the

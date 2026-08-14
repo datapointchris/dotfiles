@@ -14,6 +14,5 @@ if not ok then
   return
 end
 
--- Defaults route messages to the cmdline and spill overflow to the pager — the
--- behaviour noice was previously configured to approximate.
+-- Defaults route messages to the cmdline and spill overflow to the pager.
 ui2.enable({ enable = true })

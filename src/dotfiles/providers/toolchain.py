@@ -284,8 +284,7 @@ def _replace_goroot(unpacked: Path, privilege: Privilege) -> Result:
     Unpacked as this user first and copied in as root, rather than handing the
     tar to `sudo tar -C /usr/local`: `effects.unpack` extracts under
     `filter='data'`, which refuses absolute paths, `..` traversal and device
-    nodes. The shell this replaces applied no such filter to an archive off the
-    internet.
+    nodes. This is an archive off the internet, unpacked as root.
     """
     try:
         removed = privilege.run(['rm', '-rf', str(GO_ROOT)], reason=f'replace the Go toolchain in {GO_ROOT}')
@@ -336,13 +335,11 @@ def set_go_env(go: str | Path | None = None) -> Result:
     toolchains resource repairing drift, on a machine where `observe` has just
     confirmed the runtime is where the registry says.
 
-    **Public, and no longer reached only from `install_go`.** As a private step
-    inside the installer it ran exactly when a machine's Go was replaced, which on
-    a machine that already has Go is never: the toolchain is measured against a
-    floor of 1.23, an installed 1.26.5 clears it forever, and `install_go` is not
-    called again. Measured 2026-08-14 across the fleet — no machine had ever
-    received this setting from this code. The one box carrying it had a file dated
-    2026-08-08, written by the bash predecessor a day before this module existed.
+    **Public, so the resource can reach it without installing Go.** A private step
+    inside the installer runs only when a machine's Go is replaced, which on a
+    machine that already has Go is never — the toolchain is measured against a
+    version floor, an installed runtime clears it forever, and the installer is not
+    called again. The setting would then reach no machine that was already correct.
     """
     binary = str(go) if go else go_command()
     if not binary:

@@ -45,19 +45,14 @@ def open_log(identity: runs.Identity) -> None:
 def intention(change: Change) -> str:
     """What the run meant to do about one measured item.
 
-    `'planned'` was written for every `Change` whatever it was, because the match
-    dispatches on the payload's *type* and never asked the change itself. The engine
-    is right to yield everything it measured; the record was wrong to call all of it
-    planned. Three categories the run never intended to touch were recorded as work
-    it intended to do — items nothing could measure, items only a person can repair,
-    and, on a `plan` or `check`, every row in the whole walk.
+    Asked of the change, never dispatched on the payload's *type*. The engine is
+    right to yield everything it measured, and three categories of that are things
+    the run never intended to touch: items nothing could measure, items only a
+    person can repair, and — on a `plan` or `check` — every row in the walk.
+    Calling those `planned` makes the record claim work nobody was going to do,
+    and the record is the only artefact a person reads afterwards.
 
-    Measured 2026-08-13 on the work box: one record held eighteen `planned` rows,
-    eleven of them carrying `verdict: unknown`, against five `done` and one `failed`.
-    Nothing was ever going to be done about the eleven, and the record was the only
-    artefact a person could have read afterwards to find that out.
-
-    New values rather than a new field, and no schema bump: `RunOutcome.action` is a
+    Values rather than a new field, and no schema bump: `RunOutcome.action` is a
     bare `str`, so every existing reader absorbs these. Deliberately not members of
     `OutcomeStatus` — that enum is what `perform` did, and none of these ever reaches
     `perform`.

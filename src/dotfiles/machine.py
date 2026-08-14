@@ -136,8 +136,8 @@ same shape: a boolean about this machine that no catalog section speaks for.
 RETIRED_KEYS = {
     key: 'install is derived from the corresponding name-list now (go_tools non-empty → Go)' for key in ('go', 'rust', 'nvm', 'uv', 'tenv')
 }
-"""Runtime-gate booleans removed in Phase 1.6. Named rather than merely unknown,
-because the replacement is not guessable from the error."""
+"""Retired runtime-gate booleans, named rather than merely unknown, because the
+replacement is not guessable from the error."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -376,7 +376,7 @@ def manifest_path(name: str, root: Path | None = None) -> Path:
     --raw` and `machines edit` want the path and never parse it, which is the whole
     reason a second answer to "is there a manifest called this" is available to be
     worded differently — a different key word for the list, and silence about where
-    it looked. Two messages kept in step by hand is the arrangement this replaces.
+    it looked. The alternative is two messages kept in step by hand.
     """
     install = (root / 'install') if root else paths.INSTALL_DIR
     source = install / 'manifests' / f'{name}.yml'

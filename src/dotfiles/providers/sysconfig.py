@@ -184,9 +184,8 @@ def _observe_group(entry: catalog.GroupMembership) -> State:
     """The group database, not `id -nG`.
 
     `id` reports the groups of the *running session*, which do not change until
-    the next login — so the bash this replaces re-ran `usermod` on every install
-    after the first, and a check built on it would have reported drift forever on
-    a machine that was already correct.
+    the next login. A check built on it reports drift forever on a machine that is
+    already correct, and an apply re-runs `usermod` every time.
     """
     user = current_user()
     try:

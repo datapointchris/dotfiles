@@ -669,13 +669,13 @@ def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.
 
     An entry with no repo or no `binary_pattern` cannot be staged — there is no
     asset to name — and the machine that installs from this bundle then has no
-    source for it at all. The row filter this replaces dropped those silently,
-    which is the same information a log line carries and none of the evidence.
+    source for it at all. Dropping those silently carries the same information as
+    a log line and none of the evidence.
 
-    The two sections are named rather than reached through `getattr` defaults,
-    which is the same call `precondition_of` was corrected to: a default standing
-    in for "this subclass has no such field" answers *unbundleable* for an entry
-    whose field was merely renamed, and the symptom is a bundle silently one tool
+    The two sections are named rather than reached through `getattr` defaults: a
+    default standing in for "this subclass has no such field" answers
+    *unbundleable* for an entry whose field was merely renamed, and the symptom is
+    a bundle silently one tool
     short on the machine that cannot fetch it.
     """
     staged = []
@@ -997,7 +997,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
     # re-reading the manifest is what stops the bundle staging one set of tools
     # while `dotfiles apply` on the target goes looking for another — and it is
     # what makes a coordinate the manifest declares (`requires_wsl_host`) narrow
-    # the bundle, which the name-list filters this replaces could not see.
+    # the bundle, which a filter over entry names cannot see.
     try:
         machine = machines.load(manifest_name)
         plan = resolve.resolve(catalog.load(), machine)
