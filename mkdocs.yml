@@ -175,3 +175,4 @@ nav:
       - A USB DAC That Lies About Its Volume Range: learnings/usb-dac-lies-about-its-volume-range.md
       - Finding Where a Slow Run Went: learnings/finding-where-a-slow-run-went.md
       - A Conflicting Package Blocks an Install Forever: learnings/a-conflicting-package-blocks-an-install-forever.md
+      - Go Was on No PATH, and Nothing Said So: learnings/go-was-on-no-path-and-nothing-said-so.md
