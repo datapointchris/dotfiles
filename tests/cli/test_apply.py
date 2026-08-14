@@ -668,12 +668,12 @@ def unmeasurable(item: str, detail: str = 'the staged bundle carries no version 
 
 
 class TestWhatApplyDeclinedToTouch:
-    """Measured 2026-08-13 on the work box: `apply --offline` planned twelve package
-    items, acted on one, and said nothing whatsoever about the eleven it declined
-    because the staged bundle carried no version to compare them against.
+    """An `apply --offline` plans a set of package items, acts on the ones it can,
+    and without this says nothing whatsoever about the ones it declined because the
+    staged bundle carried no version to compare them against.
 
-    Each of those eleven already carried the sentence explaining itself, and `plan`
-    prints it. The renderer was missing, not the diagnosis.
+    Each declined item already carries the sentence explaining itself, and `plan`
+    prints it. What is missing is the renderer, not the diagnosis.
     """
 
     def test_an_item_nothing_could_measure_is_named_rather_than_passed_over(
@@ -742,10 +742,10 @@ class TestWhatApplyDeclinedToTouch:
 
 class TestTheRecordSaysWhatTheRunMeant:
     def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Measured 2026-08-13 on the work box: one record held eighteen `planned`
-        rows, eleven of them carrying `verdict: unknown`, against five `done` and one
-        `failed`. Nothing was ever going to be done about the eleven, and the record
-        was the only artefact a person could read afterwards to find that out."""
+        """An item nothing could measure is not work the run intended to do. Recorded
+        as `planned` it inflates the record with rows carrying `verdict: unknown`,
+        and the record is the only artefact a person reads afterwards to find out
+        what the run meant."""
         monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), drift('ripgrep'), outcomes=()))
 

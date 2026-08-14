@@ -311,10 +311,9 @@ class TestNoCredentialReachesTheRunLog:
     """The run log replicates between machines, so a secret written into it does
     not stay on the box that minted it.
 
-    Measured 2026-08-12: `gh auth token` sits on the default `check` path, and
-    156 of 492 run files on this machine held a live token that had already
-    reached every other one. The length cut cannot help — a token is short, which
-    is exactly why it passed.
+    `gh auth token` sits on the default `check` path, so an unredacted transcript
+    puts a live token into a file that reaches every other machine. The length cut
+    cannot help — a token is short, which is exactly why it passes.
     """
 
     # Assembled at runtime rather than written out. A literal with a real token's

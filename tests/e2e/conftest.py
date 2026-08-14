@@ -2,11 +2,11 @@
 
 The most accurate tier there is: a fresh OS image, the actual `install.sh` and
 the `apply` it hands to, and whatever the machine looks like afterwards. Docker
-stays — what moved is the harness around it, from three ~490-line bash scripts
-into one rig the environments parameterize.
+stays; the harness around it is one rig the environments parameterize rather than
+a script per environment.
 
-They were three copies of one shape, and the copies drifted. Every difference
-below was a bug found by running them on 2026-08-08:
+One shape copied per environment drifts, and each of these was a real bug in a
+copy that had:
 
 - `--reuse` re-copied the repo in the WSL script and not the Arch one, so a
   reused container silently tested the code from whenever it was created.

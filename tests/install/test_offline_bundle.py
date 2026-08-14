@@ -176,8 +176,8 @@ class TestSayingWhichBundle:
     The already-staged branch returned early and printed nothing, so every offline
     apply after the first said not one word about where its answers came from — and
     under `--offline` the bundle *is* the upstream every currency verdict is decided
-    against. Measured 2026-08-13 on the work box: twelve package items came back
-    unmeasurable and the only thing on screen was one failed install.
+    against. A screenful of unmeasurable package items then has nothing on it naming
+    the bundle they were measured against.
     """
 
     def test_an_already_staged_bundle_is_named_rather_than_passed_over(self, staged, capsys) -> None:

@@ -52,8 +52,7 @@ class ReachedTheNetwork(BaseException):
     raised as an `AssertionError` is caught by exactly that: the request is still
     refused, and the run reports `packages could not be examined` and exits 3 —
     a plausible answer, so the test passes its exit-code assertion and nobody
-    learns the network was reached. Measured on `plan --refresh`, before this
-    stopped being an `AssertionError`.
+    learns the network was reached. `plan --refresh` is the verb that reaches it.
 
     Same reasoning as `WouldInstall` in `tests/conftest.py`, and the same reason
     `pytest.fail` raises one.
@@ -487,9 +486,8 @@ def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None
 def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Drop what the developer's shell exports and a CI runner does not.
 
-    Measured on this box: `$GITHUB_TOKEN` alone flips a private-repo entry from
-    `BY_HAND` to `AUTOMATIC`, so the same test passes at one desk and fails on the
-    runner. `$LOG_LEVEL` moves the console threshold that `-v` and `-q` are being
+    `$GITHUB_TOKEN` alone flips a private-repo entry from `BY_HAND` to `AUTOMATIC`,
+    so the same test passes at a desk and fails on the runner. `$LOG_LEVEL` moves the console threshold that `-v` and `-q` are being
     asserted against, and the `DOTFILES_*` settings twins answer `config show`
     before the config file can.
     """

@@ -1,8 +1,8 @@
 """A declared package the machine cannot install, because an older name is still there.
 
-The case this pins down was measured on 2026-08-12. `packages.yml` had moved its
-sioyek entry from `aur: sioyek` to `aur: sioyek-git` when upstream deleted the
-first, and the machine still carried the package the old name built. `sioyek-git`
+The case it pins down: `packages.yml` moves an entry from `aur: sioyek` to
+`aur: sioyek-git` because upstream deleted the first, and the machine still
+carries the package the superseded name built. `sioyek-git`
 declares `Conflicts With: sioyek`, so pacman had to remove one to install the
 other, and the installers run `--noconfirm` — which takes the default answer to
 the removal prompt, and that default is no.
