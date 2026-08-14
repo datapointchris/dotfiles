@@ -121,13 +121,10 @@ class Resolution:
 
     @property
     def expanded(self) -> str:
-        """The path a consumer can open, with `~` resolved.
+        """The path a consumer can open.
 
-        `repos_registry = "~/dev/repos.json"` is an ordinary thing to write in the
-        config, and every consumer of this value needs the real path. A shell is
-        the one that cannot do it for itself: `"${NAME:-~/x}"` leaves the tilde
-        literal inside the quotes, so an unexpanded export reaches `~/homelab` as
-        a path that does not exist.
+        A shell cannot do this for itself: `"${NAME:-~/x}"` leaves the tilde
+        literal inside the quotes.
         """
         return os.path.expanduser(self.value)
 

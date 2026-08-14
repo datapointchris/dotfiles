@@ -98,27 +98,14 @@ def render(machine: Machine) -> str:
     for name, value in machine.flags.items():
         lines += ['', assignment(name, value)]
 
-    # A required value the trust-scoped config answers is exported here, so a
-    # consumer that reads the environment finds it without anyone editing this
-    # file. The rest are named and not valued, because nothing but the machine
-    # knows them and an empty string would build a wrong path silently.
     if values := machine.required_values:
         resolved = settings.resolve_all([entry.name for entry in values], settings.read_config())
         answered = [(entry, found) for entry in values if (found := resolved.of(entry.name))]
         unanswered = [entry for entry in values if not resolved.of(entry.name)]
 
         if answered:
-            lines += [
-                '',
-                "# Supplied by this tool's own config, and exported so anything reading the",
-                '# environment finds the same file. `dotfiles config show` says which rung',
-                '# answered; a value already set below the marker still wins.',
-            ]
-            for entry, found in answered:
-                lines += ['']
-                if entry.description:
-                    lines += [f'# {entry.description}']
-                lines += [assignment(entry.name, found.expanded)]
+            lines += ['']
+            lines += [assignment(entry.name, found.expanded) for entry, found in answered]
 
         if unanswered:
             lines += [

@@ -19,10 +19,4 @@
 # a Syncthing folder, so pointing at the link would make this line depend on a
 # second hop that a rebuilt machine has not restored yet.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
-
-# The homelab inventory, read by ~/homelab's pyinfra and shell entry points. Named
-# here rather than left to every machine, because the location is a fact about the
-# trust domain and not about the box. `dotfiles env apply` exports it into ~/.env
-# from this key, so a consumer reading the environment finds the same file, and
-# `dotfiles check` reports it stale when nothing is at the path.
 hosts_json = "~/.local/share/terminal-library-fleet/hosts.json"

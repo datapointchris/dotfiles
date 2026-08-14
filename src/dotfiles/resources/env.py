@@ -333,11 +333,9 @@ def _config(observed: Observed) -> list[Change]:
 def _unexported(machine, observed: Observed) -> list[Change]:
     """A required value the config answers that the generated half does not carry.
 
-    The mirror of `_orphaned`, and the direction that actually lands the export.
-    Resolving the name satisfies this resource and leaves every consumer reading
-    the environment with nothing, so the row has to fire on the file rather than
-    on the resolution — otherwise `check` reports a converged machine whose
-    `~/.env` never gained the line.
+    Fires on the file rather than on the resolution: a resolved name satisfies
+    this resource while every consumer reading the environment still finds
+    nothing.
     """
     return [
         Change(
@@ -357,14 +355,9 @@ def _unexported(machine, observed: Observed) -> list[Change]:
 def _named_files(machine, observed: Observed) -> list[Change]:
     """A shared path this tool resolved, whose file is not there.
 
-    Resolving a name is not the same as finding what it names, and only the
-    second is what a consumer needs. A rung that answers with a stale path is
-    the failure mode a default introduces, so the answer is checked rather than
-    the default being refused: the row names the path and the rung that supplied
-    it, which is what separates "nobody said" from "somebody said, wrongly".
-
-    `required_values` covers the same ground for a name a machine must answer
-    itself. This covers the rest of `SHARED_PATHS`, which no register declares.
+    Resolving a name is not finding what it names, and a default is only safe
+    because this fires. `required_values` covers the names a machine answers
+    itself; this covers the rest of `SHARED_PATHS`.
     """
     declared = {entry.name for entry in machine.required_values}
     return [
@@ -516,10 +509,7 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
     whether the declaration still produces the name at all, so a variable named
     unusually cannot slip past.
     """
-    # A required value the config answers is written into the generated section
-    # too, so anything reading the environment finds the same file. It belongs to
-    # the declaration exactly while a rung still answers it, and becomes an orphan
-    # the moment one stops — which is the same rewrite away as any other.
+    # A required value belongs to the declaration exactly while a rung answers it.
     answered = {entry.name for entry in machine.required_values if observed.resolved.of(entry.name)}
     declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags, *answered}
     return [
