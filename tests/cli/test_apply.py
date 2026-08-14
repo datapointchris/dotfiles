@@ -34,6 +34,9 @@ from dotfiles.effects import Completed
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.providers import bin_dir
+from dotfiles.providers import cargo
+from dotfiles.providers import gotool
 from dotfiles.providers import npm
 from dotfiles.providers import toolchain
 from dotfiles.resolve import Stage
@@ -586,7 +589,7 @@ def test_the_declaration_is_read_once_however_much_a_run_asks_of_it(monkeypatch:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_directory_an_installer_writes_binaries_to_is_on_the_run_path() -> None:
+def test_every_directory_an_installer_writes_binaries_to_is_on_the_run_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Installing into a directory no later stage can see is a silent failure, and
     it happened: the npm installer set its own NPM_CONFIG_PREFIX, `.zshrc` added
     that prefix's bin for interactive shells, and nothing else did. All eleven
@@ -596,8 +599,19 @@ def test_every_directory_an_installer_writes_binaries_to_is_on_the_run_path() ->
     The prefix is read from the provider that sets it rather than restated here,
     so moving it fails this instead of going unnoticed until a container reports
     sixteen missing tools.
+
+    Asked of the function each provider actually places binaries with, not of the
+    constant `TOOL_PATH_DIRS` is built from. Those are now the same fact, and this
+    is what says so — a provider that stops reading the shared constant and
+    resolves its own directory again fails here rather than silently installing
+    somewhere no stage looks.
     """
-    assert f'$HOME/{npm.PREFIX}/bin' in toolchain.TOOL_PATH_DIRS, f'{npm.PREFIX}/bin is where npm globals land, and no stage can see it'
+    monkeypatch.setenv('HOME', str(tmp_path))
+
+    written_to = {gotool.gobin(), cargo.cargo_bin(), bin_dir(), tmp_path / npm.PREFIX / 'bin'}
+    declared = {Path(entry.replace('$HOME', str(tmp_path))) for entry in toolchain.TOOL_PATH_DIRS}
+
+    assert written_to <= declared, f'installers write to {written_to - declared}, which no stage can see'
 
 
 def test_the_non_interactive_shell_sees_what_the_run_installed() -> None:
@@ -609,12 +623,12 @@ def test_the_non_interactive_shell_sees_what_the_run_installed() -> None:
     exported = [line for line in zshenv.splitlines() if line.startswith('export PATH=')]
     assert exported, '.zshenv no longer sets PATH'
 
-    # /usr/local/go/bin is deliberately absent: `go` is reached through the
-    # symlink the release installer puts in ~/.local/bin, and .zshenv is meant to
-    # stay minimal.
+    # Every entry, with nothing skipped. This loop used to `continue` on any
+    # `/usr` prefix, on the stated grounds that `go` was reached through a symlink
+    # in ~/.local/bin — there is no such symlink and nothing creates one. The skip
+    # covered the only entry that was wrong, so the test passed for two months
+    # while `go` was on no PATH any Mac has.
     for directory in toolchain.TOOL_PATH_DIRS:
-        if directory.startswith('/usr'):
-            continue
         assert directory in exported[0], f'{directory} is on the run PATH but not on a non-interactive shell PATH'
 
 

@@ -21,6 +21,7 @@ from dotfiles.effects import Completed
 from dotfiles.privilege import Privilege
 from dotfiles.providers import ghrelease
 from dotfiles.providers import releases
+from dotfiles.providers import toolchain
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Precondition
 from dotfiles.resolve import Reason
@@ -384,8 +385,10 @@ def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypa
     A container picked up Arch's `go` package transitively, so `which go` found
     `/usr/sbin/go` and the toolchain reported itself installed while
     `/usr/local/go` did not exist — every Go tool then built against a runtime this
-    repo had not put there, and only the verification script's *location* check
-    noticed.
+    repo had not put there, and nothing measuring the version noticed.
+
+    Still live on the fleet rather than a container artefact: an Arch box reached
+    over ssh resolves `/usr/bin/go` at go1.26.6 while `GO_ROOT` holds go1.26.5.
     """
     shadowing = tmp_path / 'bin'
     shadowing.mkdir()
@@ -407,13 +410,21 @@ def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypa
 
 
 def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> None:
-    """`.zshenv`, `toolchain.TOOL_PATH_DIRS` and the verification script each name
-    `/usr/local/go/bin` independently; this is the fourth and the only one that
-    decides whether it gets installed."""
+    """One constant behind every naming of it, which it was not.
+
+    `toolchain.GO_ROOT` is now the source: `TOOL_PATH_DIRS` derives from it,
+    `go_command` resolves through it, and this registration reads it rather than
+    respelling it. `.zshenv` is the one copy that cannot import Python, and
+    `tests/cli/test_apply.py` is what holds it to the list.
+
+    A third namer used to be cited here — a verification script that `plan`
+    replaced and nobody deleted the reference to.
+    """
     provider = registry.named('go-toolchain')
 
     assert isinstance(provider, registry.GoToolchain)
-    assert provider.installed_at == '/usr/local/go/bin/go'
+    assert provider.installed_at == str(toolchain.GO_ROOT / 'bin' / 'go')
+    assert str(toolchain.GO_ROOT / 'bin') in toolchain.TOOL_PATH_DIRS
 
 
 def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch) -> None:

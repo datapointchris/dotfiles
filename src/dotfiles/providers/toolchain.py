@@ -38,9 +38,11 @@ from dotfiles.effects import Output
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import BIN_DIR
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
+from dotfiles.providers import npm
 from dotfiles.providers import script
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -130,12 +132,57 @@ GO_VERSION_URL = 'https://go.dev/VERSION?m=text'
 GO_DOWNLOAD_URL = 'https://go.dev/dl'
 GO_ROOT = Path('/usr/local/go')
 
+GO_ENV_SECONDS = 10.0
+"""`go env` reads and writes one small file — no proxy, no network — so this
+bounds a stuck subprocess rather than a slow download."""
+
+GO_BIN = Path('go/bin')
+"""Where `go install` writes, relative to home — `GOPATH/bin` with GOPATH unset.
+
+Beside `GO_ROOT` rather than in `gotool` because `TOOL_PATH_DIRS` has to name it
+and cannot import a module that imports this one. `gotool.gobin()` reads it from
+here, so the two cannot come apart.
+"""
+
+
+def go_command() -> str | None:
+    """The `go` this repo installed, in preference to whatever PATH offers.
+
+    `shutil.which` asks a different question, and both fleet machines answer it
+    wrong. `.zshrc` added `/usr/local/go/bin` on Linux only, so a Mac found no
+    `go` at all; an Arch shell that never sourced `.zshrc` found the pacman
+    `/usr/bin/go` instead. Measured 2026-08-14: the Mac reported all 18 Go tools
+    unmeasurable, and Arch read their build info with a go1.26.6 the repo did not
+    install while its own go1.26.5 sat unused.
+
+    `resources/toolchains.py` reached this rule from the other side — ask the
+    provider where it put the runtime, never PATH what it can see. A measurement
+    that consults PATH is measuring the shell that launched the run.
+
+    Falls back to PATH so a machine whose Go came from elsewhere still measures,
+    and answers None where there is no `go` at all.
+    """
+    installed = GO_ROOT / 'bin' / 'go'
+    if installed.is_file():
+        return str(installed)
+    return shutil.which('go')
+
+
 GONOSUMDB = 'github.com/datapointchris/*'
 """A cold sum.golang.org lookup for a just-published version holds the connection
 for ~60s and then answers 500, and `go install` retries — so updating an
 own-namespace tool minutes after tagging it stalls for minutes with no output.
-The proxy is deliberately left alone: GOPRIVATE would bypass that too, and these
-repos are public."""
+
+**Not every repo in this namespace is public, and one of them is why this is
+load-bearing rather than a latency tweak.** `fleet` is private, so the checksum
+database cannot read it at all: it fetches a module to hash it, fails to
+authenticate, and answers 404. `go install github.com/datapointchris/fleet@latest`
+then refuses to verify and installs nothing.
+
+The proxy is still deliberately left alone. GOPRIVATE would bypass that too, and
+it does not need bypassing — `GOPROXY` ends in `,direct`, so resolution already
+falls through to git, which authenticates through `gh auth git-credential`.
+Measured 2026-08-14: with this set and nothing else changed, `fleet` builds."""
 
 
 def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result:
@@ -143,9 +190,13 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
 
     Go is the one runtime with no version manager of its own, so this is the
     manager: resolve what upstream calls current, fetch the tarball, and replace
-    the whole tree. `/usr/local` rather than somewhere under `$HOME` because
-    `.zshenv` and `TOOL_PATH_DIRS` below both name `/usr/local/go/bin`, and
-    moving it is a change to both.
+    the whole tree. `/usr/local/go` because that is where go.dev puts it on macOS
+    and Linux alike, so there is no platform branch to write.
+
+    Moving it is a change to `GO_ROOT` and to `.zshenv`, and to nothing else:
+    `TOOL_PATH_DIRS`, `go_command` and the registry's `installed_at` all read it
+    from there. `.zshenv` is the one copy that cannot, and `tests/cli/test_apply.py`
+    is what holds it in step.
     """
     if offline:
         return Result(
@@ -185,7 +236,7 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
         return Result(False, f'{GO_ROOT / "bin" / "go"} does not run after installing {release}', kind=Kind.VERIFY_FAILED)
 
     put_on_path(GO_ROOT / 'bin')
-    _set_go_env()
+    set_go_env()
     return Result(True, installed.transcript.strip(), kind=Kind.APPLIED)
 
 
@@ -249,11 +300,45 @@ def _replace_goroot(unpacked: Path, privilege: Privilege) -> Result:
     return Result(True, '', kind=Kind.APPLIED)
 
 
-def _set_go_env() -> None:
-    """Written to the Go env file rather than to shell config because the tool
-    installs run non-interactively and never source one. Advisory: a machine whose
-    Go is installed but unconfigured is worth reporting as installed."""
-    effects.run([str(GO_ROOT / 'bin' / 'go'), 'env', '-w', f'GONOSUMDB={GONOSUMDB}'], output=Output.QUIET)
+def go_env_setting(go: str | Path, name: str) -> str | None:
+    """What `go env` answers for one variable, asked of a named binary.
+
+    Read back rather than assumed, which is the whole difference between a fact
+    this run measured and one an earlier run is believed to have written. The
+    empty string is a real answer — it means unset — so only a `go` that would
+    not run is None.
+
+    Takes the binary rather than resolving one, for the reason
+    `gotool.installed_modules` takes its directory: a caller measuring a runtime
+    it has already located must be answered about *that* runtime. Resolving here
+    made the toolchains suite shell out to the real `/usr/local/go/bin/go` on
+    whichever machine ran it, past the stub the test had just placed.
+    """
+    asked = effects.run([str(go), 'env', name], output=Output.QUIET, timeout=GO_ENV_SECONDS)
+    return asked.stdout.strip() if asked.ok else None
+
+
+def set_go_env() -> Result:
+    """Put the declared module settings into the Go env file.
+
+    Written to that file rather than to shell config because tool installs run
+    non-interactively and never source one.
+
+    **Public, and no longer reached only from `install_go`.** As a private step
+    inside the installer it ran exactly when a machine's Go was replaced, which on
+    a machine that already has Go is never: the toolchain is measured against a
+    floor of 1.23, an installed 1.26.5 clears it forever, and `install_go` is not
+    called again. Measured 2026-08-14 across the fleet — no machine had ever
+    received this setting from this code. The one box carrying it had a file dated
+    2026-08-08, written by the bash predecessor a day before this module existed.
+    """
+    go = go_command()
+    if not go:
+        return Result(False, f'there is no go at {GO_ROOT / "bin" / "go"} to configure', kind=Kind.PREREQUISITE_MISSING)
+    written = effects.run([go, 'env', '-w', f'GONOSUMDB={GONOSUMDB}'], output=Output.QUIET, timeout=GO_ENV_SECONDS)
+    if not written.ok:
+        return Result(False, f'`go env -w GONOSUMDB` exited {written.returncode}: {written.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'GONOSUMDB={GONOSUMDB}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,6 +356,14 @@ the pin/floor vocabulary in `.planning/version-constraints.md` to grow a third
 answer."""
 
 FNM_HOME = Path('.local/share/fnm')
+
+FNM_ALIAS_BIN = Path('aliases/default/bin')
+"""fnm's default alias, relative to whichever fnm home a run resolved.
+
+Relative rather than absolute because `install_node` honours an `FNM_DIR`
+override and `TOOL_PATH_DIRS` cannot — one names the directory a run was told to
+use, the other the directory `.zshenv` hardcodes.
+"""
 
 
 def install_node(home: Path, *, offline: bool) -> Result:
@@ -301,7 +394,7 @@ def install_node(home: Path, *, offline: bool) -> Result:
         if not completed.ok:
             return Result(False, f'`{" ".join(command)}` exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
-    alias = Path(directory) / 'aliases' / 'default' / 'bin'
+    alias = Path(directory) / FNM_ALIAS_BIN
     put_on_path(alias)
     reported = effects.run([str(alias / 'node'), '--version'], output=Output.QUIET)
     if not reported.ok:
@@ -309,13 +402,22 @@ def install_node(home: Path, *, offline: bool) -> Result:
     return Result(True, f"node {reported.transcript.strip()} is fnm's default alias", kind=Kind.APPLIED)
 
 
+def _under_home(relative: Path) -> str:
+    """One home-relative directory, spelled the way a shell reads it.
+
+    `$HOME` rather than a resolved path because the readers are `.zshenv` and a
+    container's PATH, and both run under a home this process does not have.
+    """
+    return f'$HOME/{relative}'
+
+
 TOOL_PATH_DIRS = (
-    '$HOME/.local/share/fnm/aliases/default/bin',
-    '$HOME/.local/share/npm/bin',
-    '$HOME/.local/bin',
-    '$HOME/.cargo/bin',
-    '$HOME/go/bin',
-    '/usr/local/go/bin',
+    _under_home(FNM_HOME / FNM_ALIAS_BIN),
+    _under_home(npm.PREFIX / 'bin'),
+    _under_home(BIN_DIR),
+    _under_home(CARGO_BIN),
+    _under_home(GO_BIN),
+    str(GO_ROOT / 'bin'),
     '/usr/local/bin',
 )
 """Where a stage finds what an earlier stage installed.
@@ -325,6 +427,15 @@ consumes it unless it is named here: the cargo provider needs `cargo` from rustu
 the node toolchain needs the fnm that arrives as a cargo package, and npm-globals
 needs the Node that fnm links as its default alias. Order mirrors `.zshenv` so a
 run resolves the same binary an interactive shell would.
+
+**Every entry is read from whichever module installs into it**, so a provider
+that moves its directory moves this list with it. Retyping them is what the
+`.zshenv` history records: the npm prefix reached three of the four lists that
+name these directories and not the fourth, and eleven installed language servers
+reported missing. Only npm was bound to its owner after that, and the entry that
+stayed a literal is the one that went wrong next — `/usr/local/go/bin` was in
+this tuple and in neither shell file, on any platform, for as long as the file
+has existed.
 
 This is the *declaration* of those directories rather than something applied
 here: `put_on_path` is what places them, called by each provider as it installs.

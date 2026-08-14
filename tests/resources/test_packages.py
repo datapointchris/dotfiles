@@ -1119,13 +1119,22 @@ GO_VERSION_M = "#!/bin/sh\ncat <<'END'\n{body}\nEND\n"
 """A `go` that answers `version -m` and nothing else, which is all the probe asks."""
 
 
-def fake_go(directory: Path, *built: tuple[str, str]) -> None:
+def fake_go(monkeypatch: pytest.MonkeyPatch, directory: Path, *built: tuple[str, str]) -> None:
+    """Placed on disk *and* named as the toolchain, because putting it on PATH is
+    no longer enough to be asked.
+
+    `installed_modules` resolves through `toolchain.go_command`, which prefers the
+    Go this repo unpacked over anything PATH offers — that is the whole point of
+    it, and it means a stub reachable only by PATH is silently stepped over on any
+    machine that has a real /usr/local/go.
+    """
     lines = []
     for binary, module in built:
         lines.append(f'/go/bin/{binary}: go1.26.5')
         lines.append(f'\tpath\t{module}')
         lines.append(f'\tmod\t{module}\tv1.0.0\th1:abc=')
-    executable(directory, 'go', GO_VERSION_M.format(body='\n'.join(lines)))
+    stubbed = executable(directory, 'go', GO_VERSION_M.format(body='\n'.join(lines)))
+    monkeypatch.setattr(gotool.toolchain, 'go_command', lambda: str(stubbed))
 
 
 def go_bin(tmp_path: Path) -> Path:
@@ -1148,7 +1157,7 @@ def test_an_installed_tool_from_a_declared_owner_that_nothing_declares_is_report
     the declaration; this reads up from the machine. `fleet` sat installed on two
     workstations with no entry in packages.yml, and no verb could say so."""
     go_bin(tmp_path)
-    fake_go(fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
+    fake_go(monkeypatch, fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     found = undeclared_own(live)
@@ -1161,15 +1170,15 @@ def test_a_tool_built_by_somebody_else_is_not_ours_to_report(tmp_path: Path, fak
     """A machine is full of Go binaries nobody here published. Owner is the whole
     of the claim, and it comes out of the binary rather than off its name."""
     go_bin(tmp_path)
-    fake_go(fake_bin, ('ripgrep-go', 'github.com/someone-else/ripgrep-go'))
+    fake_go(monkeypatch, fake_bin, ('ripgrep-go', 'github.com/someone-else/ripgrep-go'))
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert undeclared_own(live) == []
 
 
-def test_a_declared_tool_is_not_also_reported_undeclared(tmp_path: Path, fake_bin: Path) -> None:
+def test_a_declared_tool_is_not_also_reported_undeclared(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     go_bin(tmp_path)
-    fake_go(fake_bin, ('task', 'github.com/go-task/task'))
+    fake_go(monkeypatch, fake_bin, ('task', 'github.com/go-task/task'))
     executable(fake_bin, 'task')
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
@@ -1181,7 +1190,7 @@ def test_a_machine_declaring_no_owned_tools_reports_none_of_theirs(tmp_path: Pat
     calling a module ours. With none declared there is no claim to make, and
     inventing one would report every Go binary on the box."""
     go_bin(tmp_path)
-    fake_go(fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
+    fake_go(monkeypatch, fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
     system_only = {'system_packages': [{'name': 'frobnicate', 'apt': 'frobnicate', 'pacman': 'frobnicate'}]}
     live = session(tmp_path, system_only, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
 
@@ -1192,7 +1201,7 @@ def test_an_undeclared_own_tool_is_not_something_apply_can_repair(tmp_path: Path
     """Declaring it and deleting it are both defensible and the declaration says
     neither, so this is `check`'s to report and nobody's to write."""
     go_bin(tmp_path)
-    fake_go(fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
+    fake_go(monkeypatch, fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     change = undeclared_own(live)[0]

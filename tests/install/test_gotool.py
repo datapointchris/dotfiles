@@ -87,7 +87,13 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
     result = gotool.install(TASK, offline=False)
 
     assert result.ok
-    assert reached.calls == [('go', 'install', f'{TASK.package}@latest')]
+
+    (called,) = reached.calls
+    assert called[1:] == ('install', f'{TASK.package}@latest')
+    # Resolved, never the bare name. A bare `go` is a PATH lookup, and PATH is the
+    # thing that was wrong: a Mac has no `go` on it at all, and an Arch box reached
+    # over ssh finds the distribution's rather than the one this repo unpacked.
+    assert called[0].endswith('/go'), f'{called[0]} is a PATH lookup, not the toolchain this repo installed'
 
 
 def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_it(home, bundle, proxy, monkeypatch) -> None:
@@ -217,8 +223,11 @@ MOD_INFO = (
 )
 
 
-def stub_go(monkeypatch, *, on_path: bool = True, stdout: str = '', returncode: int = 0) -> list[list[str]]:
-    monkeypatch.setattr(gotool.shutil, 'which', lambda name: '/usr/local/go/bin/go' if on_path and name == 'go' else None)
+def stub_go(monkeypatch, *, installed: bool = True, stdout: str = '', returncode: int = 0) -> list[list[str]]:
+    # `toolchain.go_command`, not `shutil.which`: the measurement asks where this
+    # repo unpacked Go, so a stub answering PATH would be stubbing a question
+    # nothing asks any more.
+    monkeypatch.setattr(gotool.toolchain, 'go_command', lambda: '/usr/local/go/bin/go' if installed else None)
     calls: list[list[str]] = []
 
     def fake_run(command, **_kwargs) -> Completed:
@@ -238,9 +247,9 @@ def test_module_version_reads_the_mod_line_not_the_path_suffix(monkeypatch) -> N
     assert gotool.module_version(Path('/home/chris/go/bin/gdu')) == 'v5.36.1'
 
 
-def test_module_version_is_none_without_go_on_path(monkeypatch) -> None:
+def test_module_version_is_none_when_there_is_no_go_to_ask(monkeypatch) -> None:
     """A binary with no `go` to ask is the same "cannot say" a missing probe is."""
-    calls = stub_go(monkeypatch, on_path=False, stdout=MOD_INFO)
+    calls = stub_go(monkeypatch, installed=False, stdout=MOD_INFO)
 
     assert gotool.module_version(Path('/home/chris/go/bin/gdu')) is None
     assert calls == []

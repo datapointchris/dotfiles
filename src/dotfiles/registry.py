@@ -878,16 +878,19 @@ class ToolchainProvider(Provider):
     installed_at: str = ''
     """Where this runtime must live, for one that is installed to a fixed path.
 
-    Empty for the three that go wherever their own installer puts them, and set
-    for Go, which is unpacked over `/usr/local/go` — a path `.zshenv`,
-    `toolchain.TOOL_PATH_DIRS` and the verification script all name independently.
+    Empty for the three that go wherever their own installer puts them, and read
+    from `toolchain.GO_ROOT` for Go, which is unpacked over `/usr/local/go`.
 
     It exists because `which` answers a different question than the declaration
     asks. A container picked up Arch's `go` package transitively, `which go` found
     `/usr/sbin/go`, and the toolchain reported itself installed while
     `/usr/local/go` did not exist — so every Go tool built against a runtime this
-    repo did not put there, and nothing said so until the verification script
-    checked the *location*.
+    repo did not put there.
+
+    That is not container-only, and the same split is live on the fleet: an Arch
+    box reached over ssh resolves `/usr/bin/go` at go1.26.6 while the repo's
+    go1.26.5 sits at `GO_ROOT` unused. `toolchain.go_command` is this same rule
+    applied to the Go *tools*, which were still asking PATH.
     """
 
     ownable: bool = False
@@ -1129,7 +1132,7 @@ PROVIDERS: tuple[Provider, ...] = (
         runtime='go',
         executable='go',
         needed_by='go_tools',
-        installed_at='/usr/local/go/bin/go',
+        installed_at=str(toolchain.GO_ROOT / 'bin' / 'go'),
     ),
     RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
     NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),

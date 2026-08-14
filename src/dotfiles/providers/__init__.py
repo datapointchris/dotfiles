@@ -202,17 +202,30 @@ class Result:
     """
 
 
+LOCAL_DIR = Path('.local')
+"""`~/.local`, spelled relative to home.
+
+The relative half is separate from `local_dir()` because two callers need
+different halves of one fact. A provider wants the resolved directory and gets
+it from the function. `toolchain.TOOL_PATH_DIRS` wants the `$HOME/...` string a
+shell reads, and resolving home to build it would bake this machine's home into
+a list `.zshenv` has to match on every machine.
+"""
+
+BIN_DIR = LOCAL_DIR / 'bin'
+
+
 def local_dir() -> Path:
     """`~/.local`, the prefix everything user-installed unpacks under.
 
     A function rather than a constant so a test can move `HOME`. Read at import
     time it would freeze the real home into every test in the process.
     """
-    return Path.home() / '.local'
+    return Path.home() / LOCAL_DIR
 
 
 def bin_dir() -> Path:
-    return local_dir() / 'bin'
+    return Path.home() / BIN_DIR
 
 
 def bundle_file(name: str) -> Path:

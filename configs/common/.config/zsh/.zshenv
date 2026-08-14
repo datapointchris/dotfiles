@@ -7,7 +7,16 @@
 # pre-commit hooks, agents and scripts run non-interactive, and that is exactly
 # where the wrong node bites — ichrisbirch pins 24 and its vitest suite fails
 # outright on 26. --use-on-cd in .zshrc handles per-directory overrides on top.
-export PATH="$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/npm/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/bin:$PATH"
+#
+# /usr/local/go/bin is the Go toolchain itself, and it belongs here rather than
+# only in .zshrc for the same reason as fnm. It was in neither file on macOS, so
+# `go` was on no PATH this machine has: gopls failed to load every Go workspace,
+# and `dotfiles check` reported all 18 declared Go tools unmeasurable because
+# nothing could run `go version -m` to read them.
+#
+# Held to toolchain.TOOL_PATH_DIRS by tests/cli/test_apply.py, which is the only
+# thing that stops this line and that tuple drifting apart again.
+export PATH="$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/npm/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:/usr/local/bin:$PATH"
 
 # SSH sessions inherit no locale (no SendEnv/AcceptEnv), leaving LC_CTYPE=C,
 # where zsh's $'\uXXXX' escapes fail with "character not in range".

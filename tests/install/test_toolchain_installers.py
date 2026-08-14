@@ -49,7 +49,10 @@ class Runs:
         self.calls: list[tuple[str, ...]] = []
         self.envs: list[dict[str, str]] = []
 
-    def __call__(self, command, *, cwd=None, env=None, output=effects.Output.STREAM) -> Completed:
+    # `**_bounds` so a caller adding a timeout is not a test failure. `effects.run`
+    # takes more than these four, and a double that mirrors a subset turns every
+    # new argument into a TypeError in a test that is not about that argument.
+    def __call__(self, command, *, cwd=None, env=None, output=effects.Output.STREAM, **_bounds) -> Completed:
         argv = tuple(str(part) for part in command)
         self.calls.append(argv)
         self.envs.append(dict(env or {}))

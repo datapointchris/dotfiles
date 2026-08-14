@@ -21,7 +21,6 @@ that needs it.
 from __future__ import annotations
 
 import re
-import shutil
 from pathlib import Path
 
 from dotfiles import catalog
@@ -44,8 +43,11 @@ def gobin() -> Path:
     A function rather than a constant so a test can move `HOME`, for the reason
     `providers.local_dir` records: read at import it would freeze the real home
     into every test in the process.
+
+    The relative half is `toolchain.GO_BIN`, so this and `TOOL_PATH_DIRS` cannot
+    disagree about where `go install` writes.
     """
-    return Path.home() / 'go' / 'bin'
+    return Path.home() / toolchain.GO_BIN
 
 
 MODULE_INFO_SECONDS = 10.0
@@ -70,10 +72,10 @@ def module_version(binary: Path) -> str | None:
     `mod` names the same module once more and follows it with the version on its
     own, so nothing here has to strip a suffix to tell the two apart.
 
-    None where `go` cannot answer this — missing from PATH, or a binary it does
-    not recognise as one it built — same as a probe that would not say.
+    None where `go` cannot answer this — not installed, or a binary it does not
+    recognise as one it built — same as a probe that would not say.
     """
-    go = shutil.which('go')
+    go = toolchain.go_command()
     if not go:
         return None
     result = effects.run([go, 'version', '-m', str(binary)], output=Output.QUIET, timeout=MODULE_INFO_SECONDS)
@@ -133,10 +135,16 @@ def installed_modules(directory: Path) -> dict[str, str]:
     measuring. Reading `Path.home()` here made every test in the packages suite
     read the machine it ran on.
 
+    Asked of `toolchain.go_command` rather than of PATH, which is the difference
+    between measuring the machine and measuring the shell that launched the run.
+    A Mac has no `go` on PATH at all and answered `unknown` for all 18 declared
+    Go tools; an Arch box reached over ssh finds the pacman `/usr/bin/go` and
+    answers plausibly with the wrong toolchain. Both measured 2026-08-14.
+
     Empty where `go` is absent or the directory has never been created, which is
     a machine with no Go tools rather than a failure.
     """
-    go = shutil.which('go')
+    go = toolchain.go_command()
     if not go or not directory.is_dir():
         return {}
     result = effects.run([go, 'version', '-m', str(directory)], output=Output.QUIET, timeout=MODULE_INFO_SECONDS)
@@ -211,14 +219,15 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     prints there names the cause — and a caller that discarded it left a failure
     report saying only that the command exited non-zero.
     """
-    # `/usr/local/go/bin` reaches PATH as a side effect of *installing* Go, so a
-    # machine whose toolchain is already current never places it and every tool
-    # here fails with "go: command not found" — invisibly, because an interactive
-    # shell has it from `.zshenv` and only the non-interactive callers (the timer,
-    # cron, `docker exec`, ssh) do not. cargo does this unconditionally for the
-    # same reason; this provider never got the same treatment.
+    go = toolchain.go_command()
+    if not go:
+        return Result(False, f'there is no go at {toolchain.GO_ROOT / "bin" / "go"} to install with', kind=Kind.PREREQUISITE_MISSING)
+
+    # Still placed on PATH, for the child rather than for this command: `go
+    # install` shells out to git for a module the proxy will not serve, and git
+    # is reached by name.
     toolchain.put_on_path(toolchain.GO_ROOT / 'bin')
-    completed = effects.run(['go', 'install', f'{entry.package}@latest'], output=Output.QUIET)
+    completed = effects.run([go, 'install', f'{entry.package}@latest'], output=Output.QUIET)
     if completed.ok:
         return Result(True, f'{entry.executable} installed from {entry.package}', kind=Kind.APPLIED)
 

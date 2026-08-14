@@ -53,8 +53,12 @@ def cargo_bin() -> Path:
 
     A function rather than a constant so a test can move `HOME`, for the reason
     `providers.local_dir` records.
+
+    The relative half is `toolchain.CARGO_BIN`, which rustup's installer and
+    `TOOL_PATH_DIRS` both already name — three spellings of one directory was two
+    too many.
     """
-    return Path.home() / '.cargo' / 'bin'
+    return Path.home() / toolchain.CARGO_BIN
 
 
 def triple(target: Target) -> str:

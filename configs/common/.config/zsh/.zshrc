@@ -493,12 +493,17 @@ fi
 # Tier 2: Platform-specific
 if [[ "$OSTYPE" == "darwin"* ]]; then
   add_path "/usr/local/opt/postgresql@16/bin"
-  add_path "$HOME/go/bin"
 else
   add_path "/snap/bin"
-  add_path "/usr/local/go/bin"
-  add_path "$HOME/go/bin"
 fi
+
+# Go is not platform-specific: go.dev's macOS installer and this repo's tarball
+# both unpack to /usr/local/go, and providers/toolchain.py has no branch for it.
+# These two sat in the else-branch from when macOS took Go from brew, and stayed
+# after that stopped being true — so no Mac shell could reach `go` at all.
+# Ahead of tier 3, so the repo's toolchain wins over a distro /usr/bin/go.
+add_path "/usr/local/go/bin"
+add_path "$HOME/go/bin"
 
 # Tier 1: User tools (highest priority - added last, ends up first)
 add_path "$ZSH_PLUGINS_DIR/forgit/bin"
