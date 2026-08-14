@@ -87,7 +87,9 @@ status bar colour the same way it owns `pane-border-format`.
 | --- | --- |
 | `M-n` / `M-p` | Previous / next window |
 | `M-,` / `M-.` | Previous / next session |
-| `M-h` / `M-l` | Move the focused session left / right — Linux only |
+| `prefix <` / `prefix >` | Move the focused session left / right |
+| `prefix {` / `prefix }` | Swap the focused window left / right |
+| `M-{` / `M-}` | Swap the focused pane back / forward |
 | `M-a` / `M-e` | Move the focused session to the front / end — Linux only |
 | `M-o` | Last session |
 | `M-t` | New session |
@@ -105,19 +107,23 @@ so each pair runs left-to-right where it is typed — which means `M-n` is *prev
 reads as "next", inverting tmux's own `prefix n` / `prefix p`. The keyboard direction is the one
 that gets used; the mnemonic is not.
 
-Every key here takes one modifier. An earlier arrangement put sessions on the shifted `M-<` / `M->`
-so the two axes were one gesture apart, and it was dropped once four single-modifier keys were
-available on the same hand: holding Alt and Shift together is unreliable on the Corne. Not for the
-reason it first appears — the positional gate is satisfied, since `COMMA` and `DOT` are keys 32 and
-33 inside `KEYS_R` and `hold-trigger-on-release` is set on every home-row mod, which is exactly what
-lets two same-hand mods chord. What breaks it is `require-prior-idle-ms` (150 on `hml`, 100 on
-`hmls`): whichever mod is pressed second sees the first as a prior keypress inside that window and
-resolves as a tap, emitting a letter. Pressing them a beat apart works. A ZMK combo would fix it
-outright and is deliberately not done — a tmux keybinding has no business reaching into keyboard
-firmware.
+Every switching key takes one modifier. An earlier arrangement put sessions on the shifted `M-<` /
+`M->` so the two axes were one gesture apart, and it was dropped because holding Alt and Shift
+together is unreliable on the Corne. Not for the reason it first appears — the positional gate is
+satisfied, since `COMMA` and `DOT` are keys 32 and 33 inside `KEYS_R` and `hold-trigger-on-release`
+is set on every home-row mod, which is exactly what lets two same-hand mods chord. What breaks it is
+`require-prior-idle-ms` (150 on `hml`, 100 on `hmls`): whichever mod is pressed second sees the
+first as a prior keypress inside that window and resolves as a tap, emitting a letter. Pressing them
+a beat apart works.
 
-The prefixed `h` / `l` went at the same time. They existed as a fallback for the chord, and a
-fallback for keys that now need no fallback is one more binding to remember.
+**Reordering is ranked by how often each level moves, and the ranking decides which table each pair
+lands in.** Panes get swapped most, so `swap-pane` takes the root chord `M-{` / `M-}`. Windows take
+the prefix braces that stock tmux gave `swap-pane`. Sessions move least and take `prefix <` / `>`,
+which window swap vacated. Nothing here is on a bare Alt letter, which is what freed `M-h` and `M-l`.
+
+That ranking is the whole justification, and it inverts the usual instinct that the prefix is for
+rare things because it is safer. It is not a safety argument — none of these three destroys
+anything. It is a keystroke-count argument, and it only holds while the frequency order does.
 
 Alt is the only modifier available *to a letter*. tmux's key parser accepts `C-`, `M-` and `S-` and
 rejects everything else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
@@ -126,11 +132,15 @@ which leaves Alt. Arrows are the exception and carry every modifier bit in their
 encoding, which is how pane resize reaches `C-S-arrow`. `M-[` is avoided because Alt+`[` emits the
 CSI prefix, leaving tmux to disambiguate it on the `escape-time` timer.
 
-**AeroSpace takes four of these before tmux sees them, and only on macOS.** `alt-h` and `alt-l` are
-window focus; `alt-a` and `alt-e` are workspaces A and E. So the four reordering keys are Linux-only,
-and the movement keys were picked from letters AeroSpace leaves alone. Watch `aerospace.toml` for the
-rest: `alt-comma` and `alt-period` are commented out there, and uncommenting either silently takes
-the session keys.
+**AeroSpace takes two of these before tmux sees them, and only on macOS.** `alt-a` and `alt-e` are
+workspaces A and E, so front and end stay Linux-only. It used to be four — `alt-h` and `alt-l` are
+window focus, and moving session reorder onto the prefix retired that pair of collisions. Watch
+`aerospace.toml` for the rest: `alt-comma` and `alt-period` are commented out there, and
+uncommenting either silently takes the session keys.
+
+`M-{` and `M-}` are clear of AeroSpace, which binds no braces. They are also close to unreachable by
+hand on the Corne — `{` is the `S`+`F` combo and `}` is `J`+`L`, so each brace is built from its own
+hand's Alt and Ctrl keys. The TMUX layer is how they get pressed.
 
 On macOS this all rests on Ghostty delivering Option as Alt, which it does by default only for U.S.
 keyboard layouts. Setting `macos-option-as-alt` explicitly would pin it; it is deliberately left
