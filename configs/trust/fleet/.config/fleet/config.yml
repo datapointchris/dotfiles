@@ -1,14 +1,12 @@
 # fleet's machine config: where this machine keeps each of the shared files
 # fleet reads, as opposed to what those files say.
 #
-# Every one of them is named here as a literal. A shared unprefixed variable used
-# to carry the registry and the standards directory, and it could never answer
-# where it mattered: ~/.env is a shell file, so `fleet schedule run --due` under a
-# systemd timer resolved the registry to a data directory that does not exist,
-# reported the miss, and exited 0. See standards/data.md § "A shared file is
-# named in config; only the tool's own default is compiled in".
+# Every one is a literal, never a shared shell variable: ~/.env is a shell file,
+# so anything running under a systemd timer sources no profile and resolves the
+# path to nothing. See standards/data.md § "A shared file is named in config;
+# only the tool's own default is compiled in".
 #
-# Five keys rather than one section, because the five are different files with
+# Separate keys rather than one section, because these are different files with
 # different lifetimes and a machine may share one and not another.
 #
 # Each names the terminal-library-fleet clone rather than the ~/dev symlink that

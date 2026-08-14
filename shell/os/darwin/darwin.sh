@@ -65,7 +65,7 @@ alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 
 # ---------- Environment ---------- #
 
-# Set ENVIRONMENT variable (formerly functions in macos-functions.sh)
+# Set ENVIRONMENT variable
 alias development='export ENVIRONMENT=development'
 alias testing='export ENVIRONMENT=testing'
 alias production='export ENVIRONMENT=production'

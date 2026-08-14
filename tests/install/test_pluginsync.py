@@ -1,11 +1,10 @@
 """The two plugin managers: what can be asked of each, and how each is run.
 
-The TPM half is the shell suite this replaces (`tests/shell/test_tmux_plugins_sh.py`),
-carried over property for property. A real `tmux` with TPM stubbed, because the
-stub stands in for the one thing that would otherwise need a network and the
-server isolation is the whole point — it cannot be asserted against a fake tmux.
+A real `tmux` with TPM stubbed, because the stub stands in for the one thing that
+would otherwise need a network, and the server isolation is the whole point — it
+cannot be asserted against a fake tmux.
 
-Two regressions are pinned here and were pinned there. TPM shells out to a bare
+Two regressions are pinned here. TPM shells out to a bare
 `tmux`, where `$TMUX` — set whenever the installer runs from inside a session —
 outranks `TMUX_TMPDIR`, so the throwaway session and the `kill-server` that cleans
 it up both landed on the user's live server. And TPM writes its progress *and its

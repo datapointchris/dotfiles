@@ -101,10 +101,9 @@ def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_i
     leaves a machine whose toolchain is already current without it, and every tool
     here fails with `go: command not found`.
 
-    Invisible interactively, because `.zshenv` names the directory — so it bit only
-    the non-interactive callers, which is the scheduled check, cron, `docker exec`
-    and ssh. Measured on the mbp 2026-08-10: eight Go tools failed in one apply
-    while the same run reported the toolchain converged.
+    Invisible interactively, because `.zshenv` names the directory — so it reaches
+    only the non-interactive callers: the scheduled check, cron, `docker exec` and
+    ssh. There the Go tools fail in an apply that reports the toolchain converged.
     """
     monkeypatch.setenv('PATH', os.pathsep.join(('/usr/bin', '/bin')))
     stage(bundle)

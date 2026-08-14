@@ -113,15 +113,13 @@ def test_a_caller_that_must_not_block_declines_without_prompting(tmp_path: Path,
 
 @NOT_ROOT
 def test_a_passwordless_machine_is_granted_without_a_terminal(tmp_path: Path, fake_bin: Path) -> None:
-    """The regression. `sudo -v` means *validate*, which authenticates and so wants
-    a terminal — it fails with "a terminal is required" on a box with `NOPASSWD:
-    ALL` where sudo plainly works. Every headless caller is that box, and because
-    the answer is cached for the run, one wrong probe declined root for everything
-    after it.
-
-    Measured in the wsl e2e container: 33 system packages, the Go toolchain and
-    with it 15 `go install`s at exit 127, and the zdotdir file, all refused as
-    "authorization was declined" while `sudo -n true` exited 0 beside them.
+    """`sudo -v` means *validate*, which authenticates and so wants a terminal — it
+    fails with "a terminal is required" on a box with `NOPASSWD: ALL` where sudo
+    plainly works. Every headless caller is that box, and because the answer is
+    cached for the run, one wrong probe declines root for everything after it —
+    the system packages, the Go toolchain and every `go install` behind it at exit
+    127, the zdotdir file, all refused as "authorization was declined" while
+    `sudo -n true` exits 0 beside them.
     """
     log = tmp_path / 'calls'
     fake_sudo(fake_bin, log, exit_code=1, passwordless=True)

@@ -14,14 +14,12 @@ output. Seventy-three keys across fifteen domains cost fifteen subprocesses.
 **Nothing here escalates.** macOS preferences are user-level, which is why these
 rows declare `needs_root = False` and a Mac converges without a password.
 
-**No app is restarted.** `killall Finder` and friends were deliberately removed
-from the script before this conversion — the note in it read "changes take effect
-on next login/reboot" — so the design's `restart:` field is not here. Do not add
-it back without reversing that decision first.
+**No app is restarted, deliberately.** `killall Finder` and friends are not here
+and neither is a `restart:` field: changes take effect on next login or reboot,
+and killing a user's Finder mid-run to save that is not a trade this makes.
 
-The two lines of `preferences.sh` that were not `defaults write` are not here
-either. They are `steps` rows in `providers/steps.py`, with the three other
-pieces of machine state that have no shared mechanism behind them.
+Machine state that is not a `defaults write` is not here either. It is a `steps`
+row, with the other pieces that have no shared mechanism behind them.
 """
 
 from __future__ import annotations

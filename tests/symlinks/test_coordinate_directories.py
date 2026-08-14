@@ -63,9 +63,9 @@ def test_every_directory_in_a_tree_is_common_or_a_real_coordinate(tree: str) -> 
 def every_expressible_machine() -> list[axes.Coordinates]:
     """The cartesian product of the axes, less the points no machine can be.
 
-    Arch-on-WSL and a Ubuntu desktop are the two the old design could not
-    express, and both are in here — so a conflict that only a future machine
-    would hit is found now rather than by that machine. macOS-on-WSL is in the
+    Arch-on-WSL and a Ubuntu desktop are the two a fused `platform:` string cannot
+    express, and both are in here — so a conflict that only a future machine would
+    hit is found now rather than by that machine. macOS-on-WSL is in the
     product too and is filtered out, by the same rule a manifest declaring it
     would be rejected with.
     """

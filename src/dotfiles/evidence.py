@@ -112,9 +112,8 @@ def executables_on_path(checkout: Path, search: str | None = None, wanted: froze
 
     `shutil.which` answers with the winner alone, which is the right answer to
     "is it installed" and no answer at all to "how many of it are there". One walk
-    of the PATH directories rather than a `which -a` per item: the check this
-    replaced ran a subprocess per declared tool, and `symlinks._link_for` is the
-    same lesson from the other direction.
+    of the PATH directories rather than a `which -a` per item, which is a
+    subprocess per declared tool.
 
     Deduplicated by real path, because `~/.local/bin/fd` pointing at `/usr/bin/fd`
     is one installation reachable by two names and not two installations. Order is
@@ -129,15 +128,13 @@ def executables_on_path(checkout: Path, search: str | None = None, wanted: froze
     **`wanted` bounds the three syscalls per entry, not the walk.** The directory
     listing is one read whatever is asked for, while `is_file`, `access` and
     `realpath` are three round trips *each*, and the only caller wants an answer
-    about the hundred-odd binaries a machine declares — never about the three
-    thousand names a PATH resolves. Unbounded, this paid 3400 realpaths to answer
-    96 questions.
+    about the binaries a machine declares — never about every name a PATH resolves.
+    Unbounded, this pays thousands of realpaths to answer a hundred questions.
 
-    That is a rounding error on ext4 and is not one on WSL, which is the machine
-    this was measured on: with Windows PATH interop left on, `$PATH` carries
-    `/mnt/c/Windows/System32` and its neighbours, every syscall against them
-    crosses drvfs, and the count is in the tens of thousands. None of those names
-    is ever asked about.
+    That is a rounding error on ext4 and is not one on WSL: with Windows PATH
+    interop left on, `$PATH` carries `/mnt/c/Windows/System32` and its neighbours,
+    every syscall against them crosses drvfs, and the count is in the tens of
+    thousands. None of those names is ever asked about.
 
     None keeps the whole index, because "every name on PATH" is a legitimate
     question and a default that silently answered a narrower one would be a trap
@@ -493,20 +490,19 @@ def reported_version(executable: str) -> str | None:
     `gotool.gobin()` is what "a `go install`-ed binary" means; everywhere else this
     is unchanged, whatever the first probe printed, read or not.
 
-    Asking the banner first and falling back only where nothing could *parse* was
-    what this replaced, and it is the failure `standards/release.md` § "Never
-    detect a dev build from a version string" names — a placeholder that happens to
-    look like a version carries no evidence about what produced it. `0.0.0` parses,
-    so it won, and docker-language-server measured as permanently behind and
-    reinstalled on three consecutive applies.
+    Asking the banner first and falling back only where nothing could *parse* is
+    the failure `standards/release.md` § "Never detect a dev build from a version
+    string" names — a placeholder that happens to look like a version carries no
+    evidence about what produced it. `0.0.0` parses, so it wins, and the tool
+    reports permanently behind and is reinstalled on every apply.
 
     **Neither record is authoritative, and preferring the module unconditionally
-    moved the fault rather than fixing it.** `go install` never passes the
+    moves the fault rather than fixing it.** `go install` never passes the
     `-ldflags -X` a release build stamps a version with, so a banner is whatever
     placeholder the source hardcodes. But `go install <module>@latest` resolves a
     *commit* wherever no tag matches the module path, and then the toolchain's
-    answer is a pseudo-version that reads `(0, 0, 0)` — measured on `cheat`, whose
-    banner is the correct `5.1.0`. What separates them is that only the module's
+    answer is a pseudo-version that reads `(0, 0, 0)` while the banner is correct.
+    What separates them is that only the module's
     failure announces itself: `gotool.tagged` reads a format the toolchain defines,
     where telling `0.0.0` from a real `0.0.0` means guessing.
 

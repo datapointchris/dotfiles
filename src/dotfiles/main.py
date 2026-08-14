@@ -217,7 +217,7 @@ def check(
     entirely normal between applies; a machine-local value nobody set, a file only
     safekeep can restore, a declaration that will not validate or a checker that
     could not run are things a person has to deal with. Folding the two together
-    is what left the scheduled unit permanently failed on a healthy box.
+    leaves the scheduled unit permanently failed on a healthy box.
 
     Exits 3 when it finds something, and never 1.
 
@@ -322,8 +322,8 @@ def apply_command(
             # read back — what the currency verdicts were measured against, which
             # part of the machine this run covered, and why an installed item was
             # stale — so a record omitting one is a record that cannot be read.
-            # Measured 2026-08-13 on the work box: an `apply --offline` recorded
-            # `{"skip": []}` and nothing in it said the bundle was the upstream. The
+            # Omitted, an `apply --offline` records `{"skip": []}` with nothing in
+            # it saying the bundle was the upstream. The
             # ceiling is different: its absence means "all the way", which the
             # missing key already says.
             flags={

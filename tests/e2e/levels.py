@@ -1,10 +1,9 @@
 """The test ladder, as data rather than as five invocations to remember.
 
-Every rung already existed and was addressed by hand — a file path here, a flag
-combination there — so reaching for the cheapest one that could answer a question
-meant remembering which of them that was. Twice measured, it was not remembered:
-a container died and thirty minutes went with it, then an assertion added after a
-run started needed another thirty to answer.
+Addressed by hand — a file path here, a flag combination there — reaching for the
+cheapest rung that can answer a question means remembering which one that is. Get
+it wrong and the cost is half an hour: a container dies, or an assertion added
+after a run started needs the run again.
 
 **A level is identified by the fixture its tests ask for, never by a file list.**
 `over_base` starts a throwaway container from a base image, `machine` needs a

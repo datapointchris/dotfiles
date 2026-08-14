@@ -528,9 +528,9 @@ def advice_for(item: DesiredItem, repair: Repair, blocked_by: Blocker | None = N
 def privileged(changes: Sequence[Change]) -> tuple[Change, ...]:
     """What a run will need root for, known before anything runs.
 
-    `plan` prints the count so nobody is surprised mid-run. It no longer feeds a
-    prompt: root is acquired when a write needs it, because keeping a sudo
-    timestamp alive does not work on macOS and a front prompt therefore asked for
-    a password on machines that turned out to need none.
+    `plan` prints the count so nobody is surprised mid-run. It feeds no prompt:
+    root is acquired when a write needs it, because keeping a sudo timestamp alive
+    does not work on macOS and a front prompt therefore asks for a password on
+    machines that need none.
     """
     return tuple(change for change in changes if change.actionable and change.privileged)

@@ -74,12 +74,12 @@ def test_apts_preamble_is_not_mistaken_for_a_package(fake_bin: Path) -> None:
 def test_a_managers_progress_on_stderr_is_not_a_package_behind(fake_bin: Path) -> None:
     """`brew outdated --formula --quiet` prints the answer on stdout while brew's
     auto-update writes progress to stderr. Read from the merged transcript, the
-    decoration became a package name: the row said `2 brew package(s) behind:
-    ollama, ✔︎` on a machine that was behind on one.
+    decoration becomes a package name: `2 brew package(s) behind: ollama, ✔︎` on a
+    machine that is behind on one.
 
-    apt's preamble above is the same disease, and guarding it line-shape by
-    line-shape is what this replaces — the answer is to read the stream that
-    carries the answer.
+    apt's preamble above is the same disease. Guarding it line-shape by line-shape
+    is the wrong answer; reading the stream that carries the answer is the right
+    one.
     """
     manager(fake_bin, 'brew', 'printf "✔︎ Cask copilot-money\\n" >&2\nprintf "ollama\\n"')
 

@@ -1,10 +1,9 @@
 """What a run emits, and the only vocabulary its consumers share.
 
 One measurement, several readers. The console renders it, `--json` serialises it,
-the run record accumulates it and the shell nudge folds it — and before this they
-were four call sites each reaching into the walk and printing as they went, which
-is why `runs.py` had nothing to record and why the same fold was written in four
-places with four sets of edge cases.
+the run record accumulates it and the shell nudge folds it. A reader that reached
+into the walk and printed as it went would leave the run record nothing to
+accumulate, and the fold would be rewritten once per reader.
 
 The payloads are the types the resources already return. This is an envelope, not
 a second vocabulary: a `Change` is still what `diff` decided and an `Outcome` is
@@ -32,9 +31,9 @@ class Started:
     a resource produces arrives *after* the measurement, so a reader watching the
     stream learns a resource's name at the moment it already has its answer —
     which on a fast machine is invisible and on a slow one is a blank screen for
-    the whole of the wait. Measured on the work box: `check` printed nothing for
-    five minutes and then everything at once, and nothing in the output or the
-    record said which resource the five minutes went to.
+    the whole of the wait — a slow `check` prints nothing for minutes and then
+    everything at once, with neither the output nor the record saying which
+    resource the time went to.
 
     Carried in the stream rather than printed from the walk, for the reason the
     walk yields values at all: what a reader does with it — render it, drop it,

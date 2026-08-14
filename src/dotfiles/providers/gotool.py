@@ -109,11 +109,10 @@ def tagged(version: str | None) -> bool:
     record over, and preferring the module unconditionally moved it rather than
     fixed it.
 
-    Measured 2026-08-13 across the three fleet machines: `cheat` pseudo-versioned
-    with a correct `5.1.0` banner, `docker-language-server` tagged `v0.20.1` with a
-    `0.0.0` banner, `gdu` tagged `v5.36.1` with a `development` banner. No single
-    record is authoritative; each fails in its own way, and only the module's
-    failure announces itself.
+    Every combination occurs across the declared tools: pseudo-versioned with a
+    correct banner, correctly tagged with a `0.0.0` banner, correctly tagged with a
+    `development` banner. No single record is authoritative; each fails in its own
+    way, and only the module's failure announces itself.
     """
     return bool(version) and PSEUDO_VERSION.search(version or '') is None
 
@@ -137,9 +136,9 @@ def installed_modules(directory: Path) -> dict[str, str]:
 
     Asked of `toolchain.go_command` rather than of PATH, which is the difference
     between measuring the machine and measuring the shell that launched the run.
-    A Mac has no `go` on PATH at all and answered `unknown` for all 18 declared
-    Go tools; an Arch box reached over ssh finds the pacman `/usr/bin/go` and
-    answers plausibly with the wrong toolchain. Both measured 2026-08-14.
+    A Mac has no `go` on PATH at all and answers `unknown` for every declared Go
+    tool; an Arch box reached over ssh finds the pacman `/usr/bin/go` and answers
+    plausibly with the wrong toolchain.
 
     Empty where `go` is absent or the directory has never been created, which is
     a machine with no Go tools rather than a failure.

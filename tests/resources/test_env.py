@@ -293,10 +293,10 @@ NOW_ON: dict[str, Any] = {'flags': [{'name': 'ALPHA_FLAG', 'default': True}]}
 
 
 def test_a_generated_flag_that_no_longer_says_what_the_manifest_says_is_stale(tmp_path: Path) -> None:
-    """The drift nothing reported. A default that moves in the repo reaches an
+    """The drift nothing else reports. A default that moves in the repo reaches an
     existing machine only through a regeneration, and `true` and `false` are both
-    perfectly parseable — so the file kept the old answer and `check` called the
-    machine converged."""
+    perfectly parseable — so the file keeps the superseded answer and `check` calls
+    the machine converged."""
     stale = session(tmp_path, MANIFEST, WAS_OFF)
     envfile.write(stale.env_file, stale.machine)
 

@@ -114,8 +114,8 @@ class Helper:
         Taking the value as written looks for a directory called `Program\\`,
         reports a helper git runs perfectly well as missing, and — because
         `_asked` stops at the first fault — never reaches the interpreter question
-        this resource was built to ask. Measured on the WSL box, where a real
-        login failure sat behind a fault that was not real.
+        this resource was built to ask. A real login failure then sits hidden
+        behind a fault that is not real.
 
         Which of git's three rules applies is still decided on the raw value,
         before any splitting, because that is the order git decides it in. An

@@ -100,10 +100,8 @@ absent one means, and get "this machine found nothing" for a machine that named
 twelve missing tools. Inferring a generation from the keys in front of you is the
 unversioned failure this number exists to end, not a substitute for it.
 
-The same bump covers the resource-scoped doors, which emitted a bare
-`ResourceResult` or a list of them and now emit this. That half is not additive at
-all: `dotfiles packages plan --json` used to answer an object with `pending` at the
-top and now answers one with `resources` at the top.
+The same bump covers the resource-scoped doors. That half is not additive at all:
+a resource's `--json` answers an object keyed on `resources`, not on `pending`.
 """
 
 

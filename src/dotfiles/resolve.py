@@ -1,13 +1,11 @@
 """Catalog × Machine → Plan. Pure.
 
-"What should this machine have?" is answered today by 28 bash call sites, each
-spawning an interpreter, re-parsing 258 entries, printing text, and handing that
-text back to bash to re-parse. It is one function over two objects here, with no
+"What should this machine have?" is one function over two objects, with no
 subprocess, no network and no filesystem beyond what those two already hold.
 
 That purity is what makes the whole machine × section matrix a parametrized test
-with no fixtures. The 28 call sites could only ever be exercised by running an
-installer, which is why nine bats files approximated them by running bash.
+with no fixtures. Anything reaching the world here could only be exercised by
+running an installer.
 
 **Resolution finishes here.** No provider re-reads the catalog and nothing
 downstream needs the Machine again: if a fact is not on the `DesiredItem`, it
@@ -28,14 +26,12 @@ from dotfiles import machine as machines
 
 
 class Stage(enum.IntEnum):
-    """Execution order *across* sections, replacing `install/phases.sh`'s registry.
+    """Execution order *across* sections.
 
     Ordering is a property of the work rather than of a CLI noun: symlinks must
     land after the tools that provide `task` and before tpm reads the tmux config
     it deploys, which is a constraint between two resources and therefore cannot
-    live on either. The registry's other columns die with it — `group` becomes the
-    stage's own name, `owner_aware` becomes `entry.owner`, and the install/update
-    pair becomes one act, because reconcile has one verb.
+    live on either.
     """
 
     ENVIRONMENT = 10
@@ -262,11 +258,10 @@ class Plan:
     def providers(self) -> frozenset[str]:
         """Which providers have anything to do, which is how a stage learns it is empty.
 
-        The replacement for `install/phases.sh`'s `owner_aware` column, and
-        strictly finer than it: the plan is already narrowed by this machine's
-        subscriptions, so a machine declaring none of the owner's Go tools skips
-        the go-tools stage outright rather than running its installer over an
-        empty list.
+        Derived rather than declared, and strictly finer than a column would be:
+        the plan is already narrowed by this machine's subscriptions, so a machine
+        declaring none of the owner's Go tools skips the go-tools stage outright
+        rather than running its installer over an empty list.
         """
         return frozenset(item.provider for item in self.items)
 
@@ -298,10 +293,10 @@ def resolve(
     hand-placed second call.
 
     `owner` is the whole of `--mine`, and it narrows the plan rather than feeding
-    it. The `owner_aware` column in `install/phases.sh` was a hand-maintained
-    restatement of a fact already in the data; a provider whose entries all belong
-    to someone else resolves to zero items and is skipped because it is empty, not
-    because a column said so.
+    it. A declared owner-aware flag would be a hand-maintained restatement of a
+    fact already in the data; a provider whose entries all belong to someone else
+    resolves to zero items and is skipped because it is empty, not because a
+    column said so.
 
     `packages` is `--package`, and it narrows the same way. None is every entry;
     an empty set would be a plan with nothing in it, which is a different

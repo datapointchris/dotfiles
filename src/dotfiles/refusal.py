@@ -1,19 +1,15 @@
 """One exception for "this failed, and here is what that means", with the boundary that reports it.
 
-Every command used to answer this question for itself, and the answers drifted
-apart in a way nothing could see. Three separate leaves passed a *foreign*
-integer to `typer.Exit` — argparse's status from `bridge.declaration`, git's
-return code from a refused pull, and an argparse `main`'s return from the bundle
-builder. Each lands on 1, and 1 is `DRIFT`: the machine differs from its
-declaration, which is the ordinary state `apply` exists to fix and is explicitly
-not a problem. A failed build, a refused pull and a misspelt package name all
-reported themselves as pending changes.
+**An exit code is *carried* by the failure, never *derived* at the raise site.**
+A leaf that passes a foreign integer to `typer.Exit` — a subprocess's return, an
+argparse status — lands on 1, and 1 is `DRIFT`: the machine differs from its
+declaration, which is the ordinary state `apply` exists to fix and explicitly not
+a problem. A failed build and a misspelt package name then both report themselves
+as pending changes.
 
-The fault is that an exit code was being *derived* at the site rather than
-*carried* by the failure. A domain module already knows which kind of failure it
-has — `NoSuchMachine`'s whole reason for existing is that a name nothing declares
-is retryable while a manifest that will not parse is not — and it had no way to
-say so. So it says so here, and exactly one place turns it into an exit status.
+A domain module already knows which kind of failure it has — a name nothing
+declares is retryable, a manifest that will not parse is not — so it says so here,
+and exactly one place turns it into an exit status.
 
 `advice` is the `hint` line, kept on the exception rather than printed at the
 raise site: the thing that knows a bundle is missing is also the thing that knows
@@ -94,8 +90,8 @@ class Boundary(TyperGroup):
     `ctx` is untyped because its type is whichever click the installed typer
     carries. typer 0.24 subclasses the real `click.Context`; 0.27 vendors its own
     and ships no `click` at all. Naming either narrows the supertype's parameter
-    on the version that has the other, and importing `click` to name it is the
-    dependency this file was changed to stop having.
+    on the version that has the other, and importing `click` to name it is a
+    dependency this package deliberately does not take.
     """
 
     def invoke(self, ctx: Any) -> Any:

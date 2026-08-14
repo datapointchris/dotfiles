@@ -40,9 +40,9 @@ def precondition_note(precondition: resolver.Precondition) -> str:
     """The `[amd_gpu]` suffix on a row, or '' where the item has no precondition.
 
     A named function rather than an f-string inside the render loop, because the
-    escape is the whole content and it was wrong: rich reads `[amd_gpu]` as a
-    style tag and swallows it, so the annotation had never once been visible on
-    any entry that declared one. A value that exists only inside a printed
+    escape is the whole content: rich reads `[amd_gpu]` as a style tag and swallows
+    it silently, so an unescaped annotation is invisible on every entry that
+    declares one. A value that exists only inside a printed
     sentence cannot be asserted without asserting the sentence — and asserting
     the row means pinning a terminal width, which belongs to whoever ran the
     command rather than to us.

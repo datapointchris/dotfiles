@@ -9,12 +9,11 @@ Each is a **precondition of a provider**, in the shape `cargo.binstall` took: it
 runs only when something needing it is planned, it is idempotent, and it answers
 with a `Result` its provider turns into a refusal rather than raising.
 
-That is what settles the inverted tier branch the install phases carried. Measured
-2026-08-08: a manifest with no tier dropped `homebrew.sh` and still ran
-`casks.sh`, so `brew install` ran without the bootstrap that provides `brew`. It
-was unreachable only because every manifest happens to declare a tier. A
-bootstrap owned by the provider cannot be gated by a payload switch, because the
-payload is what asks for it.
+**A bootstrap cannot be gated by a payload switch, because the payload is what
+asks for it.** Gate it on a manifest tier and a manifest declaring no tier drops
+the bootstrap while still running the payload — `brew install` without the step
+that provides `brew`. That stays unreachable only for as long as every manifest
+happens to declare a tier.
 
 None of the three is a declared package, and that is the point rather than an
 omission: a manager declared as one of its own packages would need itself to

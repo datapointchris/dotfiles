@@ -385,8 +385,8 @@ def test_a_package_outside_the_selection_is_a_usage_error(
     as a reinstall that ran and did nothing". A name the machine declares and the
     *selection* excludes has exactly that shape. `ruff` is in the plan and outside
     `--source github_releases`; `uv` is in the plan as the toolchain and outside
-    the `packages` resource entirely. Both used to pass, walk past the item and
-    report a converged machine.
+    the `packages` resource entirely. Accepted, both walk past the item and report
+    a converged machine.
 
     The advice names the address that does carry it, which is the one thing the
     caller cannot work out from the refusal.

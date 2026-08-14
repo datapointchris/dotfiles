@@ -8,6 +8,6 @@ an importer, which is why the helper beside them is copied rather than imported.
 A named package has no such ambiguity.
 
 `tests/e2e/matrix.py` is a script — run as `__main__`, imported by nothing — so
-the two names do not compete for a caller. Measured: with this package present,
+the two names do not compete for a caller. With this package present,
 `import matrix` resolves here from every directory in the suite.
 """

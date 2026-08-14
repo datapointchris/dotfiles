@@ -132,10 +132,10 @@ class Observed:
     is the one input here that is not a measurement, which is why it produces a
     Change with its own detail rather than being folded into a verdict.
 
-    A boolean rather than the entry names it used to be: which entries is
-    `--package`'s question, and by the time a plan reaches here it has already been
-    answered — the plan holds what the run covers, so a name test here would be
-    the narrowing decided a second time and free to disagree with the first.
+    A boolean rather than the entry names: which entries is `--package`'s question,
+    and by the time a plan reaches here it has already been answered. The plan holds
+    what the run covers, so a name test here would be the narrowing decided a second
+    time and free to disagree with the first.
     """
 
     @property
@@ -331,9 +331,9 @@ def _shadowing(
     `evidence` finds *a* binary, and every verb reports the machine converged
     while the tool anyone actually runs came from somewhere else.
 
-    **A second copy is not by itself a finding**, which is the whole difficulty
-    and why the shell script this replaces reported nine things on a healthy
-    machine. Three explanations are legitimate, and none of them is a list here:
+    **A second copy is not by itself a finding**, which is the whole difficulty —
+    reporting every one of them names a handful of things on a healthy machine.
+    Three explanations are legitimate, and none of them is a list here:
 
     - the copy this item's own evidence names — whatever the provider installed;
     - a copy an OS package manager attributes to a package *this manifest

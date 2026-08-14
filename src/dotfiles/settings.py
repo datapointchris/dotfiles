@@ -14,18 +14,16 @@ config; only the tool's own default is compiled in": this tool's own
 `DOTFILES_`-prefixed variable, then the config key. One answers this invocation
 and the other answers this machine.
 
-**A shared unprefixed variable used to sit between them and is gone.** It was
-how every reader of one file was told its location at once, and it could only
-ever answer in a shell — which is the half of the fleet this file exists for.
-The prefix rule is what replaced it: a tool reads no variable that is not its
-own, so one fleet's vocabulary can never be compiled into a generic tool.
+**A tool reads no variable that is not its own.** A shared unprefixed one can
+only ever answer in a shell, which is the half of the fleet this file exists for,
+and it compiles one fleet's vocabulary into a generic tool.
 
 **There is no third rung, and that is deliberate.** A default naming a path
 outside this tool's own XDG directories is what that standard forbids, and a
 default *inside* them would be dotfiles claiming to own a registry that is the
 fleet's data — which `CLAUDE.md` § "dotfiles does not manage fleet data" rules
-out. The registry also moved twice in six hours on 2026-08-12, so a compiled-in
-path would have been wrong before the commit carrying it landed.
+out. The registry has moved twice in one afternoon before now, so a compiled-in
+path can be wrong before the commit carrying it lands.
 """
 
 from __future__ import annotations

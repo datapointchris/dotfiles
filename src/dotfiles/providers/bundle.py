@@ -3,10 +3,10 @@
 `create_bundle` writes one `category|name|version|filename` row per file it puts
 in the bundle, and that manifest is the agreement between the two programs. The
 alternative is a convention — the bundler expanding a `binary_pattern` and the
-installer globbing for whatever it produced — which is what `cargo-tools.sh` did:
-four increasingly loose patterns tried against two candidate names, so a miss was
-indistinguishable from a hit on the wrong tool, and either way the machine the
-bundle exists for silently installed nothing.
+installer globbing for whatever it produced. Globbing means increasingly loose
+patterns tried against several candidate names, so a miss is indistinguishable
+from a hit on the wrong tool, and either way the machine the bundle exists for
+silently installs nothing.
 
 Read here rather than in each provider so the format is spelled once. A category
 is a provider's word for its own files and stays with the provider; what is

@@ -65,9 +65,9 @@ class TestRoundTrip:
 
     def test_a_pre_4_record_is_read_through_its_old_spelling(self, runs_dir):
         """`phases` became `steps` at schema 4, and a rename is the one schema
-        change a default cannot absorb: the old key reaches the constructor and
-        raises, where a merely-absent field would have taken its default. 68 of
-        the fleet's records were written at schema 1 and must stay readable.
+        change a default cannot absorb: the retired key reaches the constructor and
+        raises, where a merely-absent field would take its default. The fleet's
+        pre-4 records must stay readable.
         """
         path = runs.write(a_run(), runs_dir)
         payload = json.loads(path.read_text())

@@ -1,10 +1,9 @@
 """Where a run's two artefacts are opened and closed. One run, both ends of it.
 
-Before this, everything that wanted to know what a run found called the walk
-itself and printed on the way past — which is why `runs.py` was complete, tested,
-and had no caller for months. Recording is not a feature bolted onto the walk; it
-is one more consumer of what the walk already yields, and it works because the
-walk yields values instead of printing them.
+Recording is not a feature bolted onto the walk; it is one more consumer of what
+the walk already yields, and it works only because the walk yields values instead
+of printing them. A reader that called the walk and printed on the way past would
+leave `runs.py` with nothing to record.
 
 The debug event log is the same job at the other end: `open_log` at the start,
 `keep` at the finish, both taking the one `runs.Identity` that names them. They
@@ -45,19 +44,14 @@ def open_log(identity: runs.Identity) -> None:
 def intention(change: Change) -> str:
     """What the run meant to do about one measured item.
 
-    `'planned'` was written for every `Change` whatever it was, because the match
-    dispatches on the payload's *type* and never asked the change itself. The engine
-    is right to yield everything it measured; the record was wrong to call all of it
-    planned. Three categories the run never intended to touch were recorded as work
-    it intended to do — items nothing could measure, items only a person can repair,
-    and, on a `plan` or `check`, every row in the whole walk.
+    Asked of the change, never dispatched on the payload's *type*. The engine is
+    right to yield everything it measured, and three categories of that are things
+    the run never intended to touch: items nothing could measure, items only a
+    person can repair, and — on a `plan` or `check` — every row in the walk.
+    Calling those `planned` makes the record claim work nobody was going to do,
+    and the record is the only artefact a person reads afterwards.
 
-    Measured 2026-08-13 on the work box: one record held eighteen `planned` rows,
-    eleven of them carrying `verdict: unknown`, against five `done` and one `failed`.
-    Nothing was ever going to be done about the eleven, and the record was the only
-    artefact a person could have read afterwards to find that out.
-
-    New values rather than a new field, and no schema bump: `RunOutcome.action` is a
+    Values rather than a new field, and no schema bump: `RunOutcome.action` is a
     bare `str`, so every existing reader absorbs these. Deliberately not members of
     `OutcomeStatus` — that enum is what `perform` did, and none of these ever reaches
     `perform`.
@@ -93,9 +87,9 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # A failed write is an Issue too. `issues` held Refusals alone, which
                 # are raised exceptions — and a provider answering `Result(ok=False)`
                 # returns normally, so the record of a run that failed an install
-                # carried `issues: []`. Measured 2026-08-13: a claude-code install
-                # failed, the terminal said so, the run exited 3, and the record a
-                # person would send to the fleet claimed nothing was wrong.
+                # carried `issues: []` — the terminal said the install failed, the
+                # run exited 3, and the record a person would send to the fleet
+                # claimed nothing was wrong.
                 if not outcome.ok:
                     written.record_issue(event.resource, str(outcome.status), f'{outcome.change.item}: {outcome.message}')
             case Refusal() as refusal:

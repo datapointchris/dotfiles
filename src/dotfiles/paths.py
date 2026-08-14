@@ -21,8 +21,8 @@ def _looks_like_repo(candidate: Path) -> bool:
 def _repo_root() -> Path:
     """The checkout this package belongs to.
 
-    `DOTFILES_DIR` wins unconditionally where it is set: install.sh and update.sh
-    export it, the CLI runs from any directory, and it is how a test points the
+    `DOTFILES_DIR` wins unconditionally where it is set: the bootstrap exports it,
+    the CLI runs from any directory, and it is how a test points the
     whole package at a synthetic tree — which must work even when that tree is
     incomplete.
 

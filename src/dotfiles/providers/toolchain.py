@@ -151,9 +151,9 @@ def go_command() -> str | None:
     `shutil.which` asks a different question, and both fleet machines answer it
     wrong. `.zshrc` added `/usr/local/go/bin` on Linux only, so a Mac found no
     `go` at all; an Arch shell that never sourced `.zshrc` found the pacman
-    `/usr/bin/go` instead. Measured 2026-08-14: the Mac reported all 18 Go tools
-    unmeasurable, and Arch read their build info with a go1.26.6 the repo did not
-    install while its own go1.26.5 sat unused.
+    `/usr/bin/go` instead. The Mac then reports every Go tool unmeasurable, and
+    Arch reads their build info with a toolchain this repo did not install while
+    the one it did sits unused.
 
     `resources/toolchains.py` reached this rule from the other side — ask the
     provider where it put the runtime, never PATH what it can see. A measurement
@@ -181,8 +181,8 @@ then refuses to verify and installs nothing.
 
 The proxy is still deliberately left alone. GOPRIVATE would bypass that too, and
 it does not need bypassing — `GOPROXY` ends in `,direct`, so resolution already
-falls through to git, which authenticates through `gh auth git-credential`.
-Measured 2026-08-14: with this set and nothing else changed, `fleet` builds."""
+falls through to git, which authenticates through `gh auth git-credential`. This
+setting alone is what makes a private-namespace tool build."""
 
 
 def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result:
@@ -284,8 +284,7 @@ def _replace_goroot(unpacked: Path, privilege: Privilege) -> Result:
     Unpacked as this user first and copied in as root, rather than handing the
     tar to `sudo tar -C /usr/local`: `effects.unpack` extracts under
     `filter='data'`, which refuses absolute paths, `..` traversal and device
-    nodes. The shell this replaces applied no such filter to an archive off the
-    internet.
+    nodes. This is an archive off the internet, unpacked as root.
     """
     try:
         removed = privilege.run(['rm', '-rf', str(GO_ROOT)], reason=f'replace the Go toolchain in {GO_ROOT}')
@@ -336,13 +335,11 @@ def set_go_env(go: str | Path | None = None) -> Result:
     toolchains resource repairing drift, on a machine where `observe` has just
     confirmed the runtime is where the registry says.
 
-    **Public, and no longer reached only from `install_go`.** As a private step
-    inside the installer it ran exactly when a machine's Go was replaced, which on
-    a machine that already has Go is never: the toolchain is measured against a
-    floor of 1.23, an installed 1.26.5 clears it forever, and `install_go` is not
-    called again. Measured 2026-08-14 across the fleet — no machine had ever
-    received this setting from this code. The one box carrying it had a file dated
-    2026-08-08, written by the bash predecessor a day before this module existed.
+    **Public, so the resource can reach it without installing Go.** A private step
+    inside the installer runs only when a machine's Go is replaced, which on a
+    machine that already has Go is never — the toolchain is measured against a
+    version floor, an installed runtime clears it forever, and the installer is not
+    called again. The setting would then reach no machine that was already correct.
     """
     binary = str(go) if go else go_command()
     if not binary:

@@ -291,8 +291,8 @@ def test_a_transient_scope_is_never_offered_as_a_thing_to_stop(monkeypatch: pyte
     shell's child — not a unit anyone manages. `systemctl stop` on one kills the
     pane it names, which is worse than the failure being explained.
 
-    Measured on the first live run of this: a binary held by a process spawned in
-    tmux was reported under `tmux-spawn-<uuid>.scope`, with advice to stop it.
+    A binary held by a process spawned in tmux is reported under
+    `tmux-spawn-<uuid>.scope`, and offering that as a thing to stop kills the pane.
     """
     target = tmp_path / 'held'
     target.write_text('x')

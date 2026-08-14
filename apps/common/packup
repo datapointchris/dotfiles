@@ -2,72 +2,20 @@
 #
 # packup - Create compressed backup archive of specified paths
 #
-# Usage: packup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]
-#
 # Creates a timestamped zstd-compressed archive with smart exclusions, live progress
-# tracking, and comprehensive statistics.
+# tracking, and statistics. Run `packup --help` for the flags.
 #
-# Options:
-#   -n, --name <name>       Backup name (required)
-#   -d, --dest <path>       Destination directory (required)
-#   -e, --exclude <pattern> Additional exclusion pattern (repeatable)
-#   -h, --help              Show this help message
+# zstd at level 3 with -T0: 2-3x faster than gzip at a better ratio, multi-threaded
+# across every core, and fast enough to stay interactive.
 #
-# Examples:
-#   packup -n dotfiles -d ~/Documents dotfiles .config
-#   packup -n learning -d ~/Backups learning
-#   packup -n code -d ~/Documents --exclude .git dotfiles
-#   packup -n snapshot -d /tmp dotfiles ~/.zshrc
+# .git is kept whatever it costs. node_modules and .venv are regenerable from a
+# manifest and git history is not, so the space saved is not worth the trade.
 #
-# Technical Implementation Notes:
-#
-# Why zstd compression?
-# zstd provides 2-3x faster compression than gzip while achieving better compression
-# ratios. It supports multi-threading (via -T flag), utilizing all available CPU cores.
-# Level 3 provides excellent balance: fast enough for interactive use, good compression.
-# Auto-threading (T0) means it uses all available cores automatically.
-#
-# Why keep .git directories despite their size?
-# Git history is essential for disaster recovery. If you're backing up a project, being
-# able to recover the full git history (branches, tags, commit messages, authorship) is
-# often more valuable than the disk space saved by excluding it. Other artifacts like
-# node_modules and .venv can be regenerated from package manifests, but git history cannot.
-#
-# Critical Gotcha #1: Trap Handlers and Exit Codes with set -e
-# When a trap handler runs on EXIT, its return value can override the script's intended
-# exit code. With 'set -e', any command returning non-zero causes immediate exit. The
-# cleanup trap must ensure every operation succeeds (via || true) or it will turn a
-# successful backup (exit 0) into a failure (exit 1). This is non-obvious because the
-# trap runs AFTER the main code exits successfully.
-#
-# Example of the bug: The line `[[ -n "$VAR" ]] && rm -f "$VAR"` returns 1 if VAR is
-# unset (the test fails). Without || true at the end, this non-zero return becomes the
-# trap's exit code, which becomes the script's exit code, overriding the explicit
-# `exit 0` from successful completion.
-#
-# Critical Gotcha #2: wait Command Behavior with set -e
-# The wait builtin returns the exit status of the waited-for process. If the process has
-# already exited or doesn't exist, wait returns non-zero. With 'set -e', this causes
-# immediate script exit. This is particularly problematic with background spinner processes
-# that may finish microseconds before wait is called. Adding || true makes wait safe to
-# call regardless of process state.
-#
-# Critical Gotcha #3: Cross-Platform File Size Detection
-# GNU stat --format='%s' works correctly on macOS (outputs file size as expected), but
-# returns exit code 1 instead of 0. This breaks scripts using 'set -e' even though the
-# command succeeded functionally. The solution is `wc -c < file` which works identically
-# across macOS, Linux, and BSD with consistent exit codes. The < redirection is critical -
-# without it, wc includes the filename in output.
-#
-# Critical Gotcha #4: tar Exit Codes Don't Indicate Failure
-# tar returns exit code 1 for non-fatal warnings like "file changed while reading" even
-# when the archive was created successfully and is perfectly valid. This means you cannot
-# rely on tar's exit code to determine success. Instead, validate the archive exists and
-# is non-empty after creation. This is why we disable pipefail during archiving - a tar
-# warning would otherwise fail the entire pipeline despite producing a valid archive.
-#
-# Note: Excludes .venv, node_modules, __pycache__, and various cache directories that can
-# be regenerated from manifests. These patterns reduce backup size by 50-90% typically.
+# **Every cleanup operation in the EXIT trap ends in `|| true`.** A trap's return
+# value becomes the script's exit code, and it runs *after* the main body exits
+# successfully — so one failing test in there turns a good backup into exit 1.
+# `[[ -n "$VAR" ]] && rm -f "$VAR"` returns 1 whenever VAR is unset, which is
+# enough to do it.
 
 set -euo pipefail
 
@@ -479,28 +427,22 @@ create_archive() {
   # Post-Archive Cleanup and Validation
   # ==========================================================================
 
-  # Read final file count BEFORE deleting the progress file
-  # The count loop writes final value after tar completes, but there's a race condition
-  # where we might read before the final write. Brief sleep ensures we get accurate count.
-  sleep 0.1 # Let final echo "$processed" > "$PROGRESS_FILE" complete
+  # Read the count before removing the file the spinner watches. The count loop's
+  # last write races this read; the sleep narrows the window rather than closing it.
+  sleep 0.1
   PROCESSED_FILES=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
 
-  # Stop the background spinner process
-  rm -f "$PROGRESS_FILE" # Spinner checks for this file, removing it stops the loop
+  rm -f "$PROGRESS_FILE" # the spinner loop exits when this is gone
 
-  # Wait for spinner to exit cleanly
-  # CRITICAL GOTCHA: wait returns non-zero if process already exited or doesn't exist!
-  # With 'set -e', this would cause function to return 1 despite successful archive.
-  # The '|| true' ensures wait failure doesn't fail the function.
-  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null || true # Don't fail if already exited
+  # `|| true` because wait returns non-zero when the process has already exited,
+  # which under `set -e` fails the function despite a good archive.
+  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null || true
 
-  # Clear the progress line (cosmetic cleanup)
   printf "\r\033[K"
 
-  # Archive validation - More reliable than checking tar's exit code
-  # Why not trust tar's exit code? tar returns 1 for non-fatal warnings like
-  # "file changed while reading" even when archive is valid and complete.
-  # Instead, verify the file exists and has content (not 0 bytes).
+  # tar's exit code cannot say whether this worked: it returns 1 for non-fatal
+  # warnings like "file changed while reading" over a valid, complete archive.
+  # Existence and non-zero size are the only reliable signal.
   if [[ ! -f "$backup_dest" ]] || [[ ! -s "$backup_dest" ]]; then
     return 1 # Archive creation failed
   fi

@@ -84,9 +84,9 @@ literals they had already been copied four times, and nothing would have failed 
 one of the copies drifted.
 
 `SUBJECT_COLUMN` is a floor rather than the width. A section sets its own from the
-longest item in it, so `shell-plugin/zsh-syntax-highlighting` no longer shoves one
-row's detail three columns right of its neighbours' — an alignment that holds for
-most rows and breaks for a few reads as a broken table rather than a wide word."""
+longest item in it, so one long address cannot shove that row's detail past its
+neighbours' — an alignment that holds for most rows and breaks for a few reads as
+a broken table rather than a wide word."""
 
 SUBJECT_CEILING = 44
 """Where a section stops widening for one long item.
@@ -177,17 +177,16 @@ def emit_text(text: str) -> None:
 def tallies(result: ResourceResult) -> str:
     """The counts behind a verdict, where there are any, worded for the verb asking.
 
-    `ResourceResult` has carried these since it was written and no row has ever
-    shown them, so "converged" meant whatever the reader assumed it meant. Each
+    Without them "converged" means whatever the reader assumes it means. Each
     answers a question the verdict alone leaves open: how much the other verb
     would report, how much nothing could measure either way, and how much of the
     work will ask for a password.
 
     **Each verb shows only the count that is not its own answer**, and words it as
     the other verb's business. A `plan` row saying `converged` beside
-    `4 need attention` was a row contradicting itself: apply has nothing to do
-    here, and four tools are logged out, and both are true. Saying "4 need a
-    person" is the same number read from the side that owns it. The mirror case is
+    `4 need attention` contradicts itself: apply has nothing to do here, and four
+    tools are logged out, and both are true. Saying "4 need a person" is the same
+    number read from the side that owns it. The mirror case is
     a `check` row saying `converged` beside a non-zero `pending`, which is a
     declared package merely absent — drift, and not something wrong.
 
@@ -490,9 +489,9 @@ def retract() -> None:
     """Take back the progress line, now that the answer is ready to replace it.
 
     A progress line is a statement about the present tense, and leaving it on
-    screen turns it into a second, worse report. Measured on this machine: a
-    healthy `check` printed nine `⋯` lines carrying each resource's help text, then
-    nine verdict rows carrying each resource's answer, and the reader's question
+    screen turns it into a second, worse report. Left up, a healthy `check` prints
+    one `⋯` line per resource carrying its help text, then one verdict row per
+    resource carrying its answer, and the reader's question
     was which of the two lists was the report — the resource descriptions read as
     a summary of their own.
 

@@ -1,68 +1,41 @@
 """The git configuration this machine reads, and the identity it commits under.
 
-Identity is the part that matters most, and it arrives through an arrangement:
-the configuration is a chain of includes — entry point, shared config, one file
-per coordinate axis, then the trust variant that supplies the address. Two
-failures in that chain are silent, and both change what a commit carries, which
-is why this resource measures the chain as well as the address at the end of it.
+Identity arrives through a chain of includes — entry point, shared config, one
+file per coordinate axis, then the trust variant supplying the address. Two
+failures in that chain are silent and both change what a commit carries, so this
+measures the chain as well as the address at the end of it.
 
 A `~/.gitconfig` outranks the entire chain, for reads and writes both, so one
 sitting there decides the identity and nothing in the chain says so. `apply`
 removes one; between applies it is `check` that has to name it.
 
 A key two files disagree about resolves to whichever git read last, which is a
-fact about include order that neither file states. `gitconfig.py` holds the
-reading and the narrowing that keeps it from firing on git's own multi-value
-idiom.
+fact about include order that neither file states.
 
-The identity itself is checked and never written. Where it comes from is the trust
-axis's business: a fleet machine includes the personal identity the repo ships,
-and the nonfleet machine defaults to an address the repo deliberately does not
-hold. Either way `apply` has nothing to write here, and `user.useConfigOnly`
-means a machine without one discovers it when git refuses a commit, mid-work.
-Asking here moves that discovery to the moment someone is already looking at
-the machine.
+The identity is checked and never written — the trust axis decides where it comes
+from. `user.useConfigOnly` means a machine without one discovers that when git
+refuses a commit, mid-work; asking here moves the discovery to a moment someone
+is already looking at the machine.
 
 `--global` rather than a plain `--get`, so a repo-local override cannot mask an
-unset machine — which is exactly what would happen when the check runs from
-inside a clone that sets its own. `--includes` because `--global` implies
-`--no-includes`: identity now always arrives through an include, so without it
-this reads the entry-point stub, which carries no [user] by design, and calls
-every machine unset. The pair also skips the nonfleet machine's `includeIf`,
-which is what makes this report the machine's default rather than whatever the
-current directory happens to resolve to. That holds because of how the condition
-is spelled and not because the read is global: a `gitdir:` condition *is*
-evaluated by the same command, since the working directory is enough to decide
-it. `hasconfig:remote.*.url` is not, and that is the spelling the trust variant
-uses.
+unset machine. `--includes` because `--global` implies `--no-includes`, and
+identity always arrives through an include — without it this reads the entry-point
+stub, which carries no [user] by design, and calls every machine unset.
 
-That answers "does this machine have an identity at all" and nothing about
-"will a commit made *in this checkout* carry it" — a different question, and
-the one that actually failed on 2026-08-09: a repo-local override sat in
-`~/dotfiles` unnoticed and `check` reported the machine's identity as converged
-while every commit it produced was attributed to something else. So this also
-reads the effective value git would use for a commit made right here — a plain
-`--get` scoped with `-C` at `session.repo`, local winning over global exactly as
-`git commit` resolves it.
+**A `gitdir:` condition is evaluated by a `--global` read; a `hasconfig:` one is
+not.** git needs a repository's own config to know its remotes, and `--global` is
+exactly the read that excludes it. The trust variant uses the `hasconfig:` spelling.
 
-**The two differing is not itself drift**, and reading it that way was wrong on
-the very machine the arrangement was built for. A nonfleet box defaults to the
-employer identity and matches personal repos back to `personal.gitconfig` with
-`includeIf hasconfig:remote.*.url`, so inside `~/dotfiles` the effective identity
-is *meant* to differ from the machine default. A `--global` read cannot evaluate
-that condition either: git needs a repository's own config to know its remotes,
-and `--global` is exactly the read that excludes it. Measured on git 2.55 — a
-`gitdir:` condition is evaluated by that read, a `hasconfig:` one is not. So the
-comparison reported the arrangement working as a local override, named the
-employer identity as the one in effect inside a personal checkout, and advised a
-`git config --local --unset` that would have removed nothing.
+**The two differing is not drift.** A nonfleet box defaults to the employer
+identity and matches personal repos back with `includeIf hasconfig:remote.*.url`,
+so inside a personal checkout the effective identity is *meant* to differ from the
+machine default. Comparing the two reports the arrangement working as an override
+and advises a `--unset` that would remove nothing.
 
-What is drift is a value this checkout sets *for itself*. That is what `--local`
-reads, it is the only thing `--unset` can remove, and it is now measured directly
-rather than inferred from a difference. A repo-local identity is legitimate in
-other clones (an employer address kept out of a personal repo, deliberately);
-only one inside `session.repo`, the checkout the fleet's own commits come from,
-is drift. Nothing outside it is ever examined.
+Drift is a value this checkout sets *for itself*: what `--local` reads and the only
+thing `--unset` can remove. A repo-local identity is legitimate in other clones —
+an employer address kept out of a personal repo — so only one inside `session.repo`
+counts, and nothing outside it is examined.
 """
 
 from __future__ import annotations

@@ -331,11 +331,11 @@ def _awscli(request: Request) -> Result:
     """AWS's own installer, which is idempotent and expensive — so it is measured first.
 
     `aws/install --update` converges by itself, so the ideal is to run it every
-    time — and it is 73MB every time (measured 2026-08-08), which is why nothing
-    runs it without a reason.
+    time — and it is a 73MB download every time, which is why nothing runs it
+    without a reason.
 
-    `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404,
-    rechecked 2026-08-10 — but it tags every build, and the entry declares
+    `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404 —
+    but it tags every build, and the entry declares
     `version_source: tags` so `_has_currency` can compare against them. Reaching
     here therefore means the machine is missing it or behind, and the 73MB is
     being spent on a difference someone measured.

@@ -153,8 +153,7 @@ class ProbeResult:
     bundle exists for; a TLS-intercepting proxy is reachable and needs its CA
     installed, and a bundle built for it is hours spent on a two-minute fix. Every
     non-zero curl status collapsed to `NO` in the same column, so an intercepted
-    machine read as a blackholed one — measured 2026-08-13, when curl exit 60 was
-    reported as a block.
+    machine read as a blackholed one, with curl's exit 60 reported as a block.
 
     A member and not the prose it renders as. The closing hint in `network check`
     fires on `INTERCEPTED`, and it tested a substring of an English sentence written
@@ -180,7 +179,7 @@ class Derived:
     `unprobed` is carried as data rather than warned about in passing, and ends up
     in the results file. The question a reader has is whether a row is absent
     because nothing needed probing or because the probe could not be built, and a
-    warning on stderr — which is what the shell did — answers that for whoever was
+    warning on stderr answers that for whoever was
     watching the run and for nobody afterwards.
     """
 

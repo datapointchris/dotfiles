@@ -371,9 +371,9 @@ source $my_prompt && log "Load" $my_prompt
 # PLUGIN REPLACEMENTS
 # ------------------------------------------------------------------ #
 
-# colored-man-pages (LESS_TERMCAP_* + GROFF_NO_SGR=1) was removed: it forced
-# groff to keep emitting overstrike so less could paint it, which is what leaked
-# `^H` into every pager that is not less. bat colors from the theme now.
+# No colored-man-pages (LESS_TERMCAP_* + GROFF_NO_SGR=1): it forces groff to keep
+# emitting overstrike so less can paint it, which leaks `^H` into every pager that
+# is not less. bat colors come from the theme instead.
 
 # ------------------------------------------------------------------ #
 # SHELL CONFIG

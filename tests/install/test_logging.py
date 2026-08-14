@@ -142,11 +142,10 @@ def test_log_colors_overrides_what_the_terminal_says(monkeypatch):
 
 
 def test_every_http_logger_the_client_registers_is_pinned():
-    """`HTTP_LOGGERS` named `httpcore`, and the fork vendors its transport as
-    `httpcore2`, so the noisiest logger in the process was never pinned. Its
-    DEBUG records carry whole response-header tuples as the event text: 1008 of
-    1359 events in the apply of 2026-08-12, 74% of a 265KB log that Syncthing
-    copies to every machine.
+    """A pin on `httpcore` misses the fork, which vendors its transport as
+    `httpcore2` — the noisiest logger in the process. Its DEBUG records carry whole
+    response-header tuples as the event text, and unpinned they are the bulk of a
+    log that Syncthing copies to every machine.
 
     Both modules are imported here because the loggers are registered on import
     and would otherwise not exist to be counted. No request is made, so this stays

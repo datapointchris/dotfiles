@@ -2,8 +2,8 @@
 
 Every level writes to stderr, including the ones carrying good news: stdout
 belongs to whatever the script produces for a caller to consume, and a progress
-line on it corrupts that. `docs/architecture/output-streams.md` is the rule; this
-is what holds it.
+line on it corrupts that. `standards/cli-design.md` § "stdout is data, stderr is
+everything else" is the rule; this is what holds it.
 """
 
 from __future__ import annotations

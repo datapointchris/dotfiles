@@ -97,9 +97,8 @@ def prepare_images(names: list[str], into: Path) -> list[Cell]:
 
     Two environments can share one image — `offline` and `restricted` are both
     `dotfiles-test-base:ubuntu-26.04` — and the fixture builds a missing image
-    itself. Fanned out, that is two `docker build` processes racing into one tag:
-    measured the first time this runner fanned level 1 over four environments,
-    and the reason a prepare phase exists rather than leaving it to the fixture.
+    itself. Fanned out, that is two `docker build` processes racing into one tag,
+    which is why a prepare phase exists rather than leaving it to the fixture.
 
     Distinct images, one at a time. A docker build already saturates the box, so
     building two at once trades a race for thrash.

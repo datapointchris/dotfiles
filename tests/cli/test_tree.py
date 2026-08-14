@@ -221,8 +221,8 @@ def test_report_list_on_an_empty_history_is_empty_not_an_error(empty_state: Path
 
 
 def test_a_precondition_is_annotated_on_the_row_it_belongs_to() -> None:
-    """It was not, for as long as it existed: rich reads `[amd_gpu]` as a style tag
-    and swallowed it, silently, on every entry that declared one.
+    """rich reads `[amd_gpu]` as a style tag and swallows it silently, so an
+    unescaped annotation is invisible on every entry that declares one.
 
     Asserted on the value the row is built from rather than on the row. Matching
     the printed line means pinning a terminal width to steady it, which only

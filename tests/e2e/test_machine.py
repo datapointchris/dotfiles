@@ -171,17 +171,17 @@ def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
 def test_a_second_apply_over_a_converged_machine_changes_nothing(converged_machine: Machine) -> None:
     """Idempotence, against the machine the first apply just produced.
 
-    This ran `update.sh` until reconcile collapsed to one verb. `apply` is that
-    verb — it installs what is missing and upgrades what is behind — so running it
-    twice is both the update path and the assertion that the first run converged.
+    `apply` is the only verb — it installs what is missing and upgrades what is
+    behind — so running it twice is both the update path and the assertion that
+    the first run converged.
 
     **The same flags as the install, or it is not a second apply of the same
-    thing.** Without `--offline` this reached the network the offline environment
-    exists to do without, installed the Go and Rust toolchains that run had
-    deliberately refused, and passed — so a test named for changing nothing was the
-    only thing on the machine that changed anything. It also left every later
+    thing.** Without `--offline` this reaches the network the offline environment
+    exists to do without, installs the toolchains that run deliberately refused,
+    and passes — so a test named for changing nothing becomes the only thing on the
+    machine that changes anything. It also leaves every later
     `--installed` check reading a container in a state no install produces, which
-    is how the offline diagnosis went wrong twice before this was spotted.
+    makes an offline diagnosis wrong in a way nothing points at.
     """
     home = converged_machine.environment.home
     flags = converged_machine.environment.offline_flag

@@ -483,8 +483,8 @@ def test_a_symlink_left_by_the_other_mechanism_is_replaced_by_a_copy(copying: Se
     Every other row here starts from an empty home, which is the one starting
     state that cannot catch this — a target that is already a link into the repo
     reads back the source's own bytes through the link, so comparing content
-    answered `same` and the run reported a converged machine still deployed the
-    way it can no longer be.
+    answers `same` and the run reports a converged machine still deployed the way
+    policy no longer allows.
     """
     declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
     apply(session)

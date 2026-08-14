@@ -777,11 +777,10 @@ def _stage_bundle() -> ExitCode | None:
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
-    unasked, and this is that same act on a machine that no longer needs
-    bootstrapping. It is not what removing install.sh's `exec` was about — that
-    was a half-hour networked convergence nobody had asked to start, whereas this
-    is local, cheap, and precisely what the flag was given in order to install
-    from.
+    unasked, and this is that same act on a machine that does not need
+    bootstrapping. Distinct from a bootstrap that starts a networked convergence
+    nobody asked for: this is local, cheap, and precisely what the flag was given
+    in order to install from.
 
     Nothing is staged over an existing bundle: a machine part way through an
     offline install has one, and re-reading the archive each run would be work
@@ -790,10 +789,9 @@ def _stage_bundle() -> ExitCode | None:
     **Both branches report, because both install from a bundle.** The bundle is the
     upstream under this flag, so a run that does not name it has withheld the thing
     every verdict below was decided against — and the branch that finds one already
-    staged is the one every run after the first takes. Measured 2026-08-13 on the
-    work box: twelve package items came back unmeasurable because the bundle carried
-    no version for them, with nothing on screen naming the bundle, its location, its
-    date or its contents.
+    staged is the one every run after the first takes. Unreported, a bundle carrying
+    no version for an item makes it unmeasurable with nothing on screen naming the
+    bundle, its location, its date or its contents.
 
     An empty manifest ends the run rather than starting it. Every provider reads
     the bundle through that file, so a staged directory without one installs
@@ -910,12 +908,11 @@ def apply_machine(
     together installs whatever survived the parse and reports success.
 
     **A whole-machine apply refuses on any error; a scoped one refuses on the
-    errors that concern what it was asked to converge.** The gate used to be keyed
-    on whether the selection held a resource with a *provider*, which is a fact
-    about how a resource is implemented rather than about what the fault is — so
-    `symlinks apply` ran against a `packages.yml` that would not parse, and would
-    have run against a symlink collision too. Narrowing to one resource is a
-    deliberate act and stays possible; converging the whole machine against a
+    errors that concern what it was asked to converge.** Keyed on what the fault
+    is, never on whether the selection holds a resource with a *provider* — that
+    is a fact about how a resource is implemented, and it lets `symlinks apply`
+    run against a `packages.yml` that will not parse. Narrowing to one resource is
+    a deliberate act and stays possible; converging the whole machine against a
     declaration nobody can satisfy is not.
 
     **Every human line this verb prints goes to stderr, the closing verdict
@@ -1131,10 +1128,10 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     continuation of whatever provider acted last, and a set with no renderer at all
     is a part of the machine the run passed over in silence.
 
-    Measured 2026-08-13 on the work box: an `apply --offline` planned twelve package
-    items, acted on one, and said nothing whatsoever about the eleven it had declined
-    because the staged bundle carried no version to compare them against. Each of
-    those eleven already held the sentence explaining itself — `packages._unmeasurable`
+    Without this an `apply --offline` plans a set of package items, acts on the one
+    it can, and says nothing whatsoever about the rest it declined because the staged
+    bundle carried no version to compare them against. Each declined item already
+    holds the sentence explaining itself — `packages._unmeasurable`
     composes it, and `plan` prints it — so the gap this closes is a renderer rather
     than a diagnosis.
 

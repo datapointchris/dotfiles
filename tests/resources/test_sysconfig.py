@@ -254,8 +254,8 @@ def test_a_member_of_the_group_matches(monkeypatch: pytest.MonkeyPatch) -> None:
     """Read from the group database, not from `id -nG`.
 
     `id` reports the *session's* groups, which do not change until the next
-    login — so the bash this replaces re-ran `usermod` on every install after the
-    first, and a check built on it would report drift forever on a correct box.
+    login — so a check built on `id` reports drift forever on a correct box, and
+    an apply re-runs `usermod` on every install after the first.
     """
     declare_group(monkeypatch, [sysconfig.current_user()])
 

@@ -12,11 +12,10 @@ shell that needed it, because it is how the rules are exercised by hand.
     python -m dotfiles.github_release checksum-for <file> <asset>
     python -m dotfiles.github_release sha256 <file>
 
-This module has no shell caller and never had one: every path in is an in-process
-import, so it runs under whichever interpreter is running the CLI. It carried a
-`#!/usr/bin/python3` shebang and a stdlib-only rule for the macOS system python
-until 2026-08-08 — an interpreter that could not have run it, since importing the
-package reaches PyYAML.
+This module has no shell caller: every path in is an in-process import, so it runs
+under whichever interpreter is running the CLI. A stdlib-only rule would be a rule
+for an interpreter that could not run it anyway, since importing the package
+reaches PyYAML.
 """
 
 from __future__ import annotations
@@ -196,8 +195,8 @@ GITHUB_HOSTS = frozenset({'api.github.com', 'github.com'})
 Deliberately excludes the asset CDNs — `objects.githubusercontent.com` and its
 siblings — even though a release download lands there. They are S3-backed and
 serve a pre-signed URL that needs no credential of ours; `s3.amazonaws.com`
-answers a bearer token it does not recognise with a 400, measured 2026-08-10, and
-that is the *polite* failure. The impolite one is that the token was sent at all.
+answers a bearer token it does not recognise with a 400, and that is the *polite*
+failure. The impolite one is that the token was sent at all.
 """
 
 

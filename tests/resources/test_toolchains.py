@@ -212,11 +212,10 @@ def test_a_toolchain_meeting_its_floor_reports_nothing(tmp_path: Path, bin_dir: 
 def test_an_unset_go_module_env_is_stale_on_a_toolchain_that_is_otherwise_current(tmp_path: Path, bin_dir: Path) -> None:
     """A runtime's settings are machine state the same as its version is.
 
-    GONOSUMDB was written by one private step inside `install_go`, which runs only
-    when Go is absent or below its floor. Every fleet machine cleared a floor of
-    1.23 with 1.26.5, so none of them ever received it, and `go install` of the
-    one private module in the namespace failed on every apply with a 404 from
-    sum.golang.org. Nothing measured the setting, so nothing connected the two.
+    Written only by a private step inside `install_go`, GONOSUMDB reaches a machine
+    only when Go is absent or below its floor — so a machine already past the floor
+    never receives it, and `go install` of a private module fails on every apply
+    with a 404 from sum.golang.org. Unmeasured, nothing connects the two.
     """
     stub(bin_dir, 'uv')
     stub(bin_dir, 'go', go_env='')

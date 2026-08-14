@@ -2,7 +2,7 @@
 # ================================================================
 # BASH PROMPT CONFIGURATION
 # ================================================================
-# Ported from zsh prompt.zsh - feature parity where possible
+# Kept at feature parity with prompt.zsh where bash allows it
 # Uses shared utilities from prompt-lib.sh
 # ================================================================
 

@@ -152,9 +152,8 @@ def _answers(binary: str) -> bool:
     **Keyed on the resolved path, never on the name.** PATH is not fixed for the
     life of a process: `providers/toolchain.put_on_path` extends it as each
     runtime lands, and a test hands the resource a PATH of its own. Cached under
-    the bare name, one test's fake `pacman` answered for the next test's — which
-    is how this reached CI green locally and failed on a runner with no real
-    pacman to make the two agree.
+    the bare name, one test's fake `pacman` answers for the next test's — green on
+    a desk where a real pacman makes the two agree, red on a runner without one.
 
     Still a probe rather than `which` alone, because the question is whether the
     manager *runs*: a `dpkg-query` present but broken and one absent are the same

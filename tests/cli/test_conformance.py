@@ -160,10 +160,10 @@ def test_plan_accepts_every_selector_its_apply_does() -> None:
     """`plan` answers "what would `apply` change", so a scope the write accepts and
     the read cannot express is not a narrower preview — it is no preview at all.
 
-    Measured before this held: `packages apply` took `--source` and `--owner` while
-    `packages plan` took neither, so the narrow write most worth rehearsing was the
-    one with no rehearsal available. Asserted across the tree rather than for that
-    pair, because the gap opened by adding a selector to one verb and forgetting
+    An `apply` taking `--source` and `--owner` where its `plan` takes neither
+    leaves the narrow write most worth rehearsing as the one with no rehearsal
+    available. Asserted across the tree rather than for one pair, because the gap
+    opened by adding a selector to one verb and forgetting
     the other, and nothing but this notices.
     """
     for path, options in ACCEPTED.items():
@@ -318,10 +318,10 @@ def test_no_leaf_hands_typer_exit_an_integer_from_somewhere_else() -> None:
     """The invariant the boundary created, which the boundary's own tests do not
     assert.
 
-    Nine hand-written handlers used to map an exception to an exit code, and being
-    nine is what made a wrong one visible beside its right siblings. One handler
-    replaced them and put nothing in place of that redundancy — so a tenth leaf
-    written afterwards can hand `typer.Exit` argparse's status or git's return
+    A hand-written handler per leaf makes a wrong exit code visible beside its
+    right siblings. One shared handler puts nothing in place of that redundancy —
+    so a leaf written afterwards can hand `typer.Exit` argparse's status or git's
+    return
     code, land on 1, and mean DRIFT while the suite stays green. That is exactly
     what `bundle create`, `manage update` and six `bridge.declaration` callers did.
 

@@ -1,13 +1,13 @@
 """A TLS-intercepting proxy, reported as itself rather than as an outage.
 
-The work box sits behind one. On 2026-08-13 an `apply --offline` there reported
-`the claude-code install script exited 60` and nothing else — 60 being curl's code
-for a certificate it will not verify, which is one CA import away from fixed and
-reads as a blocked network. Every layer on that path narrowed its answer to a bool
-or a bare number, so the cause existed nowhere: not on screen, not in the run
+The work box sits behind one. Unreported, an `apply --offline` there says
+`the install script exited 60` and nothing else — 60 being curl's code for a
+certificate it will not verify, which is one CA import away from fixed and reads
+as a blocked network. Every layer on that path can narrow its answer to a bool or
+a bare number, and then the cause exists nowhere: not on screen, not in the run
 record, not in the debug stream.
 
-These pin the four places the reason now survives.
+These pin the four places the reason survives.
 """
 
 from __future__ import annotations

@@ -20,8 +20,7 @@
 #   require_commands curl tar
 #   verify_file /tmp/package.tar.gz "Downloaded package"
 #
-# Note: Trap handlers removed in favor of simpler error handling.
-#       Scripts should use 'set -euo pipefail' directly.
+# No trap handlers: a script wanting strict mode sets 'set -euo pipefail' itself.
 # ================================================================
 
 # Source logging library
@@ -73,17 +72,11 @@ run_cleanup() {
 }
 
 # ================================================================
-# Error Traps (Deprecated - Kept for Backward Compatibility)
+# Strict Mode
 # ================================================================
 
-# Deprecated: enable_error_traps() is now a no-op
-# Trap handlers have been removed from the error-handling library
-# Scripts should use simple 'set -euo pipefail' directly instead
-#
-# This stub remains for backward compatibility with existing scripts
-# that call enable_error_traps(). It will be removed in a future phase.
+# Turns on strict mode and registers no traps, whatever the name suggests.
 enable_error_traps() {
-  # Just set strict mode without complex trap handlers
   set -euo pipefail
 }
 
@@ -241,36 +234,4 @@ disable_debug() {
   set +x
 }
 
-# ================================================================
-# Usage Example
-# ================================================================
-# #!/usr/bin/env bash
-# set -euo pipefail  # Use simple error handling
-#
-# # Source error handling (includes logging)
-# SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# source "$SHELL_DIR/error-handling.sh"
-#
-# # Setup cleanup (runs on EXIT if you set a trap)
-# TMP_DIR=$(mktemp -d)
-# register_cleanup "rm -rf $TMP_DIR"
-# trap run_cleanup EXIT
-#
-# # Use helper functions
-# require_commands curl tar
-# run_with_context "Downloading package" curl -L "$URL" -o "$TMP_DIR/package.tar.gz"
-# verify_file "$TMP_DIR/package.tar.gz" "Downloaded package"
-#
-# # Download with retry
-# download_file_with_retry "https://example.com/file" "$TMP_DIR/file" "Package" 3
-#
-# # Safe move
-# safe_move "$TMP_DIR/binary" "$HOME/.local/bin/binary" "Binary"
-#
-# # Exit (cleanup runs via trap)
-# exit 0
-# ================================================================
-
-# ================================================================
-# End of Error Handling Library
-# ================================================================
+# A worked example is in docs/architecture/shell-libraries.md.

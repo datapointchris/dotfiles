@@ -102,8 +102,7 @@ alt-f = 'layout floating tiling'
 # Toggle fullscreen for current window
 alt-shift-f = 'fullscreen'
 
-# Close window (commented out - macOS has cmd+q)
-# alt-q = 'close'
+# No close binding: macOS already has cmd+q.
 
 # Reload config
 alt-shift-r = 'reload-config'

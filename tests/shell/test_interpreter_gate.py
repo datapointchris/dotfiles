@@ -29,10 +29,9 @@ PYTEST = (sys.executable, '-m', 'pytest', '-q', '-p', 'no:cacheprovider')
 TMUX_TIER = 'tests/install/test_pluginsync.py'
 """The tmux half of the gate lives outside this directory.
 
-TPM's isolation is asserted against a real tmux and the subject is now Python, so
-the tier moved to `tests/install` when `tmux-plugins.sh` converted. The marker did
-not, which is the property being relied on: the gate reads the collected items, so
-a test needing an interpreter is covered wherever it lives.
+TPM's isolation is asserted against a real tmux from `tests/install`, and its
+marker travels with it. That is the property being relied on: the gate reads the
+collected items, so a test needing an interpreter is covered wherever it lives.
 """
 
 GATED = ('tests/shell', TMUX_TIER)

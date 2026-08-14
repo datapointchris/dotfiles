@@ -1,9 +1,9 @@
 """What each GitHub release publishes, and where its binary sits once unpacked.
 
-Twenty-three small functions, all in one file, so a new tool is a copy of the one
+One small function per tool, all in one file, so a new tool is a copy of the one
 above it and every spelling is visible side by side. This is the part that stays
-**code** — measured across all 23 on 2026-08-07 and rejected as `packages.yml`
-data twice, because no placeholder vocabulary survives contact with them:
+**code**, and moving it into `packages.yml` as data has been rejected twice —
+no placeholder vocabulary survives contact with these:
 
     shellcheck   darwin.aarch64,  and a .tar.xz
     trivy        macOS-ARM64 / Linux-64bit

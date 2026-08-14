@@ -6,9 +6,8 @@ the count of tests suggests: the rungs are indistinguishable from their result â
 both yield a path â€” so a reordering is invisible to any test that only checks a
 path came back.
 
-A rung was deleted rather than reordered: the unprefixed `$REPOS_JSON` every
-reader of the registry used to consult. It is asserted *absent* here, because the
-shell this suite runs from still exports it and nothing else would notice it
+The unprefixed `$REPOS_JSON` is asserted *absent* rather than merely unlisted: the
+shell this suite runs from still exports it, so nothing else would notice it
 answering.
 """
 

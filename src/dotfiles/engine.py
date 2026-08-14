@@ -1,20 +1,14 @@
 """The one walk over a machine's resources.
 
-`observe → diff` was written thirteen times across this package — seven
-near-identical `check_*` functions, the CLI's per-resource path, the system-config
-phase inlining it by hand, the deploy pass, the plugin pass, and two dead
-implementations in `resources/__init__.py` that nothing ever called. Each copy had
-its own idea of what to do when a resource raised, and its own rendering.
-
-This is the only one. It yields `Event`s rather than printing, so what a reader
-does with them — render, serialise, record, fold to an exit code — is that
-reader's business and not the walk's.
+It yields `Event`s rather than printing, so what a reader does with them —
+render, serialise, record, fold to an exit code — is that reader's business and
+not the walk's. Every other spelling of `observe → diff` carried its own idea of
+what to do when a resource raised, and its own rendering.
 
 **Isolation belongs here, not to the generator.** A resource that raises must not
 end the stream for the run record, so each is walked inside a `try` that turns the
-exception into a `Refusal`. `bridge.py` protects the same property today by
-catching `SystemExit` from the declaration check, and the reason is recorded
-there: one resource failing must not stop the ones after it from being examined.
+exception into a `Refusal`. One resource failing must not stop the ones after it
+from being examined.
 """
 
 from __future__ import annotations
@@ -59,13 +53,12 @@ class Selection:
 
     **Narrowed per resource, never once for the whole walk.** `plan_for` touches
     only the items of the resource being walked, so a `--skip` aimed at one
-    resource cannot change what another one is handed. The case that proved it:
-    `toolchains` decided it needed the Go runtime by finding `go_tools` items, so a
-    globally narrowed plan made `--skip packages/go` silently stop planning Go — a
-    resource the caller never named. That derivation belongs to
-    `registry.ToolchainProvider` now and runs before a Selection exists, which
-    retires the bug rather than the rule: keeping the narrowing per resource is
-    what stops the next cross-resource reader reintroducing it.
+    resource cannot change what another one is handed. A resource deriving its own
+    work from another's items is what makes this load-bearing: `toolchains` needs
+    the Go runtime because `go_tools` items exist, so a globally narrowed plan lets
+    `--skip packages/go` silently stop planning Go — a resource the caller never
+    named. That derivation runs before a Selection exists, and keeping the narrowing
+    per resource is what stops the next cross-resource reader reintroducing it.
     """
 
     resources: tuple[str, ...]

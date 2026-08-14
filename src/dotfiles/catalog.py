@@ -93,7 +93,7 @@ GRANDFATHERED_CONSTRAINTS = frozenset(
     {
         ('github_releases', 'neovim', 'min_version'),
         ('github_releases', 'fzf', 'min_version'),
-        # go.sh fetches whatever go.dev currently offers and never reads this floor.
+        # The Go installer fetches whatever go.dev currently offers, so no floor applies.
         ('runtimes', 'go', 'min_version'),
     }
 )
@@ -398,10 +398,10 @@ class SystemPackage(Entry):
 class GithubRelease(Entry):
     """A prebuilt binary from a GitHub release.
 
-    The asset name is deliberately *not* here. It stays in code, because three of
-    the 23 defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
+    The asset name is deliberately *not* here. It stays in code, because several
+    entries defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
     and a `.tar.xz`, trivy needs `ARM64`/`64bit`, and zk spells its architecture
-    per OS. Measured across all 23 and rejected twice; see
+    per OS. Rejected as data twice; see
     `docs/architecture/github-releases.md` § "Why asset naming is code".
     """
 
@@ -492,15 +492,13 @@ class WingetPackage(Entry):
     """A Windows CLI, installed by the Microsoft Store client.
 
     Its own section rather than a `winget:` column on `SystemPackage`, and the
-    reason is mechanism rather than destination. Six of these eight are
-    `cargo_packages` rows and one is a `github_releases` row; what none of them can
-    be on Windows is the thing they are elsewhere, because binstall, the Rust
-    target triple and this repo's release-asset code all end at the Unix side. A
-    fifth manager column would instead have reached `package_for`, the four manager
-    names `SystemPackage.problems` hardcodes, `INSTALLER_FAMILIES`,
-    `syspkg.PREFERENCE`, `syspkg.ESCALATES`, `evidence.INSTALLER_QUERIES` and
-    `registry._bootstrap` — seven places, to say that one machine installs a tool a
-    different way.
+    reason is mechanism rather than destination. Most of these are `cargo_packages`
+    or `github_releases` rows elsewhere; what none of them can be on Windows is the
+    thing they are elsewhere, because binstall, the Rust target triple and this
+    repo's release-asset code all end at the Unix side. A fifth manager column
+    would instead have to be threaded through every table keyed on manager name —
+    preference, escalation, the installed-query, the bootstrap — to say that one
+    machine installs a tool a different way.
 
     `repo` and `asset` name where the same binary is published on GitHub, which is
     the offline channel rather than a note about one: the machine that needs these
@@ -516,8 +514,8 @@ class WingetPackage(Entry):
     two `{version}` and `{version_num}` spellings, and the alternative — a function
     per tool in a second module — would be code for a fact one string states.
 
-    Deliberately outside `packages.CURRENCY`: winget is a registry that owns its
-    own upgrades, so asking each package whether it is behind asks a question
+    Deliberately outside the currency check: winget is a registry that owns its own
+    upgrades, so asking each package whether it is behind asks a question
     `winget upgrade` already answers for all of them at once. That is the same
     verdict `npm_globals` gets, for the same reason.
     """
@@ -993,9 +991,8 @@ nothing."""
 class Catalog:
     """`packages.yml`, parsed once and indexed.
 
-    Nothing downstream re-reads the file and no provider takes a path: the 28
-    bash call sites that each spawned an interpreter and re-parsed 258 entries
-    become attribute access on this object.
+    Nothing downstream re-reads the file and no provider takes a path — every
+    reader gets attribute access on this object instead.
     """
 
     entries: Mapping[str, tuple[Entry, ...]]

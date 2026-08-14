@@ -108,7 +108,7 @@ def test_a_section_is_read_out_of_exactly_one_file() -> None:
 
     A section in both would be read from whichever file `_file_for` picked and
     silently ignored in the other, which is a declaration that can be edited with
-    no effect — the failure mode this whole module was rewritten to end.
+    no effect.
     """
     assert not set(catalog.SECTIONS) & set(catalog.SYSTEM_SECTIONS)
     assert all(cls.declared_in == 'system.yml' for cls in catalog.SYSTEM_SECTIONS.values())

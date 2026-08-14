@@ -84,8 +84,7 @@ prompt_git_load_state() {
     esac
   done <<<"$out"
 
-  # A detached HEAD reports "(detached)" as the branch; show the short SHA
-  # instead, matching what the previous rev-parse fallback produced.
+  # A detached HEAD reports "(detached)" as the branch; show the short SHA instead.
   [[ "$PROMPT_GIT_BRANCH" == "(detached)" ]] && PROMPT_GIT_BRANCH="${oid:0:7}"
 
   [[ $untracked ]] && PROMPT_GIT_FLAGS+="untracked "
@@ -143,10 +142,9 @@ prompt_user_context() {
 # ================================================================
 
 # The virtualenv's directory name, taken by parameter expansion rather than by
-# forking basename. Both prompts call this once per redraw, so the fork was a
-# process per prompt to strip a path — bash pays it today and zsh paid it until
-# its prompt stopped calling out to anything. `##*/` is POSIX and works on the
-# bash 3.2 macOS ships, so the rule stays in one place for both shells.
+# forking basename. Both prompts call this once per redraw, so a fork here is a
+# process per prompt to strip a path. `##*/` is POSIX and works on the bash 3.2
+# macOS ships, so the rule stays in one place for both shells.
 prompt_venv_name() {
   if [[ -n "$VIRTUAL_ENV" ]]; then
     printf '%s\n' "${VIRTUAL_ENV##*/}"

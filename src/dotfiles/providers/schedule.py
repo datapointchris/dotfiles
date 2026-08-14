@@ -74,26 +74,19 @@ def _systemd_dir() -> Path:
 
 
 def _service_content() -> str:
-    # No `SuccessExitStatus=1`. It was here because one verb answered two
-    # questions: `check` exited 1 on drift, which is the normal state of a machine
-    # between applies, so the unit sat permanently `failed` in
-    # `systemctl --user --failed` — which is how a real failure comes to be
-    # ignored. Splitting the verbs removed the reason rather than the symptom:
-    # drift is `plan`'s answer now, `check` exits 0 or 3, and a red unit means
-    # something is actually wrong.
+    # No `SuccessExitStatus=1`. `check` exits 0 or 3, so a red unit means something
+    # is actually wrong — masking 1 here would be masking a real failure. Drift is
+    # `plan`'s answer, not this verb's.
     #
     # `--refresh`, because this is the run that can afford it and the one where it
     # matters. Several findings are gated on `latest` having been measured this
     # run rather than read from a cache — a version *ahead* of the newest release
     # is the sharp one, since a cached figure cannot tell a tool that self-updated
     # from a repo that re-versioned downwards and stranded the machine on bytes no
-    # declaration reproduces. Without it the scheduled check, which is the only
-    # one that runs unattended, was the only one that never looked.
-    #
-    # Measured 2026-08-13: a plain `check` called this machine converged while
-    # todoui sat ahead of its newest release; `check --refresh` minutes later
-    # reported it. Nobody is waiting on a timer, and an unanswering upstream
-    # already degrades to "upstream did not answer" rather than failing the run.
+    # declaration reproduces. This is the only check that runs unattended, so
+    # without it that finding is never reached. Nobody is waiting on a timer, and
+    # an unanswering upstream degrades to "upstream did not answer" rather than
+    # failing the run.
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
         f'[Service]\nType=oneshot\nExecStart={_executable()} check --refresh\n'

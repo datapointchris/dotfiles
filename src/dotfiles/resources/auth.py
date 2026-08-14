@@ -2,9 +2,8 @@
 
 A converged machine is not necessarily a working one. Every binary can be
 installed, every symlink deployed and every flag set while the CLIs that do the
-work all sit logged out — measured on the Arch box on 2026-08-12, where
-`dotfiles check` printed a screen of converged rows while `learning`, `meso`,
-`nomad` and `atuin` could not answer a single request between them.
+work all sit logged out. Without this resource `dotfiles check` prints a screen of
+converged rows while the data CLIs cannot answer a single request between them.
 
 **The manifest names which; this module says how.** A machine's `auth:` list is
 the roster, and the table below is the probe for each name. That is the shape
@@ -378,11 +377,11 @@ def _bbkt(session: Session) -> Credential:
 def _jira(session: Session) -> Credential:
     """The config `jira init` writes, or the token in the environment.
 
-    The one path here taken from upstream convention rather than measured: jira is
-    declared by the work box alone and is on no machine this was written from.
-    `jira init --help` and `eza -1a ~/.config/.jira/` settle it there in one line
-    each, and `$JIRA_CONFIG_FILE` is honoured so a box that keeps it elsewhere
-    reads correctly whatever the default turns out to be.
+    The one path here taken from upstream convention rather than measured, because
+    jira is declared by the work box alone. `jira init --help` and
+    `eza -1a ~/.config/.jira/` settle it there in one line each, and
+    `$JIRA_CONFIG_FILE` is honoured so a box that keeps it elsewhere reads correctly
+    whatever the default turns out to be.
 
     `jira me` is the networked answer and is not used, for the reason every other
     probe here gives.

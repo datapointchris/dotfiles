@@ -1,23 +1,18 @@
-"""The two machines the old design could not express, now expressed.
+"""Two machines a single fused `platform:` string cannot express.
 
-`.planning/machine-axes.md` built two probes to complete a factorial — a Ubuntu
-Wayland desktop and Arch under WSL — and found that neither could be written
-down. `platform:` is one string selecting one directory per tree, and Arch-on-WSL
-needs pacman from `archlinux` and the Windows-host interop from `wsl` at once.
-Naming either loses the other; there was no third value to write.
+A Ubuntu Wayland desktop and Arch under WSL complete the factorial, and neither
+can be written down as one string: Arch-on-WSL needs pacman from `archlinux` and
+the Windows-host interop from `wsl` at once, and naming either loses the other.
 
-That is the claim step 8 exists to settle, so it is asserted here rather than
-described in a planning document. A probe resolving with the right directories on
-both axes *is* the proof, and it fails the moment a coordinate stops selecting
-independently.
+Asserted here rather than described in a planning document. A probe resolving with
+the right directories on both axes *is* the proof, and it fails the moment a
+coordinate stops selecting independently.
 
-**The body is derived, never copied.** The probes' other finding was that a
-manifest body does not vary with the OS at all — both came out byte-identical to
-the machine they were derived from, bar the identity lines. Copies of those
-bodies were kept in `.planning/machines/` and had drifted within months: one
-still said `dotfiles env sync` and still installed a package removed for failing
-to build. Deriving the body from the live manifest makes the finding a mechanism
-instead of a claim, and leaves nothing to rot.
+**The body is derived, never copied.** A manifest body does not vary with the OS —
+both probes come out byte-identical to the machine they derive from, bar the
+identity lines. A copy kept beside them drifts within months, naming a retired
+verb and a package removed for failing to build. Deriving from the live manifest
+makes the finding a mechanism instead of a claim.
 """
 
 from __future__ import annotations

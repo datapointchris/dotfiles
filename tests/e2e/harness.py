@@ -727,9 +727,8 @@ def refusals(machine: Machine) -> dict[str, str]:
 
     Addressed as the record writes them — `packages/go/sesh`, which is
     `f'{item.resource}/{item.address}'` — so a caller matches an item exactly
-    rather than on its last segment. The shell script this replaces keyed on the
-    segment alone and said why: it had no `resource` to hand. It also meant
-    anything named `awscli` excused every absent `aws`, whichever provider had
+    rather than on its last segment. Keyed on the segment alone, anything named
+    `awscli` excuses every absent `aws`, whichever provider had
     refused.
     """
     return {
@@ -1022,8 +1021,8 @@ def probe_of(item: DesiredItem) -> str:
     **Empty for a registry package, which PATH cannot answer for.** `command -v
     7zip` fails on Arch against a `7zip` that is installed and working, because
     the package ships `7z`; `build-essential` and `libssl-dev` name no binary at
-    all. Measured against the Arch container, asking PATH about system packages
-    failed 30 of them. Those are `registry_names`' question instead.
+    all. Asking PATH about system packages fails a large share of them, so those
+    are `registry_names`' question instead.
 
     Empty too for an item with no evidence of any kind — a macOS default, a
     systemd unit, a group membership. Each is real and is somebody else's
