@@ -31,10 +31,10 @@ from dotfiles.vocabulary import ExitCode
 MACHINE = 'linux-lxc-server'
 """Named rather than left to `$MACHINE`.
 
-The two walk tests below stub every checker, so which machine it is cannot
-change their answer — but `check_machine` resolves a Session before reaching
-them, and an unset `MACHINE` raises there. That passes on a developer's box,
-where `~/.env` exports one, and fails on every runner.
+The walk tests below stub every checker, so which machine it is cannot change
+their answer — but anything resolving a Session before reaching them raises on an
+unset `MACHINE`. That passes on a developer's box, where `~/.env` exports one,
+and fails on every runner.
 """
 
 
@@ -82,7 +82,7 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(ResourceVerdict.CONVERGED, 'machines'))
 
     measured = summaries(None, [name for name in vocabulary.RESOURCES if name not in {'packages', 'system'}])
-    addresses = [item.address for item in reconcile.check_machine(measured)]
+    addresses = [item.address for item in reconcile.fold_walk(measured, reconcile.Lens.CHECK)]
 
     assert 'packages' not in addresses
     assert 'system' not in addresses
@@ -90,7 +90,7 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
 
 
 def test_skipping_machines_skips_the_declaration_check() -> None:
-    assert reconcile.check_machine([], skip=frozenset({'machines'})) == []
+    assert reconcile.machines_row(frozenset({'machines'})) == []
 
 
 def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,7 +103,7 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
         Event('symlinks', Summary('all fine')),
     ]
 
-    walked = {item.address: item.verdict for item in reconcile.check_machine(measured)}
+    walked = {item.address: item.verdict for item in reconcile.fold_walk(measured, reconcile.Lens.CHECK)}
 
     assert walked['packages'] is ResourceVerdict.ISSUE
     assert walked['symlinks'] is ResourceVerdict.CONVERGED

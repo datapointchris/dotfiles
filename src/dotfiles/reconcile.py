@@ -19,6 +19,7 @@ import datetime as dt
 import functools
 from collections.abc import Callable
 from collections.abc import Iterable
+from collections.abc import Iterator
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -617,61 +618,66 @@ def survey(
         if report is not None:
             report(result)
 
-    for row in _declaration_row(skip) if lens is Lens.CHECK else []:
+    for row in machines_row(skip) if lens is Lens.CHECK else []:
         keep(row)
 
     collected: list[Event] = []
+
+    def observed() -> Iterator[Event]:
+        for event in engine.assess(session, selection):
+            if isinstance(event.payload, Started):
+                announce(event.resource, event.payload.detail)
+            collected.append(event)
+            yield event
+
+    # `retract` only for these, never for the declaration row: it erases whatever
+    # `announce` last wrote, and nothing announces a row that measured no resource.
+    for row in fold_walk(observed(), lens):
+        retract()
+        keep(row)
+    return Surveyed(collected, results)
+
+
+def fold_walk(events: Iterable[Event], lens: Lens) -> Iterator[ResourceResult]:
+    """One verdict per resource, each folded as that resource's last event lands.
+
+    A generator, and folded per resource rather than over the whole stream, so a
+    caller can report a verdict while the next resource is still being measured.
+    Folding at the end is the same answer arrived at later, which is what made a
+    slow resource indistinguishable from a hung one.
+
+    Separate from `survey` because `survey` needs a Session and this needs only
+    the events. That is what lets the walk's invariants — a skipped address being
+    absent, a refusal becoming an issue without ending the stream — be pinned
+    against the code that actually runs, rather than against a second fold written
+    beside it and free to disagree.
+    """
     measuring: list[Event] = []
-    for event in engine.assess(session, selection):
-        if isinstance(event.payload, Started):
-            announce(event.resource, event.payload.detail)
-        collected.append(event)
+    for event in events:
         measuring.append(event)
         # A resource ends on one or the other — `engine._measure` yields a Summary
         # when it answered and a Refusal when it could not, and never both.
         if isinstance(event.payload, Summary | Refusal):
-            retract()
-            keep(fold(measuring, lens)[0])
+            yield fold(measuring, lens)[0]
             measuring = []
-
     if measuring:
-        retract()
-        keep(fold(measuring, lens)[0])
-    return Surveyed(collected, results)
+        yield fold(measuring, lens)[0]
 
 
-def _declaration_row(skip: frozenset[str]) -> list[ResourceResult]:
+def machines_row(skip: frozenset[str]) -> list[ResourceResult]:
     """The `machines` verdict, unless it was skipped.
 
     One place, because both readers of it have to agree on two things: that it
     comes before the walk, and that `--skip machines` removes it rather than
     leaving a row nothing measured.
+
+    `check`'s and never `plan`'s. A semantically invalid `packages.yml` is
+    something *wrong*, and a plan that refused to print because a manifest names a
+    retired tool would be answering a question nobody asked. A declaration too
+    broken to load is a different thing, and shows up in either verb as every
+    resource refusing.
     """
     return [] if 'machines' in skip else [check_declaration()]
-
-
-def plan_machine(events: Iterable[Event]) -> list[ResourceResult]:
-    """What `apply` would change. Reads only.
-
-    The declaration check is `check`'s, not this one's: a semantically invalid
-    `packages.yml` is something *wrong*, and a plan that refused to print because
-    a manifest names a retired tool would be answering a question nobody asked.
-    A declaration too broken to load is a different thing, and shows up here as
-    every resource refusing.
-    """
-    return fold(events, Lens.PLAN)
-
-
-def check_machine(events: Iterable[Event], *, skip: frozenset[str] = frozenset()) -> list[ResourceResult]:
-    """What is wrong with this machine, which is not the same as what differs.
-
-    Drift is the normal state of a machine between applies, and folding it in here
-    is what made the scheduled unit sit permanently failed on a box with nothing
-    wrong with it — and what would have trained the shell nudge away inside a week.
-    """
-    results = _declaration_row(skip)
-    results.extend(fold(events, Lens.CHECK))
-    return results
 
 
 def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:

@@ -582,10 +582,3 @@ def _requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: 
                 )
             )
     return tuple(found)
-
-
-def declared_flags(root: Path | None = None) -> tuple[Flag, ...]:
-    """Every flag the repo declares, machine-independent."""
-    install = (root / 'install') if root else paths.INSTALL_DIR
-    flags_file = install / 'flags.yml'
-    return _declared_flags(yaml.safe_load(flags_file.read_text()) if flags_file.is_file() else {})

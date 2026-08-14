@@ -66,7 +66,6 @@ CACHE_ROOT = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'd
 # short enough that superseded versions do not accumulate forever.
 CACHE_RETENTION_DAYS = 90
 
-DOWNLOAD_TIMEOUT_SECONDS = 300
 DOWNLOAD_ATTEMPTS = 3
 
 # Keep the tail of a failing command's output: a TLS, proxy or "too many errors"

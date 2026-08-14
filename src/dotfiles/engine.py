@@ -54,9 +54,8 @@ class Selection:
 
     `plugins/tpm` and `plugins/shell-plugin` sit on opposite sides of the symlink
     pass — TPM has to exist before the pass that deploys the tmux config it reads —
-    which is the reason `ADDRESS_SEPARATOR` was invented and then not used for
-    anything. `--skip plugins/tpm` over-skipped to all of `plugins`, and `main.py`
-    admitted so in a docstring.
+    which is the reason `ADDRESS_SEPARATOR` exists. `--skip plugins/tpm`
+    over-skipped to all of `plugins`, and `main.py` admitted so in a docstring.
 
     **Narrowed per resource, never once for the whole walk.** `plan_for` touches
     only the items of the resource being walked, so a `--skip` aimed at one
@@ -101,18 +100,19 @@ class Selection:
     def of(cls, *addresses: str) -> Selection:
         """Exactly these addresses, each a resource or one provider inside one."""
         named = frozenset(_valid(address) for address in addresses)
-        resources = tuple(name for name in vocabulary.RESOURCES if name in {address.split('/')[0] for address in named})
-        wanted = {address for address in named if '/' in address}
+        parsed = {address: vocabulary.parse_address(address) for address in named}
+        resources = tuple(name for name in vocabulary.RESOURCES if name in {resource for resource, _ in parsed.values()})
+        wanted = {provider for _, provider in parsed.values() if provider is not None}
         if not wanted:
             return cls(resources)
-        return cls(resources, frozenset(address.split('/', 1)[1] for address in wanted) | _providers_of(named))
+        return cls(resources, frozenset(wanted) | _providers_of(named))
 
     @classmethod
     def excluding(cls, skip: Iterable[str]) -> Selection:
         """Everything but these, which is what `--skip` means."""
         dropped = frozenset(_valid(address) for address in skip)
         resources = tuple(name for name in vocabulary.RESOURCES if name not in dropped)
-        narrowed = {address.split('/', 1)[1] for address in dropped if '/' in address}
+        narrowed = {provider for provider in (vocabulary.parse_address(address)[1] for address in dropped) if provider is not None}
         if not narrowed:
             return cls(resources)
         return cls(resources, frozenset(provider.name for provider in registry.PROVIDERS) - narrowed)
@@ -256,8 +256,8 @@ def _valid(address: str) -> str:
     # is a separator with nothing after it — not a bare resource. Reading it as
     # one is how it would silently skip all of `plugins`, which is the over-skip
     # this grammar exists to end.
-    resource, separator, provider = address.partition(vocabulary.ADDRESS_SEPARATOR)
-    if not separator:
+    resource, provider = vocabulary.parse_address(address)
+    if provider is None:
         if resource in vocabulary.RESOURCES or resource == 'machines':
             return address
         raise UnknownAddress(f'unknown address {address}. Valid: {", ".join(vocabulary.RESOURCES)}')
@@ -272,7 +272,7 @@ def _valid(address: str) -> str:
 def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
     """Every provider of a resource named without one, so `packages` and
     `packages/go` in the same selection do not narrow each other away."""
-    whole = {address for address in addresses if '/' not in address}
+    whole = {address for address in addresses if vocabulary.parse_address(address)[1] is None}
     return frozenset(provider.name for provider in registry.PROVIDERS if provider.resource in whole)
 
 
