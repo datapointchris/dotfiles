@@ -339,6 +339,29 @@ def test_force_never_reaches_a_name_project_scripts_declares(sandbox: Sandbox, c
     assert installed.read_text() == 'the installed console script\n'
 
 
+def test_a_plain_apply_refuses_a_binary_another_installer_left_in_local_bin(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The collision that actually happens, and the one `DESTINATIONS` cannot hold.
+
+    Every row there is a config under `~/.config`, where the only thing that ever
+    writes is this manager. `uv tool install` writes a real executable into the
+    same `~/.local/bin` the apps tree links into, so deploying an `apps/` entry
+    means unlinking a file somebody's package manager owns — and it must refuse
+    without `--force` exactly as it refuses a foreign config.
+    """
+    declare(sandbox, 'apps/common/notes', 'the notes app\n')
+    installed = sandbox.home / '.local' / 'bin' / 'notes'
+    installed.parent.mkdir(parents=True)
+    installed.write_text(SOMEBODY_ELSE)
+
+    ran = cli('symlinks', 'apply', '--json')
+    checked = cli('symlinks', 'check')
+
+    assert wrote(ran) == []
+    assert not installed.is_symlink()
+    assert installed.read_text() == SOMEBODY_ELSE
+    assert checked.exit_code == ExitCode.ISSUE
+
+
 def test_force_is_a_usage_error_where_a_copy_machine_cannot_honour_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A copy overwrites every target, so nothing is ever refused for the flag to
     answer — and it exits 0 having deployed what a bare apply deploys.

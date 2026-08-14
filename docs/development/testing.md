@@ -38,8 +38,7 @@ import-time seams need rebinding rather than an environment variable.
 the other: every container level over every environment, which is `tests/e2e/`
 and costs an hour. Neither name is going to win, so read the path.
 
-The rule for a new test, and the one that was missing while `tests/cli/test_config.py`
-and eight symlink cases sat unretired behind tables that already covered them:
+The rule for a new test:
 
 **If the property is visible through a CLI verb, it belongs in `tests/matrix/` as
 a row in a table.** A test lands in `tests/resources/` only when it needs one of
