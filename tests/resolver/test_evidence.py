@@ -86,11 +86,11 @@ def test_a_non_go_binary_with_unparseable_output_is_returned_verbatim(monkeypatc
 def test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_says(monkeypatch, gobin, banner) -> None:
     """The banner is not read, and which of the three it is does not matter.
 
-    This inverted. The banner used to win wherever it parsed, and `go version -m`
-    answered only where it did not — which is a version string being interrogated
-    about whether it is a real version, the move `standards/release.md` § "Never
-    detect a dev build from a version string" forbids, for the reason it gives
-    there: a valid-looking string carries no evidence about what produced it.
+    Letting the banner win wherever it parses, and asking `go version -m` only
+    where it does not, interrogates a version string about whether it is a real
+    version — the move `standards/release.md` § "Never detect a dev build from a
+    version string" forbids, for the reason it gives there: a valid-looking string
+    carries no evidence about what produced it.
 
     The three ids are the whole argument. `go install` never passes the
     `-ldflags -X` a release build stamps a version with, so `gdu` prints
@@ -118,12 +118,12 @@ def test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_sa
 def test_a_pseudo_versioned_module_is_not_an_answer(monkeypatch, gobin) -> None:
     """`go install` resolved a commit, so the binary's own banner is what is left.
 
-    Measured on `cheat`: `go version -m` answers
-    `v0.0.0-20260216134545-b8098dc1b9de`, which `versions.parse` reads as
-    `(0, 0, 0)` — below every release anyone publishes — while `cheat --version`
-    prints the correct `5.1.0`. Preferring the module unconditionally made `cheat`
-    permanently STALE on all three fleet machines, which is exactly the
-    docker-language-server failure moved onto a different tool.
+    Where no tag matches the module path, `go version -m` answers a pseudo-version
+    like `v0.0.0-20260216134545-b8098dc1b9de`, which `versions.parse` reads as
+    `(0, 0, 0)` — below every release anyone publishes — while the binary's own
+    banner is correct. Preferring the module unconditionally makes such a tool
+    permanently STALE, which is the placeholder failure moved onto a different tool
+    rather than fixed.
 
     Neither record is authoritative and each fails its own way. The asymmetry that
     makes this decidable is that only the module's failure announces itself: a

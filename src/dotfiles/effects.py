@@ -267,11 +267,9 @@ def run(
 
         The exception is a *short* successful answer, kept up to `ANSWER_LIMIT`.
         A version probe succeeds and its whole meaning is the one line it prints,
-        so recording only the argv and the exit code makes an item that is
-        permanently stale undiagnosable from the record: `toolbox --version`
-        appears to have run fine, on every run, for weeks. That was measured — it
-        is why the toolbox drift on one Mac could not be read from the shared run
-        history and needed an ssh to answer.
+        so recording only the argv and the exit code makes a permanently stale item
+        undiagnosable from the record: the probe appears to have run fine, on every
+        run, and the drift can only be read by logging into the machine.
         """
         seconds = round(time.perf_counter() - began, 3)
         fields = {
@@ -533,10 +531,10 @@ def install(source: Path, target: Path) -> bool:
     next start picks up the new one. That is why nothing has to be stopped before
     an apply, and why this needs no knowledge of what happens to be running.
 
-    Measured on this fleet: `ntfy-client.service` has held `~/.local/bin/ntfy`
-    for four days with `Restart=always`, so every apply refused with ETXTBSY and
-    ntfy sat at 2.26.0 while 2.27.0 was published. Any long-running tool
-    installed from a release had the same permanent failure.
+    Writing through instead is a permanent failure for any long-running tool
+    installed from a release: a service under `Restart=always` holds its binary
+    open indefinitely, so every apply refuses with ETXTBSY and the tool stays at
+    whatever version it was when the service started.
     """
     began = time.perf_counter()
     target.parent.mkdir(parents=True, exist_ok=True)

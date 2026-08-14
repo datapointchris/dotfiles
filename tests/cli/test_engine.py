@@ -81,9 +81,8 @@ def test_no_two_resources_share_a_stage() -> None:
     """The precondition for sorting a walk on the stage alone.
 
     Two resources at one stage would make the order between them a tie-break
-    nobody declared, decided by whichever happened to be measured first — which
-    is the class of ordering-by-accident the phase registry was built to supply
-    and this replaces.
+    nobody declared, decided by whichever happened to be measured first. Stage
+    numbers exist to state that order rather than let it fall out of the walk.
     """
     from dotfiles import registry
 

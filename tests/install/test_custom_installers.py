@@ -534,8 +534,8 @@ class TestTerraformLs:
         The alternative is a machine that cannot finish an install because of a
         language server.
 
-        `refused` rather than the `Result(True, ...)` this used to answer. Both keep
-        the stage green, and only one of them stops `apply` printing a tick in front
+        `refused` rather than `Result(True, ...)`. Both keep the stage green, and
+        only one of them stops `apply` printing a tick in front
         of a sentence saying nothing was installed.
         """
         _, fetches = effected()

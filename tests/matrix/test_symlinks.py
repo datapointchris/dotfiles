@@ -603,11 +603,11 @@ def test_a_collision_stops_the_apply_before_it_writes_anything(sandbox: Sandbox,
     """Two directories claiming one destination is an error, and an error stops the
     run rather than converging part of it.
 
-    It used to deploy both. `declared()` appends without deduplicating, so two links
-    were planned at one target and `perform` ran both in order — the later one won,
-    the next `plan` reported the loser as ordinary drift and repaired it, unseating
-    the winner, and the file alternated between the two on every run for ever while
-    `check` reported a healthy machine.
+    Deploying both is the alternative, and it never settles. `declared()` appends
+    without deduplicating, so two links are planned at one target and `perform` runs
+    both in order — the later one wins, the next `plan` reports the loser as
+    ordinary drift and repairs it, unseating the winner, and the file alternates
+    between the two on every run for ever while `check` reports a healthy machine.
 
     Refusing before the walk rather than skipping the one target: a machine
     converged against a declaration nobody can satisfy is in a state neither the
@@ -671,15 +671,14 @@ def test_show_says_a_fully_deployed_machine_has_nothing_undeployed(sandbox: Sand
 
 
 def test_an_apply_deploys_a_link_declared_since_the_last_one_in_this_process(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A file added to the repo between two applies used to be refused, with a
-    message saying the repo no longer declares it — the opposite of true.
+    """A file added to the repo between two applies in one process still deploys.
 
-    `observe` re-reads the repo every run, so the change was planned correctly.
+    `observe` re-reads the repo every run, so the change is planned correctly.
     `perform` is handed a `Change` rather than the observation and looks the link up
     in `_index`, whose cache key is the Session — equal by value across the two
-    runs, so the second got the first's answer, found no link at that address, and
-    fell into the branch for pruning an orphan. The run exited 0 and reported
-    converged, having deployed nothing.
+    runs. Cached, the second run gets the first's answer, finds no link at that
+    address, and falls into the branch for pruning an orphan: exit 0, converged,
+    nothing deployed.
 
     Not reachable from a shell, where one process runs one apply. Reachable from
     anything driving the CLI in process, which is this suite — so the fixture that

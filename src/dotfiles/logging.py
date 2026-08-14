@@ -134,17 +134,16 @@ logging at INFO reaches the console by default, and httpx2 writes one
 release refresh is a line per declared tool, between the rows a person is
 actually reading.
 
-**`httpcore2` is the one that was missing, and it was the expensive one.** The
-fork vendors its transport under that name, not `httpcore`, so it was never
-pinned. Its DEBUG records carry whole response-header tuples as the event text
-and they went straight into the file sink. Unpinned it dominates the log — around
-three quarters of the events in a real apply, in a file Syncthing copies to every
-machine, burying the failure the run actually had.
+**`httpcore2` is the expensive one, and the easiest to miss.** The fork vendors
+its transport under that name rather than `httpcore`, so a pin on the obvious
+spelling does not reach it. Its DEBUG records carry whole response-header tuples
+as the event text, and unpinned they dominate the log — around three quarters of
+the events in a real apply, in a file Syncthing copies to every machine, burying
+the failure the run actually had.
 
-The unprefixed pair stays, on the reasoning the miss disproved only half of:
-naming a logger that does not exist really is free. What it does not buy is
-cover for a name nobody thought of, which is what a `logger` field in the stream
-now makes visible.
+The unprefixed pair stays: naming a logger that does not exist is free. What it
+does not buy is cover for a name nobody thought of, which is what the `logger`
+field in the stream makes visible.
 """
 
 

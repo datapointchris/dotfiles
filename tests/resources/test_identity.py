@@ -135,10 +135,10 @@ def personal_identity_by_remote(gitconfig: Path, session: Session) -> None:
 
 
 def test_an_include_this_checkout_matches_is_not_a_local_override(gitconfig: Path, session: Session) -> None:
-    """The arrangement working, reported as drift. A nonfleet box is *meant* to
-    commit personal repos under a different identity from its default, and the
-    advice this used to produce — `git config --local --unset` — would have
-    removed nothing, because nothing local was set."""
+    """The arrangement working, which must not read as drift. A nonfleet box is
+    *meant* to commit personal repos under a different identity from its default,
+    so advising `git config --local --unset` would remove nothing — nothing local
+    is set."""
     personal_identity_by_remote(gitconfig, session)
 
     assert changes(session) == ()
@@ -176,10 +176,9 @@ def test_a_field_decided_by_an_include_names_the_machine_default_beside_it(gitco
 def test_a_local_override_in_this_checkout_is_named(
     gitconfig: Path, session: Session, local_name: str, local_email: str, expected: list[str]
 ) -> None:
-    """This is the failure from 2026-08-09: `~/dotfiles` itself carried a
-    repo-local override and `check` reported the machine's identity as
-    converged while every commit it produced was attributed to something
-    else."""
+    """A repo-local override inside `session.repo` is drift. Unnamed, `check`
+    reports the machine's identity as converged while every commit that checkout
+    produces is attributed to something else."""
     gitconfig.write_text('[user]\n\tname = Chris\n\temail = chris@example.com\n')
     subprocess.run(['git', 'init', '-q'], cwd=session.repo, check=True)
     subprocess.run(['git', 'config', 'user.name', local_name], cwd=session.repo, check=True)

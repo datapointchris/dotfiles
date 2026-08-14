@@ -815,13 +815,12 @@ def test_an_unresolvable_machine_is_an_issue_with_every_reason_printed(sandbox: 
 
 
 def test_the_reasons_a_machine_cannot_resolve_are_printed_on_one_stream(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """One diagnostic, one stream. It used to be split: a `cannot be resolved`
-    header on stderr and the reasons under it on stdout, so neither half was the
-    whole message and the machine channel carried prose.
+    """One diagnostic, one stream. Split across both — a `cannot be resolved`
+    header on stderr and the reasons under it on stdout — neither half is the whole
+    message and the machine channel carries prose.
 
-    The header is gone with the hand-written handlers that printed it. Nothing is
-    lost — every reason names its own subject, so the header repeated the machine
-    name that is already on each line.
+    No header at all. Every reason names its own subject, so a header would repeat
+    the machine name that is already on each line.
     """
     sandbox.declare(manifest={'machine': 'box'})
 
@@ -1007,9 +1006,9 @@ def test_repo_show_refuses_rather_than_reporting_success_it_did_not_have(sandbox
     """Exit 0 is the answer "the repo is at this commit on this branch", and on a
     directory that is not a checkout there is no commit, no branch and no repo.
 
-    It used to print git's transcript whether or not git succeeded and never read
-    the return code, so the run answered 0 with `fatal: not a git repository` as
-    its whole output. `manage.update` read the same call's status all along, so
+    Printing git's transcript without reading its return code answers 0 with
+    `fatal: not a git repository` as the whole output. `manage.update` reads the
+    same call's status, so
     the two halves of one module disagreed about whether git refusing mattered.
     """
     ran = cli('repo', 'show', catch_exceptions=True)

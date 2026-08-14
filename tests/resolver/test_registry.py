@@ -410,15 +410,12 @@ def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypa
 
 
 def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> None:
-    """One constant behind every naming of it, which it was not.
+    """One constant behind every naming of the Go root.
 
-    `toolchain.GO_ROOT` is now the source: `TOOL_PATH_DIRS` derives from it,
+    `toolchain.GO_ROOT` is the source: `TOOL_PATH_DIRS` derives from it,
     `go_command` resolves through it, and this registration reads it rather than
     respelling it. `.zshenv` is the one copy that cannot import Python, and
     `tests/cli/test_apply.py` is what holds it to the list.
-
-    A third namer used to be cited here — a verification script that `plan`
-    replaced and nobody deleted the reference to.
     """
     provider = registry.named('go-toolchain')
 

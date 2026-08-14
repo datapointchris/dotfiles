@@ -62,8 +62,8 @@ def test_wsl_plans_none_of_the_docker_packages_its_apt_repo_does_not_carry(decla
 
 
 def test_every_section_is_either_provided_or_explained() -> None:
-    """A section in neither installs nothing and says nothing about it — which is
-    the state `runtimes` sat in for months.
+    """A section in neither installs nothing and says nothing about it, which is a
+    declaration nobody can tell from a satisfied one.
 
     Both declarations at once. One registry holds `packages.yml` and `system.yml`
     together, so a new section in either file has to answer the same question. Two
@@ -442,7 +442,7 @@ def test_owner_leaves_registry_sourced_sections_empty(declaration: catalog.Catal
 
 
 def test_the_four_manifests_do_not_collapse_an_axis() -> None:
-    """A fixture set carrying only expressible shapes tests only the old design.
+    """A fixture set that collapses an axis tests only the shapes it already covers.
 
     Asserted per axis rather than as a total, because a set that collapses to one
     value is the case a reader would not notice.

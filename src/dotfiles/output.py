@@ -177,17 +177,16 @@ def emit_text(text: str) -> None:
 def tallies(result: ResourceResult) -> str:
     """The counts behind a verdict, where there are any, worded for the verb asking.
 
-    `ResourceResult` has carried these since it was written and no row has ever
-    shown them, so "converged" meant whatever the reader assumed it meant. Each
+    Without them "converged" means whatever the reader assumes it means. Each
     answers a question the verdict alone leaves open: how much the other verb
     would report, how much nothing could measure either way, and how much of the
     work will ask for a password.
 
     **Each verb shows only the count that is not its own answer**, and words it as
     the other verb's business. A `plan` row saying `converged` beside
-    `4 need attention` was a row contradicting itself: apply has nothing to do
-    here, and four tools are logged out, and both are true. Saying "4 need a
-    person" is the same number read from the side that owns it. The mirror case is
+    `4 need attention` contradicts itself: apply has nothing to do here, and four
+    tools are logged out, and both are true. Saying "4 need a person" is the same
+    number read from the side that owns it. The mirror case is
     a `check` row saying `converged` beside a non-zero `pending`, which is a
     declared package merely absent — drift, and not something wrong.
 

@@ -2,21 +2,21 @@
 
 The case it pins down: `packages.yml` moves an entry from `aur: sioyek` to
 `aur: sioyek-git` because upstream deleted the first, and the machine still
-carries the package the superseded name built. `sioyek-git`
-declares `Conflicts With: sioyek`, so pacman had to remove one to install the
-other, and the installers run `--noconfirm` — which takes the default answer to
-the removal prompt, and that default is no.
+carries the package the superseded name built. `sioyek-git` declares
+`Conflicts With: sioyek`, so pacman has to remove one to install the other, and
+the installers run `--noconfirm` — which takes the default answer to the removal
+prompt, and that default is no.
 
-The install could therefore never succeed, and the three verbs each said
-something different about it:
+The install can therefore never succeed, while the three verbs each say something
+different about it:
 
     check   converged, because a missing package is drift rather than a fault
     plan    `missing`, which promises an apply will install it
-    apply   rebuilt for four minutes, then `yay -S exited 1`
+    apply   a long rebuild, then `yay -S exited 1`
 
-None of the three was wrong about what it measured. All three were wrong
-together, because nothing measured the thing that actually decided the outcome —
-that a package standing in the way was installed. These tests measure it.
+Each is right about what it measured, and all three are wrong together, because
+nothing measures the thing that decides the outcome — that a package standing in
+the way is installed. These tests measure it.
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ def test_check_reports_a_blocked_package_that_plan_and_apply_leave_alone() -> No
     `sift` is what `plan`, `check` and `apply` each read: plan renders `pending`,
     check renders `attention`, and apply acts on `pending` and reports
     `attention` without counting it as a failure. A blocked package belongs in
-    exactly one of them, and before this it was in the other.
+    exactly one of them.
     """
     found = ev.by_registry(item(supersedes=('sioyek',)), {'pacman': frozenset({'sioyek'})})
     pending, attention, unmeasured = sift([change_for(item(supersedes=('sioyek',)), found)])

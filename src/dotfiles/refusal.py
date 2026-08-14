@@ -90,8 +90,8 @@ class Boundary(TyperGroup):
     `ctx` is untyped because its type is whichever click the installed typer
     carries. typer 0.24 subclasses the real `click.Context`; 0.27 vendors its own
     and ships no `click` at all. Naming either narrows the supertype's parameter
-    on the version that has the other, and importing `click` to name it is the
-    dependency this file was changed to stop having.
+    on the version that has the other, and importing `click` to name it is a
+    dependency this package deliberately does not take.
     """
 
     def invoke(self, ctx: Any) -> Any:

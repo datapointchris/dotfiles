@@ -10,7 +10,7 @@ one file it wrote.
 Every state is built out of real files under the sandbox — a manifest, a
 `flags.yml`, `~/.env` itself, and a git configuration git actually reads —
 because both resources measure files and nothing else. Nothing in `src/dotfiles/`
-is patched, and no test asserts against this developer's own machine.
+is patched, and no test asserts against the developer's own machine.
 
 **The pairing is what most of this pins.** `plan` and `check` are two folds over
 one measurement: `plan` keeps what `apply` would repair and `check` keeps what
@@ -641,11 +641,10 @@ def test_applying_an_unparseable_flag_writes_nothing(sandbox: Sandbox, cli: Run)
 def test_an_apply_settles_a_flag_that_parses_as_neither_true_nor_false(sandbox: Sandbox, cli: Run) -> None:
     """An `apply` leaves nothing behind that the next `plan` still offers to repair.
 
-    `_flags` used to give an unparseable value `Repair.AUTOMATIC` without asking
-    which half of the file it came from, and `ALPHA_FLAG=maybe` written below the
-    marker was the one input that looped for ever: `plan` offered the rewrite,
-    `apply` performed it against the section above, and the assignment below stayed
-    the last one in the file.
+    Giving an unparseable value `Repair.AUTOMATIC` without asking which half of the
+    file it came from loops for ever on `ALPHA_FLAG=maybe` written below the marker:
+    `plan` offers the rewrite, `apply` performs it against the section above, and
+    the assignment below stays the last one in the file.
     """
     unparseable_flag_below_the_marker(sandbox)
 

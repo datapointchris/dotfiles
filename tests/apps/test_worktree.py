@@ -67,9 +67,9 @@ def make_repo(root: Path, name: str) -> Path:
     `-b main` names the branch rather than inheriting `init.defaultBranch`, which
     is a fact about the machine and not about the fixture. Cloning an empty bare
     repo takes the local branch from the remote's HEAD, so without it the initial
-    commit landed on `master` and `push origin main` failed with "src refspec main
+    commit lands on `master` and `push origin main` fails with "src refspec main
     does not match any" — green on any box whose gitconfig sets it, red on every
-    CI runner, which is where it was measured.
+    CI runner.
     """
     origin = root / f'{name}.git'
     clone = root / name

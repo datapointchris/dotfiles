@@ -70,10 +70,10 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
     tell me who you are" hint on a fresh machine commits an identity into the
     checkout.
 
-    A link here is unlinked rather than adopted. After the rename to
-    common.gitconfig the old entry point is an orphan the symlink stage prunes
-    first, but a machine reaching this out of order would otherwise write through
-    it into the repo, which is the one outcome this exists to prevent.
+    A link here is unlinked rather than adopted. The symlink stage prunes an
+    orphaned entry point first, but a machine reaching this out of order would
+    otherwise write through it into the repo, which is the one outcome this exists
+    to prevent.
     """
     if GIT_CONFIG_ENTRY.is_symlink():
         GIT_CONFIG_ENTRY.unlink()

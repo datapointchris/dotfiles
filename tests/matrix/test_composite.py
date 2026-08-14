@@ -546,8 +546,8 @@ def test_each_verb_keeps_its_own_half_of_one_machines_findings(
 
     A declared release that is absent is drift — normal between applies, and what
     `apply` exists for. A git identity nobody has set is an Issue — `apply` cannot
-    invent a name, so no run will ever clear it. Folding the two together is what
-    left the scheduled unit permanently failed on a healthy box.
+    invent a name, so no run will ever clear it. Folding the two together leaves
+    the scheduled unit permanently failed on a healthy box.
 
     The verdicts cross: `packages` is drift under `plan` and converged under
     `check`, and `identity` is the mirror of that. Both rows appear in both

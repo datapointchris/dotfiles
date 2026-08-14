@@ -274,9 +274,8 @@ def test_install_replaces_a_running_binary(running_binary: Path, tmp_path: Path)
     running process keeps what it is executing and the next start gets the new
     one. Nothing has to be stopped before an apply.
 
-    Measured cost of not doing this: ntfy sat at 2.26.0 across three applies in
-    one day while 2.27.0 was published, because its service had held the binary
-    for four days.
+    The cost of not doing it: a tool whose service holds its binary open stays at
+    whatever version the service started with, across every apply, indefinitely.
     """
     import shutil as sh
 

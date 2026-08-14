@@ -5,8 +5,8 @@ the `apply` it hands to, and whatever the machine looks like afterwards. Docker
 stays; the harness around it is one rig the environments parameterize rather than
 a script per environment.
 
-One shape copied per environment drifts, and each of these was a real bug in a
-copy that had:
+One shape copied per environment drifts, and each of these is a real bug a copy
+had:
 
 - `--reuse` re-copied the repo in the WSL script and not the Arch one, so a
   reused container silently tested the code from whenever it was created.
@@ -54,10 +54,10 @@ changes, which is most of the time.
     uv run pytest tests/e2e --docker --reuse          # reuse the OS state, install again
     uv run pytest tests/e2e --docker --installed      # reuse the install too
 
-The four environments are independent containers and no longer share a name with
+The four environments are independent containers and do not share a name with
 another checkout's — `harness.container_name` suffixes a linked worktree's. Two
-full installs at once is measured and fine (2026-08-10), which is what a second
-worktree working its own environment costs. Beyond two the limit is the box
+full installs at once is fine, which is what a second worktree working its own
+environment costs. Beyond two the limit is the box
 rather than the rig, and no number above it is claimed here: an install is twenty
 to thirty minutes of CPU and disk, so every environment at once makes the machine
 unusable for the duration.

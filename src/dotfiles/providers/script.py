@@ -122,11 +122,9 @@ def failure(name: str, completed: effects.Completed) -> str:
     """What a failed vendor script said, or its exit status where it said nothing.
 
     The transcript, because the exit status alone is unreadable and the cause is
-    already in hand. `providers/clone.py` has done exactly this for `git pull` since
-    it was written, and the number-only sentence here is what left a TLS-intercepted
-    work box reading `the claude-code install script exited 60` — where 60 is curl's
-    code for a certificate it would not verify, and the script had printed the reason
-    a screen earlier.
+    already in hand. A number-only sentence leaves a TLS-intercepted machine reading
+    `the install script exited 60` — where 60 is curl's code for a certificate it
+    would not verify, and the script printed the reason a screen earlier.
 
     Scrolling is the argument, not availability: the text does reach stderr while the
     script runs, and a multi-minute apply has carried it off the screen long before

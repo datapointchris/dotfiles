@@ -1,13 +1,9 @@
 """Is the declaration itself sound, before any machine is measured against it.
 
-`packages verify` asked this by re-parsing `packages.yml` and every manifest as
-raw dictionaries — a second parser beside `catalog.py` and `machine.py`, walking
-the same files with its own idea of how a section is spelled and its own copy of
-which manifest keys were retired. Two descriptions of one file is the drift the
-typed loaders were built to end, and `verify` was the last thing still holding
-the untyped one.
-
-Everything here reads the loaded objects. A rule the dataclasses can enforce is
+Everything here reads the loaded objects. Re-parsing the files as raw dictionaries
+would put a second parser beside the typed loaders, with its own idea of how a
+section is spelled and its own copy of which manifest keys are retired — two
+descriptions of one file, which is the drift the typed loaders exist to end. A rule the dataclasses can enforce is
 not restated: required fields, unknown keys, duplicate names, declared types and
 the version constraints are `catalog.py`'s, and a manifest naming a retired
 runtime-gate boolean is `machine.py`'s `RETIRED_KEYS`. What is left is the

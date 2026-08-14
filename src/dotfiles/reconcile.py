@@ -777,11 +777,10 @@ def _stage_bundle() -> ExitCode | None:
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
-    unasked, and this is that same act on a machine that no longer needs
-    bootstrapping. It is not what removing install.sh's `exec` was about — that
-    was a half-hour networked convergence nobody had asked to start, whereas this
-    is local, cheap, and precisely what the flag was given in order to install
-    from.
+    unasked, and this is that same act on a machine that does not need
+    bootstrapping. Distinct from a bootstrap that starts a networked convergence
+    nobody asked for: this is local, cheap, and precisely what the flag was given
+    in order to install from.
 
     Nothing is staged over an existing bundle: a machine part way through an
     offline install has one, and re-reading the archive each run would be work

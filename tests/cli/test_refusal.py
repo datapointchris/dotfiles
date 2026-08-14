@@ -51,9 +51,9 @@ def test_a_refusal_raised_in_a_leaf_reaches_the_root_group() -> None:
 def test_a_refusal_carries_its_own_kind_rather_than_the_site_deciding() -> None:
     """A subclass states its kind once, in its own declaration.
 
-    This is what the whole boundary exists for: three leaves used to pass a
-    *foreign* integer to `typer.Exit` — argparse's, git's, and an argparse
-    `main`'s — and every one of them landed on 1, which is DRIFT.
+    This is what the whole boundary exists for. A leaf passing a *foreign* integer
+    to `typer.Exit` — argparse's status, git's return code — lands on 1, which is
+    DRIFT.
     """
     ran = invoke(Retryable('name a machine'))
 

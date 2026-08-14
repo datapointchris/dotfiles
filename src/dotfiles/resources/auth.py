@@ -377,11 +377,11 @@ def _bbkt(session: Session) -> Credential:
 def _jira(session: Session) -> Credential:
     """The config `jira init` writes, or the token in the environment.
 
-    The one path here taken from upstream convention rather than measured: jira is
-    declared by the work box alone and is on no machine this was written from.
-    `jira init --help` and `eza -1a ~/.config/.jira/` settle it there in one line
-    each, and `$JIRA_CONFIG_FILE` is honoured so a box that keeps it elsewhere
-    reads correctly whatever the default turns out to be.
+    The one path here taken from upstream convention rather than measured, because
+    jira is declared by the work box alone. `jira init --help` and
+    `eza -1a ~/.config/.jira/` settle it there in one line each, and
+    `$JIRA_CONFIG_FILE` is honoured so a box that keeps it elsewhere reads correctly
+    whatever the default turns out to be.
 
     `jira me` is the networked answer and is not used, for the reason every other
     probe here gives.

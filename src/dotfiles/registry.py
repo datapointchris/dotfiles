@@ -20,7 +20,7 @@ observation behind them are not, so "the read-only verbs never escalate" is a
 property of the signatures rather than a promise about the bodies.
 
 The mechanisms are imported here rather than reached lazily: together they cost a
-few ms on top of this module's own 85ms, measured, which is not worth a local
+few milliseconds on top of this module's own import, which is not worth a local
 import inside every method and the explanation each would need.
 """
 
@@ -588,12 +588,12 @@ class PluginSyncProvider(Provider):
     One synthetic row rather than one per plugin, because there is nothing to plan
     per plugin: TPM's list is `@plugin` lines in `tmux.conf` and lazy's is lua, so
     neither has a `packages.yml` section for the resolver to walk. What the row
-    stands for is the *invocation* — the thing `tmux-plugins.sh` and
-    `nvim-plugins.sh` each were, minus the phase that ran them.
+    stands for is the *invocation*.
 
-    The row is measured rather than performed unconditionally, which the scripts
-    could not manage: each ran its manager on every apply and reported whatever it
-    printed. `providers/pluginsync.py` says what each can honestly be asked.
+    The row is measured rather than performed unconditionally. Running each manager
+    on every apply and reporting whatever it printed is the alternative, and it
+    cannot say whether anything needed doing. `providers/pluginsync.py` says what
+    each can honestly be asked.
     """
 
     manager: str = ''
@@ -1028,9 +1028,9 @@ class SystemConfigProvider(Provider):
     def states(self, items: Sequence[DesiredItem]) -> dict[str, sysconfig.State]:
         """Every row's state, batching what this provider knows how to batch.
 
-        A dict per provider rather than one function branching on the entry class,
-        which is what `system.py` did — the batch hook below is the whole reason
-        that dispatch existed, and it belongs to the one provider that needs it.
+        A dict per provider rather than one function branching on the entry class:
+        the batch hook below is the whole reason such a dispatch would exist, and it
+        belongs to the one provider that needs it.
         """
         stores = self.stores([entry for item in items if isinstance(entry := item.entry, catalogs.SystemConfig)])
         return {item.address: self.state(_configuration(item.entry), stores) for item in items}

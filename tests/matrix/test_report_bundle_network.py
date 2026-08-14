@@ -625,8 +625,8 @@ def test_an_unbuilt_bundle_verb_refuses_rather_than_answering_nothing(verb: str,
     answer a stub can give — exiting 0 would report a machine as checked by a verb
     that checked nothing.
 
-    `check` and `show` were stubs when this was written and are implemented on this
-    branch, so they moved to the case below. `prune` is the one still owed.
+    `prune` is the one verb still owed an implementation; the rest are asserted in
+    the case below.
     """
     ran = cli('bundle', verb, catch_exceptions=True)
 

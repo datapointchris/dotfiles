@@ -41,7 +41,7 @@ def test_two_machines_are_probed_differently() -> None:
     """The point of deriving: a manifest that installs more is probed for more.
 
     Equal counts would mean the manifest was not consulted and every machine was
-    being measured against one list, which is the defect this replaced.
+    being measured against one list.
     """
     assert len(probes_for(ARCHLINUX)) > len(probes_for(WSL))
 

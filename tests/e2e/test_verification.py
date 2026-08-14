@@ -1,20 +1,17 @@
 """Whether the finished machine is carrying what its manifest declares.
 
-This replaces `tests/install/verification/verify-installed-packages.sh` and
-`detect-installed-duplicates.sh`, 1,218 lines of bash between them. Three things
-change with the language:
+Two properties are what make this readable, and both are easy to lose:
 
-**One node per tool.** The scripts counted their own checks and returned one exit
-code, so `test_every_declared_tool_is_installed` asserted a single `returncode ==
-0` and printed four thousand characters of transcript on failure. A missing tool
-is a named red line here — `test_the_machine_carries_what_it_declares[wsl-…-go/sesh]`
-— and the tools that *are* fine stay quiet.
+**One node per tool.** A single check counting its own assertions returns one exit
+code, so a failure is `returncode == 0` and four thousand characters of transcript.
+A missing tool is a named red line here —
+`test_the_machine_carries_what_it_declares[wsl-…-go/sesh]` — and the tools that
+*are* fine stay quiet.
 
-**The declaration decides what is checked.** The shell script this replaced asked
-a helper that knew only some of the sections, and wrote everything else out by
-hand at the bottom — which is how it went on asserting `menu` and `theme-sync` for
-months after both were deleted, and never checked taplo, fnm, broot or atuin at
-all. `resolve.resolve` answers for the whole plan.
+**The declaration decides what is checked.** A hand-written list at the bottom of
+the file goes on asserting tools long after they are deleted, and never checks the
+ones added since — a check covering less than it claims to. `resolve.resolve`
+answers for the whole plan.
 
 **The observation stays independent.** Expectations come from the resolver;
 whether something is *there* is asked of the container in shell, and nothing here
@@ -131,9 +128,8 @@ def test_every_declared_symlink_is_deployed(converged_machine: Machine) -> None:
     diagnosis a reader wants is the whole list of what is missing at once, where a
     tool wants its own red line and its own name.
 
-    The script this replaces named four of these — `zshrc`, `tmux.conf`,
-    `gitconfig`, `init.lua` — picked once and never revisited, so a config added
-    since was unexamined and one deleted was still asserted.
+    Derived, never a hand-picked list: a list picked once is never revisited, so a
+    config added since goes unexamined and one deleted is still asserted.
     """
     targets = declared_links(converged_machine.environment)
     assert targets, 'nothing declared any links, so this asked the machine nothing'
@@ -153,9 +149,9 @@ def test_nothing_declared_is_installed_twice(converged_machine: Machine) -> None
     manager attributes to a package this manifest declares is the bootstrap the
     declaration asked for, and pacman's `nodejs` under fnm's node is exactly that.
 
-    The shell script this replaces reported these and **always exited 0**, so
-    `test_nothing_is_installed_twice` asserted a return code the script could not
-    produce and had never once failed.
+    Asserted on what the check *reports*, never on its exit status: a detector that
+    prints its findings and still exits 0 makes a return-code assertion one that
+    can never fail.
     """
     found = unexplained_copies(converged_machine, declared_items(converged_machine.environment))
 

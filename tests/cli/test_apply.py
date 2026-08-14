@@ -121,12 +121,12 @@ def test_every_provider_with_work_reaches_the_walk(name: str) -> None:
 
 
 def test_a_whole_walk_reaches_env_and_identity() -> None:
-    """Neither had a phase, so neither was ever part of `dotfiles apply`.
+    """A resource outside the walk is not part of `dotfiles apply`.
 
-    `~/.env` was written by a call at the top of the run instead — unconditionally,
-    from the manifest, by a second implementation of what the env resource
-    measures. It is stage 10 of the walk now, so it is still written first, and
-    only when it differs.
+    `~/.env` is stage 10, so it is still written first and only when it differs.
+    Writing it from a call at the top of the run instead means writing it
+    unconditionally, through a second implementation of what the env resource
+    already measures.
     """
     covered = engine.Selection.everything().resources
 

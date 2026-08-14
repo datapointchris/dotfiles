@@ -1,10 +1,9 @@
 """Where a run's two artefacts are opened and closed. One run, both ends of it.
 
-Before this, everything that wanted to know what a run found called the walk
-itself and printed on the way past — which is why `runs.py` was complete, tested,
-and had no caller for months. Recording is not a feature bolted onto the walk; it
-is one more consumer of what the walk already yields, and it works because the
-walk yields values instead of printing them.
+Recording is not a feature bolted onto the walk; it is one more consumer of what
+the walk already yields, and it works only because the walk yields values instead
+of printing them. A reader that called the walk and printed on the way past would
+leave `runs.py` with nothing to record.
 
 The debug event log is the same job at the other end: `open_log` at the start,
 `keep` at the finish, both taking the one `runs.Identity` that names them. They

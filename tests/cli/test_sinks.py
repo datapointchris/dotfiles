@@ -1,8 +1,8 @@
 """Turning a run's events into the record `dotfiles report` reads.
 
-`runs.py` was complete and tested for months with no caller, because everything
-that wanted to know what a run found called the walk and printed on the way past.
-Recording works now because it is one more reader of a stream that yields values.
+Recording works because it is one more reader of a stream that yields values. A
+reader that called the walk and printed on the way past would leave `runs.py`
+with nothing to record.
 """
 
 from __future__ import annotations

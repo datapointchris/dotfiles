@@ -288,9 +288,9 @@ def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(s
     parse would misread a project genuinely at 0.0.0.
 
     So the difference is declared. An entry saying its artifact cannot be asked is
-    never compared, and the churn stops: `docker-language-server` reinstalled on
-    three consecutive applies before this was reached for, and it stops without any
-    reader inspecting a version string to decide.
+    never compared, so the churn stops — a tool reinstalled on every apply because
+    its placeholder reads as behind — and it stops without any reader inspecting a
+    version string to decide.
     """
     placeholder = CACHED[3]
     machine(sandbox, placeholder)
@@ -398,14 +398,10 @@ def test_offline_the_bundle_is_the_upstream_and_the_record_says_what_was_done(
 def test_offline_an_unmeasurable_row_is_filed_and_named(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A bundle carrying no row for the tool leaves it unknown, and the run says so.
 
-    Renamed rather than inverted. The old name was `..._filed_and_not_printed` and
-    carried its assertion, so flipping the body under it would have left a test
-    saying the opposite of what it checks — worse than no test.
-
-    Silence was the old behaviour and the fault this branch exists to fix. An
-    `UNKNOWN` change is neither acted on nor repairable, so `apply` printed nothing
-    and the record was the only place it survived — a caller watching the screen
-    saw a converged run over a machine holding a tool nothing could measure.
+    Silence is the fault. An `UNKNOWN` change is neither acted on nor repairable, so
+    unless `apply` names it the record is the only place it survives — and a caller
+    watching the screen sees a converged run over a machine holding a tool nothing
+    could measure.
     """
     offline_machine(sandbox, STAGED[4])
 
@@ -577,9 +573,9 @@ def test_the_upgrade_and_the_reinstall_of_a_gated_tool_are_declined_alike(sandbo
     """One entry, one machine, one missing credential, one answer.
 
     `diff` runs `repair_for` on the two branches that reach it — evidence that did
-    not match, and a named reinstall — and `currency_of` used to build its `Change`
-    with the default repair instead, so no currency verdict had ever consulted a
-    precondition. The two paths reach the same entry in the same state, so a
+    not match, and a named reinstall. `currency_of` has to do the same rather than
+    build its `Change` with the default repair, or no currency verdict consults a
+    precondition at all. The two paths reach the same entry in the same state, so a
     verdict either of them can produce has to carry the same repair.
     """
     offline_machine(sandbox, STAGED[1], packages=GATED)

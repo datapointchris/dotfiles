@@ -2,8 +2,8 @@
 
 The clones are the zsh plugins, tmux's plugin manager and yazi's. All three are
 the same shape — a repo, a directory, and the question of whether the directory is
-there — which is what makes them a resource rather than three scripts that each
-re-read `packages.yml` through an interpreter of their own.
+there — which is what makes them one resource rather than three readers of
+`packages.yml`.
 
 The yazi plugins are here rather than in the yazi install because they are
 plugins, not part of a binary. Running `ya pkg add` inside the release installer
@@ -16,10 +16,9 @@ only have reordered the collision.
 **The other kind is a manager handed a list this repo does not declare.** TPM
 installs what `tmux.conf` names and lazy.nvim installs what its lua names, so
 there is no per-item declaration for the resolver to plan and each is one
-synthetic row. They were `tmux-plugins.sh` and `nvim-plugins.sh` — two scripts a
-phase ran unconditionally, reporting whatever they printed — and what changed in
-converting them is that the row is now measured first. What each can honestly be
-asked, and why the two answers differ, is `providers/pluginsync.py`.
+synthetic row. The row is measured before it is acted on, rather than running each
+manager unconditionally and reporting whatever it printed. What each can honestly
+be asked, and why the two answers differ, is `providers/pluginsync.py`.
 """
 
 from __future__ import annotations

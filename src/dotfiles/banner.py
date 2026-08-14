@@ -11,9 +11,8 @@ costs a subprocess on every invocation is one that gets turned off.
 
 **Rendered through `rich.text.Text`, never markup.** Figlet art is full of
 backslashes and square brackets, and both mean something to Rich's parser: art
-ending in `\\` escapes the closing tag that follows it, so `\\__ \\` printed as
-`\\__ [/]`. Measured while choosing these fonts, and it is silent — the row is
-still a row, just the wrong one.
+ending in `\\` escapes the closing tag that follows it, so `\\__ \\` prints as
+`\\__ [/]`. The failure is silent — the row is still a row, just the wrong one.
 """
 
 from __future__ import annotations
@@ -148,7 +147,7 @@ class Masthead(Boundary):
 
     `ctx` and `formatter` are untyped for the reason `Boundary.invoke`'s are —
     their types are whichever click the installed typer carries, and naming
-    either is the dependency this package was changed to stop having.
+    either takes a dependency this package deliberately does not have.
     """
 
     def format_help(self, ctx: Any, formatter: Any) -> None:

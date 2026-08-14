@@ -798,13 +798,13 @@ def test_a_machine_name_nothing_declares_should_be_diagnosed_rather_than_raised(
 ) -> None:
     """The caller gets exit 2, and the name on stderr.
 
-    Exit 1 was the specific harm. It means `DRIFT`, and `check` cannot drift —
-    its range is 0 and 3 — so a scheduled caller branching on the status read a
-    mistyped `--machine` as a machine that has work pending. The traceback went to
-    the console rather than to stderr's diagnostic channel, so the run also said
-    nothing about which name was wrong.
+    Exit 1 is the specific harm. It means `DRIFT`, and `check` cannot drift — its
+    range is 0 and 3 — so a scheduled caller branching on the status reads a
+    mistyped `--machine` as a machine that has work pending. A traceback on the
+    console rather than stderr's diagnostic channel also says nothing about which
+    name was wrong.
 
-    Exit 2 rather than the 3 `reconcile.apply_machine` once answered, because
+    Exit 2 rather than 3, because
     `_manifest_path` already settles this for the `machines` noun and `machines
     show <typo>` exits 2. The reasoning is one shared claim across this file,
     `test_symlinks.py` and `test_composite.py`; it is written out in the latter's

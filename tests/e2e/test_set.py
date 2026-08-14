@@ -1,10 +1,9 @@
 """One section installed over a base, which is the tier that was missing.
 
 Between `test_container.py` (eight seconds, nothing installed) and
-`test_machine.py` (ten minutes, everything installed) there was nothing, so every
-question about *one installer* cost a whole machine. Three of today's four
-failures lived in two sections, and finding them took two ten-minute runs whose
-containers were then thrown away.
+`test_machine.py` (ten minutes, everything installed) there is otherwise nothing,
+so every question about *one installer* costs a whole machine — a ten-minute run
+whose container is then thrown away.
 
 **A set does not declare its prerequisites, because the declaration already
 carries them.** `registry.ToolchainProvider.needed_by` says the Rust toolchain is
@@ -14,10 +13,9 @@ and then the tools. The only thing a set needs supplied is the part no section
 declares: an OS with a package manager, curl, git and unzip on it, which is what
 the base image is.
 
-That was not true when this file was written, and the first run of it said so:
-`--source` narrowed to one provider, the toolchain was planned and then excluded
-from the run, and every cargo tool failed with `cargo: No such file or directory`.
-The declaration was right and the selection was not.
+A selection that narrows to one provider and drops the toolchain it needs fails
+every tool in that section with `cargo: No such file or directory` — the
+declaration right and the selection wrong.
 
 What this tier cannot answer is anything about *order* — whether the symlink pass
 ran before tpm read the config it deploys is a question about a whole machine, and

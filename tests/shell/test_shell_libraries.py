@@ -6,12 +6,10 @@ handles a non-zero exit itself starts dying on it instead — but the property i
 asserted as "the flag set is unchanged", which costs nothing more and catches
 `-u` and `-o pipefail` too.
 
-Globbed, never listed. The bats version carried a hardcoded list, and its own
-comment records that the list named `install/common/lib/platform-detection.sh`
-for months after no such file existed: it reported one more library covered than
-it checked. The directories were then a hardcoded list of their own, which is the
-same failure one level up — and it cost the whole `shell/` tree, every library in
-which the property was never asked of.
+Globbed, never listed. A hardcoded list goes on naming a library after the file is
+deleted, reporting one more covered than it checks; and a hardcoded list of the
+*directories* to glob is the same failure one level up, silently omitting a whole
+tree the property is never asked of.
 """
 
 from __future__ import annotations

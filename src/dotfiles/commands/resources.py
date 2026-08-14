@@ -199,9 +199,8 @@ def _within(resource: str) -> tuple[str, ...]:
 def available_sources() -> list[str]:
     """The `--source` values, read from `packages.yml` rather than listed here.
 
-    A hand-listed enum was already missing `git_uv_tools`, `mas_apps`,
-    `macos_casks`, `flatpak_apps`, `zen_extensions` and terraform on the day it
-    was written, which is the whole argument against writing one.
+    A hand-listed enum is missing sections the day it is written, and misses every
+    section added afterwards — which is the whole argument against writing one.
     """
     import yaml
 

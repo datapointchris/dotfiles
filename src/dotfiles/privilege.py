@@ -9,13 +9,11 @@ whether repairing it needs root, so `plan` can say how many of its findings will
 need a password without asking for one. That half is worth keeping and costs
 nothing.
 
-**Asked for when a write needs it, and not before.** This reverses the rule the
-module was built on — "one prompt, at the front, or none" — on evidence: **keeping
-a sudo timestamp alive does not work on macOS.** The front prompt was buying a
-property the platform will not give, and paying for it with a password prompt on
-machines that turned out to need nothing. The model is brew's, and every other
-installer's. `authorize()`, `Escalation` and the self-re-arming keepalive timer
-went with the rule.
+**Asked for when a write needs it, and not before.** *Rejected: one prompt at the
+front, or none.* **Keeping a sudo timestamp alive does not work on macOS**, so a
+front prompt buys a property the platform will not give and pays for it with a
+password prompt on machines that turn out to need nothing. The model is brew's,
+and every other installer's.
 
 The cost is honest and stated at the prompt: a long run can stop for a password
 part-way through. `plan` says in advance how many writes will need one.
@@ -23,9 +21,9 @@ part-way through. `plan` says in advance how many writes will need one.
 **Passwordless is not the same question as prompting, and asking the wrong one
 declined root on every headless machine.** `acquire` checks `sudo -n true` before
 it considers prompting, because a box with `NOPASSWD` needs no terminal and no
-password — see `_already_granted` for the probe that was wrong and what it cost.
+password. `_already_granted` carries what that probe has to get right.
 
-`DECLINED` and `UNAVAILABLE` are not fatal, and that has not changed. A privileged
+`DECLINED` and `UNAVAILABLE` are not fatal. A privileged
 action is refused and reported, and the unprivileged rest of the run still lands —
 which is what lets the Docker and LXC harnesses converge without a
 passwordless-sudo carve-out, and what makes `dotfiles apply` usable on a box where

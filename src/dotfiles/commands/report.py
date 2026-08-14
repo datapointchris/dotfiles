@@ -339,15 +339,13 @@ def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     `brew list` reports `pkgconf` because the formula was renamed, and the
     evidence check looks for the declared name and finds nothing. The install
     reports success, the run reports converged, and the item is reinstalled
-    forever — thirteen times before the fleet shared its run history and made the
-    repetition visible at all.
+    forever. Nothing sees the repetition until the fleet shares its run history.
 
-    A registry package no longer reaches here, and that is not a regression.
-    `_transact` re-observes what it installed and records `absent` rather than
-    `done`, so the streak this counts never starts and the first run says it
-    outright instead of the third. What still reaches here is everything that
-    cannot be re-measured that cheaply, which is what three consecutive applies
-    was always the fallback for.
+    A registry package does not reach here at all. `_transact` re-observes what it
+    installed and records `absent` rather than `done`, so the streak this counts
+    never starts and the first run says it outright instead of the third. What
+    reaches here is everything that cannot be re-measured that cheaply, which is
+    what three consecutive applies is the fallback for.
 
     Counted per machine, from the newest apply backwards, stopping at the first
     run that left the item alone. A total count would rank a tool that drifted

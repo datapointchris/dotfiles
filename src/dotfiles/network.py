@@ -179,7 +179,7 @@ class Derived:
     `unprobed` is carried as data rather than warned about in passing, and ends up
     in the results file. The question a reader has is whether a row is absent
     because nothing needed probing or because the probe could not be built, and a
-    warning on stderr — which is what the shell did — answers that for whoever was
+    warning on stderr answers that for whoever was
     watching the run and for nobody afterwards.
     """
 

@@ -252,8 +252,8 @@ def no_run_artefacts_on_this_machine(request):
     Skipped under `--docker`, where an install writes its records inside the
     container and the host's directory is not the subject.
 
-    Two things arriving in that directory during a session are not leaks, and
-    both were measured refusing a commit for something the suite had not done.
+    Two things arriving in that directory during a session are not leaks, and both
+    will otherwise refuse a commit for something the suite did not do.
     A peer machine's record is delivered there by Syncthing; `runs.begin` defaults
     a record's host to `paths.MACHINE_ID`, so anything the suite could write
     carries this box's id and a file naming another one was not written here.

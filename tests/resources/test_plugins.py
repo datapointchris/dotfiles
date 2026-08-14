@@ -217,9 +217,8 @@ def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, ups
 
     Selected rather than observed-then-filtered, and the difference is not
     cosmetic: TPM is not in the plan this walk is handed, so nothing can observe
-    it, diff it or clone it. `ADDRESS_SEPARATOR` was invented for exactly this
-    pair and then went unused, which is why `--skip plugins/tpm` used to skip all
-    of `plugins`.
+    it, diff it or clone it. `ADDRESS_SEPARATOR` exists for exactly this pair;
+    unused, `--skip plugins/tpm` skips all of `plugins`.
     """
     live = session(
         tmp_path,
@@ -260,7 +259,7 @@ def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path,
 
 
 def test_a_private_plugin_is_gated_and_its_neighbour_is_not(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A plugin can declare a precondition, and this resource used to be unable to see one.
+    """A plugin can declare a precondition, and this resource has to see it.
 
     `CloneProvider` inherits `CatalogProvider.plan`, which reads
     `requires_github_auth` off the base `Entry` — so a private-repo plugin is
@@ -515,10 +514,9 @@ def observation(live: Session) -> plugins.Observed:
 
 
 def test_a_plugin_present_with_no_checkout_is_reported_rather_than_read_as_current(tmp_path: Path) -> None:
-    """Measured on the Arch box: `~/.config/yazi/plugins/what-size.yazi` held three
-    read-only files and no repository, which is the shape `ya pkg add` leaves.
-    `clone.behind` needs a checkout to fetch, so it answered None and the plugin
-    read as current on every run — a plugin this repo declares and can never move.
+    """`ya pkg add` leaves a directory of read-only files and no repository.
+    `clone.behind` needs a checkout to fetch, so it answers None and the plugin
+    reads as current on every run — a plugin this repo declares and can never move.
     """
     live = session(tmp_path, packages={'shell_plugins': [{'name': 'forgit', 'repo': 'https://github.com/wfxr/forgit.git'}]})
     installed = live.home / '.config' / 'zsh' / 'plugins' / 'forgit'
