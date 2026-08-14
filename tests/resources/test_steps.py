@@ -19,6 +19,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import paths
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import steps
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -136,6 +137,7 @@ def test_a_declined_password_leaves_the_licence_alone(fake_bin: Path, tmp_path: 
     result = steps.apply('xcode-licence', privilege)
 
     assert not result.ok
+    assert result.kind is Kind.PRIVILEGE_UNAVAILABLE
     assert not log.exists()
 
 
@@ -200,7 +202,10 @@ def test_a_config_that_is_not_json_is_refused_rather_than_replaced(orbstack: Pat
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
-    assert not steps.apply('orbstack-docker-plugins', Privilege()).ok
+
+    refused = steps.apply('orbstack-docker-plugins', Privilege())
+    assert not refused.ok
+    assert refused.kind is Kind.TARGET_UNUSABLE
     assert config.read_text() == 'not json at all'
 
 
@@ -311,6 +316,7 @@ def test_no_brew_yet_is_repairable_and_the_repair_is_what_refuses(fake_bin: Path
     refused = steps.apply('psql-linked', Privilege(offer=False))
     assert not refused.ok
     assert refused.refused, 'a stage that has not run is not this run failing'
+    assert refused.kind is Kind.PREREQUISITE_MISSING
 
 
 def test_linking_forces_because_keg_only_is_what_declines_without_it(fake_bin: Path, tmp_path: Path) -> None:

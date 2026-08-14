@@ -28,6 +28,7 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
@@ -185,7 +186,9 @@ def install(entry: catalog.GoTool, *, offline: bool) -> Result:
     """
     if offline:
         return _from_bundle(entry) or Result(
-            False, f'{entry.name} is not in the offline bundle at {bundled(entry).parent}, and offline cannot reach the proxy'
+            False,
+            f'{entry.name} is not in the offline bundle at {bundled(entry).parent}, and offline cannot reach the proxy',
+            kind=Kind.NOT_IN_BUNDLE,
         )
 
     fetched = _from_proxy(entry)
@@ -217,12 +220,12 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     toolchain.put_on_path(toolchain.GO_ROOT / 'bin')
     completed = effects.run(['go', 'install', f'{entry.package}@latest'], output=Output.QUIET)
     if completed.ok:
-        return Result(True, f'{entry.executable} installed from {entry.package}')
+        return Result(True, f'{entry.executable} installed from {entry.package}', kind=Kind.APPLIED)
 
     # `go: downloading` lines are progress, and they are most of the transcript
     # for a tool with a large dependency tree.
     said = '\n'.join(line for line in completed.transcript.splitlines() if not line.startswith('go: downloading'))
-    return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}')
+    return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
 
 
 def _from_bundle(entry: catalog.GoTool) -> Result | None:
@@ -240,5 +243,5 @@ def _from_bundle(entry: catalog.GoTool) -> Result | None:
     try:
         place(cached, destination)
     except OSError as refused:
-        return Result(False, f'could not install {entry.executable} from {cached}: {refused}')
-    return Result(True, f'{entry.executable} installed from the bundle at {cached}')
+        return Result(False, f'could not install {entry.executable} from {cached}: {refused}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{entry.executable} installed from the bundle at {cached}', kind=Kind.APPLIED)

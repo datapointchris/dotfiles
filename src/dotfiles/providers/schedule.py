@@ -25,6 +25,7 @@ from pathlib import Path
 from dotfiles import coordinates as axes
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import Kind
 from dotfiles.providers.sysconfig import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
@@ -144,8 +145,8 @@ def _apply_systemd() -> Result:
     run(['systemctl', '--user', 'daemon-reload'], output=Output.QUIET)
     enabled = run(['systemctl', '--user', 'enable', '--now', f'{UNIT}.timer'], output=Output.QUIET)
     if not enabled.ok:
-        return Result(False, f'could not enable {UNIT}.timer: {enabled.transcript.strip()}')
-    return Result(True, f'{UNIT}.timer enabled, every {INTERVAL_SECONDS // 3600}h')
+        return Result(False, f'could not enable {UNIT}.timer: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{UNIT}.timer enabled, every {INTERVAL_SECONDS // 3600}h', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,8 +204,8 @@ def _apply_launchd() -> Result:
     run(['launchctl', 'bootout', f'gui/{os.getuid()}/{LABEL}'], output=Output.QUIET)
     loaded = run(['launchctl', 'bootstrap', f'gui/{os.getuid()}', str(agent)], output=Output.QUIET)
     if not loaded.ok:
-        return Result(False, f'could not load {LABEL}: {loaded.transcript.strip()}')
-    return Result(True, f'{LABEL} loaded, every {INTERVAL_SECONDS // 3600}h')
+        return Result(False, f'could not load {LABEL}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{LABEL} loaded, every {INTERVAL_SECONDS // 3600}h', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

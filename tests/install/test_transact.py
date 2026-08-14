@@ -26,6 +26,7 @@ import pytest
 
 from dotfiles import registry
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import syspkg
 from dotfiles.resolve import Stage
@@ -56,7 +57,9 @@ def pacman_holding(fake_bin: Path, *names: str) -> None:
 @pytest.fixture
 def install_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     """A manager that reports success whatever it was asked to install."""
-    monkeypatch.setattr(syspkg, 'install', lambda manager, names, privilege: Result(True, f'{manager}: {" ".join(names)}'))
+    monkeypatch.setattr(
+        syspkg, 'install', lambda manager, names, privilege: Result(True, f'{manager}: {" ".join(names)}', kind=Kind.APPLIED)
+    )
 
 
 def transact(privilege: Privilege) -> Outcome:

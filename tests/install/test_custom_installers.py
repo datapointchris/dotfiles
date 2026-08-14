@@ -31,6 +31,7 @@ from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.effects import Completed
+from dotfiles.providers import Kind
 from dotfiles.providers import custom
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
@@ -187,7 +188,7 @@ class TestCorpus:
         result = custom.install(made_up, LINUX)
 
         assert not result.ok
-        assert 'providers.custom' in result.detail
+        assert result.kind is Kind.DECLARATION_INVALID
 
 
 class TestSources:
@@ -275,6 +276,7 @@ class TestCheckoutTools:
         result = custom.install(declared.find('custom_installers', 'font'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.COMMAND_FAILED
         assert 'exited 1' in result.detail
 
     def test_a_delegated_update_adds_no_verdict_of_its_own(self, declared, home, bundle, effected):
@@ -284,7 +286,10 @@ class TestCheckoutTools:
         stub_binary(home, 'font')
         effected()
 
-        assert custom.install(declared.find('custom_installers', 'font'), LINUX).detail == ''
+        result = custom.install(declared.find('custom_installers', 'font'), LINUX)
+
+        assert result.kind is Kind.APPLIED
+        assert result.detail == ''
 
     def test_a_checkout_whose_binary_vanished_is_drift_not_success(self, declared, home, bundle, effected):
         (home / '.local' / 'share' / 'zmk' / '.git').mkdir(parents=True)
@@ -293,7 +298,7 @@ class TestCheckoutTools:
         result = custom.install(declared.find('custom_installers', 'zmk'), LINUX)
 
         assert not result.ok
-        assert 'not on PATH' in result.detail
+        assert result.kind is Kind.NOT_ON_PATH
 
     def test_offline_leaves_an_installed_tool_alone(self, declared, home, bundle, effected):
         """Every one of these updates over the network, so offline has nothing to
@@ -306,7 +311,7 @@ class TestCheckoutTools:
         result = custom.install(declared.find('custom_installers', 'theme'), LINUX, offline=True)
 
         assert result.ok
-        assert 'offline' in result.detail
+        assert result.kind is Kind.UNCHANGED
         assert runs.calls == [] and fetches.urls == []
 
     def test_offline_with_nothing_installed_says_what_the_bundle_lacks(self, declared, home, bundle, effected):
@@ -315,6 +320,7 @@ class TestCheckoutTools:
         result = custom.install(declared.find('custom_installers', 'theme'), LINUX, offline=True)
 
         assert not result.ok
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert str(bundle) in result.detail
         assert runs.calls == []
 
@@ -364,7 +370,7 @@ class TestClaudeCode:
         result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)
 
         assert result.ok
-        assert 'self-updating' in result.detail
+        assert result.kind is Kind.UNCHANGED
         assert runs.calls == [] and fetches.urls == []
 
     def test_an_installer_refusing_because_claude_is_running_is_not_a_failure(self, declared, home, bundle, effected, monkeypatch):
@@ -376,7 +382,7 @@ class TestClaudeCode:
         result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)
 
         assert result.ok
-        assert 'another process' in result.detail
+        assert result.kind is Kind.UNCHANGED
 
     def test_any_other_failure_is_still_a_failure(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, claude=None)
@@ -385,6 +391,7 @@ class TestClaudeCode:
         result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.COMMAND_FAILED
         assert 'exited 1' in result.detail
 
 
@@ -443,6 +450,7 @@ class TestAwscli:
 
         assert not result.ok
         assert result.refused
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert fetches.urls == [] and runs.calls == []
 
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
@@ -470,7 +478,7 @@ class TestMountS3:
         result = custom.install(declared.find('custom_installers', 'mount-s3'), DARWIN)
 
         assert result.ok
-        assert 'no macOS build' in result.detail
+        assert result.kind is Kind.UNSUPPORTED_HERE
         assert fetches.urls == []
 
     def test_an_unpinned_signing_key_refuses_the_install(self, declared, home, bundle, effected, monkeypatch):
@@ -484,6 +492,7 @@ class TestMountS3:
         result = custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'pinned fingerprints' in result.detail
 
     def test_a_bad_signature_refuses_the_install(self, declared, home, bundle, effected, monkeypatch):
@@ -501,6 +510,7 @@ class TestMountS3:
         result = custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'did not verify' in result.detail
 
     def test_no_gpg_warns_rather_than_refusing(self, declared, home, bundle, effected, monkeypatch, capsys):
@@ -534,6 +544,7 @@ class TestTerraformLs:
 
         assert not result.ok
         assert result.refused
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert custom.HASHICORP in result.detail
         assert fetches.urls == []
 
@@ -569,6 +580,7 @@ class TestTerraformLs:
         result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'checksum mismatch' in result.detail
 
     def test_an_unreadable_checksums_file_refuses_rather_than_warning(self, declared, home, bundle, effected, monkeypatch):
@@ -583,6 +595,7 @@ class TestTerraformLs:
         result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'could not be verified' in result.detail
 
 
@@ -645,7 +658,7 @@ class TestBats:
         result = custom.install(declared.find('custom_installers', 'bats'), LINUX)
 
         assert not result.ok
-        assert 'did not answer' in result.detail
+        assert result.kind is Kind.VERSION_UNRESOLVED
 
 
 # ─────────────────────────────────────────────────────────────────────────────

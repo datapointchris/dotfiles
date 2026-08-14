@@ -38,6 +38,7 @@ from dotfiles.effects import Output
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import script
@@ -75,14 +76,18 @@ def install_uv(*, offline: bool) -> Result:
             return placed
         put_on_path(bin_dir())
         if shutil.which('uv') is None:
-            return Result(False, f'the uv install script ran but uv is not in {bin_dir()}')
+            return Result(False, f'the uv install script ran but uv is not in {bin_dir()}', kind=Kind.VERIFY_FAILED)
 
     chosen = effects.run(
         ['uv', 'python', 'install', '--preview-features', 'python-install-default', '--default', DEFAULT_PYTHON],
     )
     if not chosen.ok:
-        return Result(False, f'uv is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}')
-    return Result(True, f'uv, with python {DEFAULT_PYTHON} as the default')
+        return Result(
+            False,
+            f'uv is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
+            kind=Kind.COMMAND_FAILED,
+        )
+    return Result(True, f'uv, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,8 +118,8 @@ def install_rust(*, offline: bool) -> Result:
     put_on_path(Path.home() / CARGO_BIN)
     reported = effects.run(['rustc', '--version'], output=Output.QUIET)
     if not reported.ok:
-        return Result(False, f'rustup ran but rustc is not in {Path.home() / CARGO_BIN}')
-    return Result(True, reported.transcript.strip())
+        return Result(False, f'rustup ran but rustc is not in {Path.home() / CARGO_BIN}', kind=Kind.VERIFY_FAILED)
+    return Result(True, reported.transcript.strip(), kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -146,25 +151,30 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
         return Result(
             False,
             f'go installs from {GO_DOWNLOAD_URL}, which the offline bundle at {paths.BUNDLE_DIR} does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
             refused=True,
         )
 
     release = latest_release()
     if release is None:
-        return Result(False, f'could not read the current Go release from {GO_VERSION_URL}')
+        return Result(False, f'could not read the current Go release from {GO_VERSION_URL}', kind=Kind.VERSION_UNRESOLVED)
 
     archive_name = f'{release}.{go_platform(target)}.tar.gz'
     with tempfile.TemporaryDirectory(prefix='dotfiles-go-') as scratch:
         staging = Path(scratch)
         archive = _tarball(archive_name, staging)
         if archive is None:
-            return Result(False, f'could not download {GO_DOWNLOAD_URL}/{archive_name}, and no copy of it is in {Path.home()}')
+            return Result(
+                False,
+                f'could not download {GO_DOWNLOAD_URL}/{archive_name}, and no copy of it is in {Path.home()}',
+                kind=Kind.DOWNLOAD_FAILED,
+            )
 
         unpacked = staging / 'unpacked'
         if not effects.unpack(archive, unpacked):
-            return Result(False, f'{archive_name} would not extract')
+            return Result(False, f'{archive_name} would not extract', kind=Kind.ARCHIVE_UNREADABLE)
         if not (unpacked / 'go' / 'bin' / 'go').is_file():
-            return Result(False, f'{archive_name} carries no go/bin/go')
+            return Result(False, f'{archive_name} carries no go/bin/go', kind=Kind.ARCHIVE_INCOMPLETE)
 
         replaced = _replace_goroot(unpacked / 'go', privilege)
         if not replaced.ok:
@@ -172,11 +182,11 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
 
     installed = effects.run([str(GO_ROOT / 'bin' / 'go'), 'version'], output=Output.QUIET)
     if not installed.ok:
-        return Result(False, f'{GO_ROOT / "bin" / "go"} does not run after installing {release}')
+        return Result(False, f'{GO_ROOT / "bin" / "go"} does not run after installing {release}', kind=Kind.VERIFY_FAILED)
 
     put_on_path(GO_ROOT / 'bin')
     _set_go_env()
-    return Result(True, installed.transcript.strip())
+    return Result(True, installed.transcript.strip(), kind=Kind.APPLIED)
 
 
 def latest_release(url: str = GO_VERSION_URL) -> str | None:
@@ -229,14 +239,14 @@ def _replace_goroot(unpacked: Path, privilege: Privilege) -> Result:
     try:
         removed = privilege.run(['rm', '-rf', str(GO_ROOT)], reason=f'replace the Go toolchain in {GO_ROOT}')
         if not removed.ok:
-            return Result(False, f'could not remove {GO_ROOT}: {removed.transcript.strip()}')
+            return Result(False, f'could not remove {GO_ROOT}: {removed.transcript.strip()}', kind=Kind.WRITE_FAILED)
         placed = privilege.run(['cp', '-a', str(unpacked), str(GO_ROOT)], reason=f'install the Go toolchain into {GO_ROOT}')
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
 
     if not placed.ok:
-        return Result(False, f'could not write {GO_ROOT}: {placed.transcript.strip()}')
-    return Result(True, '')
+        return Result(False, f'could not write {GO_ROOT}: {placed.transcript.strip()}', kind=Kind.WRITE_FAILED)
+    return Result(True, '', kind=Kind.APPLIED)
 
 
 def _set_go_env() -> None:
@@ -272,11 +282,16 @@ def install_node(home: Path, *, offline: bool) -> Result:
     in `.zshrc`, or from `fnm exec` when the caller is not an interactive shell.
     """
     if shutil.which('fnm') is None:
-        return Result(False, "fnm is not on PATH — it ships as a cargo package, so check this machine's cargo_packages")
+        return Result(
+            False,
+            "fnm is not on PATH — it ships as a cargo package, so check this machine's cargo_packages",
+            kind=Kind.PREREQUISITE_MISSING,
+        )
     if offline:
         return Result(
             False,
             f'fnm downloads Node {NODE_DEFAULT_VERSION} from nodejs.org, which the offline bundle does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
             refused=True,
         )
 
@@ -284,14 +299,14 @@ def install_node(home: Path, *, offline: bool) -> Result:
     for command in (('fnm', 'install', NODE_DEFAULT_VERSION), ('fnm', 'default', NODE_DEFAULT_VERSION)):
         completed = effects.run(list(command), env={'FNM_DIR': directory})
         if not completed.ok:
-            return Result(False, f'`{" ".join(command)}` exited {completed.returncode}')
+            return Result(False, f'`{" ".join(command)}` exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
     alias = Path(directory) / 'aliases' / 'default' / 'bin'
     put_on_path(alias)
     reported = effects.run([str(alias / 'node'), '--version'], output=Output.QUIET)
     if not reported.ok:
-        return Result(False, f'fnm reported success but there is no node at {alias}')
-    return Result(True, f"node {reported.transcript.strip()} is fnm's default alias")
+        return Result(False, f'fnm reported success but there is no node at {alias}', kind=Kind.VERIFY_FAILED)
+    return Result(True, f"node {reported.transcript.strip()} is fnm's default alias", kind=Kind.APPLIED)
 
 
 TOOL_PATH_DIRS = (

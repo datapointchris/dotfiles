@@ -16,6 +16,7 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles.effects import Completed
+from dotfiles.providers import Kind
 from dotfiles.providers import uvtool
 
 RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
@@ -118,6 +119,7 @@ def test_a_failure_reports_what_uv_said(uv) -> None:
     result = uvtool.install(RUFF, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'distribution not found' in result.detail
 
 
@@ -130,6 +132,7 @@ def test_offline_still_tries_pypi_and_says_there_is_no_fallback(uv) -> None:
     result = uvtool.install(RUFF, offline=True)
 
     assert reached.calls == [('uv', 'tool', 'install', 'ruff')]
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'stages no Python tools' in result.detail
 
 

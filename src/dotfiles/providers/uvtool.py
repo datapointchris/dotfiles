@@ -39,6 +39,7 @@ from dotfiles import effects
 from dotfiles import github_release
 from dotfiles.effects import Output
 from dotfiles.output import warn
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 
 SLUG = re.compile(r'^(?:https://github\.com/|git@github\.com:)([^/:]+/[^/:]+?)(?:\.git)?/?$')
@@ -109,7 +110,11 @@ def _uv_tool_install(name: str, target: str, *, offline: bool, again: bool) -> R
     command = ['uv', 'tool', 'install', '--reinstall', target] if again else ['uv', 'tool', 'install', target]
     completed = effects.run(command, output=Output.QUIET)
     if completed.ok:
-        return Result(True, f'{name} installed from {target}')
+        return Result(True, f'{name} installed from {target}', kind=Kind.APPLIED)
 
     unreachable = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
-    return Result(False, f'uv tool install {target} exited {completed.returncode}{unreachable}: {completed.transcript.strip()}')
+    return Result(
+        False,
+        f'uv tool install {target} exited {completed.returncode}{unreachable}: {completed.transcript.strip()}',
+        kind=Kind.COMMAND_FAILED,
+    )

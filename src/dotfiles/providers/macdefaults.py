@@ -35,6 +35,7 @@ from typing import Any
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
@@ -143,8 +144,8 @@ def apply_default(entry: catalog.MacosDefault) -> Result:
 
     written = run(command, output=Output.QUIET)
     if not written.ok:
-        return Result(False, f'{entry.name}: {written.transcript.strip()}')
-    return Result(True, f'{entry.name} set to {entry.value}')
+        return Result(False, f'{entry.name}: {written.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{entry.name} set to {entry.value}', kind=Kind.APPLIED)
 
 
 _QUIT = False

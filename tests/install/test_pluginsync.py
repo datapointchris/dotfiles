@@ -26,6 +26,7 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles.providers import Kind
 from dotfiles.providers import pluginsync
 
 needs_tmux = pytest.mark.interpreter('tmux')
@@ -172,6 +173,7 @@ def test_tpms_own_error_reaches_the_outcome(tmux: Tmux) -> None:
     result = tmux.sync()
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'TPM plugin installation failed' in result.detail
     assert 'FATAL: Tmux Plugin Manager not configured in tmux.conf' in result.detail
 
@@ -185,6 +187,7 @@ def test_tpm_output_on_stdout_still_reaches_the_outcome(tmux: Tmux) -> None:
 
     result = tmux.sync()
 
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'SSL certificate problem' in result.detail
     assert 'exit 128' in result.detail
 
@@ -195,10 +198,11 @@ def test_the_failure_carries_the_tmux_version_and_config_path(tmux: Tmux) -> Non
     which tmux and which config it was reading."""
     tmux.stub_tpm('exit 1\n')
 
-    detail = tmux.sync().detail
+    result = tmux.sync()
 
-    assert 'tmux: tmux ' in detail
-    assert f'{tmux.config} (present)' in detail
+    assert result.kind is Kind.COMMAND_FAILED
+    assert 'tmux: tmux ' in result.detail
+    assert f'{tmux.config} (present)' in result.detail
 
 
 @needs_tmux
@@ -224,6 +228,7 @@ def test_a_missing_tpm_is_reported_rather_than_crashed_on(tmux: Tmux) -> None:
     result = tmux.sync()
 
     assert not result.ok
+    assert result.kind is Kind.PREREQUISITE_MISSING
     assert 'TPM is not at' in result.detail
 
 
@@ -237,6 +242,7 @@ def test_a_missing_tmux_conf_is_reported_rather_than_silently_installing_nothing
     result = tmux.sync()
 
     assert not result.ok
+    assert result.kind is Kind.PREREQUISITE_MISSING
     assert 'no plugin list to read' in result.detail
 
 

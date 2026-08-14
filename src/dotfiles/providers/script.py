@@ -24,6 +24,7 @@ from dotfiles import effects
 from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.output import err_console
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
 
@@ -104,12 +105,17 @@ def run(
             # difference between the two sentences `unstaged` writes: nothing stages
             # rustup, so an offline run reaching here is the design working, while a
             # network that would not serve the script is the world saying no.
-            return Result(False, unstaged(name, url, offline=offline, reason=script.reason), refused=offline)
+            return Result(
+                False,
+                unstaged(name, url, offline=offline, reason=script.reason),
+                kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED,
+                refused=offline,
+            )
         completed = effects.run(['bash', str(script.path), *args], env=dict(env) if env else None, output=Output.STREAM)
 
     if completed.ok:
-        return Result(True, '')
-    return Result(False, failure(name, completed))
+        return Result(True, '', kind=Kind.APPLIED)
+    return Result(False, failure(name, completed), kind=Kind.COMMAND_FAILED)
 
 
 def failure(name: str, completed: effects.Completed) -> str:

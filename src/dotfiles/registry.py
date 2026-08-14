@@ -48,6 +48,7 @@ from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bootstrap
 from dotfiles.providers import cargo
@@ -272,7 +273,7 @@ class ReleaseProvider(VendoredProvider):
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.GithubRelease):
-            return providers.Result(False, f'{item.name} is not a github_releases entry')
+            return providers.Result(False, f'{item.name} is not a github_releases entry', kind=providers.Kind.DECLARATION_INVALID)
         return ghrelease.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
 
 
@@ -299,7 +300,7 @@ class CustomProvider(VendoredProvider):
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.CustomInstaller):
-            return providers.Result(False, f'{item.name} is not a custom_installers entry')
+            return providers.Result(False, f'{item.name} is not a custom_installers entry', kind=providers.Kind.DECLARATION_INVALID)
         return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
 
 
@@ -339,7 +340,7 @@ class WingetProvider(VendoredProvider):
     def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.WingetPackage):
-            return providers.Result(False, f'{item.name} is not a winget_packages entry')
+            return providers.Result(False, f'{item.name} is not a winget_packages entry', kind=providers.Kind.DECLARATION_INVALID)
         return winget.install(entry, providers.bin_dir(), offline=session.offline)
 
 
@@ -1294,7 +1295,7 @@ def _bootstrap(manager: str, session: Session, privilege: Privilege) -> Result:
         return bootstrap.aur()
     if manager == 'flatpak':
         return bootstrap.flathub(session.machine.coordinates.installers[0], privilege)
-    return Result(True, '')
+    return Result(True, '', kind=Kind.UNCHANGED)
 
 
 def _through(

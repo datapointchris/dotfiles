@@ -31,6 +31,7 @@ from dotfiles import paths
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
@@ -114,7 +115,9 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool) -> Re
     """Converge one Rust CLI, from whichever source this run can reach."""
     if offline:
         return _from_bundle(entry) or Result(
-            False, f'{entry.name} is not in the offline bundle at {bundle_file(BUNDLE_BINARIES)}, and offline cannot reach crates.io'
+            False,
+            f'{entry.name} is not in the offline bundle at {bundle_file(BUNDLE_BINARIES)}, and offline cannot reach crates.io',
+            kind=Kind.NOT_IN_BUNDLE,
         )
 
     ready = binstall(target, offline=offline)
@@ -142,8 +145,10 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
     """
     completed = effects.run(['cargo', 'binstall', '-y', entry.name], output=Output.QUIET)
     if completed.ok:
-        return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}')
-    return Result(False, f'cargo binstall {entry.name} exited {completed.returncode}: {completed.transcript.strip()}')
+        return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
+    return Result(
+        False, f'cargo binstall {entry.name} exited {completed.returncode}: {completed.transcript.strip()}', kind=Kind.COMMAND_FAILED
+    )
 
 
 def _from_bundle(entry: catalog.CargoPackage) -> Result | None:
@@ -163,17 +168,17 @@ def _from_bundle(entry: catalog.CargoPackage) -> Result | None:
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{entry.name}-') as scratch:
         unpacked = Path(scratch) / 'unpacked'
         if not effects.unpack(archive, unpacked):
-            return Result(False, f'{row.filename} is neither a tar nor a zip this could open')
+            return Result(False, f'{row.filename} is neither a tar nor a zip this could open', kind=Kind.ARCHIVE_UNREADABLE)
 
         binary = _inside(unpacked, entry.executable)
         if binary is None:
-            return Result(False, f'{row.filename} carries no {entry.executable}')
+            return Result(False, f'{row.filename} carries no {entry.executable}', kind=Kind.ARCHIVE_INCOMPLETE)
         try:
             place(binary, cargo_bin() / entry.executable)
         except OSError as refused:
-            return Result(False, f'could not install {entry.executable} from {archive}: {refused}')
+            return Result(False, f'could not install {entry.executable} from {archive}: {refused}', kind=Kind.WRITE_FAILED)
 
-    return Result(True, f'{entry.executable} {row.version} installed from the bundle at {archive}')
+    return Result(True, f'{entry.executable} {row.version} installed from the bundle at {archive}', kind=Kind.APPLIED)
 
 
 def _inside(unpacked: Path, executable: str) -> Path | None:
@@ -209,9 +214,13 @@ def binstall(target: Target, *, offline: bool) -> Result:
     are blocked but crates.io is reachable.
     """
     if shutil.which('cargo-binstall'):
-        return Result(True, '')
+        return Result(True, '', kind=Kind.UNCHANGED)
     if offline:
-        return Result(False, f'cargo-binstall installs from {BINSTALL_REPO}, which the offline bundle at {paths.BUNDLE_DIR} does not stage')
+        return Result(
+            False,
+            f'cargo-binstall installs from {BINSTALL_REPO}, which the offline bundle at {paths.BUNDLE_DIR} does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
+        )
 
     placed = _binstall_from_release(target)
     if placed.ok:
@@ -219,13 +228,17 @@ def binstall(target: Target, *, offline: bool) -> Result:
         return placed
 
     if shutil.which('cargo') is None:
-        return Result(False, f'cargo-binstall is unavailable: {placed.detail}, and there is no cargo to build it')
+        return Result(
+            False, f'cargo-binstall is unavailable: {placed.detail}, and there is no cargo to build it', kind=Kind.PREREQUISITE_MISSING
+        )
 
     built = effects.run(['cargo', 'install', 'cargo-binstall'])
     if not built.ok:
-        return Result(False, f'cargo-binstall is unavailable: {placed.detail}, and building it exited {built.returncode}')
+        return Result(
+            False, f'cargo-binstall is unavailable: {placed.detail}, and building it exited {built.returncode}', kind=Kind.COMMAND_FAILED
+        )
     toolchain.put_on_path(cargo_bin())
-    return Result(True, 'cargo-binstall built from source')
+    return Result(True, 'cargo-binstall built from source', kind=Kind.APPLIED)
 
 
 def _binstall_from_release(target: Target) -> Result:
@@ -243,18 +256,18 @@ def _binstall_from_release(target: Target) -> Result:
         download = staging / archive_name
         arrived = effects.fetch(url, download)
         if not arrived:
-            return Result(False, f'could not download {url}: {arrived.reason}')
+            return Result(False, f'could not download {url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
         unpacked = staging / 'unpacked'
         if not effects.unpack(download, unpacked):
-            return Result(False, f'{archive_name} is neither a tar nor a zip this could open')
+            return Result(False, f'{archive_name} is neither a tar nor a zip this could open', kind=Kind.ARCHIVE_UNREADABLE)
 
         binary = _inside(unpacked, 'cargo-binstall')
         if binary is None:
-            return Result(False, f'{archive_name} carries no cargo-binstall')
+            return Result(False, f'{archive_name} carries no cargo-binstall', kind=Kind.ARCHIVE_INCOMPLETE)
         try:
             place(binary, cargo_bin() / 'cargo-binstall')
         except OSError as refused:
-            return Result(False, f'could not install cargo-binstall from {archive_name}: {refused}')
+            return Result(False, f'could not install cargo-binstall from {archive_name}: {refused}', kind=Kind.WRITE_FAILED)
 
-    return Result(True, f'cargo-binstall from {url}')
+    return Result(True, f'cargo-binstall from {url}', kind=Kind.APPLIED)

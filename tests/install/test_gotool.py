@@ -17,6 +17,7 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.effects import Completed
+from dotfiles.providers import Kind
 from dotfiles.providers import gotool
 from dotfiles.providers import toolchain
 
@@ -142,6 +143,7 @@ def test_an_unreachable_proxy_with_no_bundle_reports_what_go_said(home, bundle, 
     result = gotool.install(TASK, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'handshake failure' in result.detail
 
 
@@ -153,6 +155,7 @@ def test_progress_lines_are_not_mistaken_for_the_diagnosis(home, bundle, proxy) 
 
     result = gotool.install(TASK, offline=False)
 
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'downloading' not in result.detail
     assert 'no such module' in result.detail
 
@@ -163,6 +166,7 @@ def test_offline_with_nothing_staged_says_where_it_looked(home, bundle, proxy) -
     result = gotool.install(TASK, offline=True)
 
     assert not result.ok
+    assert result.kind is Kind.NOT_IN_BUNDLE
     assert str(bundle / gotool.BUNDLE_BINARIES) in result.detail
 
 

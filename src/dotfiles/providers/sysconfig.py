@@ -35,6 +35,7 @@ from dotfiles.effects import run
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -109,8 +110,8 @@ class AsRoot:
             staged.unlink(missing_ok=True)
 
         if not installed.ok:
-            return Result(False, f'could not write {path}: {installed.transcript.strip()}')
-        return Result(True, f'{path} written')
+            return Result(False, f'could not write {path}: {installed.transcript.strip()}', kind=Kind.WRITE_FAILED)
+        return Result(True, f'{path} written', kind=Kind.APPLIED)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -137,8 +138,8 @@ class AsThisUser:
             path.write_text(content)
             path.chmod(int(mode, 8))
         except (OSError, ValueError) as problem:
-            return Result(False, f'could not write {path}: {problem}')
-        return Result(True, f'{path} written')
+            return Result(False, f'could not write {path}: {problem}', kind=Kind.WRITE_FAILED)
+        return Result(True, f'{path} written', kind=Kind.APPLIED)
 
 
 def observe(entry: catalog.SystemConfig) -> State:
@@ -171,7 +172,7 @@ def apply(entry: catalog.SystemConfig, privilege: Privilege) -> Result:
         assert isinstance(entry, catalog.LoginShell)
         return _apply_login_shell(entry, escalation)
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -206,15 +207,15 @@ def _apply_group(entry: catalog.GroupMembership, escalation: Escalation) -> Resu
         grp.getgrnam(entry.name)
     except KeyError:
         if not entry.create_group:
-            return Result(False, f'no {entry.name} group, and this entry does not create one')
+            return Result(False, f'no {entry.name} group, and this entry does not create one', kind=Kind.PREREQUISITE_MISSING)
         created = escalation.run(['groupadd', entry.name], reason=f'create the {entry.name} group')
         if not created.ok:
-            return Result(False, f'groupadd {entry.name} failed: {created.transcript.strip()}')
+            return Result(False, f'groupadd {entry.name} failed: {created.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     added = escalation.run(['usermod', '-aG', entry.name, user], reason=f'add {user} to the {entry.name} group')
     if not added.ok:
-        return Result(False, f'usermod failed: {added.transcript.strip()}')
-    return Result(True, f'{user} added to {entry.name} (effective at next login)')
+        return Result(False, f'usermod failed: {added.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{user} added to {entry.name} (effective at next login)', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,15 +245,15 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     verb = 'enable' if entry.enabled else 'disable'
     changed = escalation.run(['systemctl', verb, entry.name], reason=f'{verb} {entry.name}')
     if not changed.ok:
-        return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}')
+        return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     if not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
-        return Result(True, f'{entry.name} {verb}d')
+        return Result(True, f'{entry.name} {verb}d', kind=Kind.APPLIED)
 
     started = escalation.run(['systemctl', 'start', entry.name], reason=f'start {entry.name}')
     if not started.ok:
-        return Result(False, f'systemctl start {entry.name} failed: {started.transcript.strip()}')
-    return Result(True, f'{entry.name} enabled and started')
+        return Result(False, f'systemctl start {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{entry.name} enabled and started', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -342,9 +343,11 @@ def _observe_login_shell(entry: catalog.LoginShell) -> State:
 def _apply_login_shell(entry: catalog.LoginShell, escalation: Escalation) -> Result:
     shell = shutil.which(entry.name)
     if shell is None:
-        return Result(False, f'{entry.name} is not installed, and the stage that supplies it has not', refused=True)
+        return Result(
+            False, f'{entry.name} is not installed, and the stage that supplies it has not', kind=Kind.PREREQUISITE_MISSING, refused=True
+        )
 
     changed = escalation.run(['chsh', '-s', shell, current_user()], reason=f'make {shell} the login shell')
     if not changed.ok:
-        return Result(False, f'chsh failed: {changed.transcript.strip()}')
-    return Result(True, f'login shell changed to {shell} (effective at next login)')
+        return Result(False, f'chsh failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'login shell changed to {shell} (effective at next login)', kind=Kind.APPLIED)

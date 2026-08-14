@@ -32,6 +32,7 @@ from pathlib import Path
 from dotfiles import effects
 from dotfiles.effects import Output
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import syspkg
 from dotfiles.providers import toolchain
@@ -74,7 +75,7 @@ def homebrew() -> Result:
     person's to answer.
     """
     if shutil.which('brew'):
-        return Result(True, '')
+        return Result(True, '', kind=Kind.UNCHANGED)
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-homebrew-') as scratch:
         script = Path(scratch) / 'install.sh'
@@ -83,18 +84,20 @@ def homebrew() -> Result:
             # The first thing that runs on a fresh Mac, so the failure with the least
             # context around it — and the one most likely to be read as "the network
             # is down" when it is a proxy certificate.
-            return Result(False, f'could not download the Homebrew installer from {BREW_INSTALLER}: {arrived.reason}')
+            return Result(
+                False, f'could not download the Homebrew installer from {BREW_INSTALLER}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED
+            )
         installed = effects.run(['bash', str(script)], env={'NONINTERACTIVE': '1'})
 
     if not installed.ok:
-        return Result(False, f'the Homebrew installer exited {installed.returncode}')
+        return Result(False, f'the Homebrew installer exited {installed.returncode}', kind=Kind.COMMAND_FAILED)
 
     placed = next((prefix for prefix in BREW_PREFIXES if (prefix / 'brew').is_file()), None)
     if placed is None:
         looked = ' or '.join(str(prefix) for prefix in BREW_PREFIXES)
-        return Result(False, f'the Homebrew installer reported success but left no brew in {looked}')
+        return Result(False, f'the Homebrew installer reported success but left no brew in {looked}', kind=Kind.VERIFY_FAILED)
     toolchain.put_on_path(placed)
-    return Result(True, f'Homebrew installed at {placed}')
+    return Result(True, f'Homebrew installed at {placed}', kind=Kind.APPLIED)
 
 
 def taps(wanted: Sequence[str]) -> Result:
@@ -113,8 +116,8 @@ def taps(wanted: Sequence[str]) -> Result:
     for tap in wanted:
         added = effects.run(['brew', 'tap', tap], output=Output.QUIET)
         if not added.ok:
-            return Result(False, f'brew tap {tap} exited {added.returncode}')
-    return Result(True, '')
+            return Result(False, f'brew tap {tap} exited {added.returncode}', kind=Kind.COMMAND_FAILED)
+    return Result(True, '', kind=Kind.APPLIED)
 
 
 def aur() -> Result:
@@ -130,7 +133,7 @@ def aur() -> Result:
         home.mkdir(parents=True, exist_ok=True)
         home.chmod(0o700)
     except OSError as refused:
-        return Result(False, f'could not prepare {home} for AUR signature verification: {refused}')
+        return Result(False, f'could not prepare {home} for AUR signature verification: {refused}', kind=Kind.WRITE_FAILED)
 
     return _yay()
 
@@ -159,22 +162,22 @@ def _yay() -> Result:
     AUR helper whatever the package database says about why.
     """
     if shutil.which('yay'):
-        return Result(True, '')
+        return Result(True, '', kind=Kind.UNCHANGED)
     if shutil.which('makepkg') is None:
-        return Result(False, 'building yay needs base-devel, which this machine has not installed')
+        return Result(False, 'building yay needs base-devel, which this machine has not installed', kind=Kind.PREREQUISITE_MISSING)
 
     environment = {'GNUPGHOME': str(_gnupg_home())}
     with tempfile.TemporaryDirectory(prefix='dotfiles-yay-') as scratch:
         checkout = Path(scratch) / 'yay'
         cloned = effects.run(['git', 'clone', '--depth', '1', YAY_REPO, str(checkout)])
         if not cloned.ok:
-            return Result(False, f'could not clone {YAY_REPO}: exited {cloned.returncode}')
+            return Result(False, f'could not clone {YAY_REPO}: exited {cloned.returncode}', kind=Kind.DOWNLOAD_FAILED)
 
         built = effects.run(['makepkg', '-si', '--noconfirm'], cwd=checkout, env=environment)
 
     if not built.ok:
-        return Result(False, f'makepkg -si exited {built.returncode} building yay')
-    return Result(True, 'yay built from the AUR')
+        return Result(False, f'makepkg -si exited {built.returncode} building yay', kind=Kind.COMMAND_FAILED)
+    return Result(True, 'yay built from the AUR', kind=Kind.APPLIED)
 
 
 def flathub(installer: str, privilege: Privilege) -> Result:
@@ -192,12 +195,14 @@ def flathub(installer: str, privilege: Privilege) -> Result:
     if shutil.which('flatpak') is None:
         installed = syspkg.install(installer, ['flatpak'], privilege)
         if not installed.ok:
-            return Result(False, f'flatpak is not installed and {installer} could not install it: {installed.detail}')
+            return Result(
+                False, f'flatpak is not installed and {installer} could not install it: {installed.detail}', kind=Kind.PREREQUISITE_MISSING
+            )
 
     if not SYSTEM_BUS.exists():
-        return Result(False, f'flatpak needs the D-Bus system bus at {SYSTEM_BUS}, and this machine has none')
+        return Result(False, f'flatpak needs the D-Bus system bus at {SYSTEM_BUS}, and this machine has none', kind=Kind.UNSUPPORTED_HERE)
 
     added = effects.run(['flatpak', 'remote-add', '--if-not-exists', 'flathub', FLATHUB], output=Output.QUIET)
     if not added.ok:
-        return Result(False, f'could not add the flathub remote: flatpak remote-add exited {added.returncode}')
-    return Result(True, '')
+        return Result(False, f'could not add the flathub remote: flatpak remote-add exited {added.returncode}', kind=Kind.COMMAND_FAILED)
+    return Result(True, '', kind=Kind.APPLIED)

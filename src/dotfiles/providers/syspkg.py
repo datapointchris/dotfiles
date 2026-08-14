@@ -35,6 +35,7 @@ from dotfiles.effects import Output
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 
 REMOVE: dict[str, str] = {
@@ -235,11 +236,11 @@ def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
             else effects.run(command)
         )
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
 
     if completed.ok:
-        return Result(True, f'{manager}: {" ".join(names)}')
-    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}')
+        return Result(True, f'{manager}: {" ".join(names)}', kind=Kind.APPLIED)
+    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
 
 def refresh(manager: str, privilege: Privilege) -> Result:
@@ -251,12 +252,16 @@ def refresh(manager: str, privilege: Privilege) -> Result:
     """
     command = REFRESH.get(manager)
     if command is None:
-        return Result(True, '')
+        return Result(True, '', kind=Kind.UNCHANGED)
     try:
         completed = privilege.run(list(command), reason=f'refresh the {manager} package database')
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
-    return Result(True, '') if completed.ok else Result(False, f'{" ".join(command)} exited {completed.returncode}')
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
+    return (
+        Result(True, '', kind=Kind.APPLIED)
+        if completed.ok
+        else Result(False, f'{" ".join(command)} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
+    )
 
 
 def available(manager: str) -> bool:
@@ -385,10 +390,10 @@ def upgrade(manager: str, privilege: Privilege) -> Result:
             else effects.run(command)
         )
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
     if completed.ok:
-        return Result(True, f'{" ".join(command)}')
-    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}')
+        return Result(True, f'{" ".join(command)}', kind=Kind.APPLIED)
+    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
 
 PROBE_SECONDS = 10.0

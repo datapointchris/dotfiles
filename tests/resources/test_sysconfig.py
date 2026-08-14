@@ -24,6 +24,7 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import sysconfig
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -165,7 +166,7 @@ def test_a_declined_password_writes_nothing_and_says_so(tmp_path: Path, declined
     result = sysconfig.apply(entry, declined)
 
     assert not result.ok
-    assert 'declined' in result.detail
+    assert result.kind is Kind.PRIVILEGE_UNAVAILABLE
     assert not target.exists()
 
 
@@ -353,6 +354,7 @@ def test_a_shell_still_missing_at_the_write_is_refused_rather_than_failed(monkey
 
     assert not result.ok
     assert result.refused
+    assert result.kind is Kind.PREREQUISITE_MISSING
 
 
 def test_changing_the_login_shell_passes_the_resolved_path(

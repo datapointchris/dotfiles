@@ -36,6 +36,7 @@ from dotfiles.effects import run
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import schedule
 from dotfiles.providers.sysconfig import State
@@ -92,10 +93,10 @@ def _show_library() -> Result:
     library = Path.home() / 'Library'
     cleared = run(['chflags', 'nohidden', str(library)], output=Output.QUIET)
     if not cleared.ok:
-        return Result(False, f'chflags failed: {cleared.transcript.strip()}')
+        return Result(False, f'chflags failed: {cleared.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     # Absent on a folder nobody has hidden by hand, so a failure here is not one.
     run(['xattr', '-d', FINDER_INFO, str(library)], output=Output.QUIET)
-    return Result(True, '~/Library is visible')
+    return Result(True, '~/Library is visible', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -121,7 +122,7 @@ def _screenshots_exist() -> State:
 
 def _make_screenshots() -> Result:
     _screenshot_directory().mkdir(parents=True, exist_ok=True)
-    return Result(True, f'{_screenshot_directory()} created')
+    return Result(True, f'{_screenshot_directory()} created', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -162,12 +163,12 @@ def _accept_xcode_licence(privilege: Privilege) -> Result:
     try:
         accepted = privilege.run(['xcodebuild', '-license', 'accept'], reason='accept the Xcode licence')
     except PrivilegeUnavailable:
-        return Result(False, refusal(privilege.state))
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
     if not accepted.ok:
-        return Result(False, f'xcodebuild -license accept failed: {accepted.transcript.strip()}')
+        return Result(False, f'xcodebuild -license accept failed: {accepted.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     run(['xcodebuild', '-runFirstLaunch'], output=Output.QUIET)
-    return Result(True, 'Xcode licence accepted')
+    return Result(True, 'Xcode licence accepted', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,14 +234,14 @@ def _read_docker_config() -> dict[str, object] | None:
 def _add_orbstack_plugins() -> Result:
     config = _read_docker_config()
     if config is None:
-        return Result(False, f'{_docker_config()} is not readable JSON, so nothing was written')
+        return Result(False, f'{_docker_config()} is not readable JSON, so nothing was written', kind=Kind.TARGET_UNUSABLE)
 
     config['cliPluginsExtraDirs'] = [*_plugin_directories(config), str(ORBSTACK_PLUGINS)]
 
     path = _docker_config()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2) + '\n')
-    return Result(True, f'{path} points at OrbStack plugins')
+    return Result(True, f'{path} points at OrbStack plugins', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@ def _windows_fonts() -> State:
 def _write_fontconfig() -> Result:
     fonts = _windows_fonts_directory()
     if fonts is None or not fonts.is_dir():
-        return Result(False, 'no Windows fonts directory to point at')
+        return Result(False, 'no Windows fonts directory to point at', kind=Kind.UNSUPPORTED_HERE)
 
     target = Path.home() / FONTCONFIG
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -310,7 +311,7 @@ def _write_fontconfig() -> Result:
     # The file is only useful once fontconfig has read it; a machine without
     # fc-cache still gets a correct config for whatever reads it next.
     run(['fc-cache', '-f'], output=Output.QUIET)
-    return Result(True, f'{target} points at {fonts}')
+    return Result(True, f'{target} points at {fonts}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -351,14 +352,16 @@ def _link_psql() -> Result:
     cannot have them — and a failure would exit the run non-zero for it.
     """
     if not shutil.which('brew'):
-        return Result(False, 'brew is not installed, and the stage that supplies it has not', refused=True)
+        return Result(False, 'brew is not installed, and the stage that supplies it has not', kind=Kind.PREREQUISITE_MISSING, refused=True)
     if not run(['brew', 'list', KEG_ONLY], output=Output.QUIET).ok:
-        return Result(False, f'{KEG_ONLY} is not installed, and the stage that supplies it has not', refused=True)
+        return Result(
+            False, f'{KEG_ONLY} is not installed, and the stage that supplies it has not', kind=Kind.PREREQUISITE_MISSING, refused=True
+        )
 
     linked = run(['brew', 'link', '--force', KEG_ONLY], output=Output.QUIET)
     if not linked.ok:
-        return Result(False, f'brew link --force {KEG_ONLY} exited {linked.returncode}')
-    return Result(True, f'{KEG_ONLY} linked, so psql is on PATH')
+        return Result(False, f'brew link --force {KEG_ONLY} exited {linked.returncode}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'{KEG_ONLY} linked, so psql is on PATH', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -402,5 +405,5 @@ def observe(entry_name: str) -> State:
 
 def apply(entry_name: str, privilege: Privilege) -> Result:
     if entry_name not in STEPS:
-        return Result(False, f'no function in providers/steps.py for {entry_name}')
+        return Result(False, f'no function in providers/steps.py for {entry_name}', kind=Kind.DECLARATION_INVALID)
     return STEPS[entry_name][1](privilege)

@@ -27,6 +27,7 @@ import yaml
 
 from dotfiles import registry
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import toolchain as installers
 from dotfiles.resolve import Stage
@@ -294,7 +295,7 @@ def test_repairing_a_runtime_goes_through_the_provider_that_planned_it(
     """Not a table here saying which runtimes this resource can install. That table
     is what `packages.PERFORMED` was, and it decided the same question the registry
     already answers — so the route asserted is resource → registry → provider."""
-    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(True, 'uv, from the provider'))
+    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(True, 'uv, from the provider', kind=Kind.APPLIED))
     live = session(tmp_path, BARE)
     change = changes(live)[0]
 
@@ -315,7 +316,9 @@ def test_a_refused_runtime_survives_the_route_as_refused_rather_than_failed(
     itself unconverged over go.dev and rustup.rs — sources its bundle deliberately
     does not stage, because the tools those runtimes build arrive prebuilt.
     """
-    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(False, 'nothing stages it', refused=True))
+    monkeypatch.setattr(
+        installers, 'install_uv', lambda *, offline: Result(False, 'nothing stages it', kind=Kind.NOT_IN_BUNDLE, refused=True)
+    )
     live = session(tmp_path, BARE)
     change = changes(live)[0]
 

@@ -27,6 +27,7 @@ from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.effects import Completed
+from dotfiles.providers import Kind
 from dotfiles.providers import bundle
 from dotfiles.providers import cargo
 
@@ -157,6 +158,7 @@ def test_an_unreachable_crates_io_with_no_bundle_reports_what_binstall_said(home
     result = cargo.install(FD, LINUX, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'dns error' in result.detail
 
 
@@ -166,6 +168,7 @@ def test_offline_with_nothing_staged_says_where_it_looked(home, staged, ready, c
     result = cargo.install(FD, LINUX, offline=True)
 
     assert not result.ok
+    assert result.kind is Kind.NOT_IN_BUNDLE
     assert str(staged / cargo.BUNDLE_BINARIES) in result.detail
 
 
@@ -215,6 +218,7 @@ def test_an_archive_without_the_binary_says_so_rather_than_falling_through(home,
     result = cargo.install(FD, LINUX, offline=True)
 
     assert not result.ok
+    assert result.kind is Kind.ARCHIVE_INCOMPLETE
     assert 'carries no fd' in result.detail
 
 
@@ -250,6 +254,7 @@ def test_offline_cannot_install_the_precondition_and_says_which_repo(home, stage
     result = cargo.binstall(LINUX, offline=True)
 
     assert not result.ok
+    assert result.kind is Kind.NOT_IN_BUNDLE
     assert cargo.BINSTALL_REPO in result.detail
 
 
@@ -274,8 +279,8 @@ def test_no_cargo_and_no_release_reports_both_halves(home, staged, crates, monke
     result = cargo.binstall(LINUX, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.PREREQUISITE_MISSING
     assert 'could not download' in result.detail
-    assert 'no cargo to build it' in result.detail
     assert REFUSED in result.detail, 'a bare "could not download" is what sent a TLS block to the wrong diagnosis'
 
 

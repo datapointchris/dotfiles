@@ -16,6 +16,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.resolve import DesiredItem
 
@@ -99,13 +100,13 @@ def pull(item: DesiredItem, home: Path) -> Result:
     """
     checkout = tracked(item, home)
     if checkout is None:
-        return Result(False, f'{destination(item, home)} is not a checkout this can pull')
+        return Result(False, f'{destination(item, home)} is not a checkout this can pull', kind=Kind.TARGET_UNUSABLE)
 
     was = _commit(checkout)
     result = run(['git', '-C', str(checkout), 'pull', '--quiet', '--ff-only'], output=Output.STREAM)
     if not result.ok:
-        return Result(False, result.transcript.strip() or f'git pull exited {result.returncode}')
-    return Result(True, f'{item.name} updated: {was} → {_commit(checkout)}')
+        return Result(False, result.transcript.strip() or f'git pull exited {result.returncode}', kind=Kind.DOWNLOAD_FAILED)
+    return Result(True, f'{item.name} updated: {was} → {_commit(checkout)}', kind=Kind.APPLIED)
 
 
 def _commit(checkout: Path) -> str:
@@ -137,8 +138,8 @@ def clone(item: DesiredItem, home: Path) -> Result:
 
     result = run(['git', 'clone', '--quiet', repository(item), str(target)], output=Output.STREAM)
     if not result.ok:
-        return Result(False, result.transcript.strip() or f'git clone exited {result.returncode}')
-    return Result(True, f'cloned into {target}')
+        return Result(False, result.transcript.strip() or f'git clone exited {result.returncode}', kind=Kind.DOWNLOAD_FAILED)
+    return Result(True, f'cloned into {target}', kind=Kind.APPLIED)
 
 
 def _subdirectory(repo: str, inner: str, target: Path) -> Result:
@@ -166,16 +167,16 @@ def _subdirectory(repo: str, inner: str, target: Path) -> Result:
     try:
         result = run(['git', 'clone', '--quiet', '--depth', '1', repo, str(staging)], output=Output.STREAM)
         if not result.ok:
-            return Result(False, result.transcript.strip() or f'git clone exited {result.returncode}')
+            return Result(False, result.transcript.strip() or f'git clone exited {result.returncode}', kind=Kind.DOWNLOAD_FAILED)
 
         source = staging / inner
         if not source.is_dir():
-            return Result(False, f'{repo} has no {inner}; the plugin moved or was renamed upstream')
+            return Result(False, f'{repo} has no {inner}; the plugin moved or was renamed upstream', kind=Kind.DECLARATION_INVALID)
 
         shutil.copytree(source, target)
     except (OSError, shutil.Error) as problem:
         shutil.rmtree(target, ignore_errors=True)
-        return Result(False, f'copying {inner} out of {repo}: {problem}')
+        return Result(False, f'copying {inner} out of {repo}: {problem}', kind=Kind.WRITE_FAILED)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    return Result(True, f'cloned {inner} from {repo} into {target}')
+    return Result(True, f'cloned {inner} from {repo} into {target}', kind=Kind.APPLIED)

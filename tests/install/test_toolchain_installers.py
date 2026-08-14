@@ -28,6 +28,7 @@ from dotfiles.coordinates import Target
 from dotfiles.effects import Completed
 from dotfiles.privilege import Authorization
 from dotfiles.privilege import PrivilegeUnavailable
+from dotfiles.providers import Kind
 from dotfiles.providers import toolchain
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
@@ -210,6 +211,7 @@ def test_go_offline_says_what_the_bundle_lacks_and_asks_for_nothing(home, bundle
 
     assert not result.ok
     assert result.refused
+    assert result.kind is Kind.NOT_IN_BUNDLE
     assert str(bundle) in result.detail
     assert fetches.urls == []
 
@@ -223,7 +225,7 @@ def test_go_that_cannot_be_resolved_is_not_downloaded(home, bundle, effected, mo
     result = toolchain.install_go(LINUX, Root(), offline=False)
 
     assert not result.ok
-    assert toolchain.GO_VERSION_URL in result.detail
+    assert result.kind is Kind.VERSION_UNRESOLVED
     assert fetches.urls == []
 
 
@@ -239,6 +241,7 @@ def test_go_is_unpacked_as_this_user_and_moved_in_as_root(home, bundle, effected
     result = toolchain.install_go(LINUX, root, offline=False)
 
     assert result.ok, result.detail
+    assert result.kind is Kind.APPLIED
     assert fetches.urls == [url]
     assert root.ran('rm') and root.ran(str(toolchain.GO_ROOT))
     assert runs.ran(str(toolchain.GO_ROOT / 'bin' / 'go'), 'version')
@@ -267,7 +270,7 @@ def test_go_without_root_reports_the_refusal_and_writes_nothing(home, bundle, ef
     result = toolchain.install_go(LINUX, root, offline=False)
 
     assert not result.ok
-    assert 'root' in result.detail
+    assert result.kind is Kind.PRIVILEGE_UNAVAILABLE
     assert root.calls == []
 
 
@@ -282,6 +285,7 @@ def test_a_tarball_carrying_no_go_binary_is_refused_before_root_is_asked(home, b
     result = toolchain.install_go(LINUX, root, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.ARCHIVE_INCOMPLETE
     assert root.calls == []
 
 
@@ -323,7 +327,7 @@ def test_rust_offline_says_the_bundle_stages_no_rustup(home, bundle, effected) -
 
     assert not result.ok
     assert result.refused
-    assert str(bundle) in result.detail
+    assert result.kind is Kind.NOT_IN_BUNDLE
 
 
 def test_uv_already_present_is_not_reinstalled_but_still_sets_the_default(home, bundle, effected) -> None:
@@ -337,6 +341,7 @@ def test_uv_already_present_is_not_reinstalled_but_still_sets_the_default(home, 
     result = toolchain.install_uv(offline=False)
 
     assert result.ok
+    assert result.kind is Kind.APPLIED
     assert fetches.urls == []
     assert runs.ran('python', 'install', '--default', toolchain.DEFAULT_PYTHON)
 
@@ -366,6 +371,7 @@ def test_node_without_fnm_names_where_fnm_comes_from(home, bundle, effected) -> 
     result = toolchain.install_node(home, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.PREREQUISITE_MISSING
     assert 'cargo_packages' in result.detail
 
 
@@ -382,6 +388,7 @@ def test_node_offline_is_refused_because_nodejs_org_is_not_bundled(home, bundle,
 
     assert not result.ok
     assert result.refused
+    assert result.kind is Kind.NOT_IN_BUNDLE
     assert runs.calls == [] and fetches.urls == []
 
 

@@ -34,6 +34,7 @@ from dotfiles import evidence as ev
 from dotfiles import paths
 from dotfiles import releases
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import cargo
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
@@ -818,7 +819,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     def record(entry, target=None, *, offline=False, again=False):
         attempted.append(entry.name)
-        return ghrelease.Result(True, f'{entry.name} installed')
+        return ghrelease.Result(True, f'{entry.name} installed', kind=Kind.APPLIED)
 
     monkeypatch.setattr(ghrelease, 'install', record)
     monkeypatch.setattr(custom, 'install', record)

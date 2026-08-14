@@ -36,6 +36,7 @@ from dotfiles import paths
 from dotfiles.coordinates import Target
 from dotfiles.output import err_console
 from dotfiles.output import warn
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
@@ -66,11 +67,11 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
     """
     build = ASSETS.get(entry.name)
     if build is None:
-        return Result(False, f'nothing in providers.releases names an asset for {entry.name}')
+        return Result(False, f'nothing in providers.releases names an asset for {entry.name}', kind=Kind.DECLARATION_INVALID)
 
     tag = tag or resolve_tag(entry, offline=offline)
     if tag is None:
-        return Result(False, unresolved(entry, offline=offline))
+        return Result(False, unresolved(entry, offline=offline), kind=Kind.VERSION_UNRESOLVED)
 
     asset = build(tag, target)
     url = f'https://github.com/{entry.repo}/releases/download/{tag}/{asset.name}'
@@ -85,11 +86,11 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         err_console.print(f'{entry.name} {tag}: {url}', soft_wrap=True)
         staged = _stage(download, url, entry.repo, tag, asset.name, offline=offline)
         if staged is None:
-            return Result(False, f'could not download {asset.name}')
+            return Result(False, f'could not download {asset.name}', kind=Kind.DOWNLOAD_FAILED)
 
         refused = _verify(download, asset.name, entry, tag, from_bundle=staged is Staged.BUNDLE, offline=offline)
         if refused:
-            return Result(False, refused)
+            return Result(False, refused, kind=Kind.UNVERIFIED)
 
         placed = _place(asset, entry.executable, download, staging)
         if not placed.ok:
@@ -97,11 +98,11 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
 
     missing = _companions(entry.name, tag, offline=offline)
     if missing:
-        return Result(False, missing)
+        return Result(False, missing, kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED)
 
     if not shutil.which(entry.executable):
-        return Result(False, f'{entry.executable} installed but is not on PATH — is {bin_dir()} in it?')
-    return Result(True, f'{entry.name} {tag}')
+        return Result(False, f'{entry.executable} installed but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
+    return Result(True, f'{entry.name} {tag}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -255,8 +256,8 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
 
     if asset.archive is Archive.RAW:
         if not effects.install(download, target):
-            return Result(False, _unplaceable(executable, target))
-        return Result(True, str(target))
+            return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
+        return Result(True, str(target), kind=Kind.APPLIED)
 
     if asset.archive is Archive.GZIP:
         # Decompressed beside the download rather than onto `target`, because
@@ -264,23 +265,23 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
         # destination is running. `install` is what lands it.
         plain = staging / executable
         if not effects.gunzip(download, plain):
-            return Result(False, f'{asset.name} did not decompress')
+            return Result(False, f'{asset.name} did not decompress', kind=Kind.ARCHIVE_UNREADABLE)
         if not effects.install(plain, target):
-            return Result(False, _unplaceable(executable, target))
-        return Result(True, str(target))
+            return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
+        return Result(True, str(target), kind=Kind.APPLIED)
 
     if asset.tree:
         return _place_tree(asset, download, target)
 
     unpacked = staging / 'unpacked'
     if not effects.unpack(download, unpacked):
-        return Result(False, f'{asset.name} is neither a tar nor a zip this could open')
+        return Result(False, f'{asset.name} is neither a tar nor a zip this could open', kind=Kind.ARCHIVE_UNREADABLE)
 
     source = unpacked / asset.path
     if not source.is_file():
-        return Result(False, f'{asset.name} contains no {asset.path}')
+        return Result(False, f'{asset.name} contains no {asset.path}', kind=Kind.ARCHIVE_INCOMPLETE)
     if not effects.install(source, target):
-        return Result(False, _unplaceable(executable, target))
+        return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
 
     for extra in asset.extras:
         beside = unpacked / extra
@@ -288,9 +289,9 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
             continue
         placed = bin_dir() / Path(extra).name
         if not effects.install(beside, placed):
-            return Result(False, _unplaceable(Path(extra).name, placed))
+            return Result(False, _unplaceable(Path(extra).name, placed), kind=Kind.WRITE_FAILED)
 
-    return Result(True, str(target))
+    return Result(True, str(target), kind=Kind.APPLIED)
 
 
 def _unplaceable(executable: str, target: Path) -> str:
@@ -314,16 +315,16 @@ def _place_tree(asset: ReleaseArtifact, download: Path, target: Path) -> Result:
     shutil.rmtree(root, ignore_errors=True)
 
     if not effects.unpack(download, local_dir()):
-        return Result(False, f'{asset.name} did not unpack into {local_dir()}')
+        return Result(False, f'{asset.name} did not unpack into {local_dir()}', kind=Kind.ARCHIVE_UNREADABLE)
 
     binary = local_dir() / asset.path
     if not binary.is_file():
-        return Result(False, f'{asset.name} unpacked without a {asset.path}')
+        return Result(False, f'{asset.name} unpacked without a {asset.path}', kind=Kind.ARCHIVE_INCOMPLETE)
 
     effects.make_executable(binary)
     target.unlink(missing_ok=True)
     target.symlink_to(binary)
-    return Result(True, f'{target} -> {binary}')
+    return Result(True, f'{target} -> {binary}', kind=Kind.APPLIED)
 
 
 def missing_companions(name: str) -> tuple[str, ...]:

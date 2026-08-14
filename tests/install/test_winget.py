@@ -16,6 +16,7 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import paths
+from dotfiles.providers import Kind
 from dotfiles.providers import winget
 
 
@@ -207,6 +208,7 @@ class TestInstalling:
         result = winget.install(tools[0], tmp_path / 'bin', offline=True)
 
         assert not result.ok
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert result.refused is False
         assert 'carries no jq.exe' in result.detail
 
@@ -231,6 +233,7 @@ class TestInstalling:
         result = winget.install(tools[0], tmp_path / 'bin', offline=False)
 
         assert not result.ok
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert 'winget is not on PATH' in result.detail
         assert 'carries no jq.exe' in result.detail
 
@@ -246,7 +249,7 @@ class TestInstalling:
         result = winget.install(named(tools, 'eza'), tmp_path / 'bin', offline=False)
 
         assert not result.ok
-        assert 'left no eza.exe' in result.detail
+        assert result.kind is Kind.VERIFY_FAILED
 
     def test_a_client_that_installs_nothing_still_takes_the_bundle(self, tmp_path, tools, staged, monkeypatch) -> None:
         """The Store resolving a package it then cannot place is the same outcome

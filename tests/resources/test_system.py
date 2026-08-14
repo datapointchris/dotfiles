@@ -312,14 +312,16 @@ class Manager:
         self.calls.append((manager, tuple(names)))
         broken = sorted(self._fails.intersection(names))
         if broken:
-            return providers.Result(False, f'{manager} could not install {broken[0]}')
+            return providers.Result(False, f'{manager} could not install {broken[0]}', kind=providers.Kind.COMMAND_FAILED)
         with self._inventory.open('a') as landed:
             landed.writelines(f'{name}\n' for name in names)
-        return providers.Result(True, f'{manager}: {" ".join(names)}')
+        return providers.Result(True, f'{manager}: {" ".join(names)}', kind=providers.Kind.APPLIED)
 
     def refresh(self, manager: str, privilege) -> providers.Result:
         self.refreshed.append(manager)
-        return providers.Result(False, 'no root') if self._refuses else providers.Result(True, '')
+        if self._refuses:
+            return providers.Result(False, 'no root', kind=providers.Kind.PRIVILEGE_UNAVAILABLE)
+        return providers.Result(True, '', kind=providers.Kind.APPLIED)
 
 
 @pytest.fixture
@@ -350,7 +352,9 @@ class Bootstraps:
 
     def _answer(self, name: str) -> providers.Result:
         self.ran.append(name)
-        return providers.Result(False, f'{name} is unavailable here') if name == self._refuses else providers.Result(True, '')
+        if name == self._refuses:
+            return providers.Result(False, f'{name} is unavailable here', kind=providers.Kind.PREREQUISITE_MISSING)
+        return providers.Result(True, '', kind=providers.Kind.UNCHANGED)
 
     def homebrew(self) -> providers.Result:
         return self._answer('homebrew')
@@ -360,7 +364,9 @@ class Bootstraps:
 
     def flathub(self, installer: str, privilege) -> providers.Result:
         self.ran.append(f'flathub:{installer}')
-        return providers.Result(False, 'no bus') if self._refuses == 'flathub' else providers.Result(True, '')
+        if self._refuses == 'flathub':
+            return providers.Result(False, 'no bus', kind=providers.Kind.UNSUPPORTED_HERE)
+        return providers.Result(True, '', kind=providers.Kind.APPLIED)
 
     def taps(self, wanted) -> providers.Result:
         self.tapped.extend(wanted)
@@ -784,7 +790,7 @@ def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_
 
     def record(manager: str, privilege: Privilege) -> providers.Result:
         ran.append(manager)
-        return providers.Result(True, f'{manager} upgraded')
+        return providers.Result(True, f'{manager} upgraded', kind=providers.Kind.APPLIED)
 
     monkeypatch.setattr(syspkg, 'upgrade', record)
     live = session(tmp_path, DECLARED, WORKSTATION)

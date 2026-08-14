@@ -11,10 +11,152 @@ to stop matching what the symlink manager deploys.
 from __future__ import annotations
 
 import dataclasses as dc
+import enum
 import shutil
 from pathlib import Path
 
 from dotfiles import paths
+
+
+class Kind(enum.StrEnum):
+    """What condition a `Result` reports, as a value rather than a sentence.
+
+    `detail` is prose written for the person reading the report, and it stays
+    prose — it interpolates the entry, the URL and the path, which is the half a
+    member can never carry. What a member carries is the half prose is bad at:
+    telling two sibling branches of one installer apart without matching English.
+    A test asserting a substring to prove which branch ran is a test pinned to
+    wording that exists to be rewritten, which `standards/testing.md` § "Never
+    assert on rendered output" names by this exact shape.
+
+    The set is deliberately coarse. A member earns its place by being a condition
+    something could plausibly act on differently — a different fix hint, a
+    different column, a different exit — never by being a different sentence.
+    Where two conditions share a remedy they share a member, and the prose still
+    tells them apart for the reader.
+
+    `ok` and `refused` are not folded in here and still decide the verdict.
+    `NOT_IN_BUNDLE` is the clearest case: with `refused=True` it is a source the
+    bundle deliberately does not stage, and with `refused=False` it is a bundle
+    that is broken.
+    """
+
+    APPLIED = 'applied'
+    """The change was made: something was installed, written, enabled or linked."""
+
+    UNCHANGED = 'unchanged'
+    """Nothing was written, and nothing needed to be.
+
+    Covers a tool already present, a manager with no bootstrap or refresh step, an
+    offline run with nothing to compare against, and a vendor installer that
+    declined because another process already holds it. Separated from `APPLIED`
+    because "converged" and "converged by this run" are different answers to
+    anything counting changes.
+    """
+
+    DECLARATION_INVALID = 'declaration-invalid'
+    """The repo asked for something that cannot be dispatched or does not exist.
+
+    A `packages.yml` row with no function behind it, a planned item carrying the
+    wrong entry type, a monorepo subdirectory upstream has renamed. The fix is in
+    this repo, never on the machine — which is what separates it from every other
+    member here.
+    """
+
+    PREREQUISITE_MISSING = 'prerequisite-missing'
+    """Something an earlier stage owes this one is not on the machine yet.
+
+    fnm, brew, base-devel, nvim, tmux, a group, the login shell's binary. Becomes
+    true on a later run once the stage that supplies it succeeds, which is exactly
+    what separates it from `UNSUPPORTED_HERE`.
+    """
+
+    UNSUPPORTED_HERE = 'unsupported-here'
+    """This machine structurally cannot do it, and no run will change that.
+
+    No D-Bus system bus for flatpak, no Windows fonts directory outside WSL, no
+    macOS build published at all. Reported with `ok=True` where the declaration is
+    waived rather than failed.
+    """
+
+    PRIVILEGE_UNAVAILABLE = 'privilege-unavailable'
+    """Root was needed and sudo is absent or was declined; nothing was attempted."""
+
+    NOT_IN_BUNDLE = 'not-in-bundle'
+    """An offline run, and the bundle carries nothing for this row.
+
+    `refused` says whether that is legitimate: the bundle deliberately stages no
+    Go tarball, and a missing `jq.exe` is a bundle that failed to build.
+    """
+
+    VERSION_UNRESOLVED = 'version-unresolved'
+    """No tag to install: the release API answered nothing, or a pin matches no
+    release. The transport worked, so a network fix is the wrong one."""
+
+    DOWNLOAD_FAILED = 'download-failed'
+    """A transfer did not complete, whatever ran it.
+
+    A fetch, a `git clone`, a `git pull` — the failing step moved bytes over the
+    network, so a CA, a firewall or an offline bundle are the plausible fixes.
+    That is the test, never whether a subprocess was involved.
+    """
+
+    UNVERIFIED = 'unverified'
+    """The bytes arrived and could not be trusted: digest mismatch, unreadable
+    checksum, unpinned signing key, unverified signature. Never a placement or
+    archive problem — the asset was refused before either was reached."""
+
+    ARCHIVE_UNREADABLE = 'archive-unreadable'
+    """The asset would not open or extract at all — not a tar, not a zip, would
+    not decompress. Usually a truncated transfer, or an error page carrying an
+    archive's name."""
+
+    ARCHIVE_INCOMPLETE = 'archive-incomplete'
+    """The archive opened and does not contain what the declaration named.
+
+    Read the declaration, not the transfer: upstream repacked, or the path in
+    `releases.py` is wrong. `ARCHIVE_UNREADABLE` is the same asset failing one
+    step earlier, and the two want opposite investigations.
+    """
+
+    WRITE_FAILED = 'write-failed'
+    """A write to the filesystem was attempted and the machine said no.
+
+    Placing a binary in `~/.local/bin`, installing a managed file under `/etc`,
+    creating a GnuPG home, replacing the GOROOT tree. `diagnose.explain` reads
+    `Text file busy`, `Permission denied` and `No space left` out of these details.
+    """
+
+    COMMAND_FAILED = 'command-failed'
+    """A command ran to completion and exited non-zero.
+
+    The residual, and deliberately broad: a package manager, a vendor install
+    script, `systemctl`, `chsh`, TPM, lazy. They share one remedy — read the
+    transcript the detail carries — so they share one member.
+    """
+
+    VERIFY_FAILED = 'verify-failed'
+    """The command exited clean and the thing it promised is not there.
+
+    Distinct from `COMMAND_FAILED` by which half to go and look at, the same split
+    `OutcomeStatus.ABSENT` draws: `COMMAND_FAILED` means read the command,
+    `VERIFY_FAILED` means the command lied about itself.
+    """
+
+    NOT_ON_PATH = 'not-on-path'
+    """The binary is where it belongs and the shell will not find it.
+
+    Split from `VERIFY_FAILED` because the file exists: the fix is this machine's
+    PATH, not a re-run of the installer.
+    """
+
+    TARGET_UNUSABLE = 'target-unusable'
+    """Something is already at the destination and was not put there by this tool.
+
+    A hand-made directory where a clone belongs, a `config.json` that is not JSON.
+    Refusing to clobber it is the behaviour; a person has to decide what happens
+    next.
+    """
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -23,6 +165,20 @@ class Result:
 
     ok: bool
     detail: str
+
+    kind: Kind = dc.field(kw_only=True)
+    """Which condition this is, for a caller that must not read `detail` to find out.
+
+    Keyword-only and with no default. A default is the two-tier API this field
+    exists to end — half the sites carrying a real member and half carrying
+    whatever the default is, with nothing afterwards able to tell them apart,
+    which is exactly `detail`'s existing failure. Without one, a missed site
+    raises `TypeError` where it is constructed rather than importing wrong.
+
+    Keyword-only so it can sit before `refused` without reordering any existing
+    call: every construction passes `ok` and `detail` positionally and `refused`
+    by name.
+    """
 
     refused: bool = False
     """Nothing was written, and nothing was wrong with the write: what this row

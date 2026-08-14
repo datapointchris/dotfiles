@@ -32,6 +32,7 @@ from dotfiles import paths
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.providers import Kind
 from dotfiles.providers import ghrelease
 from dotfiles.providers import releases
 from dotfiles.providers.releases import Archive
@@ -109,6 +110,7 @@ class TestPlacement:
         result = install_one(monkeyed, entry(), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         installed = home / '.local' / 'bin' / 'demo'
         assert installed.read_bytes() == PAYLOAD
         assert installed.stat().st_mode & stat.S_IXUSR
@@ -120,6 +122,7 @@ class TestPlacement:
         result = install_one(ReleaseArtifact('demo-linux-x64.gz', Archive.GZIP), entry(), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
 
     def test_a_tarball_yields_the_declared_path_and_every_extra_present(self, home, bundle, tmp_path):
@@ -131,6 +134,7 @@ class TestPlacement:
         result = install_one(asset, entry(), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         placed = home / '.local' / 'bin'
         assert placed.joinpath('demo').read_bytes() == PAYLOAD
         assert placed.joinpath('proxy').read_bytes() == b'proxy'
@@ -148,6 +152,7 @@ class TestPlacement:
         result = install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', extras=('tf', 'tofu')), entry(), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
 
     def test_a_zip_unpacks_the_same_way_a_tarball_does(self, home, bundle, tmp_path):
         archive = tmp_path / 'demo.zip'
@@ -157,6 +162,7 @@ class TestPlacement:
         result = install_one(ReleaseArtifact('demo.zip', Archive.ZIP, path='demo-1.0/demo'), entry(), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
 
     def test_an_archive_without_the_declared_path_fails_rather_than_installing_nothing(self, home, bundle, tmp_path):
@@ -167,6 +173,7 @@ class TestPlacement:
         result = install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
 
         assert not result.ok
+        assert result.kind is Kind.ARCHIVE_INCOMPLETE
         assert 'contains no demo' in result.detail
 
 
@@ -182,6 +189,7 @@ class TestTreeInstall:
         result = install_one(asset, entry('neovim', command='nvim'), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         link = home / '.local' / 'bin' / 'nvim'
         assert link.is_symlink()
         assert link.resolve() == home / '.local' / 'nvim-linux' / 'bin' / 'nvim'
@@ -202,6 +210,7 @@ class TestTreeInstall:
         result = install_one(asset, entry('neovim', command='nvim'), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         assert not (home / '.local' / 'nvim-linux' / 'share' / 'from-the-old-release').exists()
 
 
@@ -215,6 +224,7 @@ class TestCompanions:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         placed = home / '.local' / 'bin' / 'demo-tmux'
         assert placed.read_bytes() == b'companion'
         assert placed.stat().st_mode & stat.S_IXUSR
@@ -227,6 +237,7 @@ class TestCompanions:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
 
         assert not result.ok
+        assert result.kind is Kind.NOT_IN_BUNDLE
         assert 'demo-tmux' in result.detail
 
     def test_an_absent_companion_is_named_without_resolving_a_release(self, home, monkeypatch):
@@ -287,6 +298,7 @@ class TestChecksumPolicy:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'records no digest' in result.detail
 
     @pytest.mark.parametrize('declared', [catalog.CHECKSUM_UNPUBLISHED, catalog.CHECKSUM_UNLISTED])
@@ -302,6 +314,7 @@ class TestChecksumPolicy:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(checksum=declared), offline=True)
 
         assert result.ok, result.detail
+        assert result.kind is Kind.APPLIED
         assert (home / '.local' / 'bin' / 'demo').read_bytes() == PAYLOAD
 
     def test_a_bundled_asset_that_was_tampered_with_is_refused(self, home, bundle):
@@ -311,6 +324,7 @@ class TestChecksumPolicy:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
+        assert result.kind is Kind.UNVERIFIED
         assert 'mismatch' in result.detail
 
 
@@ -347,6 +361,7 @@ class TestTagResolution:
         result = ghrelease.install(entry('lazygit', version='0.56.0'), LINUX)
 
         assert not result.ok
+        assert result.kind is Kind.VERSION_UNRESOLVED
         assert 'publishes no release for' in result.detail
 
 
@@ -355,7 +370,7 @@ class TestPreconditions:
         result = ghrelease.install(entry('never-heard-of-it'), LINUX)
 
         assert not result.ok
-        assert 'names an asset' in result.detail
+        assert result.kind is Kind.DECLARATION_INVALID
 
     def test_a_binary_that_does_not_land_on_path_is_a_failure(self, home, bundle, monkeypatch):
         """The last step of every installer it replaces, and the one that catches a
@@ -366,7 +381,7 @@ class TestPreconditions:
         result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
         assert not result.ok
-        assert 'not on PATH' in result.detail
+        assert result.kind is Kind.NOT_ON_PATH
 
 
 def install_one(

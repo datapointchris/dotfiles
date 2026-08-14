@@ -24,6 +24,7 @@ from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import status
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import schedule
 from dotfiles.providers import steps
 from dotfiles.reconcile import ResourceResult
@@ -202,7 +203,10 @@ def test_a_fresh_machine_has_no_timer_and_gets_one(linux: Path, fake_bin: Path) 
     executable(fake_bin, 'systemctl')
 
     assert schedule.observe().verdict is Verdict.MISSING
-    assert steps.apply('check-schedule', Privilege()).ok
+
+    applied = steps.apply('check-schedule', Privilege())
+    assert applied.ok
+    assert applied.kind is Kind.APPLIED
     assert (linux / 'dotfiles-check.timer').is_file()
     assert schedule.observe().verdict is Verdict.MATCHED
 
@@ -293,7 +297,10 @@ def test_a_mac_gets_a_launch_agent(darwin: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'launchctl')
 
     assert schedule.observe().verdict is Verdict.MISSING
-    assert steps.apply('check-schedule', Privilege()).ok
+
+    applied = steps.apply('check-schedule', Privilege())
+    assert applied.ok
+    assert applied.kind is Kind.APPLIED
     assert darwin.is_file()
     assert schedule.observe().verdict is Verdict.MATCHED
 

@@ -24,6 +24,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles.effects import Output
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 
 PREFIX = Path('.local/share/npm')
@@ -55,8 +56,10 @@ def install(entry: catalog.NpmGlobal, *, offline: bool) -> Result:
         output=Output.QUIET,
     )
     if completed.ok:
-        return Result(True, f'{entry.executable} installed from {entry.name}')
+        return Result(True, f'{entry.executable} installed from {entry.name}', kind=Kind.APPLIED)
 
     said = '\n'.join(line for line in completed.transcript.splitlines() if not line.startswith('npm warn'))
     unreachable = ', and the offline bundle stages no npm packages to fall back on' if offline else ''
-    return Result(False, f'npm install -g {entry.name} exited {completed.returncode}{unreachable}: {said.strip()}')
+    return Result(
+        False, f'npm install -g {entry.name} exited {completed.returncode}{unreachable}: {said.strip()}', kind=Kind.COMMAND_FAILED
+    )

@@ -30,6 +30,7 @@ from pathlib import Path
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 
 PLUGIN_LINE = re.compile(r"""^\s*set(?:-option)?\s+-g\s+@plugin\s+['"]?([^'"\s]+)""")
@@ -164,7 +165,7 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
     """
     config = user_config(home)
     if reason := blocked(home, plugins_dir):
-        return Result(False, f'{reason}. {_diagnostics(config, plugins_dir)}')
+        return Result(False, f'{reason}. {_diagnostics(config, plugins_dir)}', kind=Kind.PREREQUISITE_MISSING)
 
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
     with tempfile.TemporaryDirectory(prefix='dotfiles-tpm-') as scratch:
@@ -176,7 +177,11 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
         started = run(['tmux', '-S', str(socket), 'new-session', '-d', '-s', SESSION], env=environment, unset=detached, output=Output.QUIET)
         if not started.ok:
             reason = started.transcript.strip()
-            return Result(False, f'could not start a tmux server to install into: {reason}. {_diagnostics(config, plugins_dir)}')
+            return Result(
+                False,
+                f'could not start a tmux server to install into: {reason}. {_diagnostics(config, plugins_dir)}',
+                kind=Kind.COMMAND_FAILED,
+            )
 
         try:
             run(
@@ -191,8 +196,12 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
 
     if not installed.ok:
         said = installed.transcript.strip() or f'TPM exited {installed.returncode}'
-        return Result(False, f'TPM plugin installation failed (exit {installed.returncode}): {said}. {_diagnostics(config, plugins_dir)}')
-    return Result(True, f'TPM installed the plugins {config.name} declares')
+        return Result(
+            False,
+            f'TPM plugin installation failed (exit {installed.returncode}): {said}. {_diagnostics(config, plugins_dir)}',
+            kind=Kind.COMMAND_FAILED,
+        )
+    return Result(True, f'TPM installed the plugins {config.name} declares', kind=Kind.APPLIED)
 
 
 def _diagnostics(config: Path, plugins_dir: Path) -> str:
@@ -260,12 +269,13 @@ def sync_nvim() -> Result:
             False,
             'neovim is not installed, so lazy has nothing to sync into; '
             'run `dotfiles packages apply` (or the full `dotfiles apply`) to install it first',
+            kind=Kind.PREREQUISITE_MISSING,
         )
 
     synced = run(['nvim', '--headless', '-c', 'Lazy! sync', '-c', 'qa'], show=_lazy_line)
     if not synced.ok:
-        return Result(False, synced.transcript.strip() or f'lazy exited {synced.returncode}')
-    return Result(True, 'lazy synced the plugins the Neovim config declares')
+        return Result(False, synced.transcript.strip() or f'lazy exited {synced.returncode}', kind=Kind.COMMAND_FAILED)
+    return Result(True, 'lazy synced the plugins the Neovim config declares', kind=Kind.APPLIED)
 
 
 def _lazy_line(line: str) -> str | None:

@@ -18,6 +18,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles.effects import Completed
+from dotfiles.providers import Kind
 from dotfiles.providers import npm
 
 TAPLO = catalog.NpmGlobal.from_mapping({'name': '@taplo/cli', 'command': 'taplo'})
@@ -93,6 +94,7 @@ def test_a_failure_reports_what_npm_said(home, registry) -> None:
     result = npm.install(TAPLO, offline=False)
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert '404 Not Found' in result.detail
 
 
@@ -104,6 +106,7 @@ def test_warnings_are_not_mistaken_for_the_diagnosis(home, registry) -> None:
 
     result = npm.install(TAPLO, offline=False)
 
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'deprecated' not in result.detail
     assert 'EACCES' in result.detail
 
@@ -124,4 +127,5 @@ def test_an_offline_failure_says_there_is_nothing_to_fall_back_on(home, registry
     result = npm.install(TAPLO, offline=True)
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'stages no npm packages' in result.detail

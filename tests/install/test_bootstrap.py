@@ -20,6 +20,7 @@ from dotfiles import effects
 from dotfiles import github_release
 from dotfiles.effects import Completed
 from dotfiles.privilege import Privilege
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
@@ -63,7 +64,10 @@ def test_homebrew_that_is_already_present_costs_nothing(world) -> None:
     """A precondition runs on every batch, so the common case has to be a which."""
     reached = world()
 
-    assert bootstrap.homebrew().ok
+    result = bootstrap.homebrew()
+
+    assert result.ok
+    assert result.kind is Kind.UNCHANGED
     assert reached.calls == []
 
 
@@ -110,7 +114,7 @@ def test_an_installer_that_leaves_no_brew_is_a_failure_not_a_success(world, monk
     result = bootstrap.homebrew()
 
     assert not result.ok
-    assert 'left no brew' in result.detail
+    assert result.kind is Kind.VERIFY_FAILED
 
 
 def test_the_new_prefix_is_put_on_path_for_the_rest_of_the_run(world, monkeypatch, tmp_path) -> None:
@@ -142,6 +146,7 @@ def test_a_download_that_fails_says_where_it_was_looking_and_why(world, monkeypa
     result = bootstrap.homebrew()
 
     assert not result.ok
+    assert result.kind is Kind.DOWNLOAD_FAILED
     assert bootstrap.BREW_INSTALLER in result.detail
     assert REFUSED in result.detail
 
@@ -167,6 +172,7 @@ def test_a_tap_that_fails_stops_the_batch_rather_than_warning(world) -> None:
     result = bootstrap.taps(('nikitabobko/tap',))
 
     assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
     assert 'nikitabobko/tap' in result.detail
 
 
@@ -216,6 +222,7 @@ def test_a_machine_that_cannot_build_says_so_rather_than_trying(world, monkeypat
     result = bootstrap.aur()
 
     assert not result.ok
+    assert result.kind is Kind.PREREQUISITE_MISSING
     assert 'base-devel' in result.detail
     assert reached.calls == []
 
@@ -252,7 +259,7 @@ def test_flatpak_itself_is_installed_through_the_machine_s_own_manager(world, mo
 
     def record(manager, names, privilege) -> Result:
         asked.append((manager, list(names)))
-        return Result(True, '')
+        return Result(True, '', kind=Kind.APPLIED)
 
     monkeypatch.setattr(syspkg, 'install', record)
 
@@ -271,5 +278,5 @@ def test_a_machine_with_no_message_bus_declines_rather_than_failing(world, monke
     result = bootstrap.flathub('pacman', Privilege(offer=False))
 
     assert not result.ok
-    assert 'D-Bus' in result.detail
+    assert result.kind is Kind.UNSUPPORTED_HERE
     assert reached.calls == []

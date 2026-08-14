@@ -35,6 +35,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles.effects import Output
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
@@ -155,18 +156,20 @@ def install(entry: catalog.WingetPackage, into: Path, *, offline: bool) -> Resul
     bundle sits staged on disk.
     """
     if offline:
-        return _from_bundle(entry, into) or Result(False, _unstaged(entry))
+        return _from_bundle(entry, into) or Result(False, _unstaged(entry), kind=Kind.NOT_IN_BUNDLE)
 
     winget = client()
     if not winget:
-        return _from_bundle(entry, into) or Result(False, f'winget is not on PATH, and {_unstaged(entry)}')
+        return _from_bundle(entry, into) or Result(False, f'winget is not on PATH, and {_unstaged(entry)}', kind=Kind.NOT_IN_BUNDLE)
 
     home = Path.home()
     effects.run((winget, 'install', '--accept-package-agreements', '--accept-source-agreements', entry.winget), output=Output.STREAM)
 
     if copy_installed(home, into, entry):
-        return Result(True, f'winget: {entry.winget}')
-    return _from_bundle(entry, into) or Result(False, f'winget left no {entry.filename} under {home / PACKAGES}, and {_unstaged(entry)}')
+        return Result(True, f'winget: {entry.winget}', kind=Kind.APPLIED)
+    return _from_bundle(entry, into) or Result(
+        False, f'winget left no {entry.filename} under {home / PACKAGES}, and {_unstaged(entry)}', kind=Kind.VERIFY_FAILED
+    )
 
 
 def _unstaged(entry: catalog.WingetPackage) -> str:
@@ -188,5 +191,5 @@ def _from_bundle(entry: catalog.WingetPackage, into: Path) -> Result | None:
     try:
         place(cached, into / entry.filename)
     except OSError as refused:
-        return Result(False, f'could not install {entry.filename} from {cached}: {refused}')
-    return Result(True, f'{entry.filename} installed from the bundle at {cached}')
+        return Result(False, f'could not install {entry.filename} from {cached}: {refused}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{entry.filename} installed from the bundle at {cached}', kind=Kind.APPLIED)

@@ -48,6 +48,7 @@ from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.output import err_console
 from dotfiles.output import warn
+from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import local_dir
@@ -77,7 +78,7 @@ def install(entry: catalog.CustomInstaller, target: Target, *, offline: bool = F
     """Converge one custom installer, whatever converging means for it."""
     installer = INSTALLERS.get(entry.name)
     if installer is None:
-        return Result(False, f'nothing in providers.custom installs {entry.name}')
+        return Result(False, f'nothing in providers.custom installs {entry.name}', kind=Kind.DECLARATION_INVALID)
     return installer(Request(entry, target, offline=offline))
 
 
@@ -213,7 +214,7 @@ def _present_and_offline(request: Request, installed: bool) -> Result | None:
     would report a machine as broken for being exactly what its bundle made it.
     """
     if request.offline and installed:
-        return Result(True, f'{request.entry.name} is installed; offline, so it is not updated')
+        return Result(True, f'{request.entry.name} is installed; offline, so it is not updated', kind=Kind.UNCHANGED)
     return None
 
 
@@ -243,9 +244,13 @@ def _checkout_tool(request: Request) -> Result:
 
 def _delegate_update(name: str, checkout: Path) -> Result:
     if not shutil.which(name):
-        return Result(False, f'{name} is checked out at {checkout} but is not on PATH — is {bin_dir()} in it?')
+        return Result(False, f'{name} is checked out at {checkout} but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
     completed = effects.run([name, 'update'])
-    return Result(completed.ok, '' if completed.ok else f'{name} update exited {completed.returncode}')
+    return Result(
+        completed.ok,
+        '' if completed.ok else f'{name} update exited {completed.returncode}',
+        kind=Kind.APPLIED if completed.ok else Kind.COMMAND_FAILED,
+    )
 
 
 def _bashselfupdate(request: Request) -> Result:
@@ -274,7 +279,7 @@ def _claude_code(request: Request) -> Result:
     """
     installed = evidence.reported_version(request.entry.executable)
     if installed:
-        return Result(True, f'claude-code {installed.splitlines()[0]} (self-updating)')
+        return Result(True, f'claude-code {installed.splitlines()[0]} (self-updating)', kind=Kind.UNCHANGED)
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
         # Named before it is reached, as `theme`, `font` and the runtimes do through
@@ -290,14 +295,19 @@ def _claude_code(request: Request) -> Result:
             # doing what it was built to do, and reporting a failure makes the whole
             # stage non-zero for it. Without this, offline claude-code was the one
             # unstaged script counted as a broken install.
-            return Result(False, _unstaged(request, request.entry.install_url, staged.reason), refused=request.offline)
+            return Result(
+                False,
+                _unstaged(request, request.entry.install_url, staged.reason),
+                kind=Kind.NOT_IN_BUNDLE if request.offline else Kind.DOWNLOAD_FAILED,
+                refused=request.offline,
+            )
         completed = effects.run(['bash', str(staged.path)], output=Output.STREAM)
 
     if completed.ok:
-        return Result(True, 'claude-code installed')
+        return Result(True, 'claude-code installed', kind=Kind.APPLIED)
     if BUSY_INSTALLING.search(completed.transcript):
-        return Result(True, 'claude-code skipped: another process is currently installing it')
-    return Result(False, script.failure('claude-code', completed))
+        return Result(True, 'claude-code skipped: another process is currently installing it', kind=Kind.UNCHANGED)
+    return Result(False, script.failure('claude-code', completed), kind=Kind.COMMAND_FAILED)
 
 
 BUSY_INSTALLING = re.compile(r'another process is currently installing|claude.*running', re.IGNORECASE)
@@ -338,7 +348,12 @@ def _awscli(request: Request) -> Result:
     if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
         return offline
     if request.offline:
-        return Result(False, f'awscli installs from {request.entry.url}, which the offline bundle does not stage', refused=True)
+        return Result(
+            False,
+            f'awscli installs from {request.entry.url}, which the offline bundle does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
+            refused=True,
+        )
 
     url = _awscli_zip(request.entry, request.target)
     with tempfile.TemporaryDirectory(prefix='dotfiles-awscli-') as scratch:
@@ -347,18 +362,18 @@ def _awscli(request: Request) -> Result:
         err_console.print(f'awscli: {url}', soft_wrap=True)
         arrived = effects.fetch(url, archive)
         if not arrived:
-            return Result(False, f'could not download {url}: {arrived.reason}')
+            return Result(False, f'could not download {url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
         if not effects.unpack(archive, staging / 'unpacked'):
-            return Result(False, 'the awscli zip did not unpack')
+            return Result(False, 'the awscli zip did not unpack', kind=Kind.ARCHIVE_UNREADABLE)
 
         installer = staging / 'unpacked' / 'aws' / 'install'
         if not installer.is_file():
-            return Result(False, 'the awscli zip contains no aws/install')
+            return Result(False, 'the awscli zip contains no aws/install', kind=Kind.ARCHIVE_INCOMPLETE)
         effects.make_executable(installer)
         completed = effects.run([str(installer), '--install-dir', str(local_dir() / 'aws-cli'), '--bin-dir', str(bin_dir()), '--update'])
 
     if not completed.ok:
-        return Result(False, f"aws's own installer exited {completed.returncode}")
+        return Result(False, f"aws's own installer exited {completed.returncode}", kind=Kind.COMMAND_FAILED)
     return _confirm('awscli', request.entry.executable)
 
 
@@ -395,7 +410,7 @@ def _mount_s3(request: Request) -> Result:
     """
     tarball_url = _mount_s3_tarball(request.entry, request.target)
     if not tarball_url:
-        return Result(True, 'mount-s3 has no macOS build, so nothing is installed here')
+        return Result(True, 'mount-s3 has no macOS build, so nothing is installed here', kind=Kind.UNSUPPORTED_HERE)
 
     installed = evidence.reported_version(request.entry.executable)
     if offline := _present_and_offline(request, installed is not None):
@@ -407,17 +422,17 @@ def _mount_s3(request: Request) -> Result:
         err_console.print(f'mount-s3: {tarball_url}', soft_wrap=True)
         arrived = effects.fetch(tarball_url, archive)
         if not arrived:
-            return Result(False, f'could not download {tarball_url}: {arrived.reason}')
+            return Result(False, f'could not download {tarball_url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
         refused = _verify_signature(archive, tarball_url, f'{request.entry.url}/public_keys/KEYS', staging)
         if refused:
-            return Result(False, refused)
+            return Result(False, refused, kind=Kind.UNVERIFIED)
 
         if not effects.unpack(archive, staging / 'unpacked'):
-            return Result(False, 'the mount-s3 tarball did not unpack')
+            return Result(False, 'the mount-s3 tarball did not unpack', kind=Kind.ARCHIVE_UNREADABLE)
         binary = staging / 'unpacked' / 'bin' / 'mount-s3'
         if not binary.is_file():
-            return Result(False, 'the mount-s3 tarball contains no bin/mount-s3')
+            return Result(False, 'the mount-s3 tarball contains no bin/mount-s3', kind=Kind.ARCHIVE_INCOMPLETE)
         _place(binary, request.entry.executable)
 
     if not _have_fuse():
@@ -481,11 +496,16 @@ def _terraform_ls(request: Request) -> Result:
     """
     entry = request.entry
     if request.offline:
-        return Result(False, f'terraform-ls is served from {HASHICORP}, which the offline bundle does not stage', refused=True)
+        return Result(
+            False,
+            f'terraform-ls is served from {HASHICORP}, which the offline bundle does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
+            refused=True,
+        )
 
     latest = github_release.latest_version(entry.repo, '')
     if latest is None:
-        return Result(False, f'{entry.repo} did not answer with a release')
+        return Result(False, f'{entry.repo} did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
 
     version = latest.lstrip('v')
     os_word = 'darwin' if request.target.is_darwin else 'linux'
@@ -498,17 +518,17 @@ def _terraform_ls(request: Request) -> Result:
         err_console.print(f'terraform-ls {latest}: {release}/{asset}', soft_wrap=True)
         arrived = effects.fetch(f'{release}/{asset}', archive)
         if not arrived:
-            return Result(False, f'could not download {release}/{asset}: {arrived.reason}')
+            return Result(False, f'could not download {release}/{asset}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
         refused = _verify_checksum(archive, asset, f'{release}/terraform-ls_{version}_SHA256SUMS', staging)
         if refused:
-            return Result(False, refused)
+            return Result(False, refused, kind=Kind.UNVERIFIED)
 
         if not effects.unpack(archive, staging / 'unpacked'):
-            return Result(False, 'the terraform-ls zip did not unpack')
+            return Result(False, 'the terraform-ls zip did not unpack', kind=Kind.ARCHIVE_UNREADABLE)
         binary = staging / 'unpacked' / 'terraform-ls'
         if not binary.is_file():
-            return Result(False, 'the terraform-ls zip contains no terraform-ls')
+            return Result(False, 'the terraform-ls zip contains no terraform-ls', kind=Kind.ARCHIVE_INCOMPLETE)
         _place(binary, entry.executable)
 
     return _confirm(f'terraform-ls {latest}', entry.executable)
@@ -568,7 +588,7 @@ def _bats(request: Request) -> Result:
 
     latest = github_release.latest_version(entry.repo, '')
     if latest is None:
-        return Result(False, f'{entry.repo} did not answer with a release')
+        return Result(False, f'{entry.repo} did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
 
     core = _bats_repos(entry)[0]
     with tempfile.TemporaryDirectory(prefix='dotfiles-bats-') as scratch:
@@ -576,11 +596,11 @@ def _bats(request: Request) -> Result:
         err_console.print(f'bats {latest}: {core}', soft_wrap=True)
         cloned = effects.run(['git', 'clone', '--quiet', '--depth', '1', '--branch', latest, core, str(checkout)])
         if not cloned.ok:
-            return Result(False, f'could not clone {core} at {latest}')
+            return Result(False, f'could not clone {core} at {latest}', kind=Kind.DOWNLOAD_FAILED)
 
         completed = effects.run(['bash', str(checkout / 'install.sh'), str(local_dir())])
         if not completed.ok:
-            return Result(False, f"bats-core's own install.sh exited {completed.returncode}")
+            return Result(False, f"bats-core's own install.sh exited {completed.returncode}", kind=Kind.COMMAND_FAILED)
 
     _install_bats_helpers(entry)
     return _confirm(f'bats {latest}', entry.executable)
@@ -627,8 +647,8 @@ def _place(binary: Path, executable: str) -> None:
 def _confirm(what: str, executable: str) -> Result:
     """Everything above ends here: installed is a claim PATH has to agree with."""
     if not shutil.which(executable):
-        return Result(False, f'{executable} installed but is not on PATH — is {bin_dir()} in it?')
-    return Result(True, what)
+        return Result(False, f'{executable} installed but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
+    return Result(True, what, kind=Kind.APPLIED)
 
 
 INSTALLERS: dict[str, Installer] = {
