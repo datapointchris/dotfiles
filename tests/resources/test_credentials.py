@@ -321,12 +321,19 @@ def test_probe_reports_a_helper_that_runs_and_returns_nothing(global_config: Pat
 
 def test_probe_refuses_to_let_a_helper_prompt(global_config: Path, tmp_path: Path) -> None:
     """Both variables, because they belong to different programs: git's suppresses
-    its own terminal fallback, GCM's suppresses the window GCM opens by itself."""
+    its own terminal fallback, GCM's suppresses the window GCM opens by itself.
+
+    Read out of the helper's own environment, because the probe answers the same
+    either way — and set for the child alone, which the second assertion is about.
+    """
+    witness = tmp_path / 'environment'
     helper = tmp_path / 'git-credential-env'
-    helper.write_text('#!/bin/sh\nprintf "password=$GIT_TERMINAL_PROMPT-$GCM_INTERACTIVE\\n"\n')
+    helper.write_text(f'#!/bin/sh\nprintf "%s/%s\\n" "$GIT_TERMINAL_PROMPT" "$GCM_INTERACTIVE" > {witness}\nprintf "password=p\\n"\n')
     helper.chmod(0o755)
 
-    _, why = credentials.probe(Helper('https://example.com', str(helper), global_config))
+    answered, why = credentials.probe(Helper('https://example.com', str(helper), global_config))
 
+    assert witness.read_text().strip() == '0/never'
     assert os.environ.get('GIT_TERMINAL_PROMPT') is None, 'the probe leaked its environment into this process'
+    assert answered is True
     assert 'example.com' in why
