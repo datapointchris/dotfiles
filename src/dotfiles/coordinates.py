@@ -1,4 +1,10 @@
-"""The six axes a machine actually varies along, and the four points named today.
+"""The six axes a machine actually varies along, and the labels that bundle them.
+
+A machine reaches its point either way: through a `PLATFORM_BUNDLES` label, or by
+naming its six coordinates directly in the manifest. The Windows box takes the
+second route, so the labels are no longer a roster of the fleet — they are the
+shorthands that happen to have earned a name.
+
 
 `PLATFORM` is not an axis. It is a *fused point* — package manager, OS family,
 display stack, host and capacity collapsed into one string — which is why
@@ -179,11 +185,12 @@ def platform_label(declared: Coordinates) -> str:
     what the labels distinguish. It selects nothing that deploys: a label is
     printed in a run's header and matched by a `platform:` narrowing.
 
-    The only answer to the question, and `Machine.platform_label` reads it here.
-    It was a second answer for a while, stored as whatever the manifest spelled,
-    which is empty for a manifest declaring `coordinates:` instead of `platform:`.
-    Arch-on-WSL lands on the pacman answer, which is the point of deriving it: the
-    tuple it needs exists while the fused string has no row for it.
+    The only answer to the question, and `Machine.platform_label` reads it here
+    rather than storing one — a stored label is whatever the manifest spelled, and
+    a manifest declaring `coordinates:` spells nothing. Deriving also answers where
+    no single label exists to store: Arch-on-WSL lands on the pacman answer,
+    because the tuple carries both facts while a fused string has no row for the
+    combination.
 
     Winget is answered explicitly rather than left to the last line, which is a
     fallthrough and not a Linux test — it labels everything that is neither brew

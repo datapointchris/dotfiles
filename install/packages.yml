@@ -1216,15 +1216,23 @@ cargo_packages:
 # WINGET PACKAGES (Windows)
 # ================================================================
 # Installed via: winget install <id>, then the .exe copied onto ~/.local/bin
-# `repo` and `asset` name where the same binary is published on GitHub. Nothing
-# reads them yet; they are the coordinate an offline channel would start from,
-# for a machine whose employer network blocks winget outright
 #
-# Six of these eight are cargo_packages above and would be spelled the same way
-# there if the mechanism carried over. It does not: winget is the manager, and
-# the Windows asset names disagree with the Rust target triple far enough that
-# no shared pattern reaches both — eza publishes eza.exe_x86_64-pc-windows-gnu.zip
-# against a Linux row saying nothing of the sort.
+# `repo` and `asset` are required, not annotation. They are the GitHub coordinate
+# the offline channel installs from, and the machine that needs these most cannot
+# reach winget at all — its employer network blocks the Store outright. A row
+# added without them stages nothing there, on the one machine with no other
+# install route. `create_bundle.add_winget_binaries` reads both;
+# `providers.winget.stage` expands `{version}` and `{version_num}` in `asset`.
+#
+# Write `asset` from the Windows release page rather than by analogy with the
+# `cargo_packages` row above: most of these are also Rust tools, and the Windows
+# asset names disagree with the target triple far enough that no shared pattern
+# reaches both — eza publishes eza.exe_x86_64-pc-windows-gnu.zip against a Linux
+# row saying nothing of the sort.
+#
+# `catalog.WingetPackage` says why this is a section of its own rather than a
+# column, and why `asset` is data here where `github_releases` keeps its asset
+# names in code.
 
 winget_packages:
   - name: jq

@@ -207,7 +207,7 @@ def test_a_link_into_a_repo_sibling_is_foreign(tmp_path, monkeypatch):
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
 
-    assert core.link_ownership(link, repo) == 'foreign'
+    assert core.link_ownership(link, repo) is core.Ownership.FOREIGN
 
 
 def test_a_link_into_the_repo_is_still_ours(tmp_path, monkeypatch):
@@ -222,7 +222,7 @@ def test_a_link_into_the_repo_is_still_ours(tmp_path, monkeypatch):
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
 
-    assert core.link_ownership(link, repo) == 'ours'
+    assert core.link_ownership(link, repo) is core.Ownership.OURS
 
 
 def test_a_broken_link_into_a_repo_sibling_is_not_an_orphan(tmp_path):

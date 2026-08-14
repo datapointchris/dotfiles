@@ -506,9 +506,9 @@ class WingetPackage(Entry):
     the offline channel rather than a note about one: the machine that needs these
     most cannot use winget at all, because an employer network blocks it outright.
     `create_bundle.add_winget_binaries` stages from that coordinate and
-    `providers.winget` installs what it staged. The bundler that first read them
-    was the WSL bridge's and went with the bridge; the general bundler is the right
-    home for it now that Windows is an ordinary machine.
+    `providers.winget` installs what it staged — in the general bundler beside
+    every other category, because Windows is one more machine to build a bundle
+    for rather than a side reached across a boundary.
 
     `asset` is a field where `GithubRelease` keeps its asset names in code, and the
     split is not an inconsistency. That convention exists because the release

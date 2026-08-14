@@ -229,10 +229,11 @@ def _is_darwin() -> bool:
     machine is this" but "which init system is on the box", and launchd is not
     something a manifest can be wrong about.
 
-    A two-way branch is enough because the row reaching it is narrowed to two
-    families, which the declaration states and no longer leaves to be inferred:
-    `check-schedule` carries `excludes_os_family: windows`. It said "the row is
-    already narrowed to one" while a third OS family had arrived and was taking
-    the systemd path, held off only by the `which systemctl` guard.
+    A two-way branch is enough only because the declaration narrows the row to two
+    families: `check-schedule` carries `excludes_os_family: windows`. That
+    exclusion is what makes the branch total, not the number of families the fleet
+    happens to have — a family that reaches here without one is handed the systemd
+    path, and the `which systemctl` guard is all that stands between that and a
+    unit installed on a box with no systemd.
     """
     return axes.detect().os_family is axes.OSFamily.DARWIN

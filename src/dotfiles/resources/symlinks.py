@@ -1,14 +1,12 @@
 """The repo deployed into `$HOME`, one link at a time.
 
-The single largest writer in the system, and the one place where deciding and
-acting had never been separated: the old pass recreated all 133 links on every
-run and reported only how many it made, so `check` could say a link was *broken*
-and never that a declared one was **missing**. A file added to `configs/` and
-never deployed read as converged.
-
-Per link, `observe` answers what is at the target and `diff` turns that into one
-verdict, which is what makes both questions answerable and makes `apply` write
-only what differs.
+The single largest writer in the system, and the one where deciding and acting
+have to stay apart. Per link, `observe` answers what is at the target and `diff`
+turns that into one verdict, which is what lets `apply` write only what differs
+and what lets `check` tell a **broken** link from a **missing** one. That second
+distinction is the whole point: a file added to `configs/` and never deployed has
+nothing at its target at all, and a pass that recreates every link on every run
+can only report how many it made, so the undeployed file reads as converged.
 
 Two refusals are load-bearing and are carried here unchanged. A target this
 manager did not create is never replaced without `--force`, because the write is
@@ -24,7 +22,7 @@ mechanism there rather than a fallback — nothing on that side is ever edited b
 into the repo, so the whole of what it gives up is **provenance**, and provenance
 is what both of the refusals and the orphan prune are built out of.
 
-A copy is a regular file, so `core.link_ownership` can only ever answer `foreign`
+A copy is a regular file, so `core.link_ownership` can only ever answer `FOREIGN`
 for one. Identity under copy is therefore content equality, and the three things
 that were built on the other answer are each given up in the open rather than
 quietly stopping working. `--force` and `FOREIGN_ADVICE` become unreachable,
@@ -38,11 +36,13 @@ asks what `pyproject.toml` declares and never looks at the machine.
 from __future__ import annotations
 
 import dataclasses as dc
+import enum
 import functools
 import shutil
 from collections.abc import Iterator
 from collections.abc import Mapping
 from pathlib import Path
+from typing import assert_never
 
 from dotfiles import coordinates as axes
 from dotfiles.privilege import Privilege
@@ -58,6 +58,27 @@ from dotfiles.session import Session
 from dotfiles.symlinks import core
 
 NAME = 'symlinks'
+
+
+class Content(enum.StrEnum):
+    """What is at one target, in the only terms a copy machine can answer in.
+
+    An enum rather than the five bare strings it replaced, for the reason
+    `core.Ownership` is one: `_copy_verdict` has a branch per member and a
+    fallthrough that means converged, and over strings a sixth answer would take
+    that fallthrough silently. `assert_never` there turns the same addition into a
+    type error, which is the only notice that arrives before the machine does.
+    """
+
+    LINKED = 'linked'
+    """A symlink, whatever it points at — including at this row's own source."""
+
+    ABSENT = 'absent'
+    SAME = 'same'
+    DIFFERS = 'differs'
+    UNREADABLE = 'unreadable'
+    """Nothing was established, because the read raised. A directory sitting where
+    a file belongs is the case, and it is an answer rather than an exception."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -100,11 +121,11 @@ class Observed:
     rows it is summarising.
     """
 
-    ownership: dict[Path, str]
-    """`absent` | `ours` | `foreign`, per declared target. Empty under `copying`.
+    ownership: dict[Path, core.Ownership]
+    """Who put each declared target there. Empty under `copying`.
 
     The question is whether the target is a symlink resolving into the repo, and a
-    copy is a regular file — so on a copy machine this answers `foreign` for every
+    copy is a regular file — so on a copy machine this answers `FOREIGN` for every
     target including the ones this manager wrote a moment ago. Left empty rather
     than filled with that answer, because a populated dict reads as a measurement.
     """
@@ -127,10 +148,9 @@ class Observed:
     the target because it cannot tell that file from one of its own.
     """
 
-    content: dict[Path, str]
-    """`absent` | `linked` | `same` | `differs` | `unreadable`, per declared
-    target, and the whole of what a copy machine can observe. Empty unless
-    `copying`.
+    content: dict[Path, Content]
+    """What is at each declared target, and the whole of what a copy machine can
+    observe. Empty unless `copying`.
 
     Its own field rather than more words in `ownership`, because the two
     vocabularies answer different questions and a shared field would leave a
@@ -153,21 +173,26 @@ class Observed:
 
     @property
     def summary(self) -> str:
-        """How many declared links are actually in place, out of how many exist.
+        """How many declared paths are actually in place, out of how many exist.
 
-        It read `all N declared symlinks are deployed` — a count of what the repo
-        declares with the word `deployed` attached, printed by a `check` that had
-        just found one missing. `check` is right to report converged, because a
-        missing link is `plan`'s drift and not something wrong; the *detail* was
-        the false half, and it is the half a reader keeps. `apply` printed it too,
-        above the writes creating the links it had just called deployed.
+        Both numbers, because a count of what the repo declares is not a count of
+        what is on disk, and they differ exactly when something is missing. That is
+        a state `check` reports converged — a missing link is `plan`'s drift rather
+        than something wrong — so a one-number summary claims everything is
+        deployed on the very run whose rows say otherwise, and the summary is the
+        half a reader keeps.
+
+        `symlinks` or `copies` by what this machine writes. Every row below already
+        keeps the two mechanisms apart, `_copy_verdict`'s detail most explicitly,
+        and a summary counting `symlinks` on a machine that creates none names a
+        thing that is not there.
 
         Counted through `_verdict`, which is what decides the same question for
         every row below. A second predicate here would be free to disagree with the
         rows it is summarising.
         """
         in_place = sum(1 for link in self.links if _verdict(link, self) is None)
-        return f'{in_place} of {len(self.links)} declared symlinks in place'
+        return f'{in_place} of {len(self.links)} declared {"copies" if self.copying else "symlinks"} in place'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
@@ -300,14 +325,14 @@ class SymlinksResource:
                 orphans=(),
             )
 
-        ownership: dict[Path, str] = {}
+        ownership: dict[Path, core.Ownership] = {}
         pointing_at: dict[Path, Path | None] = {}
         adoptable: set[Path] = set()
 
         for link in links:
             ownership[link.target] = core.link_ownership(link.target, link.root)
             pointing_at[link.target] = _destination(link.target)
-            if ownership[link.target] == 'foreign' and (session.force or core.is_untouched_skeleton(link.target)):
+            if ownership[link.target] is core.Ownership.FOREIGN and (session.force or core.is_untouched_skeleton(link.target)):
                 adoptable.add(link.target)
 
         wanted = {link.target for link in links}
@@ -360,7 +385,7 @@ class SymlinksResource:
             return _copy(change, link)
 
         ownership = core.link_ownership(link.target, link.root)
-        if ownership == 'foreign' and not (session.force or core.is_untouched_skeleton(link.target)):
+        if ownership is core.Ownership.FOREIGN and not (session.force or core.is_untouched_skeleton(link.target)):
             return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {FOREIGN_ADVICE}')
 
         try:
@@ -374,15 +399,15 @@ class SymlinksResource:
         return Outcome(change, OutcomeStatus.DONE, f'{link.target} → {core.make_relative_symlink(link.source, link.target)}')
 
 
-def _compare(link: Link) -> str:
-    """What is at one target, in the only terms a copy machine can answer in.
+def _compare(link: Link) -> Content:
+    """Measure one target, in the only terms a copy machine can answer in.
 
-    `linked` is asked first and answers without reading anything, because every
-    test below follows a symlink. `exists()` reports on what the link points at,
-    and `read_bytes()` returns the bytes it points at — so a target still linked
-    into the repo read back its own source and compared equal to it. The one state
-    this mechanism exists to leave behind was the one state it called converged,
-    and the migration it was written for silently did nothing.
+    `LINKED` is asked first and answers without reading anything, because every
+    test below follows a symlink: `exists()` reports on what the link points at
+    and `read_bytes()` returns the bytes it points at, so a target still linked
+    into the repo reads back its own source and compares equal to it. Asked in any
+    other order, the one state this mechanism exists to leave behind is the one
+    state it calls converged, and the migration it exists for does nothing.
 
     Byte equality for the rest, for the reason `core.is_untouched_skeleton`
     compares bytes rather than filenames: the content is the only evidence there
@@ -390,20 +415,20 @@ def _compare(link: Link) -> str:
     side of the copy, so a file restored from a backup or written by a second tool
     can carry any timestamp and still be the wrong bytes.
 
-    `unreadable` is an answer rather than an exception, because a directory
+    `UNREADABLE` is an answer rather than an exception, because a directory
     sitting where a file belongs is a real state of a real machine and the honest
     verdict for it is that nothing was established. Both reads are inside the
     guard: a source that is itself a broken symlink fails the same way and means
     the same thing.
     """
     if link.target.is_symlink():
-        return 'linked'
+        return Content.LINKED
     if not link.target.exists():
-        return 'absent'
+        return Content.ABSENT
     try:
-        return 'same' if link.target.read_bytes() == link.source.read_bytes() else 'differs'
+        return Content.SAME if link.target.read_bytes() == link.source.read_bytes() else Content.DIFFERS
     except OSError:
-        return 'unreadable'
+        return Content.UNREADABLE
 
 
 def _copy(change: Change, link: Link) -> Outcome:
@@ -447,52 +472,66 @@ def _prune(change: Change, target: Path) -> Outcome:
 
 
 def _verdict(link: Link, observed: Observed) -> Change | None:
+    """One row's finding, or None where the target is already what it should be.
+
+    Both mechanisms return None for converged, which makes every unwritten branch
+    a claim that the machine is fine. So neither dispatch has an unwritten branch:
+    `OURS` is matched by name rather than reached by falling past the other two,
+    and `assert_never` closes the match. Adding an `Ownership` member is then a
+    mypy error here rather than a target this resource stops reporting on.
+    """
     if observed.copying:
         return _copy_verdict(link, observed)
 
-    ownership = observed.ownership.get(link.target, 'absent')
+    ownership = observed.ownership.get(link.target, core.Ownership.ABSENT)
 
-    if ownership == 'absent':
-        return Change(NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist')
+    match ownership:
+        case core.Ownership.ABSENT:
+            return Change(
+                NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist'
+            )
 
-    if ownership == 'foreign':
-        if link.target in observed.adoptable:
+        case core.Ownership.FOREIGN:
+            if link.target in observed.adoptable:
+                return Change(
+                    NAME,
+                    Stage.SYMLINKS,
+                    link.address,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'{link.target} exists and will be adopted',
+                )
             return Change(
                 NAME,
                 Stage.SYMLINKS,
                 link.address,
                 Verdict.STALE,
-                repair=Repair.AUTOMATIC,
-                detail=f'{link.target} exists and will be adopted',
+                repair=Repair.BY_HAND,
+                detail=f'{link.target} was not created by this manager',
+                advice=FOREIGN_ADVICE,
             )
-        return Change(
-            NAME,
-            Stage.SYMLINKS,
-            link.address,
-            Verdict.STALE,
-            repair=Repair.BY_HAND,
-            detail=f'{link.target} was not created by this manager',
-            advice=FOREIGN_ADVICE,
-        )
 
-    destination = observed.pointing_at.get(link.target)
-    if destination != link.source.resolve():
-        return Change(
-            NAME,
-            Stage.SYMLINKS,
-            link.address,
-            Verdict.STALE,
-            repair=Repair.AUTOMATIC,
-            detail=f'{link.target} points elsewhere in the repo',
-            observed=str(destination or ''),
-        )
-    return None
+        case core.Ownership.OURS:
+            destination = observed.pointing_at.get(link.target)
+            if destination != link.source.resolve():
+                return Change(
+                    NAME,
+                    Stage.SYMLINKS,
+                    link.address,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'{link.target} points elsewhere in the repo',
+                    observed=str(destination or ''),
+                )
+            return None
+
+    assert_never(ownership)
 
 
 def _copy_verdict(link: Link, observed: Observed) -> Change | None:
     """The same three answers as the link branch, decided on content.
 
-    Shorter than its twin by exactly the refusal: there is no `foreign` row,
+    Shorter than its twin by exactly the refusal: there is no `FOREIGN` row,
     because differing bytes is the only thing a copy machine can say about a file
     it did not write, and it is also what it says about its own stale output. The
     two are indistinguishable and this is where that is paid for — `apply`
@@ -505,47 +544,58 @@ def _copy_verdict(link: Link, observed: Observed) -> Change | None:
     `differs`, because the detail is the whole value of a finding and `differs
     from the file the repo declares` is false about a link that resolves to it.
 
-    `unreadable` is `UNKNOWN` with `Repair.NONE`, which is the pair
+    `UNREADABLE` is `UNKNOWN` with `Repair.NONE`, which is the pair
     `Change.unmeasured` is defined by. Reporting it `STALE` would promise a repair
     for something nothing measured, and reporting it converged would hide a
-    directory sitting where a config belongs.
+    directory sitting where a config belongs. It is also the default for a target
+    `observe` has no entry for, which is the conservative end of the vocabulary:
+    the absent entry is itself the thing nothing established.
+
+    `SAME` is the only converged answer and says so by name, per the reasoning in
+    `_verdict`.
     """
-    state = observed.content.get(link.target, 'unreadable')
+    state = observed.content.get(link.target, Content.UNREADABLE)
 
-    if state == 'absent':
-        return Change(NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist')
+    match state:
+        case Content.ABSENT:
+            return Change(
+                NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist'
+            )
 
-    if state == 'linked':
-        return Change(
-            NAME,
-            Stage.SYMLINKS,
-            link.address,
-            Verdict.STALE,
-            repair=Repair.AUTOMATIC,
-            detail=f'{link.target} is a symlink, and this machine deploys by copy',
-        )
+        case Content.LINKED:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} is a symlink, and this machine deploys by copy',
+            )
 
-    if state == 'differs':
-        return Change(
-            NAME,
-            Stage.SYMLINKS,
-            link.address,
-            Verdict.STALE,
-            repair=Repair.AUTOMATIC,
-            detail=f'{link.target} differs from the file the repo declares',
-        )
+        case Content.DIFFERS:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} differs from the file the repo declares',
+            )
 
-    if state == 'unreadable':
-        return Change(
-            NAME,
-            Stage.SYMLINKS,
-            link.address,
-            Verdict.UNKNOWN,
-            repair=Repair.NONE,
-            detail=f'{link.target} could not be read, so nothing was established about it',
-        )
+        case Content.UNREADABLE:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.UNKNOWN,
+                repair=Repair.NONE,
+                detail=f'{link.target} could not be read, so nothing was established about it',
+            )
 
-    return None
+        case Content.SAME:
+            return None
+
+    assert_never(state)
 
 
 def _destination(target: Path) -> Path | None:

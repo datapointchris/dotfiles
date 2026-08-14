@@ -15,19 +15,18 @@ export EDITOR="nvim"
 # Prepended onto the PATH this shell was handed, and only where it does not
 # already carry the directory.
 #
-# The first line here used to assign PATH the five Unix system directories
-# outright. That reset was doing real work — it is what kept the unconditional
-# prepends under it from accumulating across nested login shells — and it could
-# afford to throw away what it was handed only because on Unix that was the same
-# five directories. Git Bash reads this file for every login shell, and there the
-# inherited PATH is the only copy of System32, the winget shim directory, and
-# everything else Windows assembles from the registry.
+# The membership test is what keeps nested login shells from accumulating
+# duplicate entries. An unconditional prepend needs a `PATH=` assignment above it
+# to do that job instead, and this file cannot afford one: Git Bash reads it for
+# every login shell, and there the inherited PATH is the only copy of System32,
+# the winget shim directory, and everything else Windows assembles from the
+# registry. Appending `:$PATH` to such an assignment saves those and hands the
+# accumulation straight back, so the test is what holds both properties at once —
+# nothing inherited is discarded, and a second run changes nothing.
 #
-# Appending `:$PATH` to the reset would save those and hand the accumulation
-# back. A membership test keeps both: nothing is discarded, and running this file
-# a second time changes nothing. It also leaves one file rather than a copy per
-# os value — configs/ deploys whole files and merges nothing, so moving a single
-# line onto the os axis means three .bash_profiles, two of them identical.
+# One file rather than a copy per os value: configs/ deploys whole files and
+# merges nothing, so moving a single line onto the os axis means three
+# .bash_profiles, two of them identical.
 for path_directory in /sbin /usr/sbin /bin /usr/bin /usr/local/bin "$HOME/.local/bin" "$HOME/bin" "$HOME/go/bin"; do
   if [[ -d "$path_directory" && ":$PATH:" != *":$path_directory:"* ]]; then
     # The separator is conditional because an empty PATH would otherwise gain a

@@ -283,20 +283,18 @@ class Machine:
     def platform_label(self) -> str:
         """Which platform label this machine carries, derived from its coordinates.
 
-        Stored, and stored as whatever the manifest happened to spell, until a
-        machine declared `coordinates:` instead of `platform:` and this answered
-        `''` while `coordinates.platform_label` answered `windows`. One question
-        with two answers, and the two are reached from different sides: `machines
-        show` printed `custom coordinates`, `as_dict` emitted an empty `platform`,
-        and `applies_to` compared a narrowing against the empty one — so a
-        `platform: windows` narrowing could never have matched the only machine it
-        could mean.
+        Derived rather than stored, because a manifest is free not to spell it. One
+        declaring `coordinates:` names no platform at all, so a stored field is
+        empty on exactly the machine whose coordinates say `windows` — and that
+        empty answer is reached from three sides at once: `machines show` prints
+        `custom coordinates`, `as_dict` emits an empty `platform`, and `applies_to`
+        compares a narrowing against it, so a `platform: windows` narrowing cannot
+        match the only machine it could mean.
 
-        Derived closes it structurally rather than by keeping two fields in step.
-        Nothing is lost on the bundle path, where the round trip is exact and
-        `tests/cli/test_apply.py` asserts it for every bundle: the label was always
-        a function of the tuple, and a manifest naming both a platform and
-        coordinates is refused, so there was never a second fact to carry.
+        Deriving closes that structurally rather than by keeping two fields in
+        step, and costs nothing on the bundle path: the label is a function of the
+        tuple, a manifest naming both a platform and coordinates is refused, and
+        `tests/cli/test_apply.py` asserts the round trip is exact for every bundle.
 
         What it does give up is the ability to say *how the manifest was written*.
         That is a property of the file rather than of the machine, `machines show
@@ -445,10 +443,10 @@ def _coordinates(name: str, declared: Mapping[str, Any], issues: list[Declaratio
     end, and a manifest carrying both would leave a reader unable to say which
     one the install used.
 
-    Only the tuple is returned. The label used to come back beside it, as whatever
-    the manifest spelled, and `Machine.platform_label` records what that cost —
-    `coordinates.platform_label` derives the same answer from the tuple, and a
-    second one carried alongside is a second one free to disagree.
+    Only the tuple is returned, never the label beside it. `coordinates.platform_label`
+    derives that from the tuple, and a copy returned alongside is a second answer
+    free to disagree with the first — `Machine.platform_label` holds what that
+    costs.
     """
     label = declared.get('platform')
     overrides = declared.get('coordinates') or {}

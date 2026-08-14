@@ -539,8 +539,7 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
     else the bundle is an alternative to a slow or unreachable source; here the
     employer network blocks the Store outright, so a Windows manifest that declares
     only `winget_packages` has exactly one install route and this is the other end
-    of it. That is what the `repo` and `asset` columns were declared for, and they
-    sat unread from the day the WSL bridge that used to read them was deleted.
+    of it. That is what the `repo` and `asset` columns are declared for.
 
     The asset is named by `providers.winget.stage`, which is the module that
     installs the result — the same arrangement `add_go_binaries` records, for the
@@ -804,10 +803,11 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
     Windows takes the other archive format astral publishes and keeps the `.exe`
     suffix, because both are facts about the asset rather than decoration: the
     release carries `uv-{triple}.zip` there and no tarball, and a PE without its
-    suffix is a file Windows declines to execute. `install.sh` looks for `bin/uv`
-    and so does not yet consume this — a bootstrap that has no Git Bash path is a
-    separate gap, and it is loud where staging a Linux ELF under a Windows label
-    was silent.
+    suffix is a file Windows declines to execute. `install.sh` derives the same
+    name from `uname -s` and copies `bin/uv.exe` onto PATH, so the suffix is a
+    contract between two files rather than a label. `tests/shell/test_install_handover.py`
+    holds them to it, both ways: the bootstrap must not hardcode `bin/uv`, and it
+    must recognise the same Git Bash unames the CLI does.
     """
     log.info('Downloading uv...')
     version = fetch_latest_version(UV_REPO)

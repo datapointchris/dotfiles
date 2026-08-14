@@ -512,6 +512,19 @@ def test_nothing_is_deployed_as_a_symlink_on_a_copy_machine(copying: Session, re
     assert not any(path.is_symlink() for path in deployed)
 
 
+def test_the_summary_names_the_mechanism_this_machine_deploys_by(copying: Session, session: Session, repo: Path) -> None:
+    """Same count, different noun, from the one fixture difference.
+
+    A copy machine creates no symlinks at all, so a summary counting them names a
+    thing the run did not produce — and it is the line a reader keeps, above rows
+    that say `copy` throughout.
+    """
+    declare(repo, 'configs/common/.bashrc')
+
+    assert symlinks.RESOURCE.observe(copying, copying.plan).summary == '0 of 1 declared copies in place'
+    assert symlinks.RESOURCE.observe(session, session.plan).summary == '0 of 1 declared symlinks in place'
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Exclusions that were regressions
 # ─────────────────────────────────────────────────────────────────────────────

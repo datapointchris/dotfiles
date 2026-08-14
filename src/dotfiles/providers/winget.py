@@ -141,10 +141,12 @@ def copy_installed(home: Path, into: Path, entry: catalog.WingetPackage) -> bool
 def install(entry: catalog.WingetPackage, into: Path, *, offline: bool) -> Result:
     """Install one package from whichever source this run can reach.
 
-    `into` is a parameter rather than `providers.bin_dir()` read here, because the
-    Windows profile a WSL box writes to is not the one this process has a home in
-    — the same reason `copy_installed` takes a home. The provider passes
-    `bin_dir()`, which is the one spelling of `~/.local/bin` this package keeps.
+    `into` is a parameter rather than `providers.bin_dir()` read here, so a test
+    can point the whole of an install at a tmp directory — the same reason
+    `copy_installed` takes a `home`, and between them they leave nothing about
+    which source a run picks that needs a Windows box to exercise. `registry` is
+    the only caller and passes `bin_dir()`, which is the one spelling of
+    `~/.local/bin` this package keeps.
 
     Offline goes straight to the bundle and never calls winget, which needs the
     Store the network blocks. Online tries winget first and falls back, because

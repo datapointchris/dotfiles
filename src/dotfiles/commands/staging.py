@@ -4,10 +4,10 @@ It exists for a work box behind a firewall that cannot reach GitHub. The bundle
 is built where the network is, for a machine that is not the one building it,
 which is why neither `--machine` nor `--arch` has a default.
 
-A second group sat beside this one until Windows became a machine of its own,
-carrying the Windows executables a WSL box copied onto the Git Bash PATH. It was
-a way to reach a machine the fleet could not address directly; a Windows manifest
-addresses it, so the group and the bridge behind it are gone rather than renamed.
+One group, for every machine. A Windows box is addressed by its own manifest and
+built for like any other target, so its executables are a category inside the
+bundle rather than a bundle of their own — `create_bundle.add_winget_binaries`
+stages them beside the wheels and the release assets.
 """
 
 from __future__ import annotations

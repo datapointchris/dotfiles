@@ -9,8 +9,9 @@
 # case this setting exists for.
 #
 # The cost is real and worth naming: `true` puts CRLF into every text file,
-# shebangs included, and MSYS2 bash refuses `/usr/bin/env^M`. Nothing in this
-# repo pins the exception — there is no .gitattributes anywhere in it — so a
-# shell script checked out on this side is a script Git Bash will not run.
+# shebangs included, and MSYS2 bash refuses `/usr/bin/env^M`. A repo full of
+# shell that Git Bash has to run pins its own exception with `.gitattributes`,
+# which wins over this setting per path; this repo's root one declares
+# `* text=auto eol=lf` for exactly that reason, and says why there.
 [core]
 	autocrlf = true

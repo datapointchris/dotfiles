@@ -111,9 +111,11 @@ Several of those projects publish no Windows checksum at all. That is stated per
 tool rather than passed over, so what was and was not verified stays visible in
 the build output.
 
-**Bootstrapping that box is the half still open.** `install.sh` requires
-`$BUNDLE/bin/uv` and a Windows bundle stages `bin/uv.exe`, so `--offline` there
-fails loudly rather than copying a Linux binary. See
+**Bootstrapping that box runs from the bundle too.** `install.sh` reads
+`uname -s`, answers `uv.exe` under Git Bash, and copies `$BUNDLE/bin/uv.exe` onto
+PATH, which is the name a Windows bundle stages. With a network but no bundle it
+runs astral's PowerShell installer; the sh one is not a fallback there, because it
+fetches a Linux binary Git Bash will copy into place and then fail to run. See
 `docs/reference/rebuilding-a-machine.md` for what a first install needs.
 
 ## Why the Neovim setup does not need any of this
