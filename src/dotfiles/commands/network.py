@@ -49,6 +49,7 @@ from dotfiles.output import render_verdict
 from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import tally
+from dotfiles.reconcile import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -97,6 +98,11 @@ def check(
                 'machine': machine.name,
                 'reachable': len(verdicts) - len(blocked),
                 'blocked': len(blocked),
+                # The wait is the one thing this verb costs, and the human line
+                # reports it — so a caller that cannot see the screen has a door to
+                # it too, as `ResourceResult.as_counts` gives every other section.
+                # The results file is no substitute: it records `when`, not how long.
+                'seconds': round(seconds, 3),
                 'unprobed': list(measurement.unprobed),
                 'probes': [
                     {
@@ -135,25 +141,30 @@ def check(
 def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
     """The probe run as a section, its refusals as rows, and one closing verdict.
 
-    The section and the close are the report grammar the reconcile verbs use, and
-    this command had neither half. Its whole human answer was one tally at column 0
-    — no mark, so a converged run and a blocked one opened the same way; no name,
-    so the counts belonged to nothing; no elapsed, after the longest read in the
-    tool; and no command, on the one screen whose entire purpose is to say what to
-    do about a firewall.
+    This is a `check`, so it reads beside the reconcile verbs and is written in
+    their grammar: a mark, so a converged run and a blocked one do not open the same
+    way; a name, so the counts belong to something; an elapsed, after the longest
+    read in the tool; and a closing command, on the one screen whose whole purpose
+    is to say what to do about a firewall. A tally alone at column 0 has none of
+    them.
 
-    **`N reachable, M blocked` is kept word for word.** It is the section's detail
-    now rather than the whole answer, and it is already the right sentence — the
+    **`N reachable, M blocked` is the section's detail, word for word.** It is the
     same phrase `network.render` puts on the results file's `Summary:` line, so
     rewording it here would leave the screen and the file it writes disagreeing
     about one measurement.
 
-    The rows stay on stderr as the evidence for the line above, which is where they
-    landed when they moved into the shared columns.
+    **The verdict is the enum rather than the two words spelled here.** Every other
+    caller of `VERDICT_MARKS` and `VERDICT_COLOURS` keys them on `str(...)` of a
+    member, and a literal that misses a rename lands as a `KeyError` on whoever runs
+    this command. `output.MATCHED` is the shape a deliberate literal takes — a
+    named constant with a test asserting it agrees with the member it stands in for
+    — and there is nothing here that reading the member does not already give.
+
+    The rows are on stderr, as the evidence for the line above.
     """
     intercepted = [verdict for verdict in blocked if verdict.refusal is network.Refusal.INTERCEPTED]
     reachable = len(measurement.verdicts) - len(blocked)
-    verdict_word = 'issue' if blocked else 'converged'
+    verdict_word = str(ResourceVerdict.ISSUE if blocked else ResourceVerdict.CONVERGED)
     console.print(
         section_line(
             VERDICT_MARKS[verdict_word],
@@ -179,7 +190,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
         render_row('unprobed', '', reason, 'magenta', width)
 
     console.print()
-    render_verdict(verdict_word, _closing(len(blocked), len(intercepted)))
+    render_verdict(verdict_word, _closing(len(blocked), len(intercepted)), console)
     if intercepted:
         # Said once at the end as well as per row, because this is the one
         # refusal whose fix is a single act covering every row that shows it —

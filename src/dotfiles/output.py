@@ -242,11 +242,11 @@ def section_line(mark: str, name: str, detail: str, colour: str = '', trailer: s
 def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = '✓', colour: str = 'green') -> None:
     """One part of an `apply`: what it holds, or what is about to happen to it.
 
-    The write verb's counterpart to the section `render_result` prints, and it was
-    two other things before it was this. The measure pass rendered here; the act
-    pass rendered a bold blue line at column 0 with a blank above it; and the two
-    sets `apply` walks past rendered a third shape again. Three grammars in one
-    screen is a screen where nothing tells the reader which lines are peers.
+    The write verb's counterpart to the section `render_result` prints, and the one
+    shape behind every heading it puts on screen — what a resource was measured to
+    hold, what a group of work is about to do, and the two sets the run walks past.
+    Three grammars in one screen is a screen where nothing tells the reader which
+    lines are peers.
 
     It renders no verdict on the measure pass, because an apply is about to act on
     what was found and a row saying "drift" immediately above the repair for it is
@@ -262,7 +262,7 @@ def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = 
     err_console.print(section_line(mark, address, detail, colour, elapsed(seconds)))
 
 
-def render_result(result: ResourceResult, stream: Console = console) -> None:
+def render_result(result: ResourceResult, stream: Console) -> None:
     """One resource's section: its name, what it found, and the rows behind that.
 
     **The resource's name is the heading.** The left column spelled the verdict on
@@ -284,6 +284,12 @@ def render_result(result: ResourceResult, stream: Console = console) -> None:
     refused on through here too, and passes stderr: that verb's stdout is the run
     record, so a `--json` run whose gate fired would otherwise hand its caller a
     heading where the document should be.
+
+    **It has no default, because the stream belongs to the verb rather than to the
+    result.** Neither answer is safe for the other caller: stdout put on a write verb
+    corrupts the document a caller parses, and stderr put on a read verb sends the
+    answer somewhere a redirect will not find it. A parameter whose two callers want
+    opposite values is one every caller states.
 
     Keyed on the verdict's string value rather than the enum, so this module stays
     below `reconcile` and does not import it at runtime — presentation should not
@@ -315,23 +321,24 @@ def render_result(result: ResourceResult, stream: Console = console) -> None:
     stream.print()
 
 
-def render_verdict(word: str, sentence: str, stream: Console = console) -> None:
+def render_verdict(word: str, sentence: str, stream: Console) -> None:
     """The run's answer, and the one place the verdict word is spelled out.
 
-    It was the left column of every section, which put `converged` nine deep on a
-    healthy machine and said nothing about the run as a whole. It is the run as a
-    whole that a person came for, and it belongs at the bottom, where the terminal
-    stops scrolling.
+    The run as a whole is what a person came for, and it belongs at the bottom,
+    where the terminal stops scrolling. In the left column of every section instead,
+    the word is `converged` nine deep on a healthy machine and says nothing about
+    the run.
 
-    All three verbs close here now. `apply` closed on a rich rule carrying the
-    machine's name, which is a different grammar for the same job and carried
-    neither the counts nor the command to run next — so the run a person watches
-    longest ended in the one line of the report that answered least.
+    All three verbs close here, so a `plan`, a `check` and an `apply` end on one
+    shape: the verdict word, then a sentence carrying the counts behind it and the
+    command that answers whatever is left.
 
     **The word and the sentence, rather than the results they are folded from.**
     Composing them is the fold's, since only it knows what each verb keeps and
-    `apply` has no lens at all; this module sits below `reconcile` and would have
-    had to import it back at call time to ask.
+    `apply` has no lens at all — and this module sits below `reconcile`, so asking
+    would mean importing it back at call time.
+
+    `stream` has no default for the reason it has none on `render_result`.
 
     Ungated, whatever `-q` says: the result the command was asked for keeps its
     channel, and a run reporting by exit code alone is a worse command rather than

@@ -189,8 +189,12 @@ def _render(plan: resolver.Plan) -> None:
                 f'{EVIDENCE_INDENT}{item.provider:<14} {item.name:<28} {item.reason.selector}{precondition_note(item.precondition)}'
             )
 
-    console.print()
-    console.print(f'{len(plan.items)} items')
+    # In the sections' own columns, because a bare count at column 0 is a shape no
+    # report here uses: no name, so the number belongs to nothing on screen, and no
+    # column, so it lines up with none of the groups it sums. `total` is the honest
+    # name — this command resolves a declaration and measures nothing, so there is
+    # no verdict to put in front of it.
+    _section('total', f'{len(plan.items)} item(s) this machine declares')
 
 
 @app.command('requirements')
@@ -255,8 +259,12 @@ def _render_requirements(machine: machines.Machine) -> None:
                 console.print(f'{EVIDENCE_INDENT}{"":<{width}}  {entry.restore}', markup=False, highlight=False)
 
     if not machine.requirements:
-        console.print()
-        console.print('  nothing — every file this machine needs is one apply writes')
+        # A section and an indented row, like the two groups above, rather than a
+        # sentence at a two-space indent of its own. An empty register is an answer
+        # to the same question `values` and `files` answer, and a reader scanning
+        # the name column for it finds nothing where a heading should be.
+        _section('by hand', 'nothing')
+        console.print(f'{EVIDENCE_INDENT}every file and value this machine needs is written by an apply')
 
 
 SAFEKEEP_TAG = 'dotfiles'

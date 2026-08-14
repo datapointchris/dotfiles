@@ -44,6 +44,7 @@ from dotfiles.output import PROGRESS_MARK
 from dotfiles.output import SUBJECT_CEILING
 from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import announce
+from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import hint
@@ -267,9 +268,9 @@ def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[valid
     converge and lets the rest through, which is `_gating`'s split.
 
     Composed here for both, so the write verb cannot word a finding differently
-    from the read one. `apply` printed a hand-built warning with the same count in
-    it, on a line that named no resource at all — so the gate that stops a run read
-    as a stray sentence rather than as the `machines` verdict it is.
+    from the read one. The gate that stops an `apply` *is* the `machines` verdict,
+    and a warning built at that call site carries the same count while naming no
+    resource — which reads as a stray sentence rather than as the row it is.
     """
     if not broken:
         warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
@@ -401,9 +402,9 @@ def named(items: Sequence[str], limit: int = 4) -> str:
     """The first few of a set, and how many more there were.
 
     One phrasing for every line that carries item names with the rows out of
-    reach — a resource's verdict, and the closing line of an `apply`. Written out
-    twice they had come to disagree about the cut-off, so the same eleven items
-    read as four-and-seven in one place and as all eleven in the other.
+    reach — a resource's verdict, and the closing line of an `apply`. Written out at
+    each of them the cut-off is what drifts, and eleven items then read as
+    four-and-seven on one line and as all eleven on the next.
     """
     shown = ', '.join(items[:limit])
     return shown if len(items) <= limit else f'{shown} and {len(items) - limit} more'
@@ -472,6 +473,16 @@ class Unreachable(refusal.Refusal):
     """
 
     code = ExitCode.USAGE
+
+
+class NoBundle(refusal.Refusal):
+    """`--offline`, with nothing on this machine to install from.
+
+    An Issue rather than a usage error, unlike its two neighbours: the flag is
+    typed correctly and the machine is the thing that cannot answer it, so retyping
+    the command fixes nothing. Staging a bundle does, which is what `advice`
+    carries at each raise site.
+    """
 
 
 def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, packages: frozenset[str]) -> engine.Selection:
@@ -700,12 +711,14 @@ def report_verdict(results: Sequence[ResourceResult], lens: Lens) -> None:
     """Close a read verb: its one verdict word, and the sentence behind it.
 
     The composition rather than the rendering, and it sits here because only the
-    fold knows what a verb kept. `output.render_verdict` reached back into this
-    module at call time to ask — a runtime import in the direction the layering
-    forbids, kept legal by being lazy. The write verb closes through the same
+    fold knows what a verb kept. Composing it inside `output` means that module
+    asking this one at call time — a runtime import in the direction the layering
+    forbids, kept legal only by being lazy. The write verb closes through the same
     renderer with a sentence of its own, and has no lens for this one to take.
+
+    On stdout, because a read verb's answer is what a caller redirects.
     """
-    render_verdict(str(worst(results)), verdict_line(results, lens))
+    render_verdict(str(worst(results)), verdict_line(results, lens), console)
 
 
 def worst(results: Sequence[ResourceResult]) -> ResourceVerdict:
@@ -767,25 +780,37 @@ def _stage_bundle() -> ExitCode | None:
     An empty manifest ends the run rather than starting it. Every provider reads
     the bundle through that file, so a staged directory without one installs
     nothing from anywhere and reports each tool separately as its own mystery.
+
+    **Every one of the three ways this ends a run is a `Refusal`**, so the walk that
+    never happened closes in the one grammar `apply` keeps for that — see
+    `apply_machine`. The unreadable branch refuses on top of `report_bundle`'s
+    warning rather than instead of it, because that warning is shared with `plan`
+    and `check`, where the same measurement is a caveat on their verdicts rather
+    than the end of the run. One line says what is wrong with the bundle; the other
+    says this verb stopped.
     """
     extracted = None
     if not paths.BUNDLE_DIR.is_dir():
         archive = offline_bundle.newest()
         if archive is None:
-            warn(f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none')
-            hint(f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH')
-            return ExitCode.ISSUE
+            return refusal.report(
+                NoBundle(
+                    f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none',
+                    advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
+                )
+            )
 
         try:
             offline_bundle.stage(archive)
         except offline_bundle.StagingError as unreadable:
-            warn(str(unreadable))
-            return ExitCode.ISSUE
+            return refusal.report(NoBundle(str(unreadable), advice='name a readable one: dotfiles bundle stage PATH'))
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
     report_bundle(staged)
-    return None if staged.readable else ExitCode.ISSUE
+    if not staged.readable:
+        return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
+    return None
 
 
 def report_bundle(staged: offline_bundle.Staging) -> None:
@@ -882,19 +907,34 @@ def apply_machine(
     split the two streams instead — heading to stdout, evidence to stderr — because
     for them the heading *is* the answer; here the answer is what the machine
     became, and the report is the working that got it there.
+
+    **A run that measured something closes on a verdict line; a run that never
+    started closes through `refusal.report`.** The verdict line is composed from
+    counts of items this walk decided, and a refusal has none — nothing selected, a
+    machine that will not resolve, `--offline` with no bundle to install from — so
+    putting a verdict word in front of a sentence about how the command was typed
+    claims a measurement nobody made. `✗ <sentence>` with the advice hung under it
+    is what every other door in this tool prints for the same event, so the two
+    shapes are *what the machine became* and *why this never ran*, and no exit is
+    left in a third. The declaration gate belongs to the first of them: it measured
+    the declaration and closes on that row's own verdict.
     """
     began = dt.datetime.now(dt.UTC)
     checkout.report_stray_branch()
 
     found = validate.declaration()
     if broken := _gating(validate.errors(found), selection):
-        render_result(declaration_row(found, broken), err_console)
+        # The row decides all three: `declaration_row` already carries the verdict,
+        # `exit_code` is the one mapping from a verdict to a status, and spelling
+        # either out again here is a second opinion that can disagree with it.
+        gate = declaration_row(found, broken)
+        render_result(gate, err_console)
         render_verdict(
-            str(ResourceVerdict.ISSUE),
+            str(gate.verdict),
             f'{len(broken)} problem(s) in the declaration, so there is nothing safe to apply — run: dotfiles machines check',
             err_console,
         )
-        return ExitCode.ISSUE
+        return exit_code([gate])
 
     try:
         session = Session.resolve(
@@ -904,10 +944,10 @@ def apply_machine(
     except refusal.Refusal as refused:
         # Every one of these carries its own code — `NoMachine` and `NoSuchMachine`
         # are USAGE because naming a different machine is what fixes them, and a
-        # manifest that will not parse is an Issue — so the mapping that used to sit
-        # here in two `except` clauses is the exception's to state. Reported through
-        # the shared boundary, which is what every other door in the tool prints a
-        # refusal with, marker and advice line included.
+        # manifest that will not parse is an Issue — so the mapping is the
+        # exception's to state and never this frame's. Reported through the shared
+        # boundary, which is what every other door in the tool prints a refusal
+        # with, marker and advice line included.
         return refusal.report(refused)
 
     if not selection.resources:
@@ -951,9 +991,9 @@ def apply_machine(
 
     # Before acting, because a resource nothing could examine is a part of the
     # machine this run is about to skip without touching. Folded rather than
-    # warned: a bare sentence at column 0 named no resource, so the one line
-    # saying part of the machine went unmeasured read as belonging to whichever
-    # section it happened to follow.
+    # warned, so the line saying part of the machine went unmeasured names the
+    # resource it is about — at column 0 it reads as belonging to whichever section
+    # happens to precede it.
     for unexamined in fold([event for event in planned if isinstance(event.payload, Refusal)], Lens.CHECK):
         render_result(unexamined, err_console)
 
@@ -1014,10 +1054,17 @@ def apply_machine(
 def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
     """What this run did, what it walked past, and which verb owns the rest.
 
-    The `verdict_line` the write verb never had. `apply` closed on a rule carrying
-    the machine's name and nothing else, so a run that repaired eleven things and a
-    run that repaired none ended identically — and neither of the two sets it
-    deliberately does not act on was counted anywhere near it.
+    `verdict_line`'s counterpart for the write verb, carrying the counts for the
+    same reason: a closing line naming only the machine ends a run that repaired
+    eleven things and a run that repaired none identically, and says nothing about
+    either of the two sets `apply` deliberately does not act on.
+
+    **What was repaired is on the line whatever else went wrong.** It is the count
+    this verb exists to produce, and it is worth most on the branch where something
+    failed — one failure after eleven repairs is a run that mostly worked, and
+    dropping the eleven makes it read exactly like a run that did nothing at all.
+    The two clauses are joined rather than chosen between, so every combination of
+    the pair is a different sentence.
 
     **The clauses are worded as the verb that owns them would**, which is
     `output.tallies`'s rule one altitude up. What needs a person is `check`'s
@@ -1033,10 +1080,9 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     the names because this is the line a scheduled run's summary keeps with the rows
     long gone, which is the argument `_lead` makes for the read verbs' rows.
     """
-    if unsuccessful:
-        head = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}'
-    else:
-        head = f'{changed} item(s) changed' if changed else 'nothing to change'
+    repaired = f'{changed} item(s) changed' if changed else ''
+    failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
+    head = '; '.join(clause for clause in (repaired, failed) if clause) or 'nothing to change'
     person = f'; {len(deferred)} item(s) need a person — run: dotfiles check' if deferred else ''
     blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
     return f'{head}{person}{blind}'
@@ -1064,17 +1110,16 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     install and the restore. `apply` answers whether the work it attempted
     succeeded; whether anything is *wrong* is the question `check` exists for.
 
-    Both sets were reachable and only one was printed. What differs and needs a
-    person was rendered as bare rows with no heading, so it read as a continuation of
-    whatever provider had acted last. What nothing could measure was rendered nowhere
-    at all.
+    Both sets are reachable and both get a heading. Bare rows without one read as a
+    continuation of whatever provider acted last, and a set with no renderer at all
+    is a part of the machine the run passed over in silence.
 
     Measured 2026-08-13 on the work box: an `apply --offline` planned twelve package
     items, acted on one, and said nothing whatsoever about the eleven it had declined
     because the staged bundle carried no version to compare them against. Each of
     those eleven already held the sentence explaining itself — `packages._unmeasurable`
-    composes it, and `plan` prints it — so this is a renderer that was missing rather
-    than a diagnosis that was.
+    composes it, and `plan` prints it — so the gap this closes is a renderer rather
+    than a diagnosis.
 
     Neither carries a verdict mark, and that is the point of `NOTICE_MARK`: one is
     real drift a person has to deal with and the other is an absence of evidence, so

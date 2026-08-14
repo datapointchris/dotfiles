@@ -103,7 +103,7 @@ def test_emit_text_adds_nothing_of_its_own(capsys: pytest.CaptureFixture) -> Non
 def test_a_resource_row_is_the_answer_so_it_goes_to_stdout(capsys: pytest.CaptureFixture) -> None:
     """`render_result` is the non-`--json` rendering of what `check` and `plan`
     answer, so it belongs on the channel `--json` owns rather than beside it."""
-    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'))
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'), output.console)
 
     written = capsys.readouterr()
     assert 'packages' in written.out
@@ -209,7 +209,7 @@ def test_quiet_drops_the_evidence_and_keeps_the_verdict(capsys: pytest.CaptureFi
     output.render_section('packages', 'everything installed from a package manager')
     assert capsys.readouterr().err == ''
 
-    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'))
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'), output.console)
     assert 'packages' in capsys.readouterr().out
 
     logging.choose_console()
@@ -232,9 +232,9 @@ def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) 
     """The whole reason there are two consoles. A diagnostic on stdout is
     indistinguishable from data to the caller parsing it.
 
-    `render_section` is here in `heading`'s place, and carries more than it did: an
-    `apply` closes on this stream too now, so every human line that verb prints is
-    on the side its `--json` document is not."""
+    `render_section` is in the list because an `apply`'s whole human report goes to
+    this stream, its closing line included — so every line that verb prints is on
+    the side its `--json` document is not."""
     render('something happened')
 
     written = capsys.readouterr()
@@ -245,7 +245,9 @@ def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) 
 def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture) -> None:
     """`ResourceResult` carried these since it was written and no row ever showed
     them, so "converged" meant whatever the reader assumed."""
-    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 differ', pending=4, privileged=2))
+    output.render_result(
+        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 differ', pending=4, privileged=2), output.console
+    )
 
     written = capsys.readouterr().out
     assert '2 need a password' in written
@@ -258,7 +260,7 @@ def test_a_plan_row_words_the_other_half_as_the_other_verb_owns_it(capsys: pytes
     with itself."""
     result = ResourceResult(address='auth', verdict=ResourceVerdict.CONVERGED, detail='3 of 7 authenticated', lens=Lens.PLAN, attention=4)
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     written = capsys.readouterr().out
     assert '4 need a person' in written
@@ -271,7 +273,7 @@ def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixtur
     answer, so on this side it is named as the difference it is."""
     result = ResourceResult(address='packages', verdict=ResourceVerdict.CONVERGED, detail='all installed', lens=Lens.CHECK, pending=3)
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     assert '3 differ' in capsys.readouterr().out
 
@@ -281,12 +283,14 @@ def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureF
     names them, and a `plan` drift row is made of what it would change. Either
     count beside its own sentence is the sentence twice."""
     output.render_result(
-        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4)
+        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4),
+        output.console,
     )
     assert '·' not in capsys.readouterr().out
 
     output.render_result(
-        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 item(s) differ', lens=Lens.PLAN, pending=4)
+        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 item(s) differ', lens=Lens.PLAN, pending=4),
+        output.console,
     )
     assert '·' not in capsys.readouterr().out
 
@@ -294,7 +298,7 @@ def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureF
 def test_a_clean_row_shows_no_counts_at_all(capsys: pytest.CaptureFixture) -> None:
     """Four noughts on every line of a healthy machine is the pages of output this
     is trying not to become."""
-    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 172 deployed'))
+    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 172 deployed'), output.console)
 
     written = capsys.readouterr().out
     assert 'all 172 deployed' in written
@@ -317,7 +321,8 @@ def test_an_unmeasurable_count_survives_the_wording_rules(capsys: pytest.Capture
     output.render_result(
         ResourceResult(
             address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4, unmeasured=1
-        )
+        ),
+        output.console,
     )
 
     assert '1 unmeasured' in capsys.readouterr().out
@@ -335,7 +340,7 @@ def test_the_evidence_is_printed_under_the_verdict_it_belongs_to(capsys: pytest.
         address='auth', verdict=ResourceVerdict.ISSUE, detail='1 item(s) need a person', lens=Lens.CHECK, findings=(finding,)
     )
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     written = capsys.readouterr()
     assert 'auth' in written.out
@@ -352,7 +357,7 @@ def test_a_small_resource_names_its_items_rather_than_counting_them(capsys: pyte
         examined=(Examined('toolchain/go', '1.25.0'), Examined('toolchain/uv', '0.9.2')),
     )
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     written = capsys.readouterr().err
     assert 'toolchain/go' in written
@@ -370,12 +375,12 @@ def test_a_large_resource_keeps_its_count_until_verbose_asks(capsys: pytest.Capt
         examined=tuple(Examined(f'configs/file{index}', '~/.config') for index in range(output.LISTED_MAX + 1)),
     )
 
-    output.render_result(result)
+    output.render_result(result, output.console)
     assert capsys.readouterr().err == ''
 
     logging.choose_console(verbose=1)
     try:
-        output.render_result(result)
+        output.render_result(result, output.console)
     finally:
         logging.choose_console()
 
@@ -469,7 +474,7 @@ def test_the_verdict_survives_quiet(capsys: pytest.CaptureFixture) -> None:
     exit code alone is a worse command rather than a quieter one."""
     logging.choose_console(quiet=True)
     try:
-        output.render_result(ResourceResult('packages', ResourceVerdict.CONVERGED, 'all installed'))
+        output.render_result(ResourceResult('packages', ResourceVerdict.CONVERGED, 'all installed'), output.console)
     finally:
         logging.choose_console()
 
@@ -480,7 +485,7 @@ def test_the_section_heading_is_the_resource_name_not_its_verdict(capsys: pytest
     """Spelled out on every section, `converged` was the word nine deep down the
     one column a reader scans for the name of the thing. The verdict is a mark
     here and the word appears once, on the closing line."""
-    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.CONVERGED, detail='all 96 installed'))
+    output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.CONVERGED, detail='all 96 installed'), output.console)
 
     written = capsys.readouterr().out
     assert 'converged' not in written
@@ -498,7 +503,7 @@ def test_a_section_ends_with_a_blank_line(capsys: pytest.CaptureFixture) -> None
     """Nine sections run together read as one list of rows rather than as nine
     answers. After rather than before, so the closing line sits below a gap too and
     nothing has to remember whether it is first."""
-    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 173 deployed'))
+    output.render_result(ResourceResult(address='symlinks', verdict=ResourceVerdict.CONVERGED, detail='all 173 deployed'), output.console)
 
     assert capsys.readouterr().out.endswith('\n\n')
 
@@ -515,7 +520,7 @@ def test_a_summary_with_two_sentences_aligns_the_second_and_carries_the_counts(c
         unmeasured=1,
     )
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     first, second, *_ = capsys.readouterr().out.splitlines()
     assert '·' not in first
@@ -537,7 +542,7 @@ def test_a_group_small_enough_to_read_lists_while_its_neighbour_stays_a_count(ca
         ),
     )
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     written = capsys.readouterr().err
     assert 'group/docker' in written
@@ -550,7 +555,7 @@ def test_a_section_widens_its_subject_column_to_the_longest_item_in_it(capsys: p
     rows = (Examined('shell-plugin/zsh-syntax-highlighting', 'cloned'), Examined('tpm/tpm', 'cloned'))
     result = ResourceResult(address='plugins', verdict=ResourceVerdict.CONVERGED, detail='all present', examined=rows)
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     long, short = (line for line in capsys.readouterr().err.splitlines() if 'cloned' in line)
     assert long.index('cloned') == short.index('cloned')
@@ -562,7 +567,7 @@ def test_the_subject_column_stops_widening_for_one_very_long_item(capsys: pytest
     rows = (Examined('a' * 200, 'here'), Examined('tpm/tpm', 'here'))
     result = ResourceResult(address='plugins', verdict=ResourceVerdict.CONVERGED, detail='all present', examined=rows)
 
-    output.render_result(result)
+    output.render_result(result, output.console)
 
     short = next(line for line in capsys.readouterr().err.splitlines() if line.strip().startswith('matched') and 'tpm' in line)
     columns = (output.EVIDENCE_INDENT, ' ' * output.VERDICT_COLUMN, ' ', ' ' * output.SUBJECT_CEILING, ' ')

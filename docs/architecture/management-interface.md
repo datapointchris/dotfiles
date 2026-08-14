@@ -98,14 +98,21 @@ halves were true — apply has nothing to do here, and four tools are logged out
 non-zero count, which is a declared package merely absent, so it reads `3 differ`. Neither
 verb ever restates its own answer as a count beside the sentence that already gave it.
 
-**`apply` closes in the same grammar, and that took the longest to arrive.** The write
-verb had four renderings of its own — a full-width rule naming the machine, a bold blue
-line at column 0 above each group of work, a bare warning for a resource that refused,
-and a second rule for the verdict — so the run a person watches longest ended in the one
-line of the report that answered least. It measures in sections now, acts in sections,
-names the two sets it walks past as sections, and closes on the same
-`{verdict} {sentence}` the read verbs do, carrying what changed, what needs a person,
-what nothing could measure, and the verb that owns each.
+**`apply` closes in the same grammar.** It measures in sections, acts in sections, names
+the two sets it walks past as sections, and closes on the same `{verdict} {sentence}` the
+read verbs do — carrying what changed, what needs a person, what nothing could measure,
+and the verb that owns each. A write verb with renderings of its own instead — a
+full-width rule naming the machine, a line at column 0 above each group of work, a bare
+warning for a resource that refused, a second rule for the verdict — ends the run a
+person watches longest in the line of the report that answers least.
+
+**That closing line ends a run that measured something, and only that.** An `apply` that
+refuses before the walk — nothing selected, a machine that will not resolve, `--offline`
+with no bundle to install from — has no counts to compose one from, so it closes on the
+refusal shape every other door in the tool uses: `✗` and the sentence, with the advice
+hung under it. Two shapes, one saying what the machine became and one saying why the run
+never started, and nothing left in a third. The declaration gate is on the first side: it
+measured the declaration, and closes on that row's verdict.
 
 Its whole human report goes to **stderr**, the closing line included, where a read verb
 puts its headings on stdout and its evidence on stderr. The split is right for a read —
