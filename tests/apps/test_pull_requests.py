@@ -1,8 +1,8 @@
-"""`pr-list` is the one query behind `prs`, `fleet prs` and doit's PRS lane.
+"""`pull-requests` is the one query behind `prs`, `fleet prs` and doit's PRS lane.
 
 The seam is the provider CLI, shadowed on PATH, because nothing else here is
-worth asserting: the jq is short and the interesting failures are all about a
-*response shape*. Three of them are real and none would show up as an error.
+worth asserting: the mapping is short and the interesting failures are all about
+a *response shape*. Three of them are real and none would show up as an error.
 
 GitHub's is asked for over GraphQL rather than `gh search prs`, whose field set
 has no `headRefName` — so the response arrives under `.data.search.nodes` and a
@@ -11,7 +11,7 @@ Bitbucket's arrives from a Server API that spells a branch `fromRef.displayId`,
 which shares no key with GitHub's. Both are mapped to one provider-neutral field
 here so no consumer sees either spelling, and that mapping is what these pin.
 
-Run with: pytest tests/apps/test_pr_list.py
+Run with: pytest tests/apps/test_pull_requests.py
 """
 
 from __future__ import annotations
@@ -26,7 +26,10 @@ from typing import Any
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-PR_LIST = REPO / 'apps' / 'common' / 'pr-list'
+PULL_REQUESTS = REPO / 'apps' / 'common' / 'pull-requests'
+
+# Read at import, while HOME is still the real one. See the `run` fixture.
+UV_CACHE = os.environ.get('UV_CACHE_DIR') or str(Path.home() / '.cache' / 'uv')
 
 
 def stub(directory: Path, name: str, script: str) -> None:
@@ -60,6 +63,16 @@ def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **over
         'baseRefName': base,
         'isDraft': False,
         'createdAt': '2026-08-01T10:00:00Z',
+        # Every field the query asks for, present on every node, because GitHub
+        # answers a request for a field. Leaving one out here models a response
+        # the API does not send, and reading it back leniently would hide a query
+        # that had stopped asking.
+        'body': f'what {repo} #{number} changes',
+        'additions': 12,
+        'deletions': 4,
+        'changedFiles': 2,
+        'reviewDecision': None,
+        'commits': {'nodes': [{'commit': {'statusCheckRollup': None}}]},
         'repository': {'name': repo, 'nameWithOwner': f'datapointchris/{repo}'},
     }
     return node | overrides
@@ -67,12 +80,14 @@ def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **over
 
 @pytest.fixture
 def run(tmp_path: Path):
-    """Invoke pr-list against a synthetic registry and a stubbed provider CLI.
+    """Invoke pull-requests against a synthetic registry and a stubbed provider CLI.
 
-    The real PATH stays behind the stub dir so jq is the real one — the jq is
-    most of what is under test, and a fake would assert nothing about it. It is
-    inherited rather than spelled out because jq is a brew package on macOS and
-    so is on neither /usr/bin nor /bin there.
+    The real PATH stays behind the stub dir so the shell can still find `uv`,
+    which the shebang runs the script under.
+
+    UV_CACHE_DIR is passed through because HOME is a throwaway here. uv hangs its
+    cache off HOME, so without this every test resolves dependencies again — and
+    on a machine with no network, fails.
     """
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
@@ -83,10 +98,14 @@ def run(tmp_path: Path):
         path = tmp_path / 'repos.json'
         path.write_text(json.dumps(repos))
         return subprocess.run(
-            [str(PR_LIST), '--registry', str(path)],
+            [str(PULL_REQUESTS), '--registry', str(path)],
             capture_output=True,
             text=True,
-            env={'HOME': str(tmp_path), 'PATH': f'{bin_dir}:{os.environ["PATH"]}'},
+            env={
+                'HOME': str(tmp_path),
+                'PATH': f'{bin_dir}:{os.environ["PATH"]}',
+                'UV_CACHE_DIR': UV_CACHE,
+            },
         )
 
     return _run

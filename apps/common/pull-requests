@@ -1,0 +1,337 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = []
+# ///
+"""Every open PR you have, across the repos the registry names, as JSON.
+
+    pull-requests [--registry PATH]
+
+The one implementation, and it prints JSON and nothing else. `prs` renders it as
+a picker and doit's dashboard adapter renders it as a lane — two consumers that
+want the same answer and disagree completely about how it should look, which is
+why neither shape lives here.
+
+Lives in dotfiles rather than in fleet because fleet is not installed on every
+machine and this has to be. The registry is: repos.json says which repos exist
+and `provider` says who hosts them, so the same command answers on a box where
+that is GitHub and one where it is Bitbucket.
+
+Grouped by provider, one bulk query per provider that has one. GitHub does, so a
+79-repo registry still costs a single API call rather than 79. A provider without
+a bulk search falls back to per-repo, which is why bbkt is a loop.
+
+Output is a JSON array, one object per PR, sorted oldest first — the backlog is a
+gauge and age is what it measures.
+
+`gh` and `bbkt` are shelled out to rather than replaced with an HTTP client. They
+hold the credentials, and reimplementing device-flow auth to save a subprocess is
+a trade nobody wants.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+# GraphQL rather than `gh search prs`, whose field set has no headRefName or
+# baseRefName — the branch is simply unreachable through it, and appending the
+# flag fails with "Unknown JSON field". The alternative was `gh pr list --json
+# headRefName` per repo, which reads better and costs one request per repo; that
+# is the fan-out the bulk search exists to avoid. This keeps the single call.
+GITHUB_SEARCH = """
+{
+  search(query: "author:@me is:pr is:open", type: ISSUE, first: 100) {
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        body
+        url
+        headRefName
+        baseRefName
+        isDraft
+        createdAt
+        additions
+        deletions
+        changedFiles
+        reviewDecision
+        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+        repository { name nameWithOwner }
+      }
+    }
+  }
+}"""
+
+
+@dataclass(frozen=True)
+class Repo:
+    """One active registry entry, for the provider being asked."""
+
+    name: str
+    slug: str
+    path: Path
+
+
+def warn(message: str) -> None:
+    print(f'pull-requests: {message}', file=sys.stderr)
+
+
+def die(message: str) -> int:
+    warn(message)
+    return 1
+
+
+def resolve_registry(override: str | None) -> Path:
+    """The registry this machine names, unless the caller named one.
+
+    Resolved after the flags so `--registry` wins without `repos-registry`
+    having to be satisfiable first — it exits non-zero with its own message when
+    nothing on the machine names a registry.
+    """
+    if override:
+        return Path(override)
+    found = subprocess.run(['repos-registry'], capture_output=True, text=True, check=True)
+    return Path(found.stdout.strip())
+
+
+def expand(path: str) -> Path:
+    """`~` only counts at the start. A tilde inside a path is a literal one."""
+    return Path(f'{Path.home()}{path[1:]}' if path.startswith('~') else path)
+
+
+def load_repos(registry: Path, provider: str) -> list[Repo]:
+    """Active repos this provider hosts.
+
+    `status` is matched plainly rather than defaulted. Supplying a default here
+    is what let the readers disagree: this one and fleet counted an entry with no
+    status, indy and relate dropped it, and every list looked plausible. The
+    registry repo rejects an entry without one at commit time.
+
+    `owner` is read the same way, and for the same reason — a reader that
+    defaults a field it filters on is wrong even when it defaults correctly.
+
+    Per-repo provider wins over the file's, for a registry that mixes hosts.
+    """
+    document = json.loads(registry.read_text())
+    default = document.get('provider', 'github')
+    repos = []
+    for entry in document['repos']:
+        if entry['status'] != 'active' or entry.get('provider', default) != provider:
+            continue
+        repos.append(
+            Repo(
+                name=entry['name'],
+                slug=f'{entry["owner"]}/{entry["name"]}',
+                path=expand(entry['path']),
+            )
+        )
+    return repos
+
+
+def registry_paths(registry: Path) -> dict[str, Path]:
+    """name → expanded path for every active repo, so a PR can be opened locally."""
+    document = json.loads(registry.read_text())
+    return {entry['name']: expand(entry['path']) for entry in document['repos'] if entry['status'] == 'active'}
+
+
+def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
+    """One search for everything you authored, then keep what the registry names.
+
+    Searching by author rather than per repo is what makes this one call;
+    filtering afterwards is what keeps it honest about scope.
+
+    The filter matches `owner/name` against `nameWithOwner`, never the basename.
+    This search covers all of GitHub, so a PR you authored upstream in a project
+    that happens to share a name with one of yours — `crate-ci/typos` against the
+    registry's `typos` — passed a basename filter and then took your clone's
+    path, which `prs` fetched a pull ref from. Being a contributor elsewhere is
+    enough to hit it; a fork is not required.
+    """
+    if not repos:
+        return []
+    if not shutil.which('gh'):
+        warn('gh is not installed; skipping GitHub repos')
+        return []
+
+    found = subprocess.run(
+        ['gh', 'api', 'graphql', '-f', f'query={GITHUB_SEARCH}'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if found.returncode != 0:
+        first_line = (found.stderr or found.stdout).strip().splitlines()
+        warn(f"gh could not list PRs (check 'gh auth status'): {first_line[0] if first_line else ''}")
+        return []
+
+    wanted = {repo.slug for repo in repos}
+    prs = []
+    # `type: ISSUE` searches issues and PRs from one index, so a node the inline
+    # fragment does not match arrives as `{}`. `is:pr` should prevent it; without
+    # the guard one would emit a row of nulls, and a null number is a hard
+    # unmarshal failure in fleet rather than a visibly empty row.
+    for node in json.loads(found.stdout)['data']['search']['nodes']:
+        if node.get('number') is None or node['repository']['nameWithOwner'] not in wanted:
+            continue
+        rollup = node['commits']['nodes']
+        prs.append(
+            {
+                # The forge that hosts it. Every action but the local diff has
+                # to dispatch on this, and inferring it from the slug's shape
+                # would be a guess.
+                'provider': 'github',
+                'repo': node['repository']['name'],
+                'slug': node['repository']['nameWithOwner'],
+                'number': node['number'],
+                'title': node['title'],
+                'body': node['body'] or '',
+                'url': node['url'],
+                'branch': node['headRefName'],
+                'base': node['baseRefName'],
+                'draft': node['isDraft'],
+                'created_at': node['createdAt'],
+                'additions': node['additions'],
+                'deletions': node['deletions'],
+                'changed_files': node['changedFiles'],
+                # "" rather than None for both, so a consumer formats one absent
+                # shape rather than two. GitHub reports no decision at all until a
+                # review is requested, and no rollup until a workflow runs.
+                'review': node['reviewDecision'] or '',
+                'checks': (rollup[0]['commit']['statusCheckRollup'] or {}).get('state', '') if rollup else '',
+            }
+        )
+    return prs
+
+
+def from_bitbucket(repos: list[Repo]) -> list[dict[str, Any]]:
+    """bbkt is repo-scoped, so this is a loop by necessity rather than by choice.
+
+    It runs in each checkout because that is how bbkt resolves the repo.
+    """
+    if not repos:
+        return []
+    if not shutil.which('bbkt'):
+        warn('bbkt is not installed; skipping Bitbucket repos')
+        return []
+
+    prs = []
+    for repo in repos:
+        if not repo.path.is_dir():
+            continue
+        found = subprocess.run(
+            ['bbkt', 'pr', 'list', '--json'],
+            cwd=repo.path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if found.returncode != 0:
+            warn(f'bbkt could not list PRs in {repo.name}')
+            continue
+        prs.extend(bitbucket_rows(repo.name, json.loads(found.stdout)))
+    return prs
+
+
+def bitbucket_rows(repo: str, payload: Any) -> list[dict[str, Any]]:
+    """bbkt's own field names, mapped once here so no consumer sees them."""
+    rows = payload if isinstance(payload, list) else payload.get('values') or payload.get('pull_requests') or []
+    return [
+        {
+            'provider': 'bitbucket',
+            'repo': repo,
+            'slug': repo,
+            'number': row.get('id') or row.get('number'),
+            'title': row['title'],
+            'body': row.get('description') or '',
+            'url': (row.get('links', {}).get('self') or [{}])[0].get('href') or row.get('url') or '',
+            'branch': dig(row, 'fromRef.displayId') or dig(row, 'source.branch.name') or '',
+            'base': dig(row, 'toRef.displayId') or dig(row, 'destination.branch.name') or '',
+            'draft': row.get('draft', False),
+            'created_at': bitbucket_timestamp(row),
+            # None, never 0. The bbkt listing carries no diff stats, and a zero
+            # would render as a PR that changed nothing rather than one nobody
+            # counted.
+            'additions': None,
+            'deletions': None,
+            'changed_files': None,
+            'review': '',
+            'checks': '',
+        }
+        for row in rows
+    ]
+
+
+def dig(row: dict[str, Any], dotted: str) -> Any:
+    value: Any = row
+    for key in dotted.split('.'):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def bitbucket_timestamp(row: dict[str, Any]) -> str:
+    created = row.get('createdDate')
+    if isinstance(created, int | float):
+        return dt.datetime.fromtimestamp(created / 1000, tz=dt.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+    return row.get('created_at') or created or ''
+
+
+def age_days(created_at: str, *, now: dt.datetime) -> int:
+    if not created_at:
+        return 0
+    created = dt.datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    return int((now - created).total_seconds() // 86400)
+
+
+def finalise(prs: list[dict[str, Any]], paths: dict[str, Path], *, now: dt.datetime) -> list[dict[str, Any]]:
+    """Age and local path added, oldest first. Pure, so the sort is testable."""
+    for pr in prs:
+        pr['age_days'] = age_days(pr['created_at'], now=now)
+        pr['path'] = str(paths.get(pr['repo'], ''))
+    return sorted(prs, key=lambda pr: pr['created_at'])
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog='pull-requests',
+        description="Print every open PR across the registry's repos as JSON, oldest first.",
+        epilog=(
+            'Each object: repo, slug, number, title, url, branch, base, draft, created_at, age_days, '
+            'path, additions, deletions, changed_files, review, checks. The three diff counts are null '
+            'from a provider that does not report them; review and checks are empty until something '
+            'has reviewed or run.'
+        ),
+    )
+    parser.add_argument('--registry', help='read this registry instead of the one this machine names')
+    arguments = parser.parse_args()
+
+    try:
+        registry = resolve_registry(arguments.registry)
+    except subprocess.CalledProcessError:
+        return 1
+    if not registry.is_file():
+        return die(f'no registry at {registry}')
+
+    now = dt.datetime.now(tz=dt.UTC)
+    prs = finalise(
+        from_github(load_repos(registry, 'github')) + from_bitbucket(load_repos(registry, 'bitbucket')),
+        registry_paths(registry),
+        now=now,
+    )
+    # ensure_ascii=False. The default escapes non-ASCII, so a title with an em
+    # dash in it goes out as \u2014 and every consumer has to undo that.
+    print(json.dumps(prs, indent=2, ensure_ascii=False))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
