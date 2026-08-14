@@ -1,0 +1,14 @@
+#!/bin/sh
+# Stub Bitbucket. Server-API spelling on purpose: `fromRef.displayId` shares no
+# key with GitHub's `headRefName`, and it reports no diff stats at all, which is
+# what puts a dash in the DIFF column rather than a false `+0 -0`.
+cat <<'JSON'
+{"values":[
+ {"id":233,"title":"Swap the nightly reconcile onto Polars",
+  "description":"Replaces the pandas reconcile with Polars.\n\nRuns in 40s against 22 minutes on the same input. Memory peaks at 1.8G\nrather than 14G, so it fits the Fargate task we already pay for.\n\nStill to check: the decimal rounding on the settlement column, which\npandas and Polars disagree about at the third place.",
+  "fromRef":{"displayId":"polars-reconcile"},
+  "toRef":{"displayId":"develop"},
+  "createdDate":1753440000000,
+  "links":{"self":[{"href":"https://bitbucket.example/pr/233"}]}}
+]}
+JSON

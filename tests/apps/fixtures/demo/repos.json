@@ -1,0 +1,11 @@
+{
+  "provider": "github",
+  "repos": [
+    {"name": "doit",        "owner": "datapointchris", "path": "~/tools/doit",    "status": "active"},
+    {"name": "dotfiles",    "owner": "datapointchris", "path": "~/dotfiles",      "status": "active"},
+    {"name": "forge",       "owner": "datapointchris", "path": "~/tools/forge",   "status": "active"},
+    {"name": "safekeep",    "owner": "datapointchris", "path": "~/tools/safekeep","status": "active"},
+    {"name": "typos",       "owner": "datapointchris", "path": "~/code/typos",    "status": "active"},
+    {"name": "internal-etl","owner": "work",           "path": "/tmp",            "status": "active", "provider": "bitbucket"}
+  ]
+}

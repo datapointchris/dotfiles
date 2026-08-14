@@ -1,0 +1,67 @@
+#!/bin/sh
+# Stub GitHub, standing in for the real `gh api graphql` call.
+#
+# Covers every shape the renderer has to survive: a stack, a draft, a `{}` node
+# the PullRequest fragment did not match, a PR authored in an upstream repo that
+# shares a basename with one of yours, checks in each state, and a review in each
+# state. Ages are relative to nothing — `created_at` is fixed, so the AGE column
+# grows as this fixture gets older, which is what makes the colour thresholds
+# visible without editing anything.
+cat <<'JSON'
+{"data":{"search":{"nodes":[
+ {},
+ {"number":7,"body":"Teaches the planning die to migrate a real directory into a symlink.\n\nRefuses when the copy has diverged from what is already synced, because\nsilently picking a winner there loses whichever side it does not pick.\n\n- [x] migrate a plain directory\n- [x] refuse a diverged copy\n- [ ] a --force that names what it would overwrite","title":"Teach the planning die to migrate a diverged copy",
+  "url":"https://github.com/datapointchris/forge/pull/7",
+  "headRefName":"planning-die-migrate","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-08-13T08:00:00Z",
+  "additions":8,"deletions":3,"changedFiles":2,
+  "reviewDecision":"REVIEW_REQUIRED",
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":null}}]},
+  "repository":{"name":"forge","nameWithOwner":"datapointchris/forge"}},
+
+ {"number":118,"body":"Adds a ninth collection to the federated index: the zsh keys your config\nbinds that a stock zsh does not.\n\nAsked of zsh rather than read out of the config files, because fzf and\natuin bind their widgets when they load — so the keys most worth finding\nappear in no file this repo could parse.\n\nDiffed against `zsh -f` so the filter needs no denylist.","title":"Add a zsh keybinding lens to the federated index",
+  "url":"https://github.com/datapointchris/doit/pull/118",
+  "headRefName":"zsh-lens","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-08-09T10:00:00Z",
+  "additions":319,"deletions":14,"changedFiles":7,
+  "reviewDecision":"APPROVED",
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
+  "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
+
+ {"number":119,"body":"Draft. Expands each index row through a synonym table so a query that\nreaches for a different word still finds the row.\n\nMeasured: synonym queries miss 65.5% of the time today. Every family\nbuilt from a row's own words misses zero.\n\nOpen question in the description: whether the harness vocabulary and the\nindex vocabulary have to be held apart to keep the measurement honest.","title":"Expand index rows through a synonym table",
+  "url":"https://github.com/datapointchris/doit/pull/119",
+  "headRefName":"synonym-expansion","baseRefName":"zsh-lens","isDraft":true,
+  "createdAt":"2026-08-12T10:00:00Z",
+  "additions":1204,"deletions":386,"changedFiles":23,
+  "reviewDecision":null,
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"PENDING"}}}]},
+  "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
+
+ {"number":41,"body":"`prs` treated an empty inbox as a failure — exit 1, message on stderr.\n\nIt runs as `display-popup -E`, which tears the popup down the instant the\ncommand exits, so the message flashed past and the keybinding read as dead.\n\nNow exits 0 and holds for a keypress when it has a terminal.","title":"Report an empty PR inbox instead of failing",
+  "url":"https://github.com/datapointchris/dotfiles/pull/41",
+  "headRefName":"prs-empty-state","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-08-01T10:00:00Z",
+  "additions":25,"deletions":2,"changedFiles":1,
+  "reviewDecision":"CHANGES_REQUESTED",
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"FAILURE"}}}]},
+  "repository":{"name":"dotfiles","nameWithOwner":"datapointchris/dotfiles"}},
+
+ {"number":3,"body":"Hard-links unchanged files between snapshots instead of copying them.\n\nCuts a full snapshot of the media tree from 94G to 3G on the second run.\n\nNeeds review on the restore path: a hard-linked tree restores correctly\nbut `--verify` walks every link and is much slower than it needs to be.","title":"Hard-link unchanged files between snapshots",
+  "url":"https://github.com/datapointchris/safekeep/pull/3",
+  "headRefName":"hardlink-snapshots","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-07-14T09:00:00Z",
+  "additions":76,"deletions":941,"changedFiles":12,
+  "reviewDecision":"APPROVED",
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
+  "repository":{"name":"safekeep","nameWithOwner":"datapointchris/safekeep"}},
+
+ {"number":1188,"body":"Upstream contribution. Should never appear in your list.","title":"Upstream work that must never appear in your list",
+  "url":"https://github.com/crate-ci/typos/pull/1188",
+  "headRefName":"upstream-branch","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-06-01T09:00:00Z",
+  "additions":3,"deletions":1,"changedFiles":1,
+  "reviewDecision":null,
+  "commits":{"nodes":[]},
+  "repository":{"name":"typos","nameWithOwner":"crate-ci/typos"}}
+]}}}
+JSON
