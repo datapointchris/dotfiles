@@ -21,4 +21,4 @@ repos_registry: ~/.local/share/terminal-library-fleet/repos.json
 # uses the manifest embedded in its own binary, so a bump means cutting a
 # release — which is why the fleet declares one and a machine without this key
 # still works.
-versions_file: ~/.local/share/terminal-library-fleet/standards/versions.json
+versions_file: ~/.local/share/terminal-library-fleet/versions.json
