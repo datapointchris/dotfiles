@@ -706,7 +706,7 @@ function commithelp() {
 }
 
 #@layers
-#--> Browse ZMK keyboard layers — pick from fzf, render SVG
+#--> Render ZMK keyboard layers: no argument picks one, a name draws it, "all" draws every layer
 function layers() {
   local keymap_yaml="${KEYMAP_YAML:-$HOME/code/zmk/corne42/corne_keymap.yaml}"
   if [[ ! -f "$keymap_yaml" ]]; then
@@ -715,20 +715,41 @@ function layers() {
     return 1
   fi
 
-  local layer
-  layer=$(yq '.layers | keys | sort | .[]' "$keymap_yaml" | tr -d '"' \
-    | gum choose --header="Select a keyboard layer")
-  [[ -z "$layer" ]] && return 0
-
   # Without -c this renders with keymap-drawer's defaults, which are white keys
   # and black legends — the repo's own dark palette never reaches the terminal.
   # The config sits beside the yaml, so it is found for any board.
   local drawer_config="${keymap_yaml%/*}/keymap_drawer.config.yaml"
-  local draw_args=(draw "$keymap_yaml" -s "$layer")
+  local draw_args=(draw "$keymap_yaml")
   [[ -f "$drawer_config" ]] && draw_args=(-c "$drawer_config" "${draw_args[@]}")
 
-  keymap "${draw_args[@]}" 2>/dev/null \
-    | chafa --size "${COLUMNS:-120}x${LINES:-40}" -
+  local available
+  available=$(yq '.layers | keys | sort | .[]' "$keymap_yaml" | tr -d '"')
+
+  local requested="${1:-}"
+
+  # Every layer stacked is roughly three times taller than it is wide, so it
+  # fits the width and scrolls. Constraining the height instead shrinks it to a
+  # quarter of the terminal's width and the legends stop being readable.
+  if [[ "$requested" == "all" ]]; then
+    keymap "${draw_args[@]}" 2>/dev/null | chafa --fit-width -
+    return
+  fi
+
+  local layer
+  if [[ -n "$requested" ]]; then
+    layer=$(echo "$requested" | tr '[:lower:]' '[:upper:]')
+    if ! echo "$available" | grep -qx "$layer"; then
+      echo "No layer '$requested' in $keymap_yaml" >&2
+      echo "Available: $(echo "$available" | tr '\n' ' ')all" >&2
+      return 1
+    fi
+  else
+    layer=$(echo "$available" | gum choose --header="Select a keyboard layer")
+    [[ -z "$layer" ]] && return 0
+  fi
+
+  draw_args+=(-s "$layer")
+  keymap "${draw_args[@]}" 2>/dev/null | chafa --fit-width -
 }
 
 #@yt-transcript
