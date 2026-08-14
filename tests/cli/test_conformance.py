@@ -336,3 +336,86 @@ def test_no_leaf_hands_typer_exit_an_integer_from_somewhere_else() -> None:
 def test_the_exit_scan_finds_the_calls_it_is_asserting_about() -> None:
     """Guards the test above: a walk that finds nothing passes vacuously."""
     assert len(exit_arguments()) > 30
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# No report draws its own section heading
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+HEADING_GEOMETRY = ('ADDRESS_COLUMN', 'VERDICT_WIDTH')
+"""The two widths that lay out a report's own lines: a section heading's name
+column, and the closing line's verdict word.
+
+Distinct from `VERDICT_COLUMN` and `SUBJECT_COLUMN`, which are an evidence *row*'s
+and are imported wherever a command renders rows — `commands/resources.py` sets its
+own rows in them deliberately. These two belong to `output.section_line` and
+`output.render_verdict`, which are the only two functions that lay out those lines.
+"""
+
+
+def heading_layouts() -> list[tuple[str, int]]:
+    """Every f-string in the package that puts a padded name behind a bold tag.
+
+    The shape a section heading is: rich's `[bold]`, then the name of the thing,
+    padded so the detail after it starts in one column. Matched on the pair rather
+    than on either half, because a bold field alone is a title and a padded field
+    alone is a row, and neither is what this asserts about.
+    """
+    found = []
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.JoinedStr):
+                continue
+            for left, right in zip(node.values, node.values[1:], strict=False):
+                bold = isinstance(left, ast.Constant) and str(left.value).endswith('[bold]')
+                padded = isinstance(right, ast.FormattedValue) and right.format_spec is not None and '<' in ast.unparse(right.format_spec)
+                if bold and padded:
+                    found.append((path.name, node.lineno))
+    return found
+
+
+def files_naming(constants: tuple[str, ...]) -> set[str]:
+    """Which files in the package reference any of these names."""
+    return {
+        path.name
+        for path in SOURCE
+        for node in ast.walk(ast.parse(path.read_text()))
+        if isinstance(node, ast.Name | ast.Attribute) and ast.unparse(node).split('.')[-1] in constants
+    }
+
+
+def test_one_function_lays_out_every_section_heading() -> None:
+    """The invariant the shared renderer created, which its own tests do not assert.
+
+    Four reports open a section — a read verb's resource row, an `apply`'s measure
+    pass, the line above each group of work, and `machines show`'s groups — and
+    while each laid out its own, a fifth one's disagreement stood beside four
+    siblings getting it right. `output.section_line` is the one builder for all of
+    them, which removes that redundancy and puts nothing in its place: a report
+    written next can lay out a heading of its own, land in a column no other report
+    uses, and leave the suite green.
+
+    The bound is the shape rather than the intent: a heading built without `[bold]`,
+    or with a width computed some other way, is not caught here. What is caught is
+    the one a person writes by copying a line that already looks right, which is how
+    all four of the originals came to exist.
+    """
+    assert {where for where, _ in heading_layouts()} == {'output.py'}
+
+
+def test_the_heading_scan_finds_the_line_it_is_asserting_about() -> None:
+    """Guards the test above: a walk that matches nothing passes vacuously."""
+    assert heading_layouts()
+
+
+def test_the_heading_widths_are_named_only_where_the_heading_is_built() -> None:
+    """The other half of the same invariant, for a report that reaches the columns by
+    importing them rather than by copying a number.
+
+    A module naming either constant is laying out a heading or a closing line of its
+    own, whatever it draws it with. `machines show` and `network check` are the two
+    that most wanted to — both render a section and neither imports a width, because
+    `section_line` and `render_verdict` hand them the geometry already.
+    """
+    assert files_naming(HEADING_GEOMETRY) == {'output.py'}

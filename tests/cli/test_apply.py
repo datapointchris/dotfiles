@@ -23,6 +23,7 @@ from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
+from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
@@ -297,6 +298,8 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     measured against a real container, where `dotfiles apply` printed nothing for
     four minutes while apt unpacked 33 packages. `Output.STREAM`'s own docstring
     records the same defect from the other side.
+
+    The ordering is what is asserted; which renderer draws the section is not.
     """
     announced: list[str] = []
 
@@ -307,11 +310,11 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     monkeypatch.setenv('MACHINE', MACHINE)
     monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter((drift('ripgrep'),)))
     monkeypatch.setattr(engine, 'execute', acting)
-    monkeypatch.setattr('dotfiles.reconcile.heading', lambda text: announced.append(f'heading:{text}'))
+    monkeypatch.setattr('dotfiles.reconcile.render_section', lambda address, *args, **kwargs: announced.append(f'section:{address}'))
 
     reconcile.apply_machine(engine.Selection.everything())
 
-    assert announced == ['heading:packages', 'acted:ripgrep']
+    assert announced == ['section:packages', 'acted:ripgrep']
 
 
 def test_a_failed_write_is_an_issue(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -808,3 +811,143 @@ def test_every_gated_section_is_one_something_really_emits() -> None:
     emitted |= {'manifest', 'gitconfig', 'registry', 'auth', 'symlinks'}
 
     assert {case[0] for case in GATING} <= emitted
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# How a run closes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestTheClosingLine:
+    """`applied_line` is `verdict_line`'s counterpart for the write verb, and it is
+    the line a scheduled run and a bootstrap both end on with every row above it
+    scrolled away.
+
+    Asserted on the composed sentence rather than through a walk, because that is
+    what it is: four counts in, one line out, and every combination of them is a
+    different answer.
+    """
+
+    def test_a_run_that_repaired_everything_says_how_much(self) -> None:
+        assert reconcile.applied_line(11, [], [], []) == '11 item(s) changed'
+
+    def test_a_run_with_nothing_to_do_says_that_instead_of_counting_to_zero(self) -> None:
+        assert reconcile.applied_line(0, [], [], []) == 'nothing to change'
+
+    def test_a_failure_keeps_the_count_of_what_did_converge(self) -> None:
+        """The count is worth most on exactly this branch. Dropping it makes a run
+        that repaired eleven things and failed one read identically to a run that
+        repaired nothing and failed one, which is the defect this line exists to
+        end, surviving where it costs the reader most."""
+        line = reconcile.applied_line(11, ['claude-code'], [], [])
+
+        assert line == '11 item(s) changed; 1 item(s) did not converge: claude-code'
+
+    def test_a_run_that_repaired_nothing_and_failed_names_only_the_failure(self) -> None:
+        """No `0 item(s) changed` clause: a count of nothing is not a fact about the
+        run, and the sentence beside it already says what happened."""
+        assert reconcile.applied_line(0, ['claude-code'], [], []) == '1 item(s) did not converge: claude-code'
+
+    def test_what_needs_a_person_is_worded_as_the_verb_that_owns_it(self) -> None:
+        """`Repair.BY_HAND` is not a failure, so the clause names `check` rather than
+        counting it as work this verb did not do."""
+        deferred = [drift('atuin', Repair.BY_HAND).payload]
+
+        line = reconcile.applied_line(1, [], deferred, [])
+
+        assert line == '1 item(s) changed; 1 item(s) need a person — run: dotfiles check'
+
+    def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:
+        """The rows are gone by the time this line is read, and a hole in the run's
+        coverage that nobody can name is one nobody can go and look at."""
+        blind = [unmeasurable('doit').payload, unmeasurable('syncer').payload]
+
+        line = reconcile.applied_line(0, [], [], blind)
+
+        assert line == 'nothing to change; 2 item(s) could not be measured: doit, syncer'
+
+
+class TestARunThatNeverStarted:
+    """A refusal closes on `refusal.report`'s shape rather than on a verdict line.
+
+    The verdict line is composed from counts of what this walk decided, and a run
+    refused before the walk has none — so a verdict word in front of a sentence
+    about how the command was typed would claim a measurement nobody made.
+    """
+
+    def test_an_offline_run_with_no_bundle_refuses_rather_than_reporting_a_verdict(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-staged')
+        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+        code = reconcile.apply_machine(engine.Selection.everything(), offline=True)
+
+        written = capsys.readouterr()
+        assert code is ExitCode.ISSUE
+        assert 'offline needs a staged bundle' in written.err
+        assert 'dotfiles bundle stage PATH' in written.err
+        assert 'converged' not in written.err
+
+    def test_it_says_nothing_on_stdout_either(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        """A refusal is the branch most able to get this wrong: it is reached before
+        the walk, so nothing else on the path has had a reason to think about the
+        stream a `--json` caller is reading."""
+        monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-staged')
+        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+        reconcile.apply_machine(engine.Selection.everything(), offline=True, as_json=True)
+
+        assert capsys.readouterr().out == ''
+
+
+class TestTheDeclarationGate:
+    """The one exit that measured something without walking the machine, so it is the
+    one refusal-shaped path that closes on a verdict line instead."""
+
+    @pytest.fixture(autouse=True)
+    def broken_declaration(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        finding = validate.Finding('github_releases', validate.Severity.ERROR, 'lazygit names no asset')
+        monkeypatch.setattr(validate, 'declaration', lambda: (finding,))
+
+    def test_it_closes_on_the_verdict_the_row_already_carried(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        """One measurement, one verdict: `declaration_row` decides it, the closing
+        line reads it, and `exit_code` maps it. Spelled out at each of the three,
+        they are three answers that can disagree."""
+        walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+        code = reconcile.apply_machine(engine.Selection.everything())
+
+        written = capsys.readouterr().err
+        assert code is ExitCode.ISSUE
+        assert 'machines' in written
+        assert 'lazygit names no asset' in written
+        assert 'nothing safe to apply' in written
+
+    def test_it_says_nothing_on_stdout(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+        """The gate fires before `--json` has emitted anything, so a heading here is
+        a heading where the caller's document should be — and this is the only exit
+        from `apply` that renders a resource section at all."""
+        walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+        reconcile.apply_machine(engine.Selection.everything(), as_json=True)
+
+        assert capsys.readouterr().out == ''
+
+    def test_a_run_narrowed_past_the_fault_is_not_stopped_by_it(
+        self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        """Guards the three above: a gate that fired on every run would pass them all
+        and say nothing about which errors concern which selection."""
+        walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
+
+        code = reconcile.apply_machine(engine.Selection.of('symlinks'))
+
+        assert code is ExitCode.CONVERGED
+        assert 'nothing safe to apply' not in capsys.readouterr().err

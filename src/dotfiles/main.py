@@ -14,6 +14,8 @@ subcommand name, so declaring `--machine` on the group turns
 
 from __future__ import annotations
 
+import functools
+
 import typer
 
 from dotfiles import banner
@@ -31,10 +33,19 @@ from dotfiles.commands import network
 from dotfiles.commands import report
 from dotfiles.commands import resources
 from dotfiles.commands import staging
+from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
-from dotfiles.output import render_verdict
 from dotfiles.vocabulary import ExitCode
+
+answered = functools.partial(render_result, stream=console)
+"""A read verb's section, bound to the stream its heading belongs on.
+
+`survey` takes a one-argument callback and the stream is not the walk's to know —
+which console a heading goes to is a fact about the verb asking, and `apply` gives
+the same renderer the other one. Bound once here so both read verbs hand over the
+same thing.
+"""
 
 app = typer.Typer(
     name='dotfiles',
@@ -178,7 +189,7 @@ def plan(
         owner=owner,
         packages=frozenset(package or ()),
         offline=offline,
-        report=None if as_json else render_result,
+        report=None if as_json else answered,
     )
     results = walked.results
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
@@ -186,7 +197,7 @@ def plan(
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
-        render_verdict(results, lens)
+        reconcile.report_verdict(results, lens)
         manage.report_position(fetch_first=False)
     raise typer.Exit(reconcile.exit_code(results))
 
@@ -228,7 +239,7 @@ def check(
     when = identity.started
     sinks.open_log(identity)
     lens = reconcile.Lens.CHECK
-    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, offline=offline, report=None if as_json else render_result)
+    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, offline=offline, report=None if as_json else answered)
     results = walked.results
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
 
@@ -249,7 +260,7 @@ def check(
         # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:
-        render_verdict(results, lens)
+        reconcile.report_verdict(results, lens)
         # Read from `.git`, never fetched: this is the honest stand-in for an
         # update notice, and a notice that spends a network round trip at every
         # prompt is one that gets turned off. It reports its own age instead.

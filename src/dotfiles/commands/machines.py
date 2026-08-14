@@ -23,11 +23,13 @@ from dotfiles import validate
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
+from dotfiles.output import EVIDENCE_INDENT
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
 from dotfiles.output import error
 from dotfiles.output import hint
+from dotfiles.output import section_line
 from dotfiles.resources import env
 from dotfiles.vocabulary import ExitCode
 
@@ -142,33 +144,57 @@ def _plan(name: str, owner: str | None = None) -> resolver.Plan:
     return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
 
 
+def _section(name: str, detail: str) -> None:
+    """One group of the resolution, in the columns every report's sections use.
+
+    No mark, and that is the honest answer rather than a gap: this command resolves
+    a *declaration* and measures nothing, so there is no verdict to put in front of
+    the name. The column stays so a reader moving between this and `dotfiles plan`
+    finds each section's detail in the same place.
+
+    On stdout with the rows beneath it, unlike the reports, because here the
+    listing is the answer and `--json` carries the same thing. Sending it through
+    `render_row` would put a machine's declared plan on stderr and let `-q` remove
+    it — so the rows keep their own widths and take `EVIDENCE_INDENT` alone, which
+    is what makes a heading read as one.
+    """
+    console.print()
+    console.print(section_line(' ', name, detail))
+
+
 def _render(plan: resolver.Plan) -> None:
     machine = plan.machine
     console.print(f'[bold]{machine.name}[/]  {machine.platform_label}')
-    console.print()
 
+    _section('coordinates', 'where this machine sits on each axis')
     for axis, value in machine.coordinates.as_dict().items():
-        console.print(f'  {axis:<16} {value}')
+        console.print(f'{EVIDENCE_INDENT}{axis:<16} {value}')
 
-    console.print()
+    _section('flags', f'{len(machine.flags)} feature switch(es) written to ~/.env')
     for flag, value in machine.flags.items():
-        console.print(f'  {flag:<26} {value}')
+        console.print(f'{EVIDENCE_INDENT}{flag:<26} {value}')
 
-    for requirement in machine.requirements:
-        console.print()
-        console.print(f'  needs by hand: {requirement.path or requirement.name} — {requirement.description}')
+    if machine.requirements:
+        _section('by hand', f'{len(machine.requirements)} thing(s) apply will never supply')
+        for requirement in machine.requirements:
+            console.print(f'{EVIDENCE_INDENT}{requirement.path or requirement.name} — {requirement.description}')
 
     for stage in resolver.Stage:
         items = plan.for_stage(stage)
         if not items:
             continue
-        console.print()
-        console.print(f'[bold blue]{stage.name.lower()}[/]  {len(items)}')
+        _section(stage.name.lower(), f'{len(items)} item(s)')
         for item in items:
-            console.print(f'  {item.provider:<14} {item.name:<28} {item.reason.selector}{precondition_note(item.precondition)}')
+            console.print(
+                f'{EVIDENCE_INDENT}{item.provider:<14} {item.name:<28} {item.reason.selector}{precondition_note(item.precondition)}'
+            )
 
-    console.print()
-    console.print(f'{len(plan.items)} items')
+    # In the sections' own columns, because a bare count at column 0 is a shape no
+    # report here uses: no name, so the number belongs to nothing on screen, and no
+    # column, so it lines up with none of the groups it sums. `total` is the honest
+    # name — this command resolves a declaration and measures nothing, so there is
+    # no verdict to put in front of it.
+    _section('total', f'{len(plan.items)} item(s) this machine declares')
 
 
 @app.command('requirements')
@@ -217,26 +243,28 @@ def _render_requirements(machine: machines.Machine) -> None:
     console.print(f'[bold]{machine.name}[/]')
 
     if values := machine.required_values:
-        console.print()
-        console.print('[bold blue]values[/]  set by hand below the OVERRIDES marker in ~/.env')
+        _section('values', f'{len(values)} set by hand below the OVERRIDES marker in ~/.env')
         width = max(len(entry.name) for entry in values)
         for entry in values:
-            console.print(f'  {entry.name:<{width}}  {entry.description}', markup=False, highlight=False)
+            console.print(f'{EVIDENCE_INDENT}{entry.name:<{width}}  {entry.description}', markup=False, highlight=False)
 
     if files := machine.required_files:
-        console.print()
-        console.print('[bold blue]files[/]  restored from a backup, never written by apply')
+        _section('files', f'{len(files)} restored from a backup, never written by apply')
         width = max(len(entry.path) for entry in files)
         for entry in files:
-            console.print(f'  {entry.path:<{width}}  {entry.description}', markup=False, highlight=False)
+            console.print(f'{EVIDENCE_INDENT}{entry.path:<{width}}  {entry.description}', markup=False, highlight=False)
             # Only where it is not the default, so the one entry safekeep cannot
             # restore is the one that stands out rather than the one that blends in.
             if entry.restore:
-                console.print(f'  {"":<{width}}  {entry.restore}', markup=False, highlight=False)
+                console.print(f'{EVIDENCE_INDENT}{"":<{width}}  {entry.restore}', markup=False, highlight=False)
 
     if not machine.requirements:
-        console.print()
-        console.print('  nothing — every file this machine needs is one apply writes')
+        # A section and an indented row, like the two groups above, rather than a
+        # sentence at a two-space indent of its own. An empty register is an answer
+        # to the same question `values` and `files` answer, and a reader scanning
+        # the name column for it finds nothing where a heading should be.
+        _section('by hand', 'nothing')
+        console.print(f'{EVIDENCE_INDENT}every file and value this machine needs is written by an apply')
 
 
 SAFEKEEP_TAG = 'dotfiles'

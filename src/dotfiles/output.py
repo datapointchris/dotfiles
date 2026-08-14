@@ -21,10 +21,9 @@ from rich.console import Console
 from rich.control import Control
 from rich.segment import ControlType
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+from dotfiles import vocabulary
 
-    from dotfiles.reconcile import Lens
+if TYPE_CHECKING:
     from dotfiles.reconcile import ResourceResult
     from dotfiles.resources import Change
     from dotfiles.resources import Examined
@@ -56,6 +55,22 @@ report that carries its verdict only in an escape code answers nothing on a mach
 that asked for none — and the marks match `_render`'s, which have meant this for
 as long as `apply` has printed them."""
 
+PROGRESS_MARK = '⋯'
+"""What stands in front of a line stated in the present tense — a resource being
+measured, a group about to be acted on.
+
+Deliberately not one of `VERDICT_MARKS`. A section printed before its work has
+happened has no verdict to carry, and borrowing one would put a tick in front of
+an install that has not run."""
+
+NOTICE_MARK = '!'
+"""What stands in front of a set the run walked past rather than judged.
+
+`warn`'s mark, because that is what these sections are: `apply` names what it
+declined to act on and what it could not measure, and neither is a verdict about
+the machine. Which of the two a reader is looking at is the section's name, which
+is the heading."""
+
 EVIDENCE_INDENT = '    '
 VERDICT_COLUMN = 11
 SUBJECT_COLUMN = 28
@@ -79,6 +94,27 @@ SUBJECT_CEILING = 44
 Past this the column costs every other row more than the long one gains, and the
 detail is pushed off a narrow terminal entirely. The over-long item takes the hit
 alone, which is the same trade `announce` makes by cropping."""
+
+ADDRESS_COLUMN = max(len(resource) for resource in vocabulary.RESOURCES)
+"""How wide the name column is on a section heading, in every report that has one.
+
+Derived from the vocabulary rather than typed, because the number *is* the widest
+resource name and a literal is a second copy of that fact which nothing would
+notice going stale. A read verb's sections, an `apply`'s, `machines show`'s stage
+groups and the requirement register all pad to it, so a reader moving between them
+finds the detail in one place.
+
+A longer name — `packages/ghrelease` when a batch announces itself, or a stage
+called `system_upgrade` — pushes its own detail right rather than being cut. The
+name is what the reader came for, and the rows under it are aligned among
+themselves whatever the heading did."""
+
+VERDICT_WIDTH = max(len(word) for word in VERDICT_COLOURS)
+"""How wide the closing line's verdict word is: the longest of them.
+
+So the sentence after it starts in one place whether the run converged or refused,
+and so a reader scanning several runs' last lines reads one column rather than
+three ragged ones."""
 
 
 def quoted(value: str) -> str:
@@ -163,16 +199,70 @@ def tallies(result: ResourceResult) -> str:
     print a row of noughts on every line of a healthy machine, which is the "pages
     of output" this is trying not to become.
     """
-    counts: tuple[tuple[int, str], ...]
     if str(result.lens) == 'check':
-        counts = ((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
-    else:
-        counts = ((result.attention, 'need a person'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
+        return tally((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
+    return tally((result.attention, 'need a person'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
+
+
+def tally(*counts: tuple[int, str]) -> str:
+    """The non-zero counts a section carries, in the punctuation every section uses.
+
+    Separate from `tallies` because a heading that is not a `ResourceResult` wants
+    the same trailer: the group `apply` is about to act on says how much of it will
+    ask for a password, and `network check` says how many sources it could not
+    probe. Written out at each of them, the separator was the thing that would drift
+    — and it is the whole of what makes a trailer read as a trailer rather than as
+    more sentence.
+
+    Only non-zero counts appear, so a converged section does not print a row of
+    noughts on every line of a healthy machine.
+    """
     shown = [f'{count} {label}' for count, label in counts if count]
     return f'  ·  {", ".join(shown)}' if shown else ''
 
 
-def render_result(result: ResourceResult) -> None:
+def section_line(mark: str, name: str, detail: str, colour: str = '', trailer: str = '') -> str:
+    """One section's opening line as markup: a mark, the name of the thing, what it found.
+
+    The shape rather than the printing, because the reports that share it do not
+    share a stream. A read verb's heading is the answer to the question asked and
+    goes to stdout; an `apply`'s is the working and goes to stderr beside the rows
+    it introduces; `machines show`'s is a listing and is data. Returning the line
+    lets each keep its own stream and its own quiet gate while nothing owns the
+    geometry twice — the argument `SUBJECT_COLUMN` makes one row further down,
+    applied to the row above it.
+
+    Colour is optional for the reason it is on `render_row`: a listing has no
+    verdict to colour, and an empty style tag renders as one.
+    """
+    marked = f'[{colour}]{mark}[/]' if colour else mark
+    return f'{marked} [bold]{name:<{ADDRESS_COLUMN}}[/] {detail}{trailer}'
+
+
+def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = '✓', colour: str = 'green') -> None:
+    """One part of an `apply`: what it holds, or what is about to happen to it.
+
+    The write verb's counterpart to the section `render_result` prints, and the one
+    shape behind every heading it puts on screen — what a resource was measured to
+    hold, what a group of work is about to do, and the two sets the run walks past.
+    Three grammars in one screen is a screen where nothing tells the reader which
+    lines are peers.
+
+    It renders no verdict on the measure pass, because an apply is about to act on
+    what was found and a row saying "drift" immediately above the repair for it is
+    a fact that expires as the reader looks at it. What does not expire is which
+    part of the machine the wait belonged to.
+
+    On stderr, and gated with the rest of the narration: an `apply`'s stdout
+    carries the run record and nothing else, and `-q` is a request for less of
+    exactly this.
+    """
+    if not showing_evidence():
+        return
+    err_console.print(section_line(mark, address, detail, colour, elapsed(seconds)))
+
+
+def render_result(result: ResourceResult, stream: Console) -> None:
     """One resource's section: its name, what it found, and the rows behind that.
 
     **The resource's name is the heading.** The left column spelled the verdict on
@@ -181,16 +271,25 @@ def render_result(result: ResourceResult) -> None:
     and the word itself appears once, on the closing line where it is the run's
     answer rather than a label on each part of it.
 
-    The heading goes to stdout because it is the answer to the question asked, and
-    the rows go to stderr because they are the evidence for it — the same split
-    every command here keeps. Interleaved on a terminal they read as one section,
-    and redirected they separate into an answer and a transcript.
-
     **The rows come after the heading, and belong to it.** They were printed while
     the fold was still running, which put the whole walk's evidence above the whole
     walk's verdicts: four logged-out CLIs appeared under the progress line for
     `credentials`, and the `credentials` verdict two lines later said converged.
     Nothing on screen tied a row to the resource that found it.
+
+    **`stream` is where the heading goes, and the rows are always evidence.** For a
+    read verb it is stdout, because the heading is the answer to the question asked
+    — interleaved on a terminal the two read as one section, and redirected they
+    separate into an answer and a transcript. An `apply` renders the declaration it
+    refused on through here too, and passes stderr: that verb's stdout is the run
+    record, so a `--json` run whose gate fired would otherwise hand its caller a
+    heading where the document should be.
+
+    **It has no default, because the stream belongs to the verb rather than to the
+    result.** Neither answer is safe for the other caller: stdout put on a write verb
+    corrupts the document a caller parses, and stderr put on a read verb sends the
+    answer somewhere a redirect will not find it. A parameter whose two callers want
+    opposite values is one every caller states.
 
     Keyed on the verdict's string value rather than the enum, so this module stays
     below `reconcile` and does not import it at runtime — presentation should not
@@ -205,9 +304,9 @@ def render_result(result: ResourceResult) -> None:
     # since a tally wedged between two halves of a sentence separates them.
     lines = result.detail.split('\n')
     trailer = f'{tallies(result)}{elapsed(result.seconds)}'
-    console.print(f'[{colour}]{mark}[/] [bold]{result.address:<11}[/] {lines[0]}{trailer if len(lines) == 1 else ""}')
+    stream.print(section_line(mark, result.address, lines[0], colour, trailer if len(lines) == 1 else ''))
     for position, line in enumerate(lines[1:], start=2):
-        console.print(f'  {"":<11} {line}{trailer if position == len(lines) else ""}')
+        stream.print(f'  {"":<{ADDRESS_COLUMN}} {line}{trailer if position == len(lines) else ""}')
 
     deferred, listed = _listed(result)
     width = _width([change.item for change in result.findings] + [change.item for change in deferred] + [row.item for row in listed])
@@ -219,26 +318,33 @@ def render_result(result: ResourceResult) -> None:
         render_examined(row, width)
     # After the section rather than before it, so the closing line sits below a gap
     # too and nothing has to remember whether it is first.
-    console.print()
+    stream.print()
 
 
-def render_verdict(results: Sequence[ResourceResult], lens: Lens) -> None:
+def render_verdict(word: str, sentence: str, stream: Console) -> None:
     """The run's answer, and the one place the verdict word is spelled out.
 
-    It was the left column of every section, which put `converged` nine deep on a
-    healthy machine and said nothing about the run as a whole. It is the run as a
-    whole that a person came for, and it belongs at the bottom, where the terminal
-    stops scrolling.
+    The run as a whole is what a person came for, and it belongs at the bottom,
+    where the terminal stops scrolling. In the left column of every section instead,
+    the word is `converged` nine deep on a healthy machine and says nothing about
+    the run.
 
-    Imported from `reconcile` at call time rather than at module scope. This module
-    sits below it on purpose — `reconcile` renders through this one — and the
-    sentence is the fold's to compose, since only it knows what the two verbs keep.
+    All three verbs close here, so a `plan`, a `check` and an `apply` end on one
+    shape: the verdict word, then a sentence carrying the counts behind it and the
+    command that answers whatever is left.
+
+    **The word and the sentence, rather than the results they are folded from.**
+    Composing them is the fold's, since only it knows what each verb keeps and
+    `apply` has no lens at all — and this module sits below `reconcile`, so asking
+    would mean importing it back at call time.
+
+    `stream` has no default for the reason it has none on `render_result`.
+
+    Ungated, whatever `-q` says: the result the command was asked for keeps its
+    channel, and a run reporting by exit code alone is a worse command rather than
+    a quieter one.
     """
-    from dotfiles import reconcile
-
-    verdict = str(reconcile.worst(results))
-    colour = VERDICT_COLOURS[verdict]
-    console.print(f'[{colour}]{verdict:<9}[/] {reconcile.verdict_line(results, lens)}')
+    stream.print(f'[{VERDICT_COLOURS[word]}]{word:<{VERDICT_WIDTH}}[/] {sentence}')
 
 
 def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:
@@ -343,22 +449,26 @@ def announce(address: str, detail: str) -> None:
 
     Two gates, answering different questions. `showing_evidence` is `-q`, and
     cli-design.md § "Quieten the evidence, never the answer" names the progress
-    headings as exactly what it removes. `heading` beside it is gated the same
-    way, and a progress line outranking the heading it announces would be the odd
-    one out.
+    headings as exactly what it removes. `render_section` beside it is gated the
+    same way, and a progress line outranking the section it announces would be the
+    odd one out.
 
     The terminal test is the second, and it is not about volume: this exists to
     be read *during* the wait, and a wait nobody is sitting through does not need
     narrating. The scheduled check writes into the journal and a `--json` run is
     parsed, so in both this is a second row per resource carrying nothing the
     verdict row does not.
+
+    In the section's own columns, since the section is what replaces it: the answer
+    landing in a different place from the question it answers is the flicker
+    `retract` exists to remove.
     """
     if not showing_evidence() or not err_console.is_terminal:
         return
     # Cropped rather than wrapped, which is also what makes `retract` correct: it
     # moves the cursor up exactly one row, and a line that wrapped would leave the
     # half above it on screen.
-    err_console.print(f'[blue]⋯[/] {address:<11} {detail}', no_wrap=True, overflow='ellipsis')
+    err_console.print(section_line(PROGRESS_MARK, address, detail, 'blue'), no_wrap=True, overflow='ellipsis')
 
 
 def retract() -> None:
@@ -384,23 +494,6 @@ def retract() -> None:
     if not showing_evidence() or listing_everything() or not err_console.is_terminal:
         return
     err_console.control(Control((ControlType.CURSOR_UP, 1), (ControlType.CARRIAGE_RETURN,), (ControlType.ERASE_IN_LINE, 2)))
-
-
-def measured(address: str, detail: str, seconds: float) -> None:
-    """What one resource turned out to hold, and what asking cost.
-
-    `apply`'s counterpart to the verdict row `check` and `plan` print. It renders
-    no verdict, because an apply is about to act on what was found and a row
-    saying "drift" immediately above the repair for it is a fact that expires as
-    the reader looks at it. What does not expire is which part of the machine the
-    wait belonged to.
-
-    Gated with the rest of the narration: this is the working an apply shows, not
-    the answer it was asked for, and `-q` is a request for less of exactly this.
-    """
-    if not showing_evidence():
-        return
-    err_console.print(f'[green]✓[/] [bold]{address:<11}[/] {detail}{elapsed(seconds)}')
 
 
 def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
@@ -500,14 +593,6 @@ def render_finding(section: str, message: str) -> None:
     render_row('invalid', section, message, 'red')
 
 
-def heading(text: str) -> None:
-    """Announce an address. On stderr, because a banner is progress, not data."""
-    if not showing_evidence():
-        return
-    err_console.print()
-    err_console.print(f'[bold blue]{text}[/]')
-
-
 def error(message: str) -> None:
     err_console.print(f'[red]✗[/] {message}')
 
@@ -517,7 +602,7 @@ def success(message: str) -> None:
 
 
 def warn(message: str) -> None:
-    err_console.print(f'[yellow]![/] {message}')
+    err_console.print(f'[yellow]{NOTICE_MARK}[/] {message}')
 
 
 def hint(message: str) -> None:

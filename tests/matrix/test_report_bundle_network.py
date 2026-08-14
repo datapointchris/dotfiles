@@ -29,6 +29,7 @@ import pytest
 from dotfiles import coordinates as axes
 from dotfiles import create_bundle
 from dotfiles import runs
+from dotfiles.commands import network as network_command
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
 from matrix.harness import DECLARES_LAZYGIT
@@ -1045,3 +1046,61 @@ def test_a_network_check_asks_only_the_shadowed_binaries(sandbox: Sandbox, cli: 
     requested = asked.read_text()
     assert 'ls-remote --quiet https://github.com/datapointchris/dotfiles.git HEAD' in requested
     assert requested.count('\n') >= BASELINE_PROBES
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# What `network check` closes on
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestTheClosingLine:
+    """The sentence a reader takes away from a run costing a minute against forty-odd
+    hosts, with the blocked rows scrolled past.
+
+    Composed rather than rendered, so these assert the wording directly: the whole
+    value of the line is which of two different remedies it names, and a row-count
+    assertion cannot tell them apart.
+    """
+
+    def test_a_reachable_network_says_so_without_naming_a_remedy(self) -> None:
+        assert network_command._closing(0, 0) == 'every source this machine installs from is reachable'
+
+    def test_a_blocked_network_names_the_machine_that_can_build_the_bundle(self) -> None:
+        """Pointing a blocked box at `dotfiles bundle create` and leaving it there is
+        an instruction that fails on the machine reading it, so the sentence carries
+        the where and the command stays last for a copy-paste."""
+        closing = network_command._closing(3, 0)
+
+        assert closing.startswith('3 source(s) unreachable, so installing here needs a bundle built elsewhere')
+        assert closing.endswith('run: dotfiles bundle create')
+
+    def test_an_intercepted_host_is_called_out_because_a_bundle_does_not_fix_it(self) -> None:
+        """The connection succeeded and the certificate was somebody else's, so the
+        answer is a CA rather than a tarball — the one distinction a reader of forty
+        identical-looking `blocked` rows would otherwise have to find for themselves."""
+        assert '2 of them presented an untrusted certificate, which a bundle does not fix' in network_command._closing(3, 2)
+
+    def test_the_run_closes_on_it_rather_than_on_the_tally_alone(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """The section says what was measured and the closing line says what to do
+        about it. A tally alone leaves the one screen whose whole purpose is a
+        firewall with nothing on it naming a next command."""
+        sandbox.shadow('curl', REFUSES)
+        sandbox.shadow('git', REFUSES)
+
+        ran = cli('network', 'check', catch_exceptions=True)
+
+        assert 'needs a bundle built elsewhere' in ran.stdout
+        assert 'dotfiles bundle create' in ran.stdout
+
+
+def test_the_wait_this_verb_costs_is_reachable_without_reading_the_screen(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The elapsed is on the human line, and the results file records `when` rather
+    than how long — so `--json` is the only door left for the one fact this verb's
+    whole cost is measured in, and every other section reports it through
+    `ResourceResult.as_counts`."""
+    sandbox.shadow('curl', REFUSES)
+    sandbox.shadow('git', REFUSES)
+
+    ran = cli('network', 'check', '--json', catch_exceptions=True)
+
+    assert isinstance(ran.document['seconds'], float)

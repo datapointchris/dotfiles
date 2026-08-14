@@ -29,6 +29,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles.output import EVIDENCE_INDENT
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
@@ -197,6 +198,46 @@ def test_a_platform_bundle_and_direct_coordinates_reach_the_same_shape(sandbox: 
     assert 'archlinux' in printed.stdout
 
 
+def test_every_group_of_the_resolution_is_a_named_section(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A reader moving between this and `dotfiles plan` finds each group's detail in
+    one place, which is only true while every group here has a name in the column
+    that report puts one in.
+
+    The coordinates and the flags were the two that did not. Both were printed under
+    a heading of their own shape, so the two labelled stage groups below them read as
+    a different kind of thing from the two unlabelled ones above.
+
+    The stage names are read off the resolution rather than typed, because which
+    stages a machine reaches is a fact about its declaration.
+    """
+    sandbox.declare(packages=TWO_OWNERS, manifest=DECLARES_BOTH)
+
+    printed = cli('machines', 'show').stdout
+    stages = {item['stage'] for item in cli('machines', 'show', '--json').document['items']}
+
+    assert 'coordinates' in printed
+    assert 'flags' in printed
+    assert 'feature switch' in printed
+    for stage in stages:
+        assert stage in printed, f'{stage} has items and no section naming it'
+
+
+def test_the_run_closes_with_the_count_in_the_sections_own_column(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A bare tally at column 0 has no name, so the number belongs to nothing on
+    screen, and no column, so it lines up with none of the groups it sums.
+
+    `total` rather than a verdict word: this command resolves a declaration and
+    measures nothing, so there is nothing to be converged or wrong about.
+    """
+    sandbox.declare(packages=TWO_OWNERS, manifest=DECLARES_BOTH)
+
+    printed = cli('machines', 'show').stdout
+    declared = len(cli('machines', 'show', '--json').document['items'])
+
+    closing = printed.splitlines()[-1]
+    assert closing.split() == ['total', f'{declared}', 'item(s)', 'this', 'machine', 'declares']
+
+
 def test_every_item_names_the_selector_that_pulled_it_in(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """The property that makes this an audit rather than a listing: under coordinate
     directories, "what does this machine get" stops being answerable by reading one place."""
@@ -355,10 +396,17 @@ def test_the_safekeep_block_tags_every_file_dotfiles_and_keeps_the_path_unexpand
 
 
 def test_a_machine_that_needs_nothing_by_hand_says_so(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """An empty section reads as a command that failed to find its file."""
+    """An empty section reads as a command that failed to find its file.
+
+    In the columns `values` and `files` use, because it answers the same question
+    they do — a reader scanning the name column for the register's answer finds it
+    where the answer would be rather than at an indent of its own.
+    """
     ran = cli('machines', 'requirements')
 
-    assert 'nothing' in ran.stdout
+    heading, reason = [line for line in ran.stdout.splitlines() if line.strip()][-2:]
+    assert heading.split() == ['by', 'hand', 'nothing']
+    assert reason.startswith(EVIDENCE_INDENT)
     assert cli('machines', 'requirements', '--json').document == []
 
 

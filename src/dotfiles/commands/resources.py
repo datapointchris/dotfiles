@@ -65,7 +65,7 @@ def _report(results: Sequence[reconcile.ResourceResult], as_json: bool, *, machi
         emit_json(status.document(results, machine, when, verb=str(lens)))
     else:
         for result in results:
-            render_result(result)
+            render_result(result, console)
     raise typer.Exit(reconcile.exit_code(list(results)))
 
 
