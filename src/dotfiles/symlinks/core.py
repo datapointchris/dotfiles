@@ -1,11 +1,35 @@
 """Dotfiles symlink manager: configuration constants, utilities, and management functions."""
 
+import enum
 import fnmatch
 import tomllib
 from pathlib import Path
 
 from dotfiles import paths
 from dotfiles.output import err_console
+
+
+class Ownership(enum.StrEnum):
+    """Who put a target where a declared link belongs.
+
+    An enum rather than the three bare strings it replaced, because the caller
+    that reads it is a dispatch with a branch per member and a fallthrough meaning
+    converged. Over strings a fourth answer added here reads as converged at that
+    fallthrough with nothing failing; over members, `_verdict`'s `assert_never`
+    is a type error the moment this class grows.
+    """
+
+    ABSENT = 'absent'
+    """Nothing is at the target, not even a broken link."""
+
+    OURS = 'ours'
+    """A symlink resolving inside the repo, which this manager may replace."""
+
+    FOREIGN = 'foreign'
+    """Anything else, including every regular file — so on a copy machine this is
+    the only answer available, which is why `Observed.ownership` is left empty
+    there rather than filled with it."""
+
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -240,10 +264,10 @@ def console_script_names(pyproject: Path | None = None) -> set[str]:
     return set(tomllib.loads(declaration.read_text()).get('project', {}).get('scripts', {}))
 
 
-def link_ownership(target_path: Path, *roots: Path) -> str:
-    """Who put this target here: `absent`, `ours`, or `foreign`.
+def link_ownership(target_path: Path, *roots: Path) -> Ownership:
+    """Who put this target here.
 
-    `ours` is a symlink pointing anywhere inside the repo or inside one of
+    `OURS` is a symlink pointing anywhere inside the repo or inside one of
     `roots`, including a broken one left by a deleted source — that is still
     this manager's to replace. `roots` carries the tree currently being linked,
     so a caller pointed at a tree that is not the installed repo still
@@ -251,21 +275,21 @@ def link_ownership(target_path: Path, *roots: Path) -> str:
 
     Containment is compared by path component, never by string prefix.
     `~/dotfiles-backup` and `~/dotfiles.bak` both start with `~/dotfiles`, and
-    calling a link into one of them `ours` is what lets an apply replace the copy
+    calling a link into one of them `OURS` is what lets an apply replace the copy
     somebody took before a risky change — without the foreign refusal and without
     `--force`.
     """
     if not (target_path.exists() or target_path.is_symlink()):
-        return 'absent'
+        return Ownership.ABSENT
     if not target_path.is_symlink():
-        return 'foreign'
+        return Ownership.FOREIGN
 
     destination = resolve_broken_symlink(target_path) if not target_path.exists() else target_path.resolve()
     if not destination:
-        return 'foreign'
+        return Ownership.FOREIGN
 
     owned = (DOTFILES_DIR, *(root.resolve() for root in roots))
-    return 'ours' if any(destination.is_relative_to(root) for root in owned) else 'foreign'
+    return Ownership.OURS if any(destination.is_relative_to(root) for root in owned) else Ownership.FOREIGN
 
 
 SKEL_DIR = Path('/etc/skel')

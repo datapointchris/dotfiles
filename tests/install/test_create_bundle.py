@@ -24,6 +24,7 @@ from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
+from dotfiles.providers import winget
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Precondition
 from dotfiles.resolve import Reason
@@ -82,6 +83,14 @@ class TestCargoTarget:
         an archive that builds cleanly and installs a machine that cannot run them."""
         assert cargo.asset_target(crate(), LINUX_ARM) == 'aarch64-unknown-linux-gnu'
         assert cargo.triple(LINUX_ARM) == 'aarch64-unknown-linux-gnu'
+
+    def test_windows_is_answered_rather_than_falling_through_to_linux(self):
+        """The last expression is a fallthrough, not a Linux test. No cargo row
+        resolves here for Windows, but the bundler asks this for uv — and a Windows
+        bundle was being handed the Linux triple and staging an ELF under a Windows
+        label, which builds cleanly and installs nothing that runs."""
+        assert cargo.triple(Target(OSFamily.WINDOWS, Arch.X86_64)) == 'x86_64-pc-windows-msvc'
+        assert cargo.triple(Target(OSFamily.WINDOWS, Arch.ARM64)) == 'aarch64-pc-windows-msvc'
 
     def test_an_override_applies_only_to_its_own_platform(self):
         # fnm ships fnm-linux.zip and fnm-macos.zip, named after neither triple.
@@ -183,6 +192,22 @@ class TestWheelSelection:
         assert create_bundle.wheel_matches(wheel, 'linux', 'x86_64')
         assert not create_bundle.wheel_matches(wheel, 'linux', 'arm64')
         assert not create_bundle.wheel_matches(wheel, 'darwin', 'x86_64')
+        assert not create_bundle.wheel_matches(wheel, 'windows', 'x86_64')
+
+    def test_a_windows_wheel_matches_its_own_target(self):
+        assert create_bundle.wheel_matches('PyYAML-6.0.3-cp313-cp313-win_amd64.whl', 'windows', 'x86_64')
+        assert create_bundle.wheel_matches('PyYAML-6.0.3-cp313-cp313-win_arm64.whl', 'windows', 'arm64')
+        assert not create_bundle.wheel_matches('PyYAML-6.0.3-cp313-cp313-win_amd64.whl', 'linux', 'x86_64')
+
+    def test_every_coordinate_a_manifest_can_declare_is_answerable(self):
+        """`wheel_matches` subscripts the table directly, so a missing row is a bare
+        KeyError from the middle of a download loop rather than a reported gap. A
+        Windows manifest hit it on the first platform wheel PyPI serves for
+        anything, which meant no bundle could be built for that machine at all —
+        including the winget executables it has no other way to get."""
+        declarable = {(str(family), str(arch)) for family in OSFamily for arch in Arch}
+
+        assert declarable <= set(create_bundle.WHEEL_PLATFORMS)
 
     def test_every_installable_cpython_version_is_taken(self):
         """The machine's interpreter is whatever it is at or above the floor, and
@@ -294,6 +319,22 @@ class TestArchives:
 
         assert destination.read_text() == 'GOFUMPT'
         assert not archive_path.exists()
+
+    @pytest.mark.parametrize('asset', ['task_linux_amd64.zip', 'task_linux_amd64.tar.xz', 'task_linux_amd64.7z'])
+    def test_an_archive_shape_with_no_reader_is_refused_rather_than_staged_as_the_binary(self, tmp_path, asset):
+        """The bare-executable branch is a real shape, so it cannot also absorb the
+        ones nobody wrote code for. Without the refusal a zip is moved under the
+        tool's name and chmod'd 0755, the manifest records it staged, and the
+        machine that reads the bundle is the one with no network to find out why
+        nothing runs.
+        """
+        archive_path = tmp_path / asset
+        archive_path.write_bytes(b'PACKED')
+
+        with pytest.raises(create_bundle.BundleError, match='cannot open'):
+            create_bundle.extract_go_binary(archive_path, 'task', tmp_path / 'task')
+
+        assert not (tmp_path / 'task').exists()
 
 
 class TestFailureDetail:
@@ -478,3 +519,112 @@ class TestBundleRoundTrip:
 
         assert staged is not None
         assert staged.filename == 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz'
+
+
+class TestWingetBundling:
+    """The only category whose machine cannot use its declared installer at all.
+
+    The employer network blocks the Store outright, so `winget_packages` is not a
+    section with a slow alternative — a Windows manifest declaring only these rows
+    has one install route, and this is the other end of it. A section that goes
+    unstaged leaves that machine with the blocked route and nothing else.
+
+    Asserted as the whole loop for the reason `TestBundleRoundTrip` records: two
+    sides naming one file out of one declaration is how they came to disagree
+    silently, on the one machine nobody can check from here.
+    """
+
+    ZIPPED = {'name': 'ripgrep', 'command': 'rg', 'winget': 'BurntSushi.ripgrep', 'repo': 'BurntSushi/ripgrep'}
+    BARE = {'name': 'jq', 'command': 'jq', 'winget': 'jqlang.jq', 'repo': 'jqlang/jq', 'asset': 'jq-windows-amd64.exe'}
+
+    def stage(self, tmp_path, monkeypatch, declared, version, *, nested=False, verified=None, holds=None):
+        entry = catalog.WingetPackage.from_mapping(declared)
+        staging = tmp_path / 'installers'
+        bundle = create_bundle.Bundle(staging, 'windows', 'x86_64')
+
+        def fetch(_cache, asset, destination, _label):
+            if not asset.filename.endswith('.zip'):
+                destination.write_text('PAYLOAD')
+                return
+            member = holds or (f'{entry.name}-1.2.3/{entry.filename}' if nested else entry.filename)
+            with zipfile.ZipFile(destination, 'w') as archive:
+                archive.writestr(member, 'PAYLOAD')
+
+        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: version)
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
+        monkeypatch.setattr(create_bundle, 'verify_against_upstream', verified or (lambda *args: None))
+
+        cache = create_bundle.DownloadCache(enabled=False)
+        create_bundle.add_winget_binaries(bundle, cache, (planned(entry, 'winget_packages'),))
+        bundle.write_metadata()
+
+        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        return entry, staging
+
+    def test_a_staged_executable_is_found_by_the_provider_that_installs_it(self, tmp_path, monkeypatch):
+        entry, _ = self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version}-windows.zip'}, 'v14.1.1')
+
+        result = winget.install(entry, tmp_path / 'bin', offline=True)
+
+        assert result.ok, result.detail
+        assert (tmp_path / 'bin' / 'rg.exe').read_text() == 'PAYLOAD'
+
+    def test_the_exe_is_staged_under_the_name_that_lands_on_path(self, tmp_path, monkeypatch):
+        """Not under the asset's name. `ripgrep-14.1.1-x86_64-pc-windows-msvc.zip`
+        is what the publisher called the download and `rg.exe` is what the shell
+        looks for, and the row records the second."""
+        entry, staging = self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version_num}-windows.zip'}, 'v14.1.1')
+
+        assert (staging / winget.BUNDLE_BINARIES / 'rg.exe').is_file()
+        assert not list((staging / winget.BUNDLE_BINARIES).glob('*.zip'))
+        assert bundle_manifest.staged(entry.name, 'winget').filename == 'rg.exe'
+
+    def test_an_exe_nested_under_a_versioned_directory_is_found(self, tmp_path, monkeypatch):
+        """These publishers disagree about whether the binary sits at the archive
+        root, which is why the search recurses rather than reading a known path."""
+        entry, _ = self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'rg-{version}.zip'}, 'v14.1.1', nested=True)
+
+        assert winget.install(entry, tmp_path / 'bin', offline=True).ok
+
+    def test_an_asset_that_is_already_an_exe_is_not_unpacked(self, tmp_path, monkeypatch):
+        """jq publishes the bare binary. Two shapes occur and which one is a fact
+        about the asset rather than about the tool."""
+        entry, staging = self.stage(tmp_path, monkeypatch, self.BARE, 'jq-1.7.1')
+
+        assert (staging / winget.BUNDLE_BINARIES / 'jq.exe').read_text() == 'PAYLOAD'
+        assert winget.install(entry, tmp_path / 'bin', offline=True).ok
+
+    def test_every_downloaded_asset_is_verified_against_its_release(self, tmp_path, monkeypatch):
+        """The machine this is built for cannot reach the release API to resolve
+        which asset carries the checksum, so verification happens on this side or
+        it does not happen. The module this replaced verified; skipping it would
+        hand that machine unverified bytes it has no way to check."""
+        seen = []
+        self.stage(
+            tmp_path,
+            monkeypatch,
+            {**self.ZIPPED, 'asset': 'rg-{version}.zip'},
+            'v14.1.1',
+            verified=lambda _bundle, _cache, path, asset: seen.append((path.name, asset.url)),
+        )
+
+        assert [name for name, _ in seen] == ['rg-v14.1.1.zip']
+        assert seen[0][1] == 'https://github.com/BurntSushi/ripgrep/releases/download/v14.1.1/rg-v14.1.1.zip'
+
+    def test_a_zip_without_the_declared_exe_fails_rather_than_bundling_nothing(self, tmp_path, monkeypatch):
+        """A silent miss here is a tool absent from the one machine that cannot go
+        and fetch it, with the bundle reporting every row staged."""
+        with pytest.raises(create_bundle.BundleError, match='rg.exe'):
+            self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'rg-{version}.zip'}, 'v14.1.1', holds='README.md')
+
+    def test_a_third_asset_shape_is_refused_rather_than_renamed_to_an_exe(self, tmp_path, monkeypatch):
+        """The zip branch and the exe branch are the whole vocabulary, so an
+        unrecognised suffix has to raise rather than take the copy path.
+
+        A tarball renamed `rg.exe` passes every later assertion — the file is
+        there, the manifest records it staged, the install copies it onto PATH —
+        and Windows declines to execute it. That is discovered on the machine with
+        no route to the tool but this one.
+        """
+        with pytest.raises(create_bundle.BundleError, match='ripgrep-v14.1.1.tar.gz'):
+            self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version}.tar.gz'}, 'v14.1.1')

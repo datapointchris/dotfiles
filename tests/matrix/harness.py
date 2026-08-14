@@ -525,7 +525,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     however the sandbox is configured.
     """
     from dotfiles import checkout
-    from dotfiles.providers import steps
     from dotfiles.symlinks import core
 
     repo = paths._repo_root()  # noqa: SLF001 — the module's own derivation, re-run rather than reimplemented
@@ -552,7 +551,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
     monkeypatch.setattr(core, 'TARGET_DIR', box.home.resolve())
-    monkeypatch.setattr(steps, 'SYNC_WINDOWS_SHELL', repo / 'install' / 'wsl' / 'sync-windows-shell.sh')
 
     rebind_default(monkeypatch, Session.__init__, 'repo', repo)
     for reader in (checkout.read, checkout.stray_branch, checkout.fetch):

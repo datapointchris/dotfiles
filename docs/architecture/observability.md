@@ -139,11 +139,11 @@ name, so a flag declared on the group turns `dotfiles apply -v` into
 asymmetry `--dry-run` and `--force` each had.
 
 **Every one of them takes the pair, with no exceptions.** The first cut spared
-`network check`, `bundle check` and the two under `windows`, on the grounds that
-they answer a question about a network or an archive rather than converging the
-machine, and so emit nothing worth turning up. Measuring that afterwards showed it
-was false — `network.py` and `windows.py` go through `effects` six and four times,
-and `offline_bundle.py` twice. `machines check` is the only one that really does
+`network check` and `bundle check`, on the grounds that they answer a question
+about a network or an archive rather than converging the machine, and so emit
+nothing worth turning up. Measuring that afterwards showed it was false —
+`network.py` goes through `effects` six times and `offline_bundle.py` twice.
+`machines check` is the only one that really does
 not emit, and `-q` still earns its place there because the finding rows it
 suppresses are rendered the same way as everything else. The rule is the verb
 rather than the subject, so learning `-v` on one `check` teaches it everywhere.

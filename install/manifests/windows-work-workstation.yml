@@ -1,0 +1,52 @@
+machine: windows-work-workstation
+
+# The axes written out, rather than a `platform:` bundle naming them. A bundle
+# is a shorthand that earned a name, and this point has not: nothing else
+# resolves through it, and the label comes from the tuple either way
+# (`coordinates.platform_label`), so a row in PLATFORM_BUNDLES would carry no
+# fact these six lines do not.
+#
+# nonfleet, because this is the Windows side of the same physical box as
+# wsl-work-workstation. The two halves boot from one disk and sit on one
+# employer network; a trust axis that answered differently either side of the
+# WSL boundary would be describing the boundary rather than the network.
+#
+# host: native rather than wsl. WSL is what runs inside this machine, not what
+# this machine runs inside — `coordinates.incoherent` refuses the other spelling
+# for that reason.
+coordinates:
+  package_manager: winget
+  os_family: windows
+  display_stack: none
+  host: native
+  network_trust: nonfleet
+  capacity: workstation
+
+# Group policy on this box refuses to create a symlink, so the three deployed
+# trees arrive as copies. Declared rather than derived from `os_family: windows`,
+# because Windows 10 and later can symlink perfectly well with Developer Mode on
+# — what refuses is one employer's administration of one machine, and the next
+# Windows machine would be told the wrong thing.
+#
+# What it costs is in `resources/symlinks.py`: a copy carries no provenance, so
+# nothing is ever pruned from this side and a file that stops being declared is
+# left where it is.
+deploy_by_copy: true
+
+# Feature flags — overrides for install/flags.yml defaults. The review register
+# is personal, and its nudge has no place in a work shell, on either side of the
+# WSL boundary.
+flags:
+  SHELL_NUDGE: false
+
+# Only `winget_packages`, and the other tool lists are absent for a reason about
+# the catalog rather than about this machine. Six of these eight are declared as
+# `cargo_packages` too and one as a `github_releases` entry, and none of those
+# names can be borrowed here: `providers/releases.py` builds its URLs from a
+# Target whose only OS branch is darwin, so a borrowed name would fetch a Linux
+# binary and report it installed.
+#
+# The names are `packages.yml`'s, which is why three of them are not what the
+# binary is called — ripgrep ships rg, fd-find ships fd, git-delta ships delta.
+# The row carries the spelling.
+winget_packages: [jq, fzf, ripgrep, bat, fd-find, eza, zoxide, git-delta]

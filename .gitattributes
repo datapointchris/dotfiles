@@ -1,0 +1,24 @@
+# Every tracked file in this repo is Unix content that bash reads: the `shell/`
+# layers `.zshrc` sources, the `apps/` scripts that exec through
+# `#!/usr/bin/env bash`, and the configs deployed verbatim into `$HOME`. There is
+# no Windows-native script here to want the other convention — `git ls-files
+# '*.ps1' '*.bat' '*.cmd'` is empty — so this is one blanket rule rather than a
+# per-extension list, which also covers the `apps/common/` executables that carry
+# no extension at all.
+#
+# The Windows machine sets `core.autocrlf = true`
+# (`configs/os/windows/.config/git/windows.gitconfig`), which is correct for the
+# Windows-native projects that side of the box exists for and fatal here. Bash
+# cannot source a file whose lines end `\r`, and cannot exec
+# `#!/usr/bin/env bash^M`. That machine also deploys by copy from its own
+# checkout, so a CRLF checkout is a CRLF `~/.bashrc` and a CRLF
+# `~/.local/shell/*.sh`. `eol=lf` is what scopes this repo out of that setting;
+# the Windows-native repos beside it keep it.
+#
+# `.editorconfig` declaring `end_of_line = lf` does not do this job. Editors read
+# it, git does not, and the conversion that breaks these files happens at
+# checkout.
+#
+# `text=auto` rather than a bare `text` so git keeps detecting binaries itself;
+# nothing tracked here is one today, and a future font or image needs no entry.
+* text=auto eol=lf

@@ -40,7 +40,7 @@ Terraform-shaped trio rather than three unrelated words.
 
 EXCEPTION_VERBS: dict[str, str] = {
     'unlink': 'symlinks: the inverse of apply, and it has no other spelling',
-    'create': 'bundle, windows: builds an artefact rather than reconciling a machine',
+    'create': 'bundle: builds an artefact rather than reconciling a machine',
     'stage': 'bundle: unpacks a bundle without installing from it',
     'edit': 'machines, repo: opens $EDITOR, which is not a read or a write of state',
     'requirements': 'machines: the register supplied by hand, which show prints in passing and no other verb can name alone',
@@ -73,7 +73,6 @@ NOUNS = frozenset(
         'report',
         'network',
         'bundle',
-        'windows',
         'repo',
     }
 )

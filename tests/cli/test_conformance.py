@@ -51,15 +51,15 @@ surface is.
 RECONCILING = [(path, command) for path, command in LEAVES if path[-1] in {'plan', 'check', 'apply'}]
 """Every `plan`, `check` and `apply` in the tree, with no exceptions carved out.
 
-The first cut of this rule kept `network check`, `bundle check` and the two under
-`windows` outside it, on the stated grounds that none of them emits through
-`effects`. That was measured afterwards and is false: `network.py` and
-`windows.py` reference `effects` six and four times, and `offline_bundle.py`
-twice. Only `machines check` really does not, and `-q` still means something there
-because the finding rows it suppresses are rendered the same way.
+The first cut of this rule kept `network check` and `bundle check` outside it, on
+the stated grounds that neither emits through `effects`. That was measured
+afterwards and is false: `network.py` references `effects` six times and
+`offline_bundle.py` twice. Only `machines check` really does not, and `-q` still
+means something there because the finding rows it suppresses are rendered the same
+way.
 
 So the rule is the verb, not the subject. A reader who learns `-v` on one
-`check` has learned it everywhere, which is worth more than sparing four leaves a
+`check` has learned it everywhere, which is worth more than sparing a few leaves a
 flag."""
 
 
@@ -173,19 +173,6 @@ def test_plan_accepts_every_selector_its_apply_does() -> None:
         assert not missing, f'{"/".join(path)} accepts {sorted(missing)}, which its plan cannot express'
 
 
-OFFLINE_MEANS_NOTHING_TO_CHECK = {('windows',)}
-"""Verbs whose `check` reaches no network, so a bundle cannot change its answer.
-
-`windows check` asks which of a fixed set of filenames exist in one directory. It
-needs neither winget nor a network, which is what let it become a real checker at
-all — so `--offline` would be a flag that changes nothing. Its `apply` takes one
-because installing is where winget is reached.
-
-Named rather than left to fall out of the loop, so the next reader knows the pair
-was considered rather than missed.
-"""
-
-
 def test_check_takes_offline_wherever_apply_does() -> None:
     """`--offline` swaps the upstream for a staged bundle, so it changes what every
     verb *answers* rather than narrowing what one covers.
@@ -197,9 +184,13 @@ def test_check_takes_offline_wherever_apply_does() -> None:
     pinned this pair, so `dotfiles check --offline` existed while
     `dotfiles packages check --offline` did not, and the test written for exactly
     this class of gap could not see it.
+
+    No verb is exempt. `windows` was, because its `check` asked which filenames
+    exist in one directory and reached no network for the answer — and it left
+    with the group.
     """
     for path, options in ACCEPTED.items():
-        if path[-1] != 'apply' or '--offline' not in options or path[:-1] in OFFLINE_MEANS_NOTHING_TO_CHECK:
+        if path[-1] != 'apply' or '--offline' not in options:
             continue
         examined = ACCEPTED.get((*path[:-1], 'check'))
         if examined is None:

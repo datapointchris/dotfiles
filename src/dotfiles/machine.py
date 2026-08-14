@@ -102,6 +102,7 @@ SUBSCRIPTIONS: dict[str, tuple[Spelling, str]] = {
     'github_releases': (Spelling.NAMES, 'github_releases'),
     'custom_installers': (Spelling.NAMES, 'custom_installers'),
     'cargo_packages': (Spelling.NAMES, 'cargo_packages'),
+    'winget_packages': (Spelling.NAMES, 'winget_packages'),
     'go_tools': (Spelling.NAMES, 'go_tools'),
     'npm_globals': (Spelling.NAMES, 'npm_globals'),
     'uv_tools': (Spelling.NAMES, 'uv_tools'),
@@ -122,9 +123,15 @@ The two names differ where the key gates something wider than one section:
 this table is a section no machine can ever subscribe to, so the load asserts
 coverage rather than defaulting."""
 
-FEATURES = ('nvim_plugins', 'configure_zsh')
+FEATURES = ('nvim_plugins', 'configure_zsh', 'deploy_by_copy')
 """Manifest booleans that gate work with no catalog section behind it — lazy.nvim
-bootstrapping itself, and making zsh the login shell."""
+bootstrapping itself, making zsh the login shell, and deploying the three trees as
+copies on a machine whose admin policy refuses to create a symlink.
+
+`deploy_by_copy` swaps a mechanism rather than adding work, which is the one that
+does not read like the others. It is here because the question it answers has the
+same shape: a boolean about this machine that no catalog section speaks for.
+`resources/symlinks.py` holds what it costs."""
 
 RETIRED_KEYS = {
     key: 'install is derived from the corresponding name-list now (go_tools non-empty → Go)' for key in ('go', 'rust', 'nvm', 'uv', 'tenv')
@@ -249,7 +256,6 @@ class Machine:
 
     name: str
     coordinates: axes.Coordinates
-    platform_label: str
     subscriptions: Mapping[str, Subscription]
     features: frozenset[str]
     flags: Mapping[str, str]
@@ -272,6 +278,30 @@ class Machine:
     Which tools, and nothing about how each is asked: `resources/auth.py` holds the
     probes and a test asserts the two sets match in both directions.
     """
+
+    @property
+    def platform_label(self) -> str:
+        """Which platform label this machine carries, derived from its coordinates.
+
+        Derived rather than stored, because a manifest is free not to spell it. One
+        declaring `coordinates:` names no platform at all, so a stored field is
+        empty on exactly the machine whose coordinates say `windows` — and that
+        empty answer is reached from three sides at once: `machines show` prints
+        `custom coordinates`, `as_dict` emits an empty `platform`, and `applies_to`
+        compares a narrowing against it, so a `platform: windows` narrowing cannot
+        match the only machine it could mean.
+
+        Deriving closes that structurally rather than by keeping two fields in
+        step, and costs nothing on the bundle path: the label is a function of the
+        tuple, a manifest naming both a platform and coordinates is refused, and
+        `tests/cli/test_apply.py` asserts the round trip is exact for every bundle.
+
+        What it does give up is the ability to say *how the manifest was written*.
+        That is a property of the file rather than of the machine, `machines show
+        --raw` answers it exactly, and this field is named for the platform rather
+        than for the declaration.
+        """
+        return axes.platform_label(self.coordinates)
 
     def wants(self, feature: str) -> bool:
         return feature in self.features
@@ -336,7 +366,7 @@ def load(name: str, root: Path | None = None) -> Machine:
         raise MachineError((DeclarationIssue(name, f'is a {type(declared).__name__} where a mapping is expected'),))
 
     issues.extend(_unknown_keys(name, declared))
-    coordinates, label = _coordinates(name, declared, issues)
+    coordinates = _coordinates(name, declared, issues)
     flags = _flags(declared, flag_data or {}, issues)
     auth = _auth(name, declared, issues)
 
@@ -346,23 +376,28 @@ def load(name: str, root: Path | None = None) -> Machine:
     return Machine(
         name=declared.get('machine') or name,
         coordinates=coordinates,
-        platform_label=label,
         subscriptions={section: _subscribe(section, declared) for section in catalog.SECTIONS},
         features=frozenset(feature for feature in FEATURES if declared.get(feature) is True),
         flags=flags,
-        requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates, label),
+        requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates),
         source=source,
         auth=auth,
     )
 
 
-def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axes.Coordinates, platform_label: str) -> bool:
+def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axes.Coordinates) -> bool:
     """Whether a `flags.yml` declaration narrows to this machine.
 
     Every coordinate is a narrowing key, not just `platform:`. That is the fix
     for `WINDOWS_USER` being declared `platform: wsl` and therefore invisible to
     an Arch-on-WSL box: as `host: wsl` the distro stops mattering. The mechanism
     that exists to make a missing value loud was itself keyed on the wrong axis.
+
+    The label is derived here rather than passed in, which is what stops the same
+    fault reappearing on the `platform:` key itself. A caller handed the label the
+    manifest happened to spell, and a manifest declaring `coordinates:` spells
+    none — so a `platform:` narrowing was compared against `''` and could match
+    nothing on exactly the machines that need naming most.
     """
     if narrowing.get('machine', machine_name) != machine_name:
         return False
@@ -371,7 +406,8 @@ def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axe
         if wanted is not None and wanted != str(getattr(coordinates, axis)):
             return False
     # `platform:` stays legal and means the whole bundle.
-    return narrowing.get('platform', platform_label) == platform_label
+    label = axes.platform_label(coordinates)
+    return narrowing.get('platform', label) == label
 
 
 def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
@@ -400,33 +436,38 @@ def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIss
     ]
 
 
-def _coordinates(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[axes.Coordinates, str]:
+def _coordinates(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
     """Resolve the platform bundle, or the axes a manifest names directly.
 
     Never both: two spellings of the same fact is the drift the split exists to
     end, and a manifest carrying both would leave a reader unable to say which
     one the install used.
+
+    Only the tuple is returned, never the label beside it. `coordinates.platform_label`
+    derives that from the tuple, and a copy returned alongside is a second answer
+    free to disagree with the first — `Machine.platform_label` holds what that
+    costs.
     """
     label = declared.get('platform')
     overrides = declared.get('coordinates') or {}
 
     if label is None and not overrides:
         issues.append(DeclarationIssue(name, 'declares neither a platform nor coordinates, so nothing knows what kind of machine it is'))
-        return axes.PLATFORM_BUNDLES['linux'], ''
+        return axes.PLATFORM_BUNDLES['linux']
 
     if label is not None and label not in axes.PLATFORM_BUNDLES:
         issues.append(DeclarationIssue(name, f'declares platform {label!r}. Known: {", ".join(axes.PLATFORM_BUNDLES)}'))
-        return axes.PLATFORM_BUNDLES['linux'], str(label)
+        return axes.PLATFORM_BUNDLES['linux']
 
     base = axes.PLATFORM_BUNDLES[label] if label else None
     if base is not None and not overrides:
-        return base, str(label)
+        return base
 
     if base is not None and overrides:
         issues.append(DeclarationIssue(name, 'declares both a platform and coordinates; a fact spelled twice is a fact that can disagree'))
-        return base, str(label)
+        return base
 
-    return _from_axes(name, overrides, issues), ''
+    return _from_axes(name, overrides, issues)
 
 
 def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
@@ -522,17 +563,12 @@ def _shell_value(value: Any) -> str:
     return str(value)
 
 
-def _requirements(
-    flag_data: Mapping[str, Any],
-    machine_name: str,
-    coordinates: axes.Coordinates,
-    platform_label: str,
-) -> tuple[Requirement, ...]:
+def _requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: axes.Coordinates) -> tuple[Requirement, ...]:
     found = []
     for key in ('required', 'required_files'):
         for entry in flag_data.get(key) or ():
             narrowing = {axis: str(entry[axis]) for axis in (*axes.AXES, 'machine', 'platform') if axis in entry}
-            if not applies_to(narrowing, machine_name, coordinates, platform_label):
+            if not applies_to(narrowing, machine_name, coordinates):
                 continue
             found.append(
                 Requirement(

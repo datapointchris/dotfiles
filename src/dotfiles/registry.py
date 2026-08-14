@@ -63,6 +63,7 @@ from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
 from dotfiles.providers import toolchain
 from dotfiles.providers import uvtool
+from dotfiles.providers import winget
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Reason
 from dotfiles.resolve import Stage
@@ -300,6 +301,46 @@ class CustomProvider(VendoredProvider):
         if not isinstance(entry, catalogs.CustomInstaller):
             return providers.Result(False, f'{item.name} is not a custom_installers entry')
         return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class WingetProvider(VendoredProvider):
+    """A Windows CLI from the Microsoft Store client, copied onto `~/.local/bin`.
+
+    A `VendoredProvider` rather than a manager-backed one, which is the opposite
+    call to `CargoProvider` beside it and is decided by the same test: winget
+    resolves and unpacks the package, but it leaves the binary in a version-stamped
+    directory nothing puts on PATH, so this package owns the last step and has to
+    re-measure whether it happened. `_arrived` matters here for the ordinary
+    reason it matters for a release — `observe` ran before the report was printed,
+    and installing over a binary that turned up since would replace it with
+    whatever the Store calls current now.
+    """
+
+    def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """PATH, asked under both spellings of the name.
+
+        `shutil.which` appends `PATHEXT` only where `os.name` is `nt`, and the
+        interpreter running this is not necessarily that one — Git Bash ships an
+        MSYS2 Python whose `os.name` is `posix`, and under it a bare `rg` finds
+        nothing on a machine that has `rg.exe`. Every row here would report missing
+        on a fully installed box, and `apply` would reinstall all eight on every
+        run.
+
+        The suffixed spelling second rather than only, because the same eight rows
+        are measured by the native interpreter too, where `rg` is the answer and
+        the one this reports.
+        """
+        found = ev.by_command(item)
+        if found.verdict is Verdict.MATCHED or not item.executable:
+            return found
+        return ev.by_command(dc.replace(item, executable=f'{item.executable}.exe'))
+
+    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+        entry = item.entry
+        if not isinstance(entry, catalogs.WingetPackage):
+            return providers.Result(False, f'{item.name} is not a winget_packages entry')
+        return winget.install(entry, providers.bin_dir(), offline=session.offline)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -1069,6 +1110,7 @@ PROVIDERS: tuple[Provider, ...] = (
     ReleaseProvider('ghrelease', 'packages', Stage.TOOLS, 'github_releases'),
     CustomProvider('custom', 'packages', Stage.TOOLS, 'custom_installers'),
     CargoProvider('cargo', 'packages', Stage.TOOLS, 'cargo_packages'),
+    WingetProvider('winget', 'packages', Stage.TOOLS, 'winget_packages'),
     GoToolProvider('go', 'packages', Stage.TOOLS, 'go_tools'),
     NpmProvider('npm', 'packages', Stage.NODE_TOOLS, 'npm_globals'),
     UvToolProvider('uv', 'packages', Stage.PYTHON_TOOLS, 'uv_tools'),

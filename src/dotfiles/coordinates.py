@@ -1,4 +1,10 @@
-"""The six axes a machine actually varies along, and the four points named today.
+"""The six axes a machine actually varies along, and the labels that bundle them.
+
+A machine reaches its point either way: through a `PLATFORM_BUNDLES` label, or by
+naming its six coordinates directly in the manifest. The Windows box takes the
+second route, so the labels are no longer a roster of the fleet — they are the
+shorthands that happen to have earned a name.
+
 
 `PLATFORM` is not an axis. It is a *fused point* — package manager, OS family,
 display stack, host and capacity collapsed into one string — which is why
@@ -29,11 +35,13 @@ class PackageManager(enum.StrEnum):
     APT = 'apt'
     PACMAN = 'pacman'
     BREW = 'brew'
+    WINGET = 'winget'
 
 
 class OSFamily(enum.StrEnum):
     DARWIN = 'darwin'
     LINUX = 'linux'
+    WINDOWS = 'windows'
 
 
 class DisplayStack(enum.StrEnum):
@@ -61,6 +69,7 @@ INSTALLER_FAMILIES: dict[PackageManager, tuple[str, ...]] = {
     PackageManager.APT: ('apt',),
     PackageManager.PACMAN: ('pacman', 'aur'),
     PackageManager.BREW: ('brew', 'cask', 'mas'),
+    PackageManager.WINGET: ('winget',),
 }
 """A package manager selects a *family* of installers, not one.
 
@@ -68,6 +77,12 @@ Reading `pacman` as a single installer drops the five `aur:` entries from
 archlinux-personal; reading `brew` as one drops all 21 casks and 12 Mac App Store
 apps from macos-personal. Both machines would install and neither would say
 anything was missing.
+
+A family of one is still written out, `apt` and `winget` alike.
+`Coordinates.installers` is a total lookup and `registry._by_manager` performs it
+on every system change, so a manager with no row here raises `KeyError` the first
+time a machine declares it — a crash where the missing thing is a table entry
+nobody can see from the traceback.
 """
 
 
@@ -112,9 +127,18 @@ def incoherent(point: Coordinates) -> tuple[str, ...]:
     was four hand-written tuples — so nothing has ever had to check this, and a
     manifest declaring `coordinates:` directly is new surface.
 
-    Deliberately only the four that are *impossible*, not the ones that are
-    merely unused. Homebrew on Linux is a real thing nobody here runs, and
+    Deliberately only the combinations that are *impossible*, not the ones that
+    are merely unused. Homebrew on Linux is a real thing nobody here runs, and
     forbidding it would be inventing a constraint rather than recording one.
+    Winget off Windows is the asymmetric case and is forbidden rather than
+    merely unused, because there is no such client to run — and every other rule
+    keys on `os_family`, so it would otherwise be the one manager no rule ever
+    looks at.
+
+    Independent `if`s rather than a chain, which is not a style choice. The aqua
+    rule was the `elif` of the darwin branch, so a second OS family written as
+    another `elif` would have shadowed it and let windows-on-aqua through. That
+    hole widens with every family added, and it shows up in no diff.
     """
     problems = []
     if point.os_family is OSFamily.DARWIN:
@@ -124,7 +148,16 @@ def incoherent(point: Coordinates) -> tuple[str, ...]:
             problems.append('wsl hosts Linux; there is no macOS inside it')
         if point.display_stack is DisplayStack.WAYLAND:
             problems.append('wayland is a Linux display stack; macOS draws on aqua')
-    elif point.display_stack is DisplayStack.AQUA:
+    if point.os_family is OSFamily.WINDOWS:
+        if point.package_manager is not PackageManager.WINGET:
+            problems.append(f'{point.package_manager} is a Unix package manager')
+        if point.host is Host.WSL:
+            problems.append('wsl hosts Linux, and Windows is what it runs inside')
+        if point.display_stack is DisplayStack.WAYLAND:
+            problems.append('wayland is a Linux display stack; Windows draws through the Desktop Window Manager')
+    if point.package_manager is PackageManager.WINGET and point.os_family is not OSFamily.WINDOWS:
+        problems.append('winget is a Windows Store client')
+    if point.display_stack is DisplayStack.AQUA and point.os_family is not OSFamily.DARWIN:
         problems.append('aqua is the macOS display stack')
     return tuple(problems)
 
@@ -146,22 +179,31 @@ end.
 
 
 def platform_label(declared: Coordinates) -> str:
-    """Which of the four labels these coordinates carry.
+    """Which label these coordinates carry.
 
     Keyed on the package manager, with apt split by host, which is the whole of
-    what the four labels distinguish. It selects nothing that deploys: a label is
+    what the labels distinguish. It selects nothing that deploys: a label is
     printed in a run's header and matched by a `platform:` narrowing.
 
-    Derived rather than read off `Machine.platform_label`, because a manifest may
-    declare `coordinates:` *instead of* `platform:` and then carries no label to
-    read. Arch-on-WSL therefore lands on the pacman answer, which is the point of
-    deriving it: the tuple it needs exists while the fused string has no row for
-    it.
+    The only answer to the question, and `Machine.platform_label` reads it here
+    rather than storing one — a stored label is whatever the manifest spelled, and
+    a manifest declaring `coordinates:` spells nothing. Deriving also answers where
+    no single label exists to store: Arch-on-WSL lands on the pacman answer,
+    because the tuple carries both facts while a fused string has no row for the
+    combination.
+
+    Winget is answered explicitly rather than left to the last line, which is a
+    fallthrough and not a Linux test — it labels everything that is neither brew
+    nor pacman. A Windows machine reaching it would print `linux` in every run
+    header and match a `platform: linux` narrowing, which is the failure mode of
+    a default that reads as an answer.
     """
     if declared.package_manager is PackageManager.BREW:
         return 'macos'
     if declared.package_manager is PackageManager.PACMAN:
         return 'archlinux'
+    if declared.package_manager is PackageManager.WINGET:
+        return 'windows'
     return 'wsl' if declared.host is Host.WSL else 'linux'
 
 
@@ -256,9 +298,9 @@ def target_for(declared: Coordinates) -> Target:
 def detect_arch(machine: str | None = None) -> Arch:
     """`uname -m`, reduced to the two the fleet runs.
 
-    Anything unrecognised answers x86_64 rather than raising: the fleet is four
-    machines and two architectures, and a release installer that refused to guess
-    would refuse to run at all on a box nobody has yet.
+    Anything unrecognised answers x86_64 rather than raising: two architectures
+    is the whole spread here, and a release installer that refused to guess would
+    refuse to run at all on a box nobody has yet.
     """
     name = (machine or platform.machine()).lower()
     return Arch.ARM64 if name in {'arm64', 'aarch64'} else Arch.X86_64
@@ -285,13 +327,50 @@ def detect(root: Path = Path('/')) -> Detected:
     `root` exists for the tests: every probe is a file or a binary, so pointing
     them at a fixture is the whole seam and nothing in this module is patched.
     """
-    family = OSFamily.DARWIN if platform.system() == 'Darwin' else OSFamily.LINUX
+    family = _os_family()
     return Detected(os_family=family, package_manager=_package_manager(family), host=_host(root))
 
 
+def _os_family() -> OSFamily:
+    """Which OS this interpreter is running on, by the name its build reports.
+
+    `Windows` is the live answer, and the rest is a guard rather than a branch
+    anyone reaches. `platform.system()` reports the kernel an interpreter was
+    built against, and the interpreter here is whatever `uv` resolved — which on
+    that machine is a python-build-standalone CPython, a native Windows binary
+    that answers `Windows` whichever shell invoked it. Git for Windows ships no
+    Python of its own, so nothing about running under Git Bash changes this.
+
+    The emulation spellings are what a Python installed *inside* MSYS2 by its own
+    pacman would answer: `MSYS_NT-10.0-26100`, `MINGW64_NT-…` from the subsystem
+    Git Bash is built on, `CYGWIN_NT-…` from the ancestor of both. Nothing in this
+    fleet installs one, and matching them costs a prefix test.
+
+    Reading only `Windows` is the failure worth naming, because the fallthrough is
+    Linux rather than unknown: `disagreements` would tell such a machine that its
+    manifest declares windows while the machine is linux, on every run, and the
+    advice would be to fix the manifest.
+    """
+    system = platform.system()
+    if system == 'Darwin':
+        return OSFamily.DARWIN
+    if system == 'Windows' or system.lower().startswith(('msys_nt', 'mingw', 'cygwin')):
+        return OSFamily.WINDOWS
+    return OSFamily.LINUX
+
+
 def _package_manager(family: OSFamily) -> PackageManager | None:
+    """The manager on PATH, asked of the family rather than tried in turn.
+
+    Winget is looked up under both spellings because `shutil.which` consults
+    `PATHEXT` only where `os.name` is `nt`, which an MSYS2 interpreter is not —
+    it would search for an extensionless `winget` that Windows does not ship, and
+    report a machine with winget installed as having no package manager at all.
+    """
     if family is OSFamily.DARWIN:
         return PackageManager.BREW if shutil.which('brew') else None
+    if family is OSFamily.WINDOWS:
+        return PackageManager.WINGET if shutil.which('winget') or shutil.which('winget.exe') else None
     for manager in (PackageManager.PACMAN, PackageManager.APT):
         if shutil.which(str(manager)):
             return manager

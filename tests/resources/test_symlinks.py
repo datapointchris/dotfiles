@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import deploy
 from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -45,6 +46,20 @@ def repo(tmp_path: Path) -> Path:
 @pytest.fixture
 def session(repo: Path, home: Path) -> Session:
     return Session(machine_name='box', repo=repo, home=home)
+
+
+@pytest.fixture
+def copying(repo: Path, home: Path) -> Session:
+    """A machine that deploys by copy, on the same coordinates as `box`.
+
+    `platform: linux` deliberately, so every declaration these tests make lands in
+    the same place `box`'s does and the only difference between the two fixtures
+    is the mechanism. The feature is a fact about one machine's administration
+    rather than about its OS, which is exactly why it is not derived from the
+    coordinates and why a Linux manifest can set it.
+    """
+    (repo / 'install' / 'manifests' / 'copybox.yml').write_text('machine: copybox\nplatform: linux\ndeploy_by_copy: true\n')
+    return Session(machine_name='copybox', repo=repo, home=home)
 
 
 def declare(repo: Path, relative: str, content: str = 'config\n') -> Path:
@@ -364,6 +379,226 @@ def test_a_deployed_config_is_never_touched_by_a_later_run(session: Session, rep
     assert deployed not in observed.orphans
     assert symlinks.RESOURCE.diff(session.plan, observed) == ()
     assert deployed.read_text() == 'source = conf/keybindings.conf\n'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy_by_copy: the same decisions, over a mechanism with no provenance
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_declared_file_that_was_never_copied_is_missing(copying: Session, repo: Path, home: Path) -> None:
+    declare(repo, 'configs/common/.config/tmux/tmux.conf')
+
+    found = changes(copying)
+
+    assert [change.verdict for change in found] == [Verdict.MISSING]
+    assert found[0].detail.startswith(str(home / '.config/tmux/tmux.conf'))
+
+
+def test_a_copy_whose_bytes_differ_from_the_repo_is_stale(copying: Session, repo: Path, home: Path) -> None:
+    """Content equality is the whole identity test here, so this row covers both
+    a copy that has fallen behind and a file somebody else wrote. They are
+    indistinguishable, and `apply` overwrites either."""
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    (home / '.bashrc').write_text('something else entirely\n')
+
+    found = changes(copying)
+
+    assert [change.verdict for change in found] == [Verdict.STALE]
+    assert found[0].repair is Repair.AUTOMATIC
+    assert found[0].actionable
+
+
+def test_a_copy_matching_the_repo_reports_nothing(copying: Session, repo: Path, home: Path) -> None:
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    (home / '.bashrc').write_text('the repo copy\n')
+
+    assert changes(copying) == ()
+
+
+def test_a_target_that_cannot_be_read_is_unmeasured_rather_than_stale(copying: Session, repo: Path, home: Path) -> None:
+    """A directory where a config belongs. Calling it stale would promise a repair
+    for something nothing measured; calling it converged would hide it."""
+    declare(repo, 'configs/common/.bashrc')
+    (home / '.bashrc').mkdir()
+
+    found = changes(copying)
+
+    assert found[0].verdict is Verdict.UNKNOWN
+    assert found[0].repair is Repair.NONE
+    assert found[0].unmeasured
+
+
+def test_applying_writes_a_regular_file_carrying_the_source_mode(copying: Session, repo: Path, home: Path) -> None:
+    """An `apps/` file that arrives without its mode bit is one the shell will not
+    run, which is why the copy carries mode and not only bytes."""
+    source = declare(repo, 'apps/common/notes', '#!/bin/sh\necho notes\n')
+    source.chmod(0o755)
+
+    apply(copying)
+
+    deployed = home / '.local/bin/notes'
+    assert not deployed.is_symlink()
+    assert deployed.read_text() == '#!/bin/sh\necho notes\n'
+    assert deployed.stat().st_mode & 0o111
+
+
+def test_applying_by_copy_is_idempotent(copying: Session, repo: Path) -> None:
+    declare(repo, 'configs/common/.bashrc')
+    apply(copying)
+
+    assert apply(copying) == []
+
+
+def test_a_file_the_repo_never_declared_is_left_alone(copying: Session, repo: Path, home: Path) -> None:
+    declare(repo, 'configs/common/.bashrc')
+    stray = home / '.config' / 'stray.conf'
+    stray.parent.mkdir(parents=True)
+    stray.write_text('the user put this here\n')
+
+    apply(copying)
+
+    assert stray.read_text() == 'the user put this here\n'
+    assert changes(copying) == ()
+
+
+def test_a_copy_whose_source_is_gone_is_never_pruned(copying: Session, repo: Path, home: Path) -> None:
+    """The one thing this mechanism gives up, pinned as a behaviour rather than
+    left to the docstring. A symlink into the repo says who made it, so a deleted
+    source makes it an orphan to prune; a copy says nothing, so pruning would be
+    guessing — and the thing guessed at is a file this repo cannot regenerate and
+    the Windows side may hold the only copy of.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    apply(copying)
+    (repo / 'configs/common/.bashrc').unlink()
+
+    assert changes(copying) == ()
+    assert (home / '.bashrc').read_text() == 'the repo copy\n'
+
+
+def test_a_symlink_left_by_the_other_mechanism_is_replaced_by_a_copy(copying: Session, session: Session, repo: Path, home: Path) -> None:
+    """The migration itself: the box deployed by link until policy stopped it.
+
+    Every other row here starts from an empty home, which is the one starting
+    state that cannot catch this — a target that is already a link into the repo
+    reads back the source's own bytes through the link, so comparing content
+    answered `same` and the run reported a converged machine still deployed the
+    way it can no longer be.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    apply(session)
+    assert (home / '.bashrc').is_symlink()
+
+    found = changes(copying)
+
+    assert [change.verdict for change in found] == [Verdict.STALE]
+    assert found[0].repair is Repair.AUTOMATIC
+    apply(copying)
+    assert not (home / '.bashrc').is_symlink()
+    assert (home / '.bashrc').read_text() == 'the repo copy\n'
+
+
+def test_nothing_is_deployed_as_a_symlink_on_a_copy_machine(copying: Session, repo: Path, home: Path) -> None:
+    """The mechanism swaps for all three trees at once. It is per machine, not per
+    tree: nothing about `configs/` wants copying that `apps/` does not."""
+    declare(repo, 'configs/common/.config/tmux/tmux.conf')
+    declare(repo, 'shell/common/functions.sh')
+    declare(repo, 'apps/common/notes')
+
+    apply(copying)
+
+    deployed = [home / '.config/tmux/tmux.conf', home / '.local/shell/functions.sh', home / '.local/bin/notes']
+    assert [path.is_file() for path in deployed] == [True, True, True]
+    assert not any(path.is_symlink() for path in deployed)
+
+
+def test_the_summary_names_the_mechanism_this_machine_deploys_by(copying: Session, session: Session, repo: Path) -> None:
+    """Same count, different noun, from the one fixture difference.
+
+    A copy machine creates no symlinks at all, so a summary counting them names a
+    thing the run did not produce — and it is the line a reader keeps, above rows
+    that say `copy` throughout.
+    """
+    declare(repo, 'configs/common/.bashrc')
+
+    assert symlinks.RESOURCE.observe(copying, copying.plan).summary == '0 of 1 declared copies in place'
+    assert symlinks.RESOURCE.observe(session, session.plan).summary == '0 of 1 declared symlinks in place'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# unlink, which is the one thing copy mode does not give up
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_unlinking_a_copy_machine_removes_what_it_deployed(copying: Session, repo: Path, home: Path) -> None:
+    """The claim `unlink` makes everywhere, made here over the other mechanism.
+
+    A sweep for symlinks finds none of these — every target is a regular file — so
+    the pass that only swept reported a machine it had left fully deployed as
+    unconfigured, and exited converged saying so.
+    """
+    declare(repo, 'configs/common/.bashrc')
+    declare(repo, 'shell/common/functions.sh')
+    declare(repo, 'apps/common/notes')
+    apply(copying)
+
+    assert deploy.unlink(copying)
+
+    assert not (home / '.bashrc').exists()
+    assert not (home / '.local/shell/functions.sh').exists()
+    assert not (home / '.local/bin/notes').exists()
+
+
+def test_unlinking_leaves_a_declared_target_whose_bytes_are_not_the_repos(copying: Session, repo: Path, home: Path) -> None:
+    """Content equality is the only provenance there is, so it is also the only
+    thing standing between this verb and somebody's file.
+
+    The reported half matters as much as the kept file: `unlink` promises a
+    machine left unconfigured, so a run that could not finish the job says so in
+    the exit code rather than in output nothing reads.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    apply(copying)
+    (home / '.bashrc').write_text('edited on this machine\n')
+
+    assert not deploy.unlink(copying)
+
+    assert (home / '.bashrc').read_text() == 'edited on this machine\n'
+
+
+def test_unlinking_a_copy_machine_still_removes_a_link_the_other_mechanism_left(
+    copying: Session, session: Session, repo: Path, home: Path
+) -> None:
+    """The migration leaves both shapes on one machine, so both passes run there.
+
+    A box that deployed by link until policy stopped it has links resolving into
+    the repo, and they are this repo's to remove whatever the manifest now says
+    about how to write new ones.
+    """
+    declare(repo, 'configs/common/.bashrc')
+    apply(session)
+    assert (home / '.bashrc').is_symlink()
+
+    assert deploy.unlink(copying)
+
+    assert not (home / '.bashrc').is_symlink()
+    assert not (home / '.bashrc').exists()
+
+
+def test_unlinking_a_link_machine_never_reaches_a_regular_file(session: Session, repo: Path, home: Path) -> None:
+    """The copy pass is per machine, exactly as the deployment is.
+
+    On a machine that deploys by link, a regular file at a declared target is one
+    this manager refused to replace — so a removal keyed on content rather than on
+    provenance would delete the very file the refusal exists to protect.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    (home / '.bashrc').write_text('the repo copy\n')
+
+    assert deploy.unlink(session)
+
+    assert (home / '.bashrc').read_text() == 'the repo copy\n'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

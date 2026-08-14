@@ -197,28 +197,8 @@ tasks:
       - bash "{{.DOTFILES_DIR}}/install/ops/docs.sh" deploy
 
   # ================================================================
-  # WINDOWS (WSL only)
+  # WSL
   # ================================================================
-
-  windows:setup:
-    desc: One-time Windows Git Bash setup via winget (run from WSL)
-    cmds:
-      - dotfiles windows apply
-
-  windows:bundle:
-    desc: "Bundle Windows tool binaries into a .tar.gz for offline install (any machine; default archive in repo root)"
-    cmds:
-      - dotfiles windows create {{.CLI_ARGS}}
-
-  windows:offline:
-    desc: "Install Windows tools from a bundle archive when winget is blocked (WSL): task windows:offline -- <archive>"
-    cmds:
-      - dotfiles windows apply --offline --source {{.CLI_ARGS}}
-
-  windows:sync:
-    desc: Sync shell files to Windows Git Bash (run from WSL)
-    cmds:
-      - bash "{{.DOTFILES_DIR}}/install/wsl/sync-windows-shell.sh"
 
   wsl:tune:
     desc: Install .wslconfig to the Windows user profile (run from WSL)

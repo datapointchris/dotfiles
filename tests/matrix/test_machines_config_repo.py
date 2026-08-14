@@ -169,9 +169,12 @@ def test_show_answers_about_a_machine_this_box_is_not(sandbox: Sandbox, cli: Cal
 
 
 def test_a_platform_bundle_and_direct_coordinates_reach_the_same_shape(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A manifest naming `coordinates:` carries no platform label, and the label is
-    the only field that differs. `custom coordinates` is what the human rendering
-    says instead."""
+    """A manifest naming `coordinates:` reaches the same shape, label included.
+
+    The label is derived from the tuple rather than read back from what the
+    manifest spelled, so declaring the axes directly is a difference in the file
+    and in nothing the machine reports. It read `custom coordinates` and emitted an
+    empty `platform` while the tuple answered the question all along."""
     sandbox.declare(
         manifest={
             'machine': 'box',
@@ -189,9 +192,9 @@ def test_a_platform_bundle_and_direct_coordinates_reach_the_same_shape(sandbox: 
     ran = cli('machines', 'show', '--json')
     printed = cli('machines', 'show')
 
-    assert ran.document['platform'] == ''
+    assert ran.document['platform'] == 'archlinux'
     assert ran.document['coordinates']['display_stack'] == 'wayland'
-    assert 'custom coordinates' in printed.stdout
+    assert 'archlinux' in printed.stdout
 
 
 def test_every_item_names_the_selector_that_pulled_it_in(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

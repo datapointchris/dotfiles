@@ -111,13 +111,19 @@ class Staging:
         return ', '.join(f'{category} {count}' for category, count in self.counts.items())
 
 
-BUNDLED_KINDS = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller)
+BUNDLED_KINDS = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.WingetPackage)
 """The declaration kinds `create_bundle` stages, and the only ones a bundle can miss.
 
 Read off its `record` calls: a `GithubRelease` becomes a `binary` row plus an `extra`
-per companion, a `GoTool` a `go-binary`, a `CargoPackage` a `cargo`, and a
-`CustomInstaller` a `script` — and that last only where the entry declares
-`bundle_install_script`.
+per companion, a `GoTool` a `go-binary`, a `CargoPackage` a `cargo`, a
+`WingetPackage` a `winget`, and a `CustomInstaller` a `script` — and that last only
+where the entry declares `bundle_install_script`.
+
+A `WingetPackage` belongs here for a reason the others do not need stated: its
+machine declares nothing else. Counting it `outside` would have `bundle check`
+report a Windows box as fully covered by a bundle carrying nothing it can install,
+which is the one machine where that sentence is both wrong and unfalsifiable from
+the other end.
 
 Everything else is deliberately absent and must not be reported as a gap. A system
 package comes from apt or pacman on the machine, an npm global from a registry, a

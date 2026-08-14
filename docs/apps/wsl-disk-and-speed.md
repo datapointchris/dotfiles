@@ -203,7 +203,8 @@ Without this you can only evaluate the change by living with it for a week.
 `%UserProfile%` on the Windows side. The symlink manager deploys below `$HOME`,
 and `$HOME` here is inside the guest, so this one is copied by
 `install/wsl/install-wslconfig.sh` — `task wsl:tune` — with a `--check` mode
-that reports drift the way `sync-windows-shell.sh` does.
+that prints drift on stdout and nothing else, so an empty answer reads as
+converged.
 
 An existing file is backed up rather than replaced silently. It is a file
 somebody edits by hand at the exact moment something is broken, and losing that

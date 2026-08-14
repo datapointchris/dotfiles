@@ -488,6 +488,77 @@ class CargoPackage(Entry):
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
+class WingetPackage(Entry):
+    """A Windows CLI, installed by the Microsoft Store client.
+
+    Its own section rather than a `winget:` column on `SystemPackage`, and the
+    reason is mechanism rather than destination. Six of these eight are
+    `cargo_packages` rows and one is a `github_releases` row; what none of them can
+    be on Windows is the thing they are elsewhere, because binstall, the Rust
+    target triple and this repo's release-asset code all end at the Unix side. A
+    fifth manager column would instead have reached `package_for`, the four manager
+    names `SystemPackage.problems` hardcodes, `INSTALLER_FAMILIES`,
+    `syspkg.PREFERENCE`, `syspkg.ESCALATES`, `evidence.INSTALLER_QUERIES` and
+    `registry._bootstrap` — seven places, to say that one machine installs a tool a
+    different way.
+
+    `repo` and `asset` name where the same binary is published on GitHub, which is
+    the offline channel rather than a note about one: the machine that needs these
+    most cannot use winget at all, because an employer network blocks it outright.
+    `create_bundle.add_winget_binaries` stages from that coordinate and
+    `providers.winget` installs what it staged — in the general bundler beside
+    every other category, because Windows is one more machine to build a bundle
+    for rather than a side reached across a boundary.
+
+    `asset` is a field where `GithubRelease` keeps its asset names in code, and the
+    split is not an inconsistency. That convention exists because the release
+    entries defeat any placeholder vocabulary between them; these need exactly the
+    two `{version}` and `{version_num}` spellings, and the alternative — a function
+    per tool in a second module — would be code for a fact one string states.
+
+    Deliberately outside `packages.CURRENCY`: winget is a registry that owns its
+    own upgrades, so asking each package whether it is behind asks a question
+    `winget upgrade` already answers for all of them at once. That is the same
+    verdict `npm_globals` gets, for the same reason.
+    """
+
+    section: ClassVar[str] = 'winget_packages'
+
+    winget: str
+    """The Microsoft Store id, which is not derivable from `repo`: ripgrep is
+    `BurntSushi.ripgrep` and fd is `sharkdp.fd`, but jq is `jqlang.jq` against a
+    repo of `jqlang/jq` and eza is `eza-community.eza` — close enough to look like
+    a rule and wrong often enough that both are written out."""
+
+    repo: str
+    asset: str
+    """Where the same binary is published outside the Store, as `owner/name` and
+    the Windows asset inside that release's tag.
+
+    The tag is not known until the release is looked up, so the asset carries
+    `{version}` or `{version_num}` where the publisher stamps one in — the tag as
+    written and the tag from its first digit on."""
+
+    @property
+    def filename(self) -> str:
+        """`rg.exe` — what winget leaves behind, what a bundle carries, and what
+        has to land in `~/.local/bin`.
+
+        Derived from `command` rather than declared, so a row cannot name a binary
+        under one spelling and a filename under another. Windows is the only place
+        the suffix is real, which is why it is added here and not carried in
+        `command`: `Entry.executable` is what PATH is asked about, and asking it
+        for `rg.exe` would be wrong on the interpreter that appends the suffix
+        itself.
+        """
+        return f'{self.executable}.exe'
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo)
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
 class GoTool(Entry):
     section: ClassVar[str] = 'go_tools'
 
@@ -675,6 +746,22 @@ class SystemConfig(Entry):
     themselves, so the field went back out under the same rule that admitted it.
     """
 
+    excludes_os_family: str = ''
+    """An OS family this row can never describe, for a row that fits every other.
+
+    The negative form, for the reason `SystemPackage.excludes_host` and
+    `CustomInstaller.excludes_os_family` are negative: the positive fields above
+    name *one* value, and a row true of two families out of three cannot say so
+    without a narrowing language this file deliberately does not have.
+
+    `check-schedule` is the case. It is a systemd user timer or a LaunchAgent, and
+    Windows is neither — the row reached `providers/schedule.py`, took the systemd
+    branch because the dispatch there is a two-way, and was saved from running
+    `systemctl` only by a `which` guard. What it left was `UNKNOWN` on every run of
+    a machine where nothing is wrong and nothing can be repaired, which is the
+    reading `available()` exists to prevent.
+    """
+
     requires_package: str = ''
     """Only where this machine's plan installs that system package. Configuring
     docker's group on a server that never installs docker would create a group
@@ -695,6 +782,9 @@ class SystemConfig(Entry):
             for axis, value in self.narrowing.items()
             if value not in set(axes.AXIS_TYPES[axis])
         ]
+        if self.excludes_os_family and self.excludes_os_family not in set(axes.AXIS_TYPES['os_family']):
+            known = ', '.join(axes.AXIS_TYPES['os_family'])
+            wrong.append(f'excludes os_family {self.excludes_os_family!r}, which is not an OS family. Known: {known}')
         return (*wrong, *Entry.problems(self))
 
 
@@ -856,6 +946,7 @@ SECTION_CLASSES: tuple[type[Entry], ...] = (
     GithubRelease,
     CustomInstaller,
     CargoPackage,
+    WingetPackage,
     GoTool,
     NpmGlobal,
     UvTool,

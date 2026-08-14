@@ -18,6 +18,30 @@ def test_a_package_manager_selects_a_family_not_one_installer() -> None:
     assert axes.PLATFORM_BUNDLES['linux'].installers == ('apt',)
 
 
+def test_the_windows_point_selects_the_winget_family() -> None:
+    """`installers` is a total lookup and `registry._by_manager` performs it on
+    every system change, so a manager with no `INSTALLER_FAMILIES` row raises
+    `KeyError` the first time a machine declares it. Windows has no bundle to
+    catch that, because it declares its coordinates directly."""
+    windows = axes.Coordinates(
+        axes.PackageManager.WINGET,
+        axes.OSFamily.WINDOWS,
+        axes.DisplayStack.NONE,
+        axes.Host.NATIVE,
+        axes.NetworkTrust.NONFLEET,
+        axes.Capacity.WORKSTATION,
+    )
+
+    assert windows.installers == ('winget',)
+
+
+@pytest.mark.parametrize('manager', list(axes.PackageManager))
+def test_every_package_manager_names_an_installer_family(manager: axes.PackageManager) -> None:
+    """The row above, generalised: the next manager added is the one nobody
+    thinks to write a family for."""
+    assert axes.INSTALLER_FAMILIES[manager]
+
+
 def test_every_platform_bundle_names_every_axis() -> None:
     for label, bundle in axes.PLATFORM_BUNDLES.items():
         assert set(bundle.as_dict()) == set(axes.AXES), label
@@ -52,6 +76,10 @@ def test_a_machine_selects_one_directory_per_axis_in_axis_order() -> None:
         (('brew', 'darwin', 'aqua', 'wsl', 'fleet', 'workstation'), 'wsl hosts Linux'),
         (('brew', 'darwin', 'wayland', 'native', 'fleet', 'workstation'), 'wayland is a Linux display stack'),
         (('pacman', 'linux', 'aqua', 'native', 'fleet', 'workstation'), 'aqua is the macOS display stack'),
+        (('apt', 'windows', 'none', 'native', 'nonfleet', 'workstation'), 'apt is a Unix package manager'),
+        (('winget', 'linux', 'none', 'native', 'nonfleet', 'workstation'), 'winget is a Windows Store client'),
+        (('winget', 'windows', 'none', 'wsl', 'nonfleet', 'workstation'), 'Windows is what it runs inside'),
+        (('winget', 'windows', 'wayland', 'native', 'nonfleet', 'workstation'), 'wayland is a Linux display stack'),
     ],
 )
 def test_a_point_no_machine_can_be_is_named_as_such(point: tuple[str, ...], expected_problem: str) -> None:
@@ -61,6 +89,23 @@ def test_a_point_no_machine_can_be_is_named_as_such(point: tuple[str, ...], expe
     found = axes.incoherent(axes.Coordinates(*(axes.AXIS_TYPES[axis](value) for axis, value in zip(axes.AXES, point, strict=True))))
 
     assert any(expected_problem in problem for problem in found), found
+
+
+def test_a_second_os_family_does_not_shadow_the_aqua_rule() -> None:
+    """The aqua rule was the `elif` of the darwin branch, so a second family
+    written as another `elif` would have taken the same slot and let
+    windows-on-aqua through. A shadowed rule shows up in no diff and in no
+    failure — only in the point it stops rejecting."""
+    windows_on_aqua = axes.Coordinates(
+        axes.PackageManager.WINGET,
+        axes.OSFamily.WINDOWS,
+        axes.DisplayStack.AQUA,
+        axes.Host.NATIVE,
+        axes.NetworkTrust.NONFLEET,
+        axes.Capacity.WORKSTATION,
+    )
+
+    assert any('aqua is the macOS display stack' in problem for problem in axes.incoherent(windows_on_aqua))
 
 
 def test_every_bundle_is_a_machine_that_can_exist() -> None:
@@ -89,6 +134,27 @@ def test_the_distro_name_is_enough_on_its_own(tmp_path: Path, monkeypatch) -> No
     monkeypatch.setenv('WSL_DISTRO_NAME', 'Ubuntu')
 
     assert axes.detect(tmp_path).host is axes.Host.WSL
+
+
+@pytest.mark.parametrize('system', ['Windows', 'MSYS_NT-10.0-26100', 'MINGW64_NT-10.0-26100', 'CYGWIN_NT-10.0-26100'])
+def test_windows_is_measured_under_every_spelling_its_interpreters_report(
+    tmp_path: Path, system: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CPython for Windows answers `Windows`; a Python built on a POSIX emulation
+    layer answers that layer's own uname. Reading only the first leaves the rest
+    on the Linux branch, where the fallthrough is silent — `disagreements` would
+    report a windows manifest against a linux machine on every run."""
+    monkeypatch.setattr(axes.platform, 'system', lambda: system)
+
+    assert axes.detect(tmp_path).os_family is axes.OSFamily.WINDOWS
+
+
+def test_a_linux_kernel_is_not_read_as_windows(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Windows spellings are matched by prefix, which is the half of that
+    test that can over-reach."""
+    monkeypatch.setattr(axes.platform, 'system', lambda: 'Linux')
+
+    assert axes.detect(tmp_path).os_family is axes.OSFamily.LINUX
 
 
 def test_a_declared_axis_disagreeing_with_the_machine_is_reported() -> None:

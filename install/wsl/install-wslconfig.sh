@@ -48,7 +48,7 @@ main() {
   local target="$profile/.wslconfig"
 
   # Drift on stdout and nothing else, so the caller reads an empty answer as
-  # converged. Same contract as sync-windows-shell.sh --check.
+  # converged.
   if [[ "$mode" == "--check" ]]; then
     if [[ ! -f "$target" ]]; then
       echo "missing: .wslconfig"

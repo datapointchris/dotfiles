@@ -108,6 +108,10 @@ path = ~/.config/delta/current.gitconfig
 # and personal work the personal exception is an includeIf that has to be read
 # after the default it overrides.
 
+# os
+[include]
+path = ~/.config/git/windows.gitconfig
+
 # host
 [include]
 path = ~/.config/git/wsl.gitconfig

@@ -28,12 +28,6 @@ a decision — `install/wsl/` holds scripts that run as their own process and
 *must* carry `set -euo pipefail`, so a repo-wide glob for `*.sh` would assert the
 opposite property of them. Everything below a root is derived."""
 
-NOT_A_LIBRARY = {'git-bash'}
-"""`shell/git-bash/` is payload for a different computer — `sync-windows-shell.sh`
-copies it onto the Windows host beside WSL — so nothing here ever sources it and
-it has no caller of ours to protect. `tests/symlinks/test_coordinate_directories.py`
-exempts it by name for the same reason."""
-
 
 def library_directories() -> tuple[str, ...]:
     """Every directory under a root that actually holds a `*.sh`.
@@ -42,17 +36,13 @@ def library_directories() -> tuple[str, ...]:
     its own file plus the `common` every machine gets — with another arriving the
     day a coordinate needs one, which is exactly the growth a list of directories
     does not track.
+
+    Nothing under a root is exempt. Every `*.sh` below one is sourced by a shell
+    this repo deploys, so each has a caller of ours to protect — and an exemption
+    outlives the directory that justified it, which is this file's own recorded
+    failure mode, one level up from the list it replaced.
     """
-    return tuple(
-        sorted(
-            {
-                str(path.parent.relative_to(REPO))
-                for root in LIBRARY_ROOTS
-                for path in (REPO / root).rglob('*.sh')
-                if NOT_A_LIBRARY.isdisjoint(path.relative_to(REPO).parts)
-            }
-        )
-    )
+    return tuple(sorted({str(path.parent.relative_to(REPO)) for root in LIBRARY_ROOTS for path in (REPO / root).rglob('*.sh')}))
 
 
 LIBRARY_DIRS = library_directories()

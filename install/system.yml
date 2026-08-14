@@ -588,8 +588,13 @@ steps:
   # nobody can check is a schedule that silently stops. It writes status.json,
   # which the shell nudge reads, and keeps the release cache warm so an
   # interactive check spends no API calls.
+  # Excluded from Windows rather than left to fall through: the two mechanisms
+  # named below are the whole of what `providers/schedule.py` can address, and a
+  # box with neither reports UNKNOWN on every run with nothing to repair. Task
+  # Scheduler would be a third mechanism and a row that declares one.
   - name: check-schedule
     description: The periodic dotfiles check — a systemd user timer, or a LaunchAgent
+    excludes_os_family: windows
 
   - name: library-visible
     description: ~/Library visible in Finder, which needs both the flag and the xattr cleared
@@ -617,10 +622,4 @@ steps:
     needs_root: false
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory
-    host: wsl
-  # A declared row rather than a task to remember, because the tree is assembled
-  # on this side and only ever executed on the other one: drift in it surfaces
-  # days later, on the one machine with no working shell left to debug from.
-  - name: windows-shell
-    description: The Git Bash shell tree on the Windows side — the shared files, .bashrc, ~/.env
     host: wsl

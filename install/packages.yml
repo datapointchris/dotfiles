@@ -1213,6 +1213,94 @@ cargo_packages:
 
 
 # ================================================================
+# WINGET PACKAGES (Windows)
+# ================================================================
+# Installed via: winget install <id>, then the .exe copied onto ~/.local/bin
+#
+# `repo` and `asset` are required, not annotation. They are the GitHub coordinate
+# the offline channel installs from, and the machine that needs these most cannot
+# reach winget at all — its employer network blocks the Store outright. A row
+# added without them stages nothing there, on the one machine with no other
+# install route. `create_bundle.add_winget_binaries` reads both;
+# `providers.winget.stage` expands `{version}` and `{version_num}` in `asset`.
+#
+# Write `asset` from the Windows release page rather than by analogy with the
+# `cargo_packages` row above: most of these are also Rust tools, and the Windows
+# asset names disagree with the target triple far enough that no shared pattern
+# reaches both — eza publishes eza.exe_x86_64-pc-windows-gnu.zip against a Linux
+# row saying nothing of the sort.
+#
+# `catalog.WingetPackage` says why this is a section of its own rather than a
+# column, and why `asset` is data here where `github_releases` keeps its asset
+# names in code.
+
+winget_packages:
+  - name: jq
+    command: jq
+    winget: jqlang.jq
+    repo: jqlang/jq
+    asset: jq-windows-amd64.exe
+    description: JSON processor
+    tags: [cli, json]
+
+  - name: fzf
+    command: fzf
+    winget: junegunn.fzf
+    repo: junegunn/fzf
+    asset: "fzf-{version_num}-windows_amd64.zip"
+    description: Fuzzy finder
+    tags: [cli, search]
+
+  - name: ripgrep
+    command: rg
+    winget: BurntSushi.ripgrep
+    repo: BurntSushi/ripgrep
+    asset: "ripgrep-{version}-x86_64-pc-windows-msvc.zip"
+    description: Fast grep alternative
+    tags: [cli, search]
+
+  - name: bat
+    command: bat
+    winget: sharkdp.bat
+    repo: sharkdp/bat
+    asset: "bat-{version}-x86_64-pc-windows-msvc.zip"
+    description: cat with syntax highlighting
+    tags: [cli, files]
+
+  - name: fd-find
+    command: fd
+    winget: sharkdp.fd
+    repo: sharkdp/fd
+    asset: "fd-{version}-x86_64-pc-windows-msvc.zip"
+    description: modern find replacement
+    tags: [cli, search, files]
+
+  - name: eza
+    command: eza
+    winget: eza-community.eza
+    repo: eza-community/eza
+    asset: eza.exe_x86_64-pc-windows-gnu.zip
+    description: modern ls replacement
+    tags: [cli, files]
+
+  - name: zoxide
+    command: zoxide
+    winget: ajeetdsouza.zoxide
+    repo: ajeetdsouza/zoxide
+    asset: "zoxide-{version_num}-x86_64-pc-windows-msvc.zip"
+    description: Smarter cd command
+    tags: [cli]
+
+  - name: git-delta
+    command: delta
+    winget: dandavison.delta
+    repo: dandavison/delta
+    asset: "delta-{version}-x86_64-pc-windows-msvc.zip"
+    description: syntax-highlighting git diff
+    tags: [cli, git]
+
+
+# ================================================================
 # TMUX PLUGINS
 # ================================================================
 # Installed via TPM (Tmux Plugin Manager)

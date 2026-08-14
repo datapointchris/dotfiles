@@ -1,0 +1,17 @@
+# A checkout here is edited and built by Windows-native tools, which is what this
+# side of the box is for — the projects that will not run under WSL. `true` is
+# Git for Windows' own installer default: LF in the object store, CRLF in the
+# working tree, converted both ways.
+#
+# `input` is the rejected alternative, and it is what the WSL half carries one
+# axis over. It leaves the working tree alone, which is right where the tools
+# reading it are Unix ones and wrong here — a Windows toolchain handed LF is the
+# case this setting exists for.
+#
+# The cost is real and worth naming: `true` puts CRLF into every text file,
+# shebangs included, and MSYS2 bash refuses `/usr/bin/env^M`. A repo full of
+# shell that Git Bash has to run pins its own exception with `.gitattributes`,
+# which wins over this setting per path; this repo's root one declares
+# `* text=auto eol=lf` for exactly that reason, and says why there.
+[core]
+	autocrlf = true
