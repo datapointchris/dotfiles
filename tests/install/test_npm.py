@@ -16,8 +16,6 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
-from dotfiles import effects
-from dotfiles.effects import Completed
 from dotfiles.providers import Kind
 from dotfiles.providers import npm
 
@@ -32,28 +30,10 @@ def home(tmp_path, monkeypatch) -> Path:
     return root
 
 
-class Registry:
-    """`npm install -g`, answering however this test says the registry behaved."""
-
-    def __init__(self, *, reachable: bool = True, said: str = '') -> None:
-        self.reachable = reachable
-        self.said = said
-        self.calls: list[tuple[tuple[str, ...], dict]] = []
-
-    def __call__(self, command, **kwargs) -> Completed:
-        argv = tuple(str(part) for part in command)
-        self.calls.append((argv, kwargs))
-        return Completed(argv, 0, '') if self.reachable else Completed(argv, 1, self.said)
-
-
 @pytest.fixture
-def registry(monkeypatch):
-    def install(**kwargs) -> Registry:
-        recorder = Registry(**kwargs)
-        monkeypatch.setattr(effects, 'run', recorder)
-        return recorder
-
-    return install
+def registry(upstream):
+    """`npm install -g`, answering however this test says the registry behaved."""
+    return upstream
 
 
 def test_the_package_is_installed_globally_by_its_declared_name(home, registry) -> None:
@@ -64,7 +44,7 @@ def test_the_package_is_installed_globally_by_its_declared_name(home, registry) 
     result = npm.install(TAPLO, offline=False)
 
     assert result.ok
-    assert reached.calls[0][0] == ('npm', 'install', '-g', '@taplo/cli')
+    assert reached.calls[0] == ('npm', 'install', '-g', '@taplo/cli')
 
 
 def test_the_prefix_is_passed_rather_than_left_to_the_npmrc(home, registry) -> None:
@@ -77,7 +57,7 @@ def test_the_prefix_is_passed_rather_than_left_to_the_npmrc(home, registry) -> N
 
     npm.install(TAPLO, offline=False)
 
-    assert reached.calls[0][1]['env'] == {'NPM_CONFIG_PREFIX': str(home / npm.PREFIX)}
+    assert reached.kwargs[0]['env'] == {'NPM_CONFIG_PREFIX': str(home / npm.PREFIX)}
 
 
 def test_the_prefix_directory_is_created_before_npm_needs_it(home, registry) -> None:
@@ -118,7 +98,7 @@ def test_offline_still_tries_the_registry(home, registry) -> None:
     reached = registry()
 
     assert npm.install(TAPLO, offline=True).ok
-    assert reached.calls[0][0] == ('npm', 'install', '-g', '@taplo/cli')
+    assert reached.calls[0] == ('npm', 'install', '-g', '@taplo/cli')
 
 
 def test_an_offline_failure_says_there_is_nothing_to_fall_back_on(home, registry) -> None:
