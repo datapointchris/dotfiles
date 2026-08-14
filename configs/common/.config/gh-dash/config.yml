@@ -144,7 +144,7 @@ repoPaths:
     datapointchris/visualizer: ~/code/python-projects/visualizer
     datapointchris/webviewrs: ~/tools/webviewrs
     datapointchris/ypl: ~/tools/ypl
-    datapointchris/zmk-build: ~/tools/zmk-build
+    datapointchris/zmk: ~/tools/zmk
     datapointchris/zmk-config-corne42: ~/code/zmk/corne42
     datapointchris/zmk-config-glove80: ~/code/zmk/glove80
     datapointchris/zmk-config-piantor-pro-bt: ~/code/zmk/piantor

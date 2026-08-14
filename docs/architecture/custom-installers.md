@@ -30,7 +30,7 @@ question:
 
 | tool | how it converges |
 | --- | --- |
-| `theme`, `font`, `zmk-build` | the checkout exists → delegate to the tool's own `update` |
+| `theme`, `font`, `zmk` | the checkout exists → delegate to the tool's own `update` |
 | `bashselfupdate` | the install script *is* the update, so run it every time |
 | `bats`, `terraform-ls` | clone or download at the tag upstream reports |
 | `mount-s3` | the bucket serves `latest/`, so fetch it |

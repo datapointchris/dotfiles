@@ -1512,21 +1512,21 @@ tools:
     tags: [webview, gui, rust, cargo]
     docs_url: "https://github.com/datapointchris/webviewrs"
 
-  zmk-build:
+  zmk:
     category: custom-tools
-    description: "Build ZMK keyboard firmware using per-repo workspaces"
+    description: "Build, draw, check and flash a ZMK keyboard config"
     installed_via: dotfiles
-    usage: "zmk-build [--pristine|--update|--clean|--clean-all]"
-    why_use: "Incremental ZMK firmware builds from a standard build.yaml with isolated per-repo west workspaces"
+    usage: "zmk <build|flash|align|draw|sync|check|clean>"
+    why_use: "Incremental local firmware builds from a standard build.yaml, plus a check that catches the keymap drawing falling behind the keymap"
     examples:
-      - cmd: "zmk-build"
-        desc: "Build all targets incrementally"
-      - cmd: "zmk-build --pristine"
+      - cmd: "zmk check"
+        desc: "Report what is missing or has drifted"
+      - cmd: "zmk sync"
+        desc: "Align, redraw and build every target"
+      - cmd: "zmk flash"
+        desc: "Pick halves with fzf, then write each"
+      - cmd: "zmk build --pristine"
         desc: "Force a clean rebuild of all targets"
-      - cmd: "zmk-build --update"
-        desc: "Force update west dependencies"
-      - cmd: "zmk-build --clean-all"
-        desc: "Remove all repo workspaces"
     tags: [zmk, firmware, keyboard, build]
 
   # SHELL UTILITY FUNCTIONS

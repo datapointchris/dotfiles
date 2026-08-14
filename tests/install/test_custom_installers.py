@@ -240,7 +240,7 @@ class TestSources:
 
 
 class TestCheckoutTools:
-    """theme, font and zmk-build: cloned by a vendor script, updated by themselves."""
+    """theme, font and zmk: cloned by a vendor script, updated by themselves."""
 
     def test_an_absent_checkout_runs_the_vendor_script(self, declared, home, bundle, effected):
         entry = declared.find('custom_installers', 'theme')
@@ -287,10 +287,10 @@ class TestCheckoutTools:
         assert custom.install(declared.find('custom_installers', 'font'), LINUX).detail == ''
 
     def test_a_checkout_whose_binary_vanished_is_drift_not_success(self, declared, home, bundle, effected):
-        (home / '.local' / 'share' / 'zmk-build' / '.git').mkdir(parents=True)
+        (home / '.local' / 'share' / 'zmk' / '.git').mkdir(parents=True)
         effected()
 
-        result = custom.install(declared.find('custom_installers', 'zmk-build'), LINUX)
+        result = custom.install(declared.find('custom_installers', 'zmk'), LINUX)
 
         assert not result.ok
         assert 'not on PATH' in result.detail

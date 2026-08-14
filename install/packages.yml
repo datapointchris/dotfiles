@@ -1091,11 +1091,11 @@ custom_installers:
     bundle_install_script: true
     description: Font management CLI with terminal/platform awareness
 
-  - name: zmk-build
-    repo: datapointchris/zmk-build
-    install_url: https://raw.githubusercontent.com/datapointchris/zmk-build/v1.0.0/install.sh
+  - name: zmk
+    repo: datapointchris/zmk
+    install_url: https://raw.githubusercontent.com/datapointchris/zmk/v2.0.0/install.sh
     bundle_install_script: true
-    description: Docker-based ZMK firmware builder with per-repo west workspaces
+    description: Builds, draws, checks and flashes ZMK keyboard configs
 
 # ================================================================
 # CARGO PACKAGES (Rust)

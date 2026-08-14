@@ -19,7 +19,7 @@ measures it, off the `repo:` each entry declares, so an installer that is called
 is one the machine needs and every function below can simply converge. What
 differs between them is only what converging means:
 
-    theme, font, zmk-build   the tool has its own `update`, so delegate to it
+    theme, font, zmk         the tool has its own `update`, so delegate to it
     bashselfupdate           the install script is the update, so always run it
     bats, terraform-ls       clone or download at the tag upstream reports
     mount-s3                 the bucket serves `latest/`, so just fetch it
@@ -171,7 +171,7 @@ def _terraform_ls_sources(entry: catalog.CustomInstaller, target: Target) -> tup
 SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...]]] = {
     'theme': _script_and_clone,
     'font': _script_and_clone,
-    'zmk-build': _script_and_clone,
+    'zmk': _script_and_clone,
     'bashselfupdate': _script_and_clone,
     'claude-code': _claude_code_sources,
     'bats': _bats_sources,
@@ -223,7 +223,7 @@ def _present_and_offline(request: Request, installed: bool) -> Result | None:
 
 
 def _checkout_tool(request: Request) -> Result:
-    """theme, font and zmk-build: install once, then delegate to the tool.
+    """theme, font and zmk: install once, then delegate to the tool.
 
     Each clones itself into `~/.local/share/<name>` and ships its own `update`,
     which knows how to fast-forward that checkout and rebuild whatever it
@@ -634,7 +634,7 @@ def _confirm(what: str, executable: str) -> Result:
 INSTALLERS: dict[str, Installer] = {
     'theme': _checkout_tool,
     'font': _checkout_tool,
-    'zmk-build': _checkout_tool,
+    'zmk': _checkout_tool,
     'bashselfupdate': _bashselfupdate,
     'claude-code': _claude_code,
     'awscli': _awscli,

@@ -65,7 +65,7 @@ custom_installers:
   - bashselfupdate
   - theme
   - font
-  - zmk-build
+  - zmk
 
 cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs, watchexec-cli]
 
