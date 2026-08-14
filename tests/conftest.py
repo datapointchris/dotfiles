@@ -416,10 +416,19 @@ def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     emptying PATH is what keeps these tests from reading the machine they run on:
     without it, "dpkg-query refuses to answer" holds on Arch for the wrong reason
     and inverts on every Debian CI runner.
+
+    The GNU userland directory rides behind those on macOS, where `/usr/bin/install`
+    is the BSD one and has no `-D`. `sysconfig.apply` writes with `install -D` to
+    create a parent directory the same way the privileged path does on a real
+    machine, so without this the whole managed-file suite fails against a flag the
+    platform never had. Resolved through `install` itself rather than by naming
+    Homebrew's path, because that path differs between Intel and Apple silicon.
     """
     directory = tmp_path / 'bin'
     directory.mkdir()
-    monkeypatch.setenv('PATH', f'{directory}{os.pathsep}/usr/bin{os.pathsep}/bin')
+    system = [Path(found).parent for name in ('install',) if (found := shutil.which(name))]
+    behind = [str(path) for path in system if path not in (Path('/usr/bin'), Path('/bin'))]
+    monkeypatch.setenv('PATH', os.pathsep.join([str(directory), *behind, '/usr/bin', '/bin']))
     return directory
 
 

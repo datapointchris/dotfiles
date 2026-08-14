@@ -8,6 +8,7 @@ a command that cannot be executed is an exit code, not an exception.
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -217,6 +218,11 @@ def test_a_command_that_would_not_start_is_still_logged(output: Output, caplog) 
 # Landing a binary that is currently running
 # ─────────────────────────────────────────────────────────────────────────────
 
+HOLDS_RUNNING_BINARIES = pytest.mark.skipif(
+    sys.platform != 'linux',
+    reason='ETXTBSY on a running executable is a Linux guarantee; XNU permits the write and the assertion has nothing to catch',
+)
+
 
 @pytest.fixture
 def running_binary(tmp_path: Path):
@@ -225,11 +231,15 @@ def running_binary(tmp_path: Path):
     A `#!` script will not do. The kernel executes the *interpreter* and merely
     reads the script, so writing to a running script raises nothing and the test
     would pass against the bug it exists to catch.
-    """
-    import shutil as sh
 
+    The bytes alone, never `copy2`: on macOS `/bin/sleep` lives on the sealed
+    system volume and carries a `restricted` flag that `copystat` cannot
+    reproduce, so copying its metadata raises `PermissionError` before the test
+    starts. Only the executable content matters here, and `chmod` supplies the
+    one bit of metadata that does.
+    """
     target = tmp_path / 'held'
-    sh.copy2('/bin/sleep', target)
+    target.write_bytes(Path('/bin/sleep').read_bytes())
     target.chmod(0o755)
     child = subprocess.Popen([str(target), '60'])
     time.sleep(0.2)
@@ -238,6 +248,7 @@ def running_binary(tmp_path: Path):
     child.wait()
 
 
+@HOLDS_RUNNING_BINARIES
 def test_copying_onto_a_running_binary_is_refused(running_binary: Path, tmp_path: Path) -> None:
     """The failure being fixed, pinned first so the fix below is not vacuous.
 
@@ -257,6 +268,7 @@ def test_copying_onto_a_running_binary_is_refused(running_binary: Path, tmp_path
     assert refused.value.errno == errno.ETXTBSY
 
 
+@HOLDS_RUNNING_BINARIES
 def test_install_replaces_a_running_binary(running_binary: Path, tmp_path: Path) -> None:
     """Replacing unlinks the old inode rather than writing through it, so the
     running process keeps what it is executing and the next start gets the new

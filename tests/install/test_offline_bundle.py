@@ -208,7 +208,11 @@ class TestSayingWhichBundle:
 
         assert reconcile._stage_bundle() is None
 
-        assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in capsys.readouterr().err
+        # Whitespace-normalised: the row carries an absolute staging path, so where
+        # the renderer folds the line moves with the terminal width and with the
+        # length of the tmp directory pytest happened to hand out.
+        said = ' '.join(capsys.readouterr().err.split())
+        assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
 
     def test_a_directory_with_no_manifest_ends_the_run_rather_than_starting_it(self, staged, capsys) -> None:
         """Every provider reads the bundle through the manifest, so without one the

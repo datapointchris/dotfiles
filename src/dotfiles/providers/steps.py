@@ -338,8 +338,12 @@ def _psql_linked() -> State:
         return State(Verdict.MATCHED, f'psql resolves to {shutil.which("psql")}')
     if not shutil.which('brew'):
         return State(Verdict.MISSING, 'brew is not on PATH yet, so libpq cannot be linked')
+    # Nothing to link is not a machine with something wrong with it — the same
+    # shape as the OrbStack row. `_link_psql` refuses this state rather than
+    # failing on it, so reporting drift here would raise a finding whose only
+    # repair declines to run.
     if not run(['brew', 'list', KEG_ONLY], output=Output.QUIET).ok:
-        return State(Verdict.MISSING, f'{KEG_ONLY} is not installed yet, so psql is on no PATH')
+        return State(Verdict.MATCHED, f'{KEG_ONLY} is not installed, so there is nothing to link')
     return State(Verdict.MISSING, f'{KEG_ONLY} is installed but keg-only, so psql is on no PATH')
 
 
