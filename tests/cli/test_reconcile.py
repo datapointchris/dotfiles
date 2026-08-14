@@ -343,7 +343,7 @@ def test_a_plan_with_nothing_to_do_says_where_the_other_question_is_asked() -> N
 
     line = reconcile.verdict_line(results, reconcile.Lens.PLAN)
 
-    assert line == 'nothing for apply to change; 4 item(s) need a person — run: dotfiles check'
+    assert line == 'nothing for apply to change; 4 item(s) need a person'
 
 
 def test_a_plan_with_work_to_do_names_the_verb_that_does_it() -> None:

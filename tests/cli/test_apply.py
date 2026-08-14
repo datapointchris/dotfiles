@@ -862,14 +862,16 @@ class TestTheClosingLine:
         run, and the sentence beside it already says what happened."""
         assert reconcile.applied_line(0, ['claude-code'], [], []) == '1 item(s) did not converge: claude-code'
 
-    def test_what_needs_a_person_is_worded_as_the_verb_that_owns_it(self) -> None:
-        """`Repair.BY_HAND` is not a failure, so the clause names `check` rather than
-        counting it as work this verb did not do."""
+    def test_what_needs_a_person_is_counted_and_never_pointed_elsewhere(self) -> None:
+        """`Repair.BY_HAND` is not a failure, so it is not counted as work this verb
+        did not do. Its row is already on screen with its own command, so naming
+        another verb sends a reader to reprint what they just read."""
         deferred = [drift('atuin', Repair.BY_HAND).payload]
 
         line = reconcile.applied_line(1, [], deferred, [])
 
-        assert line == '1 item(s) changed; 1 item(s) need a person — run: dotfiles check'
+        assert line == '1 item(s) changed; 1 item(s) need a person'
+        assert 'dotfiles check' not in line
 
     def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:
         """The rows are gone by the time this line is read, and a hole in the run's

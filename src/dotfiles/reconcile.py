@@ -705,7 +705,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
         if pending:
             return f'{pending} item(s) to change — run: dotfiles apply'
         if attention:
-            return f'nothing for apply to change; {attention} item(s) need a person — run: dotfiles check'
+            return f'nothing for apply to change; {attention} item(s) need a person'
         return 'nothing to change'
 
     troubled = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
@@ -1084,12 +1084,11 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     The two clauses are joined rather than chosen between, so every combination of
     the pair is a different sentence.
 
-    **The clauses are worded as the verb that owns them would**, which is
-    `output.tallies`'s rule one altitude up. What needs a person is `check`'s
-    question, so that clause names `check` rather than restating it as work `apply`
-    failed to do — `Repair.BY_HAND` is not a failure, and exiting non-zero for it
-    makes every freshly-installed work box look broken between the install and the
-    safekeep restore.
+    **A by-hand item is counted, never pointed elsewhere.** Its row is already on
+    screen with its own detail and its own command, so naming another verb sends a
+    reader to reprint what they just read. `Repair.BY_HAND` is not a failure
+    either, and exiting non-zero for it makes every freshly-installed work box
+    look broken between the install and the safekeep restore.
 
     **What nothing could measure is named, not just counted.** It is neither a
     failure nor drift — there is no evidence the item differs, and inventing some
@@ -1101,7 +1100,7 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     repaired = f'{changed} item(s) changed' if changed else ''
     failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
     head = '; '.join(clause for clause in (repaired, failed) if clause) or 'nothing to change'
-    person = f'; {len(deferred)} item(s) need a person — run: dotfiles check' if deferred else ''
+    person = f'; {len(deferred)} item(s) need a person' if deferred else ''
     blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
     return f'{head}{person}{blind}'
 
