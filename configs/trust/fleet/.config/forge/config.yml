@@ -13,3 +13,12 @@
 # Syncthing folder, so the link is a second hop a rebuilt machine has not
 # restored yet, while the clone is what `dotfiles apply` puts there.
 repos_registry: ~/.local/share/terminal-library-fleet/repos.json
+
+# Every pinned version forge rolls out: each language's floor and toolchain, the
+# pre-commit revs, the action, CLI and binary pins, and the rollout stamp.
+#
+# Naming it is what lets a version bump be one edit and a sweep. Unset, forge
+# uses the manifest embedded in its own binary, so a bump means cutting a
+# release — which is why the fleet declares one and a machine without this key
+# still works.
+versions_file: ~/.local/share/terminal-library-fleet/standards/versions.json
