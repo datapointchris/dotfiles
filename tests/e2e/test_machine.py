@@ -232,9 +232,10 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
     """The version has to come from the bundle manifest, or the filename built
     from it names a file the cache does not hold.
 
-    `tests/install/test_offline_versions.py` asserts the mechanism directly and
-    cheaply; this is the same property observed on a real install, where a path
-    that bypassed the short-circuit would show up as a resolution attempt.
+    `tests/resources/test_packages.py::test_offline_never_refreshes_however_it_was_asked`
+    asserts the mechanism directly and cheaply; this is the same property observed
+    on a real install, where a path that bypassed the short-circuit would show up
+    as a resolution attempt.
 
     Read off the two sentences the bundle paths actually print. This asserted
     `'Using cached'` — a phrase nothing in this repo emits and uv stopped printing
