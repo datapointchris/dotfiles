@@ -54,10 +54,37 @@ def planned(entry, section):
 
 
 class TestPlatform:
-    def test_the_bundle_name_carries_date_manifest_and_platform(self):
-        name = create_bundle.bundle_name('wsl-work-workstation', 'linux', 'x86_64', dt.date(2026, 8, 7))
-        assert name == 'dotfiles-offline-v20260807-wsl-work-workstation-linux-x86_64'
+    def test_the_bundle_name_carries_a_utc_stamp_manifest_and_platform(self):
+        built = dt.datetime(2026, 8, 7, 19, 2, 3, tzinfo=dt.UTC)
+        name = create_bundle.bundle_name('wsl-work-workstation', 'linux', 'x86_64', built)
+        assert name == 'dotfiles-offline-v20260807T190203Z-wsl-work-workstation-linux-x86_64'
 
+    def test_two_builds_in_one_day_do_not_collide(self):
+        """A day was the whole stamp, so a second build overwrote the first and
+        `offline_bundle.newest` had nothing left to rank them by."""
+        morning = create_bundle.bundle_name('m', 'linux', 'x86_64', dt.datetime(2026, 8, 7, 7, 0, tzinfo=dt.UTC))
+        evening = create_bundle.bundle_name('m', 'linux', 'x86_64', dt.datetime(2026, 8, 7, 19, 0, tzinfo=dt.UTC))
+
+        assert morning != evening
+        assert sorted((evening, morning)) == [morning, evening], 'the stamp has to sort as time does'
+
+    def test_a_local_time_is_stamped_as_the_utc_it_names(self):
+        """Two machines write into one remote directory, and a local stamp would
+        interleave them wrongly for half the year."""
+        somewhere = dt.timezone(dt.timedelta(hours=-4))
+        name = create_bundle.bundle_name('m', 'linux', 'x86_64', dt.datetime(2026, 8, 7, 20, 0, tzinfo=somewhere))
+
+        assert name == 'dotfiles-offline-v20260808T000000Z-m-linux-x86_64'
+
+    def test_a_sparse_bundle_says_so_in_its_own_name(self):
+        """Read before anything is unpacked, so `bundle list` can say which is
+        which without fetching a sidecar for every row."""
+        built = dt.datetime(2026, 8, 7, 19, 2, 3, tzinfo=dt.UTC)
+
+        assert create_bundle.bundle_name('m', 'linux', 'x86_64', built, sparse=True).endswith('-linux-x86_64-sparse')
+
+
+BUILT_AT = dt.datetime(2026, 8, 7, 19, 2, 3, tzinfo=dt.UTC)
 
 LINUX_X86 = Target(OSFamily.LINUX, Arch.X86_64)
 LINUX_ARM = Target(OSFamily.LINUX, Arch.ARM64)
@@ -167,7 +194,7 @@ class TestAssetIdentity:
     def test_a_traversal_cannot_escape_the_cache_root(self):
         path = create_bundle.cache_path_for(create_bundle.url_asset('https://evil.example/../../../etc/passwd').key)
         assert '..' not in path.parts
-        assert str(path).startswith(str(create_bundle.CACHE_ROOT))
+        assert str(path).startswith(str(create_bundle.cache_root()))
 
     def test_characters_outside_the_portable_set_become_underscores(self):
         path = create_bundle.cache_path_for(create_bundle.url_asset('https://example.com/a b;rm -rf/x.tar.gz').key)
@@ -365,7 +392,7 @@ class TestInstallScriptVersions:
     def stage(self, tmp_path, monkeypatch, entries, latest=None, uv_version='0.9.7'):
         """Stage the script rows for some entries, and hand back the manifest."""
         staging = tmp_path / 'installers'
-        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64')
+        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
 
         monkeypatch.setattr(create_bundle, 'download', lambda url, destination: destination.write_text('#!/bin/sh\n'))
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: (latest or {})[repo])
@@ -474,7 +501,7 @@ class TestBundleRoundTrip:
     def stage(self, tmp_path, monkeypatch, entry, version='v10.4.2'):
         target = Target(OSFamily.LINUX, Arch.X86_64)
         staging = tmp_path / 'installers'
-        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64')
+        bundle = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
 
         payload = tmp_path / 'build' / entry.executable
         payload.parent.mkdir(parents=True, exist_ok=True)
@@ -540,7 +567,7 @@ class TestWingetBundling:
     def stage(self, tmp_path, monkeypatch, declared, version, *, nested=False, verified=None, holds=None):
         entry = catalog.WingetPackage.from_mapping(declared)
         staging = tmp_path / 'installers'
-        bundle = create_bundle.Bundle(staging, 'windows', 'x86_64')
+        bundle = create_bundle.Bundle(staging, 'windows', 'x86_64', 'a-machine', BUILT_AT)
 
         def fetch(_cache, asset, destination, _label):
             if not asset.filename.endswith('.zip'):

@@ -8,7 +8,7 @@ network.
 Reached only through `dotfiles bundle create`, which calls `build` directly.
 
 Output:
-    dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
+    dotfiles-offline-v{YYYYMMDDTHHMMSSZ}-{manifest}-{os}-{arch}.tar.gz
 
 Streams: everything a person reads goes to stderr, and stdout carries the
 tarball path under --print-path and nothing else, so the build can be piped
@@ -42,6 +42,7 @@ from dotfiles import resolve
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.providers import bundle as bundle_format
 from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
@@ -53,9 +54,17 @@ from dotfiles.resolve import DesiredItem
 
 log = logging.getLogger('create-bundle')
 
+
 # Assets already downloaded by an earlier build, kept between runs. Regenerable
 # from the network, so it belongs in the XDG cache rather than data or state.
-CACHE_ROOT = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'dotfiles' / 'offline-bundle'
+#
+# A function for the reason `paths.cache_home` is one: a constant bound at import
+# cannot be redirected by the environment variable that already means "look
+# somewhere else", so a test setting $XDG_CACHE_HOME moved the releases cache and
+# left this one on the real machine.
+def cache_root() -> Path:
+    return paths.cache_home() / 'offline-bundle'
+
 
 # Long enough that a tool untouched across a few months of rebuilds still hits,
 # short enough that superseded versions do not accumulate forever.
@@ -87,6 +96,7 @@ then installs onto the machine.
 Directory Structure:
   installers/
   |-- manifest.txt    # every included file, with its version
+  |-- bundle.json     # what this bundle is: when, for which machine, full or sparse
   |-- checksums.txt   # sha256 of each GitHub release asset, verified here
   |-- README.txt      # this file
   |-- bin/            # the uv binary
@@ -109,8 +119,12 @@ recorded here reads as out of date, and apply moves it onto the bundled one:
 
   dotfiles packages apply --offline
 
-Which also means the reverse: a tool this bundle does not carry cannot be
-measured offline at all, and says so rather than reporting itself current.
+What a missing tool means depends on bundle.json. In a full bundle, a tool with
+no row cannot be measured offline at all and says so rather than reporting
+itself current. In a sparse one, the "current" map names the tools the builder
+measured on this machine and deliberately left out, against the version it
+found upstream -- so those read as up to date, and only a tool in neither place
+is unmeasurable.
 
 Go tools take the bundled binary when proxy.golang.org is unreachable, so
 that is how a firewalled machine moves off the version it was built with.
@@ -121,9 +135,21 @@ class BundleError(Refusal):
     """A failure that should end the build with a message rather than a traceback."""
 
 
-def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
-    """Dated, so two builds of the same manifest are distinguishable."""
-    return f'dotfiles-offline-v{today:%Y%m%d}-{manifest}-{os_name}-{arch}'
+def bundle_name(manifest: str, os_name: str, arch: str, when: dt.datetime, *, sparse: bool = False) -> str:
+    """Stamped to the second in UTC, so a name orders and dates itself.
+
+    Three things read this stamp and a day is too coarse for all of them. Two
+    builds of one manifest in a day collide outright. `offline_bundle.newest`
+    ranks archives by sorting their names, and a tie there is decided by whatever
+    order the filesystem listed them. And `bundle download` reports how long ago a
+    bundle was built, which is the question a person asks first — "today" is not
+    an answer when the loop runs twice in an afternoon.
+
+    UTC, because two machines write into one remote directory and a local stamp
+    would interleave them wrongly for half the year.
+    """
+    stamped = when.astimezone(dt.UTC).strftime('%Y%m%dT%H%M%SZ')
+    return f'dotfiles-offline-v{stamped}-{manifest}-{os_name}-{arch}{"-sparse" if sparse else ""}'
 
 
 @dataclass(frozen=True)
@@ -183,7 +209,7 @@ def cache_path_for(key: tuple[str, ...]) -> Path:
     merely odd name cannot write outside the cache root.
     """
     parts = [re.sub(r'[^A-Za-z0-9._-]', '_', part).replace('..', '__') for part in key]
-    return CACHE_ROOT.joinpath(*parts)
+    return cache_root().joinpath(*parts)
 
 
 def tail_lines(text: str, limit: int = FAILURE_DETAIL_MAX_LINES) -> str:
@@ -236,7 +262,7 @@ class DownloadCache:
         self.hits = 0
         self.downloads = 0
         if enabled:
-            CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+            cache_root().mkdir(parents=True, exist_ok=True)
 
     def digest_file(self, asset: BundleAsset) -> Path:
         cached = cache_path_for(asset.key)
@@ -324,10 +350,10 @@ class DownloadCache:
         Ageing on last use rather than on age drops superseded versions while
         leaving a still-current one that simply never changes.
         """
-        if not CACHE_ROOT.is_dir():
+        if not cache_root().is_dir():
             return
         cutoff = dt.datetime.now().timestamp() - (CACHE_RETENTION_DAYS * 86400)
-        for path in sorted(CACHE_ROOT.rglob('*'), reverse=True):
+        for path in sorted(cache_root().rglob('*'), reverse=True):
             if path.is_file() and path.stat().st_mtime < cutoff:
                 path.unlink(missing_ok=True)
             elif path.is_dir() and not any(path.iterdir()):
@@ -335,10 +361,14 @@ class DownloadCache:
 
 
 class Bundle:
-    def __init__(self, staging: Path, os_name: str, arch: str):
+    def __init__(self, staging: Path, os_name: str, arch: str, machine: str, when: dt.datetime):
         self.staging = staging
         self.os_name = os_name
         self.arch = arch
+        self.machine = machine
+        self.when = when
+        self.built_from = ''
+        self.current: dict[str, str] = {}
         self.binaries = staging / 'binaries'
         self.go_binaries = staging / 'go-binaries'
         self.winget_binaries = staging / winget.BUNDLE_BINARIES
@@ -357,15 +387,33 @@ class Bundle:
     def record_checksum(self, digest: str, filename: str) -> None:
         self.checksums.append(f'{digest}  {filename}')
 
-    def write_metadata(self) -> None:
-        header = (
-            '# Dotfiles Offline Bundle\n'
-            f'# Created: {dt.datetime.now():%c}\n'
-            f'# Platform: {self.os_name}/{self.arch}\n'
-            '#\n'
-            '# Format: category|name|version|filename\n'
+    def describe(self) -> bundle_format.Description:
+        """What this bundle is, for the file that answers that question.
+
+        `current` is empty on a full build and is what makes it full: a bundle
+        that omitted nothing has nothing to say about what it omitted, so its
+        completeness is read off the map rather than passed in beside it and the
+        two cannot disagree.
+        """
+        return bundle_format.Description(
+            created=self.when.astimezone(dt.UTC).isoformat().replace('+00:00', 'Z'),
+            machine=self.machine,
+            platform=f'{self.os_name}/{self.arch}',
+            completeness=bundle_format.Completeness.SPARSE if self.built_from else bundle_format.Completeness.FULL,
+            built_from=self.built_from,
+            current=dict(self.current),
         )
-        (self.staging / 'manifest.txt').write_text(header + '\n'.join(self.entries) + '\n')
+
+    def write_metadata(self) -> None:
+        """The four files at the bundle root, each answering one question.
+
+        `manifest.txt` carries the rows alone. What the bundle *is* — when, for
+        which machine, what it measured and left out — is `bundle.json`, so the
+        created-at and platform facts are stated once rather than in both.
+        """
+        header = '# Dotfiles Offline Bundle\n#\n# Format: category|name|version|filename\n'
+        (self.staging / bundle_format.MANIFEST).write_text(header + '\n'.join(self.entries) + '\n')
+        (self.staging / bundle_format.DOCUMENT).write_text(json.dumps(self.describe().as_dict(), indent=2) + '\n')
         (self.staging / 'checksums.txt').write_text('\n'.join(self.checksums) + ('\n' if self.checksums else ''))
         (self.staging / 'README.txt').write_text(BUNDLE_README)
 
@@ -434,14 +482,14 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
 def extract_all(archive: tarfile.TarFile, destination: Path) -> None:
     """Unpack a tarball, refusing members that would write outside `destination`.
 
-    The filter is a capability check rather than a version check: it landed in
-    3.11.4 and becomes the default in 3.14, but this file also runs under the
-    macOS system interpreter, which is still 3.9 and would reject the argument.
+    `filter='data'` unconditionally. It landed in 3.11.4 and becomes the default
+    in 3.14, and the floor here is `pyproject.toml`'s `requires-python = ">=3.13"`
+    — this module is reached only through `dotfiles bundle create`, which runs
+    under the uv-managed interpreter that constraint governs. Nothing else
+    imports it, and the bootstrap cannot: the CLI is the thing a bundle exists to
+    install.
     """
-    if hasattr(tarfile, 'data_filter'):
-        archive.extractall(destination, filter='data')
-    else:
-        archive.extractall(destination)  # noqa: S202
+    archive.extractall(destination, filter='data')
 
 
 def repackage_zip_as_tarball(zip_path: Path, tool: str, target: str, version_num: str) -> str:
@@ -973,7 +1021,7 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_versi
     bundle.record('script', 'uv', uv_version, 'uv-install.sh')
 
 
-def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None = None) -> Path:
+def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | None = None) -> Path:
     """Build the bundle and return the tarball's path.
 
     A return value, not a printed side effect: that is the whole reason this
@@ -1001,7 +1049,8 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
         raise BundleError(f'Unsupported arch: {arch}\nSupported: {", ".join(Arch)}')
 
     os_name = str(machine.coordinates.os_family)
-    name = bundle_name(manifest_name, os_name, arch, today or dt.date.today())
+    built_at = when or dt.datetime.now(dt.UTC)
+    name = bundle_name(manifest_name, os_name, arch, built_at)
     log.info('Creating offline bundle: %s', name)
     log.info('Target platform: %s/%s', os_name, arch)
     log.info('Manifest filter: %s', manifest_name)
@@ -1010,7 +1059,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
     tarball_path = paths.REPO_ROOT / f'{name}.tar.gz'
 
     with tempfile.TemporaryDirectory() as workspace:
-        bundle = Bundle(Path(workspace) / 'installers', os_name, arch)
+        bundle = Bundle(Path(workspace) / 'installers', os_name, arch, manifest_name, built_at)
 
         uv_version = add_uv(bundle, cache)
         add_wheels(bundle, cache)
@@ -1031,7 +1080,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, today: dt.date | None 
     log.info('  Size: %.1f MB', size_mb)
     log.info('  Downloads: %d', cache.downloads)
     if use_cache:
-        log.info('  From cache: %d (%s)', cache.hits, CACHE_ROOT)
+        log.info('  From cache: %d (%s)', cache.hits, cache_root())
     log.info('To use this bundle:')
     log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
     log.info('  2. Bootstrap: ./install.sh --machine <name> --offline')

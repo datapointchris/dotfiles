@@ -41,6 +41,7 @@ from typer.testing import CliRunner
 
 from dotfiles import paths
 from dotfiles import releases
+from dotfiles.providers import bundle
 from dotfiles.session import Session
 
 
@@ -126,18 +127,43 @@ def cached(path: Path, entries: dict[str, str], age: dt.timedelta = dt.timedelta
     releases.save({key: releases.Cached(version, checked) for key, version in entries.items()}, path)
 
 
-def bundle_manifest(directory: Path, rows: dict[str, str], category: str = 'binary') -> Path:
-    """The `manifest.txt` a bundle carries, written the way `create_bundle.Bundle.record` writes it.
+def bundle_manifest(
+    directory: Path,
+    rows: dict[str, str],
+    category: str = 'binary',
+    *,
+    sparse: bool = False,
+    current: dict[str, str] | None = None,
+    built_from: str = '',
+    created: str = '2026-08-14T19:02:03Z',
+) -> Path:
+    """The two metadata files a bundle carries, written the way `Bundle` writes them.
 
-    One writer for both callers below, because the format is a contract with
-    `offline_bundle` rather than a convenience: the reader splits on `|` and takes
-    four fields, so a second spelling of the line drifts from the parser silently
+    One writer for every caller, because both formats are contracts with
+    `offline_bundle` rather than conveniences: the manifest reader splits on `|`
+    and takes four fields, so a second spelling drifts from the parser silently
     and the test that would catch it is the one using the other spelling.
+
+    The keyword arguments are the shapes a bundle comes in, all of them reachable
+    from one fixture — standards/testing.md § "A fixture with one shape tests one
+    shape". A sparse bundle and a full one differ only in `bundle.json`, so a
+    fixture that could write only the second would leave every sparse branch with
+    no test able to reach it.
     """
     directory.mkdir(parents=True, exist_ok=True)
     lines = [f'{category}|{name}|{version}|{name}' for name, version in rows.items()]
-    manifest = directory / 'manifest.txt'
+    manifest = directory / bundle.MANIFEST
     manifest.write_text('# Format: category|name|version|filename\n' + '\n'.join(lines) + '\n')
+
+    described = bundle.Description(
+        created=created,
+        machine='box',
+        platform='linux/x86_64',
+        completeness=bundle.Completeness.SPARSE if sparse else bundle.Completeness.FULL,
+        built_from=built_from,
+        current=current or {},
+    )
+    (directory / bundle.DOCUMENT).write_text(json.dumps(described.as_dict(), indent=2) + '\n')
     return manifest
 
 

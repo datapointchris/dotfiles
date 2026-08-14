@@ -48,8 +48,7 @@ class Staging:
 
     directory: Path
     carried: tuple[bundle.Staged, ...]
-    built: str = ''
-    platform: str = ''
+    description: bundle.Description = dc.field(default_factory=bundle.Description)
 
     extracted: Path | None = None
     """The archive this run unpacked, or None when the bundle was already staged.
@@ -77,6 +76,14 @@ class Staging:
         starts.
         """
         return (self.directory / bundle.MANIFEST).is_file()
+
+    @property
+    def built(self) -> str:
+        return self.description.created
+
+    @property
+    def platform(self) -> str:
+        return self.description.platform
 
     @property
     def counts(self) -> dict[str, int]:
@@ -176,8 +183,7 @@ def describe(extracted: Path | None = None) -> Staging:
     description can say so. Discovering it instead would mean comparing mtimes
     against the run's own start, which is a guess where the caller already knows.
     """
-    built, platform = bundle.described()
-    return Staging(paths.BUNDLE_DIR, bundle.rows(), built=built, platform=platform, extracted=extracted)
+    return Staging(paths.BUNDLE_DIR, bundle.rows(), description=bundle.described(), extracted=extracted)
 
 
 def newest(*searched: Path) -> Path | None:

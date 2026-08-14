@@ -13,6 +13,8 @@ that what `bundle create` writes has that shape.
 
 from __future__ import annotations
 
+import datetime as dt
+import json
 import tarfile
 from pathlib import Path
 
@@ -222,17 +224,74 @@ class TestSayingWhichBundle:
         assert reconcile._stage_bundle() is ExitCode.ISSUE
         assert bundle.MANIFEST in capsys.readouterr().err
 
-    def test_the_build_date_and_platform_are_read_off_the_header(self, staged) -> None:
+    def test_the_build_time_and_platform_are_read_off_the_document(self, staged) -> None:
+        """`manifest.txt` carries rows and `bundle.json` carries the bundle, so a
+        reader asking when it was built never parses a row and vice versa."""
         staged.mkdir(parents=True)
-        (staged / bundle.MANIFEST).write_text(
-            '# Dotfiles Offline Bundle\n# Created: Thu Aug 13 00:51:54 2026\n# Platform: linux/x86_64\nbinary|fd|10.2.0|fd\n'
+        (staged / bundle.MANIFEST).write_text('# Dotfiles Offline Bundle\nbinary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(
+            json.dumps({'version': 1, 'created': '2026-08-13T00:51:54Z', 'machine': 'wsl', 'platform': 'linux/x86_64'})
         )
 
         described = offline_bundle.describe()
 
-        assert described.built == 'Thu Aug 13 00:51:54 2026'
+        assert described.built == '2026-08-13T00:51:54Z'
         assert described.platform == 'linux/x86_64'
-        assert len(described.carried) == 1, 'the header lines must not be read as rows'
+        assert described.description.machine == 'wsl'
+        assert len(described.carried) == 1, 'the comment line must not be read as a row'
+
+    def test_a_bundle_with_no_document_still_installs_from_its_rows(self, staged) -> None:
+        """A bundle that cannot describe itself is still a bundle. Paired with the
+        positive fact, because an empty description is also what a crash leaves."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+        described = offline_bundle.describe()
+
+        assert described.readable is True
+        assert len(described.carried) == 1
+        assert described.built == ''
+        assert described.description.completeness is bundle.Completeness.FULL
+
+    def test_an_unreadable_document_reads_as_full_rather_than_sparse(self, staged) -> None:
+        """The conservative fallthrough. `FULL` makes an absent entry a reported
+        gap; `SPARSE` would pass it silently, so a corrupt document must not be the
+        thing that quietens a bundle."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text('{not json')
+
+        assert offline_bundle.describe().description.completeness is bundle.Completeness.FULL
+
+    def test_a_completeness_this_version_has_never_heard_of_reads_as_full(self, staged) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(json.dumps({'completeness': 'partial-ish'}))
+
+        assert offline_bundle.describe().description.completeness is bundle.Completeness.FULL
+
+    def test_a_sparse_document_carries_what_it_measured_and_left_out(self, staged) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(
+            json.dumps({'completeness': 'sparse', 'built_from': 'a-status.json', 'current': {'binary/bat': 'v0.26.0'}})
+        )
+
+        described = offline_bundle.describe().description
+
+        assert described.sparse is True
+        assert described.built_from == 'a-status.json'
+        assert described.current == {'binary/bat': 'v0.26.0'}
+
+    def test_the_age_is_answerable_from_the_document_and_none_where_it_is_not(self) -> None:
+        """`created` is ISO 8601 in UTC so anything can parse it. A `%c` stamp is
+        readable only by the locale that wrote it, and "how long ago" is the first
+        question asked of a bundle nobody remembers building."""
+        now = dt.datetime(2026, 8, 13, 6, 51, 54, tzinfo=dt.UTC)
+
+        assert bundle.Description(created='2026-08-13T00:51:54Z').age(now) == dt.timedelta(hours=6)
+        assert bundle.Description(created='Thu Aug 13 00:51:54 2026').age(now) is None
+        assert bundle.Description().age(now) is None
 
 
 class TestCoverage:

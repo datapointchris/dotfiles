@@ -11,19 +11,140 @@ silently installs nothing.
 Read here rather than in each provider so the format is spelled once. A category
 is a provider's word for its own files and stays with the provider; what is
 shared is only how to find the row.
+
+**Two files, carrying disjoint facts.** `manifest.txt` says which files are here.
+`bundle.json` says what this bundle *is* — when, for which machine, and whether
+what it omits was measured or missed. Neither restates the other, which is why
+the created-at and platform headers are not in both.
+
+That second question is the one a sparse bundle turns on. A bundle that carries
+fewer files and a bundle that failed to carry more are indistinguishable from the
+rows alone, and reading the first as the second is the failure
+standards/cli-design.md § "A narrowing default reads as a deletion to anything
+that reconciles by sweep" measures.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
-import re
+import datetime as dt
+import json
+from collections.abc import Mapping
+from enum import StrEnum
+from typing import Any
 
 from dotfiles.providers import bundle_file
 
 MANIFEST = 'manifest.txt'
+DOCUMENT = 'bundle.json'
+
+VERSION = 1
+"""`bundle.json`'s own schema number, independent of every other version here.
+
+Not `status.VERSION` and not `STATE_VERSION`: three artefacts with three
+lifetimes, and a shared number could not say which of them changed — the split
+`status.py` already documents between the document and the state file.
+"""
 
 FIELDS = 4
 """`category|name|version|filename`. A shorter row is a comment or the header."""
+
+
+class Completeness(StrEnum):
+    """Whether a name absent from the manifest was measured or missed.
+
+    The whole reason `bundle.json` exists. Under `FULL` an absent entry is a gap
+    the bundler failed to fill, which is what `bundle check` reports as
+    `uncovered`. Under `SPARSE` it may instead be an entry the bundler measured as
+    already current on the target, and `Description.current` says which.
+    """
+
+    FULL = 'full'
+    SPARSE = 'sparse'
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Description:
+    """What a bundle is, as against what it carries.
+
+    Every field defaults, and the defaults are what an unreadable or absent
+    `bundle.json` reads as. `FULL` is the conservative one of the two
+    completenesses — it makes an absent entry a reported gap rather than a silent
+    pass — per standards/python.md § "Dispatch over a closed vocabulary names
+    every member", whose fallthrough "returns the conservative answer".
+    """
+
+    created: str = ''
+    machine: str = ''
+    platform: str = ''
+    completeness: Completeness = Completeness.FULL
+    built_from: str = ''
+    current: Mapping[str, str] = dc.field(default_factory=dict)
+    """Entries the bundler measured on the target and deliberately did not carry,
+    against the upstream version it resolved for each.
+
+    Keyed `category/name`, matching the two manifest fields that identify a row —
+    one tool is a `binary` on one machine and a `cargo` on another, so the name
+    alone is not an identity.
+
+    Empty on a full bundle and meaningless there. On a sparse one, a key present
+    here is `MATCHED` at its value; a key in neither this nor the manifest was
+    never measured, and reporting it as current would be a guess.
+    """
+
+    version: int = VERSION
+
+    @property
+    def sparse(self) -> bool:
+        return self.completeness is Completeness.SPARSE
+
+    def age(self, now: dt.datetime) -> dt.timedelta | None:
+        """How long ago this was built, or None where it does not say.
+
+        Parsed from `created`, which is ISO 8601 in UTC for exactly this reason: a
+        locale-formatted `%c` stamp is unparseable by anything that did not write
+        it, and "how long ago" is the first question asked of a bundle nobody
+        remembers building.
+        """
+        try:
+            return now - dt.datetime.fromisoformat(self.created)
+        except ValueError:
+            return None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            'version': self.version,
+            'created': self.created,
+            'machine': self.machine,
+            'platform': self.platform,
+            'completeness': str(self.completeness),
+            'built_from': self.built_from,
+            'current': dict(self.current),
+        }
+
+
+def description_from(document: Any) -> Description:
+    """A `Description` from parsed JSON, tolerating anything that is not one.
+
+    A bundle that cannot describe itself is still a bundle and its rows still
+    install, which is the same tolerance `rows` already extends to an unreadable
+    manifest. What it must not do is describe itself *wrongly*: a `completeness`
+    naming something this version has never heard of falls back to `FULL`, so an
+    unknown value reports gaps rather than silently passing them.
+    """
+    if not isinstance(document, dict):
+        return Description()
+    named = str(document.get('completeness', ''))
+    current = document.get('current')
+    return Description(
+        created=str(document.get('created', '')),
+        machine=str(document.get('machine', '')),
+        platform=str(document.get('platform', '')),
+        completeness=Completeness.SPARSE if named == Completeness.SPARSE else Completeness.FULL,
+        built_from=str(document.get('built_from', '')),
+        current={str(key): str(value) for key, value in current.items()} if isinstance(current, dict) else {},
+        version=int(document['version']) if isinstance(document.get('version'), int) else VERSION,
+    )
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -42,53 +163,41 @@ def rows() -> tuple[Staged, ...]:
     An unreadable manifest is the same answer as an absent one — no bundle —
     because that answer is already correct and already handled by every caller.
     """
-    return _parse(_text())[1]
+    return parse(_text())
 
 
 def _text() -> str:
-    """The manifest, or '' where there is none. One reader, so the header and the
-    rows are read from the same bytes rather than from two opens that can disagree."""
+    """The manifest, or '' where there is none."""
     try:
         return bundle_file(MANIFEST).read_text()
     except OSError:
         return ''
 
 
-HEADER_FIELD = re.compile(r'^#\s*(Created|Platform):\s*(.+)$')
-"""The two header lines `create_bundle` writes that describe the bundle itself.
+def described() -> Description:
+    """What this bundle says it is, or the empty description where it says nothing.
 
-Read rather than ignored because they answer the question a person asks first of a
-bundle they did not build: when, and for what. Every other `#` line is prose or the
-format legend, so this matches the two by name instead of counting lines — a
-bundler that adds a third comment must not shift what the second one means."""
-
-
-def described() -> tuple[str, str]:
-    """When this bundle was built and for which platform, from its own header.
-
-    Empty strings where there is no bundle or the header does not say, which is the
-    same answer every caller already handles: a bundle that cannot describe itself is
-    still a bundle, and its rows are what installs from it.
+    A bundle that cannot describe itself is still a bundle and its rows are what
+    installs from it, which is the answer every caller already handles.
     """
-    return _parse(_text())[0]
+    try:
+        return description_from(json.loads(bundle_file(DOCUMENT).read_text()))
+    except (OSError, ValueError):
+        return Description()
 
 
-def _parse(text: str) -> tuple[tuple[str, str], tuple[Staged, ...]]:
-    """The header pair and every row, from one pass over one string.
+def parse(text: str) -> tuple[Staged, ...]:
+    """Every row in a manifest, from one pass over one string.
 
-    Pure and taking the text, so both public readers above are one call each and a
-    test can hand it a manifest without a bundle on disk.
+    Pure and taking the text, so a test can hand it a manifest without a bundle on
+    disk and a caller merging several staged trees can read each one's own.
     """
-    built, platform, staged = '', '', []
+    staged = []
     for line in text.splitlines():
-        if found := HEADER_FIELD.match(line):
-            key, value = found.group(1), found.group(2).strip()
-            built, platform = (value, platform) if key == 'Created' else (built, value)
-            continue
         fields = line.split('|')
         if len(fields) >= FIELDS and not line.startswith('#'):
             staged.append(Staged(*fields[:FIELDS]))
-    return (built, platform), tuple(staged)
+    return tuple(staged)
 
 
 def counted(carried: tuple[Staged, ...]) -> dict[str, int]:
