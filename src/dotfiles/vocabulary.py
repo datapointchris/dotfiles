@@ -74,6 +74,7 @@ NOUNS = frozenset(
         'logs',
         'network',
         'bundle',
+        'remote',
         'repo',
     }
 )

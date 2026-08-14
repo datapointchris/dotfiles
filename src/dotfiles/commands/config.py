@@ -16,6 +16,7 @@ from pathlib import Path
 
 import typer
 
+from dotfiles import remote as transport
 from dotfiles import settings
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -31,9 +32,16 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     and the file is the last of them, so what the file says and what the tool will
     do are different questions — and only the second one is ever the one being
     asked.
+
+    The remote is reported here beside the registers even though it resolves
+    through one rung rather than three. It is the only other thing this file
+    answers, and a reader sent here by a refusal that could not find one arrives
+    asking what is declared — an answer that omitted it would send them to `cat`
+    after all.
     """
     config = settings.read_config()
     path = settings.config_file()
+    remote = transport.read(config)
     # Never through a Session, which needs a machine name: the state this is most
     # worth running in is one where ~/.env answered nothing, and resolving a
     # machine first would exit before printing why.
@@ -55,6 +63,16 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     }
                     for entry in described
                 ],
+                'remote': {
+                    'declared': remote.declared,
+                    'problem': remote.problem,
+                    'root': remote.remote.root if remote.remote else '',
+                    'program': remote.remote.transport.program if remote.remote else '',
+                    'operations': sorted(str(name) for name in remote.remote.transport.commands) if remote.remote else [],
+                    'keep': remote.remote.keep if remote.remote else 0,
+                    'fetch_bundle_when_none_is_staged': bool(remote.remote and remote.remote.fetch_bundle_when_none_is_staged),
+                    'publish_status_after_offline_apply': bool(remote.remote and remote.remote.publish_status_after_offline_apply),
+                },
             }
         )
         return
@@ -73,3 +91,17 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         missing = '' if entry.exists else '  [yellow](no file there)[/]'
         console.print(f'  {entry.name:<{width}}  {entry.value}{missing}')
         console.print(f'  {"":<{width}}  from {entry.source}')
+
+    console.print()
+    console.print(f'  {"REMOTE":<{width}}  {_remote(remote)}')
+    if remote.remote:
+        console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep}')
+
+
+def _remote(found: transport.Configured) -> str:
+    """One line for the remote, saying which of its three states this machine is in."""
+    if found.problem:
+        return f'[red]cannot be read[/] — {found.problem.splitlines()[0]}'
+    if found.remote is None:
+        return f'[yellow]{transport.UNCONFIGURED}[/]'
+    return found.remote.root

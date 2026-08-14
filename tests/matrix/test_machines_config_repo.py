@@ -1053,8 +1053,18 @@ PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
 REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
 FINDING_KEYS = {'section', 'severity', 'message'}
-SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings'}
+SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote'}
 SETTING_KEYS = {'name', 'value', 'source', 'exists', 'advice'}
+REMOTE_KEYS = {
+    'declared',
+    'problem',
+    'root',
+    'program',
+    'operations',
+    'keep',
+    'fetch_bundle_when_none_is_staged',
+    'publish_status_after_offline_apply',
+}
 
 
 def test_the_resolved_plan_document_carries_the_whole_machine_and_every_item(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -1095,6 +1105,8 @@ def test_the_settings_document_carries_the_file_and_every_rung_s_answer(sandbox:
 
     assert set(document) == SETTINGS_KEYS
     assert document['config_file'] == str(sandbox.config / 'dotfiles' / 'config.toml')
+    assert set(document['remote']) == REMOTE_KEYS
+    assert document['remote']['declared'] is False
     # Every entry rather than a fixed list of them: the shape is the contract and
     # the count is whatever SHARED_PATHS currently holds.
     assert document['settings']

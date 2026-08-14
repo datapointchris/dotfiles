@@ -31,6 +31,7 @@ from dotfiles.commands import logs
 from dotfiles.commands import machines
 from dotfiles.commands import manage
 from dotfiles.commands import network
+from dotfiles.commands import remote
 from dotfiles.commands import report
 from dotfiles.commands import resources
 from dotfiles.commands import staging
@@ -71,6 +72,7 @@ app.add_typer(config.app, name='config', rich_help_panel='Declaration')
 app.add_typer(report.app, name='report', rich_help_panel='History')
 app.add_typer(logs.app, name='logs', rich_help_panel='History')
 app.add_typer(network.app, name='network', rich_help_panel='Staging')
+app.add_typer(remote.app, name='remote', rich_help_panel='Staging')
 app.add_typer(staging.bundle_app, name='bundle', rich_help_panel='Staging')
 app.add_typer(manage.repo_app, name='repo', rich_help_panel='Manage')
 
