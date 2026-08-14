@@ -321,6 +321,21 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     stream.print()
 
 
+RULE_COLOUR = 'blue'
+"""Explicit, because Rich draws a rule faint by default and faint is unreadable on
+half the terminal themes this fleet uses."""
+
+
+def render_rule(title: str, stream: Console) -> None:
+    stream.rule(f'[bold]{title}[/]', style=RULE_COLOUR, align='left')
+
+
+def render_summary_row(verdict: str, name: str, detail: str, stream: Console) -> None:
+    """A summary row is its own section heading again, so it goes through the same
+    builder — a recap worded afresh makes the reader compare phrasings."""
+    stream.print(section_line(VERDICT_MARKS[verdict], name, detail, VERDICT_COLOURS[verdict]))
+
+
 def render_verdict(word: str, sentence: str, stream: Console) -> None:
     """The run's answer, and the one place the verdict word is spelled out.
 

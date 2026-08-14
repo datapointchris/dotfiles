@@ -197,8 +197,7 @@ def plan(
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
-        reconcile.report_verdict(results, lens)
-        manage.report_position(fetch_first=False)
+        reconcile.report_summary(results, lens)
     raise typer.Exit(reconcile.exit_code(results))
 
 
@@ -260,13 +259,7 @@ def check(
         # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:
-        reconcile.report_verdict(results, lens)
-        # Read from `.git`, never fetched: this is the honest stand-in for an
-        # update notice, and a notice that spends a network round trip at every
-        # prompt is one that gets turned off. It reports its own age instead.
-        # Its verdict is deliberately dropped — a checkout behind origin is a
-        # reason to run `update`, not drift in what this machine declares.
-        manage.report_position(fetch_first=False)
+        reconcile.report_summary(results, lens)
 
     raise typer.Exit(reconcile.exit_code(results))
 

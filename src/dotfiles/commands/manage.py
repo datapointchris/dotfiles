@@ -116,7 +116,7 @@ def update(
     load any not yet imported from the new.
     """
     if check_only:
-        raise typer.Exit(report_position(fetch_first=True))
+        raise typer.Exit(report_position())
 
     before = bridge.git('rev-parse', 'HEAD')
     if not before.ok:
@@ -174,14 +174,12 @@ def update(
     os._exit(ExitCode.CONVERGED if rebuilt.ok else ExitCode.ISSUE)
 
 
-def report_position(*, fetch_first: bool) -> ExitCode:
-    """Say where the checkout sits, and answer with whether there is anything to pull.
-
-    Shared with `check`, which calls it without the fetch: reading `.git` is free
-    and correct offline, and asking the network at every prompt is not something
-    a check can afford.
+def report_position() -> ExitCode:
+    """`update --check`'s whole answer. The read verbs report the same position off
+    `.git` alone in their closing summary — `checkout.standing` — because a notice
+    that spends a round trip at every prompt gets turned off.
     """
-    if fetch_first and not checkout.fetch():
+    if not checkout.fetch():
         error('could not reach the remote')
         return ExitCode.ISSUE
 

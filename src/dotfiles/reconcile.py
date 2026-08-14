@@ -54,7 +54,9 @@ from dotfiles.output import render_change
 from dotfiles.output import render_note
 from dotfiles.output import render_result
 from dotfiles.output import render_row
+from dotfiles.output import render_rule
 from dotfiles.output import render_section
+from dotfiles.output import render_summary_row
 from dotfiles.output import render_verdict
 from dotfiles.output import retract
 from dotfiles.output import tally
@@ -693,9 +695,9 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     Always printed, including when there is nothing to report, because the run
     that most needs it is the one that found nothing.
 
-    Worded like the checkout line printed under it — a verdict, then `run: <the
-    command>` where there is one. Two closing lines in two grammars would read as
-    two unrelated notices rather than as the end of one report.
+    Counts and never names: `report_summary` prints a row per troubled resource
+    directly above this, so naming them here was the same words twice. The drift
+    clause stays, because it is the other verb's subject and has no row up there.
     """
     pending = sum(result.pending for result in results)
     if lens is Lens.PLAN:
@@ -706,24 +708,34 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
             return f'nothing for apply to change; {attention} item(s) need a person — run: dotfiles check'
         return 'nothing to change'
 
-    troubled = [result.address for result in results if result.verdict is ResourceVerdict.ISSUE]
+    troubled = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
     drift = f'; {pending} item(s) differ from the declaration — run: dotfiles plan' if pending else ''
     if troubled:
-        return f'{len(troubled)} resource(s) need a person: {", ".join(troubled)}{drift}'
+        return f'{len(troubled)} resource(s) need a person{drift}'
     return f'nothing wrong{drift}'
 
 
-def report_verdict(results: Sequence[ResourceResult], lens: Lens) -> None:
-    """Close a read verb: its one verdict word, and the sentence behind it.
+def report_summary(results: Sequence[ResourceResult], lens: Lens) -> None:
+    """Close a read verb: the sections that found something, repeated in one place,
+    then the verdict.
 
-    The composition rather than the rendering, and it sits here because only the
-    fold knows what a verb kept. Composing it inside `output` means that module
-    asking this one at call time — a runtime import in the direction the layering
-    forbids, kept legal only by being lazy. The write verb closes through the same
-    renderer with a sentence of its own, and has no lens for this one to take.
+    A run prints a dozen sections and the two that matter are wherever the walk put
+    them, so the answer to "what is wrong with this machine" was a scroll. The
+    checkout row is inside the block for the same reason it now names its clone:
+    printed under the verdict sentence it read as a continuation of it.
 
     On stdout, because a read verb's answer is what a caller redirects.
     """
+    render_rule(f'{lens} summary', console)
+    for result in results:
+        if result.verdict is not ResourceVerdict.CONVERGED:
+            render_summary_row(str(result.verdict), result.address, result.detail.replace('\n', '; '), console)
+
+    standing, behind = checkout.standing(dt.datetime.now(dt.UTC))
+    render_summary_row(str(ResourceVerdict.DRIFT if behind else ResourceVerdict.CONVERGED), 'repo', standing, console)
+    checkout.report_stray_branch()
+
+    console.print()
     render_verdict(str(worst(results)), verdict_line(results, lens), console)
 
 

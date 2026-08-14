@@ -352,14 +352,15 @@ def test_a_plan_with_work_to_do_names_the_verb_that_does_it() -> None:
     assert reconcile.verdict_line(results, reconcile.Lens.PLAN) == '2 item(s) to change — run: dotfiles apply'
 
 
-def test_a_check_names_the_resources_that_need_a_person() -> None:
+def test_a_check_counts_the_resources_and_leaves_naming_them_to_the_summary() -> None:
+    """The block above this line names them, with the items behind each."""
     results = [
         ResourceResult('packages', ResourceVerdict.ISSUE, '1 needs a person', lens=reconcile.Lens.CHECK, attention=1),
         ResourceResult('auth', ResourceVerdict.ISSUE, '4 need a person', lens=reconcile.Lens.CHECK, attention=4),
         ResourceResult('env', ResourceVerdict.CONVERGED, 'matches', lens=reconcile.Lens.CHECK),
     ]
 
-    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 resource(s) need a person: packages, auth'
+    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 resource(s) need a person'
 
 
 def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None:
@@ -371,6 +372,54 @@ def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None
     line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
 
     assert line == 'nothing wrong; 3 item(s) differ from the declaration — run: dotfiles plan'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The closing summary block
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+CLONE = '/w/dotfiles is up to date with origin/main'
+
+
+@pytest.fixture
+def steady_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One answer and no git, so these assert on the block and not on this clone."""
+    monkeypatch.setattr(reconcile.checkout, 'standing', lambda now: (CLONE, False))
+    monkeypatch.setattr(reconcile.checkout, 'report_stray_branch', lambda: None)
+
+
+def summarised(results: list[ResourceResult], capsys: pytest.CaptureFixture) -> list[str]:
+    reconcile.report_summary(results, reconcile.Lens.CHECK)
+    return [line.rstrip() for line in capsys.readouterr().out.splitlines() if line.strip()]
+
+
+def test_the_block_says_which_question_it_is_summarising(steady_checkout, capsys: pytest.CaptureFixture) -> None:
+    assert summarised([], capsys)[0].startswith('check summary ─')
+
+
+def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, capsys: pytest.CaptureFixture) -> None:
+    """A recap worded afresh makes the reader compare phrasings to decide whether
+    it is the same finding."""
+    detail = '3 item(s) need a person: meso, nomad, atuin'
+    results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=reconcile.Lens.CHECK, attention=3)]
+
+    assert f'auth        {detail}' in ' '.join(summarised(results, capsys))
+
+
+def test_a_converged_resource_is_left_out(steady_checkout, capsys: pytest.CaptureFixture) -> None:
+    results = [ResourceResult('symlinks', ResourceVerdict.CONVERGED, '144 in place', lens=reconcile.Lens.CHECK)]
+
+    assert not [line for line in summarised(results, capsys) if 'symlinks' in line]
+
+
+def test_the_checkout_row_names_the_clone_and_sits_above_the_verdict(steady_checkout, capsys: pytest.CaptureFixture) -> None:
+    """Printed under the verdict sentence it read as a continuation of it."""
+    lines = summarised([result(ResourceVerdict.ISSUE)], capsys)
+
+    assert [position for position, line in enumerate(lines) if CLONE in line] < [
+        position for position, line in enumerate(lines) if line.startswith('issue')
+    ]
 
 
 def test_a_row_no_longer_says_unmeasurable_beside_a_tally_that_says_unmeasured() -> None:

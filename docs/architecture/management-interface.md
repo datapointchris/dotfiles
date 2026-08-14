@@ -84,12 +84,26 @@ verdict only in an escape code answers nothing on a machine that asked for none.
 The closing line is where the word goes, since the run's verdict is about the run rather
 than about each part of it. It also says which question was answered and where the other
 one is asked, which is the answer to "plan converged and said nothing — am I using it
-wrong":
+wrong".
+
+A read verb reaches it through a **summary**, under a titled rule. Every section that
+found something prints again, its own heading word for word — a recap worded afresh makes
+the reader compare two phrasings to decide whether they are one finding. A converged
+section is left out, since a block listing the healthy ones is the report a second time.
+The checkout row joins them and names the clone it measured; below the verdict sentence
+with no separator, it used to read as a continuation of it.
 
 ```text
-converged nothing for apply to change; 5 item(s) need a person — run: dotfiles check
-issue     2 resource(s) need a person: packages, auth
+check summary ─────────────────────────────────────────────────────────────────
+✗ env         1 item(s) need a person: HOSTS_JSON
+✗ auth        3 item(s) need a person: meso, nomad, atuin
+~ repo        /home/chris/dotfiles is 6 commits behind origin/main — run: dotfiles update
+
+issue     2 resource(s) need a person; 1 item(s) differ from the declaration — run: dotfiles plan
 ```
+
+The verdict line counts and never names, because the rows above it name. The drift clause
+survives on it, being the other verb's subject and so nobody's row.
 
 Each verb's row also words the *other* verb's count as that verb owns it. A `plan` row
 reading `converged` beside `4 need attention` was a row contradicting itself, and both
@@ -104,7 +118,9 @@ read verbs do — carrying what changed, what needs a person, what nothing could
 and the verb that owns each. A write verb with renderings of its own instead — a
 full-width rule naming the machine, a line at column 0 above each group of work, a bare
 warning for a resource that refused, a second rule for the verdict — ends the run a
-person watches longest in the line of the report that answers least.
+person watches longest in the line of the report that answers least. It takes no summary
+block: its closing sentence already carries what changed, what needs a person and what
+nothing could measure, so there is nothing left of its sections to gather back up.
 
 **That closing line ends a run that measured something, and only that.** An `apply` that
 refuses before the walk — nothing selected, a machine that will not resolve, `--offline`

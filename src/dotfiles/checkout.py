@@ -89,6 +89,18 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
     return Position(upstream.stdout.strip(), ahead, behind, _last_fetch(repo))
 
 
+def standing(now: dt.datetime, repo: Path = paths.REPO_ROOT) -> tuple[str, bool]:
+    """The path is on the line because this tool is installed editable against a
+    working tree, so a position with no directory named is a claim about one of
+    several candidate clones. The bool is `behind`, which the caller draws a mark
+    from — reading `.git` never fetches, so it does not move the exit code.
+    """
+    position = read(repo)
+    if position is None:
+        return f'{repo}, tracking no upstream branch — nothing to compare against', False
+    return f'{repo} is {position.describe(now)}', bool(position.behind)
+
+
 DEPLOYMENT_BRANCH = 'main'
 """The branch this machine is deployed from. Feature work belongs in a worktree."""
 
