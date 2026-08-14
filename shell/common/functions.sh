@@ -744,18 +744,16 @@ function layers() {
     draw_args+=(-s "$layer")
   fi
 
-  # --fit-width fills every column it is given, and the drawing is taller than
-  # it is wide, so a wide terminal buys height rather than detail. Capping the
-  # width caps the scrolling with it. zsh reports COLUMNS as 0 when stdout is
-  # not a TTY, which is why the floor is checked rather than just the ceiling.
-  local max_width="${LAYERS_MAX_WIDTH:-110}"
-  local width="$max_width"
-  if [[ "${COLUMNS:-0}" -gt 0 && "${COLUMNS:-0}" -lt "$max_width" ]]; then
-    width="$COLUMNS"
+  # No width limit unless LAYERS_MAX_WIDTH asks for one. chafa already sizes to
+  # the terminal, so a default cap silently defeats resizing the pane to read a
+  # layer — widening past the cap changes nothing, which reads as the variable
+  # being broken. Set it when you want the drawing smaller than the pane.
+  local -a size_args=(--fit-width)
+  if [[ -n "${LAYERS_MAX_WIDTH:-}" ]]; then
+    size_args=(--view-size "${LAYERS_MAX_WIDTH}x40" --fit-width)
   fi
 
-  keymap "${draw_args[@]}" 2>/dev/null \
-    | chafa --view-size "${width}x40" --fit-width -
+  keymap "${draw_args[@]}" 2>/dev/null | chafa "${size_args[@]}" -
 }
 
 #@yt-transcript
