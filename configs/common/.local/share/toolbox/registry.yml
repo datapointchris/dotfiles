@@ -1101,66 +1101,54 @@ tools:
   # CUSTOM DOTFILES TOOLS
   # =================================================================
 
-  menu:
+  doit:
     category: custom-tools
-    description: "Federated search across your tools, workflows, and Claude skills"
-    installed_via: dotfiles
-    usage: "menu [term]"
-    why_use: "One search box over everything you own; Enter assembles every lens that has the subject (help, toolbox, tldr, cheat, workflow, skill)"
+    description: "What to do now, and everything that decides it"
+    installed_via: uv
+    usage: "doit [next | dashboard | find | launch | review | labs]"
+    why_use: "One front door over everything you own. `next` draws from what you said matters, `dashboard` shows every lane outstanding, `find` searches the whole corpus, and `review`/`labs` carry the cadence and practice registers"
     examples:
-      - cmd: "menu"
-        desc: "Interactive picker across tools, workflows, and skills"
-      - cmd: "menu keybind"
-        desc: "Open the picker pre-filtered to a term"
-      - cmd: "menu review"
-        desc: "Show what's due to revisit (cadence register)"
-    see_also: [toolbox, workflows, menu-review]
-    tags: [dotfiles, discovery, tools, search]
+      - cmd: "doit next"
+        desc: "What to do now, drawn from your pursuit weights"
+      - cmd: "doit dashboard"
+        desc: "Every lane — what is outstanding across everything"
+      - cmd: "doit find keybind"
+        desc: "Search everything you own and open what you pick"
+      - cmd: "doit review"
+        desc: "What's due to revisit, on a cadence"
+    see_also: [toolbox, icb, learning]
+    tags: [discovery, dashboard, search, cadence, attention]
+    docs_url: "https://github.com/datapointchris/doit"
 
-
-  menu-dashboard:
+  prs:
     category: custom-tools
-    description: "Cross-app glance behind menu dashboard — everything outstanding, in lanes"
+    description: "Pick an open PR and open its diff in a tmux window"
     installed_via: dotfiles
-    usage: "menu dashboard [--lane <name>] [--json] [--timeout <seconds>]"
-    why_use: "One read-only glance at what is outstanding everywhere: tasks, habits, learning, reading, maintenance, project items, and what is approaching. Independent lanes, each ordered by its own app, so you pick by time and energy rather than following an invented ranking. Use it through `menu dashboard`"
+    usage: "prs [list]"
+    why_use: "Review without leaving the terminal — the picker spans every repo, and the diff lands in its own tmux window beside what you were doing"
     examples:
-      - cmd: "menu dashboard"
-        desc: "Every lane, three rows each"
-      - cmd: "menu dashboard --lane maintenance"
-        desc: "One lane in more depth"
-    see_also: [menu, menu-review, menu-labs, icb, learning]
-    tags: [dotfiles, dashboard, overview, outstanding, glance, json]
+      - cmd: "prs"
+        desc: "Open the picker across every repo's open PRs"
+      - cmd: "prs list"
+        desc: "Print every open PR as a table instead of picking"
+    see_also: [gh-dash, worktree, git]
+    tags: [dotfiles, git, github, review, tmux]
 
-  menu-review:
+  worktree:
     category: custom-tools
-    description: "Cadence register behind menu review — what to revisit and when"
+    description: "Give a session its own index, and land it on main without a PR"
     installed_via: dotfiles
-    usage: "menu review [list | done <id> | edit]"
-    why_use: "Track recurring maintenance, skills, and tools to revisit; due dates derive from last-done plus cadence so there is nothing to hand-maintain. Use it through `menu review`"
+    usage: "worktree [new <slug> | land | drop | list | show | choose]"
+    why_use: "A checkout's index is shared by every session standing in it, so concurrent work collides. `new` isolates in seconds and `land` rebases, fast-forwards main and cleans up — one commit stays one commit"
     examples:
-      - cmd: "menu review"
-        desc: "Show what's due now, most overdue first"
-      - cmd: "menu review done brew-maintenance"
-        desc: "Mark an item done, which advances its due date"
-    see_also: [menu, workflows]
-    tags: [dotfiles, discovery, review, cadence]
-
-  menu-labs:
-    category: custom-tools
-    description: "Hands-on practice deck behind menu labs — scheduled Labs and recall drills"
-    installed_via: dotfiles
-    usage: "menu labs [list | <id> | flash | done <id> | new <name>]"
-    why_use: "Spaced hands-on practice: open a Lab to work through in one pane while you type in another, or run a flash recall drill from your tool examples. Schedule advances from last-practiced. Use it through `menu labs`"
-    examples:
-      - cmd: "menu labs"
-        desc: "Show what's due to practice now"
-      - cmd: "menu labs flash"
-        desc: "Quick recall drill from your tool examples"
-      - cmd: "menu labs done fzf-preview"
-        desc: "Mark a Lab practiced, which advances its schedule"
-    see_also: [menu, menu-review, workflows]
-    tags: [dotfiles, discovery, practice, spaced-repetition, labs]
+      - cmd: "worktree new session-token-refresh"
+        desc: "Isolate a session off origin's default branch"
+      - cmd: "worktree land"
+        desc: "Rebase, push onto main, remove the worktree"
+      - cmd: "worktree choose"
+        desc: "Pick one with fzf across every repo"
+    see_also: [git, prs, lazygit]
+    tags: [dotfiles, git, worktree, isolation]
 
   sesh:
     category: session-management
@@ -1177,7 +1165,7 @@ tools:
         desc: "List all available sessions"
       - cmd: "sesh last"
         desc: "Switch to previously active session"
-    see_also: [menu, tmux, tmuxinator]
+    see_also: [doit, tmux, tmuxinator]
     tags: [tmux, workflow, tui, go, zoxide]
     docs_url: "https://github.com/joshmedeski/sesh"
 
@@ -1196,7 +1184,7 @@ tools:
         desc: "Create dev note"
       - cmd: "notes learning"
         desc: "Create learning note"
-    see_also: [zk, gum, menu]
+    see_also: [zk, gum, doit]
     tags: [dotfiles, notes, zk, productivity]
 
   dectl:
@@ -1368,7 +1356,7 @@ tools:
         desc: "Show specific workflow"
       - cmd: "workflows learn"
         desc: "Show a random workflow"
-    see_also: [menu, notes]
+    see_also: [doit, notes]
     tags: [dotfiles, documentation, procedures, reference]
 
   aws-profiles:
@@ -1461,7 +1449,7 @@ tools:
         desc: "Check drift between packages.yml, manifests, and scripts"
       - cmd: "packages stats"
         desc: "Show package counts"
-    see_also: [toolbox, menu]
+    see_also: [toolbox, doit]
     tags: [dotfiles, packages, discovery, yaml]
 
   relate:
