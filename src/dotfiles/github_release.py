@@ -196,8 +196,8 @@ GITHUB_HOSTS = frozenset({'api.github.com', 'github.com'})
 Deliberately excludes the asset CDNs — `objects.githubusercontent.com` and its
 siblings — even though a release download lands there. They are S3-backed and
 serve a pre-signed URL that needs no credential of ours; `s3.amazonaws.com`
-answers a bearer token it does not recognise with a 400, measured 2026-08-10, and
-that is the *polite* failure. The impolite one is that the token was sent at all.
+answers a bearer token it does not recognise with a 400, and that is the *polite*
+failure. The impolite one is that the token was sent at all.
 """
 
 

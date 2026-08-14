@@ -31,9 +31,9 @@ class Started:
     a resource produces arrives *after* the measurement, so a reader watching the
     stream learns a resource's name at the moment it already has its answer —
     which on a fast machine is invisible and on a slow one is a blank screen for
-    the whole of the wait. Measured on the work box: `check` printed nothing for
-    five minutes and then everything at once, and nothing in the output or the
-    record said which resource the five minutes went to.
+    the whole of the wait — a slow `check` prints nothing for minutes and then
+    everything at once, with neither the output nor the record saying which
+    resource the time went to.
 
     Carried in the stream rather than printed from the walk, for the reason the
     walk yields values at all: what a reader does with it — render it, drop it,

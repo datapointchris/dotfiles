@@ -90,9 +90,9 @@ SECRET_SHAPES = (
 """Token shapes scrubbed from anything a command said before it is recorded.
 
 The run log is replicated between machines, so a credential written here does
-not stay on the box that minted it. Measured 2026-08-12: `gh auth token` is on
-the default `check` path, and 156 of 492 run files held a live token that had
-reached every machine.
+not stay on the box that minted it. `gh auth token` is on the default `check`
+path, so an unredacted transcript puts a live token in a file that reaches every
+machine.
 
 Shape matching rather than a list of commands that yield secrets: the argv that
 prints one is not knowable from here, and `--refresh` alone reaches half a dozen

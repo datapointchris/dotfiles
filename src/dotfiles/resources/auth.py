@@ -2,9 +2,8 @@
 
 A converged machine is not necessarily a working one. Every binary can be
 installed, every symlink deployed and every flag set while the CLIs that do the
-work all sit logged out — measured on the Arch box on 2026-08-12, where
-`dotfiles check` printed a screen of converged rows while `learning`, `meso`,
-`nomad` and `atuin` could not answer a single request between them.
+work all sit logged out. Without this resource `dotfiles check` prints a screen of
+converged rows while the data CLIs cannot answer a single request between them.
 
 **The manifest names which; this module says how.** A machine's `auth:` list is
 the roster, and the table below is the probe for each name. That is the shape

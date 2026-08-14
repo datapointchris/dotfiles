@@ -10,11 +10,6 @@ Reached only through `dotfiles bundle create`, which calls `build` directly.
 Output:
     dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
 
-It was written for the macOS system python3, still 3.9, back when bash invoked
-it, and kept a stdlib-only rule long after `dotfiles_python` stopped ever being
-that interpreter. The rule was dropped on 2026-08-08 — it named a constraint no
-caller imposes, and this file had long since been importing the package anyway.
-
 Streams: everything a person reads goes to stderr, and stdout carries the
 tarball path under --print-path and nothing else, so the build can be piped
 into whatever consumes the bundle.

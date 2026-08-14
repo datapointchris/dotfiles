@@ -151,9 +151,9 @@ def go_command() -> str | None:
     `shutil.which` asks a different question, and both fleet machines answer it
     wrong. `.zshrc` added `/usr/local/go/bin` on Linux only, so a Mac found no
     `go` at all; an Arch shell that never sourced `.zshrc` found the pacman
-    `/usr/bin/go` instead. Measured 2026-08-14: the Mac reported all 18 Go tools
-    unmeasurable, and Arch read their build info with a go1.26.6 the repo did not
-    install while its own go1.26.5 sat unused.
+    `/usr/bin/go` instead. The Mac then reports every Go tool unmeasurable, and
+    Arch reads their build info with a toolchain this repo did not install while
+    the one it did sits unused.
 
     `resources/toolchains.py` reached this rule from the other side — ask the
     provider where it put the runtime, never PATH what it can see. A measurement
@@ -181,8 +181,8 @@ then refuses to verify and installs nothing.
 
 The proxy is still deliberately left alone. GOPRIVATE would bypass that too, and
 it does not need bypassing — `GOPROXY` ends in `,direct`, so resolution already
-falls through to git, which authenticates through `gh auth git-credential`.
-Measured 2026-08-14: with this set and nothing else changed, `fleet` builds."""
+falls through to git, which authenticates through `gh auth git-credential`. This
+setting alone is what makes a private-namespace tool build."""
 
 
 def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result:

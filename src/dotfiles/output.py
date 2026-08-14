@@ -490,9 +490,9 @@ def retract() -> None:
     """Take back the progress line, now that the answer is ready to replace it.
 
     A progress line is a statement about the present tense, and leaving it on
-    screen turns it into a second, worse report. Measured on this machine: a
-    healthy `check` printed nine `⋯` lines carrying each resource's help text, then
-    nine verdict rows carrying each resource's answer, and the reader's question
+    screen turns it into a second, worse report. Left up, a healthy `check` prints
+    one `⋯` line per resource carrying its help text, then one verdict row per
+    resource carrying its answer, and the reader's question
     was which of the two lists was the report — the resource descriptions read as
     a summary of their own.
 

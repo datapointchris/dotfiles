@@ -153,8 +153,7 @@ class ProbeResult:
     bundle exists for; a TLS-intercepting proxy is reachable and needs its CA
     installed, and a bundle built for it is hours spent on a two-minute fix. Every
     non-zero curl status collapsed to `NO` in the same column, so an intercepted
-    machine read as a blackholed one — measured 2026-08-13, when curl exit 60 was
-    reported as a block.
+    machine read as a blackholed one, with curl's exit 60 reported as a block.
 
     A member and not the prose it renders as. The closing hint in `network check`
     fires on `INTERCEPTED`, and it tested a substring of an English sentence written

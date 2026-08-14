@@ -413,10 +413,10 @@ CURL_CAUSES = {
 }
 """What curl's exit status means, for the codes this fleet actually sees.
 
-Named because a bare number is where a diagnosis stopped. `the claude-code install
-script exited 60` was the whole of what a TLS-intercepted work box was told on
-2026-08-13, and 60 is curl's code for a certificate it will not verify — which is
-one CA import away from fixed and reads as an outage.
+Named because a bare number is where a diagnosis stops. `install script exited 60`
+is the whole of what a TLS-intercepted machine gets told, and 60 is curl's code
+for a certificate it will not verify — one CA import away from fixed, and it reads
+as an outage.
 
 Only curl's, and only where a caller knows the number came from curl. A vendor
 install script running under `set -e` exits with its own status, so four of the five

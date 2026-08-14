@@ -59,7 +59,7 @@ def declaration(*args: str, output: Output = Output.DATA) -> None:
     parse of it fails.
 
     Imported inside the function, against the usual rule: `import
-    dotfiles.declaration` costs 78ms (29ms of it yaml, measured 2026-08-08), and
+    dotfiles.declaration` costs around 78ms, 29ms of it yaml, and
     most invocations — `--help`, `report latest`, `repo path` — never read the
     declaration at all.
     """

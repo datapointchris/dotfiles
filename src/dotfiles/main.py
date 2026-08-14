@@ -322,8 +322,8 @@ def apply_command(
             # read back — what the currency verdicts were measured against, which
             # part of the machine this run covered, and why an installed item was
             # stale — so a record omitting one is a record that cannot be read.
-            # Measured 2026-08-13 on the work box: an `apply --offline` recorded
-            # `{"skip": []}` and nothing in it said the bundle was the upstream. The
+            # Omitted, an `apply --offline` records `{"skip": []}` with nothing in
+            # it saying the bundle was the upstream. The
             # ceiling is different: its absence means "all the way", which the
             # missing key already says.
             flags={

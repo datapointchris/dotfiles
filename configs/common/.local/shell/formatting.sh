@@ -153,6 +153,7 @@ _get_color() {
 # Formatting Functions
 # ================================================================
 
+# Print colored text
 print_color() {
   local color="$1"
   local message="$2"
@@ -197,6 +198,7 @@ print_header() {
   fi
 }
 
+# Success header with thick borders (green + emoji)
 print_header_success() {
   local text="$1"
   echo ""
@@ -206,6 +208,7 @@ print_header_success() {
   echo ""
 }
 
+# Error header with thick borders (red + emoji)
 print_header_error() {
   local text="$1"
   echo ""
@@ -215,6 +218,7 @@ print_header_error() {
   echo ""
 }
 
+# Warning header with thick borders (yellow + emoji)
 print_header_warning() {
   local text="$1"
   echo ""
@@ -224,6 +228,7 @@ print_header_warning() {
   echo ""
 }
 
+# Info header with thick borders (cyan + emoji)
 print_header_info() {
   local text="$1"
   echo ""
@@ -257,6 +262,7 @@ print_section() {
   fi
 }
 
+# Success section (green + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_success() {
   local text="$1"
   local padding=15
@@ -267,6 +273,7 @@ print_section_success() {
   echo -e "${COLOR_GREEN}$(_separator "$BOX_THIN" "$underline_length")${COLOR_RESET}"
 }
 
+# Error section (red + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_error() {
   local text="$1"
   local padding=15
@@ -277,6 +284,7 @@ print_section_error() {
   echo -e "${COLOR_RED}$(_separator "$BOX_THIN" "$underline_length")${COLOR_RESET}"
 }
 
+# Warning section (yellow + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_warning() {
   local text="$1"
   local padding=15
@@ -287,6 +295,7 @@ print_section_warning() {
   echo -e "${COLOR_YELLOW}$(_separator "$BOX_THIN" "$underline_length")${COLOR_RESET}"
 }
 
+# Info section (cyan + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_info() {
   local text="$1"
   local padding=15
@@ -331,6 +340,7 @@ print_title() {
   echo ""
 }
 
+# Centered success title (green + emoji)
 print_title_success() {
   local text="$1"
   local term_width
@@ -344,6 +354,7 @@ print_title_success() {
   echo ""
 }
 
+# Centered error title (red + emoji)
 print_title_error() {
   local text="$1"
   local term_width
@@ -357,6 +368,7 @@ print_title_error() {
   echo ""
 }
 
+# Centered warning title (yellow + emoji)
 print_title_warning() {
   local text="$1"
   local term_width
@@ -370,6 +382,7 @@ print_title_warning() {
   echo ""
 }
 
+# Centered info title (cyan + emoji)
 print_title_info() {
   local text="$1"
   local term_width
@@ -414,6 +427,7 @@ print_banner() {
   echo ""
 }
 
+# Success banner (green + emoji)
 print_banner_success() {
   local text="$1"
   local bar_width=43
@@ -423,6 +437,7 @@ print_banner_success() {
   echo ""
 }
 
+# Error banner (red + emoji)
 print_banner_error() {
   local text="$1"
   local bar_width=43
@@ -432,6 +447,7 @@ print_banner_error() {
   echo ""
 }
 
+# Warning banner (yellow + emoji)
 print_banner_warning() {
   local text="$1"
   local bar_width=43
@@ -441,6 +457,7 @@ print_banner_warning() {
   echo ""
 }
 
+# Info banner (cyan + emoji)
 print_banner_info() {
   local text="$1"
   local bar_width=43
@@ -454,21 +471,25 @@ print_banner_info() {
 # Status Message Functions (unicode icons - subtle for lists)
 # ================================================================
 
+# Success message (green with unicode checkmark ✓)
 print_success() {
   local message="$1"
   echo -e "  ${COLOR_GREEN}${UNICODE_CHECK}${COLOR_RESET} ${message}"
 }
 
+# Error message (red with unicode cross ✗)
 print_error() {
   local message="$1"
   echo -e "  ${COLOR_RED}${UNICODE_CROSS}${COLOR_RESET} ${message}"
 }
 
+# Warning message (yellow with unicode triangle ▲)
 print_warning() {
   local message="$1"
   echo -e "  ${COLOR_YELLOW}${UNICODE_WARNING}${COLOR_RESET} ${message}"
 }
 
+# Info message (cyan with unicode bullet ●)
 print_info() {
   local message="$1"
   echo -e "  ${COLOR_CYAN}${UNICODE_INFO}${COLOR_RESET} ${message}"

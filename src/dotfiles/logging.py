@@ -137,9 +137,9 @@ actually reading.
 **`httpcore2` is the one that was missing, and it was the expensive one.** The
 fork vendors its transport under that name, not `httpcore`, so it was never
 pinned. Its DEBUG records carry whole response-header tuples as the event text
-and they went straight into the file sink. Measured on the apply of 2026-08-12:
-1008 of 1359 events were `httpcore2`, 74% of a 265KB log that Syncthing copies to
-every machine — and the failure the run actually had is not in there at all.
+and they went straight into the file sink. Unpinned it dominates the log — around
+three quarters of the events in a real apply, in a file Syncthing copies to every
+machine, burying the failure the run actually had.
 
 The unprefixed pair stays, on the reasoning the miss disproved only half of:
 naming a logger that does not exist really is free. What it does not buy is

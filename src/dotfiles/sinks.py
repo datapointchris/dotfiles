@@ -88,9 +88,9 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # A failed write is an Issue too. `issues` held Refusals alone, which
                 # are raised exceptions — and a provider answering `Result(ok=False)`
                 # returns normally, so the record of a run that failed an install
-                # carried `issues: []`. Measured 2026-08-13: a claude-code install
-                # failed, the terminal said so, the run exited 3, and the record a
-                # person would send to the fleet claimed nothing was wrong.
+                # carried `issues: []` — the terminal said the install failed, the
+                # run exited 3, and the record a person would send to the fleet
+                # claimed nothing was wrong.
                 if not outcome.ok:
                     written.record_issue(event.resource, str(outcome.status), f'{outcome.change.item}: {outcome.message}')
             case Refusal() as refusal:

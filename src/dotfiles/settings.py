@@ -22,8 +22,8 @@ and it compiles one fleet's vocabulary into a generic tool.
 outside this tool's own XDG directories is what that standard forbids, and a
 default *inside* them would be dotfiles claiming to own a registry that is the
 fleet's data — which `CLAUDE.md` § "dotfiles does not manage fleet data" rules
-out. The registry also moved twice in six hours on 2026-08-12, so a compiled-in
-path would have been wrong before the commit carrying it landed.
+out. The registry has moved twice in one afternoon before now, so a compiled-in
+path can be wrong before the commit carrying it lands.
 """
 
 from __future__ import annotations

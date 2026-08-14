@@ -398,10 +398,10 @@ class SystemPackage(Entry):
 class GithubRelease(Entry):
     """A prebuilt binary from a GitHub release.
 
-    The asset name is deliberately *not* here. It stays in code, because three of
-    the 23 defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
+    The asset name is deliberately *not* here. It stays in code, because several
+    entries defeat any placeholder vocabulary — shellcheck needs aarch64-on-darwin
     and a `.tar.xz`, trivy needs `ARM64`/`64bit`, and zk spells its architecture
-    per OS. Measured across all 23 and rejected twice; see
+    per OS. Rejected as data twice; see
     `docs/architecture/github-releases.md` § "Why asset naming is code".
     """
 

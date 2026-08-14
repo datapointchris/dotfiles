@@ -138,10 +138,9 @@ def _already_granted() -> bool:
     CI — and because the answer is cached for the run, one wrong probe declined
     root for *everything* after it.
 
-    Measured 2026-08-10 in the wsl e2e container: 33 system packages, the Go
-    toolchain and with it 15 `go install`s at exit 127, and the zdotdir file, all
-    refused as "authorization was declined" while `sudo -n true` exited 0 beside
-    them.
+    One wrong probe therefore refuses the system packages, the Go toolchain, every
+    `go install` behind it at exit 127, and the zdotdir file — all reported as
+    "authorization was declined" while `sudo -n true` exits 0 beside them.
 
     Asked before `offer` rather than after, deliberately: a caller that must not
     block still gets root where taking it blocks nobody. A live sudo timestamp
