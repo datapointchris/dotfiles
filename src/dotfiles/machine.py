@@ -203,6 +203,19 @@ class Requirement:
     also belongs to, and only earns its place where that is not obvious.
     """
 
+    file_must_exist: bool = False
+    """This value names a file, and the file has to be there.
+
+    The value half of `requires_values`, and the same rule: a declaration records
+    what has to be true, never only that something was answered. A machine can
+    name `$HOSTS_JSON` and have no inventory at that path, and today the register
+    reports it satisfied — the answer arrived, so nothing looks further.
+
+    Worth checking here even though every consumer refuses loudly, because the
+    entry's own declaration says why: the consumers are outside this repo and fail
+    at deploy time, and a `dotfiles check` that fails now is earlier than that.
+    """
+
     requires_values: tuple[str, ...] = ()
     """Values that must be set before this file can do its job.
 
@@ -601,6 +614,7 @@ def _requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: 
                     restore=str(entry.get('restore', '')),
                     tags=tuple(str(tag) for tag in entry.get('tags') or ()),
                     requires_values=tuple(str(value) for value in entry.get('requires_values') or ()),
+                    file_must_exist=bool(entry.get('file_must_exist', False)),
                 )
             )
     return tuple(found)

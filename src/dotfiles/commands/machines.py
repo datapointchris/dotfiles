@@ -237,6 +237,7 @@ def _requirement_dict(entry: machines.Requirement) -> dict[str, object]:
         'consumers': list(entry.consumers),
         'narrowing': dict(entry.narrowing),
         'requires_values': list(entry.requires_values),
+        'file_must_exist': entry.file_must_exist,
     }
 
 
@@ -248,6 +249,11 @@ def _render_requirements(machine: machines.Machine) -> None:
         width = max(len(entry.name) for entry in values)
         for entry in values:
             console.print(f'{EVIDENCE_INDENT}{entry.name:<{width}}  {entry.description}', markup=False, highlight=False)
+            # A rebuild that sets the value and never puts the file there has a
+            # machine that answers and cannot work, which is what the check now
+            # reports and what this listing owes a person doing it by hand.
+            if entry.file_must_exist:
+                console.print(f'{EVIDENCE_INDENT}{"":<{width}}  the file it names has to be there too', markup=False, highlight=False)
 
     if files := machine.required_files:
         _section('files', f'{len(files)} restored from a backup, never written by apply')

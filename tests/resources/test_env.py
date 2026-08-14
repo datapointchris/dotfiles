@@ -501,6 +501,62 @@ def test_a_satisfied_precondition_reports_nothing(tmp_path: Path) -> None:
     assert changes(tmp_path, flags=declared) == ()
 
 
+def test_a_value_naming_a_file_that_is_not_there_is_stale(tmp_path: Path, env_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The value arrived, so nothing looked further, and the machine answers with
+    a path holding no file. Its consumers are outside this repo and fail at deploy
+    time, which is later than a check that fails now."""
+    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write(f'export HOSTS_JSON={tmp_path / "nowhere.json"}\n')
+
+    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOSTS_JSON']
+
+    assert found[0].verdict is Verdict.STALE
+    assert 'names a file that is not there' in found[0].detail
+    assert found[0].observed == str(tmp_path / 'nowhere.json')
+
+
+def test_a_value_naming_a_file_that_is_there_reports_nothing(tmp_path: Path, env_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    present = tmp_path / 'hosts.json'
+    present.write_text('{}\n')
+    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write(f'export HOSTS_JSON={present}\n')
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
+def test_an_unset_value_that_names_a_file_is_missing_rather_than_stale(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One finding, not two. Nothing answered, so there is no path to test and the
+    remedy is to answer — the file question does not arise yet."""
+    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOSTS_JSON']
+
+    assert len(found) == 1
+    assert found[0].verdict is Verdict.MISSING
+
+
+def test_a_value_that_names_no_file_is_never_tested_for_one(tmp_path: Path) -> None:
+    """A Windows account name is not a path. Without the declaration nothing looks."""
+    declared = {**FLAGS, 'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export WINDOWS_USER=someone\n')
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
 def test_every_declared_precondition_names_a_value_the_repo_declares() -> None:
     """A typo in `requires_values` would silently never fire, because a name no
     machine declares resolves as not applicable everywhere."""

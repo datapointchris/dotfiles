@@ -79,6 +79,7 @@ required:
     description: Absolute path to this machine's fleet host inventory
     network_trust: fleet
     capacity: workstation
+    file_must_exist: true
     consumers:
       - ~/homelab/pyinfra/inventory.py
       - ~/homelab/scripts/lib/inventory.sh

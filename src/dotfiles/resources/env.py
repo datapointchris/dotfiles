@@ -338,19 +338,36 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     """
     changes = []
     for entry in machine.required_values:
-        if observed.values.get(entry.name) or observed.resolved.of(entry.name):
-            continue
-        changes.append(
-            Change(
-                NAME,
-                Stage.ENVIRONMENT,
-                entry.name,
-                Verdict.MISSING,
-                repair=Repair.BY_HAND,
-                detail=f'not set — {entry.description or "a machine-local value"}',
-                advice=settings.where_to_name(entry.name, observed.path),
+        answer = observed.values.get(entry.name) or (found.value if (found := observed.resolved.of(entry.name)) else '')
+        if not answer:
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    entry.name,
+                    Verdict.MISSING,
+                    repair=Repair.BY_HAND,
+                    detail=f'not set — {entry.description or "a machine-local value"}',
+                    advice=settings.where_to_name(entry.name, observed.path),
+                )
             )
-        )
+            continue
+        # The value arrived and the file it names did not. Two findings rather
+        # than one, because the remedies are opposite: the first is answered in
+        # ~/.env and this one is answered wherever the file comes from.
+        if entry.file_must_exist and not Path(answer).expanduser().exists():
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.ENVIRONMENT,
+                    entry.name,
+                    Verdict.STALE,
+                    repair=Repair.BY_HAND,
+                    detail=f'names a file that is not there — {entry.description or "a machine-local value"}',
+                    advice='point it at the real file, or put the file where it already points',
+                    observed=answer,
+                )
+            )
     for entry in machine.required_files:
         if entry.path in observed.present_files:
             changes.extend(_unready(entry, machine, observed))
