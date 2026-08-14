@@ -88,9 +88,8 @@ class Observed:
 
     Present, working, and outside this repo's reach: `clone.behind` needs a
     checkout to fetch, so it answers None and the plugin reads as current forever.
-    Measured on the Arch box, where `~/.config/yazi/plugins/what-size.yazi` holds
-    three read-only files and no repository — the shape `ya pkg add` leaves — while
-    `packages.yml` declares it a plain clone of `pirafrank/what-size.yazi`.
+    `ya pkg add` leaves a directory of read-only files and no repository, where
+    `packages.yml` declares the same plugin a plain clone.
 
     Distinct from a subdirectory plugin, which also has no `.git` and is not a
     fault: `clone.py` copies one out of a shallow checkout it then deletes, so
