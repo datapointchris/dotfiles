@@ -327,17 +327,22 @@ def detect(root: Path = Path('/')) -> Detected:
 def _os_family() -> OSFamily:
     """Which OS this interpreter is running on, by the name its build reports.
 
-    Windows answers under two spellings and only one of them is `Windows`.
-    `platform.system()` reports the kernel an interpreter was built against, so
-    CPython for Windows answers `Windows` while a Python built on a POSIX
-    emulation layer answers that layer's own uname — `MSYS_NT-10.0-26100` from
-    MSYS2, which is what Git Bash ships, `MINGW64_NT-…` from its subsystem, and
-    `CYGWIN_NT-…` from the ancestor of both.
+    `Windows` is the live answer, and the rest is a guard rather than a branch
+    anyone reaches. `platform.system()` reports the kernel an interpreter was
+    built against, and the interpreter here is whatever `uv` resolved — which on
+    that machine is a python-build-standalone CPython, a native Windows binary
+    that answers `Windows` whichever shell invoked it. Git for Windows ships no
+    Python of its own, so nothing about running under Git Bash changes this.
 
-    Reading only the first spelling is the failure worth naming, because the
-    fallthrough is Linux rather than unknown: `disagreements` would then tell a
-    Windows machine that its manifest declares windows while the machine is
-    linux, on every run, and the advice would be to fix the manifest.
+    The emulation spellings are what a Python installed *inside* MSYS2 by its own
+    pacman would answer: `MSYS_NT-10.0-26100`, `MINGW64_NT-…` from the subsystem
+    Git Bash is built on, `CYGWIN_NT-…` from the ancestor of both. Nothing in this
+    fleet installs one, and matching them costs a prefix test.
+
+    Reading only `Windows` is the failure worth naming, because the fallthrough is
+    Linux rather than unknown: `disagreements` would tell such a machine that its
+    manifest declares windows while the machine is linux, on every run, and the
+    advice would be to fix the manifest.
     """
     system = platform.system()
     if system == 'Darwin':

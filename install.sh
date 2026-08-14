@@ -125,11 +125,33 @@ INHERITED_PATH="$PATH"
 PATH="$HOME/.local/bin:$PATH"
 export PATH
 
+# Git Bash is the only shell this script meets on Windows, and `uname -s` answers
+# `MINGW64_NT-…` there. MSYS_NT and CYGWIN_NT are the same family reached through
+# a different emulation layer, and no Linux kernel reports any of the three.
+#
+# The list is written out here rather than shared with `coordinates.detect()`,
+# which matches the same prefixes: this script imports nothing, which is the whole
+# reason it is POSIX sh and readable in one sitting. Two sites deriving one fact
+# is how they come to disagree, so `tests/shell/test_install_handover.py` asserts
+# these two agree — a divergence then fails in CI rather than on the one box in
+# the fleet nobody else can reach.
+UV=uv
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*) UV=uv.exe ;;
+esac
+
 if ! command -v uv >/dev/null; then
   if [ -n "$OFFLINE" ]; then
-    [ -x "$BUNDLE/bin/uv" ] || die "offline: the staged bundle carries no bin/uv"
+    [ -x "$BUNDLE/bin/$UV" ] || die "offline: the staged bundle carries no bin/$UV"
     mkdir -p "$HOME/.local/bin"
-    cp "$BUNDLE/bin/uv" "$HOME/.local/bin/uv"
+    cp "$BUNDLE/bin/$UV" "$HOME/.local/bin/$UV"
+  elif [ "$UV" = uv.exe ]; then
+    # astral publishes a PowerShell installer for Windows and a sh one for
+    # everything else. The sh one is not a fallback: it fetches a Linux binary
+    # that Git Bash will copy into place and then fail to run, which is a worse
+    # outcome than not installing at all.
+    require powershell
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
   else
     require curl
     curl -LsSf https://astral.sh/uv/install.sh | sh
