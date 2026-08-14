@@ -22,8 +22,10 @@ from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles import versions
 from dotfiles.privilege import Privilege
+from dotfiles.providers import toolchain
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
+from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -32,6 +34,18 @@ from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
 NAME = 'toolchains'
+
+GO_RUNTIME = 'go'
+
+GONOSUMDB_VAR = 'GONOSUMDB'
+
+GO_ENV_ITEM = 'go-toolchain/module-env'
+"""Addressed apart from `go-toolchain/go` so `perform` can tell the two apart.
+
+One item carrying two changes is the pattern `packages` already uses for a tool
+that is both unmeasurable and shadowed. What is different here is that only one
+of the two is repaired by installing something, so they cannot share an address.
+"""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -46,6 +60,16 @@ class Observed:
     exits non-zero" are different findings and only the first is what a fresh
     machine looks like. A half-extracted tarball leaves the binary in place and
     `which` satisfied by it.
+    """
+
+    module_env: str | None = None
+    """What `go env GONOSUMDB` answers, or None where there is no Go to ask.
+
+    A runtime's *settings* are machine state exactly like its version is, and this
+    is the first of them measured rather than assumed. It has to be measured
+    because the only writer was a private step inside `install_go`, which runs
+    when Go is absent or below its floor and at no other time — so on every
+    machine that already had Go, the setting was never written and nothing looked.
     """
 
     examined: tuple[Examined, ...] = ()
@@ -82,6 +106,7 @@ class ToolchainsResource:
         reported: dict[str, str] = {}
         absent: dict[str, str] = {}
         examined: list[Examined] = []
+        go_probe = ''
 
         for item in plan.for_resource(NAME):
             # Asked of the provider rather than of PATH. A runtime with a fixed
@@ -104,8 +129,14 @@ class ToolchainsResource:
             else:
                 reported[item.name] = version
                 examined.append(Examined(item.address, version))
+                if item.name == GO_RUNTIME:
+                    go_probe = probe
 
-        return Observed(reported=reported, absent=absent, examined=tuple(examined))
+        # The same binary the version came from, so the settings measured belong
+        # to the toolchain measured. Resolving a second one here is how the two
+        # answers come from two different Go installs on a box carrying both.
+        module_env = toolchain.go_env_setting(go_probe, GONOSUMDB_VAR) if go_probe else None
+        return Observed(reported=reported, absent=absent, module_env=module_env, examined=tuple(examined))
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         changes = []
@@ -158,10 +189,30 @@ class ToolchainsResource:
                         privileged=registry.needs_root(item),
                     )
                 )
+
+        if observed.module_env is not None and observed.module_env != toolchain.GONOSUMDB:
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.TOOLCHAIN,
+                    GO_ENV_ITEM,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'{GONOSUMDB_VAR} is {observed.module_env or "unset"}, so a private module in the namespace will not verify',
+                    advice=f'`go env -w {GONOSUMDB_VAR}={toolchain.GONOSUMDB}`, which an apply does for you',
+                    observed=observed.module_env,
+                )
+            )
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
-        """Whichever version manager planned it installs it, or says why it cannot."""
+        """Whichever version manager planned it installs it, or says why it cannot.
+
+        The module env is the one change here that installs nothing, so it is the
+        one `registry.install` cannot answer for.
+        """
+        if change.item == GO_ENV_ITEM:
+            return Outcome.from_result(change, toolchain.set_go_env())
         return registry.install(session, change, privilege)
 
 

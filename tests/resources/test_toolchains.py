@@ -80,9 +80,16 @@ def go_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
-def stub(directory: Path, name: str, prints: str | None = None) -> Path:
+def stub(directory: Path, name: str, prints: str | None = None, *, go_env: str = installers.GONOSUMDB) -> Path:
+    """A runtime that answers `--version`, and — for go — `env <VAR>` as well.
+
+    `go_env` defaults to the declared value so a stub is a *converged* runtime.
+    A stub that answered its version string to every question reported the module
+    env stale in every test that placed one.
+    """
     target = directory / name
-    target.write_text(f'#!/bin/sh\nprintf "%s\\n" "{prints if prints is not None else VERSIONS[name]}"\n')
+    answer = prints if prints is not None else VERSIONS[name]
+    target.write_text(f'#!/bin/sh\n[ "$1" = env ] && {{ printf "%s\\n" "{go_env}"; exit 0; }}\nprintf "%s\\n" "{answer}"\n')
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
     return target
 
@@ -195,6 +202,38 @@ def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_d
 
 
 def test_a_toolchain_meeting_its_floor_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:
+    stub(bin_dir, 'uv')
+    stub(bin_dir, 'go')
+    live = session(tmp_path, {**BARE, 'go_tools': ['task']})
+
+    assert changes(live) == ()
+
+
+def test_an_unset_go_module_env_is_stale_on_a_toolchain_that_is_otherwise_current(tmp_path: Path, bin_dir: Path) -> None:
+    """A runtime's settings are machine state the same as its version is.
+
+    GONOSUMDB was written by one private step inside `install_go`, which runs only
+    when Go is absent or below its floor. Every fleet machine cleared a floor of
+    1.23 with 1.26.5, so none of them ever received it, and `go install` of the
+    one private module in the namespace failed on every apply with a 404 from
+    sum.golang.org. Nothing measured the setting, so nothing connected the two.
+    """
+    stub(bin_dir, 'uv')
+    stub(bin_dir, 'go', go_env='')
+    live = session(tmp_path, {**BARE, 'go_tools': ['task']})
+
+    found = changes(live)
+
+    assert [change.item for change in found] == ['go-toolchain/module-env']
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].repair is Repair.AUTOMATIC, 'an apply can write this itself'
+    assert 'GONOSUMDB is unset' in found[0].detail
+    assert installers.GONOSUMDB in found[0].advice, 'and says the command when a person wants to do it'
+
+
+def test_a_go_module_env_already_holding_the_declared_value_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:
+    """The repair is `go env -w`, which is idempotent — so a converged machine has
+    to be silent or every apply rewrites a file that was already right."""
     stub(bin_dir, 'uv')
     stub(bin_dir, 'go')
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
