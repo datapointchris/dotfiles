@@ -35,13 +35,17 @@ Usage: pr-list [--registry PATH] [--lane]
 Prints every open PR across the registry's repos as a JSON array, oldest first.
 
 Each object: repo, slug, number, title, url, branch, base, draft, created_at,
-age_days, path. `branch` is the identifier to type — a number is a per-repo
-counter and collides across the registry, whereas `gh` and `bbkt` both accept a
-branch anywhere they accept a number. `base` is what the PR targets, so a PR
-stacked on another names its parent rather than the default branch. `slug` is
-`owner/name`, which is what identifies a repository; `repo` is the bare basename
-and is a label, not an identity. `path` is empty when the repo is not checked out
-on this machine.
+age_days, path, additions, deletions, changed_files, review, checks. `branch` is
+the identifier to type — a number is a per-repo counter and collides across the
+registry, whereas `gh` and `bbkt` both accept a branch anywhere they accept a
+number. `base` is what the PR targets, so a PR stacked on another names its
+parent rather than the default branch. `slug` is `owner/name`, which is what
+identifies a repository; `repo` is the bare basename and is a label, not an
+identity. `path` is empty when the repo is not checked out on this machine.
+
+The three diff counts are null, not 0, from a provider that does not report them.
+`review` and `checks` are GitHub's own words — APPROVED, CHANGES_REQUESTED,
+SUCCESS, FAILURE — and are empty when nothing has reviewed or run yet.
 
 --lane emits doit's lane document instead, so `doit dashboard` can read this
 directly and no consumer has to carry a copy of the shape.
@@ -133,6 +137,11 @@ GITHUB_SEARCH='
         baseRefName
         isDraft
         createdAt
+        additions
+        deletions
+        changedFiles
+        reviewDecision
+        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
         repository { name nameWithOwner }
       }
     }
@@ -184,6 +193,14 @@ from_github() {
         base: .baseRefName,
         draft: .isDraft,
         created_at: .createdAt,
+        additions: .additions,
+        deletions: .deletions,
+        changed_files: .changedFiles,
+        # "" rather than null for both, so a consumer formats one absent shape
+        # rather than two. GitHub reports no decision at all until a review is
+        # requested, and no rollup at all until a workflow runs.
+        review: (.reviewDecision // ""),
+        checks: (.commits.nodes[0].commit.statusCheckRollup.state // ""),
       }
   '
 }
@@ -226,6 +243,14 @@ from_bitbucket() {
             else (.created_at // .createdDate // "")
             end
           ),
+          # null, never 0. The bbkt listing carries no diff stats, and a zero
+          # would render as a PR that changed nothing rather than one nobody
+          # counted. An apostrophe here would close the enclosing quote.
+          additions: null,
+          deletions: null,
+          changed_files: null,
+          review: "",
+          checks: "",
         }
     ' <<<"$raw"
   done < <(repos_for bitbucket)
