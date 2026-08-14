@@ -37,8 +37,6 @@ PACKAGE_SECTIONS = tuple(catalog.SECTIONS)
 
 
 class Color(Enum):
-    """ANSI color codes."""
-
     RESET = '\033[0m'
     RED = '\033[0;31m'
     CYAN = '\033[0;36m'
@@ -54,8 +52,6 @@ class Color(Enum):
 
 
 class InstallStatus(Enum):
-    """Package installation status."""
-
     INSTALLED = 'installed'
     APP_ONLY = 'app-only'
     NOT_INSTALLED = 'not-installed'
@@ -63,8 +59,6 @@ class InstallStatus(Enum):
 
 
 class Platform(Enum):
-    """Supported platforms."""
-
     MACOS = 'macos'
     ARCH = 'archlinux'
     LINUX = 'linux'
@@ -72,7 +66,6 @@ class Platform(Enum):
 
 
 def use_color() -> bool:
-    """Check if terminal supports color output."""
     return sys.stdout.isatty() and os.environ.get('TERM', '') != 'dumb'
 
 
@@ -80,14 +73,12 @@ USE_COLOR = use_color()
 
 
 def colorize(text: str, color: Color) -> str:
-    """Apply color to text if terminal supports it."""
     if USE_COLOR:
         return f'{color.value}{text}{Color.RESET.value}'
     return text
 
 
 def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
-    """Print a section header with underline."""
     print(f'\n{title}')
     line_char = '─' if USE_COLOR else '-'
     line = line_char * (len(title) + 15)
@@ -95,7 +86,6 @@ def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
 
 
 def print_header(title: str) -> None:
-    """Print a main header with box drawing."""
     line = '━' * 50
     if USE_COLOR:
         print(colorize(line, Color.BRIGHT_CYAN))
@@ -122,7 +112,6 @@ def get_packages_file(root: Path | None = None) -> Path:
 
 
 def load_packages(root: Path | None = None) -> dict[str, Any]:
-    """Load and parse packages.yml, optionally rooted at an override path."""
     with get_packages_file(root).open() as f:
         return yaml.safe_load(f)
 
@@ -140,7 +129,6 @@ def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def get_current_platform() -> Platform:
-    """Detect the current operating system platform."""
     system = platform.system()
     if system == 'Darwin':
         return Platform.MACOS
@@ -152,7 +140,6 @@ def get_current_platform() -> Platform:
 
 
 def is_available_on_platform(pkg: dict[str, Any]) -> bool:
-    """Check if package is available on the current platform."""
     section = pkg.get('_section', '')
     current = get_current_platform()
 
@@ -177,7 +164,6 @@ def is_available_on_platform(pkg: dict[str, Any]) -> bool:
 
 
 def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
-    """Check if a package is installed and return its status and path."""
     if not is_available_on_platform(pkg):
         return InstallStatus.NOT_AVAILABLE, None
 
@@ -237,7 +223,6 @@ def find_macos_app(name: str) -> Path | None:
 
 
 def format_status(status: InstallStatus, path: str | None) -> str | None:
-    """Format installation status for display."""
     if status == InstallStatus.INSTALLED:
         return colorize(f'✓ {path}', Color.GREEN)
     if status == InstallStatus.APP_ONLY:
@@ -248,7 +233,6 @@ def format_status(status: InstallStatus, path: str | None) -> str | None:
 
 
 def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
-    """Calculate optimal column widths for a list of items."""
     max_widths = max_widths or {}
     widths = {}
     for field in fields:
@@ -265,7 +249,6 @@ def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_
 
 
 def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all package sections with counts."""
     print_section('Package Sections')
     print()
     for section in PACKAGE_SECTIONS:
@@ -275,7 +258,6 @@ def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 
 def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Show package statistics by section."""
     print_section('Package Statistics')
     print()
 
@@ -294,7 +276,6 @@ def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 
 def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all tags with package counts."""
     print_section('Available Tags')
     print()
 
@@ -410,7 +391,6 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 
 def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Search packages by name."""
     query_lower = args.query.lower()
     results = [p for p in get_all_packages(data) if query_lower in p.get('name', '').lower()]
 
@@ -438,7 +418,6 @@ def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 
 def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List packages with optional filters."""
     named = sections_named(args)
 
     # Determine which sections to query

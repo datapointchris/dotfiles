@@ -3,12 +3,10 @@
 # ================================================================
 # notes - Quick note-taking with zk
 # ================================================================
-# Command-line interface for managing notes across sections
 # ================================================================
 
 set -euo pipefail
 
-# Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
@@ -43,13 +41,12 @@ show_help() {
 
   help_end
 
-  # Warn if the notes directory is missing (but don't fail - help should always work)
+  # Warn rather than fail: help has to work before the notebook exists.
   if [[ ! -d "$NOTES_DIR" ]]; then
     print_warning "Notes directory not found: $NOTES_DIR - run: zk init $NOTES_DIR"
   fi
 }
 
-# Check if user wants help (before dependency validation)
 case "${1:-}" in
   help | --help | -h | "")
     show_help
@@ -57,22 +54,17 @@ case "${1:-}" in
     ;;
 esac
 
-# Validate the notes directory exists for actual commands
 if [[ ! -d "$NOTES_DIR" ]]; then
   print_error "Notes directory not found: $NOTES_DIR"
   echo "Run: zk init $NOTES_DIR"
   exit 1
 fi
 
-# Discover sections (top-level directories, excluding hidden)
 discover_sections() {
   find -L "$NOTES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; | sort
 }
 
-# Search across all notes (full-text)
 cmd_search() {
-  # Full-text search with live reload
-  # Start with empty query, reload as user types
   local selected
   selected=$(
     FZF_DEFAULT_COMMAND="find -L '$NOTES_DIR' -type f -name '*.md' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
@@ -95,7 +87,6 @@ cmd_search() {
   fi
 }
 
-# Create new note (select section first)
 cmd_new() {
   local section="$1"
   local sections=()
@@ -110,9 +101,7 @@ cmd_new() {
     exit 1
   fi
 
-  # If section provided as argument, validate it
   if [[ -n "$section" ]]; then
-    # Check if section exists
     local found=0
     for s in "${sections[@]}"; do
       if [[ "$s" == "$section" ]]; then
@@ -123,12 +112,10 @@ cmd_new() {
 
     if [[ $found -eq 0 ]]; then
       print_yellow "Section '$section' does not exist"
-      # Fall through to interactive selection
       section=""
     fi
   fi
 
-  # If no section or invalid section, prompt for selection
   if [[ -z "$section" ]]; then
     section=$(printf "%s\n" "${sections[@]}" | gum choose --height=25)
 
@@ -137,7 +124,6 @@ cmd_new() {
     fi
   fi
 
-  # Get note title
   local title
   title=$(gum input --placeholder "Note title")
 
@@ -145,16 +131,13 @@ cmd_new() {
     exit 0
   fi
 
-  # Try to use zk alias first (e.g., zk journal)
   if zk "$section" --help &>/dev/null; then
     zk "$section" "$title"
   else
-    # Fallback: create in directory
     zk new "$NOTES_DIR/$section" --title "$title"
   fi
 }
 
-# Browse recent notes
 cmd_recent() {
   local selected
   selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" --sort modified- --limit 50 \
@@ -171,7 +154,6 @@ cmd_recent() {
   fi
 }
 
-# Browse notes by section
 cmd_browse() {
   local sections=()
   # mapfile is bash 4; macOS ships 3.2.
@@ -184,7 +166,6 @@ cmd_browse() {
     exit 1
   fi
 
-  # Select section
   local section
   section=$(printf "%s\n" "${sections[@]}" | gum choose --height=25)
 
@@ -192,7 +173,6 @@ cmd_browse() {
     exit 0
   fi
 
-  # Browse notes in selected section
   local selected
   selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" "$section" \
     | fzf --layout=reverse \
@@ -208,7 +188,6 @@ cmd_browse() {
   fi
 }
 
-# Main command routing (help already handled above)
 case "${1:-}" in
   search)
     cmd_search
