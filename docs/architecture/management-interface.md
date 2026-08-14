@@ -99,7 +99,7 @@ check summary ──────────────────────
 ✗ auth        3 item(s) need a person: meso, nomad, atuin
 ~ repo        /home/chris/dotfiles is 6 commits behind origin/main — run: dotfiles update
 
-issue     2 resource(s) need a person; 1 item(s) differ from the declaration — run: dotfiles plan
+issue     2 resource(s) need a person; 1 item(s) differ from what this machine declares — run: dotfiles plan
 ```
 
 The verdict line counts and never names, because the rows above it name. The drift clause

@@ -371,7 +371,7 @@ def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None
 
     line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
 
-    assert line == 'nothing wrong; 3 item(s) differ from the declaration — run: dotfiles plan'
+    assert line == 'nothing wrong; 3 item(s) differ from what this machine declares — run: dotfiles plan'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

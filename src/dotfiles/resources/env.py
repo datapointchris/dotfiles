@@ -521,7 +521,7 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
             name,
             Verdict.STALE,
             repair=Repair.AUTOMATIC,
-            detail='the declaration no longer writes it, so a regeneration drops it',
+            detail='this machine no longer declares it, so a regeneration drops it',
             observed=value,
         )
         for name, value in sorted(observed.generated.items())

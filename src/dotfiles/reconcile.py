@@ -356,7 +356,7 @@ def from_changes(
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
-        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from the declaration{root}')
+        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from what this machine declares{root}')
     return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need a person{_lead(kept)}')
 
 
@@ -709,7 +709,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
         return 'nothing to change'
 
     troubled = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
-    drift = f'; {pending} item(s) differ from the declaration — run: dotfiles plan' if pending else ''
+    drift = f'; {pending} item(s) differ from what this machine declares — run: dotfiles plan' if pending else ''
     if troubled:
         return f'{len(troubled)} resource(s) need a person{drift}'
     return f'nothing wrong{drift}'
