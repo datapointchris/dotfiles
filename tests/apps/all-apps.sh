@@ -133,6 +133,7 @@ test_cmd "printcolors available" "command -v printcolors"
 # would report as a failure rather than the success it actually is.
 test_cmd "claude-ci-watch help" "claude-ci-watch --help"
 test_cmd "tmux-rearrange help" "tmux-rearrange --help"
+test_cmd "worktree help" "worktree --help"
 
 # ================================================================
 # 2. SHELL LIBRARIES

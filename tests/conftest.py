@@ -374,6 +374,12 @@ def load_app(name: str, platform: str = 'common') -> ModuleType:
         raise ImportError(f'could not load {path}')
 
     module = importlib.util.module_from_spec(spec)
+    # Registered before it is executed, which is what importlib's own docs
+    # prescribe. `dataclass` under `from __future__ import annotations` resolves
+    # its string annotations through sys.modules[cls.__module__], so a module
+    # missing from there dies at the decorator with an AttributeError about
+    # NoneType that names neither the module nor the field.
+    sys.modules[module_name] = module
     loader.exec_module(module)
     return module
 
@@ -381,6 +387,11 @@ def load_app(name: str, platform: str = 'common') -> ModuleType:
 @pytest.fixture(scope='session')
 def aws_profiles():
     return load_app('_aws-profiles')
+
+
+@pytest.fixture(scope='session')
+def worktree_app():
+    return load_app('worktree')
 
 
 @pytest.fixture
