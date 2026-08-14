@@ -33,8 +33,9 @@ gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name, (.assets[].name)'
 ```
 
 `linux_target` and `darwin_target` override the triple for tools named some other
-way. PATH for both entry points now lives in `install/tool-path.sh`, sourced by
-each, so they cannot diverge again.
+way. The two entry points cannot diverge on PATH any more, because there are no
+longer two: the whole install runs in one Python process and `Stage` in
+`src/dotfiles/resolve.py` is the single ordering every provider is placed in.
 
 ## Key Learnings
 

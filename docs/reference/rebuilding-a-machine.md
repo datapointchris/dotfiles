@@ -56,11 +56,12 @@ the first stage of the walk, preserving everything below the `# OVERRIDES` marke
 Restore first and the managed half is rebuilt against the current manifest while
 the hand-edits and secrets survive intact.
 
-Restore afterwards and you reinstate the *old* machine's generated half — stale
-flags, stale coordinates — by which point every stage has already run on
+Restore afterwards and you reinstate the *old* machine's generated half — a stale
+`MACHINE` and stale flags — by which point every stage has already run on
 defaults. `src/dotfiles/resources/env.py` records why it is first: everything
-below it reads the file, so a run that starts from the wrong one deploys the
-wrong coordinate directories and ignores every flag override for its whole length.
+below it reads the file, and `MACHINE` is what selects the manifest, so a run
+that starts from the wrong one resolves the wrong machine entirely and ignores
+every flag override for its whole length.
 
 ## macOS
 

@@ -53,9 +53,11 @@ A first-class `linux` platform plus a tiered system-package model:
   and reach the Ubuntu work box too — see `docs/reference/tools/symlinks.md`.
 
 Provision one with `install.sh --machine linux-lxc-server`. The interactive zsh
-layers load from the `DOTFILES_*` coordinates in `~/.env`, which the install
-writes from the manifest rather than leaving to be typed by hand — see
-`docs/architecture/management-interface.md` § "The machine environment".
+layers are globbed from the deployed tree under `~/.local/shell/`, which
+`dotfiles symlinks apply` resolves from the manifest — the shell is told what to
+load rather than asked to work it out, and `~/.env` carries no coordinate to
+disagree with it. See `docs/architecture/management-interface.md` § "The machine
+environment".
 
 ## Key Learnings
 

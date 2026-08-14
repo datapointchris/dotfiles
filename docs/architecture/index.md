@@ -83,7 +83,7 @@ The axes replaced a single fused `PLATFORM` string, which could not say that the
 
 `~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the coordinate layers exported.
 
-The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env apply` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles check` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
+The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed on `network_trust: nonfleet` rather than on a machine name, because both consumers sit in `configs/common/` and every machine deploys one — naming a single machine had the Windows half of the same laptop declare no need for a file it reads. `dotfiles env apply` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles check` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
 
 It is restored by `safekeep`, not installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild. Both consumers guard on the file existing, and `relink` only removes symlinks that resolve into the repo, so a real file there survives every relink untouched.
 

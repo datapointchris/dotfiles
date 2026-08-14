@@ -275,11 +275,13 @@ is read by nothing and reports no error — the extensions simply never appear.
 `strings -a /opt/vivaldi/vivaldi-bin | rg '^/etc/'` settles it in one command,
 and is worth preferring to any amount of documentation.
 
-**The system zshenv is `/etc/zsh/zshenv` on Debian.** Debian builds zsh with
-`--enable-etcdir=/etc/zsh`; everyone else's is `/etc/zshenv`. Writing to the
-wrong one fails silently — zsh reads the other, and `~/.config/zsh/.zshrc` never
-loads at all. The entry declares both and the provider picks the one whose
-directory exists.
+**Which file is the system zshenv differs by distribution.** A distribution that
+builds zsh with `--enable-etcdir=/etc/zsh` reads `/etc/zsh/zshenv`; the rest read
+`/etc/zshenv`. Arch and Debian are both on the first spelling, so it is not the
+minority case the entry was first written for. Writing to the wrong one fails
+silently — zsh reads the other, and `~/.config/zsh/.zshrc` never loads at all.
+The entry declares both through `path` and `alternate_path`, and the provider
+picks the one whose directory exists. Never hardcode either spelling elsewhere.
 
 **The TTY auto-login line needs two backslashes.** `\\u` in the unit file, not
 `\u`: systemd unescapes `\\` to `\` when it parses `ExecStart`, and agetty's

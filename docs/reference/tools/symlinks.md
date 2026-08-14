@@ -25,7 +25,10 @@ Each of the three trees — `configs/`, `shell/`, `apps/` — is `common/` plus
 `common` links first and the coordinate directories follow in axis order.
 
 Which directory names are legal is `AXIS_DIRS` in `src/dotfiles/coordinates.py`,
-and a machine's own list is the `DOTFILES_*` block of `~/.env`. Nearly all of
+and a machine's own point is what `dotfiles machines show` prints. No coordinate
+reaches `~/.env` — the deployed tree under `~/.local/shell/` is the resolved
+answer, and `.zshrc` globs it rather than reading a second copy that could
+disagree. Nearly all of
 them are absent on disk: an axis earns a directory only where something actually
 differs along it, and implying one per axis value is the directory explosion this
 scheme exists to avoid.

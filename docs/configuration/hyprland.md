@@ -51,8 +51,10 @@ which also documents why that tool keeps its own state file instead of asking
 
 ## Theming
 
-`configs/display/wayland/.config/hypr/themes/` is the target for generated theme
-output. Colour comes from a named theme via the `theme` tool rather than being
+`~/.config/hypr/themes/` is the target for generated theme output, written by the
+`theme` tool onto the deployed machine rather than into this repo. `hyprland.conf`
+sources `themes/current.conf` there, a stable pointer the tool repoints at
+whichever theme was last applied. Colour comes from a named theme rather than being
 extracted from the wallpaper, so the palette is reproducible across machines and
 does not shift when the background changes.
 

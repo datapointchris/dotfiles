@@ -118,7 +118,7 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 
-- `ZDOTDIR` is defined in `/etc/zshenv` (system-wide) pointing to `~/.config/zsh`
+- `ZDOTDIR` is defined system-wide pointing to `~/.config/zsh`. Which file holds it is per-distribution — `/etc/zshenv` on some, `/etc/zsh/zshenv` on Arch and Debian. `install/system.yml` declares both through `path` and `alternate_path`; never hardcode one
 - There is NO `.zprofile` or `.zshenv` in the home directory (and there should NOT be)
 - `.zshrc` is located in `~/.config/zsh/.zshrc` (symlinked from dotfiles repo)
 - This XDG-compliant setup is intentional and correct
@@ -167,12 +167,13 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - `install/` - Repository management tools
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `offline/` - Offline installation support (connectivity testing, bundles)
-  - `wsl/` - The one platform-specific install directory left (Windows font, shell sync, docker repo)
-  - `common/` - Cross-platform installer scripts (plugins/) and `lib/` shared libraries
+  - `wsl/` - The one platform-specific install directory left (Windows font, `.wslconfig`, docker repo and images)
+  - `ops/` - Scripts a human runs against the repo itself rather than against a machine
+  - `common/` - `lib/`, the shared libraries an installer script sources
   - `packages.yml` - Package definitions
   - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)
 - `docs/` - MkDocs-based documentation site
-- `.claude/` - Skills and hooks for Claude Code integration
+- `.claude/` - `commands/`, the repo-scoped slash commands for Claude Code
 - `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides and status tracking
 
 **Key Systems**:
@@ -191,7 +192,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. One verb reconciles the whole declaration, so there is no create-only verb to pick between, and it is idempotent. What it prunes is not the same on every machine — `docs/reference/tools/symlinks.md` is the account, and a machine deploying by copy has no provenance to prune by. It deliberately does **not** unlink everything first: that gave a daemon watching its own config — Hyprland — a window to find the file gone and write itself a default, which the create pass then refused. Never reinstate a remove-everything pass. ⚠️ **Nothing pins this** — `tests/symlinks/` covers the resolver and the coordinate directories, not the ordering, so the invariant survives on this paragraph alone. Tracked as `icb` 457.
+After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. One verb reconciles the whole declaration, so there is no create-only verb to pick between, and it is idempotent. What it prunes is not the same on every machine — `docs/reference/tools/symlinks.md` is the account, and a machine deploying by copy has no provenance to prune by. It deliberately does **not** unlink everything first: that gave a daemon watching its own config — Hyprland — a window to find the file gone and write itself a default, which the create pass then refused. Never reinstate a remove-everything pass. The window is closed by deciding per link rather than by ordering two passes — a link already deployed produces no change at all, so nothing unlinks it, and the prune set only ever holds links whose source is gone. `tests/resources/test_symlinks.py:362` pins it.
 
 `task relink` is equivalent but only works from inside the repo.
 
@@ -287,7 +288,7 @@ table, which is why the rule above is to not write one.
 - **dotfiles** (`dotfiles`) — the front door, usable from any directory. Three reconcile verbs, Terraform-shaped: `plan` (what `apply` would change), `apply`, and `check` (what is *wrong*, which a machine merely behind on versions is not). All three sit at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
 - **Symlinks Manager** — `dotfiles symlinks apply`
 - **Theme** (`theme`) — unified theming; `theme list` names the themes and `ls ~/tools/theme/lib/generators/` the apps
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools. The registry has moved to `terminal-library`, which `doit` reads; the copy here at `configs/common/.local/share/toolbox/registry.yml` is the one `toolbox` reads and is a deliberate duplicate that `icb` 309 removes. Add a tool to both, and see `docs/apps/toolbox.md`
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools. The registry has moved to `terminal-library`, which `doit` reads; the copy here at `configs/common/.local/share/toolbox/registry.yml` is the one `toolbox` reads and is a deliberate duplicate that `icb` 310 removes. Add a tool to both, and see `docs/apps/toolbox.md`
 - **tmux Sessions** (`tmux-sessions`) — session switching, creation, and the cross-session window finder behind the two-line status bar. See `docs/architecture/tmux-sessions.md`
 - **Task** — `task --list-all` from inside the repo; nearly every task is a thin `uv run dotfiles ...` onto `src/dotfiles/`, so both front doors reach one implementation
 

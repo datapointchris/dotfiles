@@ -49,9 +49,10 @@ pick between.
 
 ## ZDOTDIR
 
-The system file differs by distro, which is the part that catches people:
-`/etc/zshenv` on macOS and Arch, `/etc/zsh/zshenv` on Ubuntu and WSL. Either
-way it should contain `export ZDOTDIR="$HOME/.config/zsh"`. `dotfiles apply`
+The system file differs by distribution, which is the part that catches people.
+`ls /etc/zshenv /etc/zsh/zshenv` says which one this machine has; whichever it
+is should contain `export ZDOTDIR="$HOME/.config/zsh"`. Reaching for the wrong
+spelling is silent, because zsh reads the other and says nothing. `dotfiles apply`
 writes it on every platform, so a missing one means the apply did not finish —
 or was never run, the bootstrap having only installed the CLI.
 
