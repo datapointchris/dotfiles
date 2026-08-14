@@ -24,12 +24,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from dotfiles import catalog
 from dotfiles import checkout
-from dotfiles import coordinates as axes
 from dotfiles import deploy
 from dotfiles import engine
-from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
@@ -42,20 +39,23 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.output import NOTICE_MARK
+from dotfiles.output import PROGRESS_MARK
 from dotfiles.output import SUBJECT_CEILING
 from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import announce
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
-from dotfiles.output import heading
 from dotfiles.output import hint
-from dotfiles.output import measured
 from dotfiles.output import render_advice
 from dotfiles.output import render_change
-from dotfiles.output import render_finding
 from dotfiles.output import render_note
+from dotfiles.output import render_result
 from dotfiles.output import render_row
+from dotfiles.output import render_section
+from dotfiles.output import render_verdict
 from dotfiles.output import retract
+from dotfiles.output import tally
 from dotfiles.output import warn
 from dotfiles.providers import bundle
 from dotfiles.resolve import Plan
@@ -65,7 +65,6 @@ from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import privileged
-from dotfiles.session import NoMachine
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
@@ -256,7 +255,22 @@ def check_declaration() -> ResourceResult:
     `SystemExit` caught and stdout redirected to say even that.
     """
     findings = validate.declaration()
-    broken = validate.errors(findings)
+    return declaration_row(findings, validate.errors(findings))
+
+
+def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[validate.Finding]) -> ResourceResult:
+    """The `machines` section: what validating found, and which of it is fatal.
+
+    Two arguments rather than one measurement, because the two callers draw the
+    fatal line in different places. `check` reports every error; an `apply`
+    narrowed to one resource reports the errors that concern what it was asked to
+    converge and lets the rest through, which is `_gating`'s split.
+
+    Composed here for both, so the write verb cannot word a finding differently
+    from the read one. `apply` printed a hand-built warning with the same count in
+    it, on a line that named no resource at all — so the gate that stops a run read
+    as a stray sentence rather than as the `machines` verdict it is.
+    """
     if not broken:
         warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
         return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}', lens=Lens.CHECK)
@@ -370,8 +384,7 @@ def _lead(kept: Sequence[Change]) -> str:
     """
     if not kept:
         return ''
-    shown = ', '.join(change.item for change in kept[:4])
-    names = shown if len(kept) <= 4 else f'{shown} and {len(kept) - 4} more'
+    names = named([change.item for change in kept])
     distinct_fixes = {change.advice for change in kept if change.advice}
     only = next(iter(distinct_fixes)) if len(distinct_fixes) == 1 else ''
     # A one-line heading takes a short one-line fix, and only that. Advice is
@@ -382,6 +395,18 @@ def _lead(kept: Sequence[Change]) -> str:
     # heading that has stopped being one.
     fix = f' — {only}' if 0 < len(only) <= SHORT_FIX and '\n' not in only else ''
     return f': {names}{fix}'
+
+
+def named(items: Sequence[str], limit: int = 4) -> str:
+    """The first few of a set, and how many more there were.
+
+    One phrasing for every line that carries item names with the rows out of
+    reach — a resource's verdict, and the closing line of an `apply`. Written out
+    twice they had come to disagree about the cut-off, so the same eleven items
+    read as four-and-seven in one place and as all eleven in the other.
+    """
+    shown = ', '.join(items[:limit])
+    return shown if len(items) <= limit else f'{shown} and {len(items) - limit} more'
 
 
 SHORT_FIX = 60
@@ -427,11 +452,12 @@ def fold(events: Iterable[Event], lens: Lens = Lens.PLAN) -> list[ResourceResult
 
 
 class NothingSelected(refusal.Refusal):
-    """An `--owner` that no entry this machine declares answers to.
+    """A narrowing that left the run with nothing to walk.
 
-    A usage error rather than a verdict, for the reason `engine._valid` makes a
-    misspelt `--skip` one: a run that accepts a scope it cannot honour reports
-    success for work it never looked at.
+    An `--owner` no entry this machine declares answers to, or a `--skip` set
+    covering every resource. A usage error rather than a verdict, for the reason
+    `engine._valid` makes a misspelt `--skip` one: a run that accepts a scope it
+    cannot honour reports success for work it never looked at.
     """
 
     code = ExitCode.USAGE
@@ -670,6 +696,18 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     return f'nothing wrong{drift}'
 
 
+def report_verdict(results: Sequence[ResourceResult], lens: Lens) -> None:
+    """Close a read verb: its one verdict word, and the sentence behind it.
+
+    The composition rather than the rendering, and it sits here because only the
+    fold knows what a verb kept. `output.render_verdict` reached back into this
+    module at call time to ask — a runtime import in the direction the layering
+    forbids, kept legal by being lazy. The write verb closes through the same
+    renderer with a sentence of its own, and has no lens for this one to take.
+    """
+    render_verdict(str(worst(results)), verdict_line(results, lens))
+
+
 def worst(results: Sequence[ResourceResult]) -> ResourceVerdict:
     """One verdict from many. An Issue outranks drift, and drift outranks nothing.
 
@@ -764,7 +802,7 @@ def report_bundle(staged: offline_bundle.Staging) -> None:
         hint('stage a bundle built by `dotfiles bundle create`: dotfiles bundle stage PATH')
         return
 
-    measured('bundle', staged.headline(), 0.0)
+    render_section('bundle', staged.headline())
     if breakdown := staged.breakdown():
         render_note(breakdown)
     else:
@@ -836,15 +874,26 @@ def apply_machine(
     have run against a symlink collision too. Narrowing to one resource is a
     deliberate act and stays possible; converging the whole machine against a
     declaration nobody can satisfy is not.
+
+    **Every human line this verb prints goes to stderr, the closing verdict
+    included.** Its stdout is the run record and nothing else, so there is no
+    branch that has to remember to fall silent under `--json` and no refusal path
+    that can hand a caller a heading where the document should be. The read verbs
+    split the two streams instead — heading to stdout, evidence to stderr — because
+    for them the heading *is* the answer; here the answer is what the machine
+    became, and the report is the working that got it there.
     """
     began = dt.datetime.now(dt.UTC)
     checkout.report_stray_branch()
 
-    if broken := _gating(validate.errors(validate.declaration()), selection):
-        warn(f'the declaration has {len(broken)} problem(s), so there is nothing safe to apply')
-        for finding in broken:
-            render_finding(finding.section, finding.message)
-        hint("'dotfiles machines check' lists them, warnings included")
+    found = validate.declaration()
+    if broken := _gating(validate.errors(found), selection):
+        render_result(declaration_row(found, broken), err_console)
+        render_verdict(
+            str(ResourceVerdict.ISSUE),
+            f'{len(broken)} problem(s) in the declaration, so there is nothing safe to apply — run: dotfiles machines check',
+            err_console,
+        )
         return ExitCode.ISSUE
 
     try:
@@ -852,16 +901,17 @@ def apply_machine(
             machine, offline=offline, owner=owner, packages=packages, refresh=not offline, force=force, reinstall=reinstall
         )
         plan = session.plan
-    except (NoMachine, machines.NoSuchMachine) as unnamed:
-        warn(str(unnamed))
-        return ExitCode.USAGE
-    except (catalog.CatalogError, machines.MachineError) as refused:
-        warn(str(refused))
-        return ExitCode.ISSUE
+    except refusal.Refusal as refused:
+        # Every one of these carries its own code — `NoMachine` and `NoSuchMachine`
+        # are USAGE because naming a different machine is what fixes them, and a
+        # manifest that will not parse is an Issue — so the mapping that used to sit
+        # here in two `except` clauses is the exception's to state. Reported through
+        # the shared boundary, which is what every other door in the tool prints a
+        # refusal with, marker and advice line included.
+        return refusal.report(refused)
 
     if not selection.resources:
-        warn('nothing selected')
-        return ExitCode.USAGE
+        return refusal.report(NothingSelected('nothing selected', advice='drop a --skip, or name the resource you meant'))
 
     # Every scope refusal above the run record, and none below it: a run refused
     # for how it was typed never measured this machine, and filing one under it
@@ -885,13 +935,9 @@ def apply_machine(
     if offline and (unstaged := _stage_bundle()):
         return unstaged
 
-    label = axes.platform_label(session.machine.coordinates)
-    err_console.rule(f'[bold]dotfiles apply[/]  {session.machine_name} ({label})', align='left')
-
     # Streamed rather than collected, for the reason `survey` is: an `apply`
-    # prints its rule and then measures the whole machine before it writes
-    # anything, and on the work box that stretch is minutes of blank screen with
-    # the rule already scrolled past.
+    # measures the whole machine before it writes anything, and on the work box
+    # that stretch is minutes of blank screen.
     planned = []
     for event in engine.assess(session, selection):
         if isinstance(event.payload, Started):
@@ -900,18 +946,22 @@ def apply_machine(
             # Same pairing the read-only verbs make: the progress line is a
             # statement in the present tense, and what replaces it is the answer.
             retract()
-            measured(event.resource, event.payload.detail, event.timing.duration_seconds)
+            render_section(event.resource, event.payload.detail, event.timing.duration_seconds)
         planned.append(event)
 
     # Before acting, because a resource nothing could examine is a part of the
-    # machine this run is about to skip without touching.
-    for event in planned:
-        if isinstance(event.payload, Refusal):
-            warn(event.payload.reason)
+    # machine this run is about to skip without touching. Folded rather than
+    # warned: a bare sentence at column 0 named no resource, so the one line
+    # saying part of the machine went unmeasured read as belonging to whichever
+    # section it happened to follow.
+    for unexamined in fold([event for event in planned if isinstance(event.payload, Refusal)], Lens.CHECK):
+        render_result(unexamined, err_console)
 
     performed = list(_perform(session, planned))
 
-    _report_untouched(planned)
+    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
+    _, deferred, unmeasured = sift(changes)
+    _report_untouched(deferred, unmeasured)
 
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
@@ -944,31 +994,69 @@ def apply_machine(
     if as_json and recorded:
         emit_json(dc.asdict(runs.read(recorded)))
 
-    unmeasured = _unmeasured(planned)
     unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
-    if unsuccessful:
-        err_console.rule('[bold red]failed[/]', align='left')
-        warn(f'{len(unsuccessful)} item(s) did not converge: {", ".join(unsuccessful)}')
-        _warn_unmeasured(unmeasured)
+    changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
+    render_verdict(
+        str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
+        applied_line(changed, unsuccessful, deferred, unmeasured),
+        err_console,
+    )
+    _name_the_shared_fix(unmeasured)
+    if unsuccessful and recorded:
         # The path, not the command that would print it. What a person does with a
         # failed offline install is send the record to the fleet, and naming
         # `dotfiles report latest` left them hunting `$XDG_STATE_HOME` for a file
         # this line was already holding.
-        if recorded:
-            hint(f'the full record is {recorded}')
-        return ExitCode.ISSUE
-
-    err_console.rule(f'[bold green]converged[/]  {session.machine_name}', align='left')
-    # Under the green rule and not instead of it. Nothing failed and nothing was
-    # left undone that this run could have done, so the verdict stands — but
-    # "converged" over a set of items nothing could measure is true only of the work
-    # attempted, and a reader takes it as a statement about the machine.
-    _warn_unmeasured(unmeasured)
-    return ExitCode.CONVERGED
+        hint(f'the full record is {recorded}')
+    return ExitCode.ISSUE if unsuccessful else ExitCode.CONVERGED
 
 
-def _report_untouched(planned: Iterable[Event]) -> None:
-    """The two sets `apply` walked past, each under a heading saying why.
+def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
+    """What this run did, what it walked past, and which verb owns the rest.
+
+    The `verdict_line` the write verb never had. `apply` closed on a rule carrying
+    the machine's name and nothing else, so a run that repaired eleven things and a
+    run that repaired none ended identically — and neither of the two sets it
+    deliberately does not act on was counted anywhere near it.
+
+    **The clauses are worded as the verb that owns them would**, which is
+    `output.tallies`'s rule one altitude up. What needs a person is `check`'s
+    question, so that clause names `check` rather than restating it as work `apply`
+    failed to do — `Repair.BY_HAND` is not a failure, and exiting non-zero for it
+    makes every freshly-installed work box look broken between the install and the
+    safekeep restore.
+
+    **What nothing could measure is named, not just counted.** It is neither a
+    failure nor drift — there is no evidence the item differs, and inventing some
+    would exit non-zero on a healthy machine — so the only thing standing between a
+    hole in the run's coverage and a converged machine is this sentence. It carries
+    the names because this is the line a scheduled run's summary keeps with the rows
+    long gone, which is the argument `_lead` makes for the read verbs' rows.
+    """
+    if unsuccessful:
+        head = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}'
+    else:
+        head = f'{changed} item(s) changed' if changed else 'nothing to change'
+    person = f'; {len(deferred)} item(s) need a person — run: dotfiles check' if deferred else ''
+    blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
+    return f'{head}{person}{blind}'
+
+
+def _name_the_shared_fix(changes: Sequence[Change]) -> None:
+    """The one command, where every item agrees on it.
+
+    Which offline is the case for: a bundle carrying nothing to compare against is
+    one fix for all of them rather than one each, and the closing line has room for
+    a count and not for a command. Silent where the items disagree, because each
+    one's own row already carries its own.
+    """
+    fixes = {change.advice for change in changes if change.advice}
+    if len(fixes) == 1:
+        hint(next(iter(fixes)))
+
+
+def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) -> None:
+    """The two sets `apply` walked past, each as a section saying which it is.
 
     Reported and not counted, both of them. A machine-local value nobody has set and
     a file only safekeep restores are real findings, and exiting non-zero for them
@@ -987,54 +1075,27 @@ def _report_untouched(planned: Iterable[Event]) -> None:
     those eleven already held the sentence explaining itself — `packages._unmeasurable`
     composes it, and `plan` prints it — so this is a renderer that was missing rather
     than a diagnosis that was.
+
+    Neither carries a verdict mark, and that is the point of `NOTICE_MARK`: one is
+    real drift a person has to deal with and the other is an absence of evidence, so
+    borrowing `~` or `✗` for either would state something the run did not measure.
     """
-    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
-    pending, attention, unmeasured = sift(changes)
-    for label, group in (('needs a person', attention), ('not measurable', unmeasured)):
+    for name, colour, group, why in (
+        ('needs a person', 'yellow', deferred, 'differ, and apply is not what repairs them'),
+        ('not measurable', 'magenta', unmeasured, 'have no evidence either way, so nothing was decided'),
+    ):
         if not group:
             continue
-        heading(label)
+        render_section(name, f'{len(group)} item(s) {why}', mark=NOTICE_MARK, colour=colour)
         width = max([SUBJECT_COLUMN, *(len(change.item) for change in group)])
         for change in group:
             render_change(change, min(width, SUBJECT_CEILING))
 
 
-def _warn_unmeasured(unmeasured: Sequence[Change]) -> None:
-    """Say on the closing line that part of the machine has no verdict.
-
-    Beside the rule rather than only in the rows above it, because this is the line a
-    scheduled run's summary carries with the rows long gone — the same argument
-    `_lead` makes for naming items on a verdict row. One shared fix is named where
-    every item agrees on it, which offline is the case for: a bundle carrying nothing
-    to compare against is one fix for all of them, not one each.
-    """
-    if not unmeasured:
-        return
-    named = ', '.join(change.item for change in unmeasured[:4])
-    more = f' and {len(unmeasured) - 4} more' if len(unmeasured) > 4 else ''
-    warn(f'{len(unmeasured)} item(s) could not be measured, so nothing was done about them: {named}{more}')
-    fixes = {change.advice for change in unmeasured if change.advice}
-    if len(fixes) == 1:
-        hint(next(iter(fixes)))
-
-
-def _unmeasured(planned: Iterable[Event]) -> list[Change]:
-    """What nothing could measure, so `apply` had no verdict to act on.
-
-    Not a failure and not drift, which is why it has neither the exit code nor the
-    `_unsuccessful` list: there is no evidence the item differs, and inventing one
-    would exit non-zero on a machine with nothing wrong with it. What it is is a hole
-    in the run's coverage, and a hole nobody is told about is indistinguishable from
-    a converged machine.
-    """
-    _, _, unmeasured = sift([event.payload for event in planned if isinstance(event.payload, Change)])
-    return unmeasured
-
-
 def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     """Act, announcing each group of work before it happens.
 
-    The heading is the address `plan` prints and `--skip` takes, so one run's
+    The section's name is the address `plan` prints and `--skip` takes, so one run's
     output and the next run's `--skip` argument are the same vocabulary.
 
     **Announced before the group runs, not as its first outcome arrives.** A
@@ -1042,10 +1103,17 @@ def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     returns one list of outcomes minutes later, so printing on the first outcome
     leaves the longest stretch of a fresh install looking hung — the same defect
     `effects.Output.STREAM` exists to record.
+
+    `PROGRESS_MARK` rather than a verdict, because at the moment this prints the
+    work has not happened. The password count rides on it for the same reason it
+    rides on a `plan` row: root is acquired at the write, so the only warning
+    anybody gets is the one printed before the write asks.
     """
     privilege = privileges.Privilege()
     for group in engine.batches(planned):
-        heading(_address(group[0]))
+        changes = [event.payload for event in group if isinstance(event.payload, Change)]
+        detail = f'{len(changes)} item(s) to converge{tally((len(privileged(changes)), "need a password"))}'
+        render_section(_address(group[0]), detail, mark=PROGRESS_MARK, colour='blue')
         for event in engine.execute(session, group, privilege):
             _render(event)
             yield event

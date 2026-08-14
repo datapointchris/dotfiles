@@ -297,6 +297,10 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     measured against a real container, where `dotfiles apply` printed nothing for
     four minutes while apt unpacked 33 packages. `Output.STREAM`'s own docstring
     records the same defect from the other side.
+
+    The ordering is what is asserted; which renderer draws the section is not. It
+    was `heading`, a bold blue line at column 0 that no other report used, and it
+    is the shared section now.
     """
     announced: list[str] = []
 
@@ -307,11 +311,11 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     monkeypatch.setenv('MACHINE', MACHINE)
     monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter((drift('ripgrep'),)))
     monkeypatch.setattr(engine, 'execute', acting)
-    monkeypatch.setattr('dotfiles.reconcile.heading', lambda text: announced.append(f'heading:{text}'))
+    monkeypatch.setattr('dotfiles.reconcile.render_section', lambda address, *args, **kwargs: announced.append(f'section:{address}'))
 
     reconcile.apply_machine(engine.Selection.everything())
 
-    assert announced == ['heading:packages', 'acted:ripgrep']
+    assert announced == ['section:packages', 'acted:ripgrep']
 
 
 def test_a_failed_write_is_an_issue(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:

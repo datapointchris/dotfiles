@@ -98,6 +98,22 @@ halves were true — apply has nothing to do here, and four tools are logged out
 non-zero count, which is a declared package merely absent, so it reads `3 differ`. Neither
 verb ever restates its own answer as a count beside the sentence that already gave it.
 
+**`apply` closes in the same grammar, and that took the longest to arrive.** The write
+verb had four renderings of its own — a full-width rule naming the machine, a bold blue
+line at column 0 above each group of work, a bare warning for a resource that refused,
+and a second rule for the verdict — so the run a person watches longest ended in the one
+line of the report that answered least. It measures in sections now, acts in sections,
+names the two sets it walks past as sections, and closes on the same
+`{verdict} {sentence}` the read verbs do, carrying what changed, what needs a person,
+what nothing could measure, and the verb that owns each.
+
+Its whole human report goes to **stderr**, the closing line included, where a read verb
+puts its headings on stdout and its evidence on stderr. The split is right for a read —
+the heading is the answer, so redirecting separates an answer from a transcript — and
+wrong for a write, whose answer is what the machine became. `apply`'s stdout is the run
+record, so keeping every line off it means no branch has to remember to fall silent
+under `--json` and no refusal can hand a caller a heading where the document should be.
+
 Nothing here reaches `--json`, which is a document rather than a rendering: it carries
 the verb, the verdict, the four counts and the items behind each of them, so a caller
 parses those rather than the screen. [Observability](observability.md) has its shape.

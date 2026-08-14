@@ -15,6 +15,7 @@ Neither is visible in a green suite otherwise, and both are cheap to assert.
 
 from __future__ import annotations
 
+import functools
 import io
 import json
 
@@ -205,7 +206,7 @@ def test_quiet_drops_the_evidence_and_keeps_the_verdict(capsys: pytest.CaptureFi
 
     output.render_change(a_change())
     output.render_finding('go_tools', 'no such section')
-    output.heading('packages')
+    output.render_section('packages', 'everything installed from a package manager')
     assert capsys.readouterr().err == ''
 
     output.render_result(ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 pending'))
@@ -222,10 +223,18 @@ def test_the_evidence_returns_when_the_flag_is_cleared(capsys: pytest.CaptureFix
     assert 'ripgrep' in capsys.readouterr().err
 
 
-@pytest.mark.parametrize('render', [output.heading, output.error, output.success, output.warn, output.hint])
+@pytest.mark.parametrize(
+    'render',
+    [functools.partial(output.render_section, 'packages'), output.error, output.success, output.warn, output.hint],
+    ids=['section', 'error', 'success', 'warn', 'hint'],
+)
 def test_every_diagnostic_goes_to_stderr(render, capsys: pytest.CaptureFixture) -> None:
     """The whole reason there are two consoles. A diagnostic on stdout is
-    indistinguishable from data to the caller parsing it."""
+    indistinguishable from data to the caller parsing it.
+
+    `render_section` is here in `heading`'s place, and carries more than it did: an
+    `apply` closes on this stream too now, so every human line that verb prints is
+    on the side its `--json` document is not."""
     render('something happened')
 
     written = capsys.readouterr()
@@ -433,7 +442,7 @@ def narrated(monkeypatch: pytest.MonkeyPatch, *, quiet: bool) -> str:
     logging.choose_console(quiet=quiet)
     try:
         output.announce('packages', 'everything installed from a package manager')
-        output.measured('packages', 'all 96 declared packages are installed', 1.0)
+        output.render_section('packages', 'all 96 declared packages are installed', 1.0)
     finally:
         logging.choose_console()
     return written.getvalue()

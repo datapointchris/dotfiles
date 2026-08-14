@@ -33,7 +33,6 @@ from dotfiles.commands import resources
 from dotfiles.commands import staging
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
-from dotfiles.output import render_verdict
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(
@@ -186,7 +185,7 @@ def plan(
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
-        render_verdict(results, lens)
+        reconcile.report_verdict(results, lens)
         manage.report_position(fetch_first=False)
     raise typer.Exit(reconcile.exit_code(results))
 
@@ -249,7 +248,7 @@ def check(
         # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:
-        render_verdict(results, lens)
+        reconcile.report_verdict(results, lens)
         # Read from `.git`, never fetched: this is the honest stand-in for an
         # update notice, and a notice that spends a network round trip at every
         # prompt is one that gets turned off. It reports its own age instead.
