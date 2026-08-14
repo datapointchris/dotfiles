@@ -191,7 +191,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. It prunes the links a deletion left dangling and then recreates every declared one, so there is no create-only verb to pick between, and it is idempotent. It deliberately does **not** unlink everything first: that gave a daemon watching its own config — Hyprland — a window to find the file gone and write itself a default, which the create pass then refused. Never reinstate a remove-everything pass. ⚠️ **Nothing pins this** — `tests/symlinks/` covers the resolver and the coordinate directories, not the ordering, so the invariant survives on this paragraph alone. Tracked as `icb` 457.
+After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. One verb reconciles the whole declaration, so there is no create-only verb to pick between, and it is idempotent. What it prunes is not the same on every machine — `docs/reference/tools/symlinks.md` is the account, and a machine deploying by copy has no provenance to prune by. It deliberately does **not** unlink everything first: that gave a daemon watching its own config — Hyprland — a window to find the file gone and write itself a default, which the create pass then refused. Never reinstate a remove-everything pass. ⚠️ **Nothing pins this** — `tests/symlinks/` covers the resolver and the coordinate directories, not the ordering, so the invariant survives on this paragraph alone. Tracked as `icb` 457.
 
 `task relink` is equivalent but only works from inside the repo.
 

@@ -132,17 +132,42 @@ def epilogue(session: Session) -> None:
 
 
 def unlink(session: Session) -> bool:
-    """Remove every link this repo deployed, coordinate directories first.
+    """Remove what this repo deployed, coordinate directories first.
 
-    Driven by the same `sources()` the deployment is, so a tree gaining a
-    coordinate directory cannot leave links only one of the two halves knows about.
+    Two passes, because one machine can be holding the output of both mechanisms.
+    The link sweep runs everywhere: a machine whose manifest has since declared
+    `deploy_by_copy` still holds whatever it deployed before that, and those links
+    are this repo's to remove. The copy pass runs only where the manifest asks for
+    it, and it is what makes this verb's promise true there — a pass that can see
+    only symlinks removes nothing on a machine whose every target is a regular
+    file, and then reports a machine it has left fully deployed as unconfigured.
+
+    Both are driven by the same declaration the deployment is, so a tree gaining a
+    coordinate directory cannot leave deployed paths that only one half knows
+    about.
+
+    A declared path still holding a file the repo does not declare is left alone
+    and named, and the run is an issue rather than converged. The exit code is the
+    half a caller reads, and the whole claim of this verb is that the machine is
+    unconfigured afterwards.
     """
-    err_console.print('[bold blue]Removing symlinks[/]')
-    triples = list(symlinks.sources(session.repo, session.machine.coordinates, session.home.resolve()))
+    home = session.home.resolve()
+    err_console.print('[bold blue]Removing what this repo deployed[/]')
+    triples = list(symlinks.sources(session.repo, session.machine.coordinates, home))
     for source, _, origin in reversed(triples):
         if source.is_dir():
-            core.remove_symlinks(source, origin)
-    return True
+            core.remove_symlinks(source, origin, target_dir=home)
+
+    if not session.machine.wants(symlinks.DEPLOY_BY_COPY):
+        return True
+
+    removed, kept = symlinks.remove_copies(session)
+    err_console.print(f'[green]Removed {removed} copies[/]')
+    for target, because in kept:
+        err_console.print(f'  [yellow]✗[/] {target} ({because})')
+    if kept:
+        hint('this machine is not fully unconfigured; each path above is left exactly as it was found')
+    return not kept
 
 
 def show(session: Session) -> None:

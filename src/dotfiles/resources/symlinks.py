@@ -462,6 +462,64 @@ def _compare(link: Link) -> Content:
         return Content.UNREADABLE
 
 
+def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
+    """Take back every declared target this mechanism wrote, and name what stays.
+
+    The copy twin of `core.remove_symlinks`, and it is driven by the declaration
+    where that one is driven by a walk of `$HOME`. A link says where it came from,
+    so the link pass can sweep the home directory and recognise its own; a copy
+    says nothing, which is the same missing provenance that leaves `orphans`
+    empty. What remains enumerable is what the repo declares — and that is the
+    whole of it, because every path this mechanism has ever written is one.
+
+    That is also why this can exist where the orphan prune cannot. Pruning has to
+    ask about a path nothing declares and has no way to; this asks only about
+    paths the repo names, and `_compare` answers for each of them.
+
+    Byte equality decides, for the reason `_compare` gives: a target holding the
+    source's bytes is this manager's output, and one that differs is somebody's
+    file. The first is removed and the second is left with its reason, because
+    leaving a file is the outcome with an undo — and on the machine that deploys
+    this way, a file the repo cannot regenerate may exist nowhere else.
+
+    An empty directory left behind is cleaned the same way the link pass cleans
+    it, and afterwards rather than per file: a parent only becomes empty once the
+    last of its children is gone.
+    """
+    home = session.home.resolve()
+    removed = 0
+    kept: list[tuple[Path, str]] = []
+
+    for link in declared(session, session.machine.coordinates):
+        state = _compare(link)
+        match state:
+            case Content.ABSENT:
+                pass
+
+            case Content.SAME:
+                try:
+                    link.target.unlink()
+                except OSError as problem:
+                    kept.append((link.target, str(problem)))
+                else:
+                    removed += 1
+
+            case Content.LINKED:
+                kept.append((link.target, 'a symlink rather than a copy, so this pass does not speak for it'))
+
+            case Content.DIFFERS:
+                kept.append((link.target, 'holds bytes the repo does not declare'))
+
+            case Content.UNREADABLE:
+                kept.append((link.target, 'could not be read, so nothing was established about it'))
+
+            case _ as unmatched:
+                assert_never(unmatched)
+
+    core.cleanup_empty_directories(home, [home / directory for directory in core.CLEANUP_DIRS])
+    return removed, tuple(kept)
+
+
 def _copy(change: Change, link: Link) -> Outcome:
     """Put the repo's bytes at the target, and the mode with them.
 

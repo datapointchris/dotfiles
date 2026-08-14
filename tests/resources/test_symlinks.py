@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import deploy
 from dotfiles.privilege import Privilege
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -523,6 +524,81 @@ def test_the_summary_names_the_mechanism_this_machine_deploys_by(copying: Sessio
 
     assert symlinks.RESOURCE.observe(copying, copying.plan).summary == '0 of 1 declared copies in place'
     assert symlinks.RESOURCE.observe(session, session.plan).summary == '0 of 1 declared symlinks in place'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# unlink, which is the one thing copy mode does not give up
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_unlinking_a_copy_machine_removes_what_it_deployed(copying: Session, repo: Path, home: Path) -> None:
+    """The claim `unlink` makes everywhere, made here over the other mechanism.
+
+    A sweep for symlinks finds none of these — every target is a regular file — so
+    the pass that only swept reported a machine it had left fully deployed as
+    unconfigured, and exited converged saying so.
+    """
+    declare(repo, 'configs/common/.bashrc')
+    declare(repo, 'shell/common/functions.sh')
+    declare(repo, 'apps/common/notes')
+    apply(copying)
+
+    assert deploy.unlink(copying)
+
+    assert not (home / '.bashrc').exists()
+    assert not (home / '.local/shell/functions.sh').exists()
+    assert not (home / '.local/bin/notes').exists()
+
+
+def test_unlinking_leaves_a_declared_target_whose_bytes_are_not_the_repos(copying: Session, repo: Path, home: Path) -> None:
+    """Content equality is the only provenance there is, so it is also the only
+    thing standing between this verb and somebody's file.
+
+    The reported half matters as much as the kept file: `unlink` promises a
+    machine left unconfigured, so a run that could not finish the job says so in
+    the exit code rather than in output nothing reads.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    apply(copying)
+    (home / '.bashrc').write_text('edited on this machine\n')
+
+    assert not deploy.unlink(copying)
+
+    assert (home / '.bashrc').read_text() == 'edited on this machine\n'
+
+
+def test_unlinking_a_copy_machine_still_removes_a_link_the_other_mechanism_left(
+    copying: Session, session: Session, repo: Path, home: Path
+) -> None:
+    """The migration leaves both shapes on one machine, so both passes run there.
+
+    A box that deployed by link until policy stopped it has links resolving into
+    the repo, and they are this repo's to remove whatever the manifest now says
+    about how to write new ones.
+    """
+    declare(repo, 'configs/common/.bashrc')
+    apply(session)
+    assert (home / '.bashrc').is_symlink()
+
+    assert deploy.unlink(copying)
+
+    assert not (home / '.bashrc').is_symlink()
+    assert not (home / '.bashrc').exists()
+
+
+def test_unlinking_a_link_machine_never_reaches_a_regular_file(session: Session, repo: Path, home: Path) -> None:
+    """The copy pass is per machine, exactly as the deployment is.
+
+    On a machine that deploys by link, a regular file at a declared target is one
+    this manager refused to replace — so a removal keyed on content rather than on
+    provenance would delete the very file the refusal exists to protect.
+    """
+    declare(repo, 'configs/common/.bashrc', 'the repo copy\n')
+    (home / '.bashrc').write_text('the repo copy\n')
+
+    assert deploy.unlink(session)
+
+    assert (home / '.bashrc').read_text() == 'the repo copy\n'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

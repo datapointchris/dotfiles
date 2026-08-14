@@ -526,9 +526,8 @@ class TestWingetBundling:
 
     The employer network blocks the Store outright, so `winget_packages` is not a
     section with a slow alternative — a Windows manifest declaring only these rows
-    has one install route, and this is the other end of it. The section went
-    unstaged from the day the WSL bridge that used to stage it was deleted, which
-    left that machine with the blocked route and nothing else.
+    has one install route, and this is the other end of it. A section that goes
+    unstaged leaves that machine with the blocked route and nothing else.
 
     Asserted as the whole loop for the reason `TestBundleRoundTrip` records: two
     sides naming one file out of one declaration is how they came to disagree

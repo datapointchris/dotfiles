@@ -562,12 +562,12 @@ def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callabl
 
     `runs/` is a Syncthing folder shared by the whole fleet, and a record is
     written with a plain `write_text` — so an interrupted process or a full disk
-    leaves a truncated file that every reading verb used to die on. The companion
-    event log was already tolerated exactly this way: `_slow_commands` catches its
-    own parse errors line by line and says so, on the grounds that a run must not
-    refuse to render because an optional file is malformed. The record's own reader
-    had no such guard, and the blast radius was larger — `list`, `stats`, `latest`
-    and `show` all stopped answering about the runs that are fine.
+    leaves a truncated file every reading verb has to survive. The companion event
+    log is tolerated exactly this way: `_slow_commands` catches its own parse
+    errors line by line and says so, on the grounds that a run must not refuse to
+    render because an optional file is malformed. The blast radius is larger here
+    — `list`, `stats`, `latest` and `show` all answer out of this reader, so one
+    unreadable file costs every one of them the runs that are fine.
     """
     corrupt_store(sandbox)
 
@@ -726,9 +726,8 @@ def test_a_bundle_that_cannot_be_built_exits_issue(cli: Callable[..., Invocation
     """Exit 1 is DRIFT — the machine differs from its declaration, which is what
     apply is for and is not a problem worth reporting.
 
-    A bundle that could not be built is an Issue by that same vocabulary, which
-    this leaf disagreed with for as long as it passed an argparse return value
-    straight to `typer.Exit`.
+    A bundle that could not be built is an Issue by that same vocabulary, so an
+    argparse return value passed straight to `typer.Exit` is the wrong number.
     """
 
     def refuse(*_args: object, **_kwargs: object) -> Path:

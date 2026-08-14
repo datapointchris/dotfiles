@@ -88,15 +88,18 @@ can only ever answer *foreign* for one, and identity becomes content equality: a
 target with different bytes is stale whether this manager wrote it or somebody
 else did, and `apply` overwrites either. `--force` is therefore unreachable and
 means nothing there. Nothing is ever pruned — a file at a path the repo no longer
-declares is either a copy left behind or something the user put there, and
-nothing on disk says which. The script that staged the Git Bash tree from WSL
-held to that same rule for as long as it existed, for the concrete version of the
-reason: the Windows side may hold the only copy of a file this repo cannot
-regenerate.
+declares is either a copy left behind or something the user put there, nothing on
+disk says which, and the Windows side is where the only copy of a file this repo
+cannot regenerate is most likely to be sitting.
 
-`dotfiles symlinks unlink` therefore removes nothing on such a machine, which is
-correct rather than a gap — it unlinks only symlinks resolving into the repo, and
-there are none.
+`dotfiles symlinks unlink` survives that loss by asking a different question.
+Pruning has to ask about a path nothing declares, which is the question a copy
+cannot answer; unlinking asks only about paths the repo names, and every path
+this mechanism has ever written is one of them. So it removes each declared
+target whose bytes are still the repo's, leaves the ones that differ, names them,
+and exits with an issue rather than converged. A target that differs is either an
+edit made on that machine or that same irreplaceable file, and neither is this
+verb's to destroy.
 
 ## Directories that do not map to `$HOME`
 

@@ -579,12 +579,13 @@ def symlinks_apply(
     # Above the run record and not inside the resource: this is a fact about how
     # the command was typed, and the run it would authorise is the run that
     # happens anyway — so a record filed under it would answer for nothing.
-    # `and` short-circuits, leaving an ordinary apply resolving the machine once.
-    if force and (session := _session(machine)).machine.wants(symlinks.DEPLOY_BY_COPY):
-        raise symlinks.ForceUnavailable(
-            f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
-            advice=symlinks.FORCE_ADVICE,
-        )
+    if force:
+        session = _session(machine)
+        if session.machine.wants(symlinks.DEPLOY_BY_COPY):
+            raise symlinks.ForceUnavailable(
+                f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
+                advice=symlinks.FORCE_ADVICE,
+            )
     _apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 
@@ -599,11 +600,17 @@ def symlinks_show(machine: str = MachineOption) -> None:
 @symlinks_app.command('unlink')
 def symlinks_unlink(
     machine: str = MachineOption,
-    force: bool = typer.Option(False, '--force', help='Required: this removes every deployed symlink'),
+    force: bool = typer.Option(False, '--force', help='Required: this removes everything this repo deployed'),
 ) -> None:
-    """Remove every symlink this repo deployed."""
+    """Remove everything this repo deployed, symlink or copy.
+
+    A machine that deploys by copy is unlinked by the declaration rather than by a
+    sweep: a copy carries no provenance, so the only targets that can be spoken
+    for are the ones the repo names, and only while their bytes are still the
+    repo's. What differs is left behind and reported.
+    """
     if not force:
-        error('unlink removes every deployed symlink, leaving the machine unconfigured')
+        error('unlink removes everything this repo deployed, leaving the machine unconfigured')
         hint('re-run with --force if that is what you want')
         raise typer.Exit(ExitCode.USAGE)
 
