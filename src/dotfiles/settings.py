@@ -121,12 +121,19 @@ class Resolution:
 
     @property
     def expanded(self) -> str:
-        """The path a consumer can open.
-
-        A shell cannot do this for itself: `"${NAME:-~/x}"` leaves the tilde
-        literal inside the quotes.
-        """
+        """The path a consumer can open, for a filesystem call or for a screen."""
         return os.path.expanduser(self.value)
+
+    @property
+    def exported(self) -> str:
+        """The value as a shell assignment can carry it, naming no account.
+
+        A tilde stays literal inside `"${NAME:-~/x}"` and `$HOME` does not, so the
+        shell is left to resolve this one for itself. Resolving it here instead
+        writes an account name into a generated file, on a fleet whose two OS
+        families do not even agree on what that path starts with.
+        """
+        return re.sub(r'^~/', '$HOME/', self.value)
 
 
 def resolve(declared: str, config: Config) -> Resolution | None:
@@ -200,10 +207,19 @@ class Resolved:
 
         Not `os.path.expandvars`, which reads `os.environ` alone — that is precisely
         how the scheduled unit came to report a present registry as missing.
+
+        `$HOME` is the exception, and the only one: it is answered from the process
+        instead of the rungs. Every process has it — a systemd user unit with an
+        empty `Environment=` included — so it carries none of the risk the rule
+        above guards against, and it is what a generated export names in place of
+        an account.
         """
 
         def substitute(match: re.Match[str]) -> str:
-            found = self.of(match.group(1) or match.group(2))
+            name = match.group(1) or match.group(2)
+            if name == 'HOME':
+                return os.path.expanduser('~')
+            found = self.of(name)
             return found.value if found else match.group(0)
 
         return os.path.expanduser(VARIABLE.sub(substitute, text))

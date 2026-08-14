@@ -348,7 +348,7 @@ def _unexported(machine, observed: Observed) -> list[Change]:
             observed=observed.generated.get(entry.name, ''),
         )
         for entry in machine.required_values
-        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.expanded
+        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.exported
     ]
 
 
@@ -412,7 +412,9 @@ def _requirements(machine, observed: Observed) -> list[Change]:
         # The value arrived and the file it names did not. Two findings rather
         # than one, because the remedies are opposite: the first is answered in
         # ~/.env and this one is answered wherever the file comes from.
-        if entry.file_must_exist and not Path(answer).expanduser().exists():
+        # Through the same expander the required_files half uses, so a `~` and a
+        # `$HOME` in one register cannot resolve to different answers.
+        if entry.file_must_exist and not Path(observed.resolved.expand(answer)).exists():
             changes.append(
                 Change(
                     NAME,

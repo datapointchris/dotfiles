@@ -532,6 +532,23 @@ def test_a_value_naming_a_file_that_is_there_reports_nothing(tmp_path: Path, env
     assert changes(tmp_path, flags=declared) == ()
 
 
+def test_a_value_naming_home_resolves_to_the_file_it_points_at(tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`$HOME` is how a hand-written answer names a path without naming an account,
+    and `expanduser` leaves it literal — which reports a file sitting right there as
+    one that is not."""
+    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    present = tmp_path / 'hosts.json'
+    present.write_text('{}\n')
+    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export HOSTS_JSON="$HOME/hosts.json"\n')
+
+    assert changes(tmp_path, flags=declared) == ()
+
+
 def test_an_unset_value_that_names_a_file_is_missing_rather_than_stale(
     tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -693,9 +710,10 @@ def test_an_env_missing_the_export_is_drift_apply_can_repair(tmp_path: Path, uns
     assert found[0].repair is Repair.AUTOMATIC
 
 
-def test_an_exported_path_is_expanded_so_a_shell_can_open_it(tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`export NAME="${NAME:-~/x}"` leaves the tilde literal inside the quotes, so
-    an unexpanded value reaches a consumer as a path that does not exist."""
+def test_an_exported_path_names_home_rather_than_the_account(tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`export NAME="${NAME:-~/x}"` leaves the tilde literal inside the quotes and
+    `$HOME` survives it, so a consumer gets a path it can open and the generated
+    file carries no account name."""
     monkeypatch.setenv('HOME', str(tmp_path))
     registry = tmp_path / 'repos.json'
     registry.write_text('{"repos": []}\n')
@@ -705,8 +723,8 @@ def test_an_exported_path_is_expanded_so_a_shell_can_open_it(tmp_path: Path, uns
     live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
     envfile.write(live.env_file, live.machine)
 
-    assert envfile.read_generated(live.env_file)['REPOS_REGISTRY'] == str(registry)
-    assert '~' not in envfile.read_generated(live.env_file)['REPOS_REGISTRY']
+    assert envfile.read_generated(live.env_file)['REPOS_REGISTRY'] == '$HOME/repos.json'
+    assert str(tmp_path) not in envfile.read_generated(live.env_file)['REPOS_REGISTRY']
 
 
 def test_a_config_answer_still_defers_to_one_set_by_hand(tmp_path: Path, unshelled: Path) -> None:

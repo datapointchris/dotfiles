@@ -105,7 +105,7 @@ def render(machine: Machine) -> str:
 
         if answered:
             lines += ['']
-            lines += [assignment(entry.name, found.expanded) for entry, found in answered]
+            lines += [assignment(entry.name, found.exported) for entry, found in answered]
 
         if unanswered:
             lines += [

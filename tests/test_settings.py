@@ -232,6 +232,16 @@ def test_a_literal_path_still_expands_its_tilde(config_home: Path) -> None:
     assert resolved().expand('~/.config/git/local.gitconfig').startswith(str(Path.home()))
 
 
+def test_home_is_answered_from_the_process_rather_than_the_rungs(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The register never declares it, so the rungs cannot answer it and an
+    unanswered variable is left literal. A hand-written path uses it to name a file
+    without naming an account, and every process has it."""
+    monkeypatch.setenv('HOME', '/home/someone')
+
+    assert resolved().expand('$HOME/hosts.json') == '/home/someone/hosts.json'
+    assert resolved().expand('${HOME}/hosts.json') == '/home/someone/hosts.json'
+
+
 def test_a_literal_path_names_no_source(config_home: Path) -> None:
     assert resolved().source('~/.config/git/local.gitconfig') == ''
     assert resolved().unresolved('~/.config/git/local.gitconfig') == ()
@@ -328,6 +338,22 @@ def test_a_settings_value_is_expanded_rather_than_echoed(config_home: Path) -> N
     described = describe()
 
     assert described[0].value == str(Path.home() / 'dev/repos.json')
+
+
+def test_a_value_written_for_a_shell_names_home_rather_than_the_account(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A tilde stays literal inside `"${NAME:-~/x}"` and `$HOME` does not, so the
+    shell resolves it. The two forms are separate because only one of them is ever
+    handed to `stat`."""
+    monkeypatch.setenv(ENV, '~/dev/repos.json')
+
+    assert answered().exported == '$HOME/dev/repos.json'
+    assert answered().expanded == str(Path.home() / 'dev/repos.json')
+
+
+def test_a_value_that_names_no_home_is_written_as_it_stands(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV, '/mnt/data/repos.json')
+
+    assert answered().exported == '/mnt/data/repos.json'
 
 
 def test_a_setting_reports_whether_the_file_it_names_is_there(config_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
