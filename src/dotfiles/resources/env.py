@@ -75,6 +75,13 @@ class Observed:
     rejected config.toml and resolved the registry through it two rows apart.
     """
 
+    named_files: tuple[settings.Setting, ...] = ()
+    """Every shared path this tool can resolve, with whether its file is there.
+
+    Measured in `observe` rather than derived in `diff`, because `exists` is a
+    filesystem read and `diff` is the pure half.
+    """
+
     config_problem: str = ''
     """Why this tool's own config.toml could not be read, empty when it could.
 
@@ -127,6 +134,7 @@ class EnvResource:
             present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present(resolved)),
             generated=envfile.read_generated(path),
             resolved=resolved,
+            named_files=settings.describe(config, path),
             config_problem=config.problem,
         )
 
@@ -149,6 +157,7 @@ class EnvResource:
         changes.extend(_identity(machine, observed))
         changes.extend(_flags(machine, observed))
         changes.extend(_config(observed))
+        changes.extend(_named_files(machine, observed))
         changes.extend(_requirements(machine, observed))
         changes.extend(_orphaned(machine, observed))
         changes.extend(_undeclared(machine, observed))
@@ -320,6 +329,36 @@ def _config(observed: Observed) -> list[Change]:
     ]
 
 
+def _named_files(machine, observed: Observed) -> list[Change]:
+    """A shared path this tool resolved, whose file is not there.
+
+    Resolving a name is not the same as finding what it names, and only the
+    second is what a consumer needs. A rung that answers with a stale path is
+    the failure mode a default introduces, so the answer is checked rather than
+    the default being refused: the row names the path and the rung that supplied
+    it, which is what separates "nobody said" from "somebody said, wrongly".
+
+    `required_values` covers the same ground for a name a machine must answer
+    itself. This covers the rest of `SHARED_PATHS`, which no register declares.
+    """
+    declared = {entry.name for entry in machine.required_values}
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            setting.name,
+            Verdict.STALE,
+            repair=Repair.BY_HAND,
+            detail='names a file that is not there',
+            advice='point it at the real file, or put the file where it already points',
+            observed=setting.value,
+            source=setting.source,
+        )
+        for setting in observed.named_files
+        if setting.value and not setting.exists and setting.name not in declared
+    ]
+
+
 def _requirements(machine, observed: Observed) -> list[Change]:
     """Values and files the repo declares and deliberately never contains.
 
@@ -452,7 +491,12 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
     whether the declaration still produces the name at all, so a variable named
     unusually cannot slip past.
     """
-    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags}
+    # A required value the config answers is written into the generated section
+    # too, so anything reading the environment finds the same file. It belongs to
+    # the declaration exactly while a rung still answers it, and becomes an orphan
+    # the moment one stops — which is the same rewrite away as any other.
+    answered = {entry.name for entry in machine.required_values if observed.resolved.of(entry.name)}
+    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags, *answered}
     return [
         Change(
             NAME,

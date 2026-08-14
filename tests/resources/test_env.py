@@ -656,6 +656,54 @@ def test_a_required_value_is_answered_by_the_config_file(tmp_path: Path, unshell
     assert changes(tmp_path, flags=REGISTRY_VALUE) == ()
 
 
+def test_a_value_the_config_answers_is_exported_so_a_shell_consumer_finds_it(tmp_path: Path, unshelled: Path) -> None:
+    """The whole point of answering it here: `~/homelab`'s pyinfra and shell entry
+    points read the environment, and a config key they do not know about would
+    leave them finding nothing while `dotfiles check` reported the machine sound."""
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    name_registry(unshelled, registry)
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    assert envfile.read_generated(live.env_file)['REPOS_REGISTRY'] == str(registry)
+
+
+def test_a_config_answer_still_defers_to_one_set_by_hand(tmp_path: Path, unshelled: Path) -> None:
+    """Written as `${NAME:-...}` like every other generated line, so a machine that
+    answered below the marker keeps its answer."""
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    name_registry(unshelled, registry)
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    assert f'${{REPOS_REGISTRY:-{registry}}}' in live.env_file.read_text()
+
+
+def test_a_named_file_that_is_not_there_is_reported_rather_than_resolved_and_trusted(tmp_path: Path, unshelled: Path) -> None:
+    """Resolving a name is not finding what it names. A default that answers is
+    only safe because this row fires when the path is empty."""
+    name_registry(unshelled, tmp_path / 'gone.json')
+    live = session(tmp_path, MANIFEST, FLAGS)
+    envfile.write(live.env_file, live.machine)
+
+    found = [change for change in changes(tmp_path, flags=FLAGS) if change.item == 'REPOS_REGISTRY']
+
+    assert found[0].verdict is Verdict.STALE
+    assert 'not there' in found[0].detail
+
+
+def test_a_named_file_that_is_there_is_no_finding(tmp_path: Path, unshelled: Path) -> None:
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    name_registry(unshelled, registry)
+    live = session(tmp_path, MANIFEST, FLAGS)
+    envfile.write(live.env_file, live.machine)
+
+    assert [change for change in changes(tmp_path, flags=FLAGS) if change.item == 'REPOS_REGISTRY'] == []
+
+
 def test_a_required_value_nothing_answers_is_advised_at_every_rung(tmp_path: Path, unshelled: Path) -> None:
     live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
     envfile.write(live.env_file, live.machine)

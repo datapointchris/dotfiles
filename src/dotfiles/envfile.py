@@ -23,6 +23,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from dotfiles import settings
 from dotfiles.machine import Machine
 
 MARKER = '# OVERRIDES - hand-edited; everything below is preserved on regenerate'
@@ -97,16 +98,36 @@ def render(machine: Machine) -> str:
     for name, value in machine.flags.items():
         lines += ['', assignment(name, value)]
 
-    # Named, never valued: this is the only place that tells you a machine needs
-    # one before something quietly builds a wrong path out of the empty string.
+    # A required value the trust-scoped config answers is exported here, so a
+    # consumer that reads the environment finds it without anyone editing this
+    # file. The rest are named and not valued, because nothing but the machine
+    # knows them and an empty string would build a wrong path silently.
     if values := machine.required_values:
-        lines += [
-            '',
-            '# This machine also needs these set by hand BELOW the marker. Their values are',
-            '# machine-local and deliberately not in the repo; `dotfiles check` fails until',
-            '# each one is set.',
-        ]
-        lines += [f'#   {entry.name} - {entry.description}'.rstrip(' -') for entry in values]
+        resolved = settings.resolve_all([entry.name for entry in values], settings.read_config())
+        answered = [(entry, found) for entry in values if (found := resolved.of(entry.name))]
+        unanswered = [entry for entry in values if not resolved.of(entry.name)]
+
+        if answered:
+            lines += [
+                '',
+                "# Supplied by this tool's own config, and exported so anything reading the",
+                '# environment finds the same file. `dotfiles config show` says which rung',
+                '# answered; a value already set below the marker still wins.',
+            ]
+            for entry, found in answered:
+                lines += ['']
+                if entry.description:
+                    lines += [f'# {entry.description}']
+                lines += [assignment(entry.name, found.value)]
+
+        if unanswered:
+            lines += [
+                '',
+                '# This machine also needs these set by hand BELOW the marker. Their values are',
+                '# machine-local and deliberately not in the repo; `dotfiles check` fails until',
+                '# each one is set.',
+            ]
+            lines += [f'#   {entry.name} - {entry.description}'.rstrip(' -') for entry in unanswered]
 
     # Named for the same reason, and here rather than in a doc because a rebuild
     # reads this file: it is the only place that says where a restored file goes.

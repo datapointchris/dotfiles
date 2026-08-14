@@ -1095,4 +1095,7 @@ def test_the_settings_document_carries_the_file_and_every_rung_s_answer(sandbox:
 
     assert set(document) == SETTINGS_KEYS
     assert document['config_file'] == str(sandbox.config / 'dotfiles' / 'config.toml')
-    assert [set(entry) for entry in document['settings']] == [SETTING_KEYS]
+    # Every entry rather than a fixed list of them: the shape is the contract and
+    # the count is whatever SHARED_PATHS currently holds.
+    assert document['settings']
+    assert all(set(entry) == SETTING_KEYS for entry in document['settings'])
