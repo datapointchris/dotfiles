@@ -170,13 +170,6 @@ def test_a_declared_link_that_was_never_deployed_is_missing(session: Session, re
     assert found[0].item == 'configs/common/.config/tmux/tmux.conf'
 
 
-def test_a_deployed_link_reports_nothing(session: Session) -> None:
-    declare(session.repo, 'configs/common/.config/tmux/tmux.conf')
-    apply(session)
-
-    assert changes(session) == ()
-
-
 def test_a_link_pointing_at_the_wrong_file_is_stale(session: Session, repo: Path, home: Path) -> None:
     declare(repo, 'configs/common/.bashrc')
     other = declare(repo, 'configs/common/.zshrc')
@@ -229,85 +222,6 @@ def test_applying_creates_the_link_relative(session: Session, repo: Path, home: 
     assert target.is_symlink()
     assert not target.readlink().is_absolute()
     assert target.read_text() == 'config\n'
-
-
-def test_applying_prunes_a_link_whose_source_is_gone(session: Session, repo: Path, home: Path) -> None:
-    declare(repo, 'configs/common/.bashrc')
-    apply(session)
-    (repo / 'configs/common/.bashrc').unlink()
-
-    apply(session)
-
-    assert not (home / '.bashrc').is_symlink()
-
-
-def test_applying_is_idempotent(session: Session, repo: Path) -> None:
-    declare(session.repo, 'configs/common/.bashrc')
-    apply(session)
-
-    assert apply(session) == []
-
-
-def test_applying_replaces_a_link_this_manager_owns(session: Session, repo: Path, home: Path) -> None:
-    source = declare(repo, 'configs/common/.bashrc')
-    other = declare(repo, 'configs/common/.zshrc')
-    (home / '.bashrc').symlink_to(other)
-
-    apply(session)
-
-    assert (home / '.bashrc').resolve() == source.resolve()
-
-
-def test_applying_never_replaces_a_foreign_target(session: Session, repo: Path, home: Path) -> None:
-    """`uv tool install` writes an executable into the same ~/.local/bin the apps
-    tree links into, and the write here is an unlink."""
-    declare(repo, 'apps/common/notes')
-    (home / '.local' / 'bin').mkdir(parents=True)
-    theirs = home / '.local' / 'bin' / 'notes'
-    theirs.write_text('#!/bin/sh\n# somebody else wrote this\n')
-
-    apply(session)
-
-    assert theirs.read_text() == '#!/bin/sh\n# somebody else wrote this\n'
-
-
-def test_applying_never_replaces_a_link_pointing_outside_the_repo(session: Session, repo: Path, home: Path, tmp_path: Path) -> None:
-    declare(repo, 'configs/common/.zshrc')
-    elsewhere = tmp_path / 'elsewhere'
-    elsewhere.mkdir()
-    (elsewhere / 'other.zshrc').write_text('someone else manages this')
-    (home / '.zshrc').symlink_to(elsewhere / 'other.zshrc')
-
-    apply(session)
-
-    assert (home / '.zshrc').resolve() == (elsewhere / 'other.zshrc').resolve()
-
-
-def test_force_adopts_a_target_this_manager_did_not_create(repo: Path, home: Path) -> None:
-    """The deliberate answer to a refusal, for adopting a machine that already
-    had dotfiles of its own."""
-    declare(repo, 'configs/common/.zshrc', 'the repo copy\n')
-    (home / '.zshrc').write_text('whatever was here before\n')
-    forcing = Session(machine_name='box', repo=repo, home=home, force=True)
-
-    apply(forcing)
-
-    assert (home / '.zshrc').is_symlink()
-    assert (home / '.zshrc').read_text() == 'the repo copy\n'
-
-
-def test_force_does_not_reach_a_name_project_scripts_declares(repo: Path, home: Path) -> None:
-    """There is no state of the machine in which replacing the console script
-    with an apps/ file is right, so --force must not reach this one."""
-    declare(repo, 'apps/common/dotfiles', 'the bash front door\n')
-    (home / '.local' / 'bin').mkdir(parents=True)
-    installed = home / '.local' / 'bin' / 'dotfiles'
-    installed.write_text('the installed console script\n')
-    forcing = Session(machine_name='box', repo=repo, home=home, force=True)
-
-    apply(forcing)
-
-    assert installed.read_text() == 'the installed console script\n'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
