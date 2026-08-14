@@ -8,7 +8,7 @@
 # of this; it is a wrong answer on one of the machines that reads it.
 #
 # Lives in dotfiles rather than in fleet because every machine has this and only
-# some have fleet, which is the same reason `pr-list` and `claude-sessions` are
+# some have fleet, which is the same reason `pull-requests` and `claude-sessions` are
 # here. Nothing in it may call back into a fleet-only binary.
 #
 # Two rungs, in that order: $DOTFILES_REPOS_REGISTRY, then `repos_registry` in

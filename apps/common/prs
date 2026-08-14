@@ -9,7 +9,7 @@
     prs list         print them instead, one row each
 
 Lives in dotfiles rather than in fleet because every machine has this and only
-some have fleet. The data comes from `pr-list`, the one place that knows how to
+some have fleet. The data comes from `pull-requests`, the one place that knows how to
 ask a provider for PRs; this is the renderer, the picker and the window.
 
 Fetches, never checks out. `gh pr checkout` switches branches, which aborts
@@ -48,25 +48,96 @@ from rich.text import Text
 AGEING = 3
 STALE = 7
 
-# One glyph per status column, always the same character, coloured by state. A
-# tick for approved beside a cross for changes-requested reads better and aligns
-# worse: nothing guarantees two different glyphs the same cell width, so a row
+# Nerd Font glyphs, one per field. Never emoji: an emoji is two cells wide in
+# some terminals and one in others, so a column carrying one cannot be aligned.
+#
+# The icon for a field never changes with its state — only its colour does. Two
+# different glyphs are not guaranteed the same cell width either, so a row
 # differing only in review state would sit a column off from the one above it.
-CHECKS_GLYPH = '●'
-REVIEW_GLYPH = '◆'
+CHECKS_ICON = ''
+REVIEW_ICON = ''
+FILES_ICON = ''
+ADDED_ICON = ''
+REMOVED_ICON = ''
+AGE_ICON = ''
+BRANCH_ICON = ''
+NUMBER_ICON = ''
+PATH_ICON = ''
+STACK_ICON = ''
+DIFF_ICON = ''
+BROWSER_ICON = ''
+COMMENT_ICON = ''
+MERGE_ICON = ''
 
 CHECK_STYLES = {'SUCCESS': 'green', 'FAILURE': 'red', 'ERROR': 'red'}
 REVIEW_STYLES = {'APPROVED': 'green', 'CHANGES_REQUESTED': 'red', 'REVIEW_REQUIRED': 'cyan'}
 
-LEGEND = f'{CHECKS_GLYPH} checks   {REVIEW_GLYPH} review   green ok · red blocked · dim none yet'
+# The state in words. A legend under the table made you carry a colour from the
+# bottom of the window back up to a glyph; saying it on the row costs a column
+# and removes the lookup entirely.
+CHECK_WORDS = {'SUCCESS': 'passing', 'FAILURE': 'failing', 'ERROR': 'failing', '': 'not run'}
+REVIEW_WORDS = {'APPROVED': 'approved', 'CHANGES_REQUESTED': 'changes', 'REVIEW_REQUIRED': 'required', '': 'no review'}
+
+# Breathing room around the table: one row top and bottom, twelve columns each
+# side. More on the sides than the top, because the sides are where a list runs
+# into its own border and the top already has a rule under the header.
+SIDE_PAD = 12
+
+# The width the fields are spread across. It has to match the popup in tmux.conf
+# minus its border and padding — `display-popup -w 150` less a border and
+# SIDE_PAD each side leaves 124, and 120 keeps a margin. Spreading to less than the window is what left the list huddled
+# against the left edge with the rest of the popup empty.
+TABLE_WIDTH = 120
+
+
+# Each glyph paired with the state it means, rather than a row of coloured dots
+# and one word after them. Three dots and the word "checks" says the column is
+# about checks and nothing about which dot is which.
+CHECKS_KEY = (('passing', 'green'), ('pending', 'yellow'), ('failing', 'red'), ('none yet', 'dim'))
+REVIEW_KEY = (('approved', 'green'), ('awaiting', 'cyan'), ('changes', 'red'), ('none yet', 'dim'))
+
+
+def spread(rows: list[list[Text]], width: int, right: frozenset[int] = frozenset()) -> list[Text]:
+    """A table laid out to fill the width, every row on the same column stops.
+
+    Widths are measured down each column across every row, so every line lands on
+    the same stops rather than each being spaced independently.
+
+    Filling the width is the point. Packed left, five short fields sit in a
+    huddle against the edge with the rest of the window empty beside them, and
+    nothing about the shape says which field is which.
+
+    The slack is dealt out one column at a time from the left, so a line ends
+    exactly on `width` rather than a few short of it. Columns named in `right`
+    are right-aligned inside their stop, so digits stack.
+    """
+    widths = [max(row[index].cell_len for row in rows) for index in range(len(rows[0]))]
+    slack = max(width - sum(widths), len(widths) - 1)
+    gap, extra = divmod(slack, len(widths) - 1)
+
+    laid_out = []
+    for row in rows:
+        line = Text()
+        for index, cell in enumerate(row):
+            if index:
+                line.append(' ' * (gap + (1 if index <= extra else 0)))
+            padding = ' ' * (widths[index] - cell.cell_len)
+            if index in right:
+                line.append(padding)
+                line.append(cell)
+            else:
+                line.append(cell)
+                line.append(padding)
+        laid_out.append(line)
+    return laid_out
 
 
 @dataclass(frozen=True)
 class PullRequest:
-    """One open PR, as `pr-list` reports it.
+    """One open PR, as `pull-requests` reports it.
 
     `slug` is `owner/name` and identifies the repository; `repo` is the bare
-    basename and is a label. The two are not interchangeable — pr-list searches
+    basename and is a label. The two are not interchangeable — pull-requests searches
     all of GitHub and filters to the registry, so a PR you authored upstream in
     someone else's project can arrive under a `repo` that matches one of yours.
 
@@ -88,6 +159,8 @@ class PullRequest:
     changed_files: int | None
     review: str
     checks: str
+    provider: str
+    body: str
 
     @classmethod
     def from_json(cls, row: dict) -> PullRequest:
@@ -106,12 +179,14 @@ class PullRequest:
             changed_files=row.get('changed_files'),
             review=row.get('review') or '',
             checks=row.get('checks') or '',
+            provider=row.get('provider') or '',
+            body=row.get('body') or '',
         )
 
 
 def fetch() -> list[PullRequest]:
-    """Every open PR the registry knows about. Raises if `pr-list` fails."""
-    result = subprocess.run(['pr-list'], capture_output=True, text=True, check=True)
+    """Every open PR the registry knows about. Raises if `pull-requests` fails."""
+    result = subprocess.run(['pull-requests'], capture_output=True, text=True, check=True)
     return [PullRequest.from_json(row) for row in json.loads(result.stdout)]
 
 
@@ -119,7 +194,7 @@ def stack_parents(prs: list[PullRequest]) -> dict[tuple[str, str], int]:
     """`(slug, branch) -> number`, so a PR targeting another can name its parent.
 
     What counts as stacked is read out of the listing — a base that is some other
-    open PR's head — because pr-list reports no default branch, so testing base
+    open PR's head — because pull-requests reports no default branch, so testing base
     against a literal "main" would mark every row of a repo defaulting to master.
 
     Keyed on slug and branch together rather than on branch alone. Branch names
@@ -131,25 +206,44 @@ def stack_parents(prs: list[PullRequest]) -> dict[tuple[str, str], int]:
 
 def age_cell(pr: PullRequest) -> Text:
     style = 'red' if pr.age_days >= STALE else 'yellow' if pr.age_days >= AGEING else 'dim'
-    return Text(f'{pr.age_days}d', style=style)
+    return Text(f'{AGE_ICON}  {pr.age_days}d', style=style)
 
 
-def diff_cell(pr: PullRequest) -> Text:
-    """Files changed, then the two counts. A dash when the provider reports none.
+def diff_column(prs: list[PullRequest]) -> list[Text]:
+    """Files changed, then the two counts, each aligned against the rows above.
+
+    Built over the whole set rather than per row. The cell holds three numbers,
+    and right-aligning it as one string lines up only its right edge — `+76 -941`
+    lands under `+25 -2` with neither the plus nor the minus in a column. Each
+    part gets its own width instead, so the signs stack.
+
+    A dash, never `+0 -0`, from a provider that reports nothing. It is padded to
+    the same total so the column edge stays straight.
 
     Every style goes on its own span, never on the `Text` itself. A base style is
     merged into each span rather than overridden, so a base of `dim` here renders
-    the additions dim green — which is the one colour on the row that has to
-    carry at a glance.
+    the additions dim green — the one colour on the row that has to carry at a
+    glance.
     """
-    if pr.additions is None:
-        return Text('—', style='dim')
-    cell = Text()
-    cell.append(f'{pr.changed_files}f ', style='dim')
-    cell.append(f'+{pr.additions}', style='green')
-    cell.append(' ')
-    cell.append(f'-{pr.deletions}', style='red')
-    return cell
+    counted = [pr for pr in prs if pr.additions is not None]
+    files = max((len(f'{FILES_ICON} {pr.changed_files}') for pr in counted), default=0)
+    added = max((len(f'{ADDED_ICON} {pr.additions}') for pr in counted), default=0)
+    removed = max((len(f'{REMOVED_ICON} {pr.deletions}') for pr in counted), default=0)
+    total = files + added + removed + 4
+
+    cells = []
+    for pr in prs:
+        cell = Text()
+        if pr.additions is None:
+            cell.append('—'.rjust(total), style='dim')
+        else:
+            cell.append(f'{FILES_ICON} {pr.changed_files}'.rjust(files), style='dim')
+            cell.append('  ')
+            cell.append(f'{ADDED_ICON} {pr.additions}'.rjust(added), style='green')
+            cell.append('  ')
+            cell.append(f'{REMOVED_ICON} {pr.deletions}'.rjust(removed), style='red')
+        cells.append(cell)
+    return cells
 
 
 def branch_cell(pr: PullRequest, parents: dict[tuple[str, str], int]) -> Text:
@@ -161,13 +255,14 @@ def branch_cell(pr: PullRequest, parents: dict[tuple[str, str], int]) -> Text:
     version.
     """
     cell = Text()
+    cell.append(f'{BRANCH_ICON}  ', style='blue')
     cell.append(pr.branch or '-', style='blue')
     parent = parents.get((pr.slug, pr.base))
     if parent is not None and parent != pr.number:
         # One space, never two. Columns are separated by a run of two, so a wider
         # gap here reads as a column boundary and the marker becomes a field of
         # its own — which is what pushes the title out of the picker's view.
-        cell.append(f' ← #{parent}', style='yellow')
+        cell.append(f' {STACK_ICON} #{parent}', style='yellow')
     return cell
 
 
@@ -177,74 +272,139 @@ def title_cell(pr: PullRequest) -> Text:
     return Text(pr.title)
 
 
-def status_cell(pr: PullRequest) -> Text:
-    """CI on the left, review on the right. Dim means nothing has happened yet.
-
-    An unrecognised check state is yellow rather than dim: GitHub adds rollup
-    states, and a new one is in flight, not absent.
-    """
-    checks = CHECK_STYLES.get(pr.checks, 'dim' if not pr.checks else 'yellow')
+def checks_cell(pr: PullRequest) -> Text:
+    """CI state, in words. An unrecognised rollup is yellow rather than dim:
+    GitHub adds states, and a new one is in flight rather than absent."""
+    style = CHECK_STYLES.get(pr.checks, 'dim' if not pr.checks else 'yellow')
     cell = Text()
-    cell.append(CHECKS_GLYPH, style=checks)
-    cell.append(REVIEW_GLYPH, style=REVIEW_STYLES.get(pr.review, 'dim'))
+    cell.append(f'{CHECKS_ICON}  ', style=style)
+    cell.append(f'checks {CHECK_WORDS.get(pr.checks, pr.checks.lower())}', style=style)
     return cell
 
 
-def compose(prs: list[PullRequest], *, header: bool = False) -> list[Text]:
-    """One `Text` per PR, columns aligned across the whole set.
+def review_cell(pr: PullRequest) -> Text:
+    style = REVIEW_STYLES.get(pr.review, 'dim')
+    cell = Text()
+    cell.append(f'{REVIEW_ICON}  ', style=style)
+    cell.append(f'review {REVIEW_WORDS.get(pr.review, pr.review.lower())}', style=style)
+    return cell
+
+
+# Between the status column and the fields beside it.
+COLUMN_GAP = 4
+
+LABELS = ('TITLE', 'DIFF', 'AGE', 'BRANCH')
+
+# The quantities right-align, so the digits stack: `-2` under `-386` hides the
+# magnitude that is the only reason the column is there.
+RIGHT_ALIGNED = frozenset({1, 2})
+
+
+def where_cell(pr: PullRequest) -> Text:
+    """Where the PR is on this disk, which is what you go on to open.
+
+    The repo name is a label and two of them can collide across a registry; the
+    path is what identifies a checkout. Written `~`-rooted, the way you would
+    type it.
+
+    A repo the registry names but this machine has not cloned has no path, so it
+    falls back to the name — the row still has to say which repo it is, and it is
+    the one `prs` will refuse to open.
+    """
+    cell = Text()
+    cell.append(f'{PATH_ICON}  ', style='cyan')
+    if not pr.path:
+        cell.append(pr.repo, style='cyan')
+        cell.append('  not cloned here', style='dim')
+        return cell
+    home = str(Path.home())
+    cell.append(pr.path.replace(home, '~', 1) if pr.path.startswith(home) else pr.path, style='cyan')
+    return cell
+
+
+def number_cell(pr: PullRequest) -> Text:
+    cell = Text()
+    cell.append(f'{NUMBER_ICON}  ', style='yellow')
+    cell.append(f'#{pr.number}', style='yellow')
+    return cell
+
+
+@dataclass(frozen=True)
+class Action:
+    """One thing you can do to a PR, and which forges can do it.
+
+    `providers` empty means every forge — the diff and the branch name are local
+    git and the browser is a URL, so none of the three asks a forge anything.
+    """
+
+    name: str
+    icon: str
+    label: str
+    detail: str
+    providers: frozenset[str] = frozenset()
+
+    def supported(self, provider: str) -> bool:
+        return not self.providers or provider in self.providers
+
+
+# Ordered by how often each is wanted, and merge is last on purpose: it is the
+# one that cannot be undone, and having to scroll past everything else to reach
+# it is the difference between choosing it and landing on it.
+ACTIONS = (
+    Action('diff', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window'),
+    Action('browser', BROWSER_ICON, 'open in browser', 'the pull request page on its forge'),
+    Action('branch', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard'),
+    Action('comment', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', frozenset({'github'})),
+    Action('merge', MERGE_ICON, 'merge', 'merge it — asks before it does'),
+)
+
+
+def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text]]]:
+    """The header line, then each PR as two lines.
+
+    The status column carries one state per line in words — checks on the first,
+    review on the second. It replaced a legend under the table, which made you
+    take a colour from the bottom of the window back up to a glyph. Saying it on
+    the row costs a column and removes the lookup.
+
+    Everything else you scan by is on the first line: title, size, age, branch.
+    The second carries where it lives on this disk and its number, which are what
+    you want once you have already chosen the row.
 
     Widths are measured on `cell_len`, which counts what a terminal draws rather
     than how many characters there are. Padding on `len` is what puts an em dash
     or a wide glyph a column out.
-
-    The title is last and unbounded. Everything before it is a field you retype,
-    and the truncated end of a row must never be one of those.
-
-    The header is measured with the rows rather than printed separately, which is
-    the only way a label and its column stay the same width. The picker asks for
-    none: fzf carries its own, where it does not become a selectable row.
     """
     parents = stack_parents(prs)
-    columns = [
-        [status_cell(pr) for pr in prs],
-        [Text(pr.repo, style='cyan') for pr in prs],
-        [Text(f'#{pr.number}', style='yellow') for pr in prs],
-        [diff_cell(pr) for pr in prs],
-        [age_cell(pr) for pr in prs],
-        [branch_cell(pr, parents) for pr in prs],
-        [title_cell(pr) for pr in prs],
-    ]
-    if header:
-        # `ST` is two cells wide, exactly like the two glyphs beneath it, so the
-        # label costs the row nothing.
-        labels = ('ST', 'REPO', 'PR', 'DIFF', 'AGE', 'BRANCH', 'TITLE')
-        for column, label in zip(columns, labels, strict=True):
-            column.insert(0, Text(label, style='bold'))
-    # The quantities right-align, so the digits stack: a ragged `#7` under `#118`
-    # reads as a different field, and `-2` under `-386` hides the magnitude that
-    # is the only reason the column is there.
-    right_aligned = {2, 3, 4}
-    widths = [max(cell.cell_len for cell in column) for column in columns]
+    checks = [checks_cell(pr) for pr in prs]
+    reviews = [review_cell(pr) for pr in prs]
+    status_label = Text('STATUS', style='bold')
+    status_width = max(cell.cell_len for cell in [*checks, *reviews, status_label])
 
-    rows = []
-    for index in range(len(columns[0])):
-        row = Text()
-        for position, column in enumerate(columns):
-            cell = column[index].copy()
-            padding = widths[position] - cell.cell_len
-            if position in right_aligned:
-                row.append(' ' * padding)
-                row.append(cell)
-            else:
-                row.append(cell)
-                # No padding after the last column: trailing spaces would widen
-                # every fzf row to the longest title and scroll the short ones.
-                if position < len(columns) - 1:
-                    row.append(' ' * padding)
-            if position < len(columns) - 1:
-                row.append('  ')
-        rows.append(row)
-    return rows
+    labels = [Text(label, style='bold') for label in LABELS]
+    rows = [[title_cell(pr), diff, age_cell(pr), branch_cell(pr, parents)] for pr, diff in zip(prs, diff_column(prs), strict=True)]
+    header, *laid_out = spread([labels, *rows], width - status_width - COLUMN_GAP, RIGHT_ALIGNED)
+
+    def lead(cell: Text) -> Text:
+        """The status cell padded to its column, so both lines start together."""
+        line = cell.copy()
+        line.append(' ' * (status_width - cell.cell_len + COLUMN_GAP))
+        return line
+
+    items = []
+    for pr, check, review, row in zip(prs, checks, reviews, laid_out, strict=True):
+        first = lead(check)
+        first.append(row)
+
+        second = lead(review)
+        second.append(where_cell(pr))
+        second.append('   ')
+        second.append(number_cell(pr))
+        items.append([first, second])
+
+    titled = lead(status_label)
+    titled.append(header)
+    return titled, items
 
 
 def to_lines(rows: list[Text], *, color: bool) -> list[str]:
@@ -261,7 +421,7 @@ def to_lines(rows: list[Text], *, color: bool) -> list[str]:
 
 
 def empty_state(*, interactive: bool) -> int:
-    """Not a failure: pr-list read every repo in the registry and found none.
+    """Not a failure: pull-requests read every repo in the registry and found none.
 
     The pause is what makes the answer readable at all. This normally runs as
     `display-popup -E`, which tears the popup down the instant the command exits,
@@ -269,15 +429,29 @@ def empty_state(*, interactive: bool) -> int:
     dead.
     """
     print('No open PRs across the registry.')
-    print('  pr-list  prints the listing this reads')
+    print('  pull-requests  prints the listing this reads')
     if interactive:
         input('press enter to close ')
     return 0
 
 
 def cmd_list(prs: list[PullRequest], *, color: bool) -> int:
-    for line in to_lines(compose(prs, header=True), color=color):
-        print(line)
+    """The table, with the header set off from the rows and the rows spaced out.
+
+    A blank line under the header stops the labels reading as a first result, and
+    one between rows is what makes a six-column row scan as a unit rather than as
+    part of a block.
+    """
+    header, items = compose(prs, width=TABLE_WIDTH)
+    margin = ' ' * SIDE_PAD
+    print()
+    print(margin + to_lines([header], color=color)[0])
+    for item in items:
+        print()
+        print()
+        for line in to_lines(item, color=color):
+            print(margin + line)
+    print()
     return 0
 
 
@@ -290,23 +464,69 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
     No `--height`: this fills whatever it is given, which is the tmux popup when
     it runs from a keybinding and the terminal when it does not. Size belongs to
     the caller, in one place.
+
+    Column titles go in the header and the legend goes in the footer. They are
+    two different kinds of thing and putting both at the top made the legend read
+    as a second header row, whatever the spacing.
+
+    The titles are composed with the rows rather than written separately, which
+    is the only thing that keeps a label over its own column.
+
+    `--gap` puts a blank line between rows; the two borders rule the header and
+    the footer off from them. All of it is spacing fzf owns — emitting blank
+    lines instead would make them selectable rows with no PR behind them.
+
+    No border of its own: tmux draws the popup's. Two nested frames around one
+    list read as a mistake, and the tmux one has to be there — without it the
+    popup has no frame to redraw against and a busy pane behind it bleeds
+    through the top line or two.
+
+    Records are NUL-separated so a PR can be two lines and still be one item.
+    With newline-separated input its title would be a second, selectable row with
+    no PR behind it, which is the same fault as faking the gaps.
     """
-    lines = to_lines(compose(prs), color=True)
-    stdin = '\n'.join(f'{index}\t{line}' for index, line in enumerate(lines))
-    label = f' open PRs · {len(prs)} '
+    header, items = compose(prs, width=TABLE_WIDTH)
+    stdin = '\0'.join(f'{index}\t' + '\n'.join(to_lines(item, color=True)) for index, item in enumerate(items))
     result = subprocess.run(
         [
             'fzf',
             '--ansi',
+            '--read0',
+            # Paint no background of its own. fzf fills the list area with its
+            # `bg` and leaves the padding to whatever is behind, so the padded
+            # frame came out a different colour from the rows inside it. `-1` is
+            # terminal default for both, which is the popup's own background.
+            '--color=bg:-1,gutter:-1,preview-bg:-1',
             '--delimiter=\t',
             '--with-nth=2',
             '--no-sort',
             '--reverse',
-            '--border=rounded',
-            f'--border-label={label}',
-            f'--header={LEGEND}',
-            '--prompt=pr ❯ ',
-            '--pointer=▸',
+            '--gap=2',
+            '--border=none',
+            '--header-border=bottom',
+            # Setting any section border makes fzf draw one round the list and
+            # the input too, which is the rule down the left edge. Only the two
+            # horizontal ones above and below are wanted.
+            '--list-border=none',
+            '--input-border=none',
+            '--no-scrollbar',
+            # No search line. An open backlog is a handful of rows — if it ever
+            # got long enough to need filtering, the backlog is the problem.
+            '--no-input',
+            f'--padding=1,{SIDE_PAD}',
+            f'--header={to_lines([header], color=True)[0]}',
+            # Both blanked. fzf reserves a column at the left for the pointer
+            # and, once items are multi-line, draws `╻┃╹` down the side of each
+            # one — a white rule against the rows that reads as a border the
+            # table does not have. The highlight already says which row is
+            # current.
+            # Empty, not a space. The gutter fzf paints down the left is as wide
+            # as the pointer, and a space still reserves the column — which is the
+            # bar. It is coloured `bg+` by default, so it vanishes on whichever
+            # row is current and reads as a border everywhere else.
+            '--pointer=',
+            '--marker=',
+            '--marker-multi-line=',
         ],
         input=stdin,
         capture_output=True,
@@ -317,6 +537,90 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
     if not chosen:
         return None
     return prs[int(chosen.split('\t')[0])]
+
+
+def describe(pr: PullRequest) -> Text:
+    """The PR as a page: what it is, then the description its author wrote.
+
+    Shown under the actions rather than beside them. The choices are a short
+    fixed list and the description is long, so the list stays put at the top
+    while the pane beneath it changes size with whatever it is carrying.
+    """
+    page = Text()
+    page.append(f'{pr.title}\n', style='bold')
+    page.append(f'{pr.slug}  #{pr.number}', style='dim')
+    page.append('   ')
+    page.append(pr.branch, style='blue')
+    page.append('  into  ', style='dim')
+    page.append(f'{pr.base}\n\n', style='blue')
+    if pr.body.strip():
+        page.append(pr.body.rstrip())
+    else:
+        page.append('No description.', style='dim')
+    return page
+
+
+def action_line(action: Action, pr: PullRequest, width: int) -> Text:
+    """One menu row. Unsupported ones stay, dimmed, and say why.
+
+    Hiding an action a forge cannot do would make the menu a different shape per
+    provider, so you would learn where `merge` sits and then find it somewhere
+    else. Dimmed, the list is the same list everywhere.
+    """
+    live = action.supported(pr.provider)
+    line = Text()
+    line.append(f'{action.icon}  ', style='' if live else 'dim')
+    line.append(action.label.ljust(18), style='bold' if live else 'dim')
+    line.append(action.detail if live else f'not available on {pr.provider}', style='dim')
+    return line
+
+
+def choose_action(pr: PullRequest) -> Action | None:
+    """The action menu for one PR, with its description in the pane above."""
+    page = to_lines([describe(pr)], color=True)
+    with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False) as handle:
+        handle.write('\n'.join(page))
+        preview = handle.name
+
+    rows = [f'{index}\t{line}' for index, line in enumerate(to_lines([action_line(a, pr, TABLE_WIDTH) for a in ACTIONS], color=True))]
+    try:
+        result = subprocess.run(
+            [
+                'fzf',
+                '--ansi',
+                '--delimiter=\t',
+                '--with-nth=2',
+                '--no-sort',
+                '--reverse',
+                '--gap',
+                '--border=none',
+                '--list-border=none',
+                '--input-border=none',
+                '--no-scrollbar',
+                # No search line here. Five fixed choices are an arrow-key list,
+                # not something you filter, and a prompt invites typing that then
+                # does nothing useful.
+                '--no-input',
+                '--color=bg:-1,gutter:-1,preview-bg:-1',
+                '--pointer=',
+                '--marker=',
+                f'--padding=1,{SIDE_PAD}',
+                '--preview',
+                f'cat {preview}',
+                '--preview-window=down,65%,wrap,border-top',
+            ],
+            input='\n'.join(rows),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        Path(preview).unlink(missing_ok=True)
+
+    chosen = result.stdout.strip()
+    if not chosen:
+        return None
+    return ACTIONS[int(chosen.split('\t')[0])]
 
 
 def open_review(pr: PullRequest) -> int:
@@ -363,6 +667,80 @@ def open_review(pr: PullRequest) -> int:
     return 0
 
 
+def in_repo(pr: PullRequest) -> Path | None:
+    """bbkt resolves the repo from the working directory, so it needs one."""
+    return Path(pr.path) if pr.path and Path(pr.path).is_dir() else None
+
+
+def open_browser(pr: PullRequest) -> int:
+    if pr.provider == 'github':
+        return run(['gh', 'pr', 'view', str(pr.number), '--repo', pr.slug, '--web'])
+    checkout = in_repo(pr)
+    if not checkout:
+        return fail(f'{pr.repo} is not checked out here, and bbkt resolves the repo from the directory')
+    return run(['bbkt', 'pr', 'open', str(pr.number)], cwd=checkout)
+
+
+def copy_branch(pr: PullRequest) -> int:
+    """The branch, not the number: a number is a per-repo counter and collides
+    across the registry, and both forges take a branch anywhere they take one."""
+    clipboard = next((tool for tool in ('wl-copy', 'pbcopy', 'xclip') if shutil.which(tool)), None)
+    if not clipboard:
+        return fail('no clipboard tool found — install wl-clipboard, or xclip')
+    argv = [clipboard, '-selection', 'clipboard'] if clipboard == 'xclip' else [clipboard]
+    subprocess.run(argv, input=pr.branch, text=True, check=True)
+    print(f'copied  {pr.branch}')
+    return 0
+
+
+def comment(pr: PullRequest) -> int:
+    """GitHub only. bbkt has no comment verb at all — see `bbkt pr --help`."""
+    return run(['gh', 'pr', 'comment', str(pr.number), '--repo', pr.slug])
+
+
+def merge(pr: PullRequest, *, interactive: bool) -> int:
+    """Merging is the one action here that cannot be taken back, so it asks.
+
+    Being last in the menu is most of the guard — you have to scroll past four
+    other things to land on it. The prompt is the rest, and it names the PR so a
+    mistimed keypress is visibly wrong before it is confirmed.
+    """
+    if interactive:
+        answer = input(f'merge {pr.slug} #{pr.number} — {pr.title}?  [y/N] ')
+        if answer.strip().lower() not in {'y', 'yes'}:
+            print('left alone')
+            return 0
+    if pr.provider == 'github':
+        return run(['gh', 'pr', 'merge', str(pr.number), '--repo', pr.slug])
+    checkout = in_repo(pr)
+    if not checkout:
+        return fail(f'{pr.repo} is not checked out here, and bbkt resolves the repo from the directory')
+    return run(['bbkt', 'pr', 'merge', str(pr.number)], cwd=checkout)
+
+
+def run(argv: list[str], cwd: Path | None = None) -> int:
+    """Hand the terminal over. These are interactive — gh opens an editor, both
+    forges prompt — so nothing here captures their output."""
+    try:
+        return subprocess.run(argv, cwd=cwd, check=False).returncode
+    except FileNotFoundError:
+        return fail(f'{argv[0]} is not installed')
+
+
+def perform(action: Action, pr: PullRequest, *, interactive: bool) -> int:
+    if not action.supported(pr.provider):
+        return fail(f'{action.label} is not available on {pr.provider}')
+    if action.name == 'diff':
+        return open_review(pr)
+    if action.name == 'browser':
+        return open_browser(pr)
+    if action.name == 'branch':
+        return copy_branch(pr)
+    if action.name == 'comment':
+        return comment(pr)
+    return merge(pr, interactive=interactive)
+
+
 def default_branch(checkout: Path) -> str:
     head = git_output(checkout, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD')
     return head.removeprefix('origin/')
@@ -394,13 +772,13 @@ def main() -> int:
     subcommands.add_parser('list', help='print every open PR as a table instead of picking one')
     arguments = parser.parse_args()
 
-    if not shutil.which('pr-list'):
-        return fail('pr-list is required')
+    if not shutil.which('pull-requests'):
+        return fail('pull-requests is required')
 
     try:
         prs = fetch()
     except subprocess.CalledProcessError as error:
-        return fail(f'pr-list failed: {error.stderr.strip() or error}')
+        return fail(f'pull-requests failed: {error.stderr.strip() or error}')
 
     if arguments.command == 'list':
         if not prs:
@@ -423,7 +801,10 @@ def main() -> int:
     chosen = pick(prs)
     if chosen is None:
         return 0
-    return open_review(chosen)
+    action = choose_action(chosen)
+    if action is None:
+        return 0
+    return perform(action, chosen, interactive=sys.stdin.isatty())
 
 
 if __name__ == '__main__':
