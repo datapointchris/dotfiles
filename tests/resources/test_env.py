@@ -532,7 +532,9 @@ def test_a_value_naming_a_file_that_is_there_reports_nothing(tmp_path: Path, env
     assert changes(tmp_path, flags=declared) == ()
 
 
-def test_an_unset_value_that_names_a_file_is_missing_rather_than_stale(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_unset_value_that_names_a_file_is_missing_rather_than_stale(
+    tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """One finding, not two. Nothing answered, so there is no path to test and the
     remedy is to answer — the file question does not arise yet."""
     monkeypatch.delenv('HOSTS_JSON', raising=False)
@@ -622,9 +624,15 @@ def unshelled(tmp_path: Path, monkeypatch) -> Path:
     than merely left alone: the suite runs from an interactive shell that exports
     the second, so without this every test below could pass on the machine's own
     answer through a rung that no longer exists.
+
+    Every name in the register rather than the one this file names, so a path
+    added to `SHARED_PATHS` cannot leave a test resolving against the machine it
+    runs on. The scratch config home covers the file rung the same way.
     """
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg'))
-    monkeypatch.delenv('DOTFILES_REPOS_REGISTRY', raising=False)
+    for name, shared in settings.SHARED_PATHS.items():
+        monkeypatch.delenv(shared.env_var, raising=False)
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.delenv('REPOS_JSON', raising=False)
     return tmp_path / 'xdg'
 
@@ -667,6 +675,22 @@ def test_a_value_the_config_answers_is_exported_so_a_shell_consumer_finds_it(tmp
     envfile.write(live.env_file, live.machine)
 
     assert envfile.read_generated(live.env_file)['REPOS_REGISTRY'] == str(registry)
+
+
+def test_an_env_missing_the_export_is_drift_apply_can_repair(tmp_path: Path, unshelled: Path) -> None:
+    """Resolving the name satisfies this resource and leaves every consumer reading
+    the environment with nothing, so the row has to fire on the file. Without it a
+    machine reports converged while ~/.env never gains the line."""
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+    name_registry(unshelled, registry)
+
+    found = [change for change in changes(tmp_path, flags=REGISTRY_VALUE) if change.item == 'REPOS_REGISTRY']
+
+    assert found[0].verdict is Verdict.STALE
+    assert found[0].repair is Repair.AUTOMATIC
 
 
 def test_a_config_answer_still_defers_to_one_set_by_hand(tmp_path: Path, unshelled: Path) -> None:

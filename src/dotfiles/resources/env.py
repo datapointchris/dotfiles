@@ -158,6 +158,7 @@ class EnvResource:
         changes.extend(_flags(machine, observed))
         changes.extend(_config(observed))
         changes.extend(_named_files(machine, observed))
+        changes.extend(_unexported(machine, observed))
         changes.extend(_requirements(machine, observed))
         changes.extend(_orphaned(machine, observed))
         changes.extend(_undeclared(machine, observed))
@@ -326,6 +327,30 @@ def _config(observed: Observed) -> list[Change]:
             detail=f'cannot be read, so it answers nothing — {observed.config_problem}',
             advice='fix the TOML, or delete the file to fall back to ~/.env alone',
         )
+    ]
+
+
+def _unexported(machine, observed: Observed) -> list[Change]:
+    """A required value the config answers that the generated half does not carry.
+
+    The mirror of `_orphaned`, and the direction that actually lands the export.
+    Resolving the name satisfies this resource and leaves every consumer reading
+    the environment with nothing, so the row has to fire on the file rather than
+    on the resolution — otherwise `check` reports a converged machine whose
+    `~/.env` never gained the line.
+    """
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            entry.name,
+            Verdict.STALE,
+            repair=Repair.AUTOMATIC,
+            detail=f'{found.source} answers it and the generated section does not export it',
+            observed=observed.generated.get(entry.name, ''),
+        )
+        for entry in machine.required_values
+        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.value
     ]
 
 
