@@ -21,9 +21,7 @@ is no desired state here to converge on.
 from __future__ import annotations
 
 import datetime as dt
-import getpass
 import platform
-import socket
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -126,9 +124,7 @@ def check(
         written = network.render(
             machine,
             measurement,
-            host=socket.gethostname(),
             when=dt.datetime.now().astimezone().strftime('%a %d %b %Y %I:%M:%S %p %Z'),
-            user=getpass.getuser(),
             system=f'{platform.system()} {platform.release()}',
         )
         output.parent.mkdir(parents=True, exist_ok=True)

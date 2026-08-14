@@ -476,13 +476,20 @@ def _row(verdict: ProbeResult) -> str:
     return f'{head}{verdict.probe.reach:<9}| {verdict.landed}'
 
 
-def render(machine: machines.Machine, measurement: Measurement, *, host: str, when: str, user: str, system: str) -> str:
+def render(machine: machines.Machine, measurement: Measurement, *, when: str, system: str) -> str:
     """The measurement as the committed results file.
 
     The column layout is load-bearing rather than decorative: `tests/e2e/harness.py`
     parses this file to decide which hosts the firewalled containers blackhole, and
     it splits on the pipes. The environment facts are arguments rather than read
     here so the render is pure and one call can be diffed against another.
+
+    **The header names the manifest and the kernel, and neither the hostname nor
+    the account.** This file is committed, and the one machine whose measurement it
+    carries is behind an employer's firewall — where `socket.gethostname()` is an
+    asset tag and `getpass.getuser()` is a work account. Neither is needed to read
+    a row: what a reader has to know to interpret a block is which manifest was
+    resolved and which OS asked, and the manifest name already says which box.
 
     REACH is a fifth column because the four before it cannot carry it. Whoever
     replays a row has to know whether it was a clone or a download, and a replay
@@ -511,9 +518,7 @@ def render(machine: machines.Machine, measurement: Measurement, *, host: str, wh
             '=' * 38,
             RESULTS_HEADER,
             '=' * 38,
-            f'Host: {host}',
             f'Date: {when}',
-            f'User: {user}',
             f'Manifest: {machine.name}',
             f'OS: {system}',
             '',
