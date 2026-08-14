@@ -25,6 +25,44 @@ The deselection lives in `tests/conftest.py` rather than as `-m 'not e2e'` in
 `addopts`, because forge owns `addopts` — a deselection written there is erased
 by the next `sync-pyproject` run.
 
+## `tests/matrix/` is where a property visible through a verb belongs
+
+A third axis, and the one that decides where a new test goes. A tier says what a
+test may touch and a level says how much machine has to exist; `tests/matrix/`
+says *which door it comes in by*. It builds one synthetic machine out of files
+and drives the real CLI against it in process, with nothing in `src/dotfiles/`
+stubbed — `tests/matrix/harness.py` is the account of how, and why the two
+import-time seams need rebinding rather than an environment variable.
+
+**Two unrelated things are called matrix.** This is one. `task test:matrix` is
+the other: every container level over every environment, which is `tests/e2e/`
+and costs an hour. Neither name is going to win, so read the path.
+
+The rule for a new test, and the one that was missing while `tests/cli/test_config.py`
+and eight symlink cases sat unretired behind tables that already covered them:
+
+**If the property is visible through a CLI verb, it belongs in `tests/matrix/` as
+a row in a table.** A test lands in `tests/resources/` only when it needs one of
+four things the front door cannot show:
+
+- a real subprocess argv — which command a probe actually ran
+- an internal field no verb prints — `consulted_network`, `Outcome.status`,
+  `Change.observed`
+- the real repo declaration, rather than a synthetic one
+- a patched module constant, such as `auth.evidence.PROBE_SECONDS`
+
+Anything else asserted at both altitudes is the lower one going stale. The matrix
+reaches per-resource `pending`, `attention`, `findings` and `examined` through
+`harness.resource`, so it fails on a wrong verdict for a named item rather than
+only on an exit code — which is what makes the granular twin redundant rather
+than complementary.
+
+**Adding a state means adding a row, never a function.** `DESTINATIONS` in
+`tests/matrix/test_symlinks.py` is the model: eight destination states, each
+carrying the plan verdict, the check verdict, whether `apply` wrote, and a
+predicate over the filesystem afterwards. A ninth destination is one row and it
+is asserted by every test in the file.
+
 ## The shell is still the subject
 
 `tests/shell/` drives real `bash`, real `zsh` and a real `tmux` from pytest. The
