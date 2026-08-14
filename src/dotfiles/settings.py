@@ -119,6 +119,18 @@ class Resolution:
     separates them — standards/data.md § "Report which layer supplied the value".
     """
 
+    @property
+    def expanded(self) -> str:
+        """The path a consumer can open, with `~` resolved.
+
+        `repos_registry = "~/dev/repos.json"` is an ordinary thing to write in the
+        config, and every consumer of this value needs the real path. A shell is
+        the one that cannot do it for itself: `"${NAME:-~/x}"` leaves the tilde
+        literal inside the quotes, so an unexpanded export reaches `~/homelab` as
+        a path that does not exist.
+        """
+        return os.path.expanduser(self.value)
+
 
 def resolve(declared: str, config: Config) -> Resolution | None:
     """The value for a declared name, or None when nothing names it.
@@ -269,7 +281,7 @@ def describe(config: Config, env_file: Path) -> tuple[Setting, ...]:
     described = []
     for name in SHARED_PATHS:
         found = resolve(name, config)
-        value = os.path.expanduser(found.value) if found else ''
+        value = found.expanded if found else ''
         described.append(
             Setting(
                 name=name,

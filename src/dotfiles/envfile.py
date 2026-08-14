@@ -118,7 +118,7 @@ def render(machine: Machine) -> str:
                 lines += ['']
                 if entry.description:
                     lines += [f'# {entry.description}']
-                lines += [assignment(entry.name, found.value)]
+                lines += [assignment(entry.name, found.expanded)]
 
         if unanswered:
             lines += [

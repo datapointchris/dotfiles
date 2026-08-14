@@ -350,7 +350,7 @@ def _unexported(machine, observed: Observed) -> list[Change]:
             observed=observed.generated.get(entry.name, ''),
         )
         for entry in machine.required_values
-        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.value
+        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.expanded
     ]
 
 

@@ -693,6 +693,22 @@ def test_an_env_missing_the_export_is_drift_apply_can_repair(tmp_path: Path, uns
     assert found[0].repair is Repair.AUTOMATIC
 
 
+def test_an_exported_path_is_expanded_so_a_shell_can_open_it(tmp_path: Path, unshelled: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`export NAME="${NAME:-~/x}"` leaves the tilde literal inside the quotes, so
+    an unexpanded value reaches a consumer as a path that does not exist."""
+    monkeypatch.setenv('HOME', str(tmp_path))
+    registry = tmp_path / 'repos.json'
+    registry.write_text('{"repos": []}\n')
+    config = unshelled / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('repos_registry = "~/repos.json"\n')
+    live = session(tmp_path, MANIFEST, REGISTRY_VALUE)
+    envfile.write(live.env_file, live.machine)
+
+    assert envfile.read_generated(live.env_file)['REPOS_REGISTRY'] == str(registry)
+    assert '~' not in envfile.read_generated(live.env_file)['REPOS_REGISTRY']
+
+
 def test_a_config_answer_still_defers_to_one_set_by_hand(tmp_path: Path, unshelled: Path) -> None:
     """Written as `${NAME:-...}` like every other generated line, so a machine that
     answered below the marker keeps its answer."""
