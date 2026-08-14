@@ -90,7 +90,7 @@ status bar colour the same way it owns `pane-border-format`.
 | `prefix <` / `prefix >` | Move the focused session left / right |
 | `prefix {` / `prefix }` | Swap the focused window left / right |
 | `M-{` / `M-}` | Swap the focused pane back / forward |
-| `M-a` / `M-e` | Move the focused session to the front / end — Linux only |
+| `prefix A` / `prefix E` | Move the focused session to the front / end |
 | `M-o` | Last session |
 | `M-t` | New session |
 | `prefix K` | Kill the session, after confirming |
@@ -132,11 +132,12 @@ which leaves Alt. Arrows are the exception and carry every modifier bit in their
 encoding, which is how pane resize reaches `C-S-arrow`. `M-[` is avoided because Alt+`[` emits the
 CSI prefix, leaving tmux to disambiguate it on the `escape-time` timer.
 
-**AeroSpace takes two of these before tmux sees them, and only on macOS.** `alt-a` and `alt-e` are
-workspaces A and E, so front and end stay Linux-only. It used to be four — `alt-h` and `alt-l` are
-window focus, and moving session reorder onto the prefix retired that pair of collisions. Watch
-`aerospace.toml` for the rest: `alt-comma` and `alt-period` are commented out there, and
-uncommenting either silently takes the session keys.
+**AeroSpace no longer takes any of these.** It used to take four: `alt-h` and `alt-l` are window
+focus, `alt-a` and `alt-e` are workspaces A and E. Moving every reorder key onto the prefix table
+retired all four at once, because AeroSpace can only claim a root chord. Front and end kept their
+letters and changed only their modifier. Watch `aerospace.toml` for what is left: `alt-comma` and
+`alt-period` are commented out there, and uncommenting either silently takes the session switching
+keys, which are still root chords.
 
 `M-{` and `M-}` are clear of AeroSpace, which binds no braces. They are also close to unreachable by
 hand on the Corne — `{` is the `S`+`F` combo and `}` is `J`+`L`, so each brace is built from its own
