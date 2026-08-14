@@ -28,6 +28,10 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 PULL_REQUESTS = REPO / 'apps' / 'common' / 'pull-requests'
 
+# The stub gh and bbkt behind `with-demo`, first on PATH. Both forges answer from
+# here, so one listing covers both spellings of a row.
+DEMO = Path(__file__).resolve().parent / 'fixtures' / 'demo'
+
 # Read at import, while HOME is still the real one. See the `run` fixture.
 UV_CACHE = os.environ.get('UV_CACHE_DIR') or str(Path.home() / '.cache' / 'uv')
 
@@ -258,3 +262,43 @@ def test_an_entrys_own_owner_decides_it_rather_than_the_file_level_one(run) -> N
     assert result.returncode == 0, result.stderr
     listed = json.loads(result.stdout)
     assert [pr['slug'] for pr in listed] == ['someone-else/thing']
+
+
+def help_example(screen: str) -> dict[str, Any]:
+    """The document out of the OUTPUT block, parsed as the JSON it claims to be.
+
+    Parsing rather than pattern-matching is half the assertion — a screen showing
+    a field reference in something that is not JSON is showing a shape no
+    consumer will meet.
+    """
+    start = screen.index('\n  [\n')
+    end = screen.index('\n  ]\n', start) + len('\n  ]')
+    (row,) = json.loads(screen[start:end])
+    return row
+
+
+def test_the_help_screens_example_carries_every_field_a_row_does() -> None:
+    """The example object in `--help` is the field reference, and measuring its
+    keys against a real row is the only thing that keeps it one. A field added to
+    the mapping and not to the example is simply unsaid — no consumer breaks, no
+    test fails, and the screen reads as complete while it is not."""
+    shown = subprocess.run(
+        [str(PULL_REQUESTS), '--help'],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'NO_COLOR': '1', 'UV_CACHE_DIR': UV_CACHE},
+    )
+    assert shown.returncode == 0, shown.stderr
+
+    listed = subprocess.run(
+        [str(PULL_REQUESTS)],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'PATH': f'{DEMO}:{os.environ["PATH"]}', 'UV_CACHE_DIR': UV_CACHE},
+    )
+    assert listed.returncode == 0, listed.stderr
+    rows = json.loads(listed.stdout)
+
+    # Order too, not just membership. The example reads as the emitted document,
+    # so a field arriving in a different place makes it a drawing of one.
+    assert [list(help_example(shown.stdout))] * len(rows) == [list(row) for row in rows]
