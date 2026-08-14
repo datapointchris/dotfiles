@@ -32,7 +32,9 @@ vim.opt.autoindent = true
 -- Do smart autoindenting when starting a new line
 vim.opt.smartindent = true
 
--- Enable smart case search
+-- Enable smart case search. smartcase only applies when ignorecase is on, so
+-- the pair is the setting; \C in a pattern forces case-sensitivity back.
+vim.opt.ignorecase = true
 vim.opt.smartcase = true
 -- Highlight all matches of the previous search pattern
 vim.opt.hlsearch = true
