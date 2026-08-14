@@ -257,9 +257,16 @@ def test_go_sets_gonosumdb_for_the_namespace_that_stalls_without_it(home, bundle
     runs, _ = effected(fetches=Fetches({url: go_tarball()}))
     answers(monkeypatch, RELEASE)
 
+    # Nothing to resolve, so only a caller that passes the binary it just unpacked
+    # writes anything. Both halves are the guard: asserting the arguments alone
+    # passed on a developer Mac carrying Go at GO_ROOT and failed on
+    # ubuntu-latest carrying none, and asserting the path alone would pass again
+    # on that same Mac because the resolver would answer with it.
+    monkeypatch.setattr(toolchain, 'go_command', lambda: None)
+
     toolchain.install_go(LINUX, Root(), offline=False)
 
-    assert runs.ran('env', '-w', f'GONOSUMDB={toolchain.GONOSUMDB}')
+    assert runs.ran(str(toolchain.GO_ROOT / 'bin' / 'go'), 'env', '-w', f'GONOSUMDB={toolchain.GONOSUMDB}')
 
 
 def test_go_without_root_reports_the_refusal_and_writes_nothing(home, bundle, effected, monkeypatch) -> None:

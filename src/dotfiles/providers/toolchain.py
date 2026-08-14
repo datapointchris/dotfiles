@@ -236,7 +236,7 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
         return Result(False, f'{GO_ROOT / "bin" / "go"} does not run after installing {release}', kind=Kind.VERIFY_FAILED)
 
     put_on_path(GO_ROOT / 'bin')
-    set_go_env()
+    set_go_env(GO_ROOT / 'bin' / 'go')
     return Result(True, installed.transcript.strip(), kind=Kind.APPLIED)
 
 
@@ -318,11 +318,23 @@ def go_env_setting(go: str | Path, name: str) -> str | None:
     return asked.stdout.strip() if asked.ok else None
 
 
-def set_go_env() -> Result:
+def set_go_env(go: str | Path | None = None) -> Result:
     """Put the declared module settings into the Go env file.
 
     Written to that file rather than to shell config because tool installs run
     non-interactively and never source one.
+
+    **Takes the binary where the caller has one.** `install_go` has just unpacked
+    and verified `GO_ROOT/bin/go`, so resolving a second time there asks a
+    question already answered — and answers it differently on a machine with no
+    Go at `GO_ROOT`, which is every CI runner. Resolving unconditionally made this
+    a no-op under the installer's own test: `go_command` fell through to a PATH
+    with no `go` on it, returned None, and the write never happened. Green on a
+    developer Mac that has Go, red on ubuntu-latest that does not.
+
+    Resolves only for the caller that genuinely has no binary in hand — the
+    toolchains resource repairing drift, on a machine where `observe` has just
+    confirmed the runtime is where the registry says.
 
     **Public, and no longer reached only from `install_go`.** As a private step
     inside the installer it ran exactly when a machine's Go was replaced, which on
@@ -332,10 +344,10 @@ def set_go_env() -> Result:
     received this setting from this code. The one box carrying it had a file dated
     2026-08-08, written by the bash predecessor a day before this module existed.
     """
-    go = go_command()
-    if not go:
+    binary = str(go) if go else go_command()
+    if not binary:
         return Result(False, f'there is no go at {GO_ROOT / "bin" / "go"} to configure', kind=Kind.PREREQUISITE_MISSING)
-    written = effects.run([go, 'env', '-w', f'GONOSUMDB={GONOSUMDB}'], output=Output.QUIET, timeout=GO_ENV_SECONDS)
+    written = effects.run([binary, 'env', '-w', f'GONOSUMDB={GONOSUMDB}'], output=Output.QUIET, timeout=GO_ENV_SECONDS)
     if not written.ok:
         return Result(False, f'`go env -w GONOSUMDB` exited {written.returncode}: {written.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     return Result(True, f'GONOSUMDB={GONOSUMDB}', kind=Kind.APPLIED)
