@@ -35,6 +35,7 @@ import shutil
 from pathlib import Path
 
 from dotfiles import effects
+from dotfiles import paths
 from dotfiles.coordinates import PackageManager
 
 PROBE_TIMEOUT_SECONDS = 5.0
@@ -193,6 +194,140 @@ def removal_command(package: str, manager: PackageManager) -> str:
         PackageManager.BREW: f'brew uninstall {package}',
         PackageManager.WINGET: f'winget uninstall {package}',
     }[manager]
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Removal:
+    """What installed a binary, and the one command that takes it away.
+
+    `mechanism` is empty where nothing claims the file, which is a real answer
+    rather than a failed probe: a binary somebody copied into `/usr/local/bin`
+    has no manager to name and `rm` is what removes it.
+    """
+
+    mechanism: str
+    command: str
+
+    @property
+    def origin(self) -> str:
+        """How the row says where this copy came from."""
+        return f'installed by {self.mechanism}' if self.mechanism else 'not managed by any package manager'
+
+
+def language_bin_dirs(home: Path) -> tuple[tuple[Path, str], ...]:
+    """The per-language bin directories, each with the name of what fills it.
+
+    A function taking `home` rather than a module constant, for the reason
+    `gotool.gobin` records: read at import, `Path.home()` freezes the real home
+    into every test in the process.
+
+    Order matters only in that no directory here is a parent of another, so the
+    first match is the only match.
+    """
+    return (
+        (home / 'go' / 'bin', 'go'),
+        (home / '.cargo' / 'bin', 'cargo'),
+        (home / '.local' / 'share' / 'npm' / 'bin', 'npm'),
+        (home / '.local' / 'bin', 'uv'),
+    )
+
+
+def _cargo_package_providing(binary: str) -> str:
+    """The crate that installed a binary, from `cargo install --list`.
+
+    Asked rather than assumed, because a crate's name and its binary's name
+    differ more often than they match — `fd-find` ships `fd`, `ripgrep` ships
+    `rg`, `git-delta` ships `delta`. `cargo uninstall fd` fails, so guessing the
+    crate from the binary would print a command that does not work.
+
+    The listing is a crate header at column zero and its binaries indented under
+    it, so the last header seen above an indented match is the answer.
+    """
+    answered, why = _ask(('cargo', 'install', '--list'), f'which crate installed {binary}')
+    if why or not answered:
+        return ''
+    crate = ''
+    for line in answered.splitlines():
+        if not line.startswith((' ', '\t')):
+            crate = line.split()[0] if line.split() else ''
+        elif line.strip() == binary:
+            return crate
+    return ''
+
+
+def _uv_tool_providing(binary: str) -> str:
+    """The uv tool that installed a binary, from `uv tool list`.
+
+    `~/.local/bin` is the one directory here with more than one filler — uv
+    tools, release binaries and hand-placed copies all land in it — so the
+    mechanism cannot be read off the path alone. Asking uv separates them: a name
+    it claims is a uv tool, and anything else is a file.
+    """
+    answered, why = _ask(('uv', 'tool', 'list'), f'which uv tool installed {binary}')
+    if why or not answered:
+        return ''
+    tool = ''
+    for line in answered.splitlines():
+        if not line.startswith(('-', ' ', '\t')):
+            tool = line.split()[0] if line.split() else ''
+        elif line.strip().lstrip('- ') == binary:
+            return tool
+    return ''
+
+
+def _npm_package_providing(path: Path) -> str:
+    """The npm package behind a global binary, read off the symlink it is.
+
+    A filesystem read rather than a probe, because npm has no query from binary
+    to package and the answer is already on disk: every global bin entry is a
+    symlink into `lib/node_modules/<package>`, and a scoped package keeps both
+    segments. `npm ls -g` would name the package and never say which binary came
+    from it, which is the half that is actually being asked.
+    """
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return ''
+    parts = resolved.parts
+    if 'node_modules' not in parts:
+        return ''
+    after = parts[parts.index('node_modules') + 1 :]
+    if not after:
+        return ''
+    return '/'.join(after[:2]) if after[0].startswith('@') and len(after) > 1 else after[0]
+
+
+def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
+    """How to remove one copy of a binary, decided by where that copy sits.
+
+    The location is the evidence. A file in `~/go/bin` was put there by `go
+    install` whatever the OS manager says, and asking brew about it answers "no
+    package owns this" — true, and useless to someone holding the file.
+
+    `rm` is the honest answer wherever a mechanism has no uninstaller of its own,
+    and `go install` is the case: it writes a binary and keeps no receipt, so
+    there is nothing to ask and nothing to run. Naming `rm` beats naming a
+    command that does not exist, and beats saying nothing.
+    """
+    shown = paths.under_home(path, home)
+    for directory, mechanism in language_bin_dirs(home):
+        if path.parent != directory:
+            continue
+        if mechanism == 'cargo' and (crate := _cargo_package_providing(path.name)):
+            return Removal('cargo', f'cargo uninstall {crate}')
+        if mechanism == 'npm' and (package := _npm_package_providing(path)):
+            return Removal('npm', f'npm uninstall -g {package}')
+        if mechanism == 'uv' and (tool := _uv_tool_providing(path.name)):
+            return Removal('uv', f'uv tool uninstall {tool}')
+        # go writes a binary and keeps no receipt, and `~/.local/bin` holds
+        # release binaries beside the uv tools. Both leave a file and nothing to
+        # ask, so the file is what gets removed.
+        return Removal(mechanism, f'rm {shown}')
+
+    owner, _ = package_owning(path, manager)
+    if owner:
+        return Removal(str(manager), removal_command(owner, manager))
+    return Removal('', f'rm {shown}')
 
 
 QUOTED_PATH = re.compile(r"'([^']+)'|\"([^\"]+)\"")

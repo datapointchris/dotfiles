@@ -48,6 +48,7 @@ from pathlib import Path
 from typing import assert_never
 
 from dotfiles import coordinates as axes
+from dotfiles import paths
 from dotfiles import refusal
 from dotfiles.privilege import Privilege
 from dotfiles.resolve import Plan
@@ -176,6 +177,10 @@ class Observed:
     deploys by copy that is the machine most likely to be holding one.
     """
 
+    home: Path = dc.field(default_factory=Path.home)
+    """The home a row's paths are shortened against, so a target and its source
+    read as `~/...` rather than spending the width on whose machine it is."""
+
     @property
     def summary(self) -> str:
         """How many declared paths are actually in place, out of how many exist.
@@ -247,14 +252,15 @@ and there never will be — the files are identical either way, and only the wri
 differs.
 """
 
-FOREIGN_ADVICE = 'move it aside, or replace every such target with `dotfiles symlinks apply --force`'
+FOREIGN_ADVICE = 'overwrite with: dotfiles symlinks apply --force'
 """What to do about a refused target, named once so `diff` and `apply` agree.
 
 The command, not the bare flag: only `dotfiles symlinks apply` takes `--force`,
-and a reader met it from a `check` or composite `apply` run that does not. The
-safe answer leads because the flag is per-run rather than per-path — it adopts
-every foreign target in the run, which is a machine-wide decision to make on
-purpose and not the way to deploy one file.
+and a reader met it from a `check` or composite `apply` run that does not.
+
+The flag is per-run rather than per-path, so it adopts every foreign target in
+the run. That is stated in `--help`, where someone deciding to type it is
+looking, rather than here where it would displace the command.
 
 Unreachable on a `DEPLOY_BY_COPY` machine, and that is the honest word for it
 rather than a gap. The refusal it advises on exists because an unlink destroys
@@ -354,6 +360,7 @@ class SymlinksResource:
                 adoptable=frozenset(),
                 content={link.target: _compare(link) for link in links},
                 orphans=(),
+                home=session.home.resolve(),
             )
 
         ownership: dict[Path, core.Ownership] = {}
@@ -376,6 +383,7 @@ class SymlinksResource:
             adoptable=frozenset(adoptable),
             content={},
             orphans=orphans,
+            home=session.home.resolve(),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -590,13 +598,14 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
                     repair=Repair.AUTOMATIC,
                     detail=f'{link.target} exists and will be adopted',
                 )
+            deployment = f'{paths.under_home(link.target, observed.home)} -> {paths.under_home(link.source, observed.home)}'
             return Change(
                 NAME,
                 Stage.SYMLINKS,
                 link.address,
                 Verdict.STALE,
                 repair=Repair.BY_HAND,
-                detail=f'{link.target} was not created by this manager',
+                detail=f'{deployment} was not created by this manager',
                 advice=FOREIGN_ADVICE,
             )
 

@@ -29,6 +29,7 @@ from dotfiles import catalog
 from dotfiles import diagnose
 from dotfiles import evidence as ev
 from dotfiles import logging
+from dotfiles import paths
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
@@ -116,6 +117,13 @@ class Observed:
     the bundle does not carry it and never will until a newer one is built.
     """
 
+    home: Path = dc.field(default_factory=Path.home)
+    """The home whose bin directories a stray copy is located against.
+
+    Carried rather than read in `diff`, so a run measuring another home is not
+    answered about the home of the process doing the measuring.
+    """
+
     reinstall: bool = False
     """Whether this run was told to install its items again whatever their state.
 
@@ -191,6 +199,7 @@ class PackagesResource:
             latest=latest,
             consulted_network=consulted,
             from_bundle=session.offline,
+            home=session.home,
             reinstall=session.reinstall,
         )
 
@@ -251,14 +260,15 @@ class PackagesResource:
                         item.address,
                         Verdict.UNDECLARED,
                         repair=Repair.BY_HAND,
-                        detail=f'{item.executable} runs from {observed.evidence[item.address].detail}; nothing declares the other copy',
-                        advice=_undeclared_advice(stray, plan.machine.coordinates.package_manager),
+                        detail=f'found: {paths.under_home(Path(observed.evidence[item.address].detail), observed.home)}',
+                        advice=_undeclared_advice(stray, plan.machine.coordinates.package_manager, observed.home),
                         desired=item,
-                        observed=', '.join(stray),
+                        observed=', '.join(paths.under_home(Path(path), observed.home) for path in stray),
                     )
                 )
 
         for binary, module in sorted(observed.undeclared.items()):
+            where = paths.under_home(observed.home / 'go' / 'bin' / binary, observed.home)
             changes.append(
                 Change(
                     NAME,
@@ -266,9 +276,8 @@ class PackagesResource:
                     binary,
                     Verdict.UNDECLARED,
                     repair=Repair.BY_HAND,
-                    detail=f'built from {module}, which nothing this machine declares asks for',
-                    advice='declare it in install/packages.yml and this machine’s manifest, '
-                    'or remove the binary if it was installed by hand and is not wanted',
+                    detail=f'found: {where}, built from {module}',
+                    advice=f'undeclared: not in install/packages.yml -> rm {where}',
                 )
             )
         return tuple(changes)
@@ -682,17 +691,17 @@ def _unmeasurable_advice(observed: Observed) -> str:
     return 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`'
 
 
-def _undeclared_advice(strays: Iterable[str], manager: PackageManager) -> str:
+def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:
     """What to do about a copy nothing declares — asked of the machine, not guessed.
 
     The row names what owns the file rather than telling a person to go and find
     out, because `pacman -Qo` answers that in one bounded call the run can make
-    itself. "Remove the undeclared copy yourself" is an instruction rather than a
-    step.
+    itself.
 
-    The alternative stays on the row, because it is still a judgement only a
-    person can make: the two copies are often the same version, and which
-    mechanism should own a tool is a real choice rather than a defect.
+    One command per stray and nothing beside it, per `standards/help.md` § "An
+    error is the help screen for the failure in hand". Changing the declaration
+    is a repo edit rather than a repair of this machine, so it is not an
+    alternative offered here.
 
     Every path is asked about separately. Two strays for one tool are two
     different packages more often than not, and one removal command covering both
@@ -700,15 +709,8 @@ def _undeclared_advice(strays: Iterable[str], manager: PackageManager) -> str:
     """
     rows: list[str] = []
     for stray in strays:
-        owner, unavailable = diagnose.package_owning(Path(stray), manager)
-        if unavailable:
-            rows.append(f'{stray} — could not check what owns it: {unavailable}')
-        elif owner:
-            rows.append(f'{stray} belongs to the {manager} package {owner}')
-            rows.append(f'run: {diagnose.removal_command(owner, manager)}')
-        else:
-            rows.append(f'{stray} belongs to no {manager} package, so it was put there by hand')
-    rows.append('or keep that copy instead, and drop this entry from packages.yml')
+        removal = diagnose.removal_of(Path(stray), manager, home)
+        rows.append(f'duplicate: {paths.under_home(Path(stray), home)} -> {removal.origin} -> {removal.command}')
     return '\n'.join(rows)
 
 

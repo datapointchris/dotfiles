@@ -108,6 +108,87 @@ def test_every_manager_can_generate_a_removal(manager: PackageManager) -> None:
     assert 'shellcheck' in diagnose.removal_command('shellcheck', manager)
 
 
+def test_a_go_binary_is_removed_with_rm_because_go_keeps_no_receipt(tmp_path: Path) -> None:
+    """`go install` writes a binary and records nothing, so there is no uninstall
+    subcommand to name and `rm` is the only true answer."""
+    removal = diagnose.removal_of(tmp_path / 'go' / 'bin' / 'fleet', PackageManager.BREW, tmp_path)
+
+    assert removal.mechanism == 'go'
+    assert removal.command == 'rm ~/go/bin/fleet'
+
+
+def test_a_cargo_binary_names_its_crate_rather_than_itself(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`cargo uninstall fd` fails: the crate is `fd-find`. Guessing the crate from
+    the binary would print a command that does not work."""
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/cargo')
+    monkeypatch.setattr(effects, 'run', answering(0, 'fd-find v10.2.0:\n    fd\nripgrep v14.1.1:\n    rg\n'))
+
+    removal = diagnose.removal_of(tmp_path / '.cargo' / 'bin' / 'fd', PackageManager.BREW, tmp_path)
+
+    assert removal == diagnose.Removal('cargo', 'cargo uninstall fd-find')
+
+
+def test_a_cargo_binary_no_crate_claims_falls_back_to_the_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A name cargo does not list is a file somebody put there, and removing the
+    file is what works on it."""
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/cargo')
+    monkeypatch.setattr(effects, 'run', answering(0, 'ripgrep v14.1.1:\n    rg\n'))
+
+    removal = diagnose.removal_of(tmp_path / '.cargo' / 'bin' / 'stray', PackageManager.BREW, tmp_path)
+
+    assert removal.command == 'rm ~/.cargo/bin/stray'
+
+
+def test_a_scoped_npm_package_keeps_both_segments(tmp_path: Path) -> None:
+    """`@taplo/cli` ships a binary called `taplo`, so the package cannot be read
+    off the name — only off the symlink."""
+    package = tmp_path / '.local' / 'share' / 'npm' / 'lib' / 'node_modules' / '@taplo' / 'cli'
+    package.mkdir(parents=True)
+    (package / 'taplo.js').write_text('')
+    binary = tmp_path / '.local' / 'share' / 'npm' / 'bin' / 'taplo'
+    binary.parent.mkdir(parents=True)
+    binary.symlink_to(package / 'taplo.js')
+
+    removal = diagnose.removal_of(binary, PackageManager.BREW, tmp_path)
+
+    assert removal == diagnose.Removal('npm', 'npm uninstall -g @taplo/cli')
+
+
+def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`~/.local/bin` is filled by uv tools and release binaries alike, so the
+    mechanism cannot be read off the path and uv is asked."""
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/uv')
+    monkeypatch.setattr(effects, 'run', answering(0, 'safekeep v0.4.0\n- safekeep\n'))
+
+    tool = diagnose.removal_of(tmp_path / '.local' / 'bin' / 'safekeep', PackageManager.BREW, tmp_path)
+    release = diagnose.removal_of(tmp_path / '.local' / 'bin' / 'lazygit', PackageManager.BREW, tmp_path)
+
+    assert tool == diagnose.Removal('uv', 'uv tool uninstall safekeep')
+    assert release.command == 'rm ~/.local/bin/lazygit'
+
+
+def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The OS manager owns what the language directories do not, and it already
+    knows the command that removes one of its packages."""
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/brew')
+    monkeypatch.setattr(effects, 'run', answering(0, 'shellcheck\n'))
+
+    removal = diagnose.removal_of(Path('/usr/local/bin/shellcheck'), PackageManager.BREW, tmp_path)
+
+    assert removal.command == 'brew uninstall shellcheck'
+
+
+def test_a_binary_no_manager_claims_is_still_given_a_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A stray nobody owns is the case the row exists for, so it must not be the
+    one that ends without something to type."""
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/brew')
+    monkeypatch.setattr(effects, 'run', answering(1, ''))
+
+    removal = diagnose.removal_of(Path('/usr/local/bin/stray'), PackageManager.BREW, tmp_path)
+
+    assert removal.command == 'rm /usr/local/bin/stray'
+
+
 def test_the_diagnosis_puts_the_command_before_what_it_could_not_check() -> None:
     """A reader scanning for the thing to type should not have to pass a list of
     probes that failed to get to it."""
