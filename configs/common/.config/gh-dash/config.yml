@@ -3,14 +3,26 @@
 # involves:@me -author:@me, none of which can ever match for a solo fleet — three
 # empty sections and one real one.
 #
-# Order is the triage order: what can land, what is broken, what has been sitting
-# too long, what is not ready yet. "Stale" is the gauge — a pile there means code
-# went out faster than it was read.
+# Order is the triage order: what can land, what is broken, what is still being
+# checked, what has been sitting too long, what is not ready yet. "Stale" is the
+# gauge — a pile there means code went out faster than it was read.
+#
+# Pending is negated rather than `status:pending` because a PR with no checks at
+# all carries no status and would match neither. Search indexes a PR's status when
+# it is opened and often never revisits it, so `status:success` is far narrower
+# than "checks passed" and most open PRs land here — without it a green PR is
+# invisible in every section. Measure it on any busy repo:
+#   for s in '' status:success status:failure '-status:success -status:failure'; do
+#     gh api graphql -f query='query($s:String!){search(query:$s,type:ISSUE){issueCount}}' \
+#       -f s="repo:cli/cli is:open is:pr $s" --jq .data.search.issueCount
+#   done
 prSections:
     - title: Ready
       filters: is:open author:@me draft:false status:success
     - title: Failing
       filters: is:open author:@me status:failure
+    - title: Pending
+      filters: is:open author:@me draft:false -status:success -status:failure
     - title: Stale
       filters: is:open author:@me created:<@today-7d
     - title: Draft
@@ -159,4 +171,8 @@ pager:
     diff: delta
 confirmQuit: false
 showAuthorIcons: true
-smartFilteringAtLaunch: true
+# On, gh-dash prepends `repo:<origin>` to every section carrying no repo: of its
+# own, so launching inside a clone hides the rest of the fleet. The prSections
+# above are a fleetwide triage, the same view `prs` gives, and that is defeated by
+# standing in a repo. `t` re-scopes the focused section to the current repo.
+smartFilteringAtLaunch: false
