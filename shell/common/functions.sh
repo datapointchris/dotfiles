@@ -727,29 +727,35 @@ function layers() {
 
   local requested="${1:-}"
 
-  # Every layer stacked is roughly three times taller than it is wide, so it
-  # fits the width and scrolls. Constraining the height instead shrinks it to a
-  # quarter of the terminal's width and the legends stop being readable.
-  if [[ "$requested" == "all" ]]; then
-    keymap "${draw_args[@]}" 2>/dev/null | chafa --fit-width -
-    return
-  fi
-
-  local layer
-  if [[ -n "$requested" ]]; then
-    layer=$(echo "$requested" | tr '[:lower:]' '[:upper:]')
-    if ! echo "$available" | grep -qx "$layer"; then
-      echo "No layer '$requested' in $keymap_yaml" >&2
-      echo "Available: $(echo "$available" | tr '\n' ' ')all" >&2
-      return 1
+  # "all" draws every layer, which is the whole reason the width is capped.
+  if [[ "$requested" != "all" ]]; then
+    local layer
+    if [[ -n "$requested" ]]; then
+      layer=$(echo "$requested" | tr '[:lower:]' '[:upper:]')
+      if ! echo "$available" | grep -qx "$layer"; then
+        echo "No layer '$requested' in $keymap_yaml" >&2
+        echo "Available: $(echo "$available" | tr '\n' ' ')all" >&2
+        return 1
+      fi
+    else
+      layer=$(echo "$available" | gum choose --header="Select a keyboard layer")
+      [[ -z "$layer" ]] && return 0
     fi
-  else
-    layer=$(echo "$available" | gum choose --header="Select a keyboard layer")
-    [[ -z "$layer" ]] && return 0
+    draw_args+=(-s "$layer")
   fi
 
-  draw_args+=(-s "$layer")
-  keymap "${draw_args[@]}" 2>/dev/null | chafa --fit-width -
+  # --fit-width fills every column it is given, and the drawing is taller than
+  # it is wide, so a wide terminal buys height rather than detail. Capping the
+  # width caps the scrolling with it. zsh reports COLUMNS as 0 when stdout is
+  # not a TTY, which is why the floor is checked rather than just the ceiling.
+  local max_width="${LAYERS_MAX_WIDTH:-110}"
+  local width="$max_width"
+  if [[ "${COLUMNS:-0}" -gt 0 && "${COLUMNS:-0}" -lt "$max_width" ]]; then
+    width="$COLUMNS"
+  fi
+
+  keymap "${draw_args[@]}" 2>/dev/null \
+    | chafa --view-size "${width}x40" --fit-width -
 }
 
 #@yt-transcript
