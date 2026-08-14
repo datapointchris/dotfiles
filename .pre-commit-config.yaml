@@ -199,13 +199,16 @@ repos:
 # > custom:after:all - Drift checks and test suites specific to dotfiles
   - repo: local
     hooks:
-      # Test all user-facing apps can be invoked
+      # Whether the deployed machine still works. Every app it invokes is a
+      # symlink out of `apps/`, and the libraries and configs it asserts on are
+      # deployed from `shell/` and `configs/`. Nothing it reaches comes from
+      # `src/`, so a commit there cannot change its answer.
       - id: test-all-apps
         name: Test all apps can be invoked
         entry: bash tests/apps/all-apps.sh
         language: system
         pass_filenames: false
-        always_run: false
+        files: ^(apps/|shell/|configs/)
         stages: [pre-commit]
 
       # Drift check: packages.yml ↔ manifests ↔ what can install them
@@ -214,17 +217,38 @@ repos:
         entry: uv run dotfiles machines check
         language: system
         pass_filenames: false
-        always_run: true
+        files: ^(install/|src/dotfiles/)
         stages: [pre-commit]
 
       # The whole suite, which since the bats tiers ported is every test the repo
       # has that does not want Docker or a network. `addopts` deselects those.
+      #
+      # It is the whole cost of a pre-commit run here, and there is no hot spot
+      # in it — thousands of tests at tens of milliseconds each. So it is scoped
+      # to what it measures: the Python application and the declaration it reads.
+      # `apps/` is in here because tests/apps drives those scripts directly. The
+      # two `configs/` subtrees are shell code the suite reads by absolute path,
+      # from tests/cli, tests/resources and tests/shell.
       - id: pytest
         name: pytest
         entry: uv run pytest tests/
         language: system
         pass_filenames: false
-        always_run: true
+        files: '^(src/|tests/|install/|apps/|pyproject\.toml$|uv\.lock$|configs/common/\.config/zsh/|configs/common/\.local/shell/)'
+        stages: [pre-commit]
+
+      # The rest of `configs/` is program configuration, and a keymap cannot
+      # break an installer. What it can break is the shape of a tree: a directory
+      # no coordinate selects, which deploys to nobody and says nothing, or two
+      # variants claiming one target, which is last-write-wins and silent.
+      # tests/symlinks and tests/shell are the two that read the real trees, and
+      # between them they are also the whole of `shell/`'s coverage.
+      - id: pytest-trees
+        name: pytest (deployed trees)
+        entry: uv run pytest tests/symlinks tests/shell
+        language: system
+        pass_filenames: false
+        files: ^(configs/|shell/)
         stages: [pre-commit]
 
       # Strict docs build — catches broken links/anchors before CI deploy fails.
