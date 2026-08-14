@@ -1,4 +1,4 @@
-"""`prs --list` is the human rendering of `pr-list`, and the picker is the other.
+"""`prs list` is the human rendering of `pr-list`, and the picker is the other.
 
 Both were reported as reading worse than `gh pr list` for two reasons: no column
 labels, and no branch anywhere — so a row named a PR by a number that collides
@@ -100,12 +100,12 @@ def script_env(tmp_path: Path, bin_dir: Path, **extra: str) -> dict[str, str]:
 
 @pytest.fixture
 def listing(tmp_path: Path, bin_dir: Path):
-    """Run `prs --list` over a fixed set of rows, returning its stdout lines."""
+    """Run `prs list` over a fixed set of rows, returning its stdout lines."""
 
     def _listing(*rows: dict[str, Any]) -> list[str]:
         stub_pr_list(bin_dir, rows)
         result = subprocess.run(
-            [str(PRS), '--list'],
+            [str(PRS), 'list'],
             capture_output=True,
             text=True,
             env=script_env(tmp_path, bin_dir),

@@ -6,7 +6,7 @@
 """Pick one of your open PRs, from anywhere, and open its diff to read.
 
     prs              pick one and open it in a tmux window
-    prs --list       print them instead, one row each
+    prs list         print them instead, one row each
 
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pr-list`, the one place that knows how to
@@ -388,7 +388,10 @@ def main() -> int:
         description='Pick an open PR and open its diff in a tmux window.',
         epilog='With no arguments, opens the picker. Needs tmux, which is where the review window goes.',
     )
-    parser.add_argument('--list', action='store_true', help='print the PRs instead of picking one')
+    # A verb rather than a flag, because `list` is the fleet's word for the set
+    # and a flag that switches the whole act is a subcommand wearing a disguise.
+    subcommands = parser.add_subparsers(dest='command', metavar='[list]')
+    subcommands.add_parser('list', help='print every open PR as a table instead of picking one')
     arguments = parser.parse_args()
 
     if not shutil.which('pr-list'):
@@ -399,7 +402,7 @@ def main() -> int:
     except subprocess.CalledProcessError as error:
         return fail(f'pr-list failed: {error.stderr.strip() or error}')
 
-    if arguments.list:
+    if arguments.command == 'list':
         if not prs:
             print('No open PRs across the registry.')
             return 0

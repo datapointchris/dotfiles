@@ -293,7 +293,7 @@ from_bitbucket() {
       })),
       grid: [],
       total: length,
-      hints: ["prs --list"],
+      hints: ["prs list"],
     }]
   }'
 else
