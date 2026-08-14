@@ -171,9 +171,9 @@ def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
 def test_a_second_apply_over_a_converged_machine_changes_nothing(converged_machine: Machine) -> None:
     """Idempotence, against the machine the first apply just produced.
 
-    This ran `update.sh` until reconcile collapsed to one verb. `apply` is that
-    verb — it installs what is missing and upgrades what is behind — so running it
-    twice is both the update path and the assertion that the first run converged.
+    `apply` is the only verb — it installs what is missing and upgrades what is
+    behind — so running it twice is both the update path and the assertion that
+    the first run converged.
 
     **The same flags as the install, or it is not a second apply of the same
     thing.** Without `--offline` this reached the network the offline environment

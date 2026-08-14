@@ -2,18 +2,8 @@
 # ================================================================
 # Logging Library
 # ================================================================
-# Production-grade logging with visual output and parseable prefixes
-#
-# Provides dual-purpose logging that is:
-#   - Beautiful for humans (colors, icons, formatting)
-#   - Parseable for tools (logsift, Grafana, etc.)
-#
-# Features:
-#   - [LEVEL] prefixes for log aggregators
-#   - Unicode icons for visual clarity
-#   - Color-coded output
-#   - File:line error references
-#   - Debug mode support
+# Dual-purpose: coloured and iconned for a human reading the terminal, and
+# [LEVEL]-prefixed so logsift and the log aggregators can parse the same line.
 #
 # Streams
 # -------
@@ -24,15 +14,10 @@
 # bad news", and progress a human reads is a diagnostic.
 #
 # The payoff is that any script can be put in a pipeline without a flag, a
-# redirect dance, or a mode. See docs/architecture/output-streams.md.
+# redirect dance, or a mode. See standards/cli-design.md § "stdout is data,
+# stderr is everything else".
 #
-# Usage:
-#   source "$HOME/.local/shell/logging.sh"
-#   log_info "Starting installation"
-#   log_success "Package installed"
-#   log_warning "Config file not found, using defaults"
-#   log_error "Download failed" "$BASH_SOURCE" "$LINENO"
-#   DEBUG=true log_debug "Cache hit for key: $key"
+# A worked example is in docs/architecture/shell-libraries.md.
 # ================================================================
 
 # Note: Libraries that are sourced should not set shell options.

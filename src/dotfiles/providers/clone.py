@@ -70,10 +70,9 @@ def behind(item: DesiredItem, home: Path) -> bool | None:
     """Whether the checkout is behind the branch it tracks, or None if unaskable.
 
     A fetch, which is why this is measured only when a run has asked to spend the
-    network. `update.sh` pulled every plugin on every run and reported the commit
-    either side to say whether anything moved; asking first is what lets `check`
-    report a plugin as behind without moving it, and `apply` skip the ones that
-    are not.
+    network. Asking first is what lets `check` report a plugin as behind without
+    moving it, and `apply` skip the ones that are not — the alternative is pulling
+    every plugin every run and reading the commit either side to find out.
     """
     checkout = tracked(item, home)
     if checkout is None:
@@ -94,9 +93,9 @@ def pull(item: DesiredItem, home: Path) -> Result:
     `--ff-only`, because nothing commits to these: a merge here would be a
     divergence nobody meant to create, and resolving it silently is the trap
     `dotfiles update` refuses for its own checkout. Without arguments otherwise —
-    a clone made with no `-b` tracks origin's default branch, so the
-    `symbolic-ref refs/remotes/origin/HEAD` dance `update.sh` did was answering a
-    question git had already answered.
+    a clone made with no `-b` tracks origin's default branch, so resolving it with
+    `symbolic-ref refs/remotes/origin/HEAD` asks a question git has already
+    answered.
     """
     checkout = tracked(item, home)
     if checkout is None:

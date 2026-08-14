@@ -258,11 +258,10 @@ class Plan:
     def providers(self) -> frozenset[str]:
         """Which providers have anything to do, which is how a stage learns it is empty.
 
-        The replacement for `install/phases.sh`'s `owner_aware` column, and
-        strictly finer than it: the plan is already narrowed by this machine's
-        subscriptions, so a machine declaring none of the owner's Go tools skips
-        the go-tools stage outright rather than running its installer over an
-        empty list.
+        Derived rather than declared, and strictly finer than a column would be:
+        the plan is already narrowed by this machine's subscriptions, so a machine
+        declaring none of the owner's Go tools skips the go-tools stage outright
+        rather than running its installer over an empty list.
         """
         return frozenset(item.provider for item in self.items)
 
@@ -294,10 +293,10 @@ def resolve(
     hand-placed second call.
 
     `owner` is the whole of `--mine`, and it narrows the plan rather than feeding
-    it. The `owner_aware` column in `install/phases.sh` was a hand-maintained
-    restatement of a fact already in the data; a provider whose entries all belong
-    to someone else resolves to zero items and is skipped because it is empty, not
-    because a column said so.
+    it. A declared owner-aware flag would be a hand-maintained restatement of a
+    fact already in the data; a provider whose entries all belong to someone else
+    resolves to zero items and is skipped because it is empty, not because a
+    column said so.
 
     `packages` is `--package`, and it narrows the same way. None is every entry;
     an empty set would be a plan with nothing in it, which is a different

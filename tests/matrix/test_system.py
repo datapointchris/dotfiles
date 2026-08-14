@@ -498,7 +498,7 @@ def pending_package(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def pending_manager_upgrade(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -> Path:
     """The package is installed and the manager is behind, so the only pending row
-    is the whole-manager upgrade `update.sh` used to run unconditionally."""
+    is the whole-manager upgrade."""
     sandbox.declare(packages=CURL, manifest=LINUX)
     sandbox.shadow('dpkg-query', '#!/bin/sh\nprintf "curl\\n"\n')
     sandbox.shadow('apt', '#!/bin/sh\n[ "$1" = "--version" ] && exit 0\nprintf "linux-image/noble 6.8 amd64 [upgradable]\\n"\n')

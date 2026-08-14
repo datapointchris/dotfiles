@@ -19,7 +19,8 @@ macos_taps:
 # ================================================================
 # Installed via OS package managers: apt (Ubuntu), pacman (Arch), brew (macOS)
 # Omit a platform if the tool is installed via other methods
-# See notes at bottom for exclusions (bat, eza, fd, neovim, etc.)
+# A tool absent here is installed by the section it does appear in:
+#   packages list --section=<x>
 
 system_packages:
   # Tier convention (one list, no parallel core/workstation lists to drift):
@@ -1303,18 +1304,11 @@ winget_packages:
 # ================================================================
 # TMUX PLUGINS
 # ================================================================
-# Installed via TPM (Tmux Plugin Manager)
-# Universal across all platforms
-# Plugins are declared in configs/common/.config/tmux/tmux.conf
-# TPM auto-installs plugins on tmux start (see tmux.conf lines 325-327)
+# Installed via TPM (Tmux Plugin Manager). Universal across all platforms.
 #
-# Current plugins:
-#   - tmux-plugins/tpm (plugin manager)
-#   - tmux-plugins/tmux-cpu (CPU/RAM status)
-#   - tmux-plugins/tmux-sidebar (file tree sidebar)
-#   - tmux-plugins/tmux-yank (clipboard integration)
-#   - tmux-plugins/tmux-resurrect (session persistence - manual save/restore)
-#   - tmux-plugins/tmux-continuum (auto-save/restore for resurrect)
+# Only tpm is declared here — it is the one thing that has to exist before tmux
+# starts. Every other plugin is declared in tmux.conf and cloned by tpm on start:
+#   rg '@plugin' configs/common/.config/tmux/tmux.conf
 
 tmux_plugins:
   tpm:

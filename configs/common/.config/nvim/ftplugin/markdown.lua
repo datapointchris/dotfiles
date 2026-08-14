@@ -21,9 +21,6 @@ if require('zk.util').notebook_root(vim.fn.expand('%:p')) ~= nil then
 
   -- Open notes linking to the current buffer.
   map('n', '<leader>zb', '<Cmd>ZkBacklinks<CR>', opts)
-  -- Alternative for backlinks using pure LSP and showing the source context.
-  --map('n', '<leader>zb', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
-  -- Open notes linked by the current buffer.
   map('n', '<leader>zl', '<Cmd>ZkLinks<CR>', opts)
 
   -- Open the code actions for a visual selection (range is taken from the

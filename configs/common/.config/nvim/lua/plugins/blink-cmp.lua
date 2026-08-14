@@ -105,10 +105,6 @@ return {
         },
       },
 
-      -- fuzzy = {
-      --   -- Using default fuzzy settings
-      -- },
-
       sources = {
         default = default_sources,
 

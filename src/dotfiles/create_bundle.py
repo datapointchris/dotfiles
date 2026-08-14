@@ -951,11 +951,9 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_versi
     in with bundle_install_script: true, and their URL is read from the
     declaration.
 
-    Neither is asked of a bash script over a `name|version|url` pipe any more.
-    That pipe was the last thing `install/common/language-managers/uv.sh` existed
-    for once the install itself became `providers/toolchain.py`, and it was a
-    second place for the bundler and the installer to disagree about which file to
-    stage.
+    Neither is asked of an external script over a `name|version|url` pipe. Such a
+    pipe is a second place for the bundler and the installer to disagree about
+    which file to stage.
 
     These are never cached: every one is served from an unversioned URL, so a
     URL-keyed hit would pin whatever was current the first time. Which is also why

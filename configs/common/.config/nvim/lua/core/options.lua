@@ -100,6 +100,4 @@ vim.o.timeoutlen = 300
 -- Set the timeout length for key code sequences (in milliseconds)
 vim.o.ttimeoutlen = 10
 
--- vim.lsp.set_log_level("debug")
-
 vim.o.sessionoptions = 'blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions'

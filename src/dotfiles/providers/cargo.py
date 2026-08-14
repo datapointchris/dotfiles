@@ -145,7 +145,7 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
     Invoked as a cargo subcommand rather than as the `cargo-binstall` binary
     directly, which it also supports: cargo is a hard dependency of this provider
     either way — the Rust toolchain converges at an earlier stage — and the
-    subcommand spelling is what `update.sh` and every crates.io instruction use.
+    subcommand spelling is what every crates.io instruction uses.
     """
     completed = effects.run(['cargo', 'binstall', '-y', entry.name], output=Output.QUIET)
     if completed.ok:

@@ -11,9 +11,7 @@ return {
           right = '',
         },
         section_separators = {
-          --   left = '',
           left = '',
-          --   right = '',
           right = '',
         },
         disabled_filetypes = {

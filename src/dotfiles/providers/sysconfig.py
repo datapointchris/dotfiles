@@ -1,10 +1,9 @@
 """The four system-configuration types: what each one reads, and what it writes.
 
 Every observation is unprivileged, which is the whole reason this subsystem can be
-*checked* for the first time. `install/archlinux/system-config.sh` was already
-written as check-then-act — `getent group docker`, `systemctl is-enabled`, `grep
--q autologin` — it simply had no way to show anyone its plan, and its reads were
-interleaved with its writes so running it at all meant a password.
+*checked* at all. The reads are `getent group docker`, `systemctl is-enabled`,
+`grep -q autologin` — none needs root. Interleaving them with the writes would
+mean a password just to see the plan.
 
 Nothing here says `sudo`. A privileged write takes an authorized `Privilege` and
 refuses without one, so a machine with no root still converges everything else and
