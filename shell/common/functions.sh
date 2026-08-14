@@ -720,7 +720,14 @@ function layers() {
     | gum choose --header="Select a keyboard layer")
   [[ -z "$layer" ]] && return 0
 
-  keymap draw "$keymap_yaml" -s "$layer" 2>/dev/null \
+  # Without -c this renders with keymap-drawer's defaults, which are white keys
+  # and black legends — the repo's own dark palette never reaches the terminal.
+  # The config sits beside the yaml, so it is found for any board.
+  local drawer_config="${keymap_yaml%/*}/keymap_drawer.config.yaml"
+  local draw_args=(draw "$keymap_yaml" -s "$layer")
+  [[ -f "$drawer_config" ]] && draw_args=(-c "$drawer_config" "${draw_args[@]}")
+
+  keymap "${draw_args[@]}" 2>/dev/null \
     | chafa --size "${COLUMNS:-120}x${LINES:-40}" -
 }
 
