@@ -320,6 +320,35 @@ def _atuin(session: Session) -> Credential:
     return Credential(Verdict.MISSING, 'no session file, so history sync is off', advice='log in with `atuin login`')
 
 
+def _claude(session: Session) -> Credential:
+    """The OAuth block in Claude Code's own credential file.
+
+    `claude` exposes no auth verb to ask, so the file is the only local answer.
+    It carries `mcpOAuth` beside the Claude login and a machine can hold one with
+    no other, which is why the block is what is looked for rather than the file.
+
+    Searched as bytes rather than parsed. A refresh rewrites this file, and a read
+    landing mid-write raises `JSONDecodeError` — a `ValueError`, which travels
+    straight through the `OSError` guard in `_asked` and costs every other tool
+    its measurement, for a file that is whole again a second later. This is
+    `_holds_something`'s reasoning applied to a file that happens to be JSON.
+    """
+    if not shutil.which('claude'):
+        return _uninstalled('claude')
+    if os.environ.get('ANTHROPIC_API_KEY'):
+        return Credential(Verdict.MATCHED, 'ANTHROPIC_API_KEY is set')
+    try:
+        if b'claudeAiOauth' in (session.home / '.claude' / '.credentials.json').read_bytes():
+            return Credential(Verdict.MATCHED, 'an OAuth session is stored')
+    except OSError:
+        pass
+    return Credential(
+        Verdict.MISSING,
+        'no OAuth session and no ANTHROPIC_API_KEY',
+        advice='run `claude` and complete the browser login',
+    )
+
+
 def _aws(session: Session) -> Credential:
     """Three places a credential can be, answered by stats rather than a round trip.
 
@@ -405,6 +434,7 @@ PROBES: dict[str, Probe] = {
     'meso': _keychain_cli('meso'),
     'nomad': _keychain_cli('nomad'),
     'atuin': _atuin,
+    'claude': _claude,
     'aws': _aws,
     'bbkt': _bbkt,
     'jira': _jira,

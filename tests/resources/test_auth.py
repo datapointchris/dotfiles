@@ -464,3 +464,63 @@ def test_a_jira_with_no_config_and_no_token_names_init(xdg: Path, fake_bin: Path
 
     assert found.verdict is Verdict.MISSING
     assert 'jira init' in found.advice
+
+
+def test_a_stored_oauth_session_is_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    executable(fake_bin, 'claude')
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+    (xdg / '.claude').mkdir(parents=True, exist_ok=True)
+    (xdg / '.claude' / '.credentials.json').write_text('{"claudeAiOauth": {"scopes": []}}')
+
+    assert changes(build(xdg, 'claude')) == ()
+
+
+def test_an_mcp_only_credential_file_is_not_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The same file carries MCP logins, and a machine can hold those with no
+    Claude login at all — so existence answers a different question."""
+    executable(fake_bin, 'claude')
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+    (xdg / '.claude').mkdir(parents=True, exist_ok=True)
+    (xdg / '.claude' / '.credentials.json').write_text('{"mcpOAuth": {"a-server": {}}}')
+
+    (found,) = changes(build(xdg, 'claude'))
+
+    assert found.verdict is Verdict.MISSING
+    assert 'browser login' in found.advice
+
+
+def test_a_half_written_credential_file_costs_no_other_tool_its_measurement(
+    xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A token refresh rewrites this file. Parsing it would raise `JSONDecodeError`
+    inside the `OSError` guard and take the whole resource down to `auth could not
+    be examined`, so a read landing mid-write must not interpret what it finds."""
+    executable(fake_bin, 'claude')
+    executable(fake_bin, 'atuin')
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+    (xdg / '.claude').mkdir(parents=True, exist_ok=True)
+    (xdg / '.claude' / '.credentials.json').write_bytes(b'{"claudeAiOauth": {"acce')
+
+    found = {change.item: change for change in changes(build(xdg, 'claude', 'atuin'))}
+
+    assert 'claude' not in found
+    assert found['atuin'].verdict is Verdict.MISSING
+
+
+def test_an_api_key_counts_as_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    executable(fake_bin, 'claude')
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'not-a-real-key')
+
+    assert changes(build(xdg, 'claude')) == ()
+
+
+def test_a_machine_with_no_credential_file_is_missing_rather_than_unknown(
+    xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    executable(fake_bin, 'claude')
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+
+    (found,) = changes(build(xdg, 'claude'))
+
+    assert found.verdict is Verdict.MISSING
+    assert found.repair is Repair.BY_HAND

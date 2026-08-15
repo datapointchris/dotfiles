@@ -1,0 +1,65 @@
+machine: scheduler
+platform: linux
+
+# Nobody types here. Same reasoning as linux-lxc-server: the shell exists to be
+# SSHed into when a run goes wrong, not to be lived in. The plugins are still
+# installed, so turning one back on for a debugging session is a ~/.env edit.
+flags:
+  SHELL_NUDGE: false
+  SHELL_VI_MODE: false
+  SHELL_AUTOSUGGESTIONS: false
+  SHELL_SYNTAX_HIGHLIGHTING: false
+  SHELL_FORGIT: false
+
+# The box the fleet's unattended work runs on, rather than a desk. A workstation
+# has to be awake for a weekly sweep to happen at all, and its graders compete
+# with whoever is using it. What that costs this machine is every repo on disk
+# and a grader pool's worth of RAM.
+#
+# The repos arrive as clones and are graded as clones, which is the same input a
+# worktree gave: `git worktree add` checks out tracked files only, so no gitignored
+# file and no `.planning` symlink was ever in scope. Nothing here needs the
+# working trees a workstation happens to carry.
+system_packages: core
+flatpak: false
+
+go_tools:
+  - fleet     # the sweep, the schedule, and the timer that fires them
+  - task      # Taskfile runner used across the repos
+  - toolbox   # tool discovery CLI
+  - gdu       # the clones fill a disk, and this is how that gets diagnosed
+
+git_uv_tools:
+  - syncer    # `fleet audit run` fast-forwards every checkout through it
+
+custom_installers:
+  - claude-code   # the grader
+
+github_releases:
+  - fzf         # fuzzy finder — backs the shell functions
+  - neovim      # editor for on-box config/log edits
+  - tree-sitter # neovim highlighting
+  - glow        # render markdown/docs over SSH
+  - duf         # disk-free at a glance
+  - atuin       # shell history (zsh init expects it)
+  - shellcheck  # debug shell scripts on the box
+
+cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
+
+npm_globals: []
+uv_tools: []
+
+shell_plugins: true
+tmux_plugins: true
+yazi_plugins: false
+nvim_plugins: true
+configure_zsh: true
+
+# `gh` for the private repos the sweep clones, `claude` for the graders it spawns,
+# `atuin` because zsh init expects it. Naming a tool is what makes this machine
+# report the login as missing until it is done, which on a box nobody watches is
+# the difference between a sweep that grades nothing and one that says why.
+auth:
+  - gh
+  - claude
+  - atuin
