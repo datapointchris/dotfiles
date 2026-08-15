@@ -127,6 +127,47 @@ class TestTheGate:
         satisfy all three above."""
         assert publishing.redacted({'scope': ['packages'], 'rows': [{'detail': 'fd 10.2.0'}]}, NAMED) == ()
 
+    def test_the_shelf_key_is_not_read_as_a_leak(self) -> None:
+        """`machine` is the manifest name and the shelf is a directory built from
+        it, so a scan that read it as identity would refuse every document there
+        has ever been. Measured on a box named `archlinux` running
+        `archlinux-personal-workstation`, where the hostname is a substring of the
+        key the exchange is organised by."""
+        document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'pf5xmxfy-work-workstation', 'rows': []}
+
+        assert publishing.redacted(document, NAMED) == ()
+
+    def test_a_document_whose_evidence_names_a_home_is_refused_unrooted(self) -> None:
+        """The state the return leg was in for the whole life of the branch: a
+        row's evidence is the path a tool was found at, and that path carries the
+        account."""
+        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/a-work-account/go/bin/gopls'}]}
+
+        assert publishing.redacted(document, NAMED) == ('the account this runs as appears in it',)
+
+    def test_rooting_the_same_document_clears_it(self) -> None:
+        """Paired with the test above, because that one passing proves only that
+        the gate fires. What has to hold is that composing correctly gets through
+        it, or the feature is a refusal with extra steps."""
+        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/a-work-account/go/bin/gopls'}]}
+
+        rooted = publishing.rooted(document, '/home/a-work-account')
+
+        assert rooted['rows'][0]['detail'] == '~/go/bin/gopls'
+        assert publishing.redacted(rooted, NAMED) == ()
+
+    def test_rooting_reaches_every_shape_a_document_holds(self) -> None:
+        """Over the whole document rather than a named field. The field an account
+        name turns up in next is the one nobody thought of, which is the same
+        reasoning the byte scan itself rests on."""
+        nested = {'rows': [{'evidence': ['/home/bob/bin/fd', 'unrelated']}, {'detail': '/home/bob/.cargo/bin/rg'}], 'count': 2}
+
+        rooted = publishing.rooted(nested, '/home/bob')
+
+        assert rooted['rows'][0]['evidence'] == ['~/bin/fd', 'unrelated']
+        assert rooted['rows'][1]['detail'] == '~/.cargo/bin/rg'
+        assert rooted['count'] == 2, 'a non-string value is carried through unchanged'
+
     def test_every_reason_is_reported_at_once(self) -> None:
         problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'pf5xmxfy a-work-account'}]}, NAMED)
 

@@ -48,8 +48,47 @@ leak that a denylist silently permits.
 """
 
 
+PROTOCOL_KEYS = ('machine',)
+"""Fields the exchange itself is built on, excluded from the byte scan.
+
+`machine` is the manifest name, and `remote.statuses_for` builds the shelf
+directory out of it — so a scan that read it as a leak would refuse every
+document ever composed. It is a filename in this repo rather than a fact about
+the box: two Macs share one, and the hostname that *would* identify a machine is
+deliberately not what goes here.
+
+Measured 2026-08-15: on a box named `archlinux` running the
+`archlinux-personal-workstation` manifest, the hostname is a substring of the
+shelf key, and the gate refused its own protocol.
+"""
+
+
 class Unpublishable(Refusal):
     """A document that must not leave this machine, and the reason."""
+
+
+def rooted(value: Any, home: str) -> Any:
+    """Every absolute path under this home, rewritten the way a person types it.
+
+    A published row's evidence is usually the path a tool was found at, and that
+    path carries the account name — which is the thing the gate refuses. So a
+    document composed without this refuses itself, and the return leg of the loop
+    never runs at all.
+
+    Recursive over the whole document rather than over a named field, because an
+    account name can appear in any string a resource chose to write, and the
+    field it appears in next is the one nobody thought of.
+
+    Measured 2026-08-15: a real `status show --json` on this machine carried 28
+    occurrences of the account, every one of them an absolute path in a `detail`.
+    """
+    if isinstance(value, str):
+        return value.replace(home, '~') if home else value
+    if isinstance(value, dict):
+        return {key: rooted(item, home) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rooted(item, home) for item in value]
+    return value
 
 
 def identifying() -> dict[str, str]:
@@ -89,8 +128,8 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     `connectivity-results.txt` a leak, `PF5XMXFY`, is one a case-sensitive test
     reads straight past.
     """
-    text = json.dumps(document)
-    lowered = text.lower()
+    scanned = {key: value for key, value in document.items() if key not in PROTOCOL_KEYS} if isinstance(document, dict) else document
+    lowered = json.dumps(scanned).lower()
     problems = []
 
     scope = document.get('scope') if isinstance(document, dict) else None

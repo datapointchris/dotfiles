@@ -112,6 +112,11 @@ def composed(machine: str | None) -> Composed:
 
     `plan` rather than `check`: what a bundle builder wants is what would *change*,
     and `check` deliberately keeps a different set of findings.
+
+    Rewritten `~`-rooted before it is returned. A row's evidence is usually the
+    path a tool was found at, which carries the account name, and the account name
+    is what the gate refuses — so an unrooted document refuses itself. A builder
+    wants the version rather than which home it sat in, so nothing is lost.
     """
     named = resolved(machine).machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
@@ -120,7 +125,7 @@ def composed(machine: str | None) -> Composed:
     walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, report=None)
     sinks.keep(walked.events, identity, {'skip': sorted(withheld), 'offline': False})
     document = status_document.document(walked.results, named, identity.started, verb='plan')
-    return Composed(document, tuple(walked.results), named)
+    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named)
 
 
 @app.command('show')
