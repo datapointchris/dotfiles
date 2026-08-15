@@ -1180,7 +1180,12 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info('Manifest filter: %s', manifest_name)
 
     cache = DownloadCache(enabled=use_cache)
-    tarball_path = paths.REPO_ROOT / f'{name}.tar.gz'
+    # Into the cache the rest of the lifecycle reads, not the checkout. `newest`
+    # searches ARCHIVE_DIR, the cwd and home, and `prune` sweeps ARCHIVE_DIR — so
+    # a bundle in the repo root was found by a bare `bundle upload` only from
+    # inside the checkout, and never swept at all while `prune` printed a count.
+    paths.ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    tarball_path = paths.ARCHIVE_DIR / f'{name}.tar.gz'
 
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / ARCHIVE_MEMBER, os_name, arch, manifest_name, built_at)

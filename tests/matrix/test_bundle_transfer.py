@@ -311,7 +311,7 @@ class TestPruning:
             (sandbox.staging / name).mkdir(parents=True)
             (sandbox.staging / name / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
 
-        ran = cli('bundle', 'prune', '--keep', '1')
+        ran = cli('bundle', 'prune', '--keep', '1', '--yes')
 
         assert ran.exit_code == ExitCode.CONVERGED
         assert (cache / f'{NEWEST}.tar.gz').is_file()
@@ -326,9 +326,40 @@ class TestPruning:
         (sandbox.staging / NEWEST).mkdir(parents=True)
         (sandbox.staging / NEWEST / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
 
-        cli('bundle', 'prune', '--keep', '0')
+        cli('bundle', 'prune', '--keep', '0', '--yes')
 
         assert (sandbox.staging / NEWEST).is_dir()
+
+    def test_another_machine_s_bundles_do_not_age_out_this_one_s(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Retention counts per machine. `bundle download --machine X` writes a
+        peer's archive into this cache, so counting them together lets a few
+        downloads for a peer take the only bundle on a box that cannot re-fetch."""
+        cache = sandbox.cache / 'dotfiles' / 'bundles'
+        cache.mkdir(parents=True)
+        peers = [f'dotfiles-offline-v2026090{n}T120000Z-other-linux-x86_64' for n in range(1, 5)]
+        for name in [OLDER, *peers]:
+            (cache / f'{name}.tar.gz').write_text('an archive')
+
+        ran = cli('bundle', 'prune', '--keep', '1', '--yes')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert (cache / f'{OLDER}.tar.gz').is_file(), 'this machine had one bundle and it was swept for a peer'
+        assert (cache / f'{peers[-1]}.tar.gz').is_file(), "the peer's newest is kept too"
+        assert not (cache / f'{peers[0]}.tar.gz').exists()
+
+    def test_a_local_sweep_without_a_terminal_refuses_rather_than_deleting(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """What is here is what a firewalled box cannot download again, and a
+        machine with no `[remote]` declared has no `bundle download` to recover
+        with. The remote sweep already had this pair."""
+        cache = sandbox.cache / 'dotfiles' / 'bundles'
+        cache.mkdir(parents=True)
+        for name in (OLDER, NEWEST):
+            (cache / f'{name}.tar.gz').write_text('an archive')
+
+        ran = cli('bundle', 'prune', '--keep', '1', '--no-input')
+
+        assert ran.exit_code == ExitCode.USAGE
+        assert (cache / f'{OLDER}.tar.gz').is_file()
 
     def test_the_remote_is_left_alone_unless_it_is_asked_for(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Deleting from a server is the one thing here another machine observes,
@@ -336,7 +367,7 @@ class TestPruning:
         published(server, OLDER)
         published(server, NEWEST)
 
-        cli('bundle', 'prune', '--keep', '1')
+        cli('bundle', 'prune', '--keep', '1', '--yes')
 
         assert (shelf(server) / f'{OLDER}.tar.gz').is_file()
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import json
+import re
 import shutil
 import tarfile
 import tempfile
@@ -24,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles import catalog
+from dotfiles import commands
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
@@ -401,16 +403,10 @@ def target() -> str:
     and no manifest is a real state part way through a rebuild, and it is exactly
     the state that most needs to be able to unpack a bundle — so a resolver that
     refused here would make the check the reason the machine cannot be built.
-
-    Imported inside because `commands` reaches the whole CLI surface and this
-    module is below it: at module scope the import is a cycle.
     """
-    from dotfiles import commands
-    from dotfiles.refusal import Refusal as AnyRefusal
-
     try:
         return commands.resolved(None).machine_name
-    except AnyRefusal:
+    except Refusal:
         return ''
 
 
@@ -425,6 +421,45 @@ def stem(archive: Path) -> str:
         if name.endswith(suffix):
             return name[: -len(suffix)]
     return archive.stem
+
+
+NAMED = re.compile(r'^dotfiles-offline-v\d{8}T\d{6}Z-(?P<manifest>.+)-(?P<os>[a-z]+)-(?P<arch>[a-z0-9_]+?)(?:-sparse)?$')
+"""`create_bundle.bundle_name` read back, for the one field a sweep needs.
+
+The manifest is greedy and the two after it are not, because a manifest carries
+hyphens — `wsl-work-workstation` — and the OS and arch do not.
+"""
+
+
+def manifest_of(name: str) -> str:
+    """Which machine a bundle was built for, from its own name.
+
+    From the name because the callers have a listing rather than an archive: a
+    remote sweep holds strings, and opening every local one to read `bundle.json`
+    costs a stat and an unpack per row to answer what the name already says.
+
+    Empty where the name is not one of ours, which groups every stranger together
+    and is the conservative answer — a sweep then counts them among themselves
+    rather than against a real machine's bundles.
+    """
+    found = NAMED.match(name.removesuffix('.tar.gz'))
+    return found.group('manifest') if found else ''
+
+
+def by_machine(names: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
+    """The same names, grouped by the machine each was built for.
+
+    Retention counts per machine and not across the cache. `bundle download
+    --machine X` writes another box's archive into the same directory this
+    machine's live in, so five downloads for a peer can age out the only bundle
+    on a box that cannot re-fetch it — while `prune` promises the newest is never
+    removed. `stage` already refuses a foreign bundle on the same reasoning; this
+    is the eviction half of it.
+    """
+    grouped: dict[str, list[str]] = {}
+    for name in names:
+        grouped.setdefault(manifest_of(name), []).append(name)
+    return {machine: tuple(sorted(held)) for machine, held in grouped.items()}
 
 
 def newest(*searched: Path) -> Path | None:

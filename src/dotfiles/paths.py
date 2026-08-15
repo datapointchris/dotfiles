@@ -127,7 +127,12 @@ def cache_home() -> Path:
 CACHE_HOME = cache_home()
 
 ARCHIVE_DIR = CACHE_HOME / 'bundles'
-"""Bundle archives, downloaded or just built, each beside its `.json` sidecar."""
+"""Bundle archives, whether `bundle create` built one or `bundle download` fetched it.
+
+A downloaded archive arrives with its `.json` record beside it; a built one has
+none until `bundle upload` composes one, which it does into a temporary directory
+because the record describes the transfer rather than the file.
+"""
 
 STATUS_CACHE = CACHE_HOME / 'status'
 """Status documents fetched from the remote, which a sparse build is planned from.

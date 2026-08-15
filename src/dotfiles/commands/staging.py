@@ -266,6 +266,12 @@ def upload(
         hint('build one with: dotfiles bundle create --machine NAME --arch ARCH')
         raise typer.Exit(ExitCode.ISSUE)
 
+    # Before `described_record`, which stats it. A named path that is not there is
+    # the caller's mistake and exits USAGE, where the unhandled FileNotFoundError
+    # exited 1 — and 1 is DRIFT here, which is a verdict rather than a failure.
+    if not found.is_file():
+        raise typer.BadParameter(f'{found} is not a file', param_hint='ARCHIVE')
+
     record = offline_bundle.described_record(found)
     machine = record.description.machine
     if not machine:
@@ -554,7 +560,7 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
 
 @bundle_app.command('prune')
 def prune(
-    keep: int = typer.Option(0, '--keep', help='How many to retain (default: the remote.keep in config, or 5)'),
+    keep: int | None = typer.Option(None, '--keep', help='How many to retain per machine (default: the remote.keep in config, or 5)'),
     remote_too: bool = typer.Option(False, '--remote', help="Also remove what is past the limit on the remote's shelf"),
     machine: str = typer.Option(None, '--machine', help='Whose remote shelf to sweep (default: this machine)'),
     yes: bool = typer.Option(False, '--yes', help='Skip the confirmation'),
@@ -573,20 +579,43 @@ def prune(
     archive whose staged directory is gone is one `bundle stage` away, so keeping
     the two in step is what makes the limit mean one thing.
 
+    **The limit counts per machine, not across the cache.** `bundle download
+    --machine X` writes another box's archive beside this one's, so a sweep that
+    counted them together would let five downloads for a peer age out the only
+    bundle on a box that cannot re-fetch it.
+
     **The newest is never removed, whatever the limit.** A machine with nothing
     staged cannot converge offline at all, so a `--keep 0` that emptied the
     staging directory would take the machine's only way to install anything.
     """
     verbosity(verbose, quiet)
-    retained = keep if keep else _configured_keep()
-    swept = _prune_local(retained)
+    # `is not None`, because 0 is a number somebody types meaning it. As a
+    # sentinel for "read the config" it was honoured as five, which is the one
+    # answer the caller did not ask for.
+    retained = keep if keep is not None else _configured_keep()
+    superseded = _superseded_locally(retained)
+
+    if superseded:
+        for name in superseded:
+            render_row('superseded', name, _age_of(name), 'yellow')
+        # The same pair the remote sweep has. What is here is what a firewalled
+        # box cannot download again, and a machine with no [remote] declared —
+        # the ordinary state — has no `bundle download` to recover with.
+        if not yes:
+            if no_input or not sys.stdin.isatty():
+                raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have removed {len(superseded)} locally')
+            if not typer.confirm(f'Remove {len(superseded)} local bundle(s)?', default=False, err=True):
+                error('nothing was removed locally')
+                raise typer.Exit(ExitCode.ISSUE)
+
+    swept = _prune_local(superseded)
     for name in swept:
         render_row('removed', name, 'past the retention limit', 'yellow')
 
     if remote_too:
         _prune_remote(machine, retained, yes=yes, no_input=no_input)
 
-    console.print(f'{len(swept)} removed locally, {retained} kept')
+    console.print(f'{len(swept)} removed locally, {retained} kept per machine')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -596,19 +625,43 @@ def _configured_keep() -> int:
     return found.remote.keep if found.remote else transport.DEFAULT_KEEP
 
 
-def _prune_local(keep: int) -> tuple[str, ...]:
-    """Remove cached archives and staged bundles past the limit, and say which."""
-    archives = tuple(sorted(path.name for path in paths.ARCHIVE_DIR.glob(offline_bundle.ARCHIVES))) if paths.ARCHIVE_DIR.is_dir() else ()
-    staged = tuple(sorted(path.name for path in providers.staged_bundles()))
+def _superseded_locally(keep: int) -> tuple[str, ...]:
+    """What a local sweep would remove, counted per machine and named, removing nothing.
 
+    Separate from the removal so the confirmation has something to show. A prompt
+    that could not name what it is about to delete is one people answer yes to
+    without reading.
+    """
+    # By stem, so one bundle is one row. An archive carries `.tar.gz` and the
+    # directory it unpacks into does not, so counting the two as they are names a
+    # single bundle twice and offers to remove it twice.
+    archives = (offline_bundle.stem(path) for path in paths.ARCHIVE_DIR.glob(offline_bundle.ARCHIVES)) if paths.ARCHIVE_DIR.is_dir() else ()
+    staged = (path.name for path in providers.staged_bundles())
+    held = tuple({*archives, *staged})
+
+    superseded: list[str] = []
+    for owned in offline_bundle.by_machine(held).values():
+        superseded.extend(transport.superseded(owned, max(keep, 1)))
+    return tuple(superseded)
+
+
+def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
+    """Remove what `_superseded_locally` named, by stem, and say what went.
+
+    All three shapes are removed for every stem — the archive, its record, and the
+    directory it unpacked into — because a stem names one bundle however many of
+    them happen to be on disk. Each removal is idempotent, so asking first would
+    cost a stat to decide nothing.
+    """
     removed = []
-    for name in transport.superseded(archives, max(keep, 1)):
-        (paths.ARCHIVE_DIR / name).unlink(missing_ok=True)
-        (paths.ARCHIVE_DIR / f'{name}{offline_bundle.SIDECAR_SUFFIX}').unlink(missing_ok=True)
-        removed.append(name)
-    for name in transport.superseded(staged, max(keep, 1)):
-        shutil.rmtree(paths.STAGING_DIR / name, ignore_errors=True)
-        removed.append(name)
+    for stem in superseded:
+        archive = paths.ARCHIVE_DIR / f'{stem}.tar.gz'
+        staged = paths.STAGING_DIR / stem
+        if archive.exists() or staged.is_dir():
+            archive.unlink(missing_ok=True)
+            (paths.ARCHIVE_DIR / f'{stem}.tar.gz{offline_bundle.SIDECAR_SUFFIX}').unlink(missing_ok=True)
+            shutil.rmtree(staged, ignore_errors=True)
+            removed.append(stem)
     return tuple(removed)
 
 
@@ -628,8 +681,11 @@ def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) 
         if no_input or not sys.stdin.isatty():
             raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have removed {len(superseded)} from {directory}')
         if not typer.confirm(f'Remove {len(superseded)} bundle(s) from {directory}?', default=False, err=True):
-            error('nothing was removed from the remote')
-            return
+            # ISSUE rather than returning into a converged exit, matching the
+            # local sweep and `bundle download`. Declining printed a red ✗ and
+            # exited 0, so a caller shelling out read success while the text said
+            # nothing had happened.
+            raise typer.Exit(ExitCode.ISSUE)
 
     for name in superseded:
         transport.remove(where, f'{directory}/{name}')
