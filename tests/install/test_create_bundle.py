@@ -680,7 +680,12 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         'go_tools': (
             catalog.GoTool,
             {
-                'name': 'task',
+                # `command` differs from `name` deliberately, as both siblings here
+                # already do. Equal, this fixture is the one shape that cannot reach
+                # the staging loop's own key: the sparse decision asks by name and
+                # the manifest files by executable, and a fixture where they are the
+                # same word tests neither against the other.
+                'name': 'go-task',
                 'command': 'task',
                 'package': 'github.com/go-task/task/v3/cmd/task',
                 'github_repo': 'go-task/task',
@@ -742,7 +747,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         ('section', 'stage', 'named', 'category'),
         [
             ('cargo_packages', 'add_cargo_binaries', 'fd-find', 'cargo'),
-            ('go_tools', 'add_go_binaries', 'task', 'go-binary'),
+            ('go_tools', 'add_go_binaries', 'go-task', 'go-binary'),
             ('winget_packages', 'add_winget_binaries', 'ripgrep', 'winget'),
         ],
         ids=['cargo', 'go', 'winget'],

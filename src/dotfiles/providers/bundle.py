@@ -50,6 +50,16 @@ lifetimes, and a shared number could not say which of them changed — the split
 FIELDS = 4
 """`category|name|version|filename`. A shorter row is a comment or the header."""
 
+CATEGORIES = ('binary', 'extra', 'go-binary', 'cargo', 'script', 'winget')
+"""Every category a named tool is staged under, across every provider.
+
+Here rather than in any one provider because a tool is a `binary` on one machine
+and a `cargo` on another, and both readers of this format ask the same question
+of it. `winget` earns its place from `create_bundle.add_winget_binaries`, one of
+the four writers of `current` — omitted, a sparse bundle for a Windows manifest
+records `winget/rg` and every lookup searches past it.
+"""
+
 
 class Completeness(StrEnum):
     """Whether a name absent from the manifest was measured or missed.
@@ -240,6 +250,23 @@ def counted(carried: tuple[Staged, ...]) -> dict[str, int]:
     return {category: tally[category] for category in sorted(tally)}
 
 
+def measured_in(described: tuple[Description, ...], name: str, *categories: str) -> str | None:
+    """The same question as `measured`, asked of descriptions already in hand.
+
+    Split out so a `Staging` — which carries its descriptions as a snapshot rather
+    than re-reading disk — answers by the identical rule instead of its own. The
+    two rules had drifted: this one matches the whole `category/name` key, and the
+    copy in `offline_bundle` matched the name half alone, so they disagreed on
+    exactly the tools declared under more than one category.
+    """
+    wanted = {f'{category}/{name}' for category in categories}
+    for description in described:
+        found = next((version for key, version in description.current.items() if key in wanted), None)
+        if found:
+            return found
+    return None
+
+
 def measured(name: str, *categories: str) -> str | None:
     """The version a sparse bundle measured on this machine and did not carry.
 
@@ -258,12 +285,7 @@ def measured(name: str, *categories: str) -> str | None:
     `providers.locate` reads files in, so what a bundle says about a tool and what
     it holds for one cannot come from different bundles.
     """
-    wanted = {f'{category}/{name}' for category in categories}
-    for described in descriptions():
-        found = next((version for key, version in described.current.items() if key in wanted), None)
-        if found:
-            return found
-    return None
+    return measured_in(descriptions(), name, *categories)
 
 
 def sparse_bundles() -> tuple[Description, ...]:

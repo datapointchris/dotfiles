@@ -167,6 +167,23 @@ class TestWhatTheTargetDecides:
 
         assert not [row for row in rows if 'lazygit' in row['item']]
 
+    def test_a_tool_measured_under_a_second_category_is_still_read(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """The key carries a category, and the reader has to search every one the
+        bundler writes.
+
+        `winget` was missing from that list while `add_winget_binaries` was one of
+        the four writers of `current`, so a sparse bundle for a Windows manifest
+        recorded `winget/rg` and every lookup searched past it — reporting a tool
+        the builder had measured as one nothing could measure.
+        """
+        self.staged(sandbox, {}, sparse=True, current={'winget/lazygit': INSTALLED}, built_from='a-status.json')
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert not [row for row in rows if 'lazygit' in row['item']]
+
     def test_a_measured_tool_the_machine_has_since_moved_off_is_drift(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """The premise expired. The bundle was planned when this machine had that
         version; it no longer does, and the existing comparison says so without a

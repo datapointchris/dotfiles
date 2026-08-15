@@ -127,12 +127,13 @@ class Staging:
         sparse bundle omitted may be one an older full bundle carried — and the two
         answers are both true. The caller asks this only about names nothing
         carries, so there is no case where they compete.
+
+        Answered by `bundle.measured_in` rather than here, so this and the offline
+        apply cannot disagree. They did: this matched the name half of the key and
+        that one matches the whole `category/name`, which differ on exactly the
+        tools declared under more than one category.
         """
-        for described in self.descriptions:
-            found = next((version for key, version in described.current.items() if key.split('/', 1)[-1] == name), None)
-            if found:
-                return found
-        return None
+        return bundle.measured_in(self.descriptions, name, *bundle.CATEGORIES)
 
     def headline(self) -> str:
         """The one line that says which bundle this run is installing from.

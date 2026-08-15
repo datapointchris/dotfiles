@@ -837,7 +837,11 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     for entry in bundleable(items):
         assert isinstance(entry, catalog.GoTool)
         version = fetch_latest_version(entry.github_repo)
-        if bundle.already_current('go-binary', entry.executable, version):
+        # `entry.name`, because `installed_versions` keys the target's map on the
+        # name half of a plan address. The `record` below keeps `entry.executable`,
+        # which is what `gotool` looks a row up by — the two are different
+        # questions and a Go tool declaring `command` is where they diverge.
+        if bundle.already_current('go-binary', entry.name, version):
             log.info('  %s (%s) is what the target already has', entry.executable, version)
             continue
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
@@ -845,7 +849,11 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
         archive_path = bundle.go_binaries / asset.filename
         cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
         extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
-        bundle.record('go-binary', entry.executable, version, entry.executable)
+        # Keyed by `name` and filed under `executable`. Every version lookup asks
+        # by the declared name — `packages._bundled` reads `item.name` — while
+        # `gotool.bundled` opens `binaries/<executable>`, so the row answers both
+        # only if the two halves carry the two different facts.
+        bundle.record('go-binary', entry.name, version, entry.executable)
 
 
 def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:

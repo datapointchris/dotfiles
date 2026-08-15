@@ -133,17 +133,9 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
     return github_release.latest_version(entry.repo, entry.release_tag_prefix)
 
 
-BUNDLE_CATEGORIES = ('binary', 'extra', 'go-binary', 'cargo', 'script')
-"""Every category the bundler stages a named tool under, not just this provider's.
-
-A tool declared here on one machine is a cargo package or a Go tool on another,
-and the question being asked is what the bundle has.
-"""
-
-
 def bundle_version(name: str) -> str | None:
     """What version of a tool an offline bundle staged, from its manifest."""
-    row = bundle.staged(name, *BUNDLE_CATEGORIES)
+    row = bundle.staged(name, *bundle.CATEGORIES)
     return row.version if row and row.version else None
 
 
@@ -156,7 +148,7 @@ def measured_version(name: str) -> str | None:
     reports every up-to-date tool as unmeasurable, which is the whole cost a
     sparse bundle would otherwise carry.
     """
-    return bundle.measured(name, *BUNDLE_CATEGORIES)
+    return bundle.measured(name, *bundle.CATEGORIES)
 
 
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
