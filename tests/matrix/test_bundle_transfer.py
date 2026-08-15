@@ -517,12 +517,39 @@ class TestResolvingLatestForASparseBuild:
     builder is handed. `tests/install/test_create_bundle.py` owns the other half.
     """
 
-    def published(self, server: Path, stamp: str) -> Path:
+    def published(self, server: Path, stamp: str, *, wrote: str = 'abcd1234') -> Path:
         shelf = server / 'artefacts' / 'status' / MACHINE
         shelf.mkdir(parents=True, exist_ok=True)
-        written = shelf / f'{status_commands.PREFIX}{stamp}-{MACHINE}-abcd1234.json'
+        written = shelf / f'{status_commands.PREFIX}{stamp}-{MACHINE}-{wrote}.json'
         written.write_text(json.dumps({'version': 2, 'machine': MACHINE, 'scope': ['packages'], 'resources': []}))
         return written
+
+    def test_two_machines_sharing_a_manifest_make_latest_a_usage_error(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """`macos-personal-workstation` is both Macs, which is why a status
+        filename carries a hostname digest at all. Nothing here can tell which one
+        a bundle is for, so picking the most recent diffs one Mac's plan against
+        the other's installed set and reports the result as measured — the outcome
+        the `machine` guard exists to prevent and cannot see, because both
+        documents name the same manifest."""
+        self.published(server, '20260101T010000Z', wrote='abcd1234')
+        self.published(server, '20260909T120000Z', wrote='99887766')
+
+        with pytest.raises(typer.BadParameter) as refused:
+            staging._status_for('latest', MACHINE)
+
+        assert '2 machines share' in str(refused.value)
+        assert 'status download' in str(refused.value)
+
+    def test_one_machine_publishing_twice_is_not_ambiguous(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """Paired with the refusal above, because a check that fired on every
+        second publish would make the ordinary case unusable."""
+        self.published(server, '20260101T010000Z')
+        newest = self.published(server, '20260909T120000Z')
+
+        assert staging._status_for('latest', MACHINE) is not None
+        assert newest.name.endswith('.json')
 
     def test_the_newest_status_lands_in_the_cache_and_is_what_the_build_is_handed(
         self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]

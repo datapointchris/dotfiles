@@ -69,7 +69,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'root': remote.remote.root if remote.remote else '',
                     'program': remote.remote.transport.program if remote.remote else '',
                     'operations': sorted(str(name) for name in remote.remote.transport.commands) if remote.remote else [],
-                    'keep': remote.remote.keep if remote.remote else 0,
+                    'keep_bundles': remote.remote.keep_bundles if remote.remote else 0,
                     'fetch_bundle_when_none_is_staged': bool(remote.remote and remote.remote.fetch_bundle_when_none_is_staged),
                     'publish_status_after_offline_apply': bool(remote.remote and remote.remote.publish_status_after_offline_apply),
                 },
@@ -95,7 +95,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     console.print()
     console.print(f'  {"REMOTE":<{width}}  {_remote(remote)}')
     if remote.remote:
-        console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep}')
+        console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep_bundles}')
 
 
 def _remote(found: transport.Configured) -> str:

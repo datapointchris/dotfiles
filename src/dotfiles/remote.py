@@ -94,7 +94,7 @@ machine that says nothing.
 """
 
 
-KEYS = frozenset({'root', 'keep', 'transport', 'fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'})
+KEYS = frozenset({'root', 'keep_bundles', 'transport', 'fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'})
 """Every key the `[remote]` table may hold, so anything else can be named."""
 
 
@@ -157,7 +157,7 @@ class Remote:
 
     root: str
     transport: Transport
-    keep: int = DEFAULT_KEEP
+    keep_bundles: int = DEFAULT_KEEP
     fetch_bundle_when_none_is_staged: bool = False
     publish_status_after_offline_apply: bool = False
 
@@ -320,9 +320,9 @@ def read(config: settings.Config | None = None) -> Configured:
     if not isinstance(root, str) or not root:
         problems.append(f'{TABLE}.root must name a directory on the remote')
 
-    keep = table.get('keep', DEFAULT_KEEP)
-    if not isinstance(keep, int) or isinstance(keep, bool) or keep < 1:
-        problems.append(f'{TABLE}.keep must be a whole number of artefacts to retain, at least 1')
+    keep_bundles = table.get('keep_bundles', DEFAULT_KEEP)
+    if not isinstance(keep_bundles, int) or isinstance(keep_bundles, bool) or keep_bundles < 1:
+        problems.append(f'{TABLE}.keep_bundles must be at least 1')
 
     fetch, problem = _flag(table, 'fetch_bundle_when_none_is_staged')
     problems.extend([problem] if problem else [])
@@ -338,7 +338,7 @@ def read(config: settings.Config | None = None) -> Configured:
         Remote(
             root=str(root),
             transport=transport,
-            keep=int(keep),
+            keep_bundles=int(keep_bundles),
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
         )

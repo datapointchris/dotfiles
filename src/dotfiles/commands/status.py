@@ -84,6 +84,22 @@ def filename(machine: str, when: dt.datetime) -> str:
     return f'{PREFIX}{stamped}-{machine}-{discriminator()}{SUFFIX}'
 
 
+def wrote(name: str) -> str:
+    """Which box published a status, from the digest in its own filename.
+
+    The discriminator is what makes two machines sharing one manifest write two
+    files instead of overwriting each other, so it is also the only thing that
+    tells their documents apart afterwards. A reader that ignores it picks
+    whichever published last, and the `machine` field cannot object because both
+    carry the same one.
+
+    Empty where the name is not one of ours, which groups strangers together
+    rather than inventing an owner for each.
+    """
+    stem = name.removesuffix(SUFFIX)
+    return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Composed:
     """The publishable document and the rows it was folded from.

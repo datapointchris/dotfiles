@@ -214,6 +214,21 @@ def _status_for(named: str | None, machine: str) -> Path | None:
         warn(f'the remote holds no status for {machine}, so this builds a full bundle')
         hint(f'publish one from that machine to make the next build sparse: dotfiles status upload --machine {machine}')
         return None
+    # Which box wrote it, not just which manifest. Two machines legitimately share
+    # one — `macos-personal-workstation` is both Macs — and that is exactly why a
+    # status filename carries a digest of the hostname. Nothing here can tell
+    # which of them a bundle is for, so picking the most recent would diff one
+    # Mac's plan against the other's installed set and report the result as
+    # measured, which is the outcome the `machine` guard below exists to prevent
+    # and cannot see.
+    published = {status_commands.wrote(name) for name in listed}
+    if len(published) > 1:
+        raise typer.BadParameter(
+            f'--against latest: {len(published)} machines share the {machine} manifest and have published, '
+            f'so "latest" does not name one. Fetch the one you mean and pass its path: '
+            f'dotfiles status download --machine {machine} --status {listed[0]} --print-path'
+        )
+
     destination = paths.STATUS_CACHE / listed[0]
     transport.pull(where, f'{transport.statuses_for(where, machine)}/{listed[0]}', destination)
     return destination
@@ -302,9 +317,9 @@ def _report_retention(where: transport.Remote, directory: str) -> None:
     it is typed.
     """
     archives = [name for name in transport.names(where, directory) if not name.endswith(offline_bundle.SIDECAR_SUFFIX)]
-    superseded = transport.superseded(tuple(archives), where.keep)
+    superseded = transport.superseded(tuple(archives), where.keep_bundles)
     if superseded:
-        render_note(f'{len(superseded)} bundle(s) past the {where.keep} kept: oldest is {superseded[0]}')
+        render_note(f'{len(superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {superseded[0]}')
         hint('remove them with: dotfiles bundle prune --remote')
 
 
@@ -398,7 +413,9 @@ def download(
     listed = offline_bundle.on_remote(where, named)
     if not listed:
         error(f'the remote holds no bundle for {named} at {transport.bundles_for(where, named)}')
-        hint(f'build and send one where the network reaches: dotfiles bundle create --machine {named} --arch ARCH')
+        # This runs on the machine that will install, so its own CPU is the
+        # target's. `ARCH` here exits USAGE on the very flag it is teaching.
+        hint(f'build and send one where the network reaches: dotfiles bundle create --machine {named} --arch {axes.detect_arch()}')
         raise typer.Exit(ExitCode.ISSUE)
 
     wanted = bundle_name or listed[0]
@@ -560,7 +577,7 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
 
 @bundle_app.command('prune')
 def prune(
-    keep: int | None = typer.Option(None, '--keep', help='How many to retain per machine (default: the remote.keep in config, or 5)'),
+    keep: int | None = typer.Option(None, '--keep', help='How many to retain per machine (default: remote.keep_bundles in config, or 5)'),
     remote_too: bool = typer.Option(False, '--remote', help="Also remove what is past the limit on the remote's shelf"),
     machine: str = typer.Option(None, '--machine', help='Whose remote shelf to sweep (default: this machine)'),
     yes: bool = typer.Option(False, '--yes', help='Skip the confirmation'),
@@ -622,7 +639,7 @@ def prune(
 def _configured_keep() -> int:
     """The machine's own limit, or this tool's default where it declares none."""
     found = transport.read()
-    return found.remote.keep if found.remote else transport.DEFAULT_KEEP
+    return found.remote.keep_bundles if found.remote else transport.DEFAULT_KEEP
 
 
 def _superseded_locally(keep: int) -> tuple[str, ...]:

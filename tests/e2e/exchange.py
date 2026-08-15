@@ -182,7 +182,7 @@ def declare_transport(machine: Machine, shelf_host: str) -> None:
 CONFIG = """\
 [remote]
 root = "{root}"
-keep = 5
+keep_bundles = 5
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 

@@ -113,7 +113,7 @@ class TestReadingTheTable:
         assert (found.remote, found.problem) == (None, '')
 
     def test_a_valid_table_resolves_with_the_compiled_in_defaults(self, config_home: Path) -> None:
-        """`keep` and both automatic-path flags are this tool's own settings, so they
+        """`keep_bundles` and both automatic-path flags are this tool's own settings, so they
         have defaults. `root` is a path on somebody else's server and never can."""
         declare(config_home, TABLE.format(program='relay'))
 
@@ -122,7 +122,7 @@ class TestReadingTheTable:
         assert found.remote is not None
         assert found.remote.root == '/artefacts'
         assert found.remote.transport.program == 'relay'
-        assert found.remote.keep == transport.DEFAULT_KEEP
+        assert found.remote.keep_bundles == transport.DEFAULT_KEEP
         assert found.remote.fetch_bundle_when_none_is_staged is False
         assert found.remote.publish_status_after_offline_apply is False
 

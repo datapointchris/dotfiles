@@ -27,7 +27,6 @@ that reconciles by sweep" measures.
 from __future__ import annotations
 
 import dataclasses as dc
-import datetime as dt
 import json
 from collections.abc import Mapping
 from enum import StrEnum
@@ -108,19 +107,6 @@ class Description:
     @property
     def sparse(self) -> bool:
         return self.completeness is Completeness.SPARSE
-
-    def age(self, now: dt.datetime) -> dt.timedelta | None:
-        """How long ago this was built, or None where it does not say.
-
-        Parsed from `created`, which is ISO 8601 in UTC for exactly this reason: a
-        locale-formatted `%c` stamp is unparseable by anything that did not write
-        it, and "how long ago" is the first question asked of a bundle nobody
-        remembers building.
-        """
-        try:
-            return now - dt.datetime.fromisoformat(self.created)
-        except ValueError:
-            return None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -216,11 +202,6 @@ def description_of(root: Path) -> Description:
         return description_from(json.loads((root / DOCUMENT).read_text()))
     except (OSError, ValueError):
         return Description()
-
-
-def described() -> Description:
-    """The newest staged bundle's own description, or the empty one."""
-    return next(iter(descriptions()), Description())
 
 
 def parse(text: str) -> tuple[Staged, ...]:

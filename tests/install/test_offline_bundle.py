@@ -13,7 +13,6 @@ that what `bundle create` writes has that shape.
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import tarfile
 from pathlib import Path
@@ -363,16 +362,6 @@ class TestSayingWhichBundle:
         assert described.sparse is True
         assert described.built_from == 'a-status.json'
         assert described.current == {'binary/bat': 'v0.26.0'}
-
-    def test_the_age_is_answerable_from_the_document_and_none_where_it_is_not(self) -> None:
-        """`created` is ISO 8601 in UTC so anything can parse it. A `%c` stamp is
-        readable only by the locale that wrote it, and "how long ago" is the first
-        question asked of a bundle nobody remembers building."""
-        now = dt.datetime(2026, 8, 13, 6, 51, 54, tzinfo=dt.UTC)
-
-        assert bundle.Description(created='2026-08-13T00:51:54Z').age(now) == dt.timedelta(hours=6)
-        assert bundle.Description(created='Thu Aug 13 00:51:54 2026').age(now) is None
-        assert bundle.Description().age(now) is None
 
 
 class TestCoverage:
