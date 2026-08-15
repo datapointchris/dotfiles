@@ -619,19 +619,18 @@ def test_a_reconcile_verb_files_a_record_report_can_read_back(verb: str, cli: Ca
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('verb', ['prune'], ids=['prune'])
-def test_an_unbuilt_bundle_verb_refuses_rather_than_answering_nothing(verb: str, cli: Callable[..., Invocation]) -> None:
-    """Exit 3 and a sentence saying what it would do, which is the only honest
-    answer a stub can give — exiting 0 would report a machine as checked by a verb
-    that checked nothing.
+def test_pruning_a_machine_with_nothing_staged_converges(cli: Callable[..., Invocation]) -> None:
+    """A sweep that found nothing past the limit is a result, not a voided run.
 
-    `prune` is the one verb still owed an implementation; the rest are asserted in
-    the case below.
+    The distinction standards/cli-design.md § "A command the machine voids
+    refuses" draws is whether the machine *can* have the thing. Its worked failure
+    is `symlinks unlink` on a deploy-by-copy box, which can never have one. Any
+    machine can have staged bundles, so "none were superseded" is an answer.
     """
-    ran = cli('bundle', verb, catch_exceptions=True)
+    ran = cli('bundle', 'prune')
 
-    assert ran.exit_code == ExitCode.ISSUE
-    assert f'bundle {verb} is not built' in ran.stderr
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert '0 removed locally' in ran.stdout
 
 
 @pytest.mark.parametrize('verb', ['check', 'show'], ids=['check', 'show'])
@@ -763,13 +762,20 @@ def bundled(directory: Path, name: str, *, manifest: bool = True, member: str = 
 
 
 def test_staging_with_no_archive_anywhere_says_where_it_looked(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The two directories searched are the two a tarball is ever copied to, and
-    naming them is what turns "no bundle" into something a reader can act on."""
+    """The three directories searched are the ones a tarball is ever found in, and
+    naming them is what turns "no bundle" into something a reader can act on.
+
+    The way onward is `download` rather than `create`: this runs on the machine
+    that cannot reach the network, where building one is not a thing it can do.
+    An unconfigured remote is answered by that verb in turn, which is where the
+    pointer at the config belongs.
+    """
     ran = cli('bundle', 'stage', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
     assert 'no bundle archive in' in ran.stderr
-    assert 'dotfiles bundle create' in ran.stderr
+    assert str(sandbox.cache / 'dotfiles' / 'bundles') in ran.stderr
+    assert 'dotfiles bundle download' in ran.stderr
 
 
 @pytest.mark.parametrize('directory', ['root', 'home'], ids=['beside-the-checkout', 'in-home'])

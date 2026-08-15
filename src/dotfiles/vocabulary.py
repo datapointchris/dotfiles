@@ -45,6 +45,8 @@ EXCEPTION_VERBS: dict[str, str] = {
     'edit': 'machines, repo: opens $EDITOR, which is not a read or a write of state',
     'requirements': 'machines: the register supplied by hand, which show prints in passing and no other verb can name alone',
     'prune': 'bundle: removes a staged artefact, not drift. Run records are never pruned',
+    'upload': 'bundle, status: sends an artefact to the remote. A direction, not a synonym for download',
+    'download': 'bundle, status: fetches one from the remote. The pair ifiles already spells, and both ends spell it the same',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',

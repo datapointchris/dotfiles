@@ -22,74 +22,16 @@ files through the tool's own loader".
 
 from __future__ import annotations
 
-import json
-import stat
-import sys
 from pathlib import Path
 
 import pytest
+from relay import install_relay
+from relay import install_spy
+from relay import recorded
 
 from dotfiles import remote as transport
 from dotfiles import settings
 from dotfiles.vocabulary import ExitCode
-
-RELAY = """#!{python}
-import pathlib, shutil, sys
-
-ROOT = pathlib.Path({root!r})
-
-
-def resolve(remote):
-    return ROOT / remote.strip("/")
-
-
-def main(argv):
-    verb, rest = argv[0], argv[1:]
-    if verb == "list":
-        directory = resolve(rest[0])
-        if not directory.is_dir():
-            print(f"{{rest[0]}} is not a directory", file=sys.stderr)
-            return 4
-        for entry in sorted(directory.iterdir()):
-            print(entry.name)
-        return 0
-    if verb == "mkdir":
-        resolve(rest[0]).mkdir(parents=True, exist_ok=True)
-        return 0
-    if verb == "upload":
-        local, directory = pathlib.Path(rest[0]), resolve(rest[1])
-        if not directory.is_dir():
-            print(f"{{rest[1]}} is not a directory", file=sys.stderr)
-            return 4
-        shutil.copy2(local, directory / local.name)
-        return 0
-    if verb == "download":
-        source, local = resolve(rest[0]), pathlib.Path(rest[1])
-        if not source.is_file():
-            print(f"{{rest[0]}} is not a file", file=sys.stderr)
-            return 4
-        shutil.copy2(source, local)
-        return 0
-    if verb == "delete":
-        target = resolve(rest[0])
-        if not target.exists():
-            print(f"{{rest[0]}} is not there", file=sys.stderr)
-            return 4
-        target.unlink()
-        return 0
-    print(f"no such verb {{verb}}", file=sys.stderr)
-    return 2
-
-
-sys.exit(main(sys.argv[1:]))
-"""
-
-SPY = """#!{python}
-import json, pathlib, sys
-
-pathlib.Path({record!r}).open("a").write(json.dumps(sys.argv[1:]) + "\\n")
-sys.exit({code})
-"""
 
 TABLE = """
 [remote]
@@ -101,13 +43,9 @@ list = ["list", "{{dir}}"]
 upload = ["upload", "{{local}}", "{{dir}}"]
 download = ["download", "{{remote}}", "{{local}}"]
 """
-
-
-def executable(directory: Path, name: str, script: str) -> Path:
-    target = directory / name
-    target.write_text(script)
-    target.chmod(target.stat().st_mode | stat.S_IEXEC)
-    return target
+"""Deliberately narrower than `relay.TABLE`, which declares both optional
+operations. What each omission costs is exactly what several tests here assert,
+so the shared complete table cannot be the one they use."""
 
 
 def declare(config_home: Path, body: str) -> None:
@@ -135,7 +73,7 @@ def server(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def relay(fake_bin: Path, server: Path) -> Path:
-    return executable(fake_bin, 'relay', RELAY.format(python=sys.executable, root=str(server)))
+    return install_relay(fake_bin, server)
 
 
 @pytest.fixture
@@ -147,14 +85,9 @@ def configured(config_home: Path, relay: Path) -> transport.Remote:
 
 
 def spying(fake_bin: Path, tmp_path: Path, *, code: int = 0) -> Path:
-    """A transport that records the argv it was handed and does nothing else."""
     record = tmp_path / 'argv.jsonl'
-    executable(fake_bin, 'spy', SPY.format(python=sys.executable, record=str(record), code=code))
+    install_spy(fake_bin, record, code=code)
     return record
-
-
-def recorded(record: Path) -> list[list[str]]:
-    return [json.loads(line) for line in record.read_text().splitlines()]
 
 
 class TestReadingTheTable:

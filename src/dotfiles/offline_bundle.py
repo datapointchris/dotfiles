@@ -16,12 +16,16 @@ unpack it.
 from __future__ import annotations
 
 import dataclasses as dc
+import json
 import shutil
+import tarfile
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from dotfiles import catalog
 from dotfiles import effects
+from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import providers
 from dotfiles import resolve as resolver
@@ -219,6 +223,69 @@ def describe(extracted: Path | None = None) -> Staging:
         descriptions=bundle.descriptions(),
         extracted=extracted,
     )
+
+
+SIDECAR_SUFFIX = '.json'
+"""What a bundle's record on the remote is called: the archive's name plus this.
+
+Derived from the archive rather than kept in an index file. An index is one
+object several machines write, which is the collision standards/data.md § "In a
+synced directory, every machine writes its own file" exists to make unreachable —
+and it goes stale against the directory listing that is the actual truth.
+"""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Record:
+    """What a remote holds about one archive, without holding the archive.
+
+    Fetched before the bundle itself, because it is a few hundred bytes and
+    answers everything a person needs to decide whether to spend the download:
+    when it was built, for which machine, whether it is sparse, and how big it is.
+    """
+
+    name: str
+    size: int
+    sha256: str
+    description: bundle.Description = dc.field(default_factory=bundle.Description)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'name': self.name, 'size': self.size, 'sha256': self.sha256, 'bundle': self.description.as_dict()}
+
+
+def record_from(document: Any) -> Record:
+    """A `Record` from parsed JSON, tolerating anything that is not one."""
+    if not isinstance(document, dict):
+        return Record('', 0, '')
+    return Record(
+        name=str(document.get('name', '')),
+        size=int(document['size']) if isinstance(document.get('size'), int) else 0,
+        sha256=str(document.get('sha256', '')),
+        description=bundle.description_from(document.get('bundle')),
+    )
+
+
+def peek(archive: Path) -> bundle.Description:
+    """What an archive says it is, read out of the tarball without unpacking it.
+
+    Every member is checked for the name rather than one being joined onto the
+    known member directory, per standards/python.md § "Ask the library where it
+    wrote; never rebuild the path" — the archive's own top-level name is the
+    bundler's business and this must not depend on it.
+    """
+    try:
+        with tarfile.open(archive, 'r:gz') as packed:
+            found = next((member for member in packed.getmembers() if Path(member.name).name == bundle.DOCUMENT), None)
+            if found is None or (opened := packed.extractfile(found)) is None:
+                return bundle.Description()
+            return bundle.description_from(json.loads(opened.read()))
+    except (OSError, tarfile.TarError, ValueError):
+        return bundle.Description()
+
+
+def described_record(archive: Path) -> Record:
+    """The record to upload beside an archive, measured from the archive itself."""
+    return Record(archive.name, archive.stat().st_size, github_release.sha256_of(archive), peek(archive))
 
 
 def stem(archive: Path) -> str:
