@@ -85,7 +85,7 @@ sys.exit({code})
 TABLE = """
 [remote]
 root = "{root}"
-
+{extra}
 [remote.transport]
 program = "{program}"
 list = ["list", "{{dir}}"]
@@ -131,9 +131,16 @@ def recorded(record: Path) -> list[list[str]]:
 
 
 def declare(config_home: Path, *, program: str = 'relay', root: str = '/artefacts', extra: str = '') -> Path:
-    """Write a real config.toml where `settings.config_file()` will look for it."""
+    """Write a real config.toml where `settings.config_file()` will look for it.
+
+    `extra` goes *inside* `[remote]` rather than after the whole table, because
+    TOML sections are positional: a key appended at the end belongs to
+    `[remote.transport]`, where nothing reads it. Getting that wrong here is how a
+    test asserting an automatic path passes against a machine that never turned
+    it on.
+    """
     written = config_home / 'dotfiles'
     written.mkdir(parents=True, exist_ok=True)
     path = written / 'config.toml'
-    path.write_text(TABLE.format(program=program, root=root) + extra)
+    path.write_text(TABLE.format(program=program, root=root, extra=extra))
     return path

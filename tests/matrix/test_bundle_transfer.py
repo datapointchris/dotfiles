@@ -23,7 +23,10 @@ from relay import install_relay
 
 from dotfiles import offline_bundle
 from dotfiles.providers import bundle
+from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
+from matrix.harness import DECLARES_LAZYGIT
+from matrix.harness import LAZYGIT
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 
@@ -372,3 +375,98 @@ def test_an_uploaded_bundle_comes_back_byte_for_byte(sandbox: Sandbox, server: P
 
     assert fetched.read_bytes() == built.read_bytes()
     assert offline_bundle.peek(fetched).machine == MACHINE
+
+
+class TestTheAutomaticPaths:
+    """Both are off unless the machine turned them on, and that is the assertion.
+
+    The box this exists for sits on an employer network where the concern is
+    monitoring rather than capability, so a converge that reaches a server unasked
+    is a change in posture. The loop is worth automating and is not worth
+    automating quietly.
+    """
+
+    def staged_nothing(self, sandbox: Sandbox) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+
+    def test_an_offline_apply_fetches_nothing_by_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """Paired with the exit code and a positive fact: it refused for want of a
+        bundle, and the cache it would have filled is empty."""
+        self.staged_nothing(sandbox)
+        published(server, NEWEST)
+
+        ran = cli('apply', '--offline', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.ISSUE
+        assert not (sandbox.cache / 'dotfiles' / 'bundles').exists()
+
+    def test_it_fetches_where_the_machine_asked_for_that(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        self.staged_nothing(sandbox)
+        published(server, NEWEST)
+        declare(sandbox.config, extra='fetch_bundle_when_none_is_staged = true\n')
+
+        cli('apply', '--offline', catch_exceptions=True)
+
+        assert (sandbox.cache / 'dotfiles' / 'bundles' / f'{NEWEST}.tar.gz').is_file()
+        assert (sandbox.staging / NEWEST / bundle.MANIFEST).is_file()
+
+    def test_a_remote_that_will_not_answer_still_ends_on_the_missing_bundle(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """ "The remote would not answer" is a worse thing to end an apply on than
+        "there is no bundle" — the second is what the caller can act on, and it is
+        true either way."""
+        self.staged_nothing(sandbox)
+        declare(sandbox.config, program='nothing-installed-here', extra='fetch_bundle_when_none_is_staged = true\n')
+
+        ran = cli('apply', '--offline', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.ISSUE
+        assert 'needs a staged bundle' in ran.stderr
+
+    def test_an_offline_apply_publishes_nothing_by_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.45.0'})
+
+        cli('apply', '--offline', catch_exceptions=True)
+
+        assert not (server / 'artefacts' / 'status').exists()
+
+    def test_it_publishes_where_the_machine_asked_for_that(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.45.0'})
+        sandbox.installed('lazygit', '0.45.0')
+        declare(sandbox.config, extra='publish_status_after_offline_apply = true\n')
+
+        ran = cli('apply', '--offline', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert len(list((server / 'artefacts' / 'status' / MACHINE).iterdir())) == 1
+
+    def test_a_failed_apply_publishes_nothing(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """A document from a failed apply describes a machine part way through
+        being something else, which is worse than no document at all."""
+        self.staged_nothing(sandbox)
+        declare(sandbox.config, extra='publish_status_after_offline_apply = true\n')
+
+        ran = cli('apply', '--offline', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.ISSUE
+        assert not (server / 'artefacts' / 'status').exists()
+
+    def test_an_online_apply_never_publishes(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """The document exists to plan an offline bundle. A machine that reaches the
+        network needs none, and publishing from one puts a second machine's rows on
+        a shelf the builder reads for the first.
+
+        Narrowed to `symlinks`, which reaches no network. An online `apply`
+        resolves with `refresh=True` and everything else would ask GitHub for a
+        version, which the matrix guard refuses. The run still takes the whole path
+        down to the gate, which is where the publish would happen.
+        """
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        declare(sandbox.config, extra='publish_status_after_offline_apply = true\n')
+        skipped = [flag for resource in RESOURCES if resource != 'symlinks' for flag in ('--skip', resource)]
+
+        ran = cli('apply', *skipped, catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert not (server / 'artefacts' / 'status').exists()

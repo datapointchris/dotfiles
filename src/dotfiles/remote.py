@@ -80,6 +80,10 @@ machine that says nothing.
 """
 
 
+KEYS = frozenset({'root', 'keep', 'transport', 'fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'})
+"""Every key the `[remote]` table may hold, so anything else can be named."""
+
+
 class RemoteError(Refusal):
     """A remote that is unconfigured, misconfigured, or would not answer."""
 
@@ -204,6 +208,9 @@ def _transport(table: Any) -> tuple[Transport | None, tuple[str, ...]]:
     program = table.get('program')
     problems = [] if isinstance(program, str) and program else [f'{TABLE}.transport.program must name a program']
 
+    named = {'program'} | {str(operation) for operation in Operation}
+    problems.extend(f'{TABLE}.transport.{key} is not an operation this runs' for key in sorted(set(table) - named))
+
     commands: dict[Operation, tuple[str, ...]] = {}
     for operation in Operation:
         if operation not in table:
@@ -246,6 +253,12 @@ def read(config: settings.Config | None = None) -> Configured:
         return Configured(problem=f'{TABLE} must be a table')
 
     problems: list[str] = []
+    # An unknown key is reported rather than ignored, because the commonest way to
+    # get one is TOML's own section semantics: a key written *after*
+    # `[remote.transport]` belongs to that table, so a machine that meant to turn
+    # an automatic path on has it silently off and no way to tell.
+    problems.extend(f'{TABLE}.{key} is not a setting this reads' for key in sorted(set(table) - KEYS))
+
     root = table.get('root')
     if not isinstance(root, str) or not root:
         problems.append(f'{TABLE}.root must name a directory on the remote')

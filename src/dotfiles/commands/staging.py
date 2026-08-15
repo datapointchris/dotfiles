@@ -26,7 +26,6 @@ from pathlib import Path
 import typer
 
 from dotfiles import coordinates as axes
-from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
@@ -297,7 +296,7 @@ def list_bundles(
     verbosity(verbose, quiet)
     where = transport.require()
     named = machine or Session.resolve(None).machine_name
-    listed = _remote_bundles(where, named)
+    listed = offline_bundle.on_remote(where, named)
     shown = listed[:limit] if limit else listed
 
     if as_json:
@@ -311,15 +310,6 @@ def list_bundles(
     if limit and len(listed) > limit:
         hint(f'see the rest with: dotfiles bundle list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
-
-
-def _remote_bundles(where: transport.Remote, machine: str) -> tuple[str, ...]:
-    """Every archive on a machine's shelf, newest first, records excluded."""
-    directory = transport.bundles_for(where, machine)
-    if not transport.exists(where, directory):
-        return ()
-    listed = transport.names(where, directory)
-    return tuple(sorted((name for name in listed if name.endswith('.tar.gz')), reverse=True))
 
 
 def _age_of(name: str) -> str:
@@ -375,7 +365,7 @@ def download(
     verbosity(verbose, quiet)
     where = transport.require()
     named = machine or Session.resolve(None).machine_name
-    listed = _remote_bundles(where, named)
+    listed = offline_bundle.on_remote(where, named)
     if not listed:
         error(f'the remote holds no bundle for {named} at {transport.bundles_for(where, named)}')
         hint(f'build and send one where the network reaches: dotfiles bundle create --machine {named} --arch ARCH')
@@ -386,36 +376,19 @@ def download(
         raise typer.BadParameter(f'--bundle: {wanted} is not on the remote. Newest is {listed[0]}')
 
     directory = transport.bundles_for(where, named)
-    record = _fetched_record(where, directory, wanted)
+    record = offline_bundle.record_on_remote(where, directory, wanted)
     _describe(wanted, record, len(listed))
     if not _confirmed(wanted, yes=yes, no_input=no_input):
         error('nothing was downloaded')
         raise typer.Exit(ExitCode.ISSUE)
 
-    destination = paths.ARCHIVE_DIR / wanted
-    transport.pull(where, f'{directory}/{wanted}', destination)
-    _verified(destination, record)
+    destination = offline_bundle.fetch(where, named, wanted)
+    if record.sha256:
+        render_note('digest matches the record on the remote')
 
     success(f'downloaded {wanted} to {paths.under_home(destination)}')
     hint(f'stage it with: dotfiles bundle stage {destination}')
     raise typer.Exit(ExitCode.CONVERGED)
-
-
-def _fetched_record(where: transport.Remote, directory: str, name: str) -> offline_bundle.Record:
-    """The record beside an archive, or an empty one where the remote has none.
-
-    Empty rather than refused: a bundle uploaded before records existed, or one
-    whose record upload failed, is still installable. What that costs is the
-    digest, and `_verified` says so rather than passing silently.
-    """
-    sidecar = f'{name}{offline_bundle.SIDECAR_SUFFIX}'
-    with tempfile.TemporaryDirectory() as workspace:
-        local = Path(workspace) / sidecar
-        try:
-            transport.pull(where, f'{directory}/{sidecar}', local)
-            return offline_bundle.record_from(json.loads(local.read_text()))
-        except (transport.RemoteError, OSError, ValueError):
-            return offline_bundle.Record(name, 0, '')
 
 
 def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
@@ -453,26 +426,6 @@ def _confirmed(name: str, *, yes: bool, no_input: bool) -> bool:
     if no_input or not sys.stdin.isatty():
         raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have fetched {name}')
     return typer.confirm('Download this bundle?', default=False, err=True)
-
-
-def _verified(archive: Path, record: offline_bundle.Record) -> None:
-    """Refuse an archive whose digest does not match the record beside it.
-
-    Deleted rather than left in the cache, because `newest` ranks by name and a
-    corrupt archive would be the one every later run picks up — and it would win
-    against the good bundle it was meant to replace.
-    """
-    if not record.sha256:
-        return
-    actual = github_release.sha256_of(archive)
-    if not github_release.digests_match(record.sha256, actual):
-        archive.unlink(missing_ok=True)
-        raise BundleTransferError(
-            f'{archive.name} does not match the digest its record publishes, so it did not arrive whole',
-            code=ExitCode.ISSUE,
-            advice='run it again: dotfiles bundle download',
-        )
-    render_note('digest matches the record on the remote')
 
 
 @bundle_app.command('check')
@@ -640,7 +593,7 @@ def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) 
     where = transport.require()
     named = machine or Session.resolve(None).machine_name
     directory = transport.bundles_for(where, named)
-    superseded = transport.superseded(_remote_bundles(where, named), max(keep, 1))
+    superseded = transport.superseded(offline_bundle.on_remote(where, named), max(keep, 1))
     if not superseded:
         render_note(f'nothing on the remote for {named} is past the {keep} kept')
         return

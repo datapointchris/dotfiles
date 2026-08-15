@@ -50,7 +50,9 @@ from dotfiles.output import render_note
 from dotfiles.output import render_row
 from dotfiles.output import section_line
 from dotfiles.output import success
+from dotfiles.output import warn
 from dotfiles.reconcile import ResourceVerdict
+from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What this machine has installed, for the machine that builds its bundles')
@@ -178,6 +180,38 @@ def upload(
     success(f'uploaded {name} to {directory}')
     render_note(f'covering {found.scope} and nothing else')
     raise typer.Exit(ExitCode.CONVERGED)
+
+
+def publish_after_apply(machine: str | None) -> None:
+    """Publish this machine's status, where it asked for that to be automatic.
+
+    Off unless `remote.publish_status_after_offline_apply` says otherwise, and the
+    default is what a machine that declares nothing gets. The box this exists for
+    sits on an employer network where the concern is monitoring rather than
+    capability, and a converge that reaches a server unasked is a change in
+    posture — the loop is worth automating and is not worth automating quietly.
+
+    Every failure is a warning rather than an exit code. The apply already
+    succeeded and its verdict is about the machine; failing the run because a
+    server did not answer would report a converged box as broken. The gate is the
+    one exception in spirit and not in mechanism: it refuses, the refusal is
+    reported here, and nothing leaves.
+    """
+    found = transport.read()
+    if found.remote is None or not found.remote.publish_status_after_offline_apply:
+        return
+    try:
+        composition = composed(machine)
+        publishing.refuse_unpublishable(composition.document)
+        name = filename(composition.machine, dt.datetime.now(dt.UTC))
+        with tempfile.TemporaryDirectory() as workspace:
+            local = Path(workspace) / name
+            local.write_text(json.dumps(composition.document, indent=2) + '\n')
+            transport.push(found.remote, local, transport.statuses_for(found.remote, composition.machine))
+    except Refusal as refused:
+        warn(f'this machine converged and its status was not published: {refused}')
+        return
+    render_note(f'published {name}, so the next bundle can be built against it')
 
 
 @app.command('list')

@@ -28,6 +28,7 @@ from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import providers
+from dotfiles import remote as transport
 from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
 from dotfiles.refusal import Refusal
@@ -321,6 +322,70 @@ def peek(archive: Path) -> bundle.Description:
 def described_record(archive: Path) -> Record:
     """The record to upload beside an archive, measured from the archive itself."""
     return Record(archive.name, archive.stat().st_size, github_release.sha256_of(archive), peek(archive))
+
+
+def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
+    """Every bundle archive on a machine's shelf, newest first, records excluded.
+
+    Here rather than in the command, because two callers resolve the same set: the
+    verb a person types, and the automatic fetch inside `apply --offline`. Two
+    listings would be two places the naming convention is known.
+    """
+    directory = transport.bundles_for(where, machine)
+    if not transport.exists(where, directory):
+        return ()
+    listed = transport.names(where, directory)
+    return tuple(sorted((name for name in listed if name.endswith('.tar.gz')), reverse=True))
+
+
+def record_on_remote(where: transport.Remote, directory: str, name: str) -> Record:
+    """The record beside an archive, or an empty one where the remote has none.
+
+    Empty rather than refused: a bundle uploaded before records existed, or one
+    whose record upload failed, is still installable. What that costs is the
+    digest, and `verified` says so rather than passing silently.
+    """
+    sidecar = f'{name}{SIDECAR_SUFFIX}'
+    with tempfile.TemporaryDirectory() as workspace:
+        local = Path(workspace) / sidecar
+        try:
+            transport.pull(where, f'{directory}/{sidecar}', local)
+            return record_from(json.loads(local.read_text()))
+        except (transport.RemoteError, OSError, ValueError):
+            return Record(name, 0, '')
+
+
+def verified(archive: Path, record: Record) -> bool:
+    """Whether an archive matches the digest its record publishes.
+
+    A corrupt one is deleted rather than left in the cache, because `newest` ranks
+    by name — it would be the archive every later run picks up, and it would win
+    against the good bundle it was meant to replace.
+
+    Answers True where the record carries no digest at all. That is a bundle
+    nothing can verify rather than one that failed verification, and the caller
+    says so; refusing here would make an unverifiable bundle uninstallable on the
+    one machine that cannot fetch another.
+    """
+    if not record.sha256:
+        return True
+    if github_release.digests_match(record.sha256, github_release.sha256_of(archive)):
+        return True
+    archive.unlink(missing_ok=True)
+    return False
+
+
+def fetch(where: transport.Remote, machine: str, name: str) -> Path:
+    """Pull one bundle into the archive cache and verify it, or refuse."""
+    directory = transport.bundles_for(where, machine)
+    record = record_on_remote(where, directory, name)
+    destination = transport.pull(where, f'{directory}/{name}', paths.ARCHIVE_DIR / name)
+    if not verified(destination, record):
+        raise StagingError(
+            f'{name} does not match the digest its record publishes, so it did not arrive whole',
+            advice='run it again: dotfiles bundle download',
+        )
+    return destination
 
 
 def stem(archive: Path) -> str:

@@ -26,6 +26,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from dotfiles import checkout
+from dotfiles import commands
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import offline_bundle
@@ -33,6 +34,7 @@ from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles import providers
 from dotfiles import refusal
+from dotfiles import remote
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import validate
@@ -849,7 +851,7 @@ def _stage_bundle() -> ExitCode | None:
     """
     extracted = None
     if not providers.staged_bundles():
-        archive = offline_bundle.newest()
+        archive = offline_bundle.newest() or _fetched_bundle()
         if archive is None:
             # Two different findings, and the second is the one a person cannot
             # work out from the first. A directory under staging that carries no
@@ -881,6 +883,36 @@ def _stage_bundle() -> ExitCode | None:
     if not staged.readable:
         return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
     return None
+
+
+def _fetched_bundle() -> Path | None:
+    """The newest bundle the remote holds, where this machine asked to be sent one.
+
+    Off unless `remote.fetch_bundle_when_none_is_staged` says otherwise, and the
+    default is what a machine that declares nothing gets. The machine this exists
+    for sits on an employer network where the concern is monitoring rather than
+    capability, so an apply that reaches a server unasked is a change in posture
+    and not a convenience — it has to be something somebody turned on.
+
+    Reached only when nothing is staged and no archive was found locally, which is
+    the one moment the run is about to refuse anyway. A failure here answers None
+    and lets that refusal happen, because "the remote would not answer" is a worse
+    thing to end an apply on than "there is no bundle" — the second is what the
+    caller can act on and is true either way.
+    """
+    found = remote.read()
+    if found.remote is None or not found.remote.fetch_bundle_when_none_is_staged:
+        return None
+    try:
+        machine = commands.resolved(None).machine_name
+        listed = offline_bundle.on_remote(found.remote, machine)
+        if not listed:
+            return None
+        warn(f'nothing staged; fetching {listed[0]} from the remote')
+        return offline_bundle.fetch(found.remote, machine, listed[0])
+    except refusal.Refusal as failed:
+        warn(f'could not fetch a bundle from the remote: {failed}')
+        return None
 
 
 def report_bundle(staged: offline_bundle.Staging) -> None:

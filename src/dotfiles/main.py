@@ -316,7 +316,7 @@ def apply_command(
 
     skipped = _skipped(skip)
     raise typer.Exit(
-        reconcile.apply_machine(
+        _converged(
             engine.Selection.excluding(skipped).capped_at(ceiling),
             machine=machine,
             offline=offline,
@@ -342,6 +342,43 @@ def apply_command(
             as_json=as_json,
         )
     )
+
+
+def _converged(
+    selection: engine.Selection,
+    *,
+    machine: str | None,
+    offline: bool,
+    owner: str | None,
+    packages: frozenset[str],
+    reinstall: bool,
+    flags: dict[str, object],
+    as_json: bool,
+) -> ExitCode:
+    """The apply, and the status it publishes afterwards where one was asked for.
+
+    A named function rather than the publish sitting beside an inline
+    `typer.Exit`, so what reaches the boundary is still something annotated
+    `ExitCode` — `tests/cli/test_conformance.py` holds every leaf to that, because
+    an integer from somewhere else lands on 1 and 1 means DRIFT.
+
+    After the run and only where it converged. The whole value of the document is
+    that it says what this machine has *now*, and one published from a failed
+    apply describes a machine part way through being something else.
+    """
+    code = reconcile.apply_machine(
+        selection,
+        machine=machine,
+        offline=offline,
+        owner=owner,
+        packages=packages,
+        reinstall=reinstall,
+        flags=flags,
+        as_json=as_json,
+    )
+    if offline and code is ExitCode.CONVERGED:
+        status_commands.publish_after_apply(machine)
+    return code
 
 
 # Registered after check and apply so that Reconcile is the first panel the help
