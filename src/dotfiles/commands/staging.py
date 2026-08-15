@@ -382,7 +382,7 @@ def download(
         error('nothing was downloaded')
         raise typer.Exit(ExitCode.ISSUE)
 
-    destination = offline_bundle.fetch(where, named, wanted)
+    destination = offline_bundle.fetch(where, named, wanted, record)
     if record.sha256:
         render_note('digest matches the record on the remote')
 

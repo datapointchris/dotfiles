@@ -375,10 +375,15 @@ def verified(archive: Path, record: Record) -> bool:
     return False
 
 
-def fetch(where: transport.Remote, machine: str, name: str) -> Path:
-    """Pull one bundle into the archive cache and verify it, or refuse."""
+def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> Path:
+    """Pull one bundle into the archive cache and verify it, or refuse.
+
+    The record is a parameter and has no default. Every caller already reads one —
+    the typed verb to describe the bundle before asking, the automatic path to
+    verify it — and a default would have this fetch it a second time, which is a
+    second round trip on the one network where round trips are the cost.
+    """
     directory = transport.bundles_for(where, machine)
-    record = record_on_remote(where, directory, name)
     destination = transport.pull(where, f'{directory}/{name}', paths.ARCHIVE_DIR / name)
     if not verified(destination, record):
         raise StagingError(

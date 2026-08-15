@@ -909,7 +909,9 @@ def _fetched_bundle() -> Path | None:
         if not listed:
             return None
         warn(f'nothing staged; fetching {listed[0]} from the remote')
-        return offline_bundle.fetch(found.remote, machine, listed[0])
+        directory = remote.bundles_for(found.remote, machine)
+        record = offline_bundle.record_on_remote(found.remote, directory, listed[0])
+        return offline_bundle.fetch(found.remote, machine, listed[0], record)
     except refusal.Refusal as failed:
         warn(f'could not fetch a bundle from the remote: {failed}')
         return None

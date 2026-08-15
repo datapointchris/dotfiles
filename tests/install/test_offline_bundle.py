@@ -276,14 +276,20 @@ class TestSayingWhichBundle:
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
 
-    def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, capsys) -> None:
+    def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, home, capsys, monkeypatch, tmp_path) -> None:
         """Every provider reads the bundle through the manifest, so without one the
         run installs nothing from anywhere and reports each tool as its own mystery.
 
         "There is none" would be true and useless here: the reader has a staged
         directory in front of them and would go looking for a tarball they already
         unpacked.
+
+        The working directory is moved because `newest` searches it, and `bundle
+        create` writes its output to the checkout root — so a real build left in the
+        tree makes this stage that bundle and report success. That is the whole
+        failure: the test passed for as long as nobody had built one.
         """
+        monkeypatch.chdir(tmp_path)
         staged.mkdir(parents=True)
 
         assert reconcile._stage_bundle() is ExitCode.ISSUE
