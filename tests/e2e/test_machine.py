@@ -16,19 +16,14 @@ is for.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
+import exchange
 import pytest
 from harness import Machine
-from harness import build_bundle
-from harness import copy_in
 from harness import declared_items
 from harness import failed_outcomes
 from harness import run_record
 from harness import shadow_calls
-
-from dotfiles import offline_bundle
-from dotfiles.providers import bundle
 
 pytestmark = pytest.mark.docker
 
@@ -267,8 +262,10 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_current(machine: Machine, tmp_path: Path) -> None:
-    """The whole feature, against a real converged machine and a real build.
+def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_current(
+    exchanging: tuple[Machine, Machine],
+) -> None:
+    """The whole feature, over the transport, between two containers.
 
     Everything below this in the suite exercises the sparse decision against a
     synthetic status and a hand-written `bundle.json`. What none of it can reach
@@ -282,30 +279,32 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
     smaller too. What has to hold is that the machine reads what was left out as
     current instead of as something nothing could measure.
     """
-    if not machine.environment.offline:
-        pytest.skip('only the offline environment installs from a bundle')
+    machine, builder = exchanging
 
-    published = machine.read('dotfiles status show --json')
-    assert published, 'the converged machine published no status'
-    status = tmp_path / 'status.json'
-    status.write_text(published)
+    # `status upload`, never `status show`. Only upload and the post-apply publish
+    # pass the document through the redaction gate, so a trip built on `show`
+    # cannot reach a gate that refuses every real document — which is what one did
+    # for the whole life of the branch.
+    machine.exec('dotfiles status upload', check=True)
 
-    sparse = build_bundle(machine.environment.manifest, against=status)
-    assert sparse.name.endswith('-sparse.tar.gz'), 'a sparse build has to say so in its own name'
+    built = exchange.build_bundle_in(builder, machine.environment.manifest, against='latest')
+    name = built.rsplit('/', 1)[-1]
+    assert name.endswith('-sparse.tar.gz'), f'a sparse build has to say so in its own name: {name}'
+    builder.exec(f'cd {builder.environment.home}/dotfiles && dotfiles bundle upload', check=True)
 
-    # Read through the tool's own reader rather than by unpacking the tarball
-    # here, so the test cannot agree with a `bundle.json` the installing side
-    # would not have understood.
-    described = offline_bundle.peek(sparse)
-    assert described.completeness is bundle.Completeness.SPARSE
-    assert described.built_from == status.name
-    assert described.current, 'a converged machine has something for the build to leave out'
+    machine.exec('dotfiles bundle download --yes', check=True)
+    machine.exec(f'dotfiles bundle stage $HOME/.cache/dotfiles/bundles/{name}', check=True)
 
-    copy_in(machine, sparse)
-    machine.exec(f'dotfiles bundle stage {machine.environment.home}/{sparse.name}', check=True)
+    # The bundle's own account of what it left out, read off the copy that
+    # crossed rather than the one that was built, so a document the installing
+    # side could not parse fails here instead of passing on the builder.
+    stem = name.removesuffix('.tar.gz')
+    described = json.loads(machine.read(f'cat $HOME/.cache/dotfiles/staged/{stem}/bundle.json') or '{}')
+    assert described.get('completeness') == 'sparse'
+    assert described.get('current'), 'a converged machine has something for the build to leave out'
 
     checked = json.loads(machine.read('dotfiles bundle check --json') or '{}')
-    left_out = {key.split('/', 1)[-1] for key in described.current}
+    left_out = {key.split('/', 1)[-1] for key in described['current']}
     reported_missing = left_out & set(checked['uncovered'])
 
     assert not reported_missing, f'omitted and reported missing: {sorted(reported_missing)}'

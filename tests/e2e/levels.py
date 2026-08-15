@@ -171,6 +171,9 @@ def level_of(fixturenames: tuple[str, ...] | list[str], *, docker: bool, install
         return BY_NAME['section-over-base']
     if 'machine' in fixturenames or 'fresh_install' in fixturenames:
         return BY_NAME['existing-install'] if installed else BY_NAME['fresh-install']
-    if 'container' in fixturenames or 'fresh_container' in fixturenames:
+    # `builder` here rather than beside `machine`, and the order decides it: the
+    # exchange fixture asks for both, and it needs an install while this needs
+    # only a started container.
+    if 'container' in fixturenames or 'fresh_container' in fixturenames or 'builder' in fixturenames:
         return BY_NAME['empty-container']
     return BY_NAME['no-container']
