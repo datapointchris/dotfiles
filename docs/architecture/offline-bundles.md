@@ -145,6 +145,14 @@ that cannot download them again.
 It also means a machine can say which bundle any staged file came from, which is
 what the directory name is for.
 
+**A bundle built for another machine is refused before it is moved into place.**
+`bundle download --machine X` writes into the same cache `newest` ranks, so
+fetching another box's bundle to look at it is one command away from
+`apply --offline` staging it — a hazard that did not exist while a bundle could
+only be carried in by hand. A bundle that names no machine still stages, and so
+does any bundle on a box that cannot name itself: that is the state part way
+through a rebuild, and it is the one that most needs to unpack something.
+
 **The checksums an asset is verified against come from the bundle that staged
 it**, not from the newest bundle holding a `checksums.txt`. A digest is published
 for one build of one release, so pairing a newer bundle's file with an older

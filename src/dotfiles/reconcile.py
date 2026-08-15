@@ -873,7 +873,7 @@ def _stage_bundle() -> ExitCode | None:
             )
 
         try:
-            offline_bundle.stage(archive)
+            offline_bundle.stage(archive, offline_bundle.target())
         except offline_bundle.StagingError as unreadable:
             return refusal.report(NoBundle(str(unreadable), advice='name a readable one: dotfiles bundle stage PATH'))
         extracted = archive

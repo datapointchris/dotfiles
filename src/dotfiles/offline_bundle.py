@@ -393,6 +393,26 @@ def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> P
     return destination
 
 
+def target() -> str:
+    """Which machine this box is, for the checks that need a name to compare with.
+
+    Empty rather than raising where nothing answers. A machine with no `$MACHINE`
+    and no manifest is a real state part way through a rebuild, and it is exactly
+    the state that most needs to be able to unpack a bundle — so a resolver that
+    refused here would make the check the reason the machine cannot be built.
+
+    Imported inside because `commands` reaches the whole CLI surface and this
+    module is below it: at module scope the import is a cycle.
+    """
+    from dotfiles import commands
+    from dotfiles.refusal import Refusal as AnyRefusal
+
+    try:
+        return commands.resolved(None).machine_name
+    except AnyRefusal:
+        return ''
+
+
 def stem(archive: Path) -> str:
     """The directory one archive unpacks into: its name without the suffixes.
 
@@ -420,7 +440,7 @@ def newest(*searched: Path) -> Path | None:
     return max(found, key=lambda archive: archive.name, default=None)
 
 
-def stage(archive: Path) -> Path:
+def stage(archive: Path, machine: str) -> Path:
     """Unpack a bundle into its own directory, and say which one.
 
     One directory per bundle rather than one tree they all merge into. Merging
@@ -438,6 +458,19 @@ def stage(archive: Path) -> Path:
     Re-staging the same archive replaces its own directory and touches no other,
     so an interrupted run can be repeated without losing what a different bundle
     staged.
+
+    **A bundle built for another machine is refused**, and `machine` is what it is
+    measured against. `bundle download --machine X` writes into the same cache
+    `newest` ranks, so fetching another box's bundle to look at it is now one
+    command away from `apply --offline` staging it — a hazard that did not exist
+    while a bundle could only be carried in by hand. `Staging.headline` already
+    records why failing up front beats failing one tool at a time; what was
+    missing until `bundle.json` was anything that knew the target.
+
+    `machine` empty means the caller could not resolve one, which is a real state
+    on a half-configured box. The check does not run there and the archive stages,
+    because unpacking is this verb's job and refusing would make a machine with no
+    `$MACHINE` unable to install at all.
     """
     staged = paths.STAGING_DIR / stem(archive)
     paths.STAGING_DIR.mkdir(parents=True, exist_ok=True)
@@ -453,6 +486,16 @@ def stage(archive: Path) -> Path:
         unpacked = [entry for entry in Path(workspace).iterdir() if entry.is_dir()]
         if len(unpacked) != 1 or not (unpacked[0] / providers.MANIFEST).is_file():
             raise StagingError(f'{archive} carries no {providers.MANIFEST}, so it is not a dotfiles bundle')
+
+        # Read from what came out rather than from the archive, so what is checked
+        # is what would be installed from. Refused before the move, so a rejected
+        # bundle leaves nothing behind for `newest` to pick up next run.
+        built_for = bundle.description_of(unpacked[0]).machine
+        if machine and built_for and built_for != machine:
+            raise StagingError(
+                f'{archive.name} was built for {built_for} and this machine is {machine}',
+                advice=f'fetch this one instead: dotfiles bundle download --machine {machine}',
+            )
 
         if staged.exists():
             shutil.rmtree(staged)

@@ -234,7 +234,7 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
         hint('fetch one with: dotfiles bundle download')
         raise typer.Exit(ExitCode.ISSUE)
 
-    staged = offline_bundle.stage(found)
+    staged = offline_bundle.stage(found, offline_bundle.target())
 
     success(f'staged {found.name} at {staged}')
 
