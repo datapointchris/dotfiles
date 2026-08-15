@@ -612,6 +612,7 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
         'NUDGE_FILE': state / f'nudge-{paths.MACHINE_ID}',
         'CACHE_HOME': cache,
         'ARCHIVE_DIR': cache / 'bundles',
+        'STATUS_CACHE': cache / 'status',
         'STAGING_DIR': box.staging,
     }
     for name, value in derived.items():

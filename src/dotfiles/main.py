@@ -35,6 +35,7 @@ from dotfiles.commands import remote
 from dotfiles.commands import report
 from dotfiles.commands import resources
 from dotfiles.commands import staging
+from dotfiles.commands import status as status_commands
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
@@ -74,6 +75,7 @@ app.add_typer(logs.app, name='logs', rich_help_panel='History')
 app.add_typer(network.app, name='network', rich_help_panel='Staging')
 app.add_typer(remote.app, name='remote', rich_help_panel='Staging')
 app.add_typer(staging.bundle_app, name='bundle', rich_help_panel='Staging')
+app.add_typer(status_commands.app, name='status', rich_help_panel='Staging')
 app.add_typer(manage.repo_app, name='repo', rich_help_panel='Manage')
 
 

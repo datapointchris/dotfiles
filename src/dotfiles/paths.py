@@ -129,6 +129,13 @@ CACHE_HOME = cache_home()
 ARCHIVE_DIR = CACHE_HOME / 'bundles'
 """Bundle archives, downloaded or just built, each beside its `.json` sidecar."""
 
+STATUS_CACHE = CACHE_HOME / 'status'
+"""Status documents fetched from the remote, which a sparse build is planned from.
+
+A cache and unambiguously so: each is a few kilobytes, the machine that wrote it
+still has it, and losing one costs a second download.
+"""
+
 STAGING_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or CACHE_HOME / 'staged')
 """One directory per unpacked bundle, named after the archive it came from.
 

@@ -197,8 +197,9 @@ def test_the_home_every_path_resolves_through_is_the_sandbox_one(sandbox: Sandbo
         ('RUNS_DIR', 'state'),
         ('STAGING_DIR', 'staging'),
         ('ARCHIVE_DIR', 'cache'),
+        ('STATUS_CACHE', 'cache'),
     ],
-    ids=['cache', 'state', 'runs', 'staged', 'archives'],
+    ids=['cache', 'state', 'runs', 'staged', 'archives', 'statuses'],
 )
 def test_every_directory_the_package_writes_to_is_under_the_sandbox(sandbox: Sandbox, constant: str, attribute: str) -> None:
     """Each of these is derived from a variable at import, so each is a separate

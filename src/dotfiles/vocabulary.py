@@ -77,6 +77,7 @@ NOUNS = frozenset(
         'network',
         'bundle',
         'remote',
+        'status',
         'repo',
     }
 )

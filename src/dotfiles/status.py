@@ -36,6 +36,7 @@ from collections.abc import Sequence
 
 from dotfiles import paths
 from dotfiles import reconcile
+from dotfiles import vocabulary
 from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
@@ -118,6 +119,17 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
     otherwise be indistinguishable — and the bundle builder wants the plan's rows
     rather than the check's.
 
+    **`scope` names which resources it covers, and a reader has to honour it.**
+    One shape now comes from three widths: every resource from `check`, one from a
+    resource-scoped door, and the publishable subset from `status show`. Without
+    it, a consumer diffing this against a declaration reads "the resources this
+    document does not mention" as "resources this machine has nothing for" —
+    which is the sweep-as-deletion failure `standards/cli-design.md` § "A
+    narrowing default reads as a deletion to anything that reconciles by sweep"
+    measures. Additive, so `VERSION` does not move: a reader that ignores it is
+    exactly as correct as it was, which was correct for the one width that
+    existed.
+
     **One shape for one resource and for nine.** The resource-scoped verbs emitted
     a bare row for a single result and an array for several, on the argument that a
     reader tells those apart on the first byte. It can, and having to is the defect:
@@ -134,6 +146,7 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
         'verb': verb,
         'machine': machine,
         'checked': when.isoformat(),
+        'scope': sorted({vocabulary.parse_address(result.address)[0] for result in results}),
         'verdict': _worst(results),
         'resources': [result.as_dict() for result in results],
     }
