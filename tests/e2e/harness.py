@@ -635,16 +635,23 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-*'
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-$(hostname -s | tr "[:upper:]" "[:lower:]")'
 """`paths.LATEST_RUN`, spelled for a shell because it is read inside the container.
 
-Globbed on the suffix rather than naming it. `paths.LATEST_RUN` gained a
-`-{machine_id}` suffix when the state directory became fleet-shared, and this
-constant kept naming the old path — so the `cp` in `install_command` matched
-nothing, silently, and every test taking the `machine` fixture errored at setup
-instead. A container holds exactly one box, so the glob is unambiguous, and it
-survives the next change to how that name is built rather than duplicating the
-derivation a second time."""
+The suffix is *derived*, never globbed. `paths.LATEST_RUN` gained a
+`-{machine_id}` suffix when the state directory became fleet-shared, and naming
+the old path made the `cp` match nothing — so a `latest-*` glob replaced it, and
+that is worse in a way the first fault was not. A glob is silent when it matches
+nothing and *fatal* when it matches twice: `cp a b file` fails with "target is
+not a directory", and every test taking the `machine` fixture then errors after
+a converged install.
+
+Which it does, because the base image bakes a record from the build. That build
+runs as a machine named `buildkitsandbox`, and its `latest-buildkitsandbox`
+lives in the image beside the container's own.
+
+`hostname -s`, lowercased, is `paths.machine_id` in shell. One box per container,
+so it resolves to exactly one path or to nothing at all."""
 
 INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
@@ -719,8 +726,24 @@ def install_record_gap(machine: Machine) -> str:
     """
     home = machine.environment.home
     if not machine.read(f'cat {home}/{INSTALL_STATUS} 2>/dev/null').strip().isdigit():
-        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command'
-    return f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, so {LATEST_RECORD} matched nothing'
+        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command{_install_tail(machine)}'
+    return (
+        f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, '
+        f'so {LATEST_RECORD} matched nothing{_install_tail(machine)}'
+    )
+
+
+def _install_tail(machine: Machine) -> str:
+    """The end of the install log, appended to whatever gap is being reported.
+
+    The log is written by `tee` and survives every failure, and the fixture that
+    raises this discards it — so the one artefact that says *why* is the one
+    nobody sees. Diagnosing a failed install then costs a second run of the
+    install, which is forty minutes to learn something already on disk.
+    """
+    home = machine.environment.home
+    tail = machine.read(f'tail -n 40 {home}/{INSTALL_LOG} 2>/dev/null')
+    return f'\n\n--- last 40 lines of {INSTALL_LOG} ---\n{tail}' if tail else ''
 
 
 def install_age(machine: Machine) -> str:

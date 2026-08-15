@@ -89,7 +89,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/opt/build-u
 # above leaves those parents root-owned, and the install then dies at
 # `failed to create directory /home/testuser/.cache/uv: Permission denied` —
 # which is every test in the offline and restricted environments, at 7 seconds.
-RUN rm -rf /home/testuser/dotfiles \
+# The run record goes with it. The layer above applies as a machine named
+# `buildkitsandbox`, so it writes `latest-buildkitsandbox` into the shared state
+# directory — another box's state, baked into every container built from this
+# image. A container then holds two `latest-*` entries, and anything reading them
+# as one gets the build's rather than its own.
+RUN rm -rf /home/testuser/dotfiles /home/testuser/.local/state/dotfiles \
     && mkdir -p /home/testuser/dotfiles \
     && chown -R testuser:testuser /home/testuser
 
