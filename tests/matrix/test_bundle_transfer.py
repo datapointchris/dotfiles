@@ -18,10 +18,14 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+import typer
 from relay import declare
 from relay import install_relay
 
 from dotfiles import offline_bundle
+from dotfiles import paths
+from dotfiles.commands import staging
+from dotfiles.commands import status as status_commands
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
@@ -470,3 +474,62 @@ class TestTheAutomaticPaths:
 
         assert ran.exit_code == ExitCode.CONVERGED
         assert not (server / 'artefacts' / 'status').exists()
+
+
+class TestResolvingLatestForASparseBuild:
+    """`--against latest` reaches the remote, and that half is testable on its own.
+
+    The build it feeds cannot run here — it downloads every installer the manifest
+    names, which the matrix guard refuses — so what is asserted is the resolution:
+    the newest status for a machine lands in the cache and its path is what the
+    builder is handed. `tests/install/test_create_bundle.py` owns the other half.
+    """
+
+    def published(self, server: Path, stamp: str) -> Path:
+        shelf = server / 'artefacts' / 'status' / MACHINE
+        shelf.mkdir(parents=True, exist_ok=True)
+        written = shelf / f'{status_commands.PREFIX}{stamp}-{MACHINE}-abcd1234.json'
+        written.write_text(json.dumps({'version': 2, 'machine': MACHINE, 'scope': ['packages'], 'resources': []}))
+        return written
+
+    def test_the_newest_status_lands_in_the_cache_and_is_what_the_build_is_handed(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        self.published(server, '20260101T010000Z')
+        newest = self.published(server, '20260909T120000Z')
+
+        found = staging._status_for('latest', MACHINE)
+
+        assert found is not None
+        assert found.name == newest.name
+        assert found.parent == paths.STATUS_CACHE
+        assert json.loads(found.read_text())['machine'] == MACHINE
+
+    def test_a_path_is_taken_as_written(self, sandbox: Sandbox, server: Path, tmp_path: Path) -> None:
+        """Everything that is not the literal `latest` is a file, so a machine with
+        a status already on disk never reaches the remote for it."""
+        named = tmp_path / 'a-status.json'
+        named.write_text('{}')
+
+        assert staging._status_for(str(named), MACHINE) == named
+
+    def test_a_path_that_is_not_a_file_is_a_usage_error_naming_the_fetch(self, sandbox: Sandbox, server: Path, tmp_path: Path) -> None:
+        with pytest.raises(typer.BadParameter, match='status download'):
+            staging._status_for(str(tmp_path / 'never-written.json'), MACHINE)
+
+    def test_an_empty_shelf_refuses_and_names_where_a_status_comes_from(self, sandbox: Sandbox, server: Path) -> None:
+        """A build that fell back to a full bundle here would be the failure the
+        whole feature exists to avoid, reported as a success."""
+        with pytest.raises(staging.BundleTransferError) as refused:
+            staging._status_for('latest', MACHINE)
+
+        assert refused.value.code is ExitCode.ISSUE
+        assert 'status upload' in refused.value.advice
+
+    def test_no_status_is_fetched_for_a_full_build(self, sandbox: Sandbox, server: Path) -> None:
+        """Paired with the cases above: `--against` absent must reach nothing at
+        all, which a remote that answered would otherwise hide."""
+        self.published(server, '20260909T120000Z')
+
+        assert staging._status_for(None, MACHINE) is None
+        assert not paths.STATUS_CACHE.exists()

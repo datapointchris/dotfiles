@@ -933,8 +933,12 @@ def newest_bundle(manifest: str) -> Path | None:
     return existing[-1] if existing else None
 
 
-def build_bundle(manifest: str) -> Path:
+def build_bundle(manifest: str, *, against: Path | None = None) -> Path:
     """Half a gigabyte and several minutes, on the machine that has the network.
+
+    `against` builds sparsely, from a status the target published. It defaults to
+    None because that is what a build *means* without one — a full bundle — rather
+    than because a caller might forget to pass it.
 
     `--print-path` makes the archive's name the build's return value: it is named
     after the date, the manifest and the target CPU, so anything downstream would
@@ -959,6 +963,7 @@ def build_bundle(manifest: str) -> Path:
             manifest,
             '--arch',
             'x86_64',
+            *(('--against', str(against)) if against else ()),
             '--print-path',
         ],
         # fmt: on
@@ -973,6 +978,17 @@ def build_bundle(manifest: str) -> Path:
     return archive
 
 
+def copy_in(machine: Machine, archive: Path) -> None:
+    """Put an archive in the container's home, owned by the installing user.
+
+    Extracted from `stage_bundle` so a test that builds a second bundle can put it
+    there too without repeating the `chown` — which is the half that is easy to
+    forget and fails as a permission error several steps later.
+    """
+    docker('cp', str(archive), f'{machine.container}:{machine.environment.home}/', check=True)
+    machine.exec(f'chown {machine.environment.user} {machine.environment.home}/{archive.name}', user='root', check=True)
+
+
 def stage_bundle(machine: Machine, *, reuse: bool = False) -> Path:
     """Put a bundle where `install.sh --offline` will find it.
 
@@ -985,8 +1001,7 @@ def stage_bundle(machine: Machine, *, reuse: bool = False) -> Path:
     """
     manifest = machine.environment.manifest
     archive = (newest_bundle(manifest) if reuse else None) or build_bundle(manifest)
-    docker('cp', str(archive), f'{machine.container}:{machine.environment.home}/', check=True)
-    machine.exec(f'chown {machine.environment.user} {machine.environment.home}/{archive.name}', user='root', check=True)
+    copy_in(machine, archive)
     return archive
 
 

@@ -15,12 +15,20 @@ is for.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from harness import Machine
+from harness import build_bundle
+from harness import copy_in
 from harness import declared_items
 from harness import failed_outcomes
 from harness import run_record
 from harness import shadow_calls
+
+from dotfiles import offline_bundle
+from dotfiles.providers import bundle
 
 pytestmark = pytest.mark.docker
 
@@ -252,3 +260,53 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
         pytest.skip('only the offline environment installs from a bundle')
     assert 'Checksum verified from offline bundle' in machine.install_log
     assert 'installed from the bundle at' in machine.install_log
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The sparse round trip
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_current(machine: Machine, tmp_path: Path) -> None:
+    """The whole feature, against a real converged machine and a real build.
+
+    Everything below this in the suite exercises the sparse decision against a
+    synthetic status and a hand-written `bundle.json`. What none of it can reach
+    is the pair the feature actually is: a status a real machine produced, and a
+    bundle a real `create_bundle` built by diffing against it. A wrong key on
+    either side passes every one of those tests and produces a bundle that carries
+    everything, reporting itself sparse.
+
+    The assertion is the omission rather than the size. A smaller archive is the
+    point and not the property — a build that omitted the wrong things would be
+    smaller too. What has to hold is that the machine reads what was left out as
+    current instead of as something nothing could measure.
+    """
+    if not machine.environment.offline:
+        pytest.skip('only the offline environment installs from a bundle')
+
+    published = machine.read('dotfiles status show --json')
+    assert published, 'the converged machine published no status'
+    status = tmp_path / 'status.json'
+    status.write_text(published)
+
+    sparse = build_bundle(machine.environment.manifest, against=status)
+    assert sparse.name.endswith('-sparse.tar.gz'), 'a sparse build has to say so in its own name'
+
+    # Read through the tool's own reader rather than by unpacking the tarball
+    # here, so the test cannot agree with a `bundle.json` the installing side
+    # would not have understood.
+    described = offline_bundle.peek(sparse)
+    assert described.completeness is bundle.Completeness.SPARSE
+    assert described.built_from == status.name
+    assert described.current, 'a converged machine has something for the build to leave out'
+
+    copy_in(machine, sparse)
+    machine.exec(f'dotfiles bundle stage {machine.environment.home}/{sparse.name}', check=True)
+
+    checked = json.loads(machine.read('dotfiles bundle check --json') or '{}')
+    left_out = {key.split('/', 1)[-1] for key in described.current}
+    reported_missing = left_out & set(checked['uncovered'])
+
+    assert not reported_missing, f'omitted and reported missing: {sorted(reported_missing)}'
+    assert left_out & set(checked['measured']), 'nothing the build left out was reported as measured'
