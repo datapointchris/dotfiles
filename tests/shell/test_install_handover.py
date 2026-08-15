@@ -26,6 +26,7 @@ import pytest
 from shells import REPO
 
 from dotfiles import coordinates
+from dotfiles.create_bundle import ARCHIVE_MEMBER
 
 BOOTSTRAP = REPO / 'install.sh'
 
@@ -108,10 +109,16 @@ exit 0
 
 
 def bootstrap_bundle(at: Path, name: str) -> Path:
-    """A tarball shaped the way `create_bundle` shapes one: a single `installers`
-    member holding the manifest, the uv the bootstrap copies, and the wheelhouse
-    it installs the CLI from."""
-    staging = at / f'{name}-contents' / 'installers'
+    """A tarball shaped the way `create_bundle` shapes one: one member holding the
+    manifest, the uv the bootstrap copies, and the wheelhouse it installs the CLI
+    from.
+
+    The member name comes from the producer rather than being spelled again here.
+    `install.sh` moves that name by hand, so a fixture carrying its own copy keeps
+    building the old shape after the producer changes — leaving these green while
+    every real bundle fails to stage, and only the container tier says so.
+    """
+    staging = at / f'{name}-contents' / ARCHIVE_MEMBER
     (staging / 'bin').mkdir(parents=True)
     (staging / 'wheels').mkdir()
     (staging / 'manifest.txt').write_text('binary|fd|10.2.0|fd\n')
@@ -120,7 +127,7 @@ def bootstrap_bundle(at: Path, name: str) -> Path:
 
     tarball = at / f'{name}.tar.gz'
     with tarfile.open(tarball, 'w:gz') as packed:
-        packed.add(staging, arcname='installers')
+        packed.add(staging, arcname=ARCHIVE_MEMBER)
     return tarball
 
 
@@ -173,7 +180,7 @@ def test_the_bootstrap_stages_into_a_directory_named_after_the_archive(tmp_path:
 
     assert ran.returncode == 0, ran.stderr
     assert (staging / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
-    assert not (staging / 'installers').exists(), "the archive's member name must not decide the directory"
+    assert not (staging / ARCHIVE_MEMBER).exists(), "the archive's member name must not decide the directory"
 
 
 def test_the_bootstrap_installs_the_cli_from_the_bundle_it_staged(tmp_path: Path) -> None:

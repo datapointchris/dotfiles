@@ -75,6 +75,16 @@ CACHE_RETENTION_DAYS = 90
 
 DOWNLOAD_ATTEMPTS = 3
 
+ARCHIVE_MEMBER = 'installers'
+"""The archive's single top-level directory, whatever the tarball is called.
+
+`install.sh` moves this name by hand, because the shell that stages a bundle is
+the one running before the CLI exists. Named here so the two agree by import
+rather than by two people typing the same word: `offline_bundle.stage` takes
+whichever directory it finds, so a change to this string breaks only the shell
+path — and only in the container tier, unless a cheaper test reads it from here.
+"""
+
 # Keep the tail of a failing command's output: a TLS, proxy or "too many errors"
 # failure states its cause on the last lines, under however much progress
 # preceded it.
@@ -1165,7 +1175,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     tarball_path = paths.REPO_ROOT / f'{name}.tar.gz'
 
     with tempfile.TemporaryDirectory() as workspace:
-        bundle = Bundle(Path(workspace) / 'installers', os_name, arch, manifest_name, built_at)
+        bundle = Bundle(Path(workspace) / ARCHIVE_MEMBER, os_name, arch, manifest_name, built_at)
         if reported is not None and against is not None:
             bundle.plan_against(against, reported)
             log.info('Sparse: against %s, which reports %d installed tool(s)', against.name, len(bundle.installed))
@@ -1181,7 +1191,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
 
         log.info('Creating tarball...')
         with tarfile.open(tarball_path, 'w:gz') as tar:
-            tar.add(bundle.staging, arcname='installers')
+            tar.add(bundle.staging, arcname=ARCHIVE_MEMBER)
 
     size_mb = tarball_path.stat().st_size / (1024 * 1024)
     log.info('Bundle created successfully!')
