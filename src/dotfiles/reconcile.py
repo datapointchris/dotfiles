@@ -683,36 +683,77 @@ def machines_row(skip: frozenset[str]) -> list[ResourceResult]:
 
 
 def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
-    """What this verb answered, and where the question it did not answer is asked.
+    """What this verb answered, named, and what it deliberately left alone.
 
     The line that makes the pair legible. `plan` and `check` walk the same machine
     and keep different halves, so on a machine with logged-out CLIs and nothing
     else wrong, `plan` prints nine converged rows and `check` prints four
     findings — which reads as one of them being broken rather than as two
-    questions. Neither run said which question it had answered, and nothing on
-    screen named the other verb.
+    questions.
 
     Always printed, including when there is nothing to report, because the run
     that most needs it is the one that found nothing.
 
-    Counts and never names: `report_summary` prints a row per troubled resource
-    directly above this, so naming them here was the same words twice. The drift
-    clause stays, because it is the other verb's subject and has no row up there.
-    """
-    pending = sum(result.pending for result in results)
-    if lens is Lens.PLAN:
-        attention = sum(result.attention for result in results)
-        if pending:
-            return f'{pending} item(s) to change — run: dotfiles apply'
-        if attention:
-            return f'nothing for apply to change; {attention} item(s) need a person'
-        return 'nothing to change'
+    **Every clause names its subjects, and no clause names another verb.** The rule
+    `applied_line` already keeps, and the whole of what this line is worth. A bare
+    count is a question rather than an answer: `2 resource(s) need a person` above
+    rows that say `env` and `auth` sends the reader hunting for what is on screen,
+    and a drift count names the one set on the machine with no row anywhere. Naming
+    the other verb instead asks for a second full walk to print those names.
 
-    troubled = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
-    drift = f'; {pending} item(s) differ from what this machine declares — run: dotfiles plan' if pending else ''
-    if troubled:
-        return f'{len(troubled)} resource(s) need a person{drift}'
-    return f'nothing wrong{drift}'
+    The drift half is `check`'s alone and the by-hand half is `plan`'s alone: each
+    is the other verb's subject, carried here because a verdict that omits it reads
+    as a machine with nothing else to say. What refused to be measured is neither,
+    and is named under both.
+    """
+    blind = _clause([result.address for result in results if _refused(result)], 'could not be measured', 'resource')
+    # Read off the changes rather than off the counts beside them, and asked with
+    # the same properties `sift` classifies by. A verb's own half is `findings` and
+    # the other verb's is `others`, so the two are gathered from opposite fields
+    # under opposite lenses.
+    own = [change.item for result in results for change in result.findings]
+
+    if lens is Lens.PLAN:
+        if own:
+            return _sentence(_clause(own, 'to change'), blind)
+        by_hand = _clause([change.item for result in results for change in result.others if change.declined], 'need a person')
+        head = 'nothing for apply to change' if by_hand or blind else 'nothing to change'
+        return _sentence(head, by_hand, blind)
+
+    # A declaration finding has no Change to carry it and is the same kind of thing
+    # as one: `machines` is the resource nobody but a person can put right.
+    troubled = own + [section for result in results for section, _ in result.invalid]
+    drift = [change.item for result in results for change in result.others if change.actionable]
+    # `nothing wrong` survives beside a drift clause, and is this verb's own answer
+    # rather than a filler. The verdict word beside it is green, because drift is
+    # not this verb's subject and does not move it — so a line that opened on the
+    # drift alone would read as a contradiction of the word to its left.
+    answered = _sentence(_clause(troubled, 'need a person'), blind) or 'nothing wrong'
+    return _sentence(answered, _clause(drift, 'differ from what this machine declares'))
+
+
+def _refused(result: ResourceResult) -> bool:
+    """Whether this resource produced no evidence at all and still failed.
+
+    A checker that could not run, which `fold` turns into an Issue carrying its
+    reason and nothing else. It has no item to name, so the resource is the
+    subject — and it must not be counted as an item needing a person, which is a
+    different thing a person can actually go and do.
+    """
+    return result.verdict is ResourceVerdict.ISSUE and not result.findings and not result.invalid
+
+
+def _clause(subjects: Sequence[str], phrase: str, noun: str = 'item') -> str:
+    """How many, what about them, and which ones — or nothing at all.
+
+    Empty for an empty set, so `_sentence` decides the punctuation rather than
+    every caller deciding whether its clause needs a leading separator.
+    """
+    return f'{len(subjects)} {noun}(s) {phrase}: {named(subjects)}' if subjects else ''
+
+
+def _sentence(*clauses: str) -> str:
+    return '; '.join(clause for clause in clauses if clause)
 
 
 def report_summary(results: Sequence[ResourceResult], lens: Lens) -> None:

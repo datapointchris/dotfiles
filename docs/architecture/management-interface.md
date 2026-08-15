@@ -82,9 +82,9 @@ alone, because `NO_COLOR` is a preference this fleet honours and a report carryi
 verdict only in an escape code answers nothing on a machine that asked for none.
 
 The closing line is where the word goes, since the run's verdict is about the run rather
-than about each part of it. It also says which question was answered and where the other
-one is asked, which is the answer to "plan converged and said nothing — am I using it
-wrong".
+than about each part of it. It also says which question was answered and what the verb
+left to the other one, which is the answer to "plan converged and said nothing — am I
+using it wrong".
 
 A read verb reaches it through a **summary**, under a titled rule. Every section that
 found something prints again, its own heading word for word — a recap worded afresh makes
@@ -99,11 +99,19 @@ check summary ──────────────────────
 ✗ auth        3 item(s) need a person: meso, nomad, atuin
 ~ repo        /home/chris/dotfiles is 6 commits behind origin/main — run: dotfiles update
 
-issue     2 resource(s) need a person; 1 item(s) differ from what this machine declares — run: dotfiles plan
+issue     4 item(s) need a person: HOSTS_JSON, meso, nomad, atuin; 1 item(s) differ from what this machine declares: ghrelease/yazi
 ```
 
-The verdict line counts and never names, because the rows above it name. The drift clause
-survives on it, being the other verb's subject and so nobody's row.
+**Every clause names its subjects, and no clause names another verb.** A bare count is a
+question rather than an answer. `2 resource(s) need a person` above rows that say `env`
+and `auth` sends the reader hunting for what is on screen, and the drift count names the
+one set on the machine with no row anywhere. Naming `dotfiles plan` instead asks for a
+second full walk to print those names. The list cuts off at four with a count of the
+rest, through `named`, the same cap a resource's own row uses.
+
+A run that refused to measure a resource has no item to name, so that clause names the
+resource instead and words it as unmeasured — a person cannot go and fix a checker that
+would not run the way they can log in to atuin.
 
 Each verb's row also words the *other* verb's count as that verb owns it. A `plan` row
 reading `converged` beside `4 need attention` was a row contradicting itself, and both

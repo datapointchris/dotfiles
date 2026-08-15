@@ -334,44 +334,83 @@ def test_the_fix_is_dropped_from_the_summary_when_it_needs_more_than_a_line() ->
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_plan_with_nothing_to_do_says_where_the_other_question_is_asked() -> None:
-    """The run this exists for. On a machine whose only fault is four logged-out
+def folded(address: str, changes: list[Change], lens: reconcile.Lens) -> ResourceResult:
+    """One resource's result the way the walk builds it, items and all.
+
+    Constructed straight from counts, a result carries numbers with nothing behind
+    them — which is the state the closing line is no longer allowed to be in, so a
+    test that built one would be pinning the defect."""
+    return reconcile.from_changes(address, changes, 'all installed', lens)
+
+
+def test_a_plan_with_nothing_to_do_names_the_items_the_other_verb_owns() -> None:
+    """The run this exists for. On a machine whose only fault is two logged-out
     CLIs, `plan` prints nine converged rows and looks like it said nothing —
     which reads as the verb being broken rather than as the other verb's subject.
     """
-    results = [ResourceResult('auth', ResourceVerdict.CONVERGED, '3 of 7', lens=reconcile.Lens.PLAN, attention=4)]
-
-    line = reconcile.verdict_line(results, reconcile.Lens.PLAN)
-
-    assert line == 'nothing for apply to change; 4 item(s) need a person'
-
-
-def test_a_plan_with_work_to_do_names_the_verb_that_does_it() -> None:
-    results = [ResourceResult('packages', ResourceVerdict.DRIFT, '2 differ', lens=reconcile.Lens.PLAN, pending=2)]
-
-    assert reconcile.verdict_line(results, reconcile.Lens.PLAN) == '2 item(s) to change — run: dotfiles apply'
-
-
-def test_a_check_counts_the_resources_and_leaves_naming_them_to_the_summary() -> None:
-    """The block above this line names them, with the items behind each."""
-    results = [
-        ResourceResult('packages', ResourceVerdict.ISSUE, '1 needs a person', lens=reconcile.Lens.CHECK, attention=1),
-        ResourceResult('auth', ResourceVerdict.ISSUE, '4 need a person', lens=reconcile.Lens.CHECK, attention=4),
-        ResourceResult('env', ResourceVerdict.CONVERGED, 'matches', lens=reconcile.Lens.CHECK),
+    logged_out = [
+        change(Verdict.MISSING, Repair.BY_HAND, item='auth/meso'),
+        change(Verdict.MISSING, Repair.BY_HAND, item='auth/atuin'),
     ]
 
-    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 resource(s) need a person'
+    line = reconcile.verdict_line([folded('auth', logged_out, reconcile.Lens.PLAN)], reconcile.Lens.PLAN)
+
+    assert line == 'nothing for apply to change; 2 item(s) need a person: auth/meso, auth/atuin'
 
 
-def test_a_clean_check_still_reports_the_drift_it_deliberately_ignored() -> None:
+def test_a_plan_with_work_to_do_names_what_would_change() -> None:
+    """And never the verb that would change it. `apply` is the only thing a plan
+    can lead to, so a reader at this line already knows the command — what they do
+    not know is which two items it would touch."""
+    drifting = [change(Verdict.MISSING, item='ghrelease/zk'), change(Verdict.STALE, item='go/forge')]
+
+    line = reconcile.verdict_line([folded('packages', drifting, reconcile.Lens.PLAN)], reconcile.Lens.PLAN)
+
+    assert line == '2 item(s) to change: ghrelease/zk, go/forge'
+
+
+def test_a_check_names_the_items_needing_a_person_across_every_resource() -> None:
+    """A count of *resources* was the one number on the screen that answered
+    nothing: the rows above already show which resources, and the thing a reader
+    goes looking for is what to do next."""
+    results = [
+        folded('env', [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER')], reconcile.Lens.CHECK),
+        folded('auth', [change(Verdict.MISSING, Repair.BY_HAND, item='auth/atuin')], reconcile.Lens.CHECK),
+        folded('packages', [change(Verdict.MATCHED)], reconcile.Lens.CHECK),
+    ]
+
+    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 item(s) need a person: env/WINDOWS_USER, auth/atuin'
+
+
+def test_a_check_names_a_resource_that_could_not_be_measured_at_all() -> None:
+    """A refusal has no item to name, and calling it an item needing a person says
+    a person can go and do something about it."""
+    results = [ResourceResult('packages', ResourceVerdict.ISSUE, 'the release cache is unreadable', lens=reconcile.Lens.CHECK)]
+
+    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '1 resource(s) could not be measured: packages'
+
+
+def test_a_clean_check_names_the_drift_it_deliberately_ignored() -> None:
     """Drift is not this verb's subject and must not move its exit code, which is
     exactly why the run has to say the drift is there — otherwise a converged
-    `check` reads as a machine with nothing to apply."""
-    results = [ResourceResult('packages', ResourceVerdict.CONVERGED, 'all installed', lens=reconcile.Lens.CHECK, pending=3)]
+    `check` reads as a machine with nothing to apply. It is also the only set with
+    no row anywhere in the block above, so a count alone left it unreachable."""
+    behind = [change(Verdict.STALE, item='ghrelease/yazi'), change(Verdict.MISSING, item='go/forge')]
 
-    line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
+    line = reconcile.verdict_line([folded('packages', behind, reconcile.Lens.CHECK)], reconcile.Lens.CHECK)
 
-    assert line == 'nothing wrong; 3 item(s) differ from what this machine declares — run: dotfiles plan'
+    assert line == 'nothing wrong; 2 item(s) differ from what this machine declares: ghrelease/yazi, go/forge'
+
+
+def test_an_unmeasurable_item_never_reaches_the_drift_clause() -> None:
+    """`others` under `check` holds everything the lens did not keep, and a cold
+    release cache puts every declared release in it with no evidence either way.
+    Named as drift, a healthy machine reads as one with a screen of pending work."""
+    mixed = [change(Verdict.UNKNOWN, Repair.NONE, item='ghrelease/yazi'), change(Verdict.STALE, item='go/forge')]
+
+    line = reconcile.verdict_line([folded('packages', mixed, reconcile.Lens.CHECK)], reconcile.Lens.CHECK)
+
+    assert line == 'nothing wrong; 1 item(s) differ from what this machine declares: go/forge'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
