@@ -89,12 +89,12 @@ bootstrap in offline mode — it finds and unpacks the tarball itself:
   dotfiles apply --machine <name> --offline
 
 The bootstrap installs the CLI and stops, printing that second line back.
-Everything comes out of ~/installers. bin/uv and wheels/ are what let the
-bootstrap install the CLI with no network at all; the rest is what the apply
-then installs onto the machine.
+Everything comes out of $XDG_CACHE_HOME/dotfiles/staged/<this bundle's name>/.
+bin/uv and wheels/ are what let the bootstrap install the CLI with no network
+at all; the rest is what the apply then installs onto the machine.
 
 Directory Structure:
-  installers/
+  <bundle name>/
   |-- manifest.txt    # every included file, with its version
   |-- bundle.json     # what this bundle is: when, for which machine, full or sparse
   |-- checksums.txt   # sha256 of each GitHub release asset, verified here
@@ -111,8 +111,10 @@ reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
 On a machine that is already built, `dotfiles bundle stage` unpacks a newer
-tarball over this one -- refreshing what it carries, leaving alone what it
-does not, and needing none of the bootstrap.
+tarball beside this one, needing none of the bootstrap. Each bundle keeps its
+own directory: the newest carrying a file answers for it, and an older one
+still answers for everything the newer left out. That is what lets a sparse
+bundle carry only what changed.
 
 Offline, this manifest is what "latest" means -- a tool older than the version
 recorded here reads as out of date, and apply moves it onto the bundled one:

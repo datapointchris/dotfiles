@@ -778,24 +778,28 @@ def test_an_unnamed_stage_finds_the_bundle_in_either_searched_directory(
 ) -> None:
     """The default is right often enough that naming the archive is the exception:
     a machine has one bundle and its name carries a date nobody types."""
-    bundled(getattr(sandbox, directory), 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
+    bundled(getattr(sandbox, directory), 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz')
 
     ran = cli('bundle', 'stage')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'manifest.txt').is_file()
+    assert (sandbox.staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
 
 
-def test_a_bundle_beside_the_checkout_wins_over_an_older_one_in_home(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Directories are tried in order rather than the newest taken across both: a
-    tarball just copied next to the checkout is the one meant, even where a stale
-    one is still sitting in `$HOME`."""
-    bundled(sandbox.root, 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
-    bundled(sandbox.home, 'dotfiles-offline-v20260909-box-linux-x86_64.tar.gz')
+def test_the_newest_archive_wins_wherever_it_sits(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Ranked across every searched directory rather than by the order they are
+    tried.
+
+    A download writes into the cache, which no first-directory-wins order can rank
+    against a copy beside the checkout. The stamp is to the second, so the
+    comparison replacing that order is unambiguous.
+    """
+    bundled(sandbox.root, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz')
+    bundled(sandbox.home, 'dotfiles-offline-v20260909T010000Z-box-linux-x86_64.tar.gz')
 
     ran = cli('bundle', 'stage')
 
-    assert 'dotfiles-offline-v20260101' in ran.stderr
+    assert 'dotfiles-offline-v20260909T010000Z' in ran.stderr
 
 
 def test_a_named_archive_is_staged_wherever_it_sits(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -806,7 +810,7 @@ def test_a_named_archive_is_staged_wherever_it_sits(sandbox: Sandbox, cli: Calla
     ran = cli('bundle', 'stage', str(archive))
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'manifest.txt').is_file()
+    assert (sandbox.staging / 'anything-at-all' / 'manifest.txt').is_file()
 
 
 @pytest.mark.parametrize(
@@ -834,23 +838,29 @@ def test_an_archive_that_is_not_a_bundle_is_refused_before_anything_is_staged(
 
     assert ran.exit_code == ExitCode.ISSUE
     assert message in ran.stderr
-    assert not sandbox.bundle.exists()
+    assert list(sandbox.staging.iterdir()) == [] if sandbox.staging.is_dir() else True
 
 
-def test_a_newer_bundle_refreshes_what_it_carries_and_leaves_the_rest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Merged into rather than replaced, which is what `tar -x` over the top does
-    and what the bundle's own README describes. Replacing would delete the wheels an
-    interrupted run still needs."""
-    first = bundled(sandbox.root / 'one', 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
+def test_a_newer_bundle_stacks_and_leaves_the_older_one_readable(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Each bundle keeps its own directory, so what an earlier one staged is still
+    there and still listed.
+
+    Merging into one tree refreshes the files and replaces the manifest, which
+    leaves everything the first carried on disk and unreachable — the manifest is
+    the only door a provider has in.
+    """
+    older = 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    first = bundled(sandbox.root / 'one', f'{older}.tar.gz')
     cli('bundle', 'stage', str(first))
-    (sandbox.bundle / 'wheels').mkdir()
-    (sandbox.bundle / 'wheels' / 'pyyaml.whl').write_text('bytes an interrupted run still needs')
+    (sandbox.staging / older / 'wheels').mkdir()
+    (sandbox.staging / older / 'wheels' / 'pyyaml.whl').write_text('bytes an interrupted run still needs')
 
-    second = bundled(sandbox.root / 'two', 'dotfiles-offline-v20260202-box-linux-x86_64.tar.gz')
+    second = bundled(sandbox.root / 'two', 'dotfiles-offline-v20260202T010000Z-box-linux-x86_64.tar.gz')
     ran = cli('bundle', 'stage', str(second))
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'wheels' / 'pyyaml.whl').is_file()
+    assert (sandbox.staging / older / 'wheels' / 'pyyaml.whl').is_file()
+    assert (sandbox.staging / 'dotfiles-offline-v20260202T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

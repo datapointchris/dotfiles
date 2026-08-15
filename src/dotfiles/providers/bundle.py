@@ -31,11 +31,12 @@ import datetime as dt
 import json
 from collections.abc import Mapping
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from dotfiles.providers import bundle_file
+from dotfiles.providers import MANIFEST
+from dotfiles.providers import staged_bundles
 
-MANIFEST = 'manifest.txt'
 DOCUMENT = 'bundle.json'
 
 VERSION = 1
@@ -158,32 +159,58 @@ class Staged:
 
 
 def rows() -> tuple[Staged, ...]:
-    """Every staged file, or nothing at all where there is no bundle.
+    """Every staged file across every staged bundle, newest bundle winning.
 
-    An unreadable manifest is the same answer as an absent one — no bundle —
-    because that answer is already correct and already handled by every caller.
+    Merged rather than concatenated, on `(category, name)`. That pair is the
+    identity a provider looks a row up by — one tool is a `binary` on one machine
+    and a `cargo` on another — and two rows for it would let a caller reading the
+    first find the older version while `locate` hands back the newer file.
+
+    Nothing at all where no bundle is staged, and an unreadable manifest is the
+    same answer as an absent one. Both are already correct and already handled by
+    every caller.
     """
-    return parse(_text())
+    merged: dict[tuple[str, str], Staged] = {}
+    for root in reversed(staged_bundles()):
+        for row in parse(_text(root)):
+            merged[row.category, row.name] = row
+    return tuple(merged.values())
 
 
-def _text() -> str:
-    """The manifest, or '' where there is none."""
+def _text(root: Path) -> str:
+    """One bundle's manifest, or '' where it cannot be read."""
     try:
-        return bundle_file(MANIFEST).read_text()
+        return (root / MANIFEST).read_text()
     except OSError:
         return ''
 
 
-def described() -> Description:
-    """What this bundle says it is, or the empty description where it says nothing.
+def descriptions() -> tuple[Description, ...]:
+    """What each staged bundle says it is, newest first.
+
+    Every one of them rather than the newest alone, because a sparse bundle's
+    `current` map explains an absence that a *different* bundle would have
+    explained by carrying the file. Reading only the newest would report an entry
+    the older full bundle staged as unconsidered.
+    """
+    return tuple(description_of(root) for root in staged_bundles())
+
+
+def description_of(root: Path) -> Description:
+    """What one staged bundle says it is, or the empty description where it says nothing.
 
     A bundle that cannot describe itself is still a bundle and its rows are what
     installs from it, which is the answer every caller already handles.
     """
     try:
-        return description_from(json.loads(bundle_file(DOCUMENT).read_text()))
+        return description_from(json.loads((root / DOCUMENT).read_text()))
     except (OSError, ValueError):
         return Description()
+
+
+def described() -> Description:
+    """The newest staged bundle's own description, or the empty one."""
+    return next(iter(descriptions()), Description())
 
 
 def parse(text: str) -> tuple[Staged, ...]:

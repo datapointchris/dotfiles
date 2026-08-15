@@ -164,7 +164,7 @@ def installed_modules(directory: Path) -> dict[str, str]:
 
 
 def bundled(entry: catalog.GoTool) -> Path:
-    return bundle_file(BUNDLE_BINARIES) / entry.executable
+    return bundle_file(f'{BUNDLE_BINARIES}/{entry.executable}')
 
 
 def stage(entry: catalog.GoTool, version: str, target: Target) -> str:

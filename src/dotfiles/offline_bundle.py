@@ -3,7 +3,7 @@
 install.sh does these same two things in POSIX sh and keeps its own copy on
 purpose: the CLI that would run this is the thing the bundle exists to install,
 so the bootstrap has nothing to call. What is deliberately not duplicated is
-where a staged bundle lives — `paths.BUNDLE_DIR` answers that on both sides.
+where a staged bundle lives — `paths.STAGING_DIR` answers that on both sides.
 
 This exists because staging and converging stopped being one act. install.sh
 ended in `exec dotfiles apply` until a bare run converged a work box nobody had
@@ -23,6 +23,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
 from dotfiles.refusal import Refusal
@@ -48,7 +49,18 @@ class Staging:
 
     directory: Path
     carried: tuple[bundle.Staged, ...]
-    description: bundle.Description = dc.field(default_factory=bundle.Description)
+
+    bundles: tuple[Path, ...] = ()
+    """Every staged bundle, newest first — the stack `carried` is merged from."""
+
+    descriptions: tuple[bundle.Description, ...] = ()
+    """What each of those says it is, in the same order.
+
+    Every one rather than the newest alone, because a sparse bundle's `current`
+    map explains an absence that a *different* bundle might have explained by
+    carrying the file. Reading only the newest reports an entry the older full
+    bundle staged as one nothing considered.
+    """
 
     extracted: Path | None = None
     """The archive this run unpacked, or None when the bundle was already staged.
@@ -68,14 +80,19 @@ class Staging:
     def readable(self) -> bool:
         """Whether anything here can install from this at all.
 
-        The manifest file, not the row count. A manifest listing nothing is a strange
-        bundle and still a bundle — every provider looks its own tool up and reports
-        its own miss, which is a worse answer than this one but an honest one. No
-        manifest is different in kind: `providers.bundle` is the only door in, so
-        there is nothing for any provider to miss and the run is inert before it
-        starts.
+        A staged bundle with a manifest, not a row count. A manifest listing
+        nothing is a strange bundle and still a bundle — every provider looks its
+        own tool up and reports its own miss, which is a worse answer than this
+        one but an honest one. No manifest anywhere is different in kind:
+        `providers.locate` is the only door in, so there is nothing for any
+        provider to miss and the run is inert before it starts.
         """
-        return (self.directory / bundle.MANIFEST).is_file()
+        return bool(self.bundles)
+
+    @property
+    def description(self) -> bundle.Description:
+        """The newest staged bundle's own, for the one line that names a build."""
+        return next(iter(self.descriptions), bundle.Description())
 
     @property
     def built(self) -> str:
@@ -103,11 +120,23 @@ class Staging:
         nobody expects; and the platform, because a linux bundle staged on a Mac
         fails one tool at a time rather than once, up front.
         """
-        if not self.present:
+        if not self.readable:
             return f'no bundle staged at {paths.under_home(self.directory)}'
         origin = f'unpacked {self.extracted.name}' if self.extracted else 'already staged'
         described = ', '.join(part for part in (f'built {self.built}' if self.built else '', self.platform) if part)
-        return f'{len(self.carried)} file(s) at {paths.under_home(self.directory)} — {origin}{f" ({described})" if described else ""}'
+        beneath = f' over {len(self.bundles) - 1} older' if len(self.bundles) > 1 else ''
+        return f'{len(self.carried)} file(s) from {self.newest.name}{beneath} — {origin}{f" ({described})" if described else ""}'
+
+    @property
+    def newest(self) -> Path:
+        """The bundle whose rows win, which is the one a headline names.
+
+        The staging directory is not an answer to "which bundle". Several are
+        staged at once and the whole point of naming each after its archive is
+        that a machine can say which one a file came from — a headline pointing
+        at their parent says only that some bundle exists.
+        """
+        return next(iter(self.bundles), self.directory)
 
     def breakdown(self) -> str:
         """The per-category counts, which is what says whether a bundle is usable.
@@ -183,41 +212,65 @@ def describe(extracted: Path | None = None) -> Staging:
     description can say so. Discovering it instead would mean comparing mtimes
     against the run's own start, which is a guess where the caller already knows.
     """
-    return Staging(paths.BUNDLE_DIR, bundle.rows(), description=bundle.described(), extracted=extracted)
+    return Staging(
+        paths.STAGING_DIR,
+        bundle.rows(),
+        bundles=providers.staged_bundles(),
+        descriptions=bundle.descriptions(),
+        extracted=extracted,
+    )
+
+
+def stem(archive: Path) -> str:
+    """The directory one archive unpacks into: its name without the suffixes.
+
+    `Path.stem` alone leaves `.tar` on a `.tar.gz`, and the directory is what a
+    reader matches against a filename to say which bundle a file came from.
+    """
+    name = archive.name
+    for suffix in ('.tar.gz', '.tgz', '.tar'):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return archive.stem
 
 
 def newest(*searched: Path) -> Path | None:
     """The bundle archive to stage, or None where there is none to find.
 
-    Dated names sort as dates do, so the last match in a directory is its newest
-    bundle. Directories are tried in order and the first holding any wins, rather
-    than the newest across all of them: a tarball just copied next to the
-    checkout is the one meant, even where a stale one is still sitting in `$HOME`.
+    Ranked across every directory rather than taking the first that holds any.
+    The stamp in a name is now to the second, so two archives in different
+    directories order unambiguously — and the cache a download writes into is a
+    third place a tarball legitimately sits, which no first-directory-wins order
+    can rank against a copy beside the checkout.
     """
-    for directory in searched or (Path.cwd(), Path.home()):
-        if found := sorted(directory.glob(ARCHIVES)):
-            return found[-1]
-    return None
+    directories = searched or (paths.ARCHIVE_DIR, Path.cwd(), Path.home())
+    found = [archive for directory in directories if directory.is_dir() for archive in directory.glob(ARCHIVES)]
+    return max(found, key=lambda archive: archive.name, default=None)
 
 
 def stage(archive: Path) -> Path:
-    """Unpack a bundle where the providers read it, and say where that was.
+    """Unpack a bundle into its own directory, and say which one.
+
+    One directory per bundle rather than one tree they all merge into. Merging
+    refreshes the *files* and replaces `manifest.txt`, so a bundle staged over
+    another leaves everything the first carried on disk and unlisted — and under
+    `--offline` the manifest is the only door in, which makes those files
+    unreachable and the tools they install unmeasurable. Keeping them apart also
+    means a machine can say which bundle any staged file came from.
 
     Unpacked into a sibling directory and moved, rather than extracted straight
-    into `BUNDLE_DIR.parent` the way install.sh does it. The archive's single
-    member is named `installers`, so extracting in place lands on `BUNDLE_DIR`
-    only while that is what it is called — and `$DOTFILES_BUNDLE`, which is how a
-    test points staging somewhere it can be inspected, says it need not be.
+    into the staging directory. The archive's single member is named `installers`,
+    so extracting in place would land on a directory of that name whatever the
+    archive is called.
 
-    An existing staged bundle is merged into rather than replaced, which is what
-    `tar -x` over the top does and what the bundle's own README describes: a
-    newer bundle refreshes what it carries and leaves alone what it does not.
-    Replacing would delete the wheels an interrupted run still needs.
+    Re-staging the same archive replaces its own directory and touches no other,
+    so an interrupted run can be repeated without losing what a different bundle
+    staged.
     """
-    staged = paths.BUNDLE_DIR
-    staged.parent.mkdir(parents=True, exist_ok=True)
+    staged = paths.STAGING_DIR / stem(archive)
+    paths.STAGING_DIR.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(dir=staged.parent) as workspace:
+    with tempfile.TemporaryDirectory(dir=paths.STAGING_DIR) as workspace:
         if not effects.unpack(archive, Path(workspace)):
             raise StagingError(f'{archive} is not a readable archive')
 
@@ -226,12 +279,11 @@ def stage(archive: Path) -> Path:
         # agreement the providers actually read. Staging the wrong tarball
         # otherwise fails much later, as every tool in the plan missing at once.
         unpacked = [entry for entry in Path(workspace).iterdir() if entry.is_dir()]
-        if len(unpacked) != 1 or not (unpacked[0] / bundle.MANIFEST).is_file():
-            raise StagingError(f'{archive} carries no {bundle.MANIFEST}, so it is not a dotfiles bundle')
+        if len(unpacked) != 1 or not (unpacked[0] / providers.MANIFEST).is_file():
+            raise StagingError(f'{archive} carries no {providers.MANIFEST}, so it is not a dotfiles bundle')
 
         if staged.exists():
-            shutil.copytree(unpacked[0], staged, dirs_exist_ok=True)
-        else:
-            shutil.move(unpacked[0], staged)
+            shutil.rmtree(staged)
+        shutil.move(unpacked[0], staged)
 
     return staged

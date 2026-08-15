@@ -126,9 +126,29 @@ def cache_home() -> Path:
 
 CACHE_HOME = cache_home()
 
-# Where install.sh untars an offline bundle, and where every provider looks for
-# one. Still under $HOME because nothing has moved it yet, not because that is
-# right: a staged bundle has to be deleted by hand along with the tarball beside
-# it. The plan moves staging to $XDG_RUNTIME_DIR so it evaporates on reboot.
-# $DOTFILES_BUNDLE overrides it for a test.
-BUNDLE_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or Path.home() / 'installers')
+ARCHIVE_DIR = CACHE_HOME / 'bundles'
+"""Bundle archives, downloaded or just built, each beside its `.json` sidecar."""
+
+STAGING_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or CACHE_HOME / 'staged')
+"""One directory per unpacked bundle, named after the archive it came from.
+
+A directory *of* bundles rather than one bundle, so a sparse bundle can land on
+top of a full one without merging into it. `providers.locate` reads across them
+newest-first, which is what makes an entry a sparse bundle omits fall through to
+the older full bundle that still carries it. Merging into one tree instead
+refreshes the files and replaces the manifest, leaving everything the older
+bundle staged on disk and unlisted.
+
+Named after the archive so a machine can say which bundle a file came from.
+
+**Sanctioned exception to `standards/data.md` § "Every path a tool writes is an
+XDG base directory".** That section's test is whether losing it costs only time,
+and for the machine this exists for it very nearly does not — a work box behind a
+firewall cannot re-fetch these from upstream. It is a cache all the same, because
+the transport that delivered them is still there and `bundle download` fetches
+them again. What it must not be is state: `STATE_HOME` is a Syncthing folder, and
+a gigabyte of archives there replicates across the fleet.
+
+`$DOTFILES_BUNDLE` overrides it, which is how a test points staging somewhere it
+can be inspected and how the bootstrap and the CLI agree on one location.
+"""

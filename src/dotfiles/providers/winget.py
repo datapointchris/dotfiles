@@ -96,7 +96,7 @@ def stage(entry: catalog.WingetPackage, version: str) -> str:
 
 
 def bundled(entry: catalog.WingetPackage) -> Path:
-    return bundle_file(BUNDLE_BINARIES) / entry.filename
+    return bundle_file(f'{BUNDLE_BINARIES}/{entry.filename}')
 
 
 def client() -> str:

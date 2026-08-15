@@ -31,6 +31,7 @@ from dotfiles import engine
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import providers
 from dotfiles import refusal
 from dotfiles import runs
 from dotfiles import sinks
@@ -847,12 +848,24 @@ def _stage_bundle() -> ExitCode | None:
     says this verb stopped.
     """
     extracted = None
-    if not paths.BUNDLE_DIR.is_dir():
+    if not providers.staged_bundles():
         archive = offline_bundle.newest()
         if archive is None:
+            # Two different findings, and the second is the one a person cannot
+            # work out from the first. A directory under staging that carries no
+            # manifest is not a bundle — every provider reads through the manifest,
+            # so a run started on one installs nothing and reports each tool as its
+            # own mystery. "There is none" would be true and would send the reader
+            # looking for a tarball they already have.
+            unusable = [path.name for path in paths.STAGING_DIR.iterdir() if path.is_dir()] if paths.STAGING_DIR.is_dir() else []
+            because = (
+                f'nothing under {paths.STAGING_DIR} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
+                if unusable
+                else f'offline needs a staged bundle at {paths.STAGING_DIR}, and there is none'
+            )
             return refusal.report(
                 NoBundle(
-                    f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none',
+                    because,
                     advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
                 )
             )

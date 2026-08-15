@@ -428,7 +428,7 @@ def test_offline_needs_a_bundle_before_it_measures_anything(sandbox: Sandbox, cl
     # The path is the whole of what this row is for, and Rich folds a long one
     # mid-word rather than at a space — so it is looked for with the wrapping
     # removed entirely rather than collapsed to single spaces.
-    assert str(sandbox.bundle) in ''.join(ran.stderr.split())
+    assert str(sandbox.staging) in ''.join(ran.stderr.split())
 
 
 # ─────────────────────────────────────────────────────────────────────────────

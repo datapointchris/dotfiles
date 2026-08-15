@@ -64,7 +64,7 @@ def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
     it.
     """
     script = into / 'install.sh'
-    cached = bundle_file(BUNDLE_SCRIPTS) / f'{name}-install.sh'
+    cached = bundle_file(f'{BUNDLE_SCRIPTS}/{name}-install.sh')
     if cached.is_file():
         shutil.copy2(cached, script)
         return Script(script)
@@ -77,7 +77,7 @@ def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
 
 def unstaged(name: str, url: str, *, offline: bool, reason: str = '') -> str:
     if offline:
-        return f'{name} installs from {url}, which the offline bundle at {paths.BUNDLE_DIR} does not stage'
+        return f'{name} installs from {url}, which no bundle staged at {paths.STAGING_DIR} carries it'
     return f'could not download the {name} install script from {url}{f": {reason}" if reason else ""}'
 
 

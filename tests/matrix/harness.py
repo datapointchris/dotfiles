@@ -68,6 +68,14 @@ Named once because it is three things at the same address — the file
 sandbox exports so a leaf resolves without `--machine`.
 """
 
+STAGED_BUNDLE = 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
+"""What a sandbox's one staged bundle is called.
+
+Stamped and named the way `create_bundle.bundle_name` names one, so a test whose
+subject is the stack orders a second bundle against it by writing an earlier or
+later stamp rather than by inventing a naming scheme of its own.
+"""
+
 MINIMAL_MANIFEST: dict[str, Any] = {'machine': MACHINE, 'platform': 'linux'}
 """A machine that declares nothing, on the one platform every CI runner can be.
 
@@ -167,17 +175,30 @@ def bundle_manifest(
     return manifest
 
 
-def staged_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rows: dict[str, str], category: str = 'binary') -> Path:
-    """A staged bundle for a test that builds no sandbox.
+def staged_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rows: dict[str, str],
+    category: str = 'binary',
+    *,
+    name: str = 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64',
+    **described: Any,
+) -> Path:
+    """One staged bundle inside a staging directory, for a test with no sandbox.
 
-    `paths.BUNDLE_DIR` is set rather than `$DOTFILES_BUNDLE`, because that variable
-    is read once at import and a fixture runs long after. Same reason as `rebind`,
-    and the sandbox uses `rebind` instead — this is for tests that build no sandbox.
+    `paths.STAGING_DIR` is set rather than `$DOTFILES_BUNDLE`, because that
+    variable is read once at import and a fixture runs long after. Same reason as
+    `rebind`, and the sandbox uses `rebind` instead.
+
+    `name` is a parameter so a test can stage two and control which is newer:
+    `providers.staged_bundles` ranks on the directory name, and a stack whose
+    order a test cannot set is a stack with no test for the falling-through half.
     """
-    installers = tmp_path / 'installers'
-    bundle_manifest(installers, rows, category)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', installers)
-    return installers
+    staging = tmp_path / 'staged'
+    unpacked = staging / name
+    bundle_manifest(unpacked, rows, category, **described)
+    monkeypatch.setattr(paths, 'STAGING_DIR', staging)
+    return unpacked
 
 
 def git_checkout(path: Path, files: dict[str, str] | None = None, branch: str = 'trunk', subject: str = 'first commit') -> Path:
@@ -264,8 +285,22 @@ class Sandbox:
     state: Path
     runs: Path
     uv_tools: Path
+
     bundle: Path
+    """One staged bundle, inside the staging directory that holds every one.
+
+    A bundle rather than the directory they sit in, because that is what a test
+    writes files into. `providers.locate` reads across the whole staging
+    directory, so a test staging a second bundle beside this one exercises the
+    stack — `staging` is that parent.
+    """
+
     machine: str = MACHINE
+
+    @property
+    def staging(self) -> Path:
+        """Where staged bundles live, which is what `$DOTFILES_BUNDLE` names."""
+        return self.bundle.parent
 
     @property
     def release_cache(self) -> Path:
@@ -391,10 +426,16 @@ class Sandbox:
         cached(self.release_cache, entries, age)
         return self.release_cache
 
-    def stage_bundle(self, rows: dict[str, str], category: str = 'binary') -> Path:
-        """The bundle an offline run reads its upstream versions out of."""
-        bundle_manifest(self.bundle, rows, category)
-        return self.bundle
+    def stage_bundle(self, rows: dict[str, str], category: str = 'binary', *, name: str = '', **described: Any) -> Path:
+        """The bundle an offline run reads its upstream versions out of.
+
+        `name` stages a second one beside the first, which is how a test reaches
+        the stack: `providers.staged_bundles` ranks on the directory name, so the
+        caller decides which of the two wins.
+        """
+        staged = self.staging / name if name else self.bundle
+        bundle_manifest(staged, rows, category, **described)
+        return staged
 
 
 REFUSED = '#!/bin/sh\nexit 1\n'
@@ -467,7 +508,7 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
         state=root / 'state',
         runs=root / 'state' / 'dotfiles' / 'runs',
         uv_tools=root / 'uv-tools',
-        bundle=root / 'installers',
+        bundle=root / 'staged' / STAGED_BUNDLE,
     )
     # `bundle` is deliberately absent from this list. `_stage_bundle` treats an
     # existing directory as an already-staged bundle, so creating it would make
@@ -504,7 +545,7 @@ def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv('XDG_STATE_HOME', str(box.state))
     monkeypatch.setenv('UV_TOOL_DIR', str(box.uv_tools))
     monkeypatch.setenv('DOTFILES_DIR', str(box.repo))
-    monkeypatch.setenv('DOTFILES_BUNDLE', str(box.bundle))
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(box.staging))
     monkeypatch.setenv('MACHINE', box.machine)
     monkeypatch.setenv('PATH', f'{box.bin}{os.pathsep}/usr/bin{os.pathsep}/bin')
 
@@ -570,7 +611,8 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
         'STATUS_FILE': state / f'status-{paths.MACHINE_ID}.json',
         'NUDGE_FILE': state / f'nudge-{paths.MACHINE_ID}',
         'CACHE_HOME': cache,
-        'BUNDLE_DIR': box.bundle,
+        'ARCHIVE_DIR': cache / 'bundles',
+        'STAGING_DIR': box.staging,
     }
     for name, value in derived.items():
         monkeypatch.setattr(paths, name, value)

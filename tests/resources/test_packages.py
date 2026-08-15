@@ -700,7 +700,7 @@ def test_offline_with_no_bundle_at_all_is_a_miss_never_a_stale_answer(
     then read whatever it holds.
     """
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-extracted')
+    monkeypatch.setattr(paths, 'STAGING_DIR', tmp_path / 'never-extracted')
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
     found = changes(live)

@@ -401,7 +401,7 @@ class TestInstallScriptVersions:
         create_bundle.add_install_scripts(bundle, items, uv_version)
         bundle.write_metadata()
 
-        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        monkeypatch.setattr(paths, 'STAGING_DIR', staging.parent)
         return bundle
 
     def test_the_version_is_what_the_repo_released_not_the_tag_pinning_the_script(self, tmp_path, monkeypatch):
@@ -518,7 +518,7 @@ class TestBundleRoundTrip:
         create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), items)
         bundle.write_metadata()
 
-        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        monkeypatch.setattr(paths, 'STAGING_DIR', staging.parent)
         return target
 
     def test_a_staged_cargo_package_is_found_by_the_provider_that_installs_it(self, tmp_path, monkeypatch):
@@ -585,7 +585,7 @@ class TestWingetBundling:
         create_bundle.add_winget_binaries(bundle, cache, (planned(entry, 'winget_packages'),))
         bundle.write_metadata()
 
-        monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+        monkeypatch.setattr(paths, 'STAGING_DIR', staging.parent)
         return entry, staging
 
     def test_a_staged_executable_is_found_by_the_provider_that_installs_it(self, tmp_path, monkeypatch):

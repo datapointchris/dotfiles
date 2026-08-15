@@ -24,6 +24,7 @@ from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles import reconcile
 from dotfiles import resolve
 from dotfiles.providers import bundle
@@ -54,17 +55,26 @@ def home(tmp_path, monkeypatch) -> Path:
     return root
 
 
+BUNDLE = 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
+
+
 @pytest.fixture
-def staged(tmp_path, monkeypatch) -> Path:
-    """Where a bundle lands, deliberately not named `installers`.
+def staging(tmp_path, monkeypatch) -> Path:
+    """The directory staged bundles land *in*, deliberately not named `installers`.
 
     `$DOTFILES_BUNDLE` is allowed to point anywhere, and extracting the archive's
     `installers` member in place would only ever land on a directory of that
     name — which is the bug this fixture exists to catch rather than describe.
     """
     destination = tmp_path / 'elsewhere' / 'staging'
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', destination)
+    monkeypatch.setattr(paths, 'STAGING_DIR', destination)
     return destination
+
+
+@pytest.fixture
+def staged(staging) -> Path:
+    """One bundle inside it, for a test that only needs there to be one."""
+    return staging / BUNDLE
 
 
 def test_the_newest_archive_in_a_directory_wins(tmp_path) -> None:
@@ -75,16 +85,18 @@ def test_the_newest_archive_in_a_directory_wins(tmp_path) -> None:
     assert offline_bundle.newest(tmp_path) == latest
 
 
-def test_the_first_directory_holding_any_wins(tmp_path, home) -> None:
-    """A tarball just copied next to the checkout beats a stale one in $HOME.
+def test_the_newest_archive_across_every_directory_wins(tmp_path, home) -> None:
+    """Ranked across all of them, not the first that holds any.
 
-    Newest-across-both would pick the older file here, which is the answer a
-    machine gets after its second rebuild in a year.
+    A download writes into the cache, which is a third place a tarball
+    legitimately sits — and no first-directory-wins order can rank it against a
+    copy beside the checkout. The stamp is to the second, so the comparison it
+    replaces that order with is unambiguous.
     """
-    beside_the_checkout = archive(tmp_path, 'dotfiles-offline-v20260101-wsl-linux-x86_64.tar.gz')
-    archive(home, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz')
+    archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz')
+    latest = archive(home, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz')
 
-    assert offline_bundle.newest(tmp_path, home) == beside_the_checkout
+    assert offline_bundle.newest(tmp_path, home) == latest
 
 
 def test_no_archive_anywhere_is_not_an_error(tmp_path, home) -> None:
@@ -92,39 +104,87 @@ def test_no_archive_anywhere_is_not_an_error(tmp_path, home) -> None:
     assert offline_bundle.newest(tmp_path, home) is None
 
 
-def test_staging_lands_on_the_bundle_dir_whatever_it_is_called(tmp_path, staged) -> None:
-    tarball = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+def test_staging_lands_in_a_directory_named_after_the_archive(tmp_path, staging) -> None:
+    """Named after the archive, so a machine can say which bundle a file came from.
 
-    assert offline_bundle.stage(tarball) == staged
-    assert (staged / bundle.MANIFEST).is_file()
-    assert (staged / 'bin' / 'uv').read_text() == 'uv'
+    The archive's single member is `installers` whatever the tarball is called, so
+    extracting in place would land on a directory of that name every time.
+    """
+    tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+
+    landed = offline_bundle.stage(tarball)
+
+    assert landed == staging / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64'
+    assert (landed / bundle.MANIFEST).is_file()
+    assert (landed / 'bin' / 'uv').read_text() == 'uv'
 
 
-def test_a_second_bundle_refreshes_rather_than_replaces(tmp_path, staged) -> None:
-    """What `tar -x` over the top does, and what the bundle README promises.
+def test_a_second_bundle_stacks_rather_than_merging(tmp_path, staging) -> None:
+    """The newer bundle answers for what it carries; the older still answers for
+    the rest.
 
-    Replacing would delete the wheels a half-finished run still needs, on the one
+    Merging into one tree refreshes the files and *replaces* `manifest.txt`, which
+    leaves everything the first bundle staged on disk and unlisted — and the
+    manifest is the only door in, so those tools become unmeasurable on the one
     machine that cannot download them again.
     """
-    first = archive(tmp_path, 'dotfiles-offline-v20260101-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'old', 'wheels/one.whl': 'kept'})
-    second = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
+    first = archive(
+        tmp_path,
+        'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz',
+        files={'bin/uv': 'old', 'wheels/one.whl': 'kept'},
+    )
+    second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
 
     offline_bundle.stage(first)
     offline_bundle.stage(second)
 
-    assert (staged / 'bin' / 'uv').read_text() == 'new'
-    assert (staged / 'wheels' / 'one.whl').read_text() == 'kept'
+    assert providers.bundle_file('bin/uv').read_text() == 'new'
+    assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
+    assert len(providers.staged_bundles()) == 2
 
 
-def test_a_tarball_without_a_manifest_is_refused(tmp_path, staged) -> None:
+def test_the_older_bundle_still_answers_for_what_the_newer_left_out(tmp_path, staging) -> None:
+    """A sparse bundle is exactly this: it carries what changed and nothing else."""
+    full = archive(
+        tmp_path,
+        'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz',
+        files={'binaries/fd': 'fd-old', 'binaries/bat': 'bat-1'},
+    )
+    sparse = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64-sparse.tar.gz', files={'binaries/fd': 'fd-new'})
+
+    offline_bundle.stage(full)
+    offline_bundle.stage(sparse)
+
+    located = providers.locate('binaries/fd')
+    assert located is not None
+    assert located.path.read_text() == 'fd-new'
+    assert located.bundle.endswith('-sparse')
+    assert providers.bundle_file('binaries/bat').read_text() == 'bat-1'
+
+
+def test_re_staging_one_archive_leaves_the_others_alone(tmp_path, staging) -> None:
+    """An interrupted stage can be repeated. Replacing the whole staging directory
+    would take the wheels a half-finished run still needs."""
+    first = archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz', files={'wheels/one.whl': 'kept'})
+    second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
+
+    offline_bundle.stage(first)
+    offline_bundle.stage(second)
+    offline_bundle.stage(second)
+
+    assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
+    assert len(providers.staged_bundles()) == 2
+
+
+def test_a_tarball_without_a_manifest_is_refused(tmp_path, staging) -> None:
     """Named here, where the archive is in hand, rather than as every tool in the
     plan turning up missing several stages later."""
-    tarball = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', manifest=False)
+    tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', manifest=False)
 
-    with pytest.raises(offline_bundle.StagingError, match=bundle.MANIFEST):
+    with pytest.raises(offline_bundle.StagingError, match=providers.MANIFEST):
         offline_bundle.stage(tarball)
 
-    assert not staged.exists()
+    assert providers.staged_bundles() == ()
 
 
 def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
@@ -135,13 +195,13 @@ def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
         offline_bundle.stage(tarball)
 
 
-def test_apply_stages_the_archive_it_finds(tmp_path, home, staged, monkeypatch) -> None:
+def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch) -> None:
     """The behaviour the bootstrap would otherwise supply by running the apply itself."""
     monkeypatch.chdir(tmp_path)
-    archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
     assert reconcile._stage_bundle() is None
-    assert (staged / 'bin' / 'uv').read_text() == 'uv'
+    assert providers.bundle_file('bin/uv').read_text() == 'uv'
 
 
 def test_apply_leaves_a_staged_bundle_alone(tmp_path, home, staged, monkeypatch) -> None:
@@ -162,14 +222,14 @@ def test_apply_refuses_with_no_archive_to_stage(tmp_path, home, staged, monkeypa
     assert reconcile._stage_bundle() is ExitCode.ISSUE
 
 
-def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staged, monkeypatch) -> None:
+def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monkeypatch) -> None:
     """A broken bundle stops the run rather than starting one that will fail as
     every tool in the plan turning up missing."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
+    (tmp_path / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
 
     assert reconcile._stage_bundle() is ExitCode.ISSUE
-    assert not staged.exists()
+    assert providers.staged_bundles() == ()
 
 
 class TestSayingWhichBundle:
@@ -191,7 +251,7 @@ class TestSayingWhichBundle:
         # Newlines stripped before matching: Rich wraps a long path across lines, and
         # the assertion is about what the line says rather than where it breaks.
         said = capsys.readouterr().err.replace('\n', '')
-        assert str(staged) in said
+        assert staged.name in said, 'the headline names which bundle, not the directory they sit in'
         assert 'already staged' in said
         assert '2 file(s)' in said
 
@@ -216,13 +276,20 @@ class TestSayingWhichBundle:
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
 
-    def test_a_directory_with_no_manifest_ends_the_run_rather_than_starting_it(self, staged, capsys) -> None:
+    def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, capsys) -> None:
         """Every provider reads the bundle through the manifest, so without one the
-        run installs nothing from anywhere and reports each tool as its own mystery."""
+        run installs nothing from anywhere and reports each tool as its own mystery.
+
+        "There is none" would be true and useless here: the reader has a staged
+        directory in front of them and would go looking for a tarball they already
+        unpacked.
+        """
         staged.mkdir(parents=True)
 
         assert reconcile._stage_bundle() is ExitCode.ISSUE
-        assert bundle.MANIFEST in capsys.readouterr().err
+        said = capsys.readouterr().err.replace('\n', '')
+        assert providers.MANIFEST in said
+        assert staged.name in said
 
     def test_the_build_time_and_platform_are_read_off_the_document(self, staged) -> None:
         """`manifest.txt` carries rows and `bundle.json` carries the bundle, so a

@@ -14,8 +14,13 @@ is why this asserts on its text.
 
 from __future__ import annotations
 
+import os
 import re
+import stat
+import subprocess
+import tarfile
 from fnmatch import fnmatch
+from pathlib import Path
 
 import pytest
 from shells import REPO
@@ -85,3 +90,135 @@ def test_the_bootstrap_stages_the_uv_its_platform_carries() -> None:
 
     assert 'bin/uv"' not in text, 'install.sh hardcodes bin/uv, which no Windows bundle carries'
     assert '$BUNDLE/bin/$UV' in text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Staging: the one thing the bootstrap does that the CLI also does
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Run rather than read. The two unpackers are duplicated on purpose — the CLI
+# that would run `bundle stage` is what the bundle exists to install — so the
+# only thing keeping them in agreement is that both are exercised. A text
+# assertion here would pass on a script that unpacks to the wrong directory.
+
+FAKE_UV = """#!/bin/sh
+printf '%s\\n' "$*" >> "$UV_ARGV"
+exit 0
+"""
+
+
+def bootstrap_bundle(at: Path, name: str) -> Path:
+    """A tarball shaped the way `create_bundle` shapes one: a single `installers`
+    member holding the manifest, the uv the bootstrap copies, and the wheelhouse
+    it installs the CLI from."""
+    staging = at / f'{name}-contents' / 'installers'
+    (staging / 'bin').mkdir(parents=True)
+    (staging / 'wheels').mkdir()
+    (staging / 'manifest.txt').write_text('binary|fd|10.2.0|fd\n')
+    (staging / 'bin' / 'uv').write_text('#!/bin/sh\nexit 0\n')
+    (staging / 'wheels' / 'dotfiles.whl').write_text('a wheel')
+
+    tarball = at / f'{name}.tar.gz'
+    with tarfile.open(tarball, 'w:gz') as packed:
+        packed.add(staging, arcname='installers')
+    return tarball
+
+
+def run_bootstrap(tmp_path: Path, *archives: str) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
+    """`install.sh --offline` with uv shadowed, so nothing is really installed."""
+    home = tmp_path / 'home'
+    staging = tmp_path / 'staged'
+    fake_bin = tmp_path / 'bin'
+    (home / '.local' / 'bin').mkdir(parents=True)
+    fake_bin.mkdir()
+    argv_log = tmp_path / 'uv-argv'
+
+    shadow = fake_bin / 'uv'
+    shadow.write_text(FAKE_UV)
+    shadow.chmod(shadow.stat().st_mode | stat.S_IEXEC)
+
+    # What a real `uv tool install` would have left behind. The script's closing
+    # check is that the CLI it installed answers on PATH, and a fake uv that
+    # installs nothing fails it — for a reason that has nothing to do with
+    # staging, which is what these tests are about.
+    installed = home / '.local' / 'bin' / 'dotfiles'
+    installed.write_text('#!/bin/sh\nexit 0\n')
+    installed.chmod(installed.stat().st_mode | stat.S_IEXEC)
+
+    for name in archives:
+        bootstrap_bundle(tmp_path, name)
+
+    environment = {
+        **os.environ,
+        'HOME': str(home),
+        'DOTFILES_BUNDLE': str(staging),
+        'UV_ARGV': str(argv_log),
+        'PATH': f'{fake_bin}{os.pathsep}/usr/bin{os.pathsep}/bin',
+    }
+    ran = subprocess.run(
+        ['sh', str(BOOTSTRAP), '--machine', 'wsl-work-workstation', '--offline'],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return ran, staging, argv_log
+
+
+def test_the_bootstrap_stages_into_a_directory_named_after_the_archive(tmp_path: Path) -> None:
+    """The same layout `offline_bundle.stage` writes, reached by the one caller
+    that cannot call it."""
+    ran, staging, _ = run_bootstrap(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64')
+
+    assert ran.returncode == 0, ran.stderr
+    assert (staging / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
+    assert not (staging / 'installers').exists(), "the archive's member name must not decide the directory"
+
+
+def test_the_bootstrap_installs_the_cli_from_the_bundle_it_staged(tmp_path: Path) -> None:
+    """The property the duplication exists for: the wheels it hands uv are the
+    ones inside the directory it just wrote, not a path assembled separately."""
+    ran, staging, argv_log = run_bootstrap(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64')
+    staged = staging / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+
+    assert ran.returncode == 0, ran.stderr
+    assert f'--find-links {staged / "wheels"}' in argv_log.read_text()
+
+
+def test_the_bootstrap_takes_the_newest_archive_across_the_directories_it_searches(tmp_path: Path) -> None:
+    """Ranked by the stamp rather than by which directory was looked at first,
+    which is what the CLI's own `newest` does now that a name carries seconds."""
+    ran, staging, _ = run_bootstrap(
+        tmp_path,
+        'dotfiles-offline-v20260101T010000Z-box-linux-x86_64',
+        'dotfiles-offline-v20260909T010000Z-box-linux-x86_64',
+    )
+
+    assert ran.returncode == 0, ran.stderr
+    assert (staging / 'dotfiles-offline-v20260909T010000Z-box-linux-x86_64').is_dir()
+    assert not (staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64').exists()
+
+
+def test_the_bootstrap_reads_a_bundle_somebody_else_staged(tmp_path: Path) -> None:
+    """A machine part way through a rebuild has one unpacked already, and the
+    archive it came from may be long gone."""
+    staging = tmp_path / 'staged' / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    (staging / 'bin').mkdir(parents=True)
+    (staging / 'wheels').mkdir()
+    (staging / 'manifest.txt').write_text('binary|fd|10.2.0|fd\n')
+
+    ran, _, argv_log = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 0, ran.stderr
+    assert f'--find-links {staging / "wheels"}' in argv_log.read_text()
+
+
+def test_the_bootstrap_refuses_when_nothing_is_staged_and_nothing_can_be(tmp_path: Path) -> None:
+    """Paired with the exit code and a positive fact, because a refusal and a
+    crash both leave the staging directory empty."""
+    ran, staging, argv_log = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 1
+    assert 'no bundle' in ran.stderr
+    assert not argv_log.exists(), 'uv was never reached'

@@ -22,7 +22,8 @@ set -eu
 
 MACHINE="${MACHINE:-}"
 OFFLINE=""
-BUNDLE="${DOTFILES_BUNDLE:-$HOME/installers}"
+STAGING="${DOTFILES_BUNDLE:-${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/staged}"
+BUNDLE=""
 
 die() {
   echo "install.sh: $*" >&2
@@ -41,17 +42,36 @@ manifest_names() {
   done
 }
 
-# Dated names sort as dates do, so the last match is the newest bundle for a
-# given manifest and platform.
+# Stamped names sort as time does, so the last match across every directory is
+# the newest archive. Ranked across all of them rather than taking the first that
+# holds any: a download writes into the cache, and no first-directory-wins order
+# can rank that against a copy carried in beside the checkout.
 newest_bundle() {
-  found=""
-  for dir in . "$HOME"; do
+  # Sorted by basename and the last taken, rather than compared with `>`, which
+  # POSIX leaves undefined for `[`. The name is emitted beside the path so the
+  # ordering is the stamp's and not the directory's.
+  for dir in "${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/bundles" . "$HOME"; do
     for path in "$dir"/dotfiles-offline-*.tar.gz; do
-      if [ -f "$path" ]; then found="$path"; fi
+      if [ -f "$path" ]; then printf '%s\t%s\n' "${path##*/}" "$path"; fi
     done
-    if [ -n "$found" ]; then break; fi
-  done
-  printf '%s' "$found"
+  done | sort | tail -n 1 | cut -f2
+}
+
+# The newest staged bundle, which is the one the CLI's own resolver would read
+# first. `bin/uv` and `wheels/` are the two things this script needs out of a
+# bundle, and both come from whichever carries them — the same falling-through
+# `providers.locate` does, spelled for the one caller that cannot call it.
+staged_bundle() {
+  for path in "$STAGING"/*; do
+    if [ -f "$path/manifest.txt" ]; then printf '%s\t%s\n' "${path##*/}" "$path"; fi
+  done | sort | tail -n 1 | cut -f2
+}
+
+# Where one archive unpacks to: its name without the suffix. Named after the
+# archive so a machine can say which bundle a staged file came from.
+bundle_stem() {
+  name="${1##*/}"
+  printf '%s' "${name%.tar.gz}"
 }
 
 usage() {
@@ -112,10 +132,19 @@ fi
 if [ -n "$OFFLINE" ]; then
   archive=$(newest_bundle)
   if [ -n "$archive" ]; then
+    stem=$(bundle_stem "$archive")
     echo "staging $archive"
-    tar -xzf "$archive" -C "$HOME"
+    # Into a scratch directory and moved, because the archive's single member is
+    # named `installers` whatever the tarball is called — extracting in place
+    # would land every bundle on one directory of that name.
+    rm -rf "$STAGING/.unpacking" "$STAGING/${stem:?}"
+    mkdir -p "$STAGING/.unpacking"
+    tar -xzf "$archive" -C "$STAGING/.unpacking"
+    mv "$STAGING/.unpacking/installers" "$STAGING/$stem"
+    rmdir "$STAGING/.unpacking"
   fi
-  [ -d "$BUNDLE" ] || die "offline: no bundle in ./ or ~/, and nothing staged at $BUNDLE"
+  BUNDLE=$(staged_bundle)
+  [ -n "$BUNDLE" ] || die "offline: no bundle in ./ or ~/, and nothing staged under $STAGING"
 fi
 
 # Kept, because the hand-off at the bottom has to say whether the *next* shell

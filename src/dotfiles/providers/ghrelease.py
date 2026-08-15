@@ -42,6 +42,7 @@ from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import local_dir
+from dotfiles.providers import locate
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
 from dotfiles.providers.releases import Archive
@@ -50,7 +51,7 @@ from dotfiles.providers.releases import ReleaseArtifact
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
-__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'missing_companions', 'resolve_tag', 'unresolved']
+__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'locate', 'missing_companions', 'resolve_tag', 'unresolved']
 
 
 def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
@@ -150,7 +151,7 @@ def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
     stage for an offline machine — and must report the same reason this would.
     """
     if offline:
-        return f'the offline bundle at {paths.BUNDLE_DIR} stages no version of {entry.name}'
+        return f'no bundle staged at {paths.STAGING_DIR} carries a version of {entry.name}'
     if entry.version:
         return f'pinned to {entry.version}, which {entry.repo} publishes no release for'
     return f'{entry.repo} did not answer with a release'
@@ -176,9 +177,9 @@ def _stage(download: Path, url: str, repo: str, tag: str, asset_name: str, *, of
     was built, and re-downloading it would spend a request to arrive at the same
     bytes.
     """
-    cached = bundle_file(BUNDLE_BINARIES) / asset_name
-    if cached.is_file():
-        shutil.copy2(cached, download)
+    cached = locate(f'{BUNDLE_BINARIES}/{asset_name}')
+    if cached is not None and cached.path.is_file():
+        shutil.copy2(cached.path, download)
         return Staged.BUNDLE
 
     if offline:
@@ -193,8 +194,15 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
     exceptions are declared per entry in `packages.yml` and measured against live
     releases by `tests/install/test_release_urls.py`, so an entry claiming one it
     no longer needs fails there rather than quietly skipping verification here.
+
+    **The checksums come from the bundle that staged the asset, not the newest one
+    holding a `checksums.txt`.** Several bundles can be staged at once, and a
+    digest is published for one build of one release — pairing a newer bundle's
+    file with an older bundle's binary fails verification on a machine where
+    nothing is wrong.
     """
-    checksums = bundle_file(BUNDLE_CHECKSUMS)
+    staged_asset = locate(f'{BUNDLE_BINARIES}/{asset_name}')
+    checksums = staged_asset.beside(BUNDLE_CHECKSUMS) if staged_asset else bundle_file(BUNDLE_CHECKSUMS)
     if offline:
         # No fallthrough to the network: it is unreachable by definition, and
         # `verify_release_checksum` would spend its timeout arriving at
@@ -394,7 +402,7 @@ def _companions(name: str, tag: str, *, offline: bool) -> str:
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         url = companion.url(tag)
-        cached = bundle_file(BUNDLE_BINARIES) / companion.name
+        cached = bundle_file(f'{BUNDLE_BINARIES}/{companion.name}')
         if cached.is_file():
             shutil.copy2(cached, destination)
         elif offline:
