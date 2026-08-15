@@ -35,6 +35,7 @@ from dotfiles import releases
 from dotfiles import versions
 from dotfiles.coordinates import PackageManager
 from dotfiles.privilege import Privilege
+from dotfiles.providers import bundle
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
@@ -525,7 +526,12 @@ def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
     now = dt.datetime.now(dt.UTC)
     found = {}
     for item in present:
-        version = ghrelease.bundle_version(item.name)
+        # What the bundle carries, then what a sparse one says it measured and
+        # left out. Both are the bundle answering "what did upstream publish",
+        # and a run that read only the first would report every tool a sparse
+        # bundle deliberately omitted as unmeasurable — which is the whole cost
+        # a sparse bundle exists to avoid paying.
+        version = ghrelease.bundle_version(item.name) or ghrelease.measured_version(item.name)
         if version:
             found[_wanted(item).key] = releases.Cached(version=version, checked=now)
     return found
@@ -672,6 +678,13 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
     if observed.from_bundle:
+        # A sparse bundle explains most of what it left out, so an entry it does
+        # not explain is a different finding: the declaration gained it after the
+        # status the bundle was planned from was taken, and nothing has ever
+        # measured it. Saying "carries no version" there sends the reader looking
+        # for a bundle that is not the problem.
+        if bundle.sparse_bundles():
+            return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
     return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'

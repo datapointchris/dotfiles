@@ -35,6 +35,7 @@ from dotfiles import reconcile
 from dotfiles import remote as transport
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import status as status_commands
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import VERDICT_MARKS
@@ -110,6 +111,7 @@ def create(
     # with exit 2 from the enum alone, and importing click to say the same thing
     # is a direct dependency on a package typer 0.27 stopped having.
     arch: axes.Arch = ArchOption,
+    against: str = typer.Option(None, '--against', help="Build sparsely against a status document, or 'latest' to fetch one"),
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
     no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
@@ -133,6 +135,17 @@ def create(
     `--no-cache` re-downloads every asset. Assets are kept for 90 days, so the
     one thing no other flag can reach is a cached file that is wrong — truncated,
     or a release republished under a tag it already used.
+
+    **`--against` makes the build sparse**, and it parameterises the build rather
+    than adding an effect to it: what changes is which installers are staged, not
+    whether an archive is written. A tool the named status reports at the version
+    upstream currently publishes is left out and recorded in `bundle.json` as
+    measured, so the machine reading the bundle can tell that omission from a
+    failure to carry it.
+
+    `latest` fetches the newest status the remote holds for that machine, which is
+    a read of the input rather than a second effect — the same act as opening the
+    file a path names.
     """
     from dotfiles import create_bundle
 
@@ -144,11 +157,43 @@ def create(
     # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
     machines.manifest_path(chosen_machine)
 
-    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache)
+    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache, against=_status_for(against, chosen_machine))
 
     if print_path:
         print(built)
     raise typer.Exit(ExitCode.CONVERGED)
+
+
+LATEST = 'latest'
+
+
+def _status_for(named: str | None, machine: str) -> Path | None:
+    """The status document a sparse build is planned against, or None for a full one.
+
+    `latest` reaches the remote and everything else is a path. Resolved here rather
+    than inside the builder, so the builder takes a file and nothing else — a
+    module that reached a network to read its own input would have no way to be
+    tested without one.
+    """
+    if named is None:
+        return None
+    if named != LATEST:
+        found = Path(named)
+        if not found.is_file():
+            raise typer.BadParameter(f'--against: {found} is not a file. Fetch one with: dotfiles status download --machine {machine}')
+        return found
+
+    where = transport.require()
+    listed = status_commands.remote_statuses(where, machine)
+    if not listed:
+        raise BundleTransferError(
+            f'the remote holds no status for {machine}, so there is nothing to build sparsely against',
+            code=ExitCode.ISSUE,
+            advice=f'publish one from that machine with: dotfiles status upload --machine {machine}',
+        )
+    destination = paths.STATUS_CACHE / listed[0]
+    transport.pull(where, f'{transport.statuses_for(where, machine)}/{listed[0]}', destination)
+    return destination
 
 
 @bundle_app.command('stage')
@@ -464,9 +509,12 @@ def check(
         emit_json(
             {
                 'bundle': str(staged.directory),
+                'bundles': [path.name for path in staged.bundles],
                 'built': staged.built,
+                'sparse': staged.sparse,
                 'covered': list(found.covered),
                 'uncovered': list(found.uncovered),
+                'measured': list(found.measured),
                 'outside': found.outside,
             }
         )
@@ -474,8 +522,15 @@ def check(
 
     reconcile.report_bundle(staged)
     for name in found.uncovered:
-        render_row('uncovered', name, 'the bundle carries no file for it, so an offline run cannot measure or install it', 'yellow')
-    bundlable = len(found.covered) + len(found.uncovered)
+        render_row('uncovered', name, 'no staged bundle carries a file for it, so an offline run cannot measure or install it', 'yellow')
+    for name in found.measured:
+        # Not a gap and not covered. The bundle cannot install this one and does
+        # not need to — and where the premise has since expired, because the tool
+        # was reinstalled or downgraded, `plan --offline` reports it as drift
+        # against this very version. That comparison is the report; a second one
+        # here would be the same fact measured twice.
+        render_row('measured', name, f'left out because this machine already had {staged.measured(name)}')
+    bundlable = len(found.covered) + len(found.uncovered) + len(found.measured)
     console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
     if found.uncovered:
         # Both values real, so the line pastes. `ARCH` sat here and exited USAGE on

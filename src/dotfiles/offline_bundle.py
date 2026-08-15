@@ -115,6 +115,24 @@ class Staging:
         """Every tool the bundle carries a file for, whatever category it is under."""
         return frozenset(row.name for row in self.carried)
 
+    @property
+    def sparse(self) -> bool:
+        return any(described.sparse for described in self.descriptions)
+
+    def measured(self, name: str) -> str | None:
+        """The version a sparse bundle recorded for a tool it left out, if any.
+
+        Across every staged description rather than the newest, because an entry a
+        sparse bundle omitted may be one an older full bundle carried — and the two
+        answers are both true. The caller asks this only about names nothing
+        carries, so there is no case where they compete.
+        """
+        for described in self.descriptions:
+            found = next((version for key, version in described.current.items() if key.split('/', 1)[-1] == name), None)
+            if found:
+                return found
+        return None
+
     def headline(self) -> str:
         """The one line that says which bundle this run is installing from.
 
@@ -186,6 +204,21 @@ class Coverage:
     machine. It covers nearly all of what it is *for*, and the rest arrives another
     way — so the count is the context that makes the two lists above legible."""
 
+    measured: tuple[str, ...] = ()
+    """Items a sparse bundle left out because this machine already had them.
+
+    Its own list rather than folded into `covered`, because the two are different
+    facts and the difference is what a person acts on. A covered item can be
+    installed from the staging directory right now; a measured one cannot be
+    installed at all, and does not need to be. Counting it covered would report a
+    bundle as able to repair something it deliberately does not hold.
+
+    Not `uncovered` either, which is the failure this whole field exists to
+    prevent: under a full bundle an absent item is a gap, and reading a sparse
+    bundle's deliberate omissions the same way reports a working machine as
+    missing most of itself.
+    """
+
 
 def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     """Which of this machine's bundlable items the bundle actually holds.
@@ -206,7 +239,9 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
         wanted[item.name] = {item.name, item.entry.executable} & staged.names
 
     covered = sorted(name for name, found in wanted.items() if found)
-    return Coverage(tuple(covered), tuple(sorted(set(wanted) - set(covered))), outside)
+    absent = set(wanted) - set(covered)
+    measured = sorted(name for name in absent if staged.measured(name))
+    return Coverage(tuple(covered), tuple(sorted(absent - set(measured))), outside, tuple(measured))
 
 
 def describe(extracted: Path | None = None) -> Staging:

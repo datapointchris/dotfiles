@@ -31,6 +31,7 @@ import tomllib
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx2
 
@@ -39,6 +40,8 @@ from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles import status
+from dotfiles import versions
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -362,6 +365,49 @@ class DownloadCache:
                 path.rmdir()
 
 
+def installed_versions(document: Any) -> dict[str, str]:
+    """What a status document says the target has, keyed by tool name.
+
+    Read off `examined`, which is the itemised installed set every resource
+    produces. The row's `item` is the address a plan uses — `provider/name` — and
+    the name is what a bundle row is keyed on, so the provider half is dropped
+    here rather than at every comparison.
+
+    A row whose detail is evidence prose rather than a version answers nothing and
+    is kept anyway: the comparison it fails is what decides the tool goes in the
+    bundle, which is the safe direction. Filtering here would need this module to
+    know which strings are versions, and `versions.exactly` already does.
+    """
+    found: dict[str, str] = {}
+    if not isinstance(document, dict):
+        return found
+    for resource in document.get('resources') or ():
+        if not isinstance(resource, dict):
+            continue
+        for row in resource.get('examined') or ():
+            if isinstance(row, dict) and isinstance(row.get('item'), str):
+                found[str(row['item']).split('/', 1)[-1]] = str(row.get('detail', ''))
+    return found
+
+
+def read_status(path: Path) -> dict[str, Any]:
+    """One status document from disk, refusing anything that is not one.
+
+    Version-checked rather than duck-typed. `status.VERSION` 2 is the generation
+    that carries rows, and 1 carried counts alone — a builder handed one of those
+    would find no `examined` anywhere and quietly bundle the entire declaration,
+    reporting it as a sparse build. That is worse than refusing, because the
+    output is plausible.
+    """
+    try:
+        document = json.loads(path.read_text())
+    except (OSError, ValueError) as unreadable:
+        raise BundleError(f'{path} is not a readable status document: {unreadable}') from unreadable
+    if not isinstance(document, dict) or document.get('version') != status.VERSION:
+        raise BundleError(f'{path} is not a version {status.VERSION} status document, so its rows cannot be trusted')
+    return document
+
+
 class Bundle:
     def __init__(self, staging: Path, os_name: str, arch: str, machine: str, when: dt.datetime):
         self.staging = staging
@@ -371,6 +417,7 @@ class Bundle:
         self.when = when
         self.built_from = ''
         self.current: dict[str, str] = {}
+        self.installed: dict[str, str] = {}
         self.binaries = staging / 'binaries'
         self.go_binaries = staging / 'go-binaries'
         self.winget_binaries = staging / winget.BUNDLE_BINARIES
@@ -382,6 +429,32 @@ class Bundle:
 
         for directory in (self.binaries, self.go_binaries, self.winget_binaries, self.scripts, self.bin, self.wheels):
             directory.mkdir(parents=True, exist_ok=True)
+
+    def plan_against(self, path: Path, document: dict[str, Any]) -> None:
+        """Build sparsely, against what one machine reported it already had."""
+        self.built_from = path.name
+        self.installed = installed_versions(document)
+
+    def already_current(self, category: str, name: str, version: str) -> bool:
+        """Whether the target has this exact version, so the bundle can leave it out.
+
+        Recorded in `current` as it answers, so the two cannot disagree: what a
+        sparse bundle omits and what it says it measured are decided in one place
+        rather than assembled twice.
+
+        `versions.exactly` is the comparator a pinned entry is already checked
+        with, asked rather than reimplemented — standards/python.md § "Ask
+        whatever owns a fact; never work it out a second time". A reported string
+        that is not a version at all compares False, so the tool goes into the
+        bundle, which is the direction a wrong answer has to fail in.
+        """
+        if not self.built_from:
+            return False
+        reported = self.installed.get(name)
+        if not reported or not versions.exactly(reported, version):
+            return False
+        self.current[f'{category}/{name}'] = version
+        return True
 
     def record(self, category: str, name: str, version: str, filename: str) -> None:
         self.entries.append(f'{category}|{name}|{version}|{filename}')
@@ -641,6 +714,9 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         entry = item.entry
         assert isinstance(entry, catalog.WingetPackage)
         version = fetch_latest_version(entry.repo)
+        if bundle.already_current('winget', entry.name, version):
+            log.info('  %s (%s) is what the target already has', entry.name, version)
+            continue
         asset = github_asset(entry.repo, version, winget.stage(entry, version))
 
         downloaded = bundle.winget_binaries / asset.filename
@@ -693,6 +769,10 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         if tag is None:
             raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
         version = tag.removeprefix(entry.release_tag_prefix)
+
+        if bundle.already_current('binary', tool, version):
+            log.info('  %s (%s) is what the target already has', tool, version)
+            continue
 
         published = build(tag, target)
         asset = github_asset(entry.repo, tag, published.name)
@@ -747,6 +827,9 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     for entry in bundleable(items):
         assert isinstance(entry, catalog.GoTool)
         version = fetch_latest_version(entry.github_repo)
+        if bundle.already_current('go-binary', entry.executable, version):
+            log.info('  %s (%s) is what the target already has', entry.executable, version)
+            continue
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
 
         archive_path = bundle.go_binaries / asset.filename
@@ -768,6 +851,9 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
     for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
         version = fetch_latest_version(entry.github_repo)
+        if bundle.already_current('cargo', entry.name, version):
+            log.info('  %s (%s) is what the target already has', entry.name, version)
+            continue
         filename = cargo.stage(entry, version, target)
         asset = github_asset(entry.github_repo, version, filename)
 
@@ -1023,7 +1109,7 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_versi
     bundle.record('script', 'uv', uv_version, 'uv-install.sh')
 
 
-def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | None = None) -> Path:
+def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | None = None, against: Path | None = None) -> Path:
     """Build the bundle and return the tarball's path.
 
     A return value, not a printed side effect: that is the whole reason this
@@ -1034,6 +1120,17 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     manifest anywhere says what processor it runs on. Taking both from a caller
     let them contradict each other, and a linux manifest asked for with a darwin
     target built a tarball of the wrong binaries without saying so.
+
+    `against` is a status document the target published, and it makes the build
+    *sparse*: every tool it reports at the version upstream currently publishes is
+    left out and recorded in `bundle.json`'s `current` instead. That map is what
+    keeps the omission legible on the other end — without it, a bundle that
+    carried less would be indistinguishable from one that failed to carry more.
+
+    The document is refused where it names a different machine. A bundle is built
+    for one manifest and its contents are that manifest's plan, so diffing it
+    against another machine's report omits whatever the two happen to share and
+    reports the result as measured.
     """
     # The same resolution the install performs, for a machine that is not this one
     # and a target that need not be its own. Asking the resolver rather than
@@ -1051,8 +1148,15 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
         raise BundleError(f'Unsupported arch: {arch}\nSupported: {", ".join(Arch)}')
 
     os_name = str(machine.coordinates.os_family)
+    reported = read_status(against) if against else None
+    if reported is not None and reported.get('machine') != manifest_name:
+        raise BundleError(
+            f'{against} reports {reported.get("machine")!r} and this builds for {manifest_name!r}\n'
+            'a sparse bundle diffs one machine against its own report, never against another one'
+        )
+
     built_at = when or dt.datetime.now(dt.UTC)
-    name = bundle_name(manifest_name, os_name, arch, built_at)
+    name = bundle_name(manifest_name, os_name, arch, built_at, sparse=reported is not None)
     log.info('Creating offline bundle: %s', name)
     log.info('Target platform: %s/%s', os_name, arch)
     log.info('Manifest filter: %s', manifest_name)
@@ -1062,6 +1166,9 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
 
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / 'installers', os_name, arch, manifest_name, built_at)
+        if reported is not None and against is not None:
+            bundle.plan_against(against, reported)
+            log.info('Sparse: against %s, which reports %d installed tool(s)', against.name, len(bundle.installed))
 
         uv_version = add_uv(bundle, cache)
         add_wheels(bundle, cache)
@@ -1081,6 +1188,8 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info('  File: %s', tarball_path)
     log.info('  Size: %.1f MB', size_mb)
     log.info('  Downloads: %d', cache.downloads)
+    if bundle.built_from:
+        log.info('  Left out as already current: %d', len(bundle.current))
     if use_cache:
         log.info('  From cache: %d (%s)', cache.hits, cache_root())
     log.info('To use this bundle:')

@@ -133,15 +133,30 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
     return github_release.latest_version(entry.repo, entry.release_tag_prefix)
 
 
-def bundle_version(name: str) -> str | None:
-    """What version of a tool an offline bundle staged, from its manifest.
+BUNDLE_CATEGORIES = ('binary', 'extra', 'go-binary', 'cargo', 'script')
+"""Every category the bundler stages a named tool under, not just this provider's.
 
-    Every category the bundler stages a named tool under, not just this
-    provider's: a tool declared here on one machine is a cargo package or a Go
-    tool on another, and the question being asked is what the bundle has.
-    """
-    row = bundle.staged(name, 'binary', 'extra', 'go-binary', 'cargo', 'script')
+A tool declared here on one machine is a cargo package or a Go tool on another,
+and the question being asked is what the bundle has.
+"""
+
+
+def bundle_version(name: str) -> str | None:
+    """What version of a tool an offline bundle staged, from its manifest."""
+    row = bundle.staged(name, *BUNDLE_CATEGORIES)
     return row.version if row and row.version else None
+
+
+def measured_version(name: str) -> str | None:
+    """The version a sparse bundle measured for a tool it deliberately did not carry.
+
+    An offline run compares against whatever the bundle says upstream published,
+    and a sparse bundle says that two ways: a manifest row for what it brought,
+    and `current` for what it measured and left behind. Reading only the first
+    reports every up-to-date tool as unmeasurable, which is the whole cost a
+    sparse bundle would otherwise carry.
+    """
+    return bundle.measured(name, *BUNDLE_CATEGORIES)
 
 
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
