@@ -24,6 +24,7 @@ from relay import install_relay
 
 from dotfiles import offline_bundle
 from dotfiles import paths
+from dotfiles import remote as transport
 from dotfiles.commands import staging
 from dotfiles.commands import status as status_commands
 from dotfiles.providers import bundle
@@ -517,14 +518,30 @@ class TestResolvingLatestForASparseBuild:
         with pytest.raises(typer.BadParameter, match='status download'):
             staging._status_for(str(tmp_path / 'never-written.json'), MACHINE)
 
-    def test_an_empty_shelf_refuses_and_names_where_a_status_comes_from(self, sandbox: Sandbox, server: Path) -> None:
-        """A build that fell back to a full bundle here would be the failure the
-        whole feature exists to avoid, reported as a success."""
-        with pytest.raises(staging.BundleTransferError) as refused:
-            staging._status_for('latest', MACHINE)
+    def test_an_empty_shelf_builds_a_full_bundle_and_says_so(self, sandbox: Sandbox, server: Path, capsys: pytest.CaptureFixture) -> None:
+        """`latest` means "whatever the remote has", and nothing is a legitimate
+        answer — it is the state of every machine before its first status is
+        published, which is exactly when somebody runs this for the first time.
 
-        assert refused.value.code is ExitCode.ISSUE
-        assert 'status upload' in refused.value.advice
+        What makes the fallback safe is that it is announced and the artefact says
+        it for itself: no `-sparse` in the name and `completeness: full` inside.
+        The failure the feature exists to avoid is a bundle carrying everything
+        while reporting itself sparse, and this path cannot produce one.
+        """
+        assert staging._status_for('latest', MACHINE) is None
+
+        said = capsys.readouterr().err.replace('\n', '')
+        assert 'full bundle' in said
+        assert 'status upload' in said
+
+    def test_a_transport_that_will_not_answer_still_refuses(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """A different fact from an empty shelf. Falling back here would build a
+        full bundle on a run where a perfectly good status was sitting on a server
+        nobody could reach — half an hour of downloads for a broken remote."""
+        declare(sandbox.config, program='nothing-installed-here')
+
+        with pytest.raises(transport.RemoteError):
+            staging._status_for('latest', MACHINE)
 
     def test_no_status_is_fetched_for_a_full_build(self, sandbox: Sandbox, server: Path) -> None:
         """Paired with the cases above: `--against` absent must reach nothing at

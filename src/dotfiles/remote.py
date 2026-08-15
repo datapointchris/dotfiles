@@ -25,6 +25,7 @@ from __future__ import annotations
 import dataclasses as dc
 import shutil
 import string
+import time
 from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
@@ -45,6 +46,7 @@ DEFAULT_KEEP = 5
 class Operation(StrEnum):
     """What a transport can be asked to do, and the key each is declared under."""
 
+    PROBE = 'probe'
     LIST = 'list'
     UPLOAD = 'upload'
     DOWNLOAD = 'download'
@@ -53,6 +55,7 @@ class Operation(StrEnum):
 
 
 PLACEHOLDERS: dict[Operation, frozenset[str]] = {
+    Operation.PROBE: frozenset(),
     Operation.LIST: frozenset({'dir'}),
     Operation.UPLOAD: frozenset({'local', 'dir'}),
     Operation.DOWNLOAD: frozenset({'remote', 'local'}),
@@ -66,8 +69,19 @@ failure this catches: `upload = ["upload"]` parses, runs, and uploads nothing,
 reporting whatever the transport says about being called with no arguments.
 """
 
-REQUIRED = (Operation.LIST, Operation.UPLOAD, Operation.DOWNLOAD)
-"""The three a remote is useless without. `mkdir` and `delete` are optional.
+REQUIRED = (Operation.PROBE, Operation.LIST, Operation.UPLOAD, Operation.DOWNLOAD)
+"""The four a remote is useless without. `mkdir` and `delete` are optional.
+
+**`probe` is required because nothing else can answer "is it up".** Every other
+operation names a path, so its failure means either "the server is unreachable"
+or "that path is not there" and the exit code cannot say which. A caller that
+guessed wrong would build a full bundle because a network blip hid a status that
+was sitting on the server the whole time.
+
+What a machine declares here has to succeed **whenever the transport can reach
+the server, whatever is or is not stored on it** — `ifiles auth status`, not a
+listing of the root. A root that does not exist yet is the ordinary state of a
+fresh remote, so a probe that fails on it reports every first run as an outage.
 
 `mkdir` is optional because not every remote needs one to accept an upload. Where
 it is absent and a directory does not exist, `push` refuses naming the directory
@@ -84,8 +98,33 @@ KEYS = frozenset({'root', 'keep', 'transport', 'fetch_bundle_when_none_is_staged
 """Every key the `[remote]` table may hold, so anything else can be named."""
 
 
+PROBE_ATTEMPTS = 3
+PROBE_BACKOFF_SECONDS = 1.0
+"""How hard to try before calling it an outage, and how long that costs.
+
+Three tries about three seconds apart at most. A single dropped packet on a
+corporate VPN must not be the reason a machine concludes it is offline — and the
+cost of being wrong in the other direction is the whole bundle downloaded because
+nothing could see the status that would have made it sparse.
+
+Deliberately small. Past a few seconds this stops being a retry and starts being
+a machine that hangs on a network that is genuinely down, which is the state the
+refusal exists to report.
+"""
+
+
 class RemoteError(Refusal):
     """A remote that is unconfigured, misconfigured, or would not answer."""
+
+
+class Unreachable(RemoteError):
+    """The transport is declared and installed, and the server did not answer.
+
+    Its own type because callers act on it differently from every other refusal.
+    An absent directory means "nothing has been published yet" and a caller may
+    reasonably carry on; this means "go and look at the network", and carrying on
+    would spend a full download on a question nobody could ask.
+    """
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -308,6 +347,74 @@ def require() -> Remote:
     return found.remote
 
 
+@dc.dataclass(frozen=True, slots=True)
+class Answer:
+    """Whether the remote answered a probe, and what it said if it did not."""
+
+    ok: bool
+    detail: str = ''
+    attempts: int = 1
+
+
+def answered(remote: Remote, *, attempts: int = PROBE_ATTEMPTS, backoff: float = PROBE_BACKOFF_SECONDS) -> Answer:
+    """Ask the declared probe whether the server is there, retrying a few times.
+
+    The retry is the whole reason this is a separate act. One dropped packet is
+    indistinguishable from an outage in a single call, and the two lead to
+    opposite decisions — carry on with what the remote holds, or stop and go and
+    look at the network.
+
+    `attempts` and `backoff` are parameters so a test exercises the loop without
+    waiting on it. Patching `time.sleep` would leave the loop itself untested,
+    which is the half worth pinning.
+
+    The last failure's own words come back with it. Nothing here parses them —
+    that is the transport's business — but a person reading "could not reach the
+    remote" wants to know whether the answer was a refused connection or an
+    expired token, and only the transport can say.
+    """
+    # A binary that is not on PATH is not a network problem, and retrying it
+    # three times over three seconds answers the same way each time. `which` is
+    # definitive where an exit code is not, so this is the one failure worth
+    # short-circuiting rather than waiting out.
+    if shutil.which(remote.transport.program) is None:
+        return Answer(False, f'{remote.transport.program} is not on PATH')
+
+    spoken = ''
+    for attempt in range(1, attempts + 1):
+        ran = _ran(remote, Operation.PROBE, effects.Output.QUIET, {})
+        if ran.ok:
+            return Answer(True, attempts=attempt)
+        spoken = _why(ran, remote.transport.program)
+        if attempt < attempts:
+            time.sleep(backoff * attempt)
+    return Answer(False, spoken, attempts)
+
+
+def reachable() -> Remote:
+    """The configured remote, proven to answer. The first call of every verb.
+
+    One entry point for the two questions that have to be asked in order, because
+    asking them separately is how a caller comes to report an outage on a machine
+    that simply never declared a remote — and how another comes to report an empty
+    shelf on a machine whose network is down.
+
+    `remote check` deliberately does not call this. Reporting these states *is*
+    its job, so it reads the pieces and renders them rather than refusing on the
+    first one.
+    """
+    where = require()
+    found = answered(where)
+    if not found.ok:
+        raise Unreachable(
+            f'{where.transport.program} could not reach the remote after {found.attempts} attempt(s)'
+            + (f'\n{found.detail}' if found.detail else ''),
+            code=ExitCode.ISSUE,
+            advice='check the network and the transport, then run: dotfiles remote check',
+        )
+    return where
+
+
 def _ran(remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str]) -> effects.Completed:
     """One transport invocation, with the substitutions as a mapping.
 
@@ -469,17 +576,28 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     where = shutil.which(program)
     measured = [
         Reach('transport', bool(where), where or f'{program} is not on PATH'),
-        Reach('root', True, remote.root),
+        Reach('configured', True, remote.root),
     ]
     if where is None:
+        return tuple(measured)
+
+    # The probe first, and the root listing only if it answered. They report
+    # different things: the probe says whether the server is there at all, and the
+    # listing says whether anything has been put on it. A root that does not exist
+    # is the ordinary state of a fresh remote and not a fault, which is precisely
+    # what a single combined row could never say.
+    answer = answered(remote)
+    tried = f' after {answer.attempts} attempts' if answer.attempts > 1 else ''
+    measured.append(Reach('reachable', answer.ok, f'the server answered{tried}' if answer.ok else f'{answer.detail}{tried}'))
+    if not answer.ok:
         return tuple(measured)
 
     listed = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
     if listed.ok:
         entries = tuple(line for line in listed.stdout.splitlines() if line.strip())
-        measured.append(Reach('reachable', True, f'{len(entries)} entry(s) under {remote.root}'))
+        measured.append(Reach('root', True, f'{len(entries)} entry(s) under {remote.root}', required=False))
     else:
-        measured.append(Reach('reachable', False, _why(listed, program)))
+        measured.append(Reach('root', False, f'{remote.root} is not there yet; the first upload creates it', required=False))
 
     measured.append(_declares(remote, Operation.MKDIR, 'a new directory is created by hand'))
     measured.append(_declares(remote, Operation.DELETE, 'retention is reported and never performed'))

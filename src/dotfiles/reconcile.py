@@ -904,6 +904,14 @@ def _fetched_bundle() -> Path | None:
     if found.remote is None or not found.remote.fetch_bundle_when_none_is_staged:
         return None
     try:
+        # Probed first, so a network that is down reports itself as one rather
+        # than as a machine with nothing on its shelf. Both end this run the same
+        # way — for want of a bundle — and only one of them is worth going to look
+        # at the network about.
+        answer = remote.answered(found.remote)
+        if not answer.ok:
+            warn(f'could not reach the remote after {answer.attempts} attempt(s), so nothing was fetched')
+            return None
         machine = commands.resolved(None).machine_name
         listed = offline_bundle.on_remote(found.remote, machine)
         if not listed:

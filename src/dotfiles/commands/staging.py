@@ -47,6 +47,7 @@ from dotfiles.output import render_note
 from dotfiles.output import render_row
 from dotfiles.output import section_line
 from dotfiles.output import success
+from dotfiles.output import warn
 from dotfiles.reconcile import ResourceVerdict
 from dotfiles.refusal import Refusal
 from dotfiles.session import Session
@@ -173,6 +174,31 @@ def _status_for(named: str | None, machine: str) -> Path | None:
     than inside the builder, so the builder takes a file and nothing else — a
     module that reached a network to read its own input would have no way to be
     tested without one.
+
+    **A remote holding no status for that machine builds a full bundle, and says
+    so.** `latest` means "whatever the remote has", and nothing is a legitimate
+    answer to that — it is the state of every machine before its first status is
+    published, which is exactly when somebody is running this for the first time.
+    Refusing there costs them a second command to learn that the loop has to be
+    primed.
+
+    What makes the fallback safe is that it is announced *and* the artefact says
+    it for itself: the archive is not named `-sparse` and its `bundle.json` reads
+    `completeness: full`. The failure this feature exists to avoid is a bundle
+    that carries everything while reporting itself sparse, and nothing about this
+    path can produce one.
+
+    **A transport that will not answer still refuses**, and `reachable` is what
+    tells the two apart. Falling back there would build a full bundle on a run
+    where a perfectly good status was sitting on a server nobody could reach —
+    quietly turning a network blip into half an hour of downloads. The probe is
+    retried before that conclusion is drawn, because one dropped packet is not an
+    outage.
+
+    Past this point the distinction stops being worth drawing. The shelf directory
+    missing and the shelf being empty both mean "nothing has been published for
+    this machine", and both build a full bundle — which is what every build did
+    before any of this existed.
     """
     if named is None:
         return None
@@ -182,14 +208,12 @@ def _status_for(named: str | None, machine: str) -> Path | None:
             raise typer.BadParameter(f'--against: {found} is not a file. Fetch one with: dotfiles status download --machine {machine}')
         return found
 
-    where = transport.require()
+    where = transport.reachable()
     listed = status_commands.remote_statuses(where, machine)
     if not listed:
-        raise BundleTransferError(
-            f'the remote holds no status for {machine}, so there is nothing to build sparsely against',
-            code=ExitCode.ISSUE,
-            advice=f'publish one from that machine with: dotfiles status upload --machine {machine}',
-        )
+        warn(f'the remote holds no status for {machine}, so this builds a full bundle')
+        hint(f'publish one from that machine to make the next build sparse: dotfiles status upload --machine {machine}')
+        return None
     destination = paths.STATUS_CACHE / listed[0]
     transport.pull(where, f'{transport.statuses_for(where, machine)}/{listed[0]}', destination)
     return destination
@@ -235,7 +259,7 @@ def upload(
     reads to describe a bundle before spending the transfer on it.
     """
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     found = Path(archive) if archive else offline_bundle.newest()
     if found is None:
         error(f'no bundle archive in {paths.ARCHIVE_DIR}, {Path.cwd()} or {Path.home()}, and none named')
@@ -294,7 +318,7 @@ def list_bundles(
     a question the listing already answers.
     """
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     listed = offline_bundle.on_remote(where, named)
     shown = listed[:limit] if limit else listed
@@ -363,7 +387,7 @@ def download(
     what lets a download be repeated without disturbing what is already staged.
     """
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     listed = offline_bundle.on_remote(where, named)
     if not listed:
@@ -590,7 +614,7 @@ def _prune_local(keep: int) -> tuple[str, ...]:
 
 def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) -> None:
     """Remove what is past the limit on a machine's shelf, having said what first."""
-    where = transport.require()
+    where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     directory = transport.bundles_for(where, named)
     superseded = transport.superseded(offline_bundle.on_remote(where, named), max(keep, 1))

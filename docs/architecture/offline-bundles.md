@@ -53,6 +53,7 @@ publish_status_after_offline_apply = false
 
 [remote.transport]
 program  = "ifiles"
+probe    = ["auth", "status"]
 list     = ["list", "{dir}"]
 upload   = ["upload", "{local}", "{dir}"]
 download = ["download", "{remote}", "{local}"]

@@ -166,7 +166,7 @@ def upload(
     same about a remote.
     """
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     found = composed(machine)
     publishing.refuse_unpublishable(found.document)
 
@@ -224,7 +224,7 @@ def list_statuses(
 ) -> None:
     """List the statuses the remote holds for a machine, newest first."""
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     named = machine or resolved(None).machine_name
     listed = remote_statuses(where, named)
     shown = listed[:limit] if limit else listed
@@ -272,7 +272,7 @@ def download(
     `ifiles shares rm`.
     """
     verbosity(verbose, quiet)
-    where = transport.require()
+    where = transport.reachable()
     named = machine or resolved(None).machine_name
     listed = remote_statuses(where, named)
     if not listed:

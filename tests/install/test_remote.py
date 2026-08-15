@@ -39,6 +39,7 @@ root = "/artefacts"
 
 [remote.transport]
 program = "{program}"
+probe = ["probe"]
 list = ["list", "{{dir}}"]
 upload = ["upload", "{{local}}", "{{dir}}"]
 download = ["download", "{{remote}}", "{{local}}"]
@@ -446,7 +447,7 @@ class TestMeasuring:
 
         measured = transport.measure(transport.read())
 
-        assert [reach.subject for reach in measured] == ['transport', 'root']
+        assert [reach.subject for reach in measured] == ['transport', 'configured']
         assert measured[0].ok is False
 
     def test_an_undeclared_optional_is_a_fact_rather_than_a_fault(self, config_home: Path, relay: Path, server: Path) -> None:
@@ -476,3 +477,90 @@ def test_the_config_file_this_reads_is_the_one_the_tool_resolves(config_home: Pa
 
     assert settings.config_file() == config_home / 'dotfiles' / 'config.toml'
     assert settings.config_file().is_file()
+
+
+class TestProbing:
+    """Whether the server is there, asked apart from anything that names a path.
+
+    The distinction the whole chain rests on. Every other operation names a
+    directory, so its failure means either "unreachable" or "not there" and one
+    exit code cannot say which — which is how a machine comes to build a full
+    bundle because a dropped packet hid the status that would have made it sparse.
+    """
+
+    def test_a_reachable_remote_answers_on_the_first_attempt(self, configured: transport.Remote, server: Path) -> None:
+        answer = transport.answered(configured, backoff=0)
+
+        assert answer.ok is True
+        assert answer.attempts == 1
+
+    def test_a_probe_answers_even_where_nothing_has_been_uploaded(self, configured: transport.Remote, server: Path) -> None:
+        """The property a probe must have, and the reason it cannot be a listing of
+        the root: a root that does not exist yet is the ordinary state of a fresh
+        remote, and a probe that failed on it would report every first run as an
+        outage."""
+        assert not (server / 'artefacts').exists()
+
+        assert transport.answered(configured, backoff=0).ok is True
+
+    def test_a_server_that_will_not_answer_is_retried_before_it_is_believed(
+        self, config_home: Path, fake_bin: Path, tmp_path: Path
+    ) -> None:
+        """One dropped packet is indistinguishable from an outage in a single call,
+        and the two lead to opposite decisions."""
+        record = tmp_path / 'argv.jsonl'
+        install_spy(fake_bin, record, code=1)
+        declare(config_home, TABLE.format(program='spy'))
+        found = transport.read()
+        assert found.remote is not None
+
+        answer = transport.answered(found.remote, attempts=3, backoff=0)
+
+        assert answer.ok is False
+        assert answer.attempts == 3
+        assert len(recorded(record)) == 3, 'every attempt has to actually reach the transport'
+
+    def test_a_program_that_is_not_installed_is_not_retried(self, config_home: Path, fake_bin: Path) -> None:
+        """`which` is definitive where an exit code is not, so waiting three
+        seconds to answer the same way three times buys nothing."""
+        declare(config_home, TABLE.format(program='nothing-is-installed-here'))
+        found = transport.read()
+        assert found.remote is not None
+
+        answer = transport.answered(found.remote, attempts=3, backoff=0)
+
+        assert (answer.ok, answer.attempts) == (False, 1)
+        assert 'not on PATH' in answer.detail
+
+
+class TestTheSharedEntryPoint:
+    """`reachable` is the first call of every verb, and asks the two in order."""
+
+    def test_an_unconfigured_machine_refuses_before_anything_is_probed(self, config_home: Path) -> None:
+        """The order matters: a machine that never declared a remote must not be
+        reported as one whose network is down."""
+        with pytest.raises(transport.RemoteError) as refused:
+            transport.reachable()
+
+        assert not isinstance(refused.value, transport.Unreachable)
+        assert 'dotfiles config show' in refused.value.advice
+
+    def test_a_declared_remote_that_will_not_answer_refuses_as_unreachable(
+        self, config_home: Path, fake_bin: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Its own type, because a caller acts on it differently: an absent
+        directory means "nothing published yet" and this means "go and look"."""
+        install_spy(fake_bin, tmp_path / 'argv.jsonl', code=1)
+        declare(config_home, TABLE.format(program='spy'))
+        monkeypatch.setattr(transport, 'PROBE_BACKOFF_SECONDS', 0)
+
+        with pytest.raises(transport.Unreachable) as refused:
+            transport.reachable()
+
+        assert refused.value.code is ExitCode.ISSUE
+        assert 'remote check' in refused.value.advice
+
+    def test_a_reachable_remote_is_handed_back(self, configured: transport.Remote, server: Path) -> None:
+        """Paired with both refusals, which a `reachable` that always raised would
+        satisfy."""
+        assert transport.reachable().root == '/artefacts'

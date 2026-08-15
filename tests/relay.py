@@ -36,6 +36,11 @@ def resolve(remote):
 
 def main(argv):
     verb, rest = argv[0], argv[1:]
+    if verb == "probe":
+        # Answers whenever the server is there, whatever is or is not on it —
+        # which is the property a probe has to have. A root that does not exist
+        # yet is the ordinary state of a fresh remote.
+        return 0 if ROOT.is_dir() else 4
     if verb == "list":
         directory = resolve(rest[0])
         if not directory.is_dir():
@@ -88,6 +93,7 @@ root = "{root}"
 {extra}
 [remote.transport]
 program = "{program}"
+probe = ["probe"]
 list = ["list", "{{dir}}"]
 upload = ["upload", "{{local}}", "{{dir}}"]
 download = ["download", "{{remote}}", "{{local}}"]
