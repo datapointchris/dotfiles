@@ -58,9 +58,10 @@ newest_bundle() {
 }
 
 # The newest staged bundle, which is the one the CLI's own resolver would read
-# first. `bin/uv` and `wheels/` are the two things this script needs out of a
-# bundle, and both come from whichever carries them — the same falling-through
-# `providers.locate` does, spelled for the one caller that cannot call it.
+# first. `bin/uv` and `wheels/` are the two things this script needs out of one,
+# and both come from this bundle alone — there is no falling through to an older
+# one here, which is safe only because `create_bundle.build` calls `add_uv` and
+# `add_wheels` on every bundle, sparse included.
 staged_bundle() {
   for path in "$STAGING"/*; do
     if [ -f "$path/manifest.txt" ]; then printf '%s\t%s\n' "${path##*/}" "$path"; fi
@@ -137,14 +138,21 @@ if [ -n "$OFFLINE" ]; then
     # Into a scratch directory and moved, because the archive's single member is
     # named `installers` whatever the tarball is called — extracting in place
     # would land every bundle on one directory of that name.
-    rm -rf "$STAGING/.unpacking" "$STAGING/${stem:?}"
+    #
+    # The destination is removed after the extract succeeds, not before, so this
+    # fails in the same order `offline_bundle.stage` does. Removing first means a
+    # truncated archive reusing a name destroys the copy already staged under it,
+    # on the one machine that cannot download another.
+    rm -rf "$STAGING/.unpacking"
     mkdir -p "$STAGING/.unpacking"
     tar -xzf "$archive" -C "$STAGING/.unpacking"
+    rm -rf "$STAGING/${stem:?}"
     mv "$STAGING/.unpacking/installers" "$STAGING/$stem"
     rmdir "$STAGING/.unpacking"
   fi
   BUNDLE=$(staged_bundle)
-  [ -n "$BUNDLE" ] || die "offline: no bundle in ./ or ~/, and nothing staged under $STAGING"
+  [ -n "$BUNDLE" ] || die "offline: no bundle in ${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/bundles, ./ or ~/, and nothing staged under $STAGING
+  fetch one on a machine with a network: dotfiles bundle download"
 fi
 
 # Kept, because the hand-off at the bottom has to say whether the *next* shell

@@ -229,12 +229,11 @@ def bin_dir() -> Path:
 
 
 MANIFEST = 'manifest.txt'
-"""What makes a staged directory a bundle, spelled here as well as in `bundle.py`.
+"""What makes a staged directory a bundle.
 
-Two spellings of one string, and the alternative is worse: `providers.bundle`
-imports `locate` from this module, so reading its constant here is a cycle.
-`tests/install/test_offline_bundle.py` asserts the two agree, which is the shape
-`output.MATCHED` already uses for the same problem.
+Here rather than in `providers.bundle`, which reads the file: this module decides
+what counts as a bundle at all, and `staged_bundles` skips a directory without
+one. `bundle.py` imports the name from here, so there is one definition.
 """
 
 
@@ -280,7 +279,11 @@ class Located:
 
 def locate(relative: str) -> Located | None:
     """The newest staged bundle carrying this file, or None where none does."""
-    return next((Located(found, root) for root in staged_bundles() if (found := root / relative).exists()), None)
+    for root in staged_bundles():
+        found = root / relative
+        if found.exists():
+            return Located(found, root)
+    return None
 
 
 def bundle_file(relative: str) -> Path:

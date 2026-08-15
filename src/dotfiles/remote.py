@@ -218,7 +218,21 @@ def _template(operation: Operation, value: Any) -> tuple[tuple[str, ...], str]:
     """One operation's argv, or the sentence saying why it is not usable."""
     if not isinstance(value, list) or not all(isinstance(part, str) for part in value):
         return (), f'{TABLE}.transport.{operation} must be a list of strings'
-    named = {name for part in value for _, name, _, _ in _fields(part) if name}
+
+    named: set[str] = set()
+    for part in value:
+        try:
+            fields = _fields(part)
+        except ValueError as malformed:
+            return (), f'{TABLE}.transport.{operation} is not a usable template: {malformed}'
+        # An unnamed field is `{}`, which `str.format` fills from a positional
+        # argument. Nothing here has one, so accepting it means `argv` raises
+        # IndexError at the moment the transport runs — a traceback where every
+        # other fault in this table is collected into a sentence.
+        if any(name == '' for _, name, _, _ in fields):
+            return (), f'{TABLE}.transport.{operation} carries an empty {{}}, and nothing here fills a positional field'
+        named |= {name for _, name, _, _ in fields if name}
+
     wanted = PLACEHOLDERS[operation]
     if named != wanted:
         listed = ', '.join(f'{{{name}}}' for name in sorted(wanted))
@@ -232,6 +246,10 @@ def _fields(part: str) -> list[tuple[str, str | None, str | None, str | None]]:
     Asked of the formatter rather than matched with a regex, so a template that
     dotfiles accepts is exactly one `argv` will not raise on — standards/python.md
     § "Ask whatever owns a fact; never work it out a second time".
+
+    Raises `ValueError` on an unbalanced brace, which the caller turns into one
+    more problem string. Uncaught it escapes `dotfiles config show`, and that is
+    the command `ADVICE` sends the reader to when the table is wrong.
     """
     return list(string.Formatter().parse(part))
 

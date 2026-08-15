@@ -172,6 +172,54 @@ class TestReadingTheTable:
         assert 'remote.transport.upload' in found.problem
         assert '{local}' in found.problem
 
+    def test_an_empty_placeholder_is_refused_rather_than_raising_at_run_time(self, config_home: Path) -> None:
+        """`{}` fills from a positional argument and nothing here has one, so an
+        accepted template raises IndexError at the moment the transport runs —
+        a traceback where every other fault in this table is a sentence."""
+        declare(
+            config_home,
+            """
+            [remote]
+            root = "/artefacts"
+
+            [remote.transport]
+            program = "relay"
+            probe = ["probe"]
+            list = ["list", "{dir}", "{}"]
+            upload = ["upload", "{local}", "{dir}"]
+            download = ["download", "{remote}", "{local}"]
+            """,
+        )
+
+        found = transport.read()
+
+        assert found.remote is None
+        assert 'remote.transport.list' in found.problem
+        assert '{}' in found.problem
+
+    def test_an_unbalanced_brace_is_reported_rather_than_escaping_config_show(self, config_home: Path) -> None:
+        """`string.Formatter().parse` raises ValueError on one, and the command
+        `ADVICE` sends the reader to is exactly `dotfiles config show`."""
+        declare(
+            config_home,
+            """
+            [remote]
+            root = "/artefacts"
+
+            [remote.transport]
+            program = "relay"
+            probe = ["probe"]
+            list = ["list", "{dir"]
+            upload = ["upload", "{local}", "{dir}"]
+            download = ["download", "{remote}", "{local}"]
+            """,
+        )
+
+        found = transport.read()
+
+        assert found.remote is None
+        assert 'remote.transport.list' in found.problem
+
     def test_a_template_naming_a_placeholder_the_operation_does_not_have_is_refused(self, config_home: Path) -> None:
         declare(
             config_home,
