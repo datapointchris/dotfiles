@@ -164,9 +164,14 @@ reason the stream exists. The record still carries the provider's one-line
 stream is what stays behind and says what the command actually printed.
 
 Measured on a converged Arch workstation: a read-only `check` makes 77 calls
-through `effects` and writes about 25KB. The scheduled check runs every six hours
-(`schedule.INTERVAL_SECONDS`), and the state directory is its own Syncthing
-folder, so the fleet keeps the history and no verb here prunes it.
+through `effects` and writes about 25KB. The scheduled check runs every ten
+minutes (`schedule.INTERVAL_SECONDS`), and the state directory is its own
+Syncthing folder, so the fleet keeps the history and no verb here prunes it.
+
+That cadence is what makes the records a series rather than a sample, and it is
+also what makes their volume worth stating: at roughly 36KB a run measured across
+the last thirty, a machine writes about 5MB and 288 files a day, and nothing
+prunes them.
 
 `dotfiles report` is how the records are asked about, and `--help` lists the
 verbs. The one that shaped the format is `stats`: it totals time per address

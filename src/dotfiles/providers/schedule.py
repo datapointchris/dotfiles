@@ -34,9 +34,20 @@ from dotfiles.resources import Verdict
 LABEL = 'com.datapointchris.dotfiles-check'
 UNIT = 'dotfiles-check'
 
-INTERVAL_SECONDS = 60 * 60 * 6
-"""Four times a day. Often enough that a day-old nudge means the timer stopped,
-rare enough that it is never what someone notices about their machine."""
+INTERVAL_SECONDS = 60 * 10
+"""Every ten minutes. The record each run writes is the fleet's drift series, so
+this cadence is what sets its resolution — how far a machine has moved, and how
+far behind another one it sits, are only answerable as often as someone measured.
+
+Affordable because the refresh is authenticated: 24 declared releases at six runs
+an hour is 144 calls against GitHub's 5000, and a rate-limited answer keeps the
+previous one rather than failing the run."""
+
+
+def _cadence() -> str:
+    if INTERVAL_SECONDS % 3600 == 0:
+        return f'{INTERVAL_SECONDS // 3600}h'
+    return f'{INTERVAL_SECONDS // 60}m'
 
 
 INSTALLED = Path.home() / '.local' / 'bin' / 'dotfiles'
@@ -139,7 +150,7 @@ def _apply_systemd() -> Result:
     enabled = run(['systemctl', '--user', 'enable', '--now', f'{UNIT}.timer'], output=Output.QUIET)
     if not enabled.ok:
         return Result(False, f'could not enable {UNIT}.timer: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{UNIT}.timer enabled, every {INTERVAL_SECONDS // 3600}h', kind=Kind.APPLIED)
+    return Result(True, f'{UNIT}.timer enabled, every {_cadence()}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -198,7 +209,7 @@ def _apply_launchd() -> Result:
     loaded = run(['launchctl', 'bootstrap', f'gui/{os.getuid()}', str(agent)], output=Output.QUIET)
     if not loaded.ok:
         return Result(False, f'could not load {LABEL}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{LABEL} loaded, every {INTERVAL_SECONDS // 3600}h', kind=Kind.APPLIED)
+    return Result(True, f'{LABEL} loaded, every {_cadence()}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
