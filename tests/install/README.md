@@ -23,7 +23,6 @@ uv run pytest tests/e2e --docker --environment archlinux  # one of them
 `--keep` leaves the containers up afterwards and `--reuse` keeps a kept
 container's OS state while still refreshing the repo inside it.
 
-`docker/` holds the image definitions those runs build from, and
-`verification/` the two scripts an e2e run finishes with — what the manifest
-declared is present and in the expected prefix, and nothing is installed twice by
-two different methods.
+`docker/` holds the image definitions those runs build from. What an e2e run
+finishes with is `tests/e2e/test_verification.py`, which takes its expectations
+from `resolve.resolve` and gives every declared item its own test node.

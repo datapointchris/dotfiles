@@ -42,28 +42,10 @@ def bundle(tmp_path, monkeypatch) -> Path:
     return staged
 
 
-class Proxy:
-    """`go install`, answering however this test says the proxy behaved."""
-
-    def __init__(self, *, reachable: bool = True, said: str = '') -> None:
-        self.reachable = reachable
-        self.said = said
-        self.calls: list[tuple[str, ...]] = []
-
-    def __call__(self, command, **_kwargs) -> Completed:
-        argv = tuple(str(part) for part in command)
-        self.calls.append(argv)
-        return Completed(argv, 0, '') if self.reachable else Completed(argv, 1, self.said)
-
-
 @pytest.fixture
-def proxy(monkeypatch):
-    def install(**kwargs) -> Proxy:
-        recorder = Proxy(**kwargs)
-        monkeypatch.setattr(effects, 'run', recorder)
-        return recorder
-
-    return install
+def proxy(upstream):
+    """`go install`, answering however this test says the module proxy behaved."""
+    return upstream
 
 
 def stage(bundle: Path, name: str = 'task') -> Path:

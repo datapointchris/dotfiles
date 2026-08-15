@@ -1,12 +1,19 @@
 # Dotfiles Testing
 
 One runner. `eza -1 tests/` lists the directories; each is named for what it
-covers, and the two that are not obvious:
+covers, and the three that are not obvious:
 
 - `tests/shell/` — the shell code, driven from pytest through a real `bash`,
   `zsh` or `tmux`. The runner is Python; the subject is not.
 - `tests/e2e/` — one rig that installs whole machines in containers, with the
   environments as parameters.
+- `tests/matrix/` — one synthetic machine built from files, with the real CLI
+  driven against it in process. Where a property visible through a verb belongs,
+  and the routing rule is in `docs/development/testing.md`.
+
+**`tests/matrix/` and `task test:matrix` are unrelated.** The task is the
+container grid below — every level over every environment, an hour of wall
+clock. The directory starts nothing and runs in seconds.
 
 `docs/development/testing.md` is why it is arranged this way.
 

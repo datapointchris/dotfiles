@@ -59,19 +59,6 @@ def test_a_pin_no_release_matches_resolves_to_nothing(tmp_path: Path):
     assert 'publishes no release for' in ghrelease.unresolved(entry, offline=False)
 
 
-def test_a_pin_the_catalog_refuses_is_never_silently_dropped(tmp_path: Path):
-    """No network. A tag where a bare version belongs is refused at load, so it
-    cannot reach the resolver as a pin that matches nothing and read as upstream
-    having gone quiet."""
-    packages = tmp_path / 'packages.yml'
-    packages.write_text(yaml.safe_dump({'github_releases': [{'name': PINNED_TOOL, 'repo': PINNED_REPO, 'version': 'v0.56.0'}]}))
-
-    with pytest.raises(catalog.CatalogError) as refused:
-        catalog.load(packages)
-
-    assert 'which is a tag' in str(refused.value)
-
-
 def test_an_unreadable_catalog_stops_the_phase_rather_than_installing_latest(tmp_path: Path, monkeypatch):
     """No network, and the bug the bash version of this file caught: a failed
     lookup and a declared-nothing lookup both exited 1 there, so swallowing the

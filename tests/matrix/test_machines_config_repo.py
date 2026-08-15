@@ -886,6 +886,7 @@ def test_the_variable_rung_is_reported_by_the_name_that_answered(
     assert setting['source'] == f'${REGISTRY_VARIABLE}'
     assert setting['value'] == str(registry)
     assert setting['exists'] is True
+    assert setting['advice'] == '', 'advice on a converged row is noise, and reads as a fault where there is none'
 
 
 def test_the_file_rung_is_reported_by_the_path_of_the_file(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

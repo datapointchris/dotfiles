@@ -13,9 +13,7 @@ from __future__ import annotations
 import pytest
 
 from dotfiles import catalog
-from dotfiles import effects
 from dotfiles import github_release
-from dotfiles.effects import Completed
 from dotfiles.providers import Kind
 from dotfiles.providers import uvtool
 
@@ -26,28 +24,10 @@ KEYMAP = catalog.GitUvTool.from_mapping(
 )
 
 
-class Uv:
-    """`uv tool install`, answering however this test says it went."""
-
-    def __init__(self, *, ok: bool = True, said: str = '') -> None:
-        self.ok = ok
-        self.said = said
-        self.calls: list[tuple[str, ...]] = []
-
-    def __call__(self, command, **_kwargs) -> Completed:
-        argv = tuple(str(part) for part in command)
-        self.calls.append(argv)
-        return Completed(argv, 0, '') if self.ok else Completed(argv, 1, self.said)
-
-
 @pytest.fixture
-def uv(monkeypatch):
-    def install(**kwargs) -> Uv:
-        recorder = Uv(**kwargs)
-        monkeypatch.setattr(effects, 'run', recorder)
-        return recorder
-
-    return install
+def uv(upstream):
+    """`uv tool install`, answering however this test says it went."""
+    return upstream
 
 
 @pytest.fixture
@@ -114,7 +94,7 @@ def test_a_git_tool_repaired_again_is_forced_at_its_pin(uv, released) -> None:
 
 
 def test_a_failure_reports_what_uv_said(uv) -> None:
-    uv(ok=False, said='error: distribution not found for: nosuchtool')
+    uv(reachable=False, said='error: distribution not found for: nosuchtool')
 
     result = uvtool.install(RUFF, offline=False)
 
@@ -127,7 +107,7 @@ def test_offline_still_tries_pypi_and_says_there_is_no_fallback(uv) -> None:
     """The bundle stages wheels for this CLI's own closure and nothing else, while
     the machine that installs offline declares six uv tools — so refusing would
     install none of them on the box the offline path exists for."""
-    reached = uv(ok=False, said='error: network unreachable')
+    reached = uv(reachable=False, said='error: network unreachable')
 
     result = uvtool.install(RUFF, offline=True)
 

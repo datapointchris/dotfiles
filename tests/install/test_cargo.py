@@ -26,7 +26,6 @@ from dotfiles import paths
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
-from dotfiles.effects import Completed
 from dotfiles.providers import Kind
 from dotfiles.providers import bundle
 from dotfiles.providers import cargo
@@ -58,28 +57,10 @@ def staged(tmp_path, monkeypatch) -> Path:
     return staging
 
 
-class Cargo:
-    """`cargo binstall`, answering however this test says crates.io behaved."""
-
-    def __init__(self, *, reachable: bool = True, said: str = '') -> None:
-        self.reachable = reachable
-        self.said = said
-        self.calls: list[tuple[str, ...]] = []
-
-    def __call__(self, command, **_kwargs) -> Completed:
-        argv = tuple(str(part) for part in command)
-        self.calls.append(argv)
-        return Completed(argv, 0, '') if self.reachable else Completed(argv, 1, self.said)
-
-
 @pytest.fixture
-def crates(monkeypatch):
-    def install(**kwargs) -> Cargo:
-        recorder = Cargo(**kwargs)
-        monkeypatch.setattr(effects, 'run', recorder)
-        return recorder
-
-    return install
+def crates(upstream):
+    """`cargo binstall`, answering however this test says crates.io behaved."""
+    return upstream
 
 
 @pytest.fixture
