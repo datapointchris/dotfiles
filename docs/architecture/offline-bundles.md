@@ -47,7 +47,7 @@ behaviour stay owned by the CLI that owns them.
 ```toml
 [remote]
 root = "/dotfiles"
-keep = 5
+keep_bundles = 5
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 
@@ -88,8 +88,8 @@ machine comes to have an automatic path silently off with nothing saying so.
 was built, which machine for, whether it is full or sparse, and — when sparse —
 what it measured and deliberately left out.
 
-They carry disjoint facts on purpose. The created-at and platform headers used to
-live in `manifest.txt` and moved, rather than being written in both.
+They carry disjoint facts on purpose. The created-at and platform headers live
+only in `bundle.json`, never in both.
 
 ```json
 {
@@ -98,7 +98,7 @@ live in `manifest.txt` and moved, rather than being written in both.
   "machine": "wsl-work-workstation",
   "platform": "linux/x86_64",
   "completeness": "sparse",
-  "built_from": "dotfiles-status-v20260901T0700Z-wsl-work-workstation-4f2a91c3.json",
+  "built_from": "dotfiles-status-v20260901T070000Z-wsl-work-workstation-4f2a91c3.json",
   "current": { "binary/bat": "v0.26.0", "go-binary/task": "v3.46.0" }
 }
 ```
@@ -136,11 +136,11 @@ Each archive unpacks into `$XDG_CACHE_HOME/dotfiles/staged/<archive name>/`, and
 `providers.locate` walks them newest first. The newest bundle carrying a file
 answers for it; an older one still answers for everything the newer left out.
 
-That is what makes a sparse bundle possible. Staging used to merge every bundle
-into one tree, which refreshed the *files* and replaced `manifest.txt` — leaving
-everything an earlier bundle carried on disk and unlisted. The manifest is the
-only door a provider has in, so those tools became unmeasurable on the one machine
-that cannot download them again.
+That is what makes a sparse bundle possible. Merging every bundle into one tree
+would refresh the *files* and replace `manifest.txt`, leaving everything an
+earlier bundle carried on disk and unlisted. The manifest is the only door a
+provider has in, so those tools would be unmeasurable on the one machine that
+cannot download them again.
 
 It also means a machine can say which bundle any staged file came from, which is
 what the directory name is for.
@@ -163,8 +163,8 @@ bundle's binary fails verification on a machine where nothing is wrong.
 Losing a staged bundle costs a re-fetch through the transport that delivered it,
 which is the test for a cache. It cannot go under `$XDG_STATE_HOME/dotfiles/`,
 which is a Syncthing folder — a gigabyte of archives there replicates across the
-fleet. `src/dotfiles/paths.py` records this as a sanctioned exception, because the
-classification is close enough to be worth writing down rather than defaulting.
+fleet. `src/dotfiles/paths.py` records the reasoning, because the classification is
+close enough to be worth writing down rather than defaulting.
 
 ## What travels back, and what cannot
 

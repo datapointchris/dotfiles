@@ -19,6 +19,7 @@ an offline run on the target would decide.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -85,8 +86,6 @@ class TestReadingAStatus:
 
 class TestDecidingWhatToLeaveOut:
     def built(self, tmp_path: Path, **installed: str) -> create_bundle.Bundle:
-        import datetime as dt
-
         made = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'box', dt.datetime(2026, 9, 9, tzinfo=dt.UTC))
         path = tmp_path / 'status.json'
         document = status_for(**installed)
@@ -122,7 +121,6 @@ class TestDecidingWhatToLeaveOut:
         """Paired with the first case: without `--against` there is no premise to
         omit anything on, and a build that quietly did would be a sparse bundle
         describing itself as full."""
-        import datetime as dt
 
         made = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'box', dt.datetime(2026, 9, 9, tzinfo=dt.UTC))
 

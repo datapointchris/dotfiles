@@ -181,7 +181,7 @@ def staged_bundle(
     rows: dict[str, str],
     category: str = 'binary',
     *,
-    name: str = 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64',
+    name: str = STAGED_BUNDLE,
     **described: Any,
 ) -> Path:
     """One staged bundle inside a staging directory, for a test with no sandbox.

@@ -695,7 +695,7 @@ def test_offline_with_no_bundle_at_all_is_a_miss_never_a_stale_answer(
     """A machine that never had a bundle extracted is the case a *missing manifest*
     reaches, which no other test here takes: every one of them stages one first.
 
-    `BUNDLE_DIR` is pointed at a path that does not exist rather than left alone,
+    `STAGING_DIR` is pointed at a path that does not exist rather than left alone,
     because the real one may exist on the machine running this and the test would
     then read whatever it holds.
     """

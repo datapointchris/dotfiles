@@ -153,13 +153,13 @@ bundle staged on disk and unlisted.
 
 Named after the archive so a machine can say which bundle a file came from.
 
-**Sanctioned exception to `standards/data.md` § "Every path a tool writes is an
-XDG base directory".** That section's test is whether losing it costs only time,
-and for the machine this exists for it very nearly does not — a work box behind a
-firewall cannot re-fetch these from upstream. It is a cache all the same, because
-the transport that delivered them is still there and `bundle download` fetches
-them again. What it must not be is state: `STATE_HOME` is a Syncthing folder, and
-a gigabyte of archives there replicates across the fleet.
+**Cache rather than state**, which is the harder half of the classification here.
+The usual test is whether losing it costs only time, and for the machine this
+exists for it very nearly does not — a work box behind a firewall cannot re-fetch
+these from upstream. It is a cache all the same, because the transport that
+delivered them is still there and `bundle download` fetches them again. What it
+must not be is state: `STATE_HOME` is a Syncthing folder, and a gigabyte of
+archives there replicates across the fleet.
 
 `$DOTFILES_BUNDLE` overrides it, which is how a test points staging somewhere it
 can be inspected and how the bootstrap and the CLI agree on one location.

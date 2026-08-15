@@ -13,9 +13,9 @@ approximating. A machine behind the work firewall reaches neither differently fo
 having typed a different word.
 
 The bundle's layout is agreed here rather than by convention. `create_bundle`
-writes `go-binaries/<name>` and the bash read `$HOME/installers/go-binaries/$name`
-from a different file; one of them moving was a silent miss on the one machine
-that needs it.
+writes `go-binaries/<executable>` and this module opens it, so the two sides name
+one path through one constant — where each spelling its own is a silent miss on
+the one machine that needs it.
 """
 
 from __future__ import annotations
