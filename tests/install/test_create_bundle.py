@@ -8,6 +8,7 @@ Run with: pytest tests/install/test_create_bundle.py
 """
 
 import datetime as dt
+import json
 import tarfile
 import zipfile
 
@@ -16,6 +17,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import create_bundle
 from dotfiles import paths
+from dotfiles import status
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -655,3 +657,155 @@ class TestWingetBundling:
         """
         with pytest.raises(create_bundle.BundleError, match='ripgrep-v14.1.1.tar.gz'):
             self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version}.tar.gz'}, 'v14.1.1')
+
+
+class TestTheSparseDecisionReachesEveryStagingLoop:
+    """Each `add_*` has to consult it, and nothing else would say if one did not.
+
+    `already_current` is tested directly elsewhere. What that cannot catch is a
+    staging loop that never calls it: the bundle would carry the tool anyway, the
+    build would report itself sparse, and every test of the decision would still
+    pass. Five call sites, so this is parametrised over the four that resolve a
+    version from a release — `add_install_scripts` stages from an unversioned URL
+    and has nothing to compare.
+    """
+
+    VERSION = 'v10.4.2'
+
+    DECLARED = {
+        'cargo_packages': (
+            catalog.CargoPackage,
+            {'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'},
+        ),
+        'go_tools': (
+            catalog.GoTool,
+            {
+                'name': 'task',
+                'command': 'task',
+                'package': 'github.com/go-task/task/v3/cmd/task',
+                'github_repo': 'go-task/task',
+                'binary_pattern': 'task_{os}_{go_arch}.tar.gz',
+            },
+        ),
+        'winget_packages': (
+            catalog.WingetPackage,
+            {
+                'name': 'ripgrep',
+                'command': 'rg',
+                'winget': 'BurntSushi.ripgrep',
+                'repo': 'BurntSushi/ripgrep',
+                'asset': 'ripgrep-{version}-windows.exe',
+            },
+        ),
+    }
+
+    def planned_for(self, section):
+        """One entry, built when it is asked for.
+
+        Lazily, because a mapping built eagerly makes a declaration error in any
+        one of them the failure every case here reports — which is how three
+        parametrised cases came to fail for a fourth's reason.
+        """
+        kind, declared = self.DECLARED[section]
+        entry = kind.from_mapping(declared)
+        return entry, planned(entry, section)
+
+    def bundle_for(self, tmp_path, monkeypatch, section, installed):
+        """A bundle planned against a status reporting `installed` for the tool."""
+        os_name = 'windows' if section == 'winget_packages' else 'linux'
+        bundle = create_bundle.Bundle(tmp_path / 'installers', os_name, 'x86_64', 'box', BUILT_AT)
+        entry, item = self.planned_for(section)
+
+        status_path = tmp_path / 'status.json'
+        status_path.write_text(
+            json.dumps(
+                {
+                    'version': status.VERSION,
+                    'machine': 'box',
+                    'scope': ['packages'],
+                    'resources': [{'address': 'packages', 'examined': [{'item': f'x/{installed[0]}', 'detail': installed[1]}]}],
+                }
+            )
+        )
+        bundle.plan_against(status_path, json.loads(status_path.read_text()))
+
+        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: self.VERSION)
+        monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
+
+        def refuse(*args, **kwargs):
+            raise AssertionError('a tool the target already has must not be downloaded')
+
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', refuse)
+        return bundle, entry, item
+
+    @pytest.mark.parametrize(
+        ('section', 'stage', 'named', 'category'),
+        [
+            ('cargo_packages', 'add_cargo_binaries', 'fd-find', 'cargo'),
+            ('go_tools', 'add_go_binaries', 'task', 'go-binary'),
+            ('winget_packages', 'add_winget_binaries', 'ripgrep', 'winget'),
+        ],
+        ids=['cargo', 'go', 'winget'],
+    )
+    def test_a_tool_the_target_already_has_is_neither_downloaded_nor_recorded(self, tmp_path, monkeypatch, section, stage, named, category):
+        """The download is refused outright rather than merely unasserted: a loop
+        that skipped the record and fetched anyway would pass a row count."""
+        bundle, _, item = self.bundle_for(tmp_path, monkeypatch, section, (named, self.VERSION))
+
+        getattr(create_bundle, stage)(bundle, create_bundle.DownloadCache(enabled=False), (item,))
+
+        assert bundle.entries == []
+        assert bundle.current == {f'{category}/{named}': self.VERSION}
+        assert bundle.describe().completeness is bundle_manifest.Completeness.SPARSE
+
+    def test_a_release_the_target_already_has_is_neither_downloaded_nor_recorded(self, tmp_path, monkeypatch):
+        """`add_github_releases` resolves its tag through `ghrelease` rather than
+        `fetch_latest_version`, so it needs its own case."""
+        entry = catalog.GithubRelease.from_mapping({'name': 'lazygit', 'repo': 'jesseduffield/lazygit'})
+        bundle = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'box', BUILT_AT)
+        status_path = tmp_path / 'status.json'
+        status_path.write_text(
+            json.dumps(
+                {
+                    'version': status.VERSION,
+                    'machine': 'box',
+                    'scope': ['packages'],
+                    'resources': [{'address': 'packages', 'examined': [{'item': 'ghrelease/lazygit', 'detail': '0.45.0'}]}],
+                }
+            )
+        )
+        bundle.plan_against(status_path, json.loads(status_path.read_text()))
+        monkeypatch.setattr(create_bundle.ghrelease, 'resolve_tag', lambda entry, **kwargs: 'v0.45.0')
+
+        def refuse(*args, **kwargs):
+            raise AssertionError('a tool the target already has must not be downloaded')
+
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', refuse)
+
+        create_bundle.add_github_releases(bundle, create_bundle.DownloadCache(enabled=False), (planned(entry, 'github_releases'),))
+
+        # The tag as recorded, which is what a manifest row would have carried —
+        # `resolve_tag` rebuilds it from the prefix and the version, so `current`
+        # has to speak the same form a row does or the offline comparison reads
+        # two different things.
+        assert bundle.entries == []
+        assert bundle.current == {'binary/lazygit': 'v0.45.0'}
+
+    def test_a_tool_the_target_is_behind_on_is_still_staged(self, tmp_path, monkeypatch):
+        """Paired with every case above, which a loop that staged nothing at all
+        would satisfy."""
+        bundle, entry, item = self.bundle_for(tmp_path, monkeypatch, 'cargo_packages', ('fd-find', 'v9.0.0'))
+        payload = tmp_path / 'build' / entry.executable
+        payload.parent.mkdir(parents=True, exist_ok=True)
+        payload.write_bytes(b'#!/bin/sh\nexit 0\n')
+
+        def fetch(_cache, _asset, destination, _label):
+            with tarfile.open(destination, 'w:gz') as tar:
+                tar.add(payload, arcname=payload.name)
+
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
+
+        create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), (item,))
+
+        assert [row.split('|')[1] for row in bundle.entries] == ['fd-find']
+        assert bundle.current == {}
