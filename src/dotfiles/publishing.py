@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import getpass
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from dotfiles import paths
@@ -51,7 +52,25 @@ class Unpublishable(Refusal):
     """A document that must not leave this machine, and the reason."""
 
 
-def redacted(document: Any) -> tuple[str, ...]:
+def identifying() -> dict[str, str]:
+    """The names that must not leave, read off the machine this is running on.
+
+    `paths.machine_id()` is the bare hostname, which on the machine this exists
+    for is an employer asset tag. `getpass.getuser()` is the work account. Two
+    names and not a pattern: a general "does this look like an identifier" test
+    would refuse half the package names in a document and teach whoever hit it to
+    pass a flag.
+
+    Separate from `redacted` so the decision is pure and the reads sit at the edge
+    — standards/python.md § "Structure effects as impure -> pure -> impure". A
+    gate that read the machine inside itself can only be tested against whatever
+    machine the suite runs on, which is how an assertion comes to hold at a desk
+    and fail on a runner whose hostname happens to contain its username.
+    """
+    return {'this machine name': paths.machine_id(), 'the account this runs as': getpass.getuser()}
+
+
+def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     """Every reason this document may not be published, empty where there are none.
 
     Measured against the serialized bytes rather than the object, because the
@@ -60,11 +79,9 @@ def redacted(document: Any) -> tuple[str, ...]:
     those are reachable by walking the shape this module expects, and all of them
     are reachable by looking at the text.
 
-    Two names and not a pattern. `paths.machine_id()` is the bare hostname, which
-    on the machine this exists for is an employer asset tag, and
-    `getpass.getuser()` is the work account. A general "does this look like an
-    identifier" test would refuse half the package names in the document and teach
-    whoever hit it to pass a flag.
+    `identities` has no default. Both callers already hold one, and a default here
+    would be the seam that hides the machine again — the same reason the split
+    above exists.
     """
     text = json.dumps(document)
     problems = []
@@ -75,10 +92,7 @@ def redacted(document: Any) -> tuple[str, ...]:
         if outside:
             problems.append(f'it covers {", ".join(outside)}, which is outside the publishable set {", ".join(PUBLISHABLE)}')
 
-    for what, value in (('this machine name', paths.machine_id()), ('the account this runs as', getpass.getuser())):
-        if value and value in text:
-            problems.append(f'{what} appears in it')
-
+    problems.extend(f'{what} appears in it' for what, value in identities.items() if value and value in text)
     return tuple(problems)
 
 
@@ -90,7 +104,7 @@ def refuse_unpublishable(document: Any) -> None:
     refuse runs before the first byte of data", applied to a remote instead of to
     stdout.
     """
-    problems = redacted(document)
+    problems = redacted(document, identifying())
     if problems:
         raise Unpublishable(
             'this document carries more than packages and versions, so it stays here:\n' + '\n'.join(problems),

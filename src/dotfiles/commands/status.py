@@ -147,7 +147,7 @@ def show(
     console.print(section_line(VERDICT_MARKS[word], 'status', f'{found.machine} — {found.scope}', VERDICT_COLOURS[word]))
     for result in found.results:
         render_row(str(result.verdict), result.address, result.detail)
-    for problem in publishing.redacted(found.document):
+    for problem in publishing.redacted(found.document, publishing.identifying()):
         render_row('issue', 'unpublishable', problem, VERDICT_COLOURS['issue'])
     raise typer.Exit(ExitCode.CONVERGED)
 

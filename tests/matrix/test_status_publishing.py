@@ -84,34 +84,52 @@ class TestWhatTheDocumentCovers:
         assert set(ran.document['scope']) > set(publishing.PUBLISHABLE)
 
 
+NAMED = {'this machine name': 'pf5xmxfy', 'the account this runs as': 'a-work-account'}
+"""The two names the gate refuses, chosen rather than read off this machine.
+
+A test that reads `paths.machine_id()` and `getpass.getuser()` can only assert
+against whatever machine it runs on, and the two overlap differently everywhere:
+this counted two problems at a desk and three on a runner whose hostname contains
+its username. `standards/testing.md` § "Never assert on rendered output" is the
+same failure one layer up — assert the value, and choose the inputs.
+"""
+
+
 class TestTheGate:
     def test_a_document_naming_this_box_is_refused(self) -> None:
         """The second guard, and the one the allowlist cannot be: an allowlist
         protects against a new resource, never against a new field on a row."""
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': paths.machine_id()}]})
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'pf5xmxfy'}]}, NAMED)
 
-        assert problems
-        assert 'machine name' in problems[0]
+        assert problems == ('this machine name appears in it',)
 
     def test_a_document_naming_the_account_is_refused(self) -> None:
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': getpass.getuser()}]})
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'a-work-account'}]}, NAMED)
 
-        assert any('account' in problem for problem in problems)
+        assert problems == ('the account this runs as appears in it',)
 
     def test_a_document_covering_more_than_the_allowlist_is_refused(self) -> None:
-        problems = publishing.redacted({'scope': ['packages', 'identity'], 'rows': []})
+        problems = publishing.redacted({'scope': ['packages', 'identity'], 'rows': []}, NAMED)
 
         assert any('identity' in problem for problem in problems)
 
     def test_a_clean_document_passes(self) -> None:
         """Paired with the refusals, because a gate that refused everything would
         satisfy all three above."""
-        assert publishing.redacted({'scope': ['packages'], 'rows': [{'detail': 'fd 10.2.0'}]}) == ()
+        assert publishing.redacted({'scope': ['packages'], 'rows': [{'detail': 'fd 10.2.0'}]}, NAMED) == ()
 
     def test_every_reason_is_reported_at_once(self) -> None:
-        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': paths.machine_id()}]})
+        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'pf5xmxfy a-work-account'}]}, NAMED)
 
-        assert len(problems) == 2
+        assert len(problems) == 3
+
+    def test_the_names_it_refuses_are_this_machine_s(self) -> None:
+        """The half the chosen names above cannot cover: that what reaches the gate
+        in production is the hostname and the account rather than two constants."""
+        assert publishing.identifying() == {
+            'this machine name': paths.machine_id(),
+            'the account this runs as': getpass.getuser(),
+        }
 
     def test_the_refusal_carries_an_issue_and_names_what_would_have_been_sent(self) -> None:
         with pytest.raises(publishing.Unpublishable) as refused:
