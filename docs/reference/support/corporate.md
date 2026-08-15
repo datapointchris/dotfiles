@@ -43,18 +43,71 @@ prevent. The wheels cover every CPython at or above this package's
 `requires-python`, because which interpreter the target has is a fact only the
 target knows.
 
-The tarball is named after the date, the manifest and the target platform, so
+The tarball is named after a UTC stamp, the manifest and the target platform, so
 handing it to something else means retyping a name that changes every build.
-`--print-path` writes the finished path to stdout, which makes the handoff a
-substitution rather than a copy-paste:
+`dotfiles bundle upload` finds the newest one itself, which is why the handoff is
+two commands rather than a substitution:
 
 ```bash
-ifiles upload "$(dotfiles bundle create --machine wsl-work-workstation --arch x86_64 --print-path)"
+dotfiles bundle create --machine wsl-work-workstation --arch x86_64
+dotfiles bundle upload
 ```
 
-The build log is unaffected — it goes to stderr either way, so it still reaches
-the terminal — and the path is printed only after the cache prune finishes, so
-nothing downstream sees a bundle that is still being written.
+`--print-path` still writes the finished path to stdout for anything else that
+wants it. The build log is unaffected — it goes to stderr either way — and the
+path is printed only after the cache prune finishes, so nothing downstream sees a
+bundle that is still being written.
+
+## Move it without touching either machine's filesystem
+
+`dotfiles remote check` says whether this machine can exchange anything at all: is
+a transport declared, is the program installed, does the remote answer. It
+measures the listing rather than inferring it from `command -v`, because a box
+with the binary and no credential answers that perfectly and fails at the first
+upload.
+
+The transport is whatever the machine declares. `docs/architecture/offline-bundles.md`
+holds the config shape and why it is that shape.
+
+From the work box:
+
+```bash
+dotfiles bundle download          # newest for this machine; confirms, then verifies
+dotfiles bundle stage <path>      # or let `apply --offline` do it
+dotfiles apply --machine wsl-work-workstation --offline
+dotfiles status upload            # so the next bundle can be built against it
+```
+
+The download names the bundle, how long ago it was built, what platform it is for
+and how big it is, and asks — the transfer is minutes on a restricted network and
+the thing worth knowing first is whether it was built for this machine at all. The
+digest published beside the archive is checked on arrival; a mismatch deletes the
+file rather than leaving a corrupt archive that every later run would pick up.
+
+## Carry only what changed
+
+`dotfiles status upload` publishes what this machine already has, scoped to
+packages and toolchains and to nothing else. Then, where the network is:
+
+```bash
+dotfiles bundle create --machine wsl-work-workstation --arch x86_64 --against latest
+dotfiles bundle upload
+```
+
+Every tool the status reports at the version upstream currently publishes is left
+out, and recorded in the bundle as measured rather than missing. The work box
+reads that as up to date instead of unmeasurable, and a tool in neither place is
+still reported as one nothing has ever measured.
+
+Two config keys close the loop without a command: `fetch_bundle_when_none_is_staged`
+and `publish_status_after_offline_apply`. Both default off, deliberately — the
+concern on that network is monitoring rather than capability, so a converge that
+reaches a server unasked is a change in posture rather than a convenience.
+
+**Nothing but packages and versions leaves that machine.** The document is
+composed over an allowlist of resources, and the bytes are read for this machine's
+hostname and account before any of them move. Both guards, and why there are two,
+are in `docs/architecture/offline-bundles.md`.
 
 The builder is `src/dotfiles/create_bundle.py`. It was shell until the naming
 above proved the problem — a bash function has no return value, so "produce a
@@ -63,16 +116,22 @@ tarball and tell the caller its name" has no direct expression there. Its logic
 covered by `tests/install/test_create_bundle.py`, which needs neither a network
 nor a container and runs in well under a second.
 
-Move the tarball across, then `./install.sh --machine NAME --offline` finds it in
-`./` or `~/`, extracts it to `~/installers/`, installs uv and the CLI from the
-bundle with no index at all, and prints the `dotfiles apply --machine NAME
+On a machine with no CLI yet, `./install.sh --machine NAME --offline` finds the
+newest archive in the download cache, beside the checkout or in `$HOME`, unpacks
+it into `$XDG_CACHE_HOME/dotfiles/staged/<archive name>/`, installs uv and the CLI
+from it with no index at all, and prints the `dotfiles apply --machine NAME
 --offline` that installs the machine from it. The flag is needed on both, and for
 different reasons: it says where the bootstrap gets uv and the wheels, and it
-says the apply installs from `~/installers/` rather than from the network.
+says the apply installs from a staged bundle rather than from the network.
 
 On a machine that already has the CLI, the bootstrap is not the way to unpack a
 newer bundle — `dotfiles bundle stage` does that alone, and the apply does it
 unasked when it finds nothing staged.
+
+Each bundle keeps its own directory rather than merging into one. The newest
+carrying a file answers for it and an older one still answers for the rest, which
+is what lets a sparse bundle carry only what changed. `dotfiles bundle prune`
+sweeps what is past the retention limit, and never the newest.
 
 This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
 it builds a bundle, starts a container blackholed to exactly the hosts this page's

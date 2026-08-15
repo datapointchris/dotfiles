@@ -128,6 +128,7 @@ nav:
       - Tool Composition: architecture/tool-composition.md
       - GitHub Releases: architecture/github-releases.md
       - Custom Installers: architecture/custom-installers.md
+      - Offline Bundles: architecture/offline-bundles.md
       - System Configuration: architecture/system-configuration.md
       - Observability: architecture/observability.md
   - Configuration:
