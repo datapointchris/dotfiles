@@ -237,6 +237,18 @@ class TestLatestVersion:
 
         assert github_release.latest_version('owner/repo', 'cli/') == 'cli/1.4.0'
 
+    def test_a_double_digit_minor_outranks_a_single_digit_one(self, monkeypatch):
+        """GitHub ranks these tags as strings, so 0.9.1 arrives ahead of 0.10.0.
+
+        Measured against meso 2026-08-14: cli/v0.9.1 came back first while
+        cli/v0.10.0 was newer by both created_at and published_at. Taking the
+        first match froze the tool at 0.9.x and reported the machine converged.
+        """
+        payload = b'[{"tag_name": "cli/v0.9.1", "draft": false}, {"tag_name": "cli/v0.10.0", "draft": false}]'
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+        assert github_release.latest_version('owner/repo', 'cli/') == 'cli/v0.10.0'
+
     def test_a_draft_is_not_a_release_anyone_can_install(self, monkeypatch):
         payload = b'[{"tag_name": "cli/2.0.0", "draft": true}, {"tag_name": "cli/1.4.0", "draft": false}]'
         monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)

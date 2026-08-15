@@ -259,8 +259,14 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     would report the CLI outdated every time the API released, and current every
     time the API released after it.
 
-    Two assumptions, both load-bearing: releases come back newest-first, so the
-    first match is the latest, and a draft is not a release anyone can install.
+    A draft is not a release anyone can install, so drafts are skipped.
+
+    The matches are ranked rather than taken in the order GitHub sends them.
+    That order is neither `created_at` nor `published_at` descending — measured
+    2026-08-14, meso answered with `cli/v0.9.1` ahead of `cli/v0.10.0`, which was
+    newer by both timestamps, because GitHub ranks the tags as strings. Taking
+    the first match therefore froze a tool at 0.9.x the moment it shipped 0.10.0,
+    and reported the machine converged while doing it.
     """
     if not tag_prefix:
         try:
@@ -273,11 +279,15 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
     except (httpx2.HTTPError, json.JSONDecodeError):
         return None
-    for release in releases:
-        tag = release.get('tag_name') or ''
-        if not release.get('draft') and tag.startswith(tag_prefix):
-            return tag
-    return None
+    candidates = [tag for release in releases if not release.get('draft') and (tag := release.get('tag_name') or '').startswith(tag_prefix)]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda tag: _version_key(tag, tag_prefix))
+
+
+def _version_key(tag: str, tag_prefix: str) -> tuple[int, ...]:
+    """Rank a tag by its numbers, so 0.10.0 outranks 0.9.1 where a string sort does not."""
+    return tuple(int(number) for number in re.findall(r'\d+', tag.removeprefix(tag_prefix)))
 
 
 TAG_PAGE = 100
