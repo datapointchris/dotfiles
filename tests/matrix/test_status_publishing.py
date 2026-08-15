@@ -103,6 +103,15 @@ class TestTheGate:
 
         assert problems == ('this machine name appears in it',)
 
+    def test_a_document_naming_this_box_in_another_case_is_refused(self) -> None:
+        """`machine_id` lowercases and Windows reports a hostname in upper, so the
+        two never meet as typed. `PF5XMXFY` is the literal that made
+        `connectivity-results.txt` a leak, and a case-sensitive test reads it
+        straight past."""
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'PF5XMXFY'}]}, NAMED)
+
+        assert problems == ('this machine name appears in it',)
+
     def test_a_document_naming_the_account_is_refused(self) -> None:
         problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'a-work-account'}]}, NAMED)
 

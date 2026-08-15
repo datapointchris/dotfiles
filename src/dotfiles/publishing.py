@@ -82,8 +82,15 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     `identities` has no default. Both callers already hold one, and a default here
     would be the seam that hides the machine again — the same reason the split
     above exists.
+
+    Matched without regard to case, because the two names arrive here normalized
+    and a document carries whatever the OS rendered. `machine_id` lowercases, and
+    Windows reports a hostname in upper — so the literal string that made
+    `connectivity-results.txt` a leak, `PF5XMXFY`, is one a case-sensitive test
+    reads straight past.
     """
     text = json.dumps(document)
+    lowered = text.lower()
     problems = []
 
     scope = document.get('scope') if isinstance(document, dict) else None
@@ -92,7 +99,7 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
         if outside:
             problems.append(f'it covers {", ".join(outside)}, which is outside the publishable set {", ".join(PUBLISHABLE)}')
 
-    problems.extend(f'{what} appears in it' for what, value in identities.items() if value and value in text)
+    problems.extend(f'{what} appears in it' for what, value in identities.items() if value and value.lower() in lowered)
     return tuple(problems)
 
 
