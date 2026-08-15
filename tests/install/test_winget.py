@@ -15,7 +15,6 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
-from dotfiles import paths
 from dotfiles import providers
 from dotfiles.providers import Kind
 from dotfiles.providers import winget
@@ -35,7 +34,7 @@ def staged(tmp_path, monkeypatch) -> Path:
     directory = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (directory / winget.BUNDLE_BINARIES).mkdir(parents=True)
     (directory / providers.MANIFEST).write_text('')
-    monkeypatch.setattr(paths, 'STAGING_DIR', root)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return directory
 
 

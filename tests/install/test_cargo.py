@@ -56,7 +56,7 @@ def staged(tmp_path, monkeypatch) -> Path:
     staging = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staging / cargo.BUNDLE_BINARIES).mkdir(parents=True)
     (staging / providers.MANIFEST).write_text('')
-    monkeypatch.setattr(paths, 'STAGING_DIR', root)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staging
 
 
@@ -153,7 +153,7 @@ def test_offline_with_nothing_staged_says_where_it_looked(home, staged, ready, c
 
     assert not result.ok
     assert result.kind is Kind.NOT_IN_BUNDLE
-    assert str(paths.STAGING_DIR) in result.detail, 'a stack has no one bundle directory to name'
+    assert str(paths.staging_dir()) in result.detail, 'a stack has no one bundle directory to name'
 
 
 def test_a_manifest_row_naming_a_file_the_bundle_lacks_is_a_miss(home, staged, ready, crates) -> None:

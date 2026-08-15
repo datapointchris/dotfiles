@@ -158,7 +158,7 @@ def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
     stage for an offline machine — and must report the same reason this would.
     """
     if offline:
-        return f'no bundle staged at {paths.STAGING_DIR} carries a version of {entry.name}'
+        return f'no bundle staged at {paths.staging_dir()} carries a version of {entry.name}'
     if entry.version:
         return f'pinned to {entry.version}, which {entry.repo} publishes no release for'
     return f'{entry.repo} did not answer with a release'

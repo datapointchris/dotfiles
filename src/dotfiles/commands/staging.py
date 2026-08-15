@@ -229,7 +229,7 @@ def _status_for(named: str | None, machine: str) -> Path | None:
             f'dotfiles status download --machine {machine} --status {listed[0]} --print-path'
         )
 
-    destination = paths.STATUS_CACHE / listed[0]
+    destination = paths.status_cache() / listed[0]
     transport.pull(where, f'{transport.statuses_for(where, machine)}/{listed[0]}', destination)
     return destination
 
@@ -245,7 +245,7 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
     """
     found = Path(archive) if archive else offline_bundle.newest()
     if found is None:
-        error(f'no bundle archive in {paths.ARCHIVE_DIR}, {Path.cwd()} or {Path.home()}, and none named')
+        error(f'no bundle archive in {paths.archive_dir()}, {Path.cwd()} or {Path.home()}, and none named')
         hint('fetch one with: dotfiles bundle download')
         raise typer.Exit(ExitCode.ISSUE)
 
@@ -277,7 +277,7 @@ def upload(
     where = transport.reachable()
     found = Path(archive) if archive else offline_bundle.newest()
     if found is None:
-        error(f'no bundle archive in {paths.ARCHIVE_DIR}, {Path.cwd()} or {Path.home()}, and none named')
+        error(f'no bundle archive in {paths.archive_dir()}, {Path.cwd()} or {Path.home()}, and none named')
         hint('build one with: dotfiles bundle create --machine NAME --arch ARCH')
         raise typer.Exit(ExitCode.ISSUE)
 
@@ -652,7 +652,9 @@ def _superseded_locally(keep: int) -> tuple[str, ...]:
     # By stem, so one bundle is one row. An archive carries `.tar.gz` and the
     # directory it unpacks into does not, so counting the two as they are names a
     # single bundle twice and offers to remove it twice.
-    archives = (offline_bundle.stem(path) for path in paths.ARCHIVE_DIR.glob(offline_bundle.ARCHIVES)) if paths.ARCHIVE_DIR.is_dir() else ()
+    archives = (
+        (offline_bundle.stem(path) for path in paths.archive_dir().glob(offline_bundle.ARCHIVES)) if paths.archive_dir().is_dir() else ()
+    )
     staged = (path.name for path in providers.staged_bundles())
     held = tuple({*archives, *staged})
 
@@ -672,11 +674,11 @@ def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
     """
     removed = []
     for stem in superseded:
-        archive = paths.ARCHIVE_DIR / f'{stem}.tar.gz'
-        staged = paths.STAGING_DIR / stem
+        archive = paths.archive_dir() / f'{stem}.tar.gz'
+        staged = paths.staging_dir() / stem
         if archive.exists() or staged.is_dir():
             archive.unlink(missing_ok=True)
-            (paths.ARCHIVE_DIR / f'{stem}.tar.gz{offline_bundle.SIDECAR_SUFFIX}').unlink(missing_ok=True)
+            (paths.archive_dir() / f'{stem}.tar.gz{offline_bundle.SIDECAR_SUFFIX}').unlink(missing_ok=True)
             shutil.rmtree(staged, ignore_errors=True)
             removed.append(stem)
     return tuple(removed)

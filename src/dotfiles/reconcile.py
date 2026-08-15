@@ -859,11 +859,11 @@ def _stage_bundle() -> ExitCode | None:
             # so a run started on one installs nothing and reports each tool as its
             # own mystery. "There is none" would be true and would send the reader
             # looking for a tarball they already have.
-            unusable = [path.name for path in paths.STAGING_DIR.iterdir() if path.is_dir()] if paths.STAGING_DIR.is_dir() else []
+            unusable = [path.name for path in paths.staging_dir().iterdir() if path.is_dir()] if paths.staging_dir().is_dir() else []
             because = (
-                f'nothing under {paths.STAGING_DIR} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
+                f'nothing under {paths.staging_dir()} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
                 if unusable
-                else f'offline needs a staged bundle at {paths.STAGING_DIR}, and there is none'
+                else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
             )
             return refusal.report(
                 NoBundle(

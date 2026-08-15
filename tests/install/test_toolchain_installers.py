@@ -134,7 +134,7 @@ def bundle(tmp_path, monkeypatch) -> Path:
     staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'scripts').mkdir(parents=True)
     (staged / providers.MANIFEST).write_text('')
-    monkeypatch.setattr(paths, 'STAGING_DIR', root)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -218,7 +218,7 @@ def test_go_offline_says_what_the_bundle_lacks_and_asks_for_nothing(home, bundle
     assert not result.ok
     assert result.refused
     assert result.kind is Kind.NOT_IN_BUNDLE
-    assert str(paths.STAGING_DIR) in result.detail
+    assert str(paths.staging_dir()) in result.detail
     assert fetches.urls == []
 
 

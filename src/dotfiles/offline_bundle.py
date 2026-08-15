@@ -3,7 +3,7 @@
 install.sh does these same two things in POSIX sh and keeps its own copy on
 purpose: the CLI that would run this is the thing the bundle exists to install,
 so the bootstrap has nothing to call. What is deliberately not duplicated is
-where a staged bundle lives — `paths.STAGING_DIR` answers that on both sides.
+where a staged bundle lives — `paths.staging_dir()` answers that on both sides.
 
 This exists because staging and converging stopped being one act. install.sh
 ended in `exec dotfiles apply` until a bare run converged a work box nobody had
@@ -256,7 +256,7 @@ def describe(extracted: Path | None = None) -> Staging:
     against the run's own start, which is a guess where the caller already knows.
     """
     return Staging(
-        paths.STAGING_DIR,
+        paths.staging_dir(),
         bundle.rows(),
         bundles=providers.staged_bundles(),
         descriptions=bundle.descriptions(),
@@ -387,7 +387,7 @@ def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> P
     second round trip on the one network where round trips are the cost.
     """
     directory = transport.bundles_for(where, machine)
-    destination = transport.pull(where, f'{directory}/{name}', paths.ARCHIVE_DIR / name)
+    destination = transport.pull(where, f'{directory}/{name}', paths.archive_dir() / name)
     if not verified(destination, record):
         raise StagingError(
             f'{name} does not match the digest its record publishes, so it did not arrive whole',
@@ -471,7 +471,7 @@ def newest(*searched: Path) -> Path | None:
     third place a tarball legitimately sits, which no first-directory-wins order
     can rank against a copy beside the checkout.
     """
-    directories = searched or (paths.ARCHIVE_DIR, Path.cwd(), Path.home())
+    directories = searched or (paths.archive_dir(), Path.cwd(), Path.home())
     found = [archive for directory in directories if directory.is_dir() for archive in directory.glob(ARCHIVES)]
     return max(found, key=lambda archive: archive.name, default=None)
 
@@ -508,10 +508,10 @@ def stage(archive: Path, machine: str) -> Path:
     because unpacking is this verb's job and refusing would make a machine with no
     `$MACHINE` unable to install at all.
     """
-    staged = paths.STAGING_DIR / stem(archive)
-    paths.STAGING_DIR.mkdir(parents=True, exist_ok=True)
+    staged = paths.staging_dir() / stem(archive)
+    paths.staging_dir().mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(dir=paths.STAGING_DIR) as workspace:
+    with tempfile.TemporaryDirectory(dir=paths.staging_dir()) as workspace:
         if not effects.unpack(archive, Path(workspace)):
             raise StagingError(f'{archive} is not a readable archive')
 

@@ -186,9 +186,9 @@ def staged_bundle(
 ) -> Path:
     """One staged bundle inside a staging directory, for a test with no sandbox.
 
-    `paths.STAGING_DIR` is set rather than `$DOTFILES_BUNDLE`, because that
-    variable is read once at import and a fixture runs long after. Same reason as
-    `rebind`, and the sandbox uses `rebind` instead.
+    `$DOTFILES_BUNDLE` is what `paths.staging_dir` reads on every call, so setting
+    it here is obeyed by a fixture running long after import — which is the whole
+    reason those paths are functions rather than constants.
 
     `name` is a parameter so a test can stage two and control which is newer:
     `providers.staged_bundles` ranks on the directory name, and a stack whose
@@ -197,7 +197,7 @@ def staged_bundle(
     staging = tmp_path / 'staged'
     unpacked = staging / name
     bundle_manifest(unpacked, rows, category, **described)
-    monkeypatch.setattr(paths, 'STAGING_DIR', staging)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(staging))
     return unpacked
 
 
@@ -611,9 +611,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
         'STATUS_FILE': state / f'status-{paths.MACHINE_ID}.json',
         'NUDGE_FILE': state / f'nudge-{paths.MACHINE_ID}',
         'CACHE_HOME': cache,
-        'ARCHIVE_DIR': cache / 'bundles',
-        'STATUS_CACHE': cache / 'status',
-        'STAGING_DIR': box.staging,
     }
     for name, value in derived.items():
         monkeypatch.setattr(paths, name, value)

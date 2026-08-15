@@ -249,9 +249,9 @@ def staged_bundles() -> tuple[Path, ...]:
     refused — a half-finished unpack should not make every staged bundle beside it
     unreadable.
     """
-    if not paths.STAGING_DIR.is_dir():
+    if not paths.staging_dir().is_dir():
         return ()
-    found = (path for path in paths.STAGING_DIR.iterdir() if (path / MANIFEST).is_file())
+    found = (path for path in paths.staging_dir().iterdir() if (path / MANIFEST).is_file())
     return tuple(sorted(found, key=lambda path: path.name, reverse=True))
 
 
@@ -296,7 +296,7 @@ def bundle_file(relative: str) -> Path:
     message a provider builds from it.
     """
     found = locate(relative)
-    return found.path if found else paths.STAGING_DIR / relative
+    return found.path if found else paths.staging_dir() / relative
 
 
 def place(source: Path, destination: Path) -> None:

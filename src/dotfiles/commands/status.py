@@ -305,7 +305,7 @@ def download(
     if wanted not in listed:
         raise typer.BadParameter(f'--status: {wanted} is not on the remote. Newest is {listed[0]}')
 
-    destination = paths.STATUS_CACHE / wanted
+    destination = paths.status_cache() / wanted
     transport.pull(where, f'{transport.statuses_for(where, named)}/{wanted}', destination)
 
     if print_path:

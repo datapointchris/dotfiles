@@ -77,7 +77,7 @@ def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
 
 def unstaged(name: str, url: str, *, offline: bool, reason: str = '') -> str:
     if offline:
-        return f'{name} installs from {url}, which no bundle staged at {paths.STAGING_DIR} carries it'
+        return f'{name} installs from {url}, which no bundle staged at {paths.staging_dir()} carries it'
     return f'could not download the {name} install script from {url}{f": {reason}" if reason else ""}'
 
 

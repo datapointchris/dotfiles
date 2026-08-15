@@ -28,7 +28,6 @@ import pytest
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
-from dotfiles import paths
 from dotfiles import providers
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
@@ -92,7 +91,7 @@ def bundle(tmp_path, monkeypatch) -> Path:
     staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'binaries').mkdir(parents=True)
     (staged / providers.MANIFEST).write_text('')
-    monkeypatch.setattr(paths, 'STAGING_DIR', root)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 

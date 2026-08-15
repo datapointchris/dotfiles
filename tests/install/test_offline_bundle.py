@@ -22,7 +22,6 @@ import pytest
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
-from dotfiles import paths
 from dotfiles import providers
 from dotfiles import reconcile
 from dotfiles import resolve
@@ -74,7 +73,7 @@ def staging(tmp_path, monkeypatch) -> Path:
     name — which is the bug this fixture exists to catch rather than describe.
     """
     destination = tmp_path / 'elsewhere' / 'staging'
-    monkeypatch.setattr(paths, 'STAGING_DIR', destination)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(destination))
     return destination
 
 

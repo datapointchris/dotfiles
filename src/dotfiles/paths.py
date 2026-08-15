@@ -125,42 +125,53 @@ def cache_home() -> Path:
 
 
 CACHE_HOME = cache_home()
+"""This tool's cache root, for a caller that wants it once rather than per path."""
 
-ARCHIVE_DIR = CACHE_HOME / 'bundles'
-"""Bundle archives, whether `bundle create` built one or `bundle download` fetched it.
 
-A downloaded archive arrives with its `.json` record beside it; a built one has
-none until `bundle upload` composes one, which it does into a temporary directory
-because the record describes the transfer rather than the file.
-"""
+def archive_dir() -> Path:
+    """Bundle archives, whether `bundle create` built one or `bundle download` fetched it.
 
-STATUS_CACHE = CACHE_HOME / 'status'
-"""Status documents fetched from the remote, which a sparse build is planned from.
+    A downloaded archive arrives with its `.json` record beside it; a built one has
+    none until `bundle upload` composes one, which it does into a temporary
+    directory because the record describes the transfer rather than the file.
+    """
+    return cache_home() / 'bundles'
 
-A cache and unambiguously so: each is a few kilobytes, the machine that wrote it
-still has it, and losing one costs a second download.
-"""
 
-STAGING_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or CACHE_HOME / 'staged')
-"""One directory per unpacked bundle, named after the archive it came from.
+def status_cache() -> Path:
+    """Status documents fetched from the remote, which a sparse build is planned from.
 
-A directory *of* bundles rather than one bundle, so a sparse bundle can land on
-top of a full one without merging into it. `providers.locate` reads across them
-newest-first, which is what makes an entry a sparse bundle omits fall through to
-the older full bundle that still carries it. Merging into one tree instead
-refreshes the files and replaces the manifest, leaving everything the older
-bundle staged on disk and unlisted.
+    A cache and unambiguously so: each is a few kilobytes, the machine that wrote
+    it still has it, and losing one costs a second download.
+    """
+    return cache_home() / 'status'
 
-Named after the archive so a machine can say which bundle a file came from.
 
-**Cache rather than state**, which is the harder half of the classification here.
-The usual test is whether losing it costs only time, and for the machine this
-exists for it very nearly does not — a work box behind a firewall cannot re-fetch
-these from upstream. It is a cache all the same, because the transport that
-delivered them is still there and `bundle download` fetches them again. What it
-must not be is state: `STATE_HOME` is a Syncthing folder, and a gigabyte of
-archives there replicates across the fleet.
+def staging_dir() -> Path:
+    """One directory per unpacked bundle, named after the archive it came from.
 
-`$DOTFILES_BUNDLE` overrides it, which is how a test points staging somewhere it
-can be inspected and how the bootstrap and the CLI agree on one location.
-"""
+    A directory *of* bundles rather than one bundle, so a sparse bundle can land on
+    top of a full one without merging into it. `providers.locate` reads across them
+    newest-first, which is what makes an entry a sparse bundle omits fall through to
+    the older full bundle that still carries it. Merging into one tree instead
+    refreshes the files and replaces the manifest, leaving everything the older
+    bundle staged on disk and unlisted.
+
+    Named after the archive so a machine can say which bundle a file came from.
+
+    **Cache rather than state**, which is the harder half of the classification
+    here. The usual test is whether losing it costs only time, and for the machine
+    this exists for it very nearly does not — a work box behind a firewall cannot
+    re-fetch these from upstream. It is a cache all the same, because the transport
+    that delivered them is still there and `bundle download` fetches them again.
+    What it must not be is state: `STATE_HOME` is a Syncthing folder, and a
+    gigabyte of archives there replicates across the fleet.
+
+    A function rather than a constant, for the reason `cache_home` gives and this
+    one needs twice over: `$DOTFILES_BUNDLE` is read on every call, so the
+    bootstrap and a test can both point staging somewhere and be obeyed. Bound at
+    import, every one of these was a name a harness had to rebind by hand — and
+    `status_cache` was the one nobody remembered, so four tests wrote into the
+    real `~/.cache`.
+    """
+    return Path(os.environ.get('DOTFILES_BUNDLE') or cache_home() / 'staged')

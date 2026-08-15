@@ -261,7 +261,7 @@ class TestFetching:
 
         assert listed.document['statuses'][0].startswith(f'{status_commands.PREFIX}20260909T120000Z')
         assert fetched.exit_code == ExitCode.CONVERGED
-        assert (paths.STATUS_CACHE / f'{status_commands.PREFIX}20260909T120000Z-{MACHINE}-abcd1234.json').is_file()
+        assert (paths.status_cache() / f'{status_commands.PREFIX}20260909T120000Z-{MACHINE}-abcd1234.json').is_file()
 
     def test_print_path_puts_the_path_alone_on_stdout(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """So the networked side is a substitution rather than a copy-paste, the
@@ -300,7 +300,7 @@ def test_a_published_status_comes_back_intact(sandbox: Sandbox, server: Path, cl
     cli('status', 'upload')
     sent = json.loads(next(iter(shelf(server).iterdir())).read_text())
     cli('status', 'download')
-    fetched = json.loads(next(iter(paths.STATUS_CACHE.iterdir())).read_text())
+    fetched = json.loads(next(iter(paths.status_cache().iterdir())).read_text())
 
     assert fetched == sent
     assert fetched['scope'] and fetched['resources'], 'a round trip of nothing would satisfy the line above'

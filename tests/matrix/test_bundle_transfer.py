@@ -561,7 +561,7 @@ class TestResolvingLatestForASparseBuild:
 
         assert found is not None
         assert found.name == newest.name
-        assert found.parent == paths.STATUS_CACHE
+        assert found.parent == paths.status_cache()
         assert json.loads(found.read_text())['machine'] == MACHINE
 
     def test_a_path_is_taken_as_written(self, sandbox: Sandbox, server: Path, tmp_path: Path) -> None:
@@ -607,4 +607,4 @@ class TestResolvingLatestForASparseBuild:
         self.published(server, '20260909T120000Z')
 
         assert staging._status_for(None, MACHINE) is None
-        assert not paths.STATUS_CACHE.exists()
+        assert not paths.status_cache().exists()

@@ -61,7 +61,7 @@ def bundle(tmp_path, monkeypatch) -> Path:
     staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'scripts').mkdir(parents=True)
     (staged / providers.MANIFEST).write_text('')
-    monkeypatch.setattr(paths, 'STAGING_DIR', root)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -324,7 +324,7 @@ class TestCheckoutTools:
 
         assert not result.ok
         assert result.kind is Kind.NOT_IN_BUNDLE
-        assert str(paths.STAGING_DIR) in result.detail
+        assert str(paths.staging_dir()) in result.detail
         assert runs.calls == []
 
     def test_a_bundled_script_is_preferred_over_the_network(self, declared, home, bundle, effected):
