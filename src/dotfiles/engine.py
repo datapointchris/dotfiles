@@ -420,7 +420,7 @@ def _act(session: Session, resource: Resource, group: list[Event], privilege: Pr
     for event, change in zip(group, changes, strict=True):
         clock = runs.Stopwatch()
         try:
-            with clock.step('act'):
+            with clock.step('act'), logging.bound(resource=event.resource, item=change.item):
                 outcome = resource.perform(session, change, privilege)
         except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
             yield Event(event.resource, Refusal(f'{change.item}: {failed}'), stage=change.stage)
@@ -442,7 +442,7 @@ def _act_together(session: Session, resource: Batched, group: list[Event], chang
     """
     clock = runs.Stopwatch()
     try:
-        with clock.step('act'):
+        with clock.step('act'), logging.bound(resource=group[0].resource):
             outcomes = resource.perform_batch(session, changes, privilege)
     except Exception as failed:  # noqa: BLE001 — perform writes to the world, and the world is wide
         for event, change in zip(group, changes, strict=True):
@@ -463,7 +463,7 @@ def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> 
 
     clock = runs.Stopwatch()
     try:
-        with clock.step('observe'):
+        with clock.step('observe'), logging.bound(resource=address):
             observed = resource.observe(session, plan)
             changes = resource.diff(plan, observed)
     except Exception as failed:  # noqa: BLE001 — observe reaches the world, and the world is wide

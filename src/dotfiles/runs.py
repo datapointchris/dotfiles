@@ -384,6 +384,41 @@ def _machine_of(stem: str) -> str:
     return machine
 
 
+def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None, limit: int | None = None) -> list[Path]:
+    """The debug streams, newest first, found by globbing them rather than the records.
+
+    Deliberately not `list_runs` with the suffix swapped. A run opens its log at
+    the start and writes its record at the end, so a run *in progress* has a
+    `.jsonl` and no `.json` at all — and that run is the one a follower exists to
+    show. Routed through the records, the live stream would be the single thing
+    this could not find.
+
+    `machine` filters on the stem exactly as `list_runs` does, and every caller
+    here passes this box: `runs/` is shared over Syncthing, so another machine's
+    check arriving mid-run is otherwise the newest log in the directory and a
+    follow pane would switch to narrating a different computer.
+    """
+    directory = runs_dir or paths.RUNS_DIR
+    if not directory.exists():
+        return []
+
+    found = sorted(directory.glob('*.jsonl'), reverse=True)
+    if machine:
+        found = [path for path in found if _machine_of(path.stem) == machine]
+    return found if limit is None else found[:limit]
+
+
+def latest_event_log(runs_dir: Path | None = None, *, machine: str | None = None) -> Path | None:
+    """The newest stream on this box, or None before anything has run.
+
+    No `latest-<host>` link to follow, unlike `latest`: that one is rewritten by
+    `write` at the *end* of a run, which is exactly too late for the reader that
+    wants the stream while it is still being written.
+    """
+    found = list_event_logs(runs_dir, machine=machine or paths.MACHINE_ID, limit=1)
+    return found[0] if found else None
+
+
 def latest(runs_dir: Path | None = None) -> Path | None:
     """The newest run on this box, followed from the link every run rewrites.
 

@@ -20,9 +20,11 @@ override them afterwards and no test could set one without reloading the module.
 That is why the three documented knobs had no test between them.
 """
 
+import contextlib
 import logging
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import structlog
@@ -214,6 +216,25 @@ def bind_run(run_id: str, machine: str) -> None:
 
 def clear_run() -> None:
     structlog.contextvars.clear_contextvars()
+
+
+@contextlib.contextmanager
+def bound(**fields: str) -> Iterator[None]:
+    """Stamp every event emitted inside the block, and take the fields back off after.
+
+    The walk is what knows which resource is being examined; `effects` is what
+    emits the lines and is deliberately below it, so neither can name the other.
+    Contextvars are what carry the answer across that gap without a logger being
+    threaded through four call layers — the same mechanism `bind_run` already uses
+    for the run id.
+
+    This attributes lines that exist rather than adding any, which is why it does
+    not reopen the argument in `docs/architecture/observability.md` against
+    logging the walk: an address on a `ran` line says which section spent the
+    time, and the record still owns every verdict.
+    """
+    with structlog.contextvars.bound_contextvars(**fields):
+        yield
 
 
 def get_logger(name: str):

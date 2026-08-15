@@ -177,6 +177,14 @@ def _render(path: Path, record: runs.RunRecord) -> None:
             commands.add_row(f'{seconds:.2f}', command)
         console.print(commands)
 
+    # The one place the two artefacts meet, so the one place worth naming the
+    # other command: the table above is read *out of* the stream, and a reader
+    # who wants the rest of it would otherwise have to know that a separate noun
+    # exists. `logs show` resolves a run id, which is what this rendering leads with.
+    if path.with_suffix('.jsonl').is_file():
+        console.print()
+        console.print(f'[blue]dotfiles logs show {record.id}[/] for everything this run logged')
+
     # Only where it went wrong: a provider hands back a detail line for a success
     # too, and 112 of "installed zk" buries the four that say why nothing was.
     for outcome in record.outcomes:
@@ -201,10 +209,10 @@ def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     The asymmetry is between a derived view and its source rather than between a
     person and a machine. What `_slow_commands` reads is the run's own `.jsonl`,
     which is machine-readable, sits beside this file, and holds one line per
-    command with its duration:
+    command with its duration. `dotfiles logs` is the noun that owns it:
 
-        jq -r 'select(.event == "ran") | "\\(.seconds)\\t\\(.argv | join(" "))"' \\
-          "$(dotfiles report path | sed 's/.json$/.jsonl/')" | sort -rn | head
+        dotfiles logs show --json | jq -r 'select(.event == "ran")
+          | "\\(.seconds)\\t\\(.argv | join(" "))"' | sort -rn | head
     """
     if as_json:
         emit_json(dataclasses.asdict(record))

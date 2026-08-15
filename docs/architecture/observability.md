@@ -14,7 +14,7 @@ their readers are:
 | Artefact | Written by | Read by |
 | --- | --- | --- |
 | `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
-| `runs/<id>.jsonl` | every `plan`, `check` and `apply` | a person debugging one failure |
+| `runs/<id>.jsonl` | every `plan`, `check` and `apply` | `dotfiles logs`, during the run or after |
 | `status.json` | every `check` | a caller asking where this machine stands |
 | `nudge` | every `check` | zsh, at every prompt |
 
@@ -109,6 +109,53 @@ it. So everything is emitted at debug and the file sink keeps all of it whatever
 `LOG_LEVEL` and the verbosity flags say. Those move the console threshold and
 nothing else, which is the property that lets a run be quiet and still be
 answerable afterwards.
+
+**Every line carries the resource that provoked it.** `effects` sits below the
+walk and cannot name the resource it is serving, so the walk binds the address
+into contextvars around `observe` and around each `perform` — the same mechanism
+`bind_run` already uses for the run id. It attributes lines that exist rather than
+adding any, which is why it does not reopen the argument above against logging the
+walk: an address on a `ran` line says which section spent the time, and the record
+still owns every verdict. What stays unattributed is honest — the stray-branch
+probe runs before the walk and belongs to no resource.
+
+## `dotfiles logs` is its own noun, not a verb under `report`
+
+The two artefacts have different authors and different lifetimes. A record is
+**composed**: `sinks.record` walks the events and builds a typed `RunRecord` with
+a schema and a versioned reader, and it is what travels off the machine. A stream
+is **emitted**: whatever any module logged, at debug, in whatever shape that module
+chose, and it is what stays behind. Filing the stream under a group whose help
+reads "What past runs did" would also put a live follow under a past tense.
+
+`show` rather than `read`, per `standards/cli-design.md` § "One word per job":
+`read` earns its place only where something is left over for `show` to say, and
+everything knowable *about* a stream is already on the record beside it. Nothing
+installed spells it `read` either — `docker logs`, `kubectl logs`, `gh run view
+--log`.
+
+The one place the two nouns meet is `report show`, which reads the stream to name
+a run's slowest commands. That rendering names `dotfiles logs show <id>`, because
+a reader who wants the rest of what it summarised would otherwise have to know a
+separate noun exists.
+
+**`--follow` switches files, and that is the whole reason it is a command.** A
+stream is named for the moment its run started, so following one file ends at the
+next invocation — the exact thing that makes a second pane worth having is a
+reader that survives the run boundary. A stable symlink cannot stand in:
+`tail -F` pins to the resolved inode and does not notice a repoint, measured
+both ways — repointing a symlink lost every line of the second file, while
+replacing a real file by rename followed correctly. Owning the switch in the
+reader needs no second copy of every byte, and it compares by *name* rather than
+mtime because `Identity.stem` leads with a UTC timestamp for exactly that reason.
+
+Discovery goes through the `.jsonl` files rather than the records, and it has to:
+a run opens its stream first and writes its record last, so for the whole duration
+of a run the stream exists and the record does not. Routed through the records,
+the live run would be the single thing this could not find. It filters to this box
+for the same reason `report latest` does — `runs/` is shared over Syncthing, so
+another machine's check arriving mid-run is otherwise the newest file in the
+directory.
 
 ## `-v`, `-vv` and `-q` on every reconciling leaf
 

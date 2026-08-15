@@ -71,6 +71,7 @@ NOUNS = frozenset(
         'machines',
         'config',
         'report',
+        'logs',
         'network',
         'bundle',
         'repo',
