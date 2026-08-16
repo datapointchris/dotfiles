@@ -281,7 +281,10 @@ def stage(
     if archive and not found.is_file():
         raise typer.BadParameter(f'{found} is not a file', param_hint='ARCHIVE')
 
-    staged = offline_bundle.stage(found, offline_bundle.target())
+    # Resolved here because this verb takes no `--machine`: the box running it is
+    # the target, which is the one case where reading the session is the answer
+    # rather than a hole. `apply --offline` threads both from the session it has.
+    staged = offline_bundle.stage(found, offline_bundle.target(), offline_bundle.this_box())
 
     success(f'staged {found.name} at {staged}')
 

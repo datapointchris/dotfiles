@@ -640,7 +640,7 @@ def newest(*searched: Path, machine: str = '') -> Path | None:
     return max(found, key=lambda archive: archive.name, default=None)
 
 
-def stage(archive: Path, machine: str) -> Path:
+def stage(archive: Path, machine: str, box: str) -> Path:
     """Unpack a bundle into its own directory, and say which one.
 
     One directory per bundle rather than one tree they all merge into. Merging
@@ -667,10 +667,18 @@ def stage(archive: Path, machine: str) -> Path:
     records why failing up front beats failing one tool at a time; what was
     missing until `bundle.json` was anything that knew the target.
 
-    `machine` empty means the caller could not resolve one, which is a real state
-    on a half-configured box. The check does not run there and the archive stages,
-    because unpacking is this verb's job and refusing would make a machine with no
-    `$MACHINE` unable to install at all.
+    **`box` is the second identity and is threaded the same way**, because the
+    manifest cannot answer which of two machines sharing it a sparse bundle was
+    planned against. Injected rather than resolved here: an ambient read answers
+    `$MACHINE` or the default, so `apply --machine X --offline` where X's manifest
+    carries a different `network_trust` would compare a digest against a hostname
+    and refuse a valid bundle. The caller already resolved a session to get
+    `machine`; both come from it.
+
+    Either empty means the caller could not resolve one, which is a real state on
+    a half-configured box. The check that needs it does not run there and the
+    archive stages, because unpacking is this verb's job and refusing would make a
+    machine with no `$MACHINE` unable to install at all.
     """
     staged = paths.staging_dir() / stem(archive)
     paths.staging_dir().mkdir(parents=True, exist_ok=True)
@@ -702,7 +710,6 @@ def stage(archive: Path, machine: str) -> Path:
         # current and records the omissions as measured — about a machine that
         # never reported. Only a sparse bundle carries the claim, so only a sparse
         # bundle is refused.
-        box = this_box()
         if box and described.built_for and described.built_for != box:
             raise StagingError(
                 f'{archive.name} was planned against what {described.built_for} had installed, and this box is {box}',

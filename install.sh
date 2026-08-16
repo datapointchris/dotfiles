@@ -165,10 +165,25 @@ if [ -n "$OFFLINE" ]; then
     # needs it most: after the bootstrap something is always staged, so the CLI's
     # own check never runs again on this machine. A bundle naming no machine
     # stages, which is the rebuild state and the one that most needs to unpack.
-    built_for=$(sed -n 's/.*"machine"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$member/bundle.json" 2>/dev/null | head -n 1)
-    if [ -n "$built_for" ] && [ "$built_for" != "$MACHINE" ]; then
+    built_manifest=$(sed -n 's/.*"machine"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$member/bundle.json" 2>/dev/null | head -n 1)
+    if [ -n "$built_manifest" ] && [ "$built_manifest" != "$MACHINE" ]; then
       rm -rf "$STAGING/.unpacking"
-      die "$archive was built for $built_for and this machine is $MACHINE"
+      die "$archive was built for $built_manifest and this machine is $MACHINE"
+    fi
+
+    # A sparse bundle omits what its premise says the target already had, and the
+    # manifest above cannot check that premise: two machines share one, so the
+    # comparison passes for the twin. The CLI compares `built_for` against this
+    # box's discriminator, which is a hostname or a blake2b digest depending on a
+    # coordinate declared in YAML — not a thing to resolve in POSIX sh.
+    #
+    # So the bootstrap takes full bundles only. A rebuild is the state where the
+    # machine has least, which is the state a sparse bundle serves worst, and the
+    # recovery is one command once the CLI it installs exists.
+    completeness=$(sed -n 's/.*"completeness"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$member/bundle.json" 2>/dev/null | head -n 1)
+    if [ "$completeness" = "sparse" ]; then
+      rm -rf "$STAGING/.unpacking"
+      die "$archive is sparse, and the bootstrap installs from a full bundle. Stage it after: dotfiles bundle stage $archive"
     fi
 
     rm -rf "$STAGING/${stem:?}"

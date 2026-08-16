@@ -32,6 +32,7 @@ from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
 from dotfiles import providers
+from dotfiles import publishing
 from dotfiles import refusal
 from dotfiles import remote
 from dotfiles import runs
@@ -823,16 +824,21 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle(machine: str) -> ExitCode | None:
+def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
-    `machine` is the name the caller already resolved, threaded rather than read
-    again. `offline_bundle.target()` answers `$MACHINE` or the default, so an
+    **Both identities are threaded, and for one reason.** `machine` is the
+    manifest and `box` is the discriminator that tells two machines sharing one
+    apart. `offline_bundle.target()` answers `$MACHINE` or the default, so an
     `apply --machine X --offline` measured a correct bundle against the wrong name
     and refused it — and `--machine` is most likely to be typed explicitly during
     a rebuild, which is exactly when this path runs. `Session.resolve` has already
-    proven the manifest exists, where `target()` swallows that refusal into `''`
-    and silently disables the guard.
+    proven the manifest exists, where an ambient resolve swallows that refusal into
+    `''` and silently disables the guard. Reaching for the box the same way would
+    reintroduce the same hole one guard later: under `--machine X` whose manifest
+    carries a different `network_trust`, an ambient `discriminator` answers with a
+    digest where the bundle recorded a hostname, and a valid bundle is refused with
+    two strings that cannot be compared.
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
@@ -888,7 +894,7 @@ def _stage_bundle(machine: str) -> ExitCode | None:
             )
 
         try:
-            offline_bundle.stage(archive, machine)
+            offline_bundle.stage(archive, machine, box)
         except offline_bundle.StagingError as unreadable:
             return refusal.report(NoBundle(str(unreadable), advice=unreadable.advice or 'name a readable one: dotfiles bundle stage PATH'))
         extracted = archive
@@ -1109,7 +1115,7 @@ def apply_machine(
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
 
-    if offline and (unstaged := _stage_bundle(session.machine_name)):
+    if offline and (unstaged := _stage_bundle(session.machine_name, publishing.discriminator(session.machine.coordinates.network_trust))):
         return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`

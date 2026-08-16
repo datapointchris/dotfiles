@@ -297,6 +297,43 @@ def test_a_bundle_naming_no_machine_still_stages(tmp_path: Path) -> None:
     assert (staging / name / 'manifest.txt').is_file()
 
 
+def test_a_sparse_bundle_is_refused_by_the_bootstrap_and_names_the_verb_that_takes_it(tmp_path: Path) -> None:
+    """The manifest guard above cannot check a sparse bundle's premise, because two
+    machines share one manifest. The CLI compares the box discriminator, which is a
+    hostname or a blake2b digest depending on a coordinate declared in YAML — not a
+    thing to resolve in POSIX sh. A rebuild is also the state a sparse bundle serves
+    worst, so this path takes full bundles only."""
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    bootstrap_bundle(tmp_path, name)
+    described = tmp_path / f'{name}-contents' / ARCHIVE_MEMBER / 'bundle.json'
+    described.write_text('{"machine": "wsl-work-workstation", "completeness": "sparse", "built_for": "someone-else"}\n')
+    with tarfile.open(tmp_path / f'{name}.tar.gz', 'w:gz') as packed:
+        packed.add(tmp_path / f'{name}-contents' / ARCHIVE_MEMBER, arcname=ARCHIVE_MEMBER)
+
+    ran, staging, _ = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 1
+    assert 'is sparse' in ran.stderr
+    assert 'dotfiles bundle stage' in ran.stderr
+    assert not (staging / name).exists(), 'a refused bundle leaves nothing behind'
+
+
+def test_a_full_bundle_is_what_the_bootstrap_stages(tmp_path: Path) -> None:
+    """Paired with the refusal, which a bootstrap that refused everything would
+    satisfy."""
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    bootstrap_bundle(tmp_path, name)
+    described = tmp_path / f'{name}-contents' / ARCHIVE_MEMBER / 'bundle.json'
+    described.write_text('{"machine": "wsl-work-workstation", "completeness": "full"}\n')
+    with tarfile.open(tmp_path / f'{name}.tar.gz', 'w:gz') as packed:
+        packed.add(tmp_path / f'{name}-contents' / ARCHIVE_MEMBER, arcname=ARCHIVE_MEMBER)
+
+    ran, staging, _ = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 0, ran.stderr
+    assert (staging / name / 'manifest.txt').is_file()
+
+
 def test_a_truncated_archive_leaves_the_copy_already_staged_under_that_name(tmp_path: Path) -> None:
     """The ordering, and the reason it is an ordering rather than a preference.
 

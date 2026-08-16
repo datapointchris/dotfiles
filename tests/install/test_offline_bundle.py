@@ -139,7 +139,7 @@ def test_staging_lands_in_a_directory_named_after_the_archive(tmp_path, staging)
     """
     tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
-    landed = offline_bundle.stage(tarball, MACHINE_NAME)
+    landed = offline_bundle.stage(tarball, MACHINE_NAME, '')
 
     assert landed == staging / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64'
     assert (landed / bundle.MANIFEST).is_file()
@@ -162,8 +162,8 @@ def test_a_second_bundle_stacks_rather_than_merging(tmp_path, staging) -> None:
     )
     second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
 
-    offline_bundle.stage(first, MACHINE_NAME)
-    offline_bundle.stage(second, MACHINE_NAME)
+    offline_bundle.stage(first, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
 
     assert providers.bundle_file('bin/uv').read_text() == 'new'
     assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
@@ -179,8 +179,8 @@ def test_the_older_bundle_still_answers_for_what_the_newer_left_out(tmp_path, st
     )
     sparse = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64-sparse.tar.gz', files={'binaries/fd': 'fd-new'})
 
-    offline_bundle.stage(full, MACHINE_NAME)
-    offline_bundle.stage(sparse, MACHINE_NAME)
+    offline_bundle.stage(full, MACHINE_NAME, '')
+    offline_bundle.stage(sparse, MACHINE_NAME, '')
 
     located = providers.locate('binaries/fd')
     assert located is not None
@@ -195,9 +195,9 @@ def test_re_staging_one_archive_leaves_the_others_alone(tmp_path, staging) -> No
     first = archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz', files={'wheels/one.whl': 'kept'})
     second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
 
-    offline_bundle.stage(first, MACHINE_NAME)
-    offline_bundle.stage(second, MACHINE_NAME)
-    offline_bundle.stage(second, MACHINE_NAME)
+    offline_bundle.stage(first, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
 
     assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
     assert len(providers.staged_bundles()) == 2
@@ -209,7 +209,7 @@ def test_a_tarball_without_a_manifest_is_refused(tmp_path, staging) -> None:
     tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', manifest=False)
 
     with pytest.raises(offline_bundle.StagingError, match=providers.MANIFEST):
-        offline_bundle.stage(tarball, MACHINE_NAME)
+        offline_bundle.stage(tarball, MACHINE_NAME, '')
 
     assert providers.staged_bundles() == ()
 
@@ -219,7 +219,7 @@ def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
     tarball.write_text('this is not a tarball')
 
     with pytest.raises(offline_bundle.StagingError, match='not a readable archive'):
-        offline_bundle.stage(tarball, MACHINE_NAME)
+        offline_bundle.stage(tarball, MACHINE_NAME, '')
 
 
 def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch) -> None:
@@ -227,7 +227,7 @@ def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch)
     monkeypatch.chdir(tmp_path)
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
-    assert reconcile._stage_bundle('') is None
+    assert reconcile._stage_bundle('', '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'uv'
 
 
@@ -239,14 +239,14 @@ def test_apply_leaves_a_staged_bundle_alone(tmp_path, home, staged, monkeypatch)
     (staged / bundle.MANIFEST).write_text('what the interrupted run staged\n')
     archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz')
 
-    assert reconcile._stage_bundle('') is None
+    assert reconcile._stage_bundle('', '') is None
     assert (staged / bundle.MANIFEST).read_text() == 'what the interrupted run staged\n'
 
 
 def test_apply_refuses_with_no_archive_to_stage(tmp_path, home, staged, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    assert reconcile._stage_bundle('') is ExitCode.ISSUE
+    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
 
 
 def test_apply_skips_a_peer_s_archive_and_stages_this_machine_s(tmp_path, home, staging, monkeypatch) -> None:
@@ -256,7 +256,7 @@ def test_apply_skips_a_peer_s_archive_and_stages_this_machine_s(tmp_path, home, 
     archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'mine'})
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
 
-    assert reconcile._stage_bundle(MACHINE_NAME) is None
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'mine'
 
 
@@ -270,7 +270,7 @@ def test_apply_refuses_a_peer_s_bundle_already_in_the_stack(tmp_path, home, stag
     (theirs / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
     (theirs / bundle.DOCUMENT).write_text('{"machine": "other-box", "completeness": "full"}\n')
 
-    assert reconcile._stage_bundle(MACHINE_NAME) is ExitCode.ISSUE
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
 
 
 def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monkeypatch) -> None:
@@ -279,7 +279,7 @@ def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monk
     monkeypatch.chdir(tmp_path)
     (tmp_path / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
 
-    assert reconcile._stage_bundle('') is ExitCode.ISSUE
+    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
     assert providers.staged_bundles() == ()
 
 
@@ -297,7 +297,7 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\ncargo|ripgrep|15.2.0|rg.tar.gz\n')
 
-        assert reconcile._stage_bundle('') is None
+        assert reconcile._stage_bundle('', '') is None
 
         # Newlines stripped before matching: Rich wraps a long path across lines, and
         # the assertion is about what the line says rather than where it breaks.
@@ -311,7 +311,7 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('wheel|rich|14.0.0|rich.whl\nbinary|fd|10.2.0|fd\n')
 
-        reconcile._stage_bundle('')
+        reconcile._stage_bundle('', '')
 
         assert 'binary 1, wheel 1' in capsys.readouterr().err
 
@@ -319,7 +319,7 @@ class TestSayingWhichBundle:
         monkeypatch.chdir(tmp_path)
         archive(tmp_path, 'dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz')
 
-        assert reconcile._stage_bundle('') is None
+        assert reconcile._stage_bundle('', '') is None
 
         # Whitespace-normalised: the row carries an absolute staging path, so where
         # the renderer folds the line moves with the terminal width and with the
@@ -343,7 +343,7 @@ class TestSayingWhichBundle:
         monkeypatch.chdir(tmp_path)
         staged.mkdir(parents=True)
 
-        assert reconcile._stage_bundle('') is ExitCode.ISSUE
+        assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
         said = capsys.readouterr().err.replace('\n', '')
         assert providers.MANIFEST in said
         assert staged.name in said
@@ -462,7 +462,7 @@ class TestRefusingAForeignBundle:
         tarball = self.built_for(tmp_path, 'windows-work-workstation')
 
         with pytest.raises(offline_bundle.StagingError) as refused:
-            offline_bundle.stage(tarball, 'wsl-work-workstation')
+            offline_bundle.stage(tarball, 'wsl-work-workstation', '')
 
         assert 'windows-work-workstation' in str(refused.value)
         assert 'wsl-work-workstation' in str(refused.value)
@@ -473,7 +473,7 @@ class TestRefusingAForeignBundle:
         tarball = self.built_for(tmp_path, 'windows-work-workstation')
 
         with pytest.raises(offline_bundle.StagingError):
-            offline_bundle.stage(tarball, 'wsl-work-workstation')
+            offline_bundle.stage(tarball, 'wsl-work-workstation', '')
 
         assert providers.staged_bundles() == ()
         assert list(staging.iterdir()) == [] if staging.is_dir() else True
@@ -483,7 +483,7 @@ class TestRefusingAForeignBundle:
         satisfy."""
         tarball = self.built_for(tmp_path, 'wsl-work-workstation')
 
-        landed = offline_bundle.stage(tarball, 'wsl-work-workstation')
+        landed = offline_bundle.stage(tarball, 'wsl-work-workstation', '')
 
         assert (landed / bundle.MANIFEST).is_file()
 
@@ -492,7 +492,7 @@ class TestRefusingAForeignBundle:
         silence would make every archive built before `bundle.json` unusable."""
         tarball = self.built_for(tmp_path, '')
 
-        assert offline_bundle.stage(tarball, 'wsl-work-workstation').is_dir()
+        assert offline_bundle.stage(tarball, 'wsl-work-workstation', '').is_dir()
 
     def test_a_machine_that_cannot_name_itself_stages_anything(self, tmp_path, staging) -> None:
         """The state part way through a rebuild, and the one that most needs to
@@ -500,7 +500,7 @@ class TestRefusingAForeignBundle:
         """
         tarball = self.built_for(tmp_path, 'windows-work-workstation')
 
-        assert offline_bundle.stage(tarball, '').is_dir()
+        assert offline_bundle.stage(tarball, '', '').is_dir()
 
 
 class TestRefusingAPremiseFromTheOtherBox:
@@ -527,37 +527,33 @@ class TestRefusingAPremiseFromTheOtherBox:
             packed.add(staging, arcname='installers')
         return tarball
 
-    def test_a_bundle_planned_against_the_twin_is_refused_and_names_both(self, tmp_path, staging, monkeypatch) -> None:
-        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
+    def test_a_bundle_planned_against_the_twin_is_refused_and_names_both(self, tmp_path, staging) -> None:
         tarball = self.planned_against(tmp_path, 'mbp')
 
         with pytest.raises(offline_bundle.StagingError) as refused:
-            offline_bundle.stage(tarball, 'macos-personal-workstation')
+            offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini')
 
         assert 'mbp' in str(refused.value)
         assert 'macmini' in str(refused.value)
 
-    def test_a_bundle_planned_against_this_box_stages(self, tmp_path, staging, monkeypatch) -> None:
-        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
+    def test_a_bundle_planned_against_this_box_stages(self, tmp_path, staging) -> None:
         tarball = self.planned_against(tmp_path, 'macmini')
 
-        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
 
-    def test_a_full_bundle_carries_no_premise_and_is_never_refused(self, tmp_path, staging, monkeypatch) -> None:
+    def test_a_full_bundle_carries_no_premise_and_is_never_refused(self, tmp_path, staging) -> None:
         """Only a sparse bundle claims anything about what the target already had,
         so only a sparse bundle can be wrong about which target."""
-        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
         tarball = self.planned_against(tmp_path, '', sparse=False)
 
-        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
 
-    def test_a_box_that_cannot_name_itself_stages_anything(self, tmp_path, staging, monkeypatch) -> None:
+    def test_a_box_that_cannot_name_itself_stages_anything(self, tmp_path, staging) -> None:
         """Same terms as the machine check above: a half-built box has to be able
         to unpack a bundle, or the guard is what stops the rebuild."""
-        monkeypatch.setattr(offline_bundle, 'this_box', lambda: '')
         tarball = self.planned_against(tmp_path, 'mbp')
 
-        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', '').is_dir()
 
     def test_the_resolver_answers_empty_rather_than_raising_on_a_bare_machine(self, home, monkeypatch) -> None:
         """What feeds the case above. `commands.resolved` refuses a machine nothing
