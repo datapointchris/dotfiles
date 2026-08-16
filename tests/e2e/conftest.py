@@ -97,6 +97,7 @@ from harness import install_age
 from harness import install_command
 from harness import install_record
 from harness import install_record_gap
+from harness import machine_verdict
 from harness import plant_python_shadow
 from harness import stage_bundle
 from harness import start
@@ -278,12 +279,17 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
     """
     environment: Environment = request.param
 
-    if docker('info').returncode != 0:
-        pytest.skip('Docker is not running')
-
-    if not image_exists(environment.image):
-        if not environment.build_image:
-            pytest.skip(f'image {environment.image} is absent and nothing here builds it')
+    verdict = machine_verdict(
+        docker_running=docker('info').returncode == 0,
+        image_present=image_exists(environment.image),
+        buildable=bool(environment.build_image),
+        required=request.config.getoption('--require-images'),
+    )
+    if verdict.action == 'refuse':
+        raise pytest.UsageError(f'--require-images, but {environment.name}: {verdict.reason}')
+    if verdict.action == 'skip':
+        pytest.skip(f'{environment.image}: {verdict.reason}')
+    if verdict.action == 'build':
         subprocess.run(environment.build_image, check=True, cwd=UNDER_TEST)
 
     name = container_name(_purpose(request.config), environment.name)

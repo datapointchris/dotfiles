@@ -445,14 +445,55 @@ SCHEDULER = Environment(
     #
     # debian:12 rather than ubuntu, because the machine this stands in for is a
     # Proxmox LXC cloned from a Debian 12 template.
+    # curl and git because `install.sh` requires them by name and debian:12 ships
+    # neither — measured 2026-08-16, where the base image carries `tar` alone out
+    # of curl, wget, git, sudo, unzip and xz. The archlinux prepare gets away with
+    # `sudo git` because that base image already has the rest, which is what made
+    # this the environment that says what a bootstrap actually needs.
     prepare=(
-        'apt-get update && apt-get install -y --no-install-recommends sudo git ca-certificates',
+        'apt-get update && apt-get install -y --no-install-recommends sudo git curl ca-certificates',
         'useradd -m -s /bin/bash scheduleruser',
         "printf '%s\\n' 'scheduleruser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
     ),
 )
 
 ENVIRONMENTS = (ARCHLINUX, WSL, OFFLINE, RESTRICTED, SCHEDULER)
+
+
+@dataclass(frozen=True, slots=True)
+class Verdict:
+    """What to do about a machine level that may not be startable here."""
+
+    action: str
+    reason: str = ''
+
+
+def machine_verdict(*, docker_running: bool, image_present: bool, buildable: bool, required: bool) -> Verdict:
+    """Whether a level that needs a container runs, builds, skips, or refuses.
+
+    `required` is the runner's answer, not the machine's, and it is the whole
+    point: a workstation running the fast suite should skip what it cannot start,
+    while a run that asked for `fresh-install` has already said it wants a
+    machine. `tests/conftest.py` § `resolve_interpreters` draws the same line for
+    bash, zsh and tmux.
+
+    Measured 2026-08-16: without the refusal, `debian:12` being absent skipped all
+    97 cases, pytest exited 0, and `matrix.py` reported
+    `pass  fresh-install/scheduler  3.2s` for a rung documented at 20-30 minutes.
+    Every environment is exposed — `archlinux:latest` declares no builder either
+    and works only because it is already pulled here.
+
+    Docker is asked about first because `docker image inspect` fails for both
+    reasons and cannot say which.
+    """
+    if not docker_running:
+        return Verdict('refuse' if required else 'skip', 'Docker is not running')
+    if image_present:
+        return Verdict('run')
+    if buildable:
+        return Verdict('build')
+    reason = 'image is absent and nothing here builds it'
+    return Verdict('refuse' if required else 'skip', reason)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

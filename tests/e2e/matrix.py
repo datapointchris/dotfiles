@@ -87,6 +87,12 @@ def command(level: Level, environment: str | None, extra: list[str]) -> list[str
     whole reason the rungs were hard to reach for by hand.
     """
     arguments = ['uv', 'run', 'pytest', '--level', level.name, '-p', 'no:randomly']
+    # A run that reached here asked for this rung by name, so a container it
+    # cannot start is a failure rather than a skip. Without it, an absent image
+    # skipped all 97 cases, pytest exited 0, and this printed `pass` in 3.2s for a
+    # level documented at 20-30 minutes. Measured 2026-08-16.
+    if level.fixture == 'machine':
+        arguments += ['--require-images']
     if environment:
         arguments += ['--environment', environment]
     return arguments + extra

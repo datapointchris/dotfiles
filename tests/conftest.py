@@ -109,6 +109,12 @@ def pytest_addoption(parser):
         default=False,
         help='refuse to run rather than skip when a test needs an interpreter this machine lacks',
     )
+    parser.addoption(
+        '--require-images',
+        action='store_true',
+        default=False,
+        help='refuse to run rather than skip when an e2e level cannot start its container',
+    )
     parser.addoption('--keep', action='store_true', default=False, help='leave e2e containers running afterwards')
     parser.addoption('--reuse', action='store_true', default=False, help='reuse a kept container and any built bundle')
     parser.addoption(
