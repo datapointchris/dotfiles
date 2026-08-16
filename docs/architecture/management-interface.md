@@ -546,6 +546,13 @@ real type system, a test suite, and dependencies it can declare.
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 
-The `apps/` scripts (`notes`, `packup`, `patterns`, …) remain **independent
-user tools** with their own identity and `toolbox` discovery. Folding them into
+The `apps/` scripts (`notes`, `packup`, …) remain **independent user tools** with
+their own identity and `toolbox` discovery. Folding them into
 `dotfiles <subcommand>` would be a regression, not a consolidation.
+
+An app leaves this directory when its data outgrows a file. `patterns` captured
+timestamped fragments into a per-machine JSONL that reached no other desk, and a
+tool for finding patterns over time needs every entry rather than one box's — so
+it became `icb patterns` against the ichrisbirch API. The test is the store, not
+the script: a file-backed app whose file has to roam is already an API client
+that has not been written yet.

@@ -1,8 +1,8 @@
 """formatting.sh — the status rows and the help-screen grammar.
 
 Both halves survive the Python conversion because the surviving consumers are
-`apps/`: `notes`, `packup`, `patterns` and `_aws-profiles` build their whole help
-screen out of this grammar, and the status rows are what every app prints. The
+`apps/`: `notes`, `packup` and `_aws-profiles` build their whole help screen out
+of this grammar, and the status rows are what every app prints. The
 CLI's own help is Typer's and is pinned separately by the conformance suite.
 
 The alignment is asserted on the text with the escapes stripped, because the
