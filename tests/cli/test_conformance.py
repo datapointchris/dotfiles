@@ -63,23 +63,6 @@ So the rule is the verb, not the subject. A reader who learns `-v` on one
 flag."""
 
 
-def test_the_tree_is_not_empty() -> None:
-    """Guards every other test here: a walk that finds nothing passes vacuously."""
-    assert len(LEAVES) > 20
-    assert len(GROUPS) == len(vocabulary.NOUNS)
-    assert len(RECONCILING) > 15
-
-
-@pytest.mark.parametrize(('path', 'command'), RECONCILING, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
-def test_every_reconciling_leaf_takes_the_verbosity_pair(path: tuple[str, ...], command: click.Command) -> None:
-    """A flag that works on `dotfiles apply` and not on `dotfiles packages apply`
-    is the drift this file exists to catch — the same asymmetry `--dry-run` and
-    `--force` had, one subcommand at a time."""
-    flags = {name for param in command.params for name in param.opts}
-    assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
-    assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
-
-
 STAGING = [(path, command) for path, command in LEAVES if path[0] in {'bundle', 'status', 'remote'}]
 """Every leaf of the offline loop, which renders evidence rows to a terminal.
 
@@ -91,11 +74,37 @@ internally consistent, which is the asymmetry `--dry-run` and `--force` each gre
 one subcommand at a time.
 """
 
+VERBOSE = sorted({*RECONCILING, *STAGING}, key=lambda entry: entry[0])
+"""Every leaf that owes `-v` and `-q`, from both selectors, deduplicated.
 
-@pytest.mark.parametrize(('path', 'command'), STAGING, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
-def test_every_leaf_of_the_offline_loop_takes_the_verbosity_pair(path: tuple[str, ...], command: click.Command) -> None:
-    """`bundle create` is the loudest verb in the group — one line per staged
-    asset — and was one of the two with no way to quieten it."""
+One list because there is one rule. `RECONCILING` selects by verb and `STAGING`
+by group, and `bundle check` and `remote check` are in both — asserted twice by
+two copies of one assertion, with nothing comparing the copies. A change to what
+the pair means would have to find both, and the second is the one whose selector
+is a literal.
+"""
+
+
+def test_the_tree_is_not_empty() -> None:
+    """Guards every other test here: a walk that finds nothing passes vacuously.
+
+    Every derived list, because a parametrization that collects nothing reports
+    `1 skipped` rather than a failure — so renaming a group would remove a
+    conformance policy and leave the suite green.
+    """
+    assert len(LEAVES) > 20
+    assert len(GROUPS) == len(vocabulary.NOUNS)
+    assert len(RECONCILING) > 15
+    assert len(STAGING) > 10
+    assert len(VERBOSE) >= len(RECONCILING)
+
+
+@pytest.mark.parametrize(('path', 'command'), VERBOSE, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
+def test_every_leaf_that_owes_the_verbosity_pair_takes_it(path: tuple[str, ...], command: click.Command) -> None:
+    """A flag that works on `dotfiles apply` and not on `dotfiles packages apply`
+    is the drift this file exists to catch — the same asymmetry `--dry-run` and
+    `--force` had, one subcommand at a time. `bundle create` is the loudest verb
+    in the offline loop and was one of two there with no way to quieten it."""
     flags = {name for param in command.params for name in param.opts}
     assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
     assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'

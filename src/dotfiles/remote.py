@@ -158,14 +158,15 @@ class Remote:
     root: str
     transport: Transport
     keep_bundles: int = DEFAULT_KEEP
-    keep_bundles_declared: bool = False
-    """Whether the table set the limit, or this tool's default answered.
+    from_table: frozenset[str] = frozenset()
+    """Which of these the `[remote]` table set, as against this tool's defaults.
 
-    Carried rather than inferred from the number, because a machine that declares
+    Carried rather than inferred from the values, because a machine that declares
     the same value as the default is indistinguishable by comparison — and
     standards/configuration.md § "A resolved value reports which layer set it"
     names that exactly: *"the failure this prevents is not a wrong value, it is a
-    plausible one."* The value governs deletion from a server.
+    plausible one."* One set rather than a boolean per key, so a setting added
+    later reports its layer without anyone remembering to add a second field.
     """
 
     fetch_bundle_when_none_is_staged: bool = False
@@ -187,9 +188,8 @@ STATUSES = 'status'
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
 — which is what every `--machine` flag here reads and what `bundles_for` and
-`statuses_for` build. Naming these two the same word left the term with two
-referents and `remote check`, the only command that describes the remote, using
-neither.
+`statuses_for` build. These two are kinds, not shelves: one word for both would
+leave the term with two referents on one help screen.
 
 
 A remote's layout is this tool's to choose because both ends of the exchange are
@@ -356,7 +356,7 @@ def read(config: settings.Config | None = None) -> Configured:
             root=str(root),
             transport=transport,
             keep_bundles=int(keep_bundles),
-            keep_bundles_declared='keep_bundles' in table,
+            from_table=frozenset(set(table) & KEYS),
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
         )

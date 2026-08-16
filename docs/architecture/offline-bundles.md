@@ -169,11 +169,13 @@ sparse builds rather than only at `--keep 1`. A newer full build unpins the olde
 one, which bounds a machine's stack at the limit plus one.
 
 One function decides all of it — `offline_bundle.retention` — and the local sweep,
-the remote sweep and the post-upload nudge all ask it. Composed by hand at each of
-the three, they had already stopped agreeing about whether the limit was floored.
-`--keep 0` is a usage error rather than a silent clamp to one, and `bundle prune
---json` carries what was removed, kept and pinned so nothing has to read it out of
-the closing sentence.
+the remote sweep and the post-upload nudge all ask it. Composed at each of the
+three they agree only while somebody keeps them agreeing, and a nudge counting
+against a different limit from the sweep it points at reads as a correct number.
+The floor lives at the two doors a number arrives through: `remote.read` refuses a
+declared limit below one, and `--keep 0` is a usage error rather than a silent
+clamp. `bundle prune --json` carries what was removed, kept and pinned, so nothing
+has to read those out of the closing sentence.
 
 **Which version a tool is measured against comes from the newest bundle that
 answers, not from the newest answer of a given kind.** A bundle says what upstream
@@ -218,9 +220,16 @@ named `archlinux` the string `syncthing@archlinux` reached the scan and refused 
 document that identified nothing. Refusing the whole thing took the return leg off
 a working machine for one row out of a hundred. A row carrying one of the names is
 now **withheld** and named on screen; a name with no row to drop still refuses the
-document. Nothing carrying an identity leaves under either rule, and a withheld row
-lands in the state the format already means by absence — unmeasured, so the builder
-carries the tool rather than assuming it current.
+document. A withheld row lands in the state the format already means by absence —
+unmeasured, so the builder carries the tool rather than assuming it current.
+
+**Which names count is the trust coordinate's answer, and it is one answer for the
+whole exchange.** Off the fleet the hostname is an employer asset tag: `written_by`
+reduces it to a digest, and a row carrying it is withheld. On the fleet it is
+published on purpose, in the filename and in `written_by` — so screening rows
+against it would drop a row to hide a string travelling one key over, costing the
+builder a tool and protecting nothing. The account name is never published
+anywhere and is screened on every machine.
 
 Loosening the match itself was rejected. Word boundaries still match
 `syncthing@archlinux`, a minimum length stops protecting `mbp`, and an escape hatch

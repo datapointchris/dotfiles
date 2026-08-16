@@ -39,12 +39,11 @@ from dotfiles.refusal import Refusal
 ARCHIVE_SUFFIX = '.tar.gz'
 """What a bundle archive ends in, and the only thing that makes a listed name one.
 
-Named because two readers of a remote shelf have to agree on it. `on_remote`
-keeps what ends in this; the retention nudge kept everything that was not a
-record, so a `.part` from an interrupted upload or a `.DS_Store` from browsing the
-share counted as a bundle in one and not the other — and it sorts before
-`dotfiles-`, so the nudge named it as the oldest bundle while the sweep it points
-at would not touch it.
+Named because two readers of a remote shelf have to agree on it, and a shelf
+holds more than bundles. A `.part` from an interrupted upload or a `.DS_Store`
+from browsing the share sorts before `dotfiles-`, so a reader that took
+everything-but-the-records would name one as the oldest bundle while the sweep it
+points at declined to touch it.
 """
 
 ARCHIVES = f'dotfiles-offline-*{ARCHIVE_SUFFIX}'
@@ -280,13 +279,12 @@ def describe(extracted: Path | None = None) -> Staging:
     description can say so. Discovering it instead would mean comparing mtimes
     against the run's own start, which is a guess where the caller already knows.
 
-    **One walk, handed to all three readers.** Walking separately for the paths,
-    the rows and the descriptions made the only way they could disagree a
-    `ValueError` out of `Staging.base`, which zips two of them `strict=True` — and
-    that escapes `reconcile._stage_bundle`, which catches `StagingError`, as a
-    traceback out of `apply --offline`. A second `bundle stage` or a hand-unpacked
-    directory during a run is what reaches it. One walk removes the failure and
-    two of the three reads.
+    **One walk, handed to all three readers.** `Staging.base` zips the paths and
+    the descriptions `strict=True`, so three separate walks could disagree — and
+    the `ValueError` that produced escapes `reconcile._stage_bundle`, which catches
+    `StagingError`, as a traceback out of `apply --offline`. A second `bundle
+    stage` or a hand-unpacked directory during a run is what reaches it. One walk
+    makes the disagreement unreachable and costs two fewer reads.
     """
     staged = providers.staged_bundles()
     return Staging(
@@ -427,10 +425,11 @@ def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> P
             f'{name} does not match the digest its record publishes, so it did not arrive whole',
             advice='run it again: dotfiles bundle download',
         )
-    # Kept beside the archive, which is what `paths.archive_dir` already says
-    # happens and nothing did. A machine that downloads today and stages in a
-    # month otherwise has no digest left to re-check, and `_prune_local` was
-    # unlinking a path nothing ever wrote.
+    # Kept beside the archive, which is what `paths.archive_dir` describes and
+    # what `_prune_local` removes. It is the record of what arrived — size, digest
+    # and what the bundle says it is — for an archive that outlives the listing it
+    # came from. Nothing re-checks the digest at stage time today; `verified` runs
+    # here, against this record, at the moment the bytes land.
     (paths.archive_dir() / f'{name}{SIDECAR_SUFFIX}').write_text(json.dumps(record.as_dict(), indent=2) + '\n')
     return destination
 
@@ -577,22 +576,27 @@ class Sweep:
 def retention(names: tuple[str, ...], keep: int) -> Sweep:
     """What a sweep of one machine's bundles would remove, and what it pins.
 
-    **One function because the rule has three parts and three callers had all
-    three.** The local sweep, the remote sweep and the post-upload nudge each
-    composed `base_of`, `superseded` and drop-the-base by hand, each carried a
-    comment explaining why it agreed with the other two, and they had already
-    stopped agreeing: one counted against the configured limit raw and two against
-    the floor. `standards/python.md` § "Ask whatever owns a fact; never work it out
-    a second time" is the rule, and a fourth caller is where three sites stop
-    agreeing for good.
+    **One function, because the rule has three parts and three callers need all
+    three.** The local sweep, the remote sweep and the post-upload nudge each want
+    `base_of`, `superseded` and drop-the-base, in that order. Composed at each
+    site they agree only while somebody keeps them agreeing, and the drift is
+    invisible — a nudge counting against a different limit from the sweep it
+    points at reads as a correct number. `standards/python.md` § "Ask whatever owns
+    a fact; never work it out a second time" is the rule.
 
-    Floored at one here, so the number applied is the number every caller reports.
+    **The floor is not enforced here, and that is deliberate.** `remote.read`
+    refuses a declared `keep_bundles` below one and `bundle prune` refuses a
+    `--keep` below one, so a value arriving here has already been through a parser
+    that said so. A third clamp would be the silent behaviour those two refusals
+    exist to replace: a caller passing zero would get one and no sentence saying
+    the flag was not honoured. Where the number is wrong, it is wrong loudly at
+    the door it came in through.
 
     Pure and taking names, so the two sweeps that read a remote and the one that
     reads a cache all answer by the identical rule without any of them holding a
     transport.
     """
-    past = transport.superseded(names, max(keep, 1))
+    past = transport.superseded(names, keep)
     base = base_of(names)
     return Sweep(tuple(name for name in past if name != base), tuple(name for name in past if name == base))
 

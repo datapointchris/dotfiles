@@ -1062,6 +1062,7 @@ REMOTE_KEYS = {
     'program',
     'operations',
     'keep_bundles',
+    'from_table',
     'fetch_bundle_when_none_is_staged',
     'publish_status_after_offline_apply',
 }

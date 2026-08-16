@@ -139,12 +139,17 @@ def show(
 
     **What `--json` prints is what would be sent**, screened rows and all, because
     the advice on a refusal says exactly that and a document shown unscreened would
-    make it false.
+    make it false. Which rows were withheld is therefore not a key in it: the
+    document is the artefact, and a field describing the act of composing it would
+    travel to the server as part of the thing it describes. A caller wanting the
+    set diffs this against `plan --json`, which walks the same resources unscreened
+    — and the *builder* needs nothing, because a row absent from the document is
+    already `unmeasured` and gets carried.
 
-    The verdict on the headline is about *publishability*, not about the machine —
-    it is what this command's exit code answers, and the resource rows below carry
-    the machine's own verdict. Rendering one and exiting the other left a reader
-    working out which of two vocabularies a `3` had come from.
+    The verdict on the headline is about *publishability*, which is what this
+    command's exit code answers; the resource rows below carry the machine's own.
+    A headline reporting one while the exit reports the other leaves a reader
+    working out which of two vocabularies a `3` came from.
     """
     verbosity(verbose, quiet)
     found = composed(machine)
@@ -196,8 +201,12 @@ def upload(
 
     success(f'uploaded {name} to {directory}')
     render_note(f'covering {found.scope} and nothing else')
+    # `warn`, not a note: `render_note` returns early under `-q`, so a publish that
+    # dropped rows said nothing at all on the one invocation a script makes. A row
+    # that did not travel is a warning about the artefact rather than evidence
+    # under a verdict.
     for withheld in screen.withheld:
-        render_note(f'{withheld} was left out: its version string names this machine')
+        warn(f'{withheld} was left out of {name}: its version string names this machine')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -237,7 +246,7 @@ def publish_after_apply(machine: str | None) -> None:
     # row dropped silently is one the builder then carries a tool for with nothing
     # anywhere recording why — degrading is right, degrading silently is not.
     for withheld in screen.withheld:
-        render_note(f'{withheld} was left out: its version string names this machine')
+        warn(f'{withheld} was left out of {name}: its version string names this machine')
 
 
 @app.command('list')

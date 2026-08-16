@@ -251,13 +251,17 @@ def counted(carried: tuple[Staged, ...]) -> dict[str, int]:
 
 
 def measured_in(described: tuple[Description, ...], name: str, *categories: str) -> str | None:
-    """The same question as `measured`, asked of descriptions already in hand.
+    """What version a sparse bundle measured for a tool it deliberately left out.
 
-    Split out so a `Staging` — which carries its descriptions as a snapshot rather
-    than re-reading disk — answers by the identical rule instead of its own. The
-    two rules had drifted: this one matches the whole `category/name` key, and the
-    copy in `offline_bundle` matched the name half alone, so they disagreed on
-    exactly the tools declared under more than one category.
+    Answered from descriptions already in hand rather than by re-reading disk, so
+    a `Staging` holding a snapshot and any other caller get the identical rule.
+    The key is the whole `category/name` pair: a tool declared under more than one
+    category — a `binary` on one machine and a `cargo` on another — is a different
+    row under each, and matching the name half alone answers for the wrong one.
+
+    None where no bundle mentions it, which is the third state `Completeness`
+    exists for. Absence with no explanation is a declaration that changed after
+    the status was taken, and calling it current would be a guess.
     """
     wanted = {f'{category}/{name}' for category in categories}
     for description in described:

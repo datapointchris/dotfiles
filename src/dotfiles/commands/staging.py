@@ -354,17 +354,24 @@ def _report_retention(where: transport.Remote, machine: str) -> None:
     **Nothing here may change the verb's exit code.** The archive and its record
     have already landed by the time this runs and `success` has already printed, so
     a `RemoteError` from the listing reported a completed upload as a failure and
-    invited a caller to send it again. `_prune_remote` suppresses the same class
-    for the same reason.
+    invited a caller to send it again.
+
+    **Caught and said, never caught and swallowed.** A box whose shelf listing has
+    been failing for months would otherwise upload cleanly every time and never
+    learn the nudge stopped running — `python.md` § "Fail fast instead of
+    defaulting" allows degrading and not degrading silently.
 
     Counted through `on_remote` and `retention`, which is what `prune --remote`
     will use, so the number named here is the number that command acts on.
     """
-    with contextlib.suppress(transport.RemoteError):
+    try:
         sweep = offline_bundle.retention(offline_bundle.on_remote(where, machine), where.keep_bundles)
-        if sweep.superseded:
-            render_note(f'{len(sweep.superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {sweep.superseded[0]}')
-            hint('remove them with: dotfiles bundle prune --remote')
+    except transport.RemoteError as unlisted:
+        warn(f'the upload landed, and what has accumulated could not be counted: {unlisted}')
+        return
+    if sweep.superseded:
+        render_note(f'{len(sweep.superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {sweep.superseded[0]}')
+        hint('remove them with: dotfiles bundle prune --remote')
 
 
 @bundle_app.command('list')
@@ -515,13 +522,11 @@ def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
 def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool) -> bool:
     """Whether to go ahead, asked the way every prompt here is asked.
 
-    **One helper for all three prompts, because three copies had already
-    diverged**: declining a download printed a sentence and exited ISSUE,
-    declining a local sweep printed a different sentence and exited ISSUE, and
-    declining a remote sweep printed nothing and exited ISSUE — so somebody who
-    answered `n` got a non-zero status with no reason on screen. The caller still
-    owns what happens next; what is shared is how the question is put and what a
-    machine without a terminal is told instead.
+    **One helper for all three prompts.** Written out at each site they drift into
+    three different declines, and the one that drifts furthest prints nothing at
+    all — a non-zero status with no reason on screen for somebody who answered
+    `n`. The caller still owns what happens next; what is shared is how the
+    question is put and what a machine without a terminal is told instead.
 
     Default no everywhere. Two of the three are destructive by the test
     standards/cli-design.md § "Destructive operations require an explicit flag"
@@ -647,7 +652,9 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
 def prune(
     keep: int | None = KeepOption,
     remote_too: bool = typer.Option(False, '--remote', help="Also remove what is past the limit on the remote's shelf"),
-    machine: str = typer.Option(None, '--machine', help='Whose bundles to sweep (default: every machine in the cache)'),
+    machine: str = typer.Option(
+        None, '--machine', help='Whose bundles to sweep (default: every machine locally, this machine on the remote)'
+    ),
     yes: bool = typer.Option(False, '--yes', help='Skip the confirmation'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
     as_json: bool = JsonOption,
@@ -692,7 +699,9 @@ def prune(
             f'--keep {keep}: a machine with nothing staged cannot converge offline at all, so the floor is 1',
             param_hint='--keep',
         )
-    retained = keep if keep is not None else max(_configured_keep(), 1)
+    # Neither value needs a floor: `remote.read` refuses a declared limit below
+    # one, and the flag is refused above. One place decides, and it says so.
+    retained = keep if keep is not None else _configured_keep()
     sweep = _superseded_locally(retained, machine)
     superseded = sweep.superseded
 

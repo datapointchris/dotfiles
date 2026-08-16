@@ -70,6 +70,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'program': remote.remote.transport.program if remote.remote else '',
                     'operations': sorted(str(name) for name in remote.remote.transport.commands) if remote.remote else [],
                     'keep_bundles': remote.remote.keep_bundles if remote.remote else 0,
+                    'from_table': sorted(remote.remote.from_table) if remote.remote else [],
                     'fetch_bundle_when_none_is_staged': bool(remote.remote and remote.remote.fetch_bundle_when_none_is_staged),
                     'publish_status_after_offline_apply': bool(remote.remote and remote.remote.publish_status_after_offline_apply),
                 },
@@ -97,17 +98,28 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     if remote.remote:
         console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep_bundles}')
         console.print(f'  {"":<{width}}  {_kept_from(remote.remote)}')
+        # Every setting in the table, not the one that grew an attribution. The
+        # second decides whether a document leaves the machine unasked, which is
+        # at least as worth seeing as a retention count — and both were reachable
+        # through `--json` alone while this block described the rest.
+        for name in ('fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'):
+            console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({_layer(remote.remote, name)})')
+
+
+def _layer(found: transport.Remote, key: str) -> str:
+    """Which layer decided one setting, the way the registers above say it.
+
+    standards/configuration.md § "A resolved value reports which layer set it" —
+    the failure it prevents is a plausible value rather than a wrong one. These
+    govern deletion from a server and whether a document leaves the machine
+    unasked, and unattributed beside rows that all carry `from {source}` they read
+    as declared on a machine that declared nothing.
+    """
+    return f'from {transport.TABLE}.{key}' if key in found.from_table else 'this tool’s default'
 
 
 def _kept_from(found: transport.Remote) -> str:
-    """Which layer decided the retention limit, the way the registers above say it.
-
-    standards/configuration.md § "A resolved value reports which layer set it" —
-    the failure it prevents is a plausible value rather than a wrong one. This
-    number governs deletion from a server, and unattributed beside rows that all
-    carry `from {source}` it read as declared on a machine that declared nothing.
-    """
-    return f'from {transport.TABLE}.keep_bundles' if found.keep_bundles_declared else 'this tool’s default'
+    return _layer(found, 'keep_bundles')
 
 
 def _remote(found: transport.Configured) -> str:
