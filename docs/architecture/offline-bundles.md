@@ -186,10 +186,17 @@ Two independent guards, in `src/dotfiles/publishing.py`:
   hostname and account. An allowlist protects against a new resource and not
   against a new field on a row.
 
-Shelves and filenames key on the **manifest**, never on `paths.machine_id()`. That
-is the bare hostname, and on the work box it is an employer asset tag. A status
-filename additionally carries eight hex characters of a digest of it, because two
-Macs share one manifest and the manifest alone would have one overwrite the other.
+Shelves key on the **manifest**, never on `paths.machine_id()`. Two Macs share one
+manifest, so a status filename carries a discriminator after it or the second
+upload overwrites the first.
+
+**Which discriminator depends on the trust coordinate.** On a fleet machine it is
+the bare hostname — not a secret there, and a shelf listing that says `macmini`
+answers "which box published this" without opening anything. Off the fleet the
+hostname is an employer asset tag, so it is eight hex characters of a blake2b
+digest instead: enough to tell two boxes apart, not enough to name either.
+Anything that is not `FLEET` gets the digest, and so does a hostname carrying a
+hyphen, since `status.wrote` recovers the segment by splitting on the last one.
 
 ## The remote layout is dotfiles' to decide
 
@@ -197,7 +204,7 @@ Macs share one manifest and the manifest alone would have one overwrite the othe
 <remote.root>/
   bundles/<manifest>/dotfiles-offline-v<UTC>-<manifest>-<os>-<arch>[-sparse].tar.gz
   bundles/<manifest>/....tar.gz.json          size, digest, and the bundle.json
-  status/<manifest>/dotfiles-status-v<UTC>-<manifest>-<digest>.json
+  status/<manifest>/dotfiles-status-v<UTC>-<manifest>-<hostname|digest>.json
 ```
 
 Both ends of the exchange are this tool and nothing else reads these directories,

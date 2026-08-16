@@ -27,6 +27,7 @@ from pathlib import Path
 
 import typer
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import reconcile
@@ -64,34 +65,47 @@ PREFIX = 'dotfiles-status-v'
 SUFFIX = '.json'
 
 
-def discriminator() -> str:
-    """Eight hex characters standing in for this box, carrying nothing of its name.
+def discriminator(trust: axes.NetworkTrust) -> str:
+    """What tells this box apart from the others sharing its manifest.
 
     Two machines legitimately share one manifest — `macos-personal-workstation` is
     both Macs — so a filename keyed on the manifest alone has one silently
     overwrite the other, which is the collision standards/data.md § "In a synced
     directory, every machine writes its own file" exists to make unreachable.
 
-    A digest rather than the hostname that would ordinarily key it, because that
-    hostname is an employer asset tag on the machine this feature exists for. The
-    digest disambiguates and identifies nothing.
+    **Which answer depends on the trust coordinate, because the constraint does.**
+    On a fleet machine the hostname is not a secret and it is what a reader wants:
+    a shelf listing says `macmini` rather than eight hex characters nobody can
+    resolve. Off the fleet the hostname is an employer asset tag, so a blake2b
+    digest disambiguates and identifies nothing. Anything that is not `FLEET` gets
+    the digest, which is the direction a privacy boundary has to fail in.
+
+    A hostname carrying a hyphen also falls back, because `wrote` recovers this by
+    splitting on the last one and the manifest name it follows is full of them.
     """
-    return hashlib.blake2b(paths.machine_id().encode(), digest_size=4).hexdigest()
+    named = paths.machine_id()
+    if trust is axes.NetworkTrust.FLEET and '-' not in named:
+        return named
+    return hashlib.blake2b(named.encode(), digest_size=4).hexdigest()
 
 
-def filename(machine: str, when: dt.datetime) -> str:
+def filename(machine: str, when: dt.datetime, trust: axes.NetworkTrust) -> str:
     stamped = when.astimezone(dt.UTC).strftime('%Y%m%dT%H%M%SZ')
-    return f'{PREFIX}{stamped}-{machine}-{discriminator()}{SUFFIX}'
+    return f'{PREFIX}{stamped}-{machine}-{discriminator(trust)}{SUFFIX}'
 
 
 def wrote(name: str) -> str:
-    """Which box published a status, from the digest in its own filename.
+    """Which box published a status, from the discriminator in its own filename.
 
     The discriminator is what makes two machines sharing one manifest write two
     files instead of overwriting each other, so it is also the only thing that
     tells their documents apart afterwards. A reader that ignores it picks
     whichever published last, and the `machine` field cannot object because both
     carry the same one.
+
+    A hostname on a fleet machine and a digest off it, and this returns whichever
+    is there — the two are told apart by being read rather than by being parsed,
+    since a caller wants an identity to group on and not the kind of one it is.
 
     Empty where the name is not one of ours, which groups strangers together
     rather than inventing an owner for each.
@@ -112,6 +126,13 @@ class Composed:
     document: dict[str, object]
     results: tuple[reconcile.ResourceResult, ...]
     machine: str
+    trust: axes.NetworkTrust
+    """Which answer `discriminator` gives, resolved here because the session is here.
+
+    Carried rather than re-read at the two call sites, so the name a document is
+    published under and the name reported afterwards cannot come from different
+    reads of the same machine.
+    """
 
     @property
     def scope(self) -> str:
@@ -134,7 +155,8 @@ def composed(machine: str | None) -> Composed:
     is what the gate refuses — so an unrooted document refuses itself. A builder
     wants the version rather than which home it sat in, so nothing is lost.
     """
-    named = resolved(machine).machine_name
+    session = resolved(machine)
+    named = session.machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
@@ -148,7 +170,7 @@ def composed(machine: str | None) -> Composed:
     walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, report=None)
     sinks.keep(walked.events, identity, {'skip': sorted(withheld), 'offline': True})
     document = status_document.document(walked.results, named, identity.started, verb='plan')
-    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named)
+    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, session.machine.coordinates.network_trust)
 
 
 @app.command('show')
@@ -198,7 +220,7 @@ def upload(
     found = composed(machine)
     publishing.refuse_unpublishable(found.document)
 
-    name = filename(found.machine, dt.datetime.now(dt.UTC))
+    name = filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
     directory = transport.statuses_for(where, found.machine)
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / name
@@ -231,7 +253,7 @@ def publish_after_apply(machine: str | None) -> None:
     try:
         composition = composed(machine)
         publishing.refuse_unpublishable(composition.document)
-        name = filename(composition.machine, dt.datetime.now(dt.UTC))
+        name = filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
         with tempfile.TemporaryDirectory() as workspace:
             local = Path(workspace) / name
             local.write_text(json.dumps(composition.document, indent=2) + '\n')

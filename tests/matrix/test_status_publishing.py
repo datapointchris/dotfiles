@@ -12,6 +12,7 @@ asserted is what would land on a server.
 
 from __future__ import annotations
 
+import datetime as dt
 import getpass
 import json
 from collections.abc import Callable
@@ -21,6 +22,7 @@ import pytest
 from relay import declare
 from relay import install_relay
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import vocabulary
@@ -211,17 +213,35 @@ class TestPublishing:
         assert sent['version'] == shown['version']
         assert [row['address'] for row in sent['resources']] == [row['address'] for row in shown['resources']]
 
-    def test_the_filename_carries_a_digest_rather_than_the_hostname(
-        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
-    ) -> None:
+    def test_a_fleet_machine_names_itself_in_the_filename(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Two machines share `macos-personal-workstation`, so the manifest alone
-        would have one overwrite the other — and the hostname that would ordinarily
-        key it is an employer asset tag on the machine this exists for."""
+        would have one overwrite the other. On the fleet the hostname is not a
+        secret and it is what a reader of the shelf wants."""
         cli('status', 'upload')
         published = next(iter(shelf(server).iterdir())).name
 
-        assert status_commands.discriminator() in published
-        assert paths.machine_id() not in published
+        assert status_commands.wrote(published) == paths.machine_id()
+
+    def test_off_the_fleet_the_discriminator_names_nothing(self) -> None:
+        """The hostname is an employer asset tag on the machine this exists for, so
+        anything that is not FLEET gets a digest — the direction a privacy boundary
+        has to fail in."""
+        named = paths.machine_id()
+
+        assert status_commands.discriminator(axes.NetworkTrust.FLEET) == named
+        assert status_commands.discriminator(axes.NetworkTrust.NONFLEET) != named
+        assert len(status_commands.discriminator(axes.NetworkTrust.NONFLEET)) == 8
+
+    def test_a_hyphenated_hostname_falls_back_to_the_digest(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`wrote` recovers the discriminator by splitting on the last hyphen, and
+        the manifest name it follows is full of them."""
+        monkeypatch.setattr(paths, 'machine_id', lambda: 'my-laptop')
+        stamped = dt.datetime(2026, 9, 9, 12, tzinfo=dt.UTC)
+
+        name = status_commands.filename(MACHINE, stamped, axes.NetworkTrust.FLEET)
+
+        assert status_commands.discriminator(axes.NetworkTrust.FLEET) != 'my-laptop'
+        assert status_commands.wrote(name) == status_commands.discriminator(axes.NetworkTrust.FLEET)
 
     def test_the_shelf_is_keyed_on_the_manifest(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         cli('status', 'upload')
@@ -236,7 +256,7 @@ class TestPublishing:
         ago" answerable, and the stamp is to the second so two in one day differ."""
         cli('status', 'upload')
         second = f'{status_commands.PREFIX}20260909T120000Z-{MACHINE}-ffff.json'
-        monkeypatch.setattr(status_commands, 'filename', lambda machine, when: second)
+        monkeypatch.setattr(status_commands, 'filename', lambda machine, when, trust: second)
         cli('status', 'upload')
 
         assert len(list(shelf(server).iterdir())) == 2

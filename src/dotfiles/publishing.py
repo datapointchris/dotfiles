@@ -20,6 +20,18 @@ decides otherwise, which is the direction a privacy boundary has to fail in.
 The gate below is the second half, and it exists because an allowlist protects
 against a new *resource* and not against a new *field*. It reads the bytes about
 to leave and refuses on the two names that identify this box.
+
+**The match is an unanchored substring test, and a box whose hostname is a common
+word or a package name could never publish.** The document unavoidably carries
+`go-toolchain/go`, `uv-toolchain/uv` and a row per installed tool, so hostnames
+like `go`, `uv` or `node` would be refused permanently with advice pointing at a
+document containing nothing personal. Measured 2026-08-16 against a real 30 KB
+document: none of `archlinux`, `macmini`, `mbp` or the account name occurs in it,
+so no machine here is reachable by this. It also fails closed — the refusal is
+loud and nothing leaves. Every loosening costs more than it buys: word boundaries
+still match `"go-toolchain/go"`, a minimum length stops protecting `mbp`, and an
+escape hatch is a hole in the one boundary that must not have one. If it ever
+fires, rename the box or add the colliding field to `PROTOCOL_KEYS`.
 """
 
 from __future__ import annotations
