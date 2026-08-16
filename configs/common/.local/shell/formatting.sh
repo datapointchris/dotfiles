@@ -265,7 +265,6 @@ print_section() {
 # Success section (green + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_success() {
   local text="$1"
-  local padding=15
   echo ""
   echo ""
   echo -e "${COLOR_GREEN}${EMOJI_SUCCESS} ${text}${COLOR_RESET}"
@@ -276,7 +275,6 @@ print_section_success() {
 # Error section (red + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_error() {
   local text="$1"
-  local padding=15
   echo ""
   echo ""
   echo -e "${COLOR_RED}${EMOJI_ERROR} ${text}${COLOR_RESET}"
@@ -287,7 +285,6 @@ print_section_error() {
 # Warning section (yellow + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_warning() {
   local text="$1"
-  local padding=15
   echo ""
   echo ""
   echo -e "${COLOR_YELLOW}${EMOJI_WARNING} ${text}${COLOR_RESET}"
@@ -298,7 +295,6 @@ print_section_warning() {
 # Info section (cyan + emoji, underline padded by SECTION_UNDERLINE_PADDING)
 print_section_info() {
   local text="$1"
-  local padding=15
   echo ""
   echo ""
   echo -e "${COLOR_CYAN}${EMOJI_INFO} ${text}${COLOR_RESET}"
