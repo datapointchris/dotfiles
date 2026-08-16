@@ -37,3 +37,9 @@ standards_dir: ~/.local/share/terminal-library-fleet/standards
 # each machine actually ran is per-machine state under $XDG_STATE_HOME, and
 # deliberately not here.
 schedule_file: ~/.local/share/terminal-library-fleet/schedule.json
+
+# What each tool promises — its tier, and the tools it invokes as subprocesses.
+# A sixth file rather than a section of the repo registry, because a tool is not
+# a repo: icb ships from ichrisbirch, dotfiles ships eight, and half the repos
+# ship none.
+tools_registry: ~/.local/share/terminal-library-fleet/tools.json
