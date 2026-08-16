@@ -167,6 +167,44 @@ class TestPlacement:
         placed = home / '.config' / 'systemd' / 'user' / 'demo.service'
         assert placed.read_bytes() == b'[Unit]\n'
 
+    def test_the_unit_is_pointed_at_the_binary_this_installed(self, home, bundle, tmp_path):
+        """Upstream's unit names the path its distro package uses, not ours.
+
+        syncthing ships `ExecStart=/usr/bin/syncthing serve --no-browser
+        --no-restart`, and a release install puts the binary in ~/.local/bin — so
+        the unit as published fails with status 203, exec-not-found. Measured on
+        scheduler-lxc 2026-08-16.
+
+        Only the path is rewritten. The arguments stay upstream's, so a release
+        that changes them is followed rather than overridden.
+        """
+        archive = tmp_path / 'demo.tar.gz'
+        unit = b'[Service]\nExecStart=/usr/bin/demo serve --no-browser\n'
+        tarball(archive, {'demo': PAYLOAD, 'etc/linux-systemd/user/demo.service': unit})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        result = install_one(asset, entry(), offline=True)
+
+        assert result.ok, result.detail
+        placed = (home / '.config' / 'systemd' / 'user' / 'demo.service').read_text()
+        assert f'ExecStart={home}/.local/bin/demo serve --no-browser' in placed
+        assert '/usr/bin/demo' not in placed
+
+    def test_an_exec_line_naming_something_else_is_left_alone(self, home, bundle, tmp_path):
+        """Only the tool's own path is ours to correct. A unit calling another
+        binary is upstream saying so, and rewriting it would break the call."""
+        archive = tmp_path / 'demo.tar.gz'
+        unit = b'[Service]\nExecStartPre=/usr/bin/install -d /tmp/demo\nExecStart=/usr/bin/demo\n'
+        tarball(archive, {'demo': PAYLOAD, 'etc/linux-systemd/user/demo.service': unit})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        install_one(asset, entry(), offline=True)
+
+        placed = (home / '.config' / 'systemd' / 'user' / 'demo.service').read_text()
+        assert 'ExecStartPre=/usr/bin/install -d /tmp/demo' in placed
+
     def test_a_unit_does_not_land_among_the_binaries(self, home, bundle, tmp_path):
         """`extras` places into the bin directory, which is wrong for a unit: it
         would put a systemd file on PATH and leave systemd unable to find it."""

@@ -295,11 +295,35 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
         source = unpacked / asset.unit
         if not source.is_file():
             return Result(False, f'{asset.name} contains no {asset.unit}', kind=Kind.ARCHIVE_INCOMPLETE)
+        source.write_text(_exec_at(source.read_text(), target))
         placed = unit_dir() / Path(asset.unit).name
         if not effects.install(source, placed, executable=False):
             return Result(False, _unplaceable(Path(asset.unit).name, placed), kind=Kind.WRITE_FAILED)
 
     return Result(True, str(target), kind=Kind.APPLIED)
+
+
+def _exec_at(unit: str, binary: Path) -> str:
+    """Upstream's unit, pointed at where this actually installed the binary.
+
+    A published unit names the path its distro package uses — syncthing ships
+    `ExecStart=/usr/bin/syncthing` — and a release install puts the binary under
+    ~/.local/bin, so the unit as written fails with 203, exec-not-found. Measured
+    on scheduler-lxc 2026-08-16.
+
+    Only the path moves. The arguments stay upstream's, so a release that changes
+    them is followed rather than overridden, and an Exec line calling some other
+    binary is left alone because that call is upstream saying what it needs.
+    """
+    lines = []
+    for line in unit.splitlines(keepends=True):
+        key, sep, rest = line.partition('=')
+        first, space, arguments = rest.strip().partition(' ')
+        if sep and key.strip().startswith('Exec') and Path(first).name == binary.name:
+            lines.append(f'{key}={binary}{space}{arguments}\n')
+            continue
+        lines.append(line)
+    return ''.join(lines)
 
 
 def unit_dir() -> Path:
