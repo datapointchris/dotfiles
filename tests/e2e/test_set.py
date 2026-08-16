@@ -53,6 +53,26 @@ def apply_section(machine: Machine, section: str) -> tuple[int, str]:
     return result.returncode, result.stdout
 
 
+def needing(machine: Machine, section: str, tool: str) -> None:
+    """Skip where this environment's manifest never asked for that tool.
+
+    Every test here runs against whichever environment the matrix selected, and
+    the manifests differ on purpose — `scheduler` declares one custom installer
+    where a workstation declares several. A test naming a specific tool is asking
+    about the *installer*, and on a machine that never planned it the section
+    applies correctly and the assertion fails anyway.
+
+    Read from the resolved plan rather than by parsing the YAML, so a tool that
+    arrives through a coordinate or a bundle rather than a literal manifest line
+    is counted the same way the engine counts it.
+    """
+    resolved = machine.exec(
+        f'cd {machine.environment.home}/dotfiles && uv run dotfiles packages plan --source {section} --json 2>/dev/null'
+    )
+    if tool not in resolved.stdout:
+        pytest.skip(f'{machine.environment.manifest} declares no {tool} under {section}')
+
+
 @pytest.mark.parametrize('section', SECTIONS)
 def test_a_section_installs_over_the_base(over_base: Machine, section: str) -> None:
     """The assertion is the exit code, not the prose.
@@ -79,6 +99,7 @@ def test_a_release_that_nests_its_binary_still_lands(over_base: Machine) -> None
 def test_a_zip_distributed_tool_comes_out_executable(over_base: Machine) -> None:
     """`zipfile.extractall` drops permissions, so awscli installed, symlinked, and
     answered `Permission denied` — which `shutil.which` reports as *not on PATH*."""
+    needing(over_base, 'custom_installers', 'awscli')
     code, output = apply_section(over_base, 'custom_installers')
 
     assert code == 0, output[-2000:]
@@ -89,6 +110,7 @@ def test_a_download_from_a_third_party_host_is_not_sent_a_github_token(over_base
     """mount-s3 comes from an S3 bucket, and S3 answers a bearer token it does not
     recognise with a 400. The credential was going to every host this repo fetches
     from, so an authenticated machine could not install it at all."""
+    needing(over_base, 'custom_installers', 'mount-s3')
     code, output = apply_section(over_base, 'custom_installers')
 
     assert code == 0, output[-2000:]
