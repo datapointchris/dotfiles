@@ -167,8 +167,7 @@ def staging_dir() -> Path:
     A function rather than a constant, for the reason `cache_home` gives and this
     one needs twice over: `$DOTFILES_BUNDLE` is read on every call, so the
     bootstrap and a test can both point staging somewhere and be obeyed. Bound at
-    import, every one of these was a name a harness had to rebind by hand — and
-    `status_cache` was the one nobody remembered, so four tests wrote into the
-    real `~/.cache`.
+    import, each of these is a name a harness has to rebind by hand, and the one
+    nobody remembers is what writes into the real `~/.cache`.
     """
     return Path(os.environ.get('DOTFILES_BUNDLE') or cache_home() / 'staged')

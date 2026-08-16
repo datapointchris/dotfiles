@@ -250,10 +250,11 @@ class Coverage:
 def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     """Which of this machine's bundlable items the bundle actually holds.
 
-    Matched on the executable as well as the name, because the bundler records a Go
-    tool under `entry.executable` and every other kind under its name. Comparing
-    names alone reported every Go tool whose binary is called something else as
-    missing from a bundle that carries it.
+    Matched on the executable as well as the name. A row is keyed on the declared
+    name, and a plan item is looked up by whichever of the two a reader has —
+    `bundle check` resolves from the plan, where a Go tool whose binary is called
+    something else is reached by its executable. Either side alone reports a tool
+    the bundle carries as missing from it.
     """
     wanted, outside = {}, 0
     for item in plan.items:

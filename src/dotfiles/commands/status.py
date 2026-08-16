@@ -149,10 +149,9 @@ def show(
     verbosity(verbose, quiet)
     found = composed(machine)
     # Measured once and read by both doors, so the exit code and the rows cannot
-    # disagree. A document carrying the hostname rendered a red issue row and
-    # still exited CONVERGED, so `status show && status upload` walked straight
-    # into the refusal the first command had already found. `remote check` derives
-    # its verdict from its faults the same way.
+    # disagree — a red issue row above a CONVERGED exit sends `status show &&
+    # status upload` straight into a refusal the first command already found.
+    # `remote check` derives its verdict from its faults the same way.
     screen = publishing.screened(found.document, publishing.identifying())
 
     if as_json:

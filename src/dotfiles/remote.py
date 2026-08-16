@@ -183,7 +183,14 @@ class Remote:
 
 BUNDLES = 'bundles'
 STATUSES = 'status'
-"""The two shelves under `root`, and dotfiles decides both.
+"""The two kinds of artefact under `root`, and dotfiles decides both.
+
+A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
+— which is what every `--machine` flag here reads and what `bundles_for` and
+`statuses_for` build. Naming these two the same word left the term with two
+referents and `remote check`, the only command that describes the remote, using
+neither.
+
 
 A remote's layout is this tool's to choose because both ends of the exchange are
 this tool — nothing else reads these directories, and a machine that had to

@@ -313,8 +313,8 @@ def upload(
         raise typer.Exit(ExitCode.ISSUE)
 
     # Before `described_record`, which stats it. A named path that is not there is
-    # the caller's mistake and exits USAGE, where the unhandled FileNotFoundError
-    # exited 1 — and 1 is DRIFT here, which is a verdict rather than a failure.
+    # the caller's mistake and exits USAGE; an unhandled `FileNotFoundError` here
+    # would land on 1, and 1 is DRIFT — a verdict rather than a failure.
     if not found.is_file():
         raise typer.BadParameter(f'{found} is not a file', param_hint='ARCHIVE')
 
@@ -597,9 +597,9 @@ def check(
     bundlable = len(found.covered) + len(found.uncovered) + len(found.measured)
     console.print(f'{len(found.covered)} of {bundlable} bundlable item(s) staged  ·  {found.outside} installed by other means')
     if found.uncovered:
-        # Both values real, so the line pastes. `ARCH` sat here and exited USAGE on
-        # the very flag the hint was teaching. This runs on the machine that will
-        # install, so its own CPU is the answer.
+        # Both values real, so the line pastes. This runs on the machine that will
+        # install, so its own CPU is the answer — a literal `ARCH` here would exit
+        # USAGE on the very flag the hint is teaching.
         hint(
             'build a newer bundle where the network reaches: '
             f'dotfiles bundle create --machine {session.machine_name} --arch {axes.detect_arch()}'
@@ -680,9 +680,9 @@ def prune(
     staging directory would take the machine's only way to install anything.
     """
     verbosity(verbose, quiet)
-    # `is not None`, because 0 is a number somebody types meaning it. As a
-    # sentinel for "read the config" it was honoured as five, which is the one
-    # answer the caller did not ask for.
+    # `is not None`, because 0 is a number somebody types meaning it. Treated as a
+    # sentinel for "read the config" it becomes five, which is the one answer the
+    # caller did not ask for.
     if keep is not None and keep < 1:
         raise typer.BadParameter(
             f'--keep {keep}: a machine with nothing staged cannot converge offline at all, so the floor is 1',

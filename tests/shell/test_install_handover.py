@@ -295,3 +295,32 @@ def test_a_bundle_naming_no_machine_still_stages(tmp_path: Path) -> None:
 
     assert ran.returncode == 0, ran.stderr
     assert (staging / name / 'manifest.txt').is_file()
+
+
+def test_a_truncated_archive_leaves_the_copy_already_staged_under_that_name(tmp_path: Path) -> None:
+    """The ordering, and the reason it is an ordering rather than a preference.
+
+    Removing the destination before the extract means an archive that fails part
+    way through destroys the bundle already staged under its name, on the one
+    machine that cannot download another. Nothing distinguished the two orders —
+    the suite ran thirteen cases and handed the script no archive that fails.
+
+    `offline_bundle.stage` unpacks into a scratch directory and moves for the same
+    reason, which is what `code-quality.md` § "A duplicated implementation copies
+    the original's failure order, not only its result" is about.
+    """
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    bootstrap_bundle(tmp_path, name)
+    truncated = (tmp_path / f'{name}.tar.gz').read_bytes()[:64]
+    (tmp_path / f'{name}.tar.gz').write_bytes(truncated)
+
+    already = tmp_path / 'staged' / name
+    already.mkdir(parents=True)
+    (already / 'manifest.txt').write_text('binary|fd|10.2.0|fd\n')
+
+    ran, staging, _ = run_bootstrap(tmp_path)
+
+    # Non-zero rather than 1: the extract dies under `set -e` and tar's own status
+    # is what travels, where the script's checks exit 1 through `die`.
+    assert ran.returncode != 0
+    assert (staging / name / 'manifest.txt').read_text() == 'binary|fd|10.2.0|fd\n'

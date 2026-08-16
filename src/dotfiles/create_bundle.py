@@ -79,11 +79,12 @@ DOWNLOAD_ATTEMPTS = 3
 ARCHIVE_MEMBER = 'installers'
 """The archive's single top-level directory, whatever the tarball is called.
 
-`install.sh` moves this name by hand, because the shell that stages a bundle is
-the one running before the CLI exists. Named here so the two agree by import
-rather than by two people typing the same word: `offline_bundle.stage` takes
-whichever directory it finds, so a change to this string breaks only the shell
-path — and only in the container tier, unless a cheaper test reads it from here.
+Written here and read nowhere else that matters: both stagers find the member by
+its `manifest.txt` rather than by this name — `offline_bundle.stage` because it
+takes whichever directory it finds, `install.sh` because a bootstrap that knew
+the producer's word for its own staging directory was the only reader in the
+fleet that cared. So this string is the bundler's choice alone, and changing it
+breaks nothing but the tests that pack an archive with it.
 """
 
 # Keep the tail of a failing command's output: a TLS, proxy or "too many errors"
@@ -258,7 +259,7 @@ def download(url: str, destination: Path) -> None:
         except (httpx2.HTTPError, OSError) as error:
             last_error = error
             if attempt < DOWNLOAD_ATTEMPTS:
-                log.warning('Retry %d/%d for %s (%s)', attempt, DOWNLOAD_ATTEMPTS, url, error)
+                log.warning(f'Retry {attempt}/{DOWNLOAD_ATTEMPTS} for {url} ({error})')
         else:
             return
 
@@ -305,7 +306,7 @@ class DownloadCache:
 
         if self.enabled and cached.is_file() and digest_file.is_file():
             if github_release.sha256_of(cached) == digest_file.read_text().strip():
-                log.info('%s [cached]', label)
+                log.info(f'{label} [cached]')
                 shutil.copyfile(cached, destination)
                 # mtime is the clock the retention sweep reads, so a hit has to
                 # count as use — otherwise a tool that never changes ages out
@@ -316,10 +317,10 @@ class DownloadCache:
                         os.utime(path, now)
                 self.hits += 1
                 return
-            log.warning('    cached copy of %s is corrupt, re-downloading', destination.name)
+            log.warning(f'    cached copy of {destination.name} is corrupt, re-downloading')
             self.evict(asset)
 
-        log.info('%s', label)
+        log.info(label)
         download(asset.url, destination)
         self.downloads += 1
 
@@ -337,7 +338,7 @@ class DownloadCache:
             partial.replace(cached)
             digest_file.write_text(github_release.sha256_of(cached) + '\n')
         except OSError:
-            log.warning('    could not cache %s', destination.name)
+            log.warning(f'    could not cache {destination.name}')
 
     def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
@@ -570,7 +571,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     """
     parsed = asset.release
     if parsed is None:
-        log.warning('    not a GitHub release, no checksum recorded: %s', path.name)
+        log.warning(f'    not a GitHub release, no checksum recorded: {path.name}')
         return
     repo, tag = parsed
     asset_name = asset.filename
@@ -587,7 +588,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
 
     checksum_asset = github_release.select_checksum_asset(sorted(github_release.release_assets(repo, tag)), asset_name)
     if checksum_asset is None:
-        log.warning('    %s publishes no checksums, none recorded', repo)
+        log.warning(f'    {repo} publishes no checksums, none recorded')
         cache.remember_status(asset, 'unpublished')
         return
 
@@ -603,7 +604,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         # yq's checksums is an rhash table (name first, then one column per
         # algorithm), which the sha256sum parser cannot read. Its installer does
         # not verify either, so this is no worse than the online path.
-        log.warning('    %s has no readable entry for %s, none recorded', checksum_asset, asset_name)
+        log.warning(f'    {checksum_asset} has no readable entry for {asset_name}, none recorded')
         cache.remember_status(asset, 'unpublished')
         return
 
@@ -778,7 +779,7 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         assert isinstance(entry, catalog.WingetPackage)
         version = fetch_latest_version(entry.repo)
         if bundle.already_current('winget', 'winget', entry.name, version):
-            log.info('  %s (%s) is what the target already has', entry.name, version)
+            log.info(f'  {entry.name} ({version}) is what the target already has')
             continue
         asset = github_asset(entry.repo, version, winget.stage(entry, version))
 
@@ -845,7 +846,7 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         # The `not COMPANIONS` test short-circuits first, deliberately, because
         # `already_current` mutates `current` as it answers.
         if not releases.COMPANIONS.get(tool) and bundle.already_current('ghrelease', 'binary', tool, version):
-            log.info('  %s (%s) is what the target already has', tool, version)
+            log.info(f'  {tool} ({version}) is what the target already has')
             continue
 
         published = build(tag, target)
@@ -883,7 +884,7 @@ def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.
         if isinstance(entry, catalog.GoTool | catalog.CargoPackage) and entry.github_repo and entry.binary_pattern:
             staged.append(entry)
         else:
-            log.warning('  %s declares no github_repo/binary_pattern, so nothing is staged for it', item.name)
+            log.warning(f'  {item.name} declares no github_repo/binary_pattern, so nothing is staged for it')
     return staged
 
 
@@ -906,7 +907,7 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
         # `gotool` opens the staged file as — the two are different questions, and
         # a Go tool declaring `command` is where they diverge.
         if bundle.already_current('go', 'go-binary', entry.name, version):
-            log.info('  %s (%s) is what the target already has', entry.executable, version)
+            log.info(f'  {entry.executable} ({version}) is what the target already has')
             continue
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
 
@@ -934,7 +935,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
         assert isinstance(entry, catalog.CargoPackage)
         version = fetch_latest_version(entry.github_repo)
         if bundle.already_current('cargo', 'cargo', entry.name, version):
-            log.info('  %s (%s) is what the target already has', entry.name, version)
+            log.info(f'  {entry.name} ({version}) is what the target already has')
             continue
         filename = cargo.stage(entry, version, target)
         asset = github_asset(entry.github_repo, version, filename)
@@ -1151,7 +1152,7 @@ def version_the_script_installs(entry: catalog.CustomInstaller) -> str:
     nothing downstream ever asks these for a verdict.
     """
     if not entry.repo:
-        log.info('  %s names no repo, so the bundle records no version for it', entry.name)
+        log.info(f'  {entry.name} names no repo, so the bundle records no version for it')
         return ''
     return fetch_latest_version(entry.repo).removeprefix(entry.release_tag_prefix)
 
@@ -1182,7 +1183,7 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_versi
             continue
         if not entry.install_url:
             raise BundleError(f"packages.yml custom_installers entry '{entry.name}' opts into bundling but declares no install_url")
-        log.info('  %s...', entry.name)
+        log.info(f'  {entry.name}...')
         download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
         bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
 
@@ -1239,9 +1240,9 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
 
     built_at = when or dt.datetime.now(dt.UTC)
     name = bundle_name(manifest_name, os_name, arch, built_at, sparse=reported is not None)
-    log.info('Creating offline bundle: %s', name)
-    log.info('Target platform: %s/%s', os_name, arch)
-    log.info('Manifest filter: %s', manifest_name)
+    log.info(f'Creating offline bundle: {name}')
+    log.info(f'Target platform: {os_name}/{arch}')
+    log.info(f'Manifest filter: {manifest_name}')
 
     cache = DownloadCache(enabled=use_cache)
     # Into the cache the rest of the lifecycle reads, not the checkout. `newest`
@@ -1256,7 +1257,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
         if reported is not None and against is not None:
             bundle.built_for = status.published_by(reported, against.name)
             bundle.plan_against(against, reported)
-            log.info('Sparse: against %s, which reports %d installed tool(s)', against.name, len(bundle.installed))
+            log.info(f'Sparse: against {against.name}, which reports {len(bundle.installed)} installed tool(s)')
 
         uv_version = add_uv(bundle, cache)
         add_wheels(bundle, cache)
@@ -1273,13 +1274,13 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
 
     size_mb = tarball_path.stat().st_size / (1024 * 1024)
     log.info('Bundle created successfully!')
-    log.info('  File: %s', tarball_path)
-    log.info('  Size: %.1f MB', size_mb)
-    log.info('  Downloads: %d', cache.downloads)
+    log.info(f'  File: {tarball_path}')
+    log.info(f'  Size: {size_mb:.1f} MB')
+    log.info(f'  Downloads: {cache.downloads}')
     if bundle.built_from:
-        log.info('  Left out as already current: %d', len(bundle.current))
+        log.info(f'  Left out as already current: {len(bundle.current)}')
     if use_cache:
-        log.info('  From cache: %d (%s)', cache.hits, cache_root())
+        log.info(f'  From cache: {cache.hits} ({cache_root()})')
     log.info('To use this bundle:')
     log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
     log.info('  2. Bootstrap: ./install.sh --machine <name> --offline')
