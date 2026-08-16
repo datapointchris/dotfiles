@@ -332,6 +332,54 @@ class TestDownloading:
         assert json.loads(sidecar.read_text())['sha256']
 
 
+class TestReportingTheRemoteSettings:
+    """Every `[remote]` setting says which layer decided it.
+
+    standards/configuration.md § "A resolved value reports which layer set it" —
+    the failure is a plausible value rather than a wrong one. One of these governs
+    deletion from a server and another decides whether a document leaves the
+    machine unasked, and both defaulted silently beside register rows that all
+    carry `from {source}`.
+    """
+
+    def test_a_declared_limit_names_the_table_it_came_from(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        declare(sandbox.config, extra='keep_bundles = 5\n')
+
+        ran = cli('config', 'show')
+
+        assert 'from remote.keep_bundles' in ran.stdout
+
+    def test_the_same_number_undeclared_names_the_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """Paired with the test above and the whole reason provenance is carried
+        rather than compared: 5 is also `DEFAULT_KEEP`, so the value cannot say."""
+        declare(sandbox.config)
+
+        ran = cli('config', 'show')
+
+        assert 'this tool’s default' in ran.stdout
+        assert 'from remote.keep_bundles' not in ran.stdout
+
+    def test_both_automatic_paths_are_on_the_human_screen(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """They reached `--json` alone, and the second decides whether a status
+        document leaves the machine without anyone asking."""
+        declare(sandbox.config, extra='publish_status_after_offline_apply = true\n')
+
+        ran = cli('config', 'show')
+
+        assert 'fetch_bundle_when_none_is_staged off' in ran.stdout
+        assert 'publish_status_after_offline_apply on' in ran.stdout
+        assert 'from remote.publish_status_after_offline_apply' in ran.stdout
+
+    def test_the_machine_door_carries_the_provenance_too(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """A caller reading the JSON otherwise gets exactly the plausible value the
+        rendered line was added to prevent."""
+        declare(sandbox.config, extra='keep_bundles = 5\n')
+
+        ran = cli('config', 'show', '--json')
+
+        assert ran.document['remote']['from_table'] == ['keep_bundles', 'root', 'transport']
+
+
 class TestStaging:
     def test_a_named_path_that_is_not_there_is_a_usage_error(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """A typo is the caller's mistake, which is USAGE. It reached `stage` and
