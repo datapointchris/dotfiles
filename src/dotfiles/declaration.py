@@ -72,7 +72,20 @@ class Platform(Enum):
 
 
 def use_color() -> bool:
-    """Check if terminal supports color output."""
+    """Preference, then override, then detection.
+
+    NO_COLOR is the user saying they do not want colour and wins outright.
+    FORCE_COLOR answers the different question "is this a terminal", for a caller
+    that knows the detection is wrong. Treating them as one chain lets a
+    FORCE_COLOR inherited from a CI image overrule a user who asked for none.
+
+    The same order as `colors.sh` `color_enabled`, which is the shell half of
+    this and the reason both spellings agree.
+    """
+    if os.environ.get('NO_COLOR'):
+        return False
+    if os.environ.get('FORCE_COLOR'):
+        return True
     return sys.stdout.isatty() and os.environ.get('TERM', '') != 'dumb'
 
 

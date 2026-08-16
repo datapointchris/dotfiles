@@ -3,7 +3,12 @@
 Everything here reads the loaded objects. Re-parsing the files as raw dictionaries
 would put a second parser beside the typed loaders, with its own idea of how a
 section is spelled and its own copy of which manifest keys are retired — two
-descriptions of one file, which is the drift the typed loaders exist to end. A rule the dataclasses can enforce is
+descriptions of one file, which is the drift the typed loaders exist to end.
+
+`declaration.py` does parse raw, and that is the one place it is right: browsing
+has to list a `packages.yml` that will not load, which is exactly when a reader
+wants to look at it. It carries no second description either way — its section
+spellings are derived from `catalog.SECTIONS`. A rule the dataclasses can enforce is
 not restated: required fields, unknown keys, duplicate names, declared types and
 the version constraints are `catalog.py`'s, and a manifest naming a retired
 runtime-gate boolean is `machine.py`'s `RETIRED_KEYS`. What is left is the

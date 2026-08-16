@@ -22,6 +22,7 @@ import json
 import pytest
 from rich.console import Console
 
+from dotfiles import declaration
 from dotfiles import logging
 from dotfiles import output
 from dotfiles.reconcile import Lens
@@ -572,3 +573,45 @@ def test_the_subject_column_stops_widening_for_one_very_long_item(capsys: pytest
     short = next(line for line in capsys.readouterr().err.splitlines() if line.strip().startswith('matched') and 'tpm' in line)
     columns = (output.EVIDENCE_INDENT, ' ' * output.VERDICT_COLUMN, ' ', ' ' * output.SUBJECT_CEILING, ' ')
     assert short.index('here') == len(''.join(columns))
+
+
+class TestTheBrowsingPathResolvesColourTheSameWayAsEverythingElse:
+    """`declaration.py` renders with its own ANSI constants rather than through
+    rich, because browsing has to survive a `packages.yml` that will not load.
+    That is deliberate; answering the colour question differently from the rest
+    of the fleet is not.
+
+    standards/cli-design.md § "Colour resolves once, and `NO_COLOR` outranks
+    `FORCE_COLOR`": preference, then override, then detection. Checking only the
+    TTY — which this did — silently ignored both variables.
+    """
+
+    def test_no_color_wins_even_on_a_terminal(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv('NO_COLOR', '1')
+        monkeypatch.setenv('FORCE_COLOR', '1')
+
+        assert declaration.use_color() is False
+
+    def test_force_color_overrides_the_detection(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The reason it exists: a CI log or a pager renders escapes while stdout
+        is not a terminal."""
+        monkeypatch.delenv('NO_COLOR', raising=False)
+        monkeypatch.setenv('FORCE_COLOR', '1')
+
+        assert declaration.use_color() is True
+
+    def test_a_dumb_terminal_gets_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv('NO_COLOR', raising=False)
+        monkeypatch.delenv('FORCE_COLOR', raising=False)
+        monkeypatch.setenv('TERM', 'dumb')
+
+        assert declaration.use_color() is False
+
+    def test_a_pipe_gets_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Otherwise `packages list > notes` writes escape codes into the file."""
+        monkeypatch.delenv('NO_COLOR', raising=False)
+        monkeypatch.delenv('FORCE_COLOR', raising=False)
+        monkeypatch.setenv('TERM', 'xterm')
+        monkeypatch.setattr('sys.stdout', io.StringIO())
+
+        assert declaration.use_color() is False
