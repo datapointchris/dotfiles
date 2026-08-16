@@ -87,7 +87,6 @@ typeCheckingMode = "standard"
 analyzeUnannotatedFunctions = true  # or pylance stops analyzing in vscode
 
 [tool.pytest.ini_options]
-addopts = "-vv"
 minversion = "8.0"
 testpaths = ["tests"]
 markers = [
@@ -98,6 +97,7 @@ markers = [
 # So `harness` imports the same way from tests/e2e and from the root conftest,
 # rather than relying on pytest inserting the test file's directory.
 pythonpath = ["tests/e2e"]
+verbosity_assertions = 2
 
 
 [tool.refurb]
@@ -167,7 +167,7 @@ managed = [
     ["pyright", "typeCheckingMode"],
     ["pyright", "analyzeUnannotatedFunctions"],
     ["codespell", "check-filenames"],
-    ["pytest", "ini_options", "addopts"],
+    ["pytest", "ini_options", "verbosity_assertions"],
     ["pytest", "ini_options", "minversion"],
     ["pytest", "ini_options", "testpaths"],
 ]
@@ -181,6 +181,7 @@ dev = [
     "mypy>=1.10.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    "pytest-xdist>=3.5.0",
     "types-PyYAML>=6.0.12",
 ]
 

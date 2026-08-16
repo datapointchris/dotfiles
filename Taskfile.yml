@@ -101,7 +101,7 @@ tasks:
   test:
     desc: Run the test suite (no Docker, no network)
     cmds:
-      - uv run pytest
+      - uv run pytest -n auto
 
   test:e2e:
     desc: 'Raw pytest over every e2e level at once — prefer test:matrix, which orders and records them'
