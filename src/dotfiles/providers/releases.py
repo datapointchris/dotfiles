@@ -245,6 +245,25 @@ def shellcheck(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'shellcheck-{tag}.{suffix}.tar.xz', Archive.TARBALL, path=f'shellcheck-{tag}/shellcheck')
 
 
+def syncthing(tag: str, target: Target) -> ReleaseArtifact:
+    """Two archive formats from one project, and three files named `syncthing`.
+
+    macOS ships `.zip` where Linux ships `.tar.gz`, so the archive kind branches
+    with the platform rather than being a property of the tool. The stem keeps the
+    tag's `v`, unlike most entries here.
+
+    `path` is exact because the archive also carries `etc/freebsd-rc/syncthing` and
+    `etc/firewall-ufw/syncthing` — an rc script and a ufw profile. Matching on
+    basename installs a shell script as the binary.
+    """
+    system = 'macos' if target.is_darwin else 'linux'
+    arch = 'arm64' if target.is_arm else 'amd64'
+    stem = f'syncthing-{system}-{arch}-{tag}'
+    if target.is_darwin:
+        return ReleaseArtifact(f'{stem}.zip', Archive.ZIP, path=f'{stem}/syncthing')
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/syncthing')
+
+
 TENV_PROXIES = ('terraform', 'tofu', 'terragrunt', 'terramate', 'atmos', 'tf')
 """The shims tenv ships beside itself, each dispatching to the version it manages.
 
@@ -371,6 +390,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'nomad': _go_release_cli('nomad'),
     'ntfy': ntfy,
     'shellcheck': shellcheck,
+    'syncthing': syncthing,
     'tenv': tenv,
     'terraformer': terraformer,
     'terrascan': terrascan,

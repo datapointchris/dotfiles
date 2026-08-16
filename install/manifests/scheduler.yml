@@ -43,6 +43,7 @@ github_releases:
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box
+  - syncthing   # the fleet folders, including ~/.claude for the grader
 
 cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
 

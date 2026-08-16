@@ -485,11 +485,6 @@ system_packages:
     description: Execute program periodically (used in watchports alias)
 
   # Network Tools
-  - name: syncthing
-    pacman: syncthing
-    brew: syncthing
-    description: Continuous file synchronization
-
   - name: nmap
     tier: core
     apt: nmap
@@ -927,6 +922,22 @@ github_releases:
     repo: atuinsh/atuin
     description: SQLite-backed shell history capturing command, exit, cwd, and session
     tags: [cli, shell, history]
+
+  # Upstream publishes every platform this fleet has — linux-amd64, linux-arm64,
+  # macos-amd64, macos-arm64 and a macos-universal — so nothing forces the
+  # brew/pacman split atuin above documents an absolute reason for. One route
+  # everywhere, and the machines that want it name it.
+  #
+  # pacman and brew carried it before, which put it on every `workstation` tier
+  # and reachable by nothing else: the tier is the only thing a manifest can say
+  # about system packages, so a headless box at `core` had no way to ask for it
+  # and an apt platform had no key to install from. Naming it here is what lets
+  # the scheduler declare it without widening what `core` means for every
+  # minimal server in the fleet.
+  - name: syncthing
+    repo: syncthing/syncthing
+    description: Continuous file synchronization between the fleet's machines
+    tags: [cli, network, sync]
 
   # One release covers every workstation, which is why this is not a brew/pacman
   # split: ntfy publishes a universal darwin build and is absent from the pacman

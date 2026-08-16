@@ -30,6 +30,7 @@ go_tools:
 
 github_releases:
   - fzf
+  - syncthing
   - neovim
   - lazygit
   - yazi
