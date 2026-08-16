@@ -449,3 +449,47 @@ def test_the_heading_widths_are_named_only_where_the_heading_is_built() -> None:
     `section_line` and `render_verdict` hand them the geometry already.
     """
     assert files_naming(HEADING_GEOMETRY) == {'output.py'}
+
+
+def calls_named(name: str) -> list[tuple[str, int]]:
+    """Every call to `name` in the package, qualified or bare, with where it is.
+
+    Both forms, because a function is reached one way from outside its module and
+    the other from inside it — and the inside caller is the one a
+    "somewhere else does this too" invariant would otherwise miss entirely.
+    """
+    found = []
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, 'id', '')
+            if called == name:
+                found.append((path.name, node.lineno))
+    return found
+
+
+def test_one_place_asks_a_yes_or_no_question() -> None:
+    """A centralization pins the invariant it created, or it is one refactor and no
+    guarantee — standards/testing.md § "A refactor that centralizes scattered
+    handling pins the invariant it created".
+
+    That `_confirmed` works and that nothing bypasses `_confirmed` are independent
+    claims, and the tests for the first are satisfied by a fourth prompt written
+    out longhand. Three copies is where this started: three different declines,
+    one of them printing nothing at all.
+    """
+    assert [where for where, _ in calls_named('confirm')] == ['staging.py']
+
+
+def test_one_place_composes_the_retention_rule() -> None:
+    """The same claim for the other centralization in this feature.
+
+    `base_of` and `superseded` are each legitimate alone — the first names a pin
+    and the second counts a limit. Composing them and dropping the base is the
+    *rule*, and a fourth caller assembling it by hand is where three sites stopped
+    agreeing before.
+    """
+    composing = {where for where, _ in calls_named('base_of')} & {where for where, _ in calls_named('superseded')}
+
+    assert composing == {'offline_bundle.py'}
