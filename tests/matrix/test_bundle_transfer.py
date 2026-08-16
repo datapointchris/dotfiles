@@ -26,8 +26,8 @@ from relay import install_relay
 
 from dotfiles import offline_bundle
 from dotfiles import paths
+from dotfiles import publishing as status_commands
 from dotfiles import remote as transport
-from dotfiles import status as status_commands
 from dotfiles.commands import staging
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import RESOURCES

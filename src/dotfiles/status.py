@@ -31,12 +31,11 @@ outliving the problem it describes.
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 from collections.abc import Sequence
 
-from dotfiles import coordinates as axes
 from dotfiles import paths
+from dotfiles import publishing
 from dotfiles import reconcile
 from dotfiles import remote as transport
 from dotfiles import vocabulary
@@ -44,58 +43,6 @@ from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
-
-PREFIX = 'dotfiles-status-v'
-SUFFIX = '.json'
-
-
-def discriminator(trust: axes.NetworkTrust) -> str:
-    """What tells this box apart from the others sharing its manifest.
-
-    Two machines legitimately share one manifest — `macos-personal-workstation` is
-    both Macs — so a filename keyed on the manifest alone has one silently
-    overwrite the other, which is the collision standards/data.md § "In a synced
-    directory, every machine writes its own file" exists to make unreachable.
-
-    **Which answer depends on the trust coordinate, because the constraint does.**
-    On a fleet machine the hostname is not a secret and it is what a reader wants:
-    a shelf listing says `macmini` rather than eight hex characters nobody can
-    resolve. Off the fleet the hostname is an employer asset tag, so a blake2b
-    digest disambiguates and identifies nothing. Anything that is not `FLEET` gets
-    the digest, which is the direction a privacy boundary has to fail in.
-
-    A hostname carrying a hyphen also falls back, because `wrote` recovers this by
-    splitting on the last one and the manifest name it follows is full of them.
-    """
-    named = paths.machine_id()
-    if trust is axes.NetworkTrust.FLEET and '-' not in named:
-        return named
-    return hashlib.blake2b(named.encode(), digest_size=4).hexdigest()
-
-
-def filename(machine: str, when: dt.datetime, trust: axes.NetworkTrust) -> str:
-    stamped = when.astimezone(dt.UTC).strftime('%Y%m%dT%H%M%SZ')
-    return f'{PREFIX}{stamped}-{machine}-{discriminator(trust)}{SUFFIX}'
-
-
-def wrote(name: str) -> str:
-    """Which box published a status, from the discriminator in its own filename.
-
-    The discriminator is what makes two machines sharing one manifest write two
-    files instead of overwriting each other, so it is also the only thing that
-    tells their documents apart afterwards. A reader that ignores it picks
-    whichever published last, and the `machine` field cannot object because both
-    carry the same one.
-
-    A hostname on a fleet machine and a digest off it, and this returns whichever
-    is there — the two are told apart by being read rather than by being parsed,
-    since a caller wants an identity to group on and not the kind of one it is.
-
-    Empty where the name is not one of ours, which groups strangers together
-    rather than inventing an owner for each.
-    """
-    stem = name.removesuffix(SUFFIX)
-    return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
 
 
 def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
@@ -114,24 +61,8 @@ def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
     listed = transport.listed(where, directory)
     if listed is None:
         return ()
-    return tuple(sorted((name for name in listed if name.startswith(PREFIX) and name.endswith(SUFFIX)), reverse=True))
-
-
-def published_by(document: object, name: str = '') -> str:
-    """Which box a status document came from, preferring what it says over its name.
-
-    The document is authoritative and the filename is the fallback. A file can be
-    renamed, moved out of the cache, or handed over by any means a person chooses,
-    and `--against` takes whatever path it is given — so the identity has to
-    survive inside the bytes. `data.md` § "A reader of a shared directory selects
-    by the key that made the writes unique" is the rule, and it asks for the key in
-    the document as well as in the name.
-
-    The name still answers for a document published before the field existed,
-    which is every one already sitting on a shelf.
-    """
-    found = document.get(WRITTEN_BY) if isinstance(document, dict) else None
-    return str(found) if found else wrote(name)
+    named = (name for name in listed if name.startswith(publishing.PREFIX) and name.endswith(publishing.SUFFIX))
+    return tuple(sorted(named, reverse=True))
 
 
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
@@ -197,19 +128,6 @@ a resource's `--json` answers an object keyed on `resources`, not on `pending`.
 """
 
 
-WRITTEN_BY = 'written_by'
-"""Which box composed a document, where the composer knew.
-
-Keyed separately from `machine`, which is the manifest and is the field two Macs
-write identically. A consumer that has to tell one from the other — the sparse
-bundle builder is the only one — reads this, and `published_by` is how.
-
-Absent rather than empty where nothing supplied it. `check --json` and `plan
---json` are read on the machine that produced them and have no second box to be
-confused with, so a key there would be a fact with no question behind it.
-"""
-
-
 def document(
     results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check', written_by: str = ''
 ) -> dict[str, object]:
@@ -257,7 +175,7 @@ def document(
         'resources': [result.as_dict() for result in results],
     }
     if written_by:
-        composed[WRITTEN_BY] = written_by
+        composed[publishing.WRITTEN_BY] = written_by
     return composed
 
 

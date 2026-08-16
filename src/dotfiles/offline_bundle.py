@@ -30,6 +30,7 @@ from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import providers
+from dotfiles import publishing
 from dotfiles import remote as transport
 from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
@@ -459,10 +460,8 @@ def this_box() -> str:
     Empty on the same terms as `target`, and for the same reason: a half-built
     machine has to be able to unpack a bundle.
     """
-    from dotfiles import status
-
     try:
-        return status.discriminator(commands.resolved(None).machine.coordinates.network_trust)
+        return publishing.discriminator(commands.resolved(None).machine.coordinates.network_trust)
     except Refusal:
         return ''
 

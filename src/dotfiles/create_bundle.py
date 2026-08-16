@@ -441,8 +441,12 @@ def read_status(path: Path) -> dict[str, Any]:
     if not isinstance(document, dict) or document.get('version') != status.VERSION:
         raise BundleError(f'{path} is not a version {status.VERSION} status document, so its rows cannot be trusted')
 
+    # A membership test rather than a set intersection: the document is untrusted
+    # — `--against` takes any path and `status download` pulls one off a shelf —
+    # and an unhashable element makes `set()` raise `TypeError` past the refusal
+    # contract every other malformed shape in this function honours.
     scope = document.get('scope')
-    covered = sorted(set(scope) & set(publishing.PUBLISHABLE)) if isinstance(scope, list) else []
+    covered = [one for one in scope if one in publishing.PUBLISHABLE] if isinstance(scope, list) else []
     if isinstance(scope, list) and not covered:
         raise BundleError(
             f'{path} covers {", ".join(str(one) for one in scope) or "nothing"}, and a bundle is planned against '
@@ -1255,7 +1259,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / ARCHIVE_MEMBER, os_name, arch, manifest_name, built_at)
         if reported is not None and against is not None:
-            bundle.built_for = status.published_by(reported, against.name)
+            bundle.built_for = publishing.published_by(reported, against.name)
             bundle.plan_against(against, reported)
             log.info(f'Sparse: against {against.name}, which reports {len(bundle.installed)} installed tool(s)')
 

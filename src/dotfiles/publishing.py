@@ -34,6 +34,15 @@ into its own banner.
 row to drop refuses the document. `screened` is that, and the reasoning for
 per-row rather than per-document is there.
 
+**Which names those are is the trust coordinate's answer, and it is one answer
+for the whole exchange.** Off the fleet the hostname is an employer asset tag: it
+is what `written_by` deliberately reduces to a digest, and it is what a row is
+withheld for carrying. On the fleet the hostname is published on purpose, in the
+filename and in `written_by`, so screening rows against it would drop a row to
+hide a string travelling one key over — costing the builder a tool and protecting
+nothing. `identifying` is where that single decision lives. The account name is
+never published anywhere, so it is on the list on every machine.
+
 Loosening the match itself was rejected and stays rejected. Word boundaries still
 match `syncthing@archlinux`, a minimum length stops protecting `mbp`, and an
 escape hatch is a hole in the one boundary that must not have one. Withholding is
@@ -44,11 +53,14 @@ changes is only how much else goes with it.
 from __future__ import annotations
 
 import dataclasses as dc
+import datetime as dt
 import getpass
+import hashlib
 import json
 from collections.abc import Mapping
 from typing import Any
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
@@ -81,7 +93,7 @@ Measured 2026-08-15: on a box named `archlinux` running the
 `archlinux-personal-workstation` manifest, the hostname is a substring of the
 shelf key, and the gate refused its own protocol.
 
-`written_by` is `status.discriminator`, which is what tells two boxes sharing a
+`written_by` is `discriminator` above, which is what tells two boxes sharing a
 manifest apart and is *already* the trust decision this module cares about: a
 `FLEET` box publishes its hostname because the hostname is not a secret there,
 and anything else publishes a blake2b digest that identifies nothing. Excluding
@@ -92,6 +104,94 @@ where the coordinate is known rather than twice.
 
 class Unpublishable(Refusal):
     """A document that must not leave this machine, and the reason."""
+
+
+PREFIX = 'dotfiles-status-v'
+SUFFIX = '.json'
+
+WRITTEN_BY = 'written_by'
+"""Which box composed a document, where the composer knew.
+
+Keyed separately from `machine`, which is the manifest and is the field two Macs
+write identically. A consumer that has to tell one from the other — the sparse
+bundle builder is the only one — reads this, and `published_by` is how.
+
+Absent rather than empty where nothing supplied it. `check --json` and `plan
+--json` are read on the machine that produced them and have no second box to be
+confused with, so a key there would be a fact with no question behind it.
+"""
+
+
+def discriminator(trust: axes.NetworkTrust) -> str:
+    """What tells this box apart from the others sharing its manifest.
+
+    Two machines legitimately share one manifest — `macos-personal-workstation` is
+    both Macs — so a filename keyed on the manifest alone has one silently
+    overwrite the other, which is the collision standards/data.md § "In a synced
+    directory, every machine writes its own file" exists to make unreachable.
+
+    **Which answer depends on the trust coordinate, because the constraint does.**
+    On a fleet machine the hostname is not a secret and it is what a reader wants:
+    a shelf listing says `macmini` rather than eight hex characters nobody can
+    resolve. Off the fleet the hostname is an employer asset tag, so a blake2b
+    digest disambiguates and identifies nothing. Anything that is not `FLEET` gets
+    the digest, which is the direction a privacy boundary has to fail in.
+
+    A hostname carrying a hyphen also falls back, because `wrote` recovers this by
+    splitting on the last one and the manifest name it follows is full of them.
+
+    **Here rather than in `status.py`, because this is the same decision
+    `identifying` makes** — which name may leave this box — and the two disagreeing
+    is how a row came to be withheld to hide a string published one key over. It
+    also puts the naming where nothing needs `reconcile`, which is what let
+    `offline_bundle` reach it without a deferred import round a cycle.
+    """
+    named = paths.machine_id()
+    if trust is axes.NetworkTrust.FLEET and '-' not in named:
+        return named
+    return hashlib.blake2b(named.encode(), digest_size=4).hexdigest()
+
+
+def filename(machine: str, when: dt.datetime, trust: axes.NetworkTrust) -> str:
+    stamped = when.astimezone(dt.UTC).strftime('%Y%m%dT%H%M%SZ')
+    return f'{PREFIX}{stamped}-{machine}-{discriminator(trust)}{SUFFIX}'
+
+
+def wrote(name: str) -> str:
+    """Which box published a status, from the discriminator in its own filename.
+
+    The discriminator is what makes two machines sharing one manifest write two
+    files instead of overwriting each other, so it is also the only thing that
+    tells their documents apart afterwards. A reader that ignores it picks
+    whichever published last, and the `machine` field cannot object because both
+    carry the same one.
+
+    A hostname on a fleet machine and a digest off it, and this returns whichever
+    is there — the two are told apart by being read rather than by being parsed,
+    since a caller wants an identity to group on and not the kind of one it is.
+
+    Empty where the name is not one of ours, which groups strangers together
+    rather than inventing an owner for each.
+    """
+    stem = name.removesuffix(SUFFIX)
+    return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
+
+
+def published_by(document: object, name: str = '') -> str:
+    """Which box a status document came from, preferring what it says over its name.
+
+    The document is authoritative and the filename is the fallback. A file can be
+    renamed, moved out of the cache, or handed over by any means a person chooses,
+    and `--against` takes whatever path it is given — so the identity has to
+    survive inside the bytes. `data.md` § "A reader of a shared directory selects
+    by the key that made the writes unique" is the rule, and it asks for the key in
+    the document as well as in the name.
+
+    The name still answers for a document published before the field existed,
+    which is every one already sitting on a shelf.
+    """
+    found = document.get(WRITTEN_BY) if isinstance(document, dict) else None
+    return str(found) if found else wrote(name)
 
 
 def rooted(value: Any, home: str) -> Any:
@@ -118,7 +218,7 @@ def rooted(value: Any, home: str) -> Any:
     return value
 
 
-def identifying() -> dict[str, str]:
+def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
     """The names that must not leave, read off the machine this is running on.
 
     `paths.machine_id()` is the bare hostname, which on the machine this exists
@@ -127,13 +227,28 @@ def identifying() -> dict[str, str]:
     would refuse half the package names in a document and teach whoever hit it to
     pass a flag.
 
+    **The hostname is on this list only where publishing it is not already the
+    decision.** `discriminator` puts the bare hostname in `written_by` on a
+    `FLEET` box, deliberately — it is not a secret there, and a shelf listing that
+    reads `macmini` rather than eight hex characters is the point. Screening rows
+    against it as well withholds a row to hide a string the same document carries
+    one key over: the builder loses a tool it had a version for, and the name
+    ships regardless. Off the fleet the hostname is an employer asset tag,
+    `written_by` is a blake2b digest, and this is the whole reason the gate exists.
+
+    So one coordinate decides both halves. The account name is on the list
+    everywhere, because nothing ever publishes it on purpose.
+
     Separate from `redacted` so the decision is pure and the reads sit at the edge
     — standards/python.md § "Structure effects as impure -> pure -> impure". A
     gate that read the machine inside itself can only be tested against whatever
     machine the suite runs on, which is how an assertion comes to hold at a desk
     and fail on a runner whose hostname happens to contain its username.
     """
-    return {'this machine name': paths.machine_id(), 'the account this runs as': getpass.getuser()}
+    named = {'the account this runs as': getpass.getuser()}
+    if trust is axes.NetworkTrust.FLEET:
+        return named
+    return {'this machine name': paths.machine_id(), **named}
 
 
 def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
@@ -169,11 +284,18 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(problems)
 
 
-ROW_KEYS = ('others', 'findings', 'examined')
-"""The per-item lists inside a resource, which is where a relayed string lands.
+ROW_KEYS = ('others', 'findings', 'examined', 'invalid')
+"""Every per-item list `reconcile.ResourceResult.as_dict` emits.
 
-A row's `observed` is whatever the tool printed about itself and this machine
-composed none of it. Every other string in the document was written here.
+All four rather than the three that carry an `observed`, because the set has to
+be the emitter's rather than a guess about which lists can hold a relayed string.
+Three of four fails closed — a name in the fourth refuses the document where the
+same string one list over is withheld — and nothing would have said so. An
+`invalid` row is a declaration fault keyed by `section`, and a builder acts on
+none of them, so withholding one costs nothing a reader of this document wanted.
+
+A row added to `as_dict` later is *not* covered until it is named here, which is
+the allowlist direction and the same trade `PUBLISHABLE` makes one level up.
 """
 
 
@@ -206,11 +328,10 @@ def screened(document: Any, identities: Mapping[str, str]) -> Screened:
     the header, in a resource's own fields — has no row to drop and comes back as
     a problem, which is the whole document refused exactly as before.
 
-    Measured 2026-08-16, and it reverses what this module recorded on the same
-    date. The claim was that no fleet hostname occurs in a real document, and it
-    was true when it was taken: `0fd84143` moved syncthing from the system
-    packages into `github_releases` hours later, and a `github_releases` row
-    reports `--version` output where a pacman row reports a package version.
+    A tool relaying a name it got from elsewhere is what makes this necessary:
+    syncthing's version banner carries the host that built the Arch package, so
+    `syncthing@archlinux` reaches the scan on a box named `archlinux` while
+    identifying nothing about it.
     """
     if not isinstance(document, dict):
         return Screened(document, (), redacted(document, identities))
@@ -226,8 +347,15 @@ def screened(document: Any, identities: Mapping[str, str]) -> Screened:
             rows = resource.get(key)
             if not isinstance(rows, list):
                 continue
-            kept[key] = [row for row in rows if not _names_the_machine(row, identities)]
-            withheld.extend(_named(row) for row in rows if _names_the_machine(row, identities))
+            # One pass, one question per row. Asking twice and inverting the second
+            # is the same fact worked out from two places, and the two have to stay
+            # exact opposites with nothing comparing them.
+            allowed: list[Any] = []
+            refused: list[Any] = []
+            for row in rows:
+                (refused if _names_the_machine(row, identities) else allowed).append(row)
+            kept[key] = allowed
+            withheld.extend(_named(row) for row in refused)
         resources.append(kept)
 
     remaining = {**document, 'resources': resources}
@@ -240,11 +368,17 @@ def _names_the_machine(row: Any, identities: Mapping[str, str]) -> bool:
 
 
 def _named(row: Any) -> str:
-    """What to call a withheld row, which is the address a reader would look it up by."""
-    return str(row.get('item') or row.get('resource') or 'an unnamed row') if isinstance(row, dict) else 'an unnamed row'
+    """What to call a withheld row, which is the address a reader would look it up by.
+
+    `item` on the three lists that carry one and `section` on `invalid`, which is
+    keyed differently because it is a declaration fault rather than a tool.
+    """
+    if not isinstance(row, dict):
+        return 'an unnamed row'
+    return str(row.get('item') or row.get('section') or row.get('resource') or 'an unnamed row')
 
 
-def publishable(document: Any) -> Screened:
+def publishable(document: Any, trust: axes.NetworkTrust) -> Screened:
     """The document as it may travel, or a refusal naming every reason at once.
 
     Called before the bytes move rather than after, so a refusal never leaves half
@@ -257,7 +391,7 @@ def publishable(document: Any) -> Screened:
     took out. There is no arrangement of two calls that cannot get that wrong,
     which is why there is one.
     """
-    found = screened(document, identifying())
+    found = screened(document, identifying(trust))
     if found.problems:
         raise Unpublishable(
             'this document carries more than packages and versions, so it stays here:\n' + '\n'.join(found.problems),

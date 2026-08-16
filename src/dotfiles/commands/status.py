@@ -120,7 +120,7 @@ def composed(machine: str | None) -> Composed:
     # which is exactly what a builder diffs against.
     walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
     trust = session.machine.coordinates.network_trust
-    document = status_document.document(walked.results, named, began, verb='plan', written_by=status_document.discriminator(trust))
+    document = status_document.document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
     return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, trust)
 
 
@@ -152,7 +152,7 @@ def show(
     # disagree — a red issue row above a CONVERGED exit sends `status show &&
     # status upload` straight into a refusal the first command already found.
     # `remote check` derives its verdict from its faults the same way.
-    screen = publishing.screened(found.document, publishing.identifying())
+    screen = publishing.screened(found.document, publishing.identifying(found.trust))
 
     if as_json:
         emit_json(screen.document)
@@ -185,9 +185,9 @@ def upload(
     verbosity(verbose, quiet)
     where = transport.reachable()
     found = composed(machine)
-    screen = publishing.publishable(found.document)
+    screen = publishing.publishable(found.document, found.trust)
 
-    name = status_document.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
+    name = publishing.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
     directory = transport.statuses_for(where, found.machine)
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / name
@@ -223,8 +223,8 @@ def publish_after_apply(machine: str | None) -> None:
         return
     try:
         composition = composed(machine)
-        screen = publishing.publishable(composition.document)
-        name = status_document.filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
+        screen = publishing.publishable(composition.document, composition.trust)
+        name = publishing.filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
         with tempfile.TemporaryDirectory() as workspace:
             local = Path(workspace) / name
             local.write_text(json.dumps(screen.document, indent=2) + '\n')
@@ -233,6 +233,11 @@ def publish_after_apply(machine: str | None) -> None:
         warn(f'this machine converged and its status was not published: {failed}')
         return
     render_note(f'published {name}, so the next bundle can be built against it')
+    # Named here as `upload` names them. This is the path nobody is watching, so a
+    # row dropped silently is one the builder then carries a tool for with nothing
+    # anywhere recording why — degrading is right, degrading silently is not.
+    for withheld in screen.withheld:
+        render_note(f'{withheld} was left out: its version string names this machine')
 
 
 @app.command('list')

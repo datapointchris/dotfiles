@@ -99,21 +99,30 @@ class Boundary(TyperGroup):
 
         **A tool that spends 1 on a verdict owes a branch for the framework's
         default.** click exits 1 on `Abort`, which is what a prompt raises at EOF
-        and what Ctrl-D produces at a live terminal — so declining a prune by
-        answering `n` exited 3 while aborting the same prompt exited 1, and 1 is
-        `DRIFT`: pending changes, reported by a run that measured nothing and
-        changed nothing. The TTY guard beside each prompt covers the piped case and
-        stops at the keyboard.
+        and what Ctrl-D produces at a live terminal. 1 is `DRIFT` here — pending
+        changes — so a run that measured nothing and changed nothing reports the
+        machine as differing from its declaration. The TTY guard beside each prompt
+        covers the piped case and stops at the keyboard.
 
         Here rather than at each prompt because the branch is about what an exit
         code means in this tool, and there are four prompts. `typer.Abort` is
         `click.exceptions.Abort` re-exported, so naming it costs no `click` import
         — which is the seam this class is careful to protect.
+
+        **The two do not get the same sentence, because only one of them knows.**
+        `Abort` is raised by a prompt and nothing has happened yet, so `nothing was
+        done` is a fact. `KeyboardInterrupt` arrives from the keyboard at any
+        instant this group is running — after eighty downloads, after three
+        unlinks, after an upload has landed — and a boundary that claimed nothing
+        happened would be asserting something it cannot see.
         """
         try:
             return super().invoke(ctx)
         except Refusal as refused:
             raise typer.Exit(report(refused)) from refused
-        except (typer.Abort, KeyboardInterrupt) as aborted:
+        except typer.Abort as aborted:
             error('nothing was done')
             raise typer.Exit(ExitCode.ISSUE) from aborted
+        except KeyboardInterrupt as interrupted:
+            error('interrupted')
+            raise typer.Exit(ExitCode.ISSUE) from interrupted

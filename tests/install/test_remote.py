@@ -22,9 +22,11 @@ files through the tool's own loader".
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
+from relay import deny_listing
 from relay import install_relay
 from relay import install_spy
 from relay import recorded
@@ -361,20 +363,52 @@ class TestTellingAbsenceFromFailure:
         assert transport.listed(configured, '/artefacts') == ('a.tar.gz',)
 
     def test_a_directory_that_was_never_created_answers_none(self, configured: transport.Remote, server: Path) -> None:
-        """Absence is established by an ancestor that lists, which is what proves
-        the remote is reachable and leaves the missing child as the explanation."""
+        """The probe answers and the listing does not, which is absence."""
         (server / 'artefacts').mkdir()
 
         assert transport.listed(configured, '/artefacts/never-created') is None
 
-    def test_an_unreachable_remote_raises_rather_than_reading_as_absent(self, configured: transport.Remote) -> None:
-        """Nothing up to the root lists, so nothing establishes absence. The
-        refusal travels rather than a caller being told the shelf is empty."""
+    def test_a_shelf_nobody_has_published_to_is_absence_and_not_an_outage(self, configured: transport.Remote, server: Path) -> None:
+        """The ordinary state of a machine whose peer has never uploaded. An
+        ancestor lists, which proves the remote is reachable and the failure is
+        scoped to the child."""
+        (server / 'artefacts').mkdir()
+
+        assert transport.listed(configured, '/artefacts/status/box') is None
+
+    def test_a_root_nothing_has_been_published_under_refuses_and_says_so(self, configured: transport.Remote, server: Path) -> None:
+        """Indistinguishable from a denied listing, so it refuses rather than
+        guessing, and the advice names the other reading. `push` creates the tree
+        on the first upload, so this state does not persist."""
+        assert not (server / 'artefacts').exists()
+
+        with pytest.raises(transport.RemoteError) as refused:
+            transport.listed(configured, '/artefacts/status/box')
+
+        assert 'dotfiles remote check' in refused.value.advice
+        assert 'nothing has been published' in refused.value.advice
+
+    def test_a_remote_where_nothing_at_all_lists_raises_rather_than_reading_as_absent(
+        self, configured: transport.Remote, server: Path
+    ) -> None:
+        """A probe that answers while nothing under the root will list is a
+        permission boundary or a transient fault as easily as a tree nobody
+        created. Those are opposite findings, and the costly wrong answer is the
+        silent one: `--against latest` spends a full bundle over a restricted
+        network."""
+        deny_listing(server)
+
         with pytest.raises(transport.RemoteError) as refused:
             transport.listed(configured, '/artefacts/bundles/box')
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'box' in str(refused.value)
+
+    def test_a_server_that_is_gone_raises(self, configured: transport.Remote, server: Path) -> None:
+        shutil.rmtree(server)
+
+        with pytest.raises(transport.RemoteError):
+            transport.listed(configured, '/artefacts/bundles/box')
 
 
 class TestPushing:

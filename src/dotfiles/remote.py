@@ -492,28 +492,48 @@ def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
     nobody could reach". Collapsing them turns a network fault into half an hour of
     downloads with nothing on screen saying a call failed.
 
-    Absence is established by walking up. A transport reports one exit status for
-    every kind of failure, so nothing in its answer says which this was — but an
-    ancestor that lists proves the remote is reachable, which leaves the missing
-    child as the only explanation. Nothing listing all the way to the root is
-    unreachable, and that raises.
+    **Absence has to be proved, and one signal cannot prove it.** A transport
+    reports one exit status for every kind of failure, so a failed listing says
+    nothing about which this was. Two signals together do:
 
-    The walk costs extra round trips only on the failure path. A directory that
-    lists answers in one call, which is every ordinary run.
+    - **An ancestor that lists** proves the remote is reachable *and* that the
+      failure is scoped to the child, which leaves the missing child as the
+      explanation. This is the shelf nobody has published to yet — the ordinary
+      state of a machine whose peer has never uploaded.
+    - **A failing `probe`** proves the server itself is not answering, and `probe`
+      is required precisely because every other operation names a path. That
+      raises.
+
+    **Anything else raises, and that is a choice between two wrong answers rather
+    than a solved problem.** A remote answering its probe while *nothing* under
+    the root will list is a permission boundary or a transient fault as easily as
+    a tree nobody has created yet, and one exit status cannot separate them. The
+    two costs are not equal: a wrong "absent" makes `--against latest` spend a
+    full bundle over the one network where that is expensive, silently, while a
+    wrong refusal prints a sentence naming the path. So the ambiguity refuses, and
+    the advice names both readings rather than picking one.
+
+    Extra round trips happen only on the failure path. A directory that lists
+    answers in one call, which is every ordinary run.
     """
     ran = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
     if ran.ok:
         return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
-    if _reachable_above(remote, directory):
+    if _lists_above(remote, directory):
         return None
-    raise RemoteError(f'{remote.transport.program} could not list {directory}\n{ran.transcript.strip()}', code=ExitCode.ISSUE)
+    raise RemoteError(
+        f'{remote.transport.program} could not list {directory}, and nothing under {remote.root} would list either\n'
+        f'{ran.transcript.strip()}',
+        code=ExitCode.ISSUE,
+        advice='a remote nothing has been published to yet answers this way too — check it with: dotfiles remote check',
+    )
 
 
-def _reachable_above(remote: Remote, directory: str) -> bool:
-    """Whether any ancestor of a directory lists, which is what proves it is merely absent."""
+def _lists_above(remote: Remote, directory: str) -> bool:
+    """Whether any ancestor lists, up to and including the configured root."""
     root = remote.root.rstrip('/')
     walking = directory.rstrip('/')
-    while walking != root and '/' in walking.removeprefix(root):
+    while '/' in walking and walking != root:
         walking = walking.rsplit('/', 1)[0]
         if _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
             return True

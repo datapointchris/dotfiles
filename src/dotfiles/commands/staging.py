@@ -30,6 +30,7 @@ from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import providers
+from dotfiles import publishing
 from dotfiles import reconcile
 from dotfiles import remote as transport
 from dotfiles import status as status_document
@@ -233,13 +234,13 @@ def _status_for(named: str | None, machine: str) -> Path | None:
     # which of them a bundle is for, so picking the most recent would diff one
     # Mac's plan against the other's installed set and report the result as
     # measured.
-    published = {status_document.wrote(name) for name in listed}
+    published = {publishing.wrote(name) for name in listed}
     if len(published) > 1:
         # Every candidate with the box that wrote it, rather than the newest
         # pre-filled. Pasting one made the refusal's own remedy the route into the
         # ambiguity it had just declined to resolve — `help.md` § "An example says
         # what it is for, not just what to type".
-        newest_per_box = {status_document.wrote(name): name for name in reversed(listed)}
+        newest_per_box = {publishing.wrote(name): name for name in reversed(listed)}
         offered = '\n'.join(f'  {box or "an unrecognised box"}: --status {name}' for box, name in sorted(newest_per_box.items()))
         raise typer.BadParameter(
             f'--against latest: {len(published)} machines share the {machine} manifest and have published, '

@@ -25,7 +25,7 @@ from relay import install_relay
 from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
-from dotfiles import status as status_commands
+from dotfiles import publishing as status_commands
 from dotfiles import vocabulary
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
@@ -178,14 +178,20 @@ class TestTheGate:
     def test_the_names_it_refuses_are_this_machine_s(self) -> None:
         """The half the chosen names above cannot cover: that what reaches the gate
         in production is the hostname and the account rather than two constants."""
-        assert publishing.identifying() == {
+        assert publishing.identifying(axes.NetworkTrust.NONFLEET) == {
             'this machine name': paths.machine_id(),
             'the account this runs as': getpass.getuser(),
         }
 
+    def test_a_fleet_box_does_not_screen_for_a_name_it_publishes_on_purpose(self) -> None:
+        """`written_by` carries the bare hostname on `FLEET`, deliberately. Screening
+        rows against it too withholds a row to hide a string travelling one key
+        over — the builder loses a tool and the name ships regardless."""
+        assert publishing.identifying(axes.NetworkTrust.FLEET) == {'the account this runs as': getpass.getuser()}
+
     def test_the_refusal_carries_an_issue_and_names_what_would_have_been_sent(self) -> None:
         with pytest.raises(publishing.Unpublishable) as refused:
-            publishing.publishable({'scope': ['identity'], 'resources': []})
+            publishing.publishable({'scope': ['identity'], 'resources': []}, axes.NetworkTrust.NONFLEET)
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'dotfiles status show --json' in refused.value.advice
@@ -247,7 +253,7 @@ class TestWithholdingARowRatherThanRefusingTheDocument:
         use the machine the suite is running on."""
         banner = f'syncthing v2.1.3 syncthing@{paths.machine_id()}'
 
-        screen = publishing.publishable(relayed(banner))
+        screen = publishing.publishable(relayed(banner), axes.NetworkTrust.NONFLEET)
 
         assert screen.withheld == ('ghrelease/syncthing',)
         assert screen.problems == ()
@@ -439,7 +445,7 @@ def test_a_document_the_gate_would_refuse_exits_issue(sandbox: Sandbox, cli: Cal
     """`status show && status upload` walked into a refusal the first command had
     already measured. `remote check` derives its verdict from its faults the same
     way, and this is the one finding this verb produces."""
-    monkeypatch.setattr(publishing, 'identifying', lambda: {'this machine name': 'packages'})
+    monkeypatch.setattr(publishing, 'identifying', lambda _trust: {'this machine name': 'packages'})
 
     ran = cli('status', 'show', catch_exceptions=True)
 
