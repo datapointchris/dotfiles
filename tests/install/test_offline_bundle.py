@@ -13,6 +13,7 @@ that what `bundle create` writes has that shape.
 
 from __future__ import annotations
 
+import json
 import tarfile
 from pathlib import Path
 
@@ -21,7 +22,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
-from dotfiles import paths
+from dotfiles import providers
 from dotfiles import reconcile
 from dotfiles import resolve
 from dotfiles.providers import bundle
@@ -52,17 +53,34 @@ def home(tmp_path, monkeypatch) -> Path:
     return root
 
 
+BUNDLE = 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
+
+MACHINE_NAME = 'box'
+"""What these archives say they were built for, so staging is not a foreign one.
+
+Passed explicitly rather than resolved, because `stage` takes the name it
+compares against — a test that let it resolve the real machine would refuse or
+allow depending on whose desk it ran at.
+"""
+
+
 @pytest.fixture
-def staged(tmp_path, monkeypatch) -> Path:
-    """Where a bundle lands, deliberately not named `installers`.
+def staging(tmp_path, monkeypatch) -> Path:
+    """The directory staged bundles land *in*, deliberately not named `installers`.
 
     `$DOTFILES_BUNDLE` is allowed to point anywhere, and extracting the archive's
     `installers` member in place would only ever land on a directory of that
     name — which is the bug this fixture exists to catch rather than describe.
     """
     destination = tmp_path / 'elsewhere' / 'staging'
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', destination)
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(destination))
     return destination
+
+
+@pytest.fixture
+def staged(staging) -> Path:
+    """One bundle inside it, for a test that only needs there to be one."""
+    return staging / BUNDLE
 
 
 def test_the_newest_archive_in_a_directory_wins(tmp_path) -> None:
@@ -73,16 +91,18 @@ def test_the_newest_archive_in_a_directory_wins(tmp_path) -> None:
     assert offline_bundle.newest(tmp_path) == latest
 
 
-def test_the_first_directory_holding_any_wins(tmp_path, home) -> None:
-    """A tarball just copied next to the checkout beats a stale one in $HOME.
+def test_the_newest_archive_across_every_directory_wins(tmp_path, home) -> None:
+    """Ranked across all of them, not the first that holds any.
 
-    Newest-across-both would pick the older file here, which is the answer a
-    machine gets after its second rebuild in a year.
+    A download writes into the cache, which is a third place a tarball
+    legitimately sits — and no first-directory-wins order can rank it against a
+    copy beside the checkout. The stamp is to the second, so the comparison it
+    replaces that order with is unambiguous.
     """
-    beside_the_checkout = archive(tmp_path, 'dotfiles-offline-v20260101-wsl-linux-x86_64.tar.gz')
-    archive(home, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz')
+    archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz')
+    latest = archive(home, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz')
 
-    assert offline_bundle.newest(tmp_path, home) == beside_the_checkout
+    assert offline_bundle.newest(tmp_path, home) == latest
 
 
 def test_no_archive_anywhere_is_not_an_error(tmp_path, home) -> None:
@@ -90,39 +110,108 @@ def test_no_archive_anywhere_is_not_an_error(tmp_path, home) -> None:
     assert offline_bundle.newest(tmp_path, home) is None
 
 
-def test_staging_lands_on_the_bundle_dir_whatever_it_is_called(tmp_path, staged) -> None:
-    tarball = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+def test_a_peer_s_archive_does_not_outrank_this_machine_s(tmp_path) -> None:
+    """`bundle download --machine X` writes a peer's archive into the same cache.
+    Unfiltered it sorts newest, wins here, and is refused by `stage` a line later
+    — ending the run with this machine's own bundle in the same directory and
+    nothing able to reach it."""
+    mine = archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz')
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz')
 
-    assert offline_bundle.stage(tarball) == staged
-    assert (staged / bundle.MANIFEST).is_file()
-    assert (staged / 'bin' / 'uv').read_text() == 'uv'
+    assert offline_bundle.newest(tmp_path, machine=MACHINE_NAME) == mine
+    assert offline_bundle.newest(tmp_path) != mine, 'unfiltered, the peer still wins'
 
 
-def test_a_second_bundle_refreshes_rather_than_replaces(tmp_path, staged) -> None:
-    """What `tar -x` over the top does, and what the bundle README promises.
+def test_a_hand_carried_archive_still_stages(tmp_path) -> None:
+    """A name this tool did not write answers `''` for its manifest, and passes.
+    `stage`'s own `bundle.json` check is the backstop, and refusing here would
+    make a tarball someone copied across unusable."""
+    stranger = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-handmade.tar.gz')
 
-    Replacing would delete the wheels a half-finished run still needs, on the one
+    assert offline_bundle.newest(tmp_path, machine=MACHINE_NAME) == stranger
+
+
+def test_staging_lands_in_a_directory_named_after_the_archive(tmp_path, staging) -> None:
+    """Named after the archive, so a machine can say which bundle a file came from.
+
+    The archive's single member is `installers` whatever the tarball is called, so
+    extracting in place would land on a directory of that name every time.
+    """
+    tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+
+    landed = offline_bundle.stage(tarball, MACHINE_NAME, '')
+
+    assert landed == staging / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64'
+    assert (landed / bundle.MANIFEST).is_file()
+    assert (landed / 'bin' / 'uv').read_text() == 'uv'
+
+
+def test_a_second_bundle_stacks_rather_than_merging(tmp_path, staging) -> None:
+    """The newer bundle answers for what it carries; the older still answers for
+    the rest.
+
+    Merging into one tree refreshes the files and *replaces* `manifest.txt`, which
+    leaves everything the first bundle staged on disk and unlisted — and the
+    manifest is the only door in, so those tools become unmeasurable on the one
     machine that cannot download them again.
     """
-    first = archive(tmp_path, 'dotfiles-offline-v20260101-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'old', 'wheels/one.whl': 'kept'})
-    second = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
+    first = archive(
+        tmp_path,
+        'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz',
+        files={'bin/uv': 'old', 'wheels/one.whl': 'kept'},
+    )
+    second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
 
-    offline_bundle.stage(first)
-    offline_bundle.stage(second)
+    offline_bundle.stage(first, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
 
-    assert (staged / 'bin' / 'uv').read_text() == 'new'
-    assert (staged / 'wheels' / 'one.whl').read_text() == 'kept'
+    assert providers.bundle_file('bin/uv').read_text() == 'new'
+    assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
+    assert len(providers.staged_bundles()) == 2
 
 
-def test_a_tarball_without_a_manifest_is_refused(tmp_path, staged) -> None:
+def test_the_older_bundle_still_answers_for_what_the_newer_left_out(tmp_path, staging) -> None:
+    """A sparse bundle is exactly this: it carries what changed and nothing else."""
+    full = archive(
+        tmp_path,
+        'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz',
+        files={'binaries/fd': 'fd-old', 'binaries/bat': 'bat-1'},
+    )
+    sparse = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64-sparse.tar.gz', files={'binaries/fd': 'fd-new'})
+
+    offline_bundle.stage(full, MACHINE_NAME, '')
+    offline_bundle.stage(sparse, MACHINE_NAME, '')
+
+    located = providers.locate('binaries/fd')
+    assert located is not None
+    assert located.path.read_text() == 'fd-new'
+    assert located.bundle.endswith('-sparse')
+    assert providers.bundle_file('binaries/bat').read_text() == 'bat-1'
+
+
+def test_re_staging_one_archive_leaves_the_others_alone(tmp_path, staging) -> None:
+    """An interrupted stage can be repeated. Replacing the whole staging directory
+    would take the wheels a half-finished run still needs."""
+    first = archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-wsl-linux-x86_64.tar.gz', files={'wheels/one.whl': 'kept'})
+    second = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'new'})
+
+    offline_bundle.stage(first, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
+    offline_bundle.stage(second, MACHINE_NAME, '')
+
+    assert providers.bundle_file('wheels/one.whl').read_text() == 'kept'
+    assert len(providers.staged_bundles()) == 2
+
+
+def test_a_tarball_without_a_manifest_is_refused(tmp_path, staging) -> None:
     """Named here, where the archive is in hand, rather than as every tool in the
     plan turning up missing several stages later."""
-    tarball = archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', manifest=False)
+    tarball = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', manifest=False)
 
-    with pytest.raises(offline_bundle.StagingError, match=bundle.MANIFEST):
-        offline_bundle.stage(tarball)
+    with pytest.raises(offline_bundle.StagingError, match=providers.MANIFEST):
+        offline_bundle.stage(tarball, MACHINE_NAME, '')
 
-    assert not staged.exists()
+    assert providers.staged_bundles() == ()
 
 
 def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
@@ -130,16 +219,16 @@ def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
     tarball.write_text('this is not a tarball')
 
     with pytest.raises(offline_bundle.StagingError, match='not a readable archive'):
-        offline_bundle.stage(tarball)
+        offline_bundle.stage(tarball, MACHINE_NAME, '')
 
 
-def test_apply_stages_the_archive_it_finds(tmp_path, home, staged, monkeypatch) -> None:
+def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch) -> None:
     """The behaviour the bootstrap would otherwise supply by running the apply itself."""
     monkeypatch.chdir(tmp_path)
-    archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
-    assert reconcile._stage_bundle() is None
-    assert (staged / 'bin' / 'uv').read_text() == 'uv'
+    assert reconcile._stage_bundle('', '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'uv'
 
 
 def test_apply_leaves_a_staged_bundle_alone(tmp_path, home, staged, monkeypatch) -> None:
@@ -150,24 +239,48 @@ def test_apply_leaves_a_staged_bundle_alone(tmp_path, home, staged, monkeypatch)
     (staged / bundle.MANIFEST).write_text('what the interrupted run staged\n')
     archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz')
 
-    assert reconcile._stage_bundle() is None
+    assert reconcile._stage_bundle('', '') is None
     assert (staged / bundle.MANIFEST).read_text() == 'what the interrupted run staged\n'
 
 
 def test_apply_refuses_with_no_archive_to_stage(tmp_path, home, staged, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    assert reconcile._stage_bundle() is ExitCode.ISSUE
+    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
 
 
-def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staged, monkeypatch) -> None:
+def test_apply_skips_a_peer_s_archive_and_stages_this_machine_s(tmp_path, home, staging, monkeypatch) -> None:
+    """The gate takes the machine the caller resolved. Unfiltered, the peer's
+    archive was picked and then refused, ending the run."""
+    monkeypatch.chdir(tmp_path)
+    archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'mine'})
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'mine'
+
+
+def test_apply_refuses_a_peer_s_bundle_already_in_the_stack(tmp_path, home, staging, monkeypatch) -> None:
+    """`providers.locate` reads across the whole stack, so a peer's bundle
+    underneath a good one still supplies files. `stage` refuses at the moment of
+    unpacking and cannot see what was already there."""
+    monkeypatch.chdir(tmp_path)
+    theirs = staging / 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64'
+    theirs.mkdir(parents=True)
+    (theirs / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (theirs / bundle.DOCUMENT).write_text('{"machine": "other-box", "completeness": "full"}\n')
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
+
+
+def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monkeypatch) -> None:
     """A broken bundle stops the run rather than starting one that will fail as
     every tool in the plan turning up missing."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
+    (tmp_path / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
 
-    assert reconcile._stage_bundle() is ExitCode.ISSUE
-    assert not staged.exists()
+    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
+    assert providers.staged_bundles() == ()
 
 
 class TestSayingWhichBundle:
@@ -184,12 +297,12 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\ncargo|ripgrep|15.2.0|rg.tar.gz\n')
 
-        assert reconcile._stage_bundle() is None
+        assert reconcile._stage_bundle('', '') is None
 
         # Newlines stripped before matching: Rich wraps a long path across lines, and
         # the assertion is about what the line says rather than where it breaks.
         said = capsys.readouterr().err.replace('\n', '')
-        assert str(staged) in said
+        assert staged.name in said, 'the headline names which bundle, not the directory they sit in'
         assert 'already staged' in said
         assert '2 file(s)' in said
 
@@ -198,7 +311,7 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('wheel|rich|14.0.0|rich.whl\nbinary|fd|10.2.0|fd\n')
 
-        reconcile._stage_bundle()
+        reconcile._stage_bundle('', '')
 
         assert 'binary 1, wheel 1' in capsys.readouterr().err
 
@@ -206,7 +319,7 @@ class TestSayingWhichBundle:
         monkeypatch.chdir(tmp_path)
         archive(tmp_path, 'dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz')
 
-        assert reconcile._stage_bundle() is None
+        assert reconcile._stage_bundle('', '') is None
 
         # Whitespace-normalised: the row carries an absolute staging path, so where
         # the renderer folds the line moves with the terminal width and with the
@@ -214,25 +327,85 @@ class TestSayingWhichBundle:
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
 
-    def test_a_directory_with_no_manifest_ends_the_run_rather_than_starting_it(self, staged, capsys) -> None:
+    def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, home, capsys, monkeypatch, tmp_path) -> None:
         """Every provider reads the bundle through the manifest, so without one the
-        run installs nothing from anywhere and reports each tool as its own mystery."""
+        run installs nothing from anywhere and reports each tool as its own mystery.
+
+        "There is none" would be true and useless here: the reader has a staged
+        directory in front of them and would go looking for a tarball they already
+        unpacked.
+
+        The working directory is moved because `newest` searches it, and `bundle
+        create` writes its output to the checkout root — so a real build left in the
+        tree makes this stage that bundle and report success. That is the whole
+        failure: the test passed for as long as nobody had built one.
+        """
+        monkeypatch.chdir(tmp_path)
         staged.mkdir(parents=True)
 
-        assert reconcile._stage_bundle() is ExitCode.ISSUE
-        assert bundle.MANIFEST in capsys.readouterr().err
+        assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
+        said = capsys.readouterr().err.replace('\n', '')
+        assert providers.MANIFEST in said
+        assert staged.name in said
 
-    def test_the_build_date_and_platform_are_read_off_the_header(self, staged) -> None:
+    def test_the_build_time_and_platform_are_read_off_the_document(self, staged) -> None:
+        """`manifest.txt` carries rows and `bundle.json` carries the bundle, so a
+        reader asking when it was built never parses a row and vice versa."""
         staged.mkdir(parents=True)
-        (staged / bundle.MANIFEST).write_text(
-            '# Dotfiles Offline Bundle\n# Created: Thu Aug 13 00:51:54 2026\n# Platform: linux/x86_64\nbinary|fd|10.2.0|fd\n'
+        (staged / bundle.MANIFEST).write_text('# Dotfiles Offline Bundle\nbinary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(
+            json.dumps({'version': 1, 'created': '2026-08-13T00:51:54Z', 'machine': 'wsl', 'platform': 'linux/x86_64'})
         )
 
         described = offline_bundle.describe()
 
-        assert described.built == 'Thu Aug 13 00:51:54 2026'
+        assert described.built == '2026-08-13T00:51:54Z'
         assert described.platform == 'linux/x86_64'
-        assert len(described.carried) == 1, 'the header lines must not be read as rows'
+        assert described.description.machine == 'wsl'
+        assert len(described.carried) == 1, 'the comment line must not be read as a row'
+
+    def test_a_bundle_with_no_document_still_installs_from_its_rows(self, staged) -> None:
+        """A bundle that cannot describe itself is still a bundle. Paired with the
+        positive fact, because an empty description is also what a crash leaves."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+        described = offline_bundle.describe()
+
+        assert described.readable is True
+        assert len(described.carried) == 1
+        assert described.built == ''
+        assert described.description.completeness is bundle.Completeness.FULL
+
+    def test_an_unreadable_document_reads_as_full_rather_than_sparse(self, staged) -> None:
+        """The conservative fallthrough. `FULL` makes an absent entry a reported
+        gap; `SPARSE` would pass it silently, so a corrupt document must not be the
+        thing that quietens a bundle."""
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text('{not json')
+
+        assert offline_bundle.describe().description.completeness is bundle.Completeness.FULL
+
+    def test_a_completeness_this_version_has_never_heard_of_reads_as_full(self, staged) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(json.dumps({'completeness': 'partial-ish'}))
+
+        assert offline_bundle.describe().description.completeness is bundle.Completeness.FULL
+
+    def test_a_sparse_document_carries_what_it_measured_and_left_out(self, staged) -> None:
+        staged.mkdir(parents=True)
+        (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staged / bundle.DOCUMENT).write_text(
+            json.dumps({'completeness': 'sparse', 'built_from': 'a-status.json', 'current': {'binary/bat': 'v0.26.0'}})
+        )
+
+        described = offline_bundle.describe().description
+
+        assert described.sparse is True
+        assert described.built_from == 'a-status.json'
+        assert described.current == {'binary/bat': 'v0.26.0'}
 
 
 class TestCoverage:
@@ -263,3 +436,134 @@ class TestCoverage:
         found = offline_bundle.coverage(offline_bundle.describe(), self._plan())
 
         assert 'task' in found.covered
+
+
+class TestRefusingAForeignBundle:
+    """A bundle built for another machine is refused before anything is moved.
+
+    `bundle download --machine X` writes into the same cache `newest` ranks, so
+    fetching another box's bundle to look at it is one command away from
+    `apply --offline` staging it. That hazard did not exist while a bundle could
+    only be carried in by hand, and `bundle.json` is the first thing that knows
+    the target.
+    """
+
+    def built_for(self, at: Path, machine: str, name: str = BUNDLE) -> Path:
+        staging = at / f'{name}-contents' / 'installers'
+        staging.mkdir(parents=True)
+        (staging / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        (staging / bundle.DOCUMENT).write_text(json.dumps(bundle.Description(machine=machine).as_dict()))
+        tarball = at / f'{name}.tar.gz'
+        with tarfile.open(tarball, 'w:gz') as packed:
+            packed.add(staging, arcname='installers')
+        return tarball
+
+    def test_a_bundle_for_another_machine_is_refused_and_names_both(self, tmp_path, staging) -> None:
+        tarball = self.built_for(tmp_path, 'windows-work-workstation')
+
+        with pytest.raises(offline_bundle.StagingError) as refused:
+            offline_bundle.stage(tarball, 'wsl-work-workstation', '')
+
+        assert 'windows-work-workstation' in str(refused.value)
+        assert 'wsl-work-workstation' in str(refused.value)
+
+    def test_nothing_is_left_behind_for_the_next_run_to_pick_up(self, tmp_path, staging) -> None:
+        """Refused before the move, so a rejected bundle does not become the one
+        `providers.staged_bundles` reads first next time."""
+        tarball = self.built_for(tmp_path, 'windows-work-workstation')
+
+        with pytest.raises(offline_bundle.StagingError):
+            offline_bundle.stage(tarball, 'wsl-work-workstation', '')
+
+        assert providers.staged_bundles() == ()
+        assert list(staging.iterdir()) == [] if staging.is_dir() else True
+
+    def test_the_machine_it_was_built_for_stages_it(self, tmp_path, staging) -> None:
+        """Paired with the refusal, which a `stage` that refused everything would
+        satisfy."""
+        tarball = self.built_for(tmp_path, 'wsl-work-workstation')
+
+        landed = offline_bundle.stage(tarball, 'wsl-work-workstation', '')
+
+        assert (landed / bundle.MANIFEST).is_file()
+
+    def test_a_bundle_that_names_no_machine_stages(self, tmp_path, staging) -> None:
+        """A bundle that does not say is not evidence of a mismatch. Refusing on
+        silence would make every archive built before `bundle.json` unusable."""
+        tarball = self.built_for(tmp_path, '')
+
+        assert offline_bundle.stage(tarball, 'wsl-work-workstation', '').is_dir()
+
+    def test_a_machine_that_cannot_name_itself_stages_anything(self, tmp_path, staging) -> None:
+        """The state part way through a rebuild, and the one that most needs to
+        unpack a bundle — so the check is what would stop the machine being built.
+        """
+        tarball = self.built_for(tmp_path, 'windows-work-workstation')
+
+        assert offline_bundle.stage(tarball, '', '').is_dir()
+
+
+class TestRefusingAPremiseFromTheOtherBox:
+    """The manifest cannot answer this, which is the whole reason it exists.
+
+    Two Macs both declare `macos-personal-workstation`, so a sparse bundle
+    planned against one of them passes the machine check on the other — and its
+    omissions are recorded as measured about a box that never reported.
+    """
+
+    def planned_against(self, at: Path, box: str, *, sparse: bool = True) -> Path:
+        staging = at / 'contents' / 'installers'
+        staging.mkdir(parents=True)
+        (staging / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        described = bundle.Description(
+            machine='macos-personal-workstation',
+            completeness=bundle.Completeness.SPARSE if sparse else bundle.Completeness.FULL,
+            built_from='a-status.json' if sparse else '',
+            built_for=box,
+        )
+        (staging / bundle.DOCUMENT).write_text(json.dumps(described.as_dict()))
+        tarball = at / f'{BUNDLE}.tar.gz'
+        with tarfile.open(tarball, 'w:gz') as packed:
+            packed.add(staging, arcname='installers')
+        return tarball
+
+    def test_a_bundle_planned_against_the_twin_is_refused_and_names_both(self, tmp_path, staging) -> None:
+        tarball = self.planned_against(tmp_path, 'mbp')
+
+        with pytest.raises(offline_bundle.StagingError) as refused:
+            offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini')
+
+        assert 'mbp' in str(refused.value)
+        assert 'macmini' in str(refused.value)
+
+    def test_a_bundle_planned_against_this_box_stages(self, tmp_path, staging) -> None:
+        tarball = self.planned_against(tmp_path, 'macmini')
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
+
+    def test_a_full_bundle_carries_no_premise_and_is_never_refused(self, tmp_path, staging) -> None:
+        """Only a sparse bundle claims anything about what the target already had,
+        so only a sparse bundle can be wrong about which target."""
+        tarball = self.planned_against(tmp_path, '', sparse=False)
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
+
+    def test_a_box_that_cannot_name_itself_stages_anything(self, tmp_path, staging) -> None:
+        """Same terms as the machine check above: a half-built box has to be able
+        to unpack a bundle, or the guard is what stops the rebuild."""
+        tarball = self.planned_against(tmp_path, 'mbp')
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', '').is_dir()
+
+    def test_the_resolver_answers_empty_rather_than_raising_on_a_bare_machine(self, home, monkeypatch) -> None:
+        """What feeds the case above. `commands.resolved` refuses a machine nothing
+        names, and that refusal must not reach the caller as a failed stage.
+
+        `$MACHINE` and `~/.env` both, because the resolver reads the second where
+        the first is unset — and a test that blanked only the variable would pass
+        by reading whatever machine the suite happened to run on.
+        """
+        monkeypatch.delenv('MACHINE', raising=False)
+        assert not (home / '.env').exists()
+
+        assert offline_bundle.target() == ''

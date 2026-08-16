@@ -37,11 +37,13 @@ from dotfiles.coordinates import Target
 from dotfiles.output import err_console
 from dotfiles.output import warn
 from dotfiles.providers import Kind
+from dotfiles.providers import Located
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import local_dir
+from dotfiles.providers import locate
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
 from dotfiles.providers.releases import Archive
@@ -50,7 +52,7 @@ from dotfiles.providers.releases import ReleaseArtifact
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
-__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'missing_companions', 'resolve_tag', 'unresolved']
+__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'locate', 'missing_companions', 'resolve_tag', 'unresolved']
 
 
 def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
@@ -96,7 +98,7 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         if not placed.ok:
             return placed
 
-    missing = _companions(entry.name, tag, offline=offline)
+    missing = _companions(entry.name, tag, locate(f'{BUNDLE_BINARIES}/{asset.name}'), offline=offline)
     if missing:
         return Result(False, missing, kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED)
 
@@ -133,14 +135,21 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
 
 
 def bundle_version(name: str) -> str | None:
-    """What version of a tool an offline bundle staged, from its manifest.
-
-    Every category the bundler stages a named tool under, not just this
-    provider's: a tool declared here on one machine is a cargo package or a Go
-    tool on another, and the question being asked is what the bundle has.
-    """
-    row = bundle.staged(name, 'binary', 'extra', 'go-binary', 'cargo', 'script')
+    """What version of a tool an offline bundle staged, from its manifest."""
+    row = bundle.staged(name, *bundle.CATEGORIES)
     return row.version if row and row.version else None
+
+
+def published_version(name: str) -> str | None:
+    """What the staged stack says upstream published, newest bundle answering first.
+
+    Both halves of one bundle before either half of the next, which is what keeps
+    the answer ordered by bundle age rather than by which shape it arrived in.
+    Separate from `bundle_version` because that one must name a tag whose asset is
+    on disk — `resolve_tag` builds an asset name out of it — and a version a sparse
+    bundle only measured has no file by definition.
+    """
+    return bundle.published(name, *bundle.CATEGORIES)
 
 
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
@@ -150,7 +159,7 @@ def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
     stage for an offline machine — and must report the same reason this would.
     """
     if offline:
-        return f'the offline bundle at {paths.BUNDLE_DIR} stages no version of {entry.name}'
+        return f'no bundle staged at {paths.staging_dir()} carries a version of {entry.name}'
     if entry.version:
         return f'pinned to {entry.version}, which {entry.repo} publishes no release for'
     return f'{entry.repo} did not answer with a release'
@@ -176,9 +185,9 @@ def _stage(download: Path, url: str, repo: str, tag: str, asset_name: str, *, of
     was built, and re-downloading it would spend a request to arrive at the same
     bytes.
     """
-    cached = bundle_file(BUNDLE_BINARIES) / asset_name
-    if cached.is_file():
-        shutil.copy2(cached, download)
+    cached = locate(f'{BUNDLE_BINARIES}/{asset_name}')
+    if cached is not None and cached.path.is_file():
+        shutil.copy2(cached.path, download)
         return Staged.BUNDLE
 
     if offline:
@@ -193,8 +202,15 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
     exceptions are declared per entry in `packages.yml` and measured against live
     releases by `tests/install/test_release_urls.py`, so an entry claiming one it
     no longer needs fails there rather than quietly skipping verification here.
+
+    **The checksums come from the bundle that staged the asset, not the newest one
+    holding a `checksums.txt`.** Several bundles can be staged at once, and a
+    digest is published for one build of one release — pairing a newer bundle's
+    file with an older bundle's binary fails verification on a machine where
+    nothing is wrong.
     """
-    checksums = bundle_file(BUNDLE_CHECKSUMS)
+    staged_asset = locate(f'{BUNDLE_BINARIES}/{asset_name}')
+    checksums = staged_asset.beside(BUNDLE_CHECKSUMS) if staged_asset else bundle_file(BUNDLE_CHECKSUMS)
     if offline:
         # No fallthrough to the network: it is unreachable by definition, and
         # `verify_release_checksum` would spend its timeout arriving at
@@ -378,7 +394,7 @@ def missing_companions(name: str) -> tuple[str, ...]:
     return tuple(companion.name for companion in COMPANIONS.get(name, ()) if not (bin_dir() / companion.name).exists())
 
 
-def _companions(name: str, tag: str, *, offline: bool) -> str:
+def _companions(name: str, tag: str, staged_asset: Located | None, *, offline: bool) -> str:
     """Fetch the files that ship with a tool without being in its release.
 
     '' when there is nothing to do or it was done. A companion is not optional,
@@ -388,14 +404,22 @@ def _companions(name: str, tag: str, *, offline: bool) -> str:
     and a companion is fetched at that binary's tag so the two are a matched pair.
     Whether one is *missing* is `missing_companions`, and it belongs to the
     observation rather than to this.
+
+    `staged_asset` is the bundle the binary came out of, and the companion is
+    taken from beside it — the same pinning `_verify` does for a checksum, for the
+    same reason. A companion filename carries no version, so an unpinned lookup
+    returns whichever staged bundle is newest: a binary from an older full bundle
+    would take `fzf-tmux` from a newer sparse one, which is the mismatched pair
+    the paragraph above says must not happen. None where the binary came off the
+    network, and the companion follows it there.
     """
     for companion in COMPANIONS.get(name, ()):
         destination = bin_dir() / companion.name
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         url = companion.url(tag)
-        cached = bundle_file(BUNDLE_BINARIES) / companion.name
-        if cached.is_file():
+        cached = staged_asset.beside(f'{BUNDLE_BINARIES}/{companion.name}') if staged_asset else None
+        if cached is not None and cached.is_file():
             shutil.copy2(cached, destination)
         elif offline:
             return f'{companion.name} is not in the offline bundle and cannot be downloaded'

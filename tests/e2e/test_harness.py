@@ -124,9 +124,7 @@ def test_a_file_with_the_landed_column_derives_the_cdn_instead(monkeypatch: pyte
     written = network.render(
         machines.load('wsl-work-workstation'),
         network.Measurement((asset, clone), ()),
-        host='h',
         when='w',
-        user='u',
         system='s',
     )
 

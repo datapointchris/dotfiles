@@ -619,19 +619,18 @@ def test_a_reconcile_verb_files_a_record_report_can_read_back(verb: str, cli: Ca
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('verb', ['prune'], ids=['prune'])
-def test_an_unbuilt_bundle_verb_refuses_rather_than_answering_nothing(verb: str, cli: Callable[..., Invocation]) -> None:
-    """Exit 3 and a sentence saying what it would do, which is the only honest
-    answer a stub can give — exiting 0 would report a machine as checked by a verb
-    that checked nothing.
+def test_pruning_a_machine_with_nothing_staged_converges(cli: Callable[..., Invocation]) -> None:
+    """A sweep that found nothing past the limit is a result, not a voided run.
 
-    `prune` is the one verb still owed an implementation; the rest are asserted in
-    the case below.
+    The distinction standards/cli-design.md § "A command the machine voids
+    refuses" draws is whether the machine *can* have the thing. Its worked failure
+    is `symlinks unlink` on a deploy-by-copy box, which can never have one. Any
+    machine can have staged bundles, so "none were superseded" is an answer.
     """
-    ran = cli('bundle', verb, catch_exceptions=True)
+    ran = cli('bundle', 'prune')
 
-    assert ran.exit_code == ExitCode.ISSUE
-    assert f'bundle {verb} is not built' in ran.stderr
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert '0 removed locally' in ran.stdout
 
 
 @pytest.mark.parametrize('verb', ['check', 'show'], ids=['check', 'show'])
@@ -763,13 +762,20 @@ def bundled(directory: Path, name: str, *, manifest: bool = True, member: str = 
 
 
 def test_staging_with_no_archive_anywhere_says_where_it_looked(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The two directories searched are the two a tarball is ever copied to, and
-    naming them is what turns "no bundle" into something a reader can act on."""
+    """The three directories searched are the ones a tarball is ever found in, and
+    naming them is what turns "no bundle" into something a reader can act on.
+
+    The way onward is `download` rather than `create`: this runs on the machine
+    that cannot reach the network, where building one is not a thing it can do.
+    An unconfigured remote is answered by that verb in turn, which is where the
+    pointer at the config belongs.
+    """
     ran = cli('bundle', 'stage', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.ISSUE
     assert 'no bundle archive in' in ran.stderr
-    assert 'dotfiles bundle create' in ran.stderr
+    assert str(sandbox.cache / 'dotfiles' / 'bundles') in ran.stderr
+    assert 'dotfiles bundle download' in ran.stderr
 
 
 @pytest.mark.parametrize('directory', ['root', 'home'], ids=['beside-the-checkout', 'in-home'])
@@ -778,24 +784,28 @@ def test_an_unnamed_stage_finds_the_bundle_in_either_searched_directory(
 ) -> None:
     """The default is right often enough that naming the archive is the exception:
     a machine has one bundle and its name carries a date nobody types."""
-    bundled(getattr(sandbox, directory), 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
+    bundled(getattr(sandbox, directory), 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz')
 
     ran = cli('bundle', 'stage')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'manifest.txt').is_file()
+    assert (sandbox.staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
 
 
-def test_a_bundle_beside_the_checkout_wins_over_an_older_one_in_home(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Directories are tried in order rather than the newest taken across both: a
-    tarball just copied next to the checkout is the one meant, even where a stale
-    one is still sitting in `$HOME`."""
-    bundled(sandbox.root, 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
-    bundled(sandbox.home, 'dotfiles-offline-v20260909-box-linux-x86_64.tar.gz')
+def test_the_newest_archive_wins_wherever_it_sits(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Ranked across every searched directory rather than by the order they are
+    tried.
+
+    A download writes into the cache, which no first-directory-wins order can rank
+    against a copy beside the checkout. The stamp is to the second, so the
+    comparison replacing that order is unambiguous.
+    """
+    bundled(sandbox.root, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz')
+    bundled(sandbox.home, 'dotfiles-offline-v20260909T010000Z-box-linux-x86_64.tar.gz')
 
     ran = cli('bundle', 'stage')
 
-    assert 'dotfiles-offline-v20260101' in ran.stderr
+    assert 'dotfiles-offline-v20260909T010000Z' in ran.stderr
 
 
 def test_a_named_archive_is_staged_wherever_it_sits(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -806,7 +816,7 @@ def test_a_named_archive_is_staged_wherever_it_sits(sandbox: Sandbox, cli: Calla
     ran = cli('bundle', 'stage', str(archive))
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'manifest.txt').is_file()
+    assert (sandbox.staging / 'anything-at-all' / 'manifest.txt').is_file()
 
 
 @pytest.mark.parametrize(
@@ -834,23 +844,29 @@ def test_an_archive_that_is_not_a_bundle_is_refused_before_anything_is_staged(
 
     assert ran.exit_code == ExitCode.ISSUE
     assert message in ran.stderr
-    assert not sandbox.bundle.exists()
+    assert list(sandbox.staging.iterdir()) == [] if sandbox.staging.is_dir() else True
 
 
-def test_a_newer_bundle_refreshes_what_it_carries_and_leaves_the_rest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Merged into rather than replaced, which is what `tar -x` over the top does
-    and what the bundle's own README describes. Replacing would delete the wheels an
-    interrupted run still needs."""
-    first = bundled(sandbox.root / 'one', 'dotfiles-offline-v20260101-box-linux-x86_64.tar.gz')
+def test_a_newer_bundle_stacks_and_leaves_the_older_one_readable(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Each bundle keeps its own directory, so what an earlier one staged is still
+    there and still listed.
+
+    Merging into one tree refreshes the files and replaces the manifest, which
+    leaves everything the first carried on disk and unreachable — the manifest is
+    the only door a provider has in.
+    """
+    older = 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    first = bundled(sandbox.root / 'one', f'{older}.tar.gz')
     cli('bundle', 'stage', str(first))
-    (sandbox.bundle / 'wheels').mkdir()
-    (sandbox.bundle / 'wheels' / 'pyyaml.whl').write_text('bytes an interrupted run still needs')
+    (sandbox.staging / older / 'wheels').mkdir()
+    (sandbox.staging / older / 'wheels' / 'pyyaml.whl').write_text('bytes an interrupted run still needs')
 
-    second = bundled(sandbox.root / 'two', 'dotfiles-offline-v20260202-box-linux-x86_64.tar.gz')
+    second = bundled(sandbox.root / 'two', 'dotfiles-offline-v20260202T010000Z-box-linux-x86_64.tar.gz')
     ran = cli('bundle', 'stage', str(second))
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert (sandbox.bundle / 'wheels' / 'pyyaml.whl').is_file()
+    assert (sandbox.staging / older / 'wheels' / 'pyyaml.whl').is_file()
+    assert (sandbox.staging / 'dotfiles-offline-v20260202T010000Z-box-linux-x86_64' / 'manifest.txt').is_file()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

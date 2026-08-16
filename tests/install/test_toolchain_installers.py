@@ -22,6 +22,7 @@ import pytest
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -129,9 +130,11 @@ def home(tmp_path, monkeypatch) -> Path:
 
 @pytest.fixture
 def bundle(tmp_path, monkeypatch) -> Path:
-    staged = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'scripts').mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', staged)
+    (staged / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -215,7 +218,7 @@ def test_go_offline_says_what_the_bundle_lacks_and_asks_for_nothing(home, bundle
     assert not result.ok
     assert result.refused
     assert result.kind is Kind.NOT_IN_BUNDLE
-    assert str(bundle) in result.detail
+    assert str(paths.staging_dir()) in result.detail
     assert fetches.urls == []
 
 

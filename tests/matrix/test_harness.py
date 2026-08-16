@@ -190,19 +190,28 @@ def test_the_home_every_path_resolves_through_is_the_sandbox_one(sandbox: Sandbo
 
 
 @pytest.mark.parametrize(
-    ('constant', 'attribute'),
+    ('name', 'attribute'),
     [
-        ('CACHE_HOME', 'cache'),
         ('STATE_HOME', 'state'),
         ('RUNS_DIR', 'state'),
-        ('BUNDLE_DIR', 'bundle'),
+        ('staging_dir', 'staging'),
+        ('archive_dir', 'cache'),
+        ('status_cache', 'cache'),
     ],
-    ids=['cache', 'state', 'runs', 'bundle'],
+    ids=['state', 'runs', 'staged', 'archives', 'statuses'],
 )
-def test_every_directory_the_package_writes_to_is_under_the_sandbox(sandbox: Sandbox, constant: str, attribute: str) -> None:
-    """Each of these is derived from a variable at import, so each is a separate
-    chance to write into the real fleet's state directory — which is on Syncthing."""
-    assert getattr(paths, constant).is_relative_to(getattr(sandbox, attribute))
+def test_every_directory_the_package_writes_to_is_under_the_sandbox(sandbox: Sandbox, name: str, attribute: str) -> None:
+    """Each is a separate chance to write into the real fleet's state directory,
+    which is on Syncthing.
+
+    The cache paths are functions and resolve through `$XDG_CACHE_HOME` on every
+    call, so the sandbox setting that one variable carries all of them — where a
+    constant was a name somebody had to remember to rebind, and `status_cache` was
+    the one nobody did."""
+    found = getattr(paths, name)
+    resolved = found() if callable(found) else found
+
+    assert resolved.is_relative_to(getattr(sandbox, attribute))
 
 
 def test_a_recording_verb_files_its_run_inside_the_sandbox(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

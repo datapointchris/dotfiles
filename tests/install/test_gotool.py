@@ -16,6 +16,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles.effects import Completed
 from dotfiles.providers import Kind
 from dotfiles.providers import gotool
@@ -36,9 +37,11 @@ def home(tmp_path, monkeypatch) -> Path:
 
 @pytest.fixture
 def bundle(tmp_path, monkeypatch) -> Path:
-    staged = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / gotool.BUNDLE_BINARIES).mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', staged)
+    (staged / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -154,7 +157,7 @@ def test_offline_with_nothing_staged_says_where_it_looked(home, bundle, proxy) -
 
     assert not result.ok
     assert result.kind is Kind.NOT_IN_BUNDLE
-    assert str(bundle / gotool.BUNDLE_BINARIES) in result.detail
+    assert str(paths.staging_dir()) in result.detail, 'a stack has no one bundle directory to name'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

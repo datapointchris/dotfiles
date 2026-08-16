@@ -15,6 +15,9 @@ is for.
 
 from __future__ import annotations
 
+import json
+
+import exchange
 import pytest
 from harness import Machine
 from harness import declared_items
@@ -252,3 +255,63 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
         pytest.skip('only the offline environment installs from a bundle')
     assert 'Checksum verified from offline bundle' in machine.install_log
     assert 'installed from the bundle at' in machine.install_log
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The sparse round trip
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_current(
+    exchanging: tuple[Machine, Machine],
+) -> None:
+    """The whole feature, over the transport, between two containers.
+
+    Everything below this in the suite exercises the sparse decision against a
+    synthetic status and a hand-written `bundle.json`. What none of it can reach
+    is the pair the feature actually is: a status a real machine produced, and a
+    bundle a real `create_bundle` built by diffing against it. A wrong key on
+    either side passes every one of those tests and produces a bundle that carries
+    everything, reporting itself sparse.
+
+    The assertion is the omission rather than the size. A smaller archive is the
+    point and not the property — a build that omitted the wrong things would be
+    smaller too. What has to hold is that every omission is *accounted for*: read
+    either as carried by the full bundle underneath, or as measured and current.
+
+    Not `measured` specifically, because this machine installed from a full bundle
+    and the sparse one stages on top of it. The stack answering for those files is
+    the feature working, so everything the sparse build omitted reads as covered
+    here. `tests/matrix/test_sparse_bundles.py` owns the case where a sparse bundle
+    stands alone and `measured` is the only possible answer.
+    """
+    machine, builder = exchanging
+
+    # `status upload`, never `status show`. Only upload and the post-apply publish
+    # pass the document through the redaction gate, so a trip built on `show`
+    # cannot reach a gate that refuses every real document — which is what one did
+    # for the whole life of the branch.
+    exchange.ran(machine, 'dotfiles status upload')
+
+    built = exchange.build_bundle_in(builder, machine.environment.manifest, against='latest')
+    name = built.rsplit('/', 1)[-1]
+    assert name.endswith('-sparse.tar.gz'), f'a sparse build has to say so in its own name: {name}'
+    exchange.ran(builder, f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle upload')
+
+    exchange.ran(machine, 'dotfiles bundle download --yes')
+    exchange.ran(machine, f'dotfiles bundle stage $HOME/.cache/dotfiles/bundles/{name}')
+
+    # The bundle's own account of what it left out, read off the copy that
+    # crossed rather than the one that was built, so a document the installing
+    # side could not parse fails here instead of passing on the builder.
+    stem = name.removesuffix('.tar.gz')
+    described = json.loads(machine.read(f'cat $HOME/.cache/dotfiles/staged/{stem}/bundle.json') or '{}')
+    assert described.get('completeness') == 'sparse'
+    assert described.get('current'), 'a converged machine has something for the build to leave out'
+
+    checked = json.loads(machine.read('dotfiles bundle check --json') or '{}')
+    left_out = {key.split('/', 1)[-1] for key in described['current']}
+    accounted = set(checked['covered']) | set(checked['measured'])
+
+    assert not left_out & set(checked['uncovered']), f'omitted and reported missing: {sorted(left_out & set(checked["uncovered"]))}'
+    assert left_out <= accounted, f'omitted and unaccounted for: {sorted(left_out - accounted)}'

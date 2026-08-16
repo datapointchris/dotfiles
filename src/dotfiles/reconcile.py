@@ -31,7 +31,10 @@ from dotfiles import engine
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import privilege as privileges
+from dotfiles import providers
+from dotfiles import publishing
 from dotfiles import refusal
+from dotfiles import remote
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import validate
@@ -579,6 +582,7 @@ def survey(
     owner: str | None = None,
     packages: frozenset[str] = frozenset(),
     offline: bool = False,
+    announce_bundle: bool = True,
     report: Callable[[ResourceResult], None] | None = None,
 ) -> Surveyed:
     """Measure the machine once, folding and reporting each resource as it lands.
@@ -608,7 +612,14 @@ def survey(
     spend, and `resources.packages._upstream` already ignores it on this branch — so
     passing it through would be one more place the two could come to disagree.
     """
-    if offline:
+    # `announce_bundle` is off for a caller that is not rehearsing an install.
+    # `status show` walks offline to get versions rather than to install anything,
+    # and on a machine with nothing staged the note read "holds no manifest.txt,
+    # so nothing can be installed from it" and pointed at `bundle stage` — advice
+    # away from the next real step, in the state that is the first turn of the
+    # loop. Not gated on `report is not None`: `plan --offline --json` and
+    # `check --offline --json` both pass None and both genuinely install from it.
+    if offline and announce_bundle:
         report_bundle(offline_bundle.describe())
     session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
     selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
@@ -813,8 +824,21 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle() -> ExitCode | None:
+def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
+
+    **Both identities are threaded, and for one reason.** `machine` is the
+    manifest and `box` is the discriminator that tells two machines sharing one
+    apart. `offline_bundle.target()` answers `$MACHINE` or the default, so an
+    `apply --machine X --offline` measured a correct bundle against the wrong name
+    and refused it — and `--machine` is most likely to be typed explicitly during
+    a rebuild, which is exactly when this path runs. `Session.resolve` has already
+    proven the manifest exists, where an ambient resolve swallows that refusal into
+    `''` and silently disables the guard. Reaching for the box the same way would
+    reintroduce the same hole one guard later: under `--machine X` whose manifest
+    carries a different `network_trust`, an ambient `discriminator` answers with a
+    digest where the bundle recorded a hostname, and a valid bundle is refused with
+    two strings that cannot be compared.
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
@@ -847,27 +871,90 @@ def _stage_bundle() -> ExitCode | None:
     says this verb stopped.
     """
     extracted = None
-    if not paths.BUNDLE_DIR.is_dir():
-        archive = offline_bundle.newest()
+    if not providers.staged_bundles():
+        archive = offline_bundle.newest(machine=machine) or _fetched_bundle(machine)
         if archive is None:
+            # Two different findings, and the second is the one a person cannot
+            # work out from the first. A directory under staging that carries no
+            # manifest is not a bundle — every provider reads through the manifest,
+            # so a run started on one installs nothing and reports each tool as its
+            # own mystery. "There is none" would be true and would send the reader
+            # looking for a tarball they already have.
+            unusable = [path.name for path in paths.staging_dir().iterdir() if path.is_dir()] if paths.staging_dir().is_dir() else []
+            because = (
+                f'nothing under {paths.staging_dir()} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
+                if unusable
+                else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
+            )
             return refusal.report(
                 NoBundle(
-                    f'offline needs a staged bundle at {paths.BUNDLE_DIR}, and there is none',
+                    because,
                     advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
                 )
             )
 
         try:
-            offline_bundle.stage(archive)
+            offline_bundle.stage(archive, machine, box)
         except offline_bundle.StagingError as unreadable:
-            return refusal.report(NoBundle(str(unreadable), advice='name a readable one: dotfiles bundle stage PATH'))
+            return refusal.report(NoBundle(str(unreadable), advice=unreadable.advice or 'name a readable one: dotfiles bundle stage PATH'))
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
     report_bundle(staged)
     if not staged.readable:
         return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
+    # Every description rather than the newest, because `providers.locate` reads
+    # across the whole stack — a peer's bundle underneath a good one still supplies
+    # files. `stage` refuses at the moment of unpacking and this catches what is
+    # already there, staged by hand or left by an earlier run under another name.
+    foreign = sorted({one.machine for one in staged.descriptions if one.machine and machine and one.machine != machine})
+    if foreign:
+        return refusal.report(
+            NoBundle(
+                f'a staged bundle was built for {", ".join(foreign)} and this machine is {machine}',
+                advice=f'remove it from {paths.staging_dir()}, or apply with --machine',
+            )
+        )
     return None
+
+
+def _fetched_bundle(machine: str) -> Path | None:
+    """The newest bundle the remote holds, where this machine asked to be sent one.
+
+    Off unless `remote.fetch_bundle_when_none_is_staged` says otherwise, and the
+    default is what a machine that declares nothing gets. The machine this exists
+    for sits on an employer network where the concern is monitoring rather than
+    capability, so an apply that reaches a server unasked is a change in posture
+    and not a convenience — it has to be something somebody turned on.
+
+    Reached only when nothing is staged and no archive was found locally, which is
+    the one moment the run is about to refuse anyway. A failure here answers None
+    and lets that refusal happen, because "the remote would not answer" is a worse
+    thing to end an apply on than "there is no bundle" — the second is what the
+    caller can act on and is true either way.
+    """
+    found = remote.read()
+    if found.remote is None or not found.remote.fetch_bundle_when_none_is_staged:
+        return None
+    try:
+        # Probed first, so a network that is down reports itself as one rather
+        # than as a machine with nothing on its shelf. Both end this run the same
+        # way — for want of a bundle — and only one of them is worth going to look
+        # at the network about.
+        answer = remote.answered(found.remote)
+        if not answer.ok:
+            warn(f'could not reach the remote after {answer.attempts} attempt(s), so nothing was fetched')
+            return None
+        listed = offline_bundle.on_remote(found.remote, machine)
+        if not listed:
+            return None
+        warn(f'nothing staged; fetching {listed[0]} from the remote')
+        directory = remote.bundles_for(found.remote, machine)
+        record = offline_bundle.record_on_remote(found.remote, directory, listed[0])
+        return offline_bundle.fetch(found.remote, machine, listed[0], record)
+    except refusal.Refusal as failed:
+        warn(f'could not fetch a bundle from the remote: {failed}')
+        return None
 
 
 def report_bundle(staged: offline_bundle.Staging) -> None:
@@ -1028,7 +1115,7 @@ def apply_machine(
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
 
-    if offline and (unstaged := _stage_bundle()):
+    if offline and (unstaged := _stage_bundle(session.machine_name, publishing.discriminator(session.machine.coordinates.network_trust))):
         return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`

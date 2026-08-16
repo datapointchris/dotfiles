@@ -28,7 +28,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
-from dotfiles import paths
+from dotfiles import providers
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -87,9 +87,11 @@ def home(tmp_path, monkeypatch) -> Path:
 @pytest.fixture
 def bundle(tmp_path, monkeypatch) -> Path:
     """A staged offline bundle, which is the seam that keeps these tests local."""
-    staged = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'binaries').mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', staged)
+    (staged / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -353,6 +355,24 @@ class TestCompanions:
         assert not result.ok
         assert result.kind is Kind.NOT_IN_BUNDLE
         assert 'demo-tmux' in result.detail
+
+    def test_a_companion_comes_from_the_bundle_that_supplied_the_binary(self, home, bundle, tmp_path):
+        """A companion filename carries no version, so an unpinned lookup returns
+        whichever staged bundle is newest — pairing an older bundle's binary with a
+        newer bundle's companion, which is what `_verify` was already changed to
+        stop doing for a checksum."""
+        newer = tmp_path / 'staged' / 'dotfiles-offline-v20260901T000000Z-box-linux-x86_64'
+        (newer / 'binaries').mkdir(parents=True)
+        (newer / providers.MANIFEST).write_text('')
+        (newer / 'binaries' / 'demo-tmux').write_bytes(b'from the newer bundle')
+
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+        (bundle / 'binaries' / 'demo-tmux').write_bytes(b'companion')
+
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, companions=COMPANION)
+
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo-tmux').read_bytes() == b'companion'
 
     def test_an_absent_companion_is_named_without_resolving_a_release(self, home, monkeypatch):
         """The whole point of splitting the name off the URL. Nothing here has a

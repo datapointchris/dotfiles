@@ -75,6 +75,7 @@ import shlex
 import subprocess
 from collections.abc import Iterator
 
+import exchange
 import levels
 import pytest
 from harness import ARCHLINUX
@@ -99,7 +100,6 @@ from harness import install_record
 from harness import install_record_gap
 from harness import machine_verdict
 from harness import plant_python_shadow
-from harness import stage_bundle
 from harness import start
 
 
@@ -334,6 +334,70 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
 
 
 @pytest.fixture(scope='session')
+def builder(request: pytest.FixtureRequest) -> Iterator[Machine]:
+    """The networked machine that builds, as a container rather than as the host.
+
+    Session-scoped and independent of `container`, because it is not one of the
+    environments under test. Nothing installs here and nothing is asserted about
+    its own convergence — it exists to hold a network and a copy of the repo that
+    no editor is touching mid-run.
+    """
+    if docker('info').returncode != 0:
+        pytest.skip('Docker is not running')
+
+    if not image_exists(exchange.BUILDER.image):
+        subprocess.run(exchange.BUILDER.build_image, check=True, cwd=UNDER_TEST)
+
+    name = exchange.builder_name(_purpose(request.config))
+    reusing = reusing_containers(request.config) and docker('container', 'inspect', name).returncode == 0
+    if reusing:
+        docker('start', name)
+    else:
+        docker('rm', '-f', name)
+        start(exchange.BUILDER, name)
+
+    exchange.ensure_network()
+    exchange.join(name)
+
+    subject = Machine(environment=exchange.BUILDER, container=name)
+    try:
+        copy_repo(subject)
+        authenticate_git(subject)
+        exchange.install_uv(subject)
+        exchange.serve_shelf(subject)
+        # Its own shelf by the same name the peer uses, so one script and one
+        # config serve both machines rather than the builder getting a special case.
+        exchange.authorize(subject, subject)
+        exchange.declare_transport(subject, subject)
+        yield subject
+    finally:
+        if keeping_containers(request.config):
+            print(f'\nkept: docker exec -it --user {exchange.BUILDER.user} {name} bash')
+        else:
+            docker('rm', '-f', name)
+            exchange.remove_network()
+
+
+@pytest.fixture(scope='session')
+def exchanging(machine: Machine, builder: Machine) -> tuple[Machine, Machine]:
+    """A converged offline machine and a builder that can trade with it.
+
+    Both ends declare the same transport against the same shelf, so what crosses
+    between them goes through `remote.py` rather than through `docker cp`. That
+    is what puts the upload path on the trip: `status show` composes a document
+    and `status upload` is the only caller that passes it through the gate, so a
+    trip built on the first cannot see a gate that refuses everything.
+    """
+    if not machine.environment.offline:
+        pytest.skip('the exchange is between the builder and the offline machine')
+
+    exchange.join(machine.container)
+    exchange.authorize(machine, builder)
+    exchange.declare_transport(machine, builder)
+    return machine, builder
+
+
+@pytest.fixture(scope='session')
 def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
     """The same container, with `install.sh` and then `dotfiles apply` run against it.
 
@@ -362,10 +426,14 @@ def machine(container: Machine, request: pytest.FixtureRequest) -> Machine:
         return container
 
     if environment.offline:
-        # `--reuse` means "reuse the expensive artifacts", and the bundle is one:
-        # half a gigabyte and several minutes. Rebuilt by default so a change to
-        # the bundle format cannot ship against a bundle in the old layout.
-        stage_bundle(container, reuse=request.config.getoption('--reuse'))
+        # Built in the builder container, never on the host. The host running
+        # `dotfiles bundle create` out of the worktree made the test runner the
+        # code under test, so an edit mid-run changed what was being measured.
+        #
+        # Rebuilt every run rather than reused: a stale bundle is exactly what
+        # would hide a change to the bundle format, since the install would pass
+        # against the old layout and the change would ship untested.
+        exchange.stage_full_bundle(request.getfixturevalue('builder'), container)
 
     # Truncated here rather than at planting time, so the log covers the install
     # and nothing else: the container tier probes the shadow deliberately to

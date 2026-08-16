@@ -635,16 +635,27 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-*'
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-$(echo "$HOSTNAME" | cut -d. -f1 | tr "[:upper:]" "[:lower:]")'
 """`paths.LATEST_RUN`, spelled for a shell because it is read inside the container.
 
-Globbed on the suffix rather than naming it. `paths.LATEST_RUN` gained a
-`-{machine_id}` suffix when the state directory became fleet-shared, and this
-constant kept naming the old path — so the `cp` in `install_command` matched
-nothing, silently, and every test taking the `machine` fixture errored at setup
-instead. A container holds exactly one box, so the glob is unambiguous, and it
-survives the next change to how that name is built rather than duplicating the
-derivation a second time."""
+The suffix is *derived*, never globbed. `paths.LATEST_RUN` gained a
+`-{machine_id}` suffix when the state directory became fleet-shared, and naming
+the old path made the `cp` match nothing — so a `latest-*` glob replaced it, and
+that is worse in a way the first fault was not. A glob is silent when it matches
+nothing and *fatal* when it matches twice: `cp a b file` fails with "target is
+not a directory", and every test taking the `machine` fixture then errors after
+a converged install.
+
+Which it does, because the base image bakes a record from the build. That build
+runs as a machine named `buildkitsandbox`, and its `latest-buildkitsandbox`
+lives in the image beside the container's own.
+
+`$HOSTNAME` cut at the first dot and lowercased is `paths.machine_id` in shell,
+which reads `socket.gethostname()`. Bash sets that variable itself, so it needs no
+binary — `hostname` is absent on the Arch image, where deriving through it
+resolved to `latest-` and matched nothing on every environment but Ubuntu.
+
+One box per container, so it resolves to exactly one path or to none at all."""
 
 INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
@@ -719,8 +730,24 @@ def install_record_gap(machine: Machine) -> str:
     """
     home = machine.environment.home
     if not machine.read(f'cat {home}/{INSTALL_STATUS} 2>/dev/null').strip().isdigit():
-        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command'
-    return f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, so {LATEST_RECORD} matched nothing'
+        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command{_install_tail(machine)}'
+    return (
+        f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, '
+        f'so {LATEST_RECORD} matched nothing{_install_tail(machine)}'
+    )
+
+
+def _install_tail(machine: Machine) -> str:
+    """The end of the install log, appended to whatever gap is being reported.
+
+    The log is written by `tee` and survives every failure, and the fixture that
+    raises this discards it — so the one artefact that says *why* is the one
+    nobody sees. Diagnosing a failed install then costs a second run of the
+    install, which is forty minutes to learn something already on disk.
+    """
+    home = machine.environment.home
+    tail = machine.read(f'tail -n 40 {home}/{INSTALL_LOG} 2>/dev/null')
+    return f'\n\n--- last 40 lines of {INSTALL_LOG} ---\n{tail}' if tail else ''
 
 
 def install_age(machine: Machine) -> str:
@@ -919,75 +946,6 @@ def copy_repo(machine: Machine) -> None:
         check=True,
     )
     machine.exec(f'cd {home}/dotfiles && git init -q', check=True)
-
-
-def newest_bundle(manifest: str) -> Path | None:
-    """The most recent bundle an earlier run left in the repo root, if any.
-
-    Keyed on the manifest as well as the arch, because a bundle carries what one
-    machine's plan resolves to. Reusing another environment's would stage the
-    wrong set of tools and the install would fail on something the bundle was
-    never asked to carry.
-    """
-    existing = sorted(UNDER_TEST.glob(f'dotfiles-offline-*-{manifest}-linux-x86_64.tar.gz'), key=lambda path: path.stat().st_mtime)
-    return existing[-1] if existing else None
-
-
-def build_bundle(manifest: str) -> Path:
-    """Half a gigabyte and several minutes, on the machine that has the network.
-
-    `--print-path` makes the archive's name the build's return value: it is named
-    after the date, the manifest and the target CPU, so anything downstream would
-    otherwise have to reconstruct a name that changes every build. The log goes to
-    stderr, leaving stdout carrying the path alone.
-
-    The OS is not passed: `bundle create` reads it off the manifest, so an
-    environment cannot ask for a bundle whose OS contradicts the machine it is
-    about to be staged onto.
-    """
-    built = subprocess.run(
-        # fmt: off
-        [
-            'uv',
-            'run',
-            '--project',
-            str(UNDER_TEST),
-            'dotfiles',
-            'bundle',
-            'create',
-            '--machine',
-            manifest,
-            '--arch',
-            'x86_64',
-            '--print-path',
-        ],
-        # fmt: on
-        check=True,
-        capture_output=True,
-        text=True,
-        cwd=UNDER_TEST,
-    )
-    archive = Path(built.stdout.strip())
-    if not archive.is_file():
-        raise AssertionError(f'bundle build reported {archive}, which is not a file')
-    return archive
-
-
-def stage_bundle(machine: Machine, *, reuse: bool = False) -> Path:
-    """Put a bundle where `install.sh --offline` will find it.
-
-    Built on this machine rather than in the container, because building needs
-    the network the container does not have — which is the whole point.
-
-    `reuse` takes one an earlier run left behind. Off by default, because a stale
-    bundle is exactly what would hide a change to the bundle format: the install
-    would pass against the old layout and the format change would ship untested.
-    """
-    manifest = machine.environment.manifest
-    archive = (newest_bundle(manifest) if reuse else None) or build_bundle(manifest)
-    docker('cp', str(archive), f'{machine.container}:{machine.environment.home}/', check=True)
-    machine.exec(f'chown {machine.environment.user} {machine.environment.home}/{archive.name}', user='root', check=True)
-    return archive
 
 
 # ─────────────────────────────────────────────────────────────────────────────

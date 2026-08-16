@@ -894,8 +894,8 @@ class TestARunThatNeverStarted:
     def test_an_offline_run_with_no_bundle_refuses_rather_than_reporting_a_verdict(
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
     ) -> None:
-        monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-staged')
-        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-staged'))
+        monkeypatch.setattr(offline_bundle, 'newest', lambda *searched, machine='': None)
         walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
         code = reconcile.apply_machine(engine.Selection.everything(), offline=True)
@@ -912,8 +912,8 @@ class TestARunThatNeverStarted:
         """A refusal is the branch most able to get this wrong: it is reached before
         the walk, so nothing else on the path has had a reason to think about the
         stream a `--json` caller is reading."""
-        monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-staged')
-        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-staged'))
+        monkeypatch.setattr(offline_bundle, 'newest', lambda *searched, machine='': None)
         walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
         reconcile.apply_machine(engine.Selection.everything(), offline=True, as_json=True)

@@ -31,7 +31,6 @@ from matrix.harness import session
 from matrix.harness import staged_bundle
 
 from dotfiles import evidence as ev
-from dotfiles import paths
 from dotfiles import releases
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
@@ -695,12 +694,12 @@ def test_offline_with_no_bundle_at_all_is_a_miss_never_a_stale_answer(
     """A machine that never had a bundle extracted is the case a *missing manifest*
     reaches, which no other test here takes: every one of them stages one first.
 
-    `BUNDLE_DIR` is pointed at a path that does not exist rather than left alone,
+    `STAGING_DIR` is pointed at a path that does not exist rather than left alone,
     because the real one may exist on the machine running this and the test would
     then read whatever it holds.
     """
     reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', tmp_path / 'never-extracted')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-extracted'))
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
     found = changes(live)

@@ -120,7 +120,7 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool) -> Re
     if offline:
         return _from_bundle(entry) or Result(
             False,
-            f'{entry.name} is not in the offline bundle at {bundle_file(BUNDLE_BINARIES)}, and offline cannot reach crates.io',
+            f'{entry.name} is not in a bundle staged at {paths.staging_dir()}, and offline cannot reach crates.io',
             kind=Kind.NOT_IN_BUNDLE,
         )
 
@@ -165,7 +165,7 @@ def _from_bundle(entry: catalog.CargoPackage) -> Result | None:
     row = bundle.staged(entry.name, BUNDLE_CATEGORY)
     if row is None:
         return None
-    archive = bundle_file(BUNDLE_BINARIES) / row.filename
+    archive = bundle_file(f'{BUNDLE_BINARIES}/{row.filename}')
     if not archive.is_file():
         return None
 
@@ -222,7 +222,7 @@ def binstall(target: Target, *, offline: bool) -> Result:
     if offline:
         return Result(
             False,
-            f'cargo-binstall installs from {BINSTALL_REPO}, which the offline bundle at {paths.BUNDLE_DIR} does not stage',
+            f'cargo-binstall installs from {BINSTALL_REPO}, which no bundle staged at {paths.staging_dir()} carries it',
             kind=Kind.NOT_IN_BUNDLE,
         )
 

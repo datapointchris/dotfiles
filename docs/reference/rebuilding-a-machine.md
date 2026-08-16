@@ -92,9 +92,10 @@ rather than trusting an old reading — the blocked set has twice been wrong in
 the direction of carrying tools that were never actually blocked.
 
 Rebuild by registering the new Ubuntu rootfs as the distro. Get the bundle onto
-the new WSL filesystem and install from there rather than across a mounted
-drive; `--offline` extracts it to `~/installers/` itself, so nothing needs
-unpacking by hand.
+the new WSL filesystem and install from there rather than across a mounted drive;
+`--offline` unpacks it into the cache itself, so nothing needs unpacking by hand.
+Where a remote is configured, `dotfiles bundle download` fetches it onto the new
+filesystem in one command and there is nothing to carry at all.
 
 ```bash
 ./install.sh --machine wsl-work-workstation --offline

@@ -449,11 +449,14 @@ def test_a_plan_scoped_to_an_owner_that_matches_nothing_refuses_as_apply_does(sa
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+INTERCHANGE_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict', 'resources'}
+
+
 @pytest.mark.parametrize(
     ('verb', 'keys'),
     [
-        pytest.param('plan', {'version', 'verb', 'machine', 'checked', 'verdict', 'resources'}, id='plan-emits-the-interchange-document'),
-        pytest.param('check', {'version', 'verb', 'machine', 'checked', 'verdict', 'resources'}, id='check-emits-the-same-document'),
+        pytest.param('plan', INTERCHANGE_KEYS, id='plan-emits-the-interchange-document'),
+        pytest.param('check', INTERCHANGE_KEYS, id='check-emits-the-same-document'),
         pytest.param(
             'apply',
             {'id', 'machine', 'verb', 'flags', 'started_at', 'schema', 'finished_at', 'duration_seconds', 'host', 'outcomes', 'issues'},

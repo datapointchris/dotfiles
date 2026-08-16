@@ -8,11 +8,15 @@ directions at once.
 
 from __future__ import annotations
 
+import getpass
+import socket
+
 import pytest
 
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import network
+from dotfiles import paths
 from dotfiles import resolve
 from dotfiles.providers.custom import Reach
 
@@ -33,7 +37,7 @@ def probes_for(name: str) -> tuple[network.Probe, ...]:
 
 
 def rendered_rows(measurement: network.Measurement) -> list[list[str]]:
-    written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
+    written = network.render(machines.load(WSL), measurement, when='w', system='s')
     return [[cell.strip() for cell in line.split('|')] for line in written.splitlines() if line.split('|')[0].strip() in {'YES', 'NO'}]
 
 
@@ -149,7 +153,7 @@ def test_the_results_file_is_the_shape_the_harness_parses() -> None:
 
     rows = [
         [cell.strip() for cell in line.split('|')]
-        for line in network.render(machine, measurement, host='h', when='w', user='u', system='s').splitlines()
+        for line in network.render(machine, measurement, when='w', system='s').splitlines()
         if line.split('|')[0].strip() in {'YES', 'NO'}
     ]
 
@@ -171,11 +175,44 @@ def test_the_recorded_reach_survives_the_file() -> None:
     cloned = network.Probe('custom_installer', 'theme', 'https://github.com/datapointchris/theme.git', Reach.CLONE)
     measurement = network.Measurement((network.ProbeResult(cloned, True),), ())
 
-    written = network.render(machines.load(WSL), measurement, host='h', when='w', user='u', system='s')
+    written = network.render(machines.load(WSL), measurement, when='w', system='s')
     row = next(line for line in written.splitlines() if line.startswith('YES'))
 
     assert row.split('|')[REACH_COLUMN].strip() == 'clone'
     assert not row.split('|')[1].strip().endswith('clone'), 'the section cannot answer it, which is the point'
+
+
+def test_the_results_file_names_the_manifest_and_no_account() -> None:
+    """The one machine this file ever measures is behind an employer's firewall,
+    and the file is committed.
+
+    `socket.gethostname()` is an asset tag there and `getpass.getuser()` is a work
+    account, so both are refused a way in — the render takes neither. Paired with
+    the positive fact, because a render that returned nothing at all would satisfy
+    a `not in` on its own: the manifest is named, which is what a reader actually
+    needs to interpret a row.
+    """
+    measurement = network.Measurement((network.ProbeResult(network.Probe('go_tool', 'task', 'https://proxy.golang.org'), True),), ())
+
+    written = network.render(machines.load(WSL), measurement, when='w', system='s')
+    header = written.split('Summary:')[0]
+
+    assert f'Manifest: {WSL}' in header
+    assert socket.gethostname() not in written
+    assert getpass.getuser() not in written
+    assert not any(line.startswith(('Host:', 'User:')) for line in written.splitlines())
+
+
+def test_the_committed_record_carries_no_account_either() -> None:
+    """The file on disk, not just what the render would produce now.
+
+    A render that stopped writing the two lines leaves whatever was written before
+    it sitting in the repo, and that copy is the one anybody reads.
+    """
+    written = (paths.REPO_ROOT / 'install' / 'offline' / 'connectivity-results.txt').read_text()
+
+    assert 'Manifest: ' in written
+    assert not any(line.startswith(('Host:', 'User:')) for line in written.splitlines())
 
 
 def measured_through(monkeypatch: pytest.MonkeyPatch, probe: network.Probe, *, ok: bool, written: str) -> network.ProbeResult:
@@ -276,6 +313,6 @@ def test_the_summary_counts_what_the_rows_say() -> None:
     with the table under it."""
     verdicts = tuple(network.ProbeResult(network.Probe('registry', str(index), f'https://h/{index}'), index % 2 == 0) for index in range(5))
 
-    written = network.render(machines.load(WSL), network.Measurement(verdicts, ()), host='h', when='w', user='u', system='s')
+    written = network.render(machines.load(WSL), network.Measurement(verdicts, ()), when='w', system='s')
 
     assert 'Summary: 3 reachable, 2 blocked' in written

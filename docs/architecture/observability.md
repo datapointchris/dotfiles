@@ -326,13 +326,18 @@ it and `dotfiles report show --json` cannot give different answers about one run
 which building the same document twice would allow. Everything a run narrates goes
 to stderr, so stdout stays a stream.
 
-**Half the loop that consumes it is built.** `bundle check` answers whether a
-staged bundle covers what a machine's plan asks for, resolved locally rather than
-from a document. What is missing is the other direction: a `bundle create` that
-takes a machine's own `plan --json` and carries only what that machine lacks,
-instead of every installer the repo declares. The document is ready for it — a
-row names its items, which is what a diff needs — and so is the history, because
-every `plan` and `check` already files a run record carrying the same changes.
+**The loop that consumes it is closed.** `bundle check` answers whether a staged
+bundle covers what a machine's plan asks for, and `bundle create --against` takes
+a machine's own document and carries only what that machine lacks. What made it
+possible was already here: a row names its items, which is what a diff needs.
+
+Two things were added for it. `scope` says which resources a document covers, so
+one shape can come from three widths — every resource from `check`, one from a
+resource-scoped door, and the publishable subset from `status show` — without a
+consumer reading "not mentioned" as "this machine has none". And the bundle
+carries a `current` map saying what it measured and deliberately left out, so an
+absence in a sparse bundle is distinguishable from a failure to carry.
+`architecture/offline-bundles.md` is the whole of it.
 
 ## Related
 

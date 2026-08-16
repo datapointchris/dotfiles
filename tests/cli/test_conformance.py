@@ -63,18 +63,48 @@ So the rule is the verb, not the subject. A reader who learns `-v` on one
 flag."""
 
 
+STAGING = [(path, command) for path, command in LEAVES if path[0] in {'bundle', 'status', 'remote'}]
+"""Every leaf of the offline loop, which renders evidence rows to a terminal.
+
+Scoped to these three groups rather than to the whole tree, and the boundary is
+measured rather than chosen: the read-only `show`/`list`/`path` leaves elsewhere
+do not take the pair either, and giving it to all of them is a change larger than
+the feature that surfaced the question. What this asserts is that the loop is
+internally consistent, which is the asymmetry `--dry-run` and `--force` each grew
+one subcommand at a time.
+"""
+
+VERBOSE = sorted({*RECONCILING, *STAGING}, key=lambda entry: entry[0])
+"""Every leaf that owes `-v` and `-q`, from both selectors, deduplicated.
+
+One list because there is one rule. `RECONCILING` selects by verb and `STAGING`
+by group, and `bundle check` and `remote check` are in both — asserted twice by
+two copies of one assertion, with nothing comparing the copies. A change to what
+the pair means would have to find both, and the second is the one whose selector
+is a literal.
+"""
+
+
 def test_the_tree_is_not_empty() -> None:
-    """Guards every other test here: a walk that finds nothing passes vacuously."""
+    """Guards every other test here: a walk that finds nothing passes vacuously.
+
+    Every derived list, because a parametrization that collects nothing reports
+    `1 skipped` rather than a failure — so renaming a group would remove a
+    conformance policy and leave the suite green.
+    """
     assert len(LEAVES) > 20
     assert len(GROUPS) == len(vocabulary.NOUNS)
     assert len(RECONCILING) > 15
+    assert len(STAGING) > 10
+    assert len(VERBOSE) >= len(RECONCILING)
 
 
-@pytest.mark.parametrize(('path', 'command'), RECONCILING, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
-def test_every_reconciling_leaf_takes_the_verbosity_pair(path: tuple[str, ...], command: click.Command) -> None:
+@pytest.mark.parametrize(('path', 'command'), VERBOSE, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
+def test_every_leaf_that_owes_the_verbosity_pair_takes_it(path: tuple[str, ...], command: click.Command) -> None:
     """A flag that works on `dotfiles apply` and not on `dotfiles packages apply`
     is the drift this file exists to catch — the same asymmetry `--dry-run` and
-    `--force` had, one subcommand at a time."""
+    `--force` had, one subcommand at a time. `bundle create` is the loudest verb
+    in the offline loop and was one of two there with no way to quieten it."""
     flags = {name for param in command.params for name in param.opts}
     assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
     assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
@@ -419,3 +449,47 @@ def test_the_heading_widths_are_named_only_where_the_heading_is_built() -> None:
     `section_line` and `render_verdict` hand them the geometry already.
     """
     assert files_naming(HEADING_GEOMETRY) == {'output.py'}
+
+
+def calls_named(name: str) -> list[tuple[str, int]]:
+    """Every call to `name` in the package, qualified or bare, with where it is.
+
+    Both forms, because a function is reached one way from outside its module and
+    the other from inside it — and the inside caller is the one a
+    "somewhere else does this too" invariant would otherwise miss entirely.
+    """
+    found = []
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, 'id', '')
+            if called == name:
+                found.append((path.name, node.lineno))
+    return found
+
+
+def test_one_place_asks_a_yes_or_no_question() -> None:
+    """A centralization pins the invariant it created, or it is one refactor and no
+    guarantee — standards/testing.md § "A refactor that centralizes scattered
+    handling pins the invariant it created".
+
+    That `_confirmed` works and that nothing bypasses `_confirmed` are independent
+    claims, and the tests for the first are satisfied by a fourth prompt written
+    out longhand. Three copies is where this started: three different declines,
+    one of them printing nothing at all.
+    """
+    assert [where for where, _ in calls_named('confirm')] == ['staging.py']
+
+
+def test_one_place_composes_the_retention_rule() -> None:
+    """The same claim for the other centralization in this feature.
+
+    `base_of` and `superseded` are each legitimate alone — the first names a pin
+    and the second counts a limit. Composing them and dropping the base is the
+    *rule*, and a fourth caller assembling it by hand is where three sites stopped
+    agreeing before.
+    """
+    composing = {where for where, _ in calls_named('base_of')} & {where for where, _ in calls_named('superseded')}
+
+    assert composing == {'offline_bundle.py'}

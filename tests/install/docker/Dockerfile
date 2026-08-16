@@ -14,7 +14,14 @@ FROM ubuntu:${UBUNTU_VERSION} AS base
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERM=xterm-256color
 
-# Install minimal required packages for running installers
+# Install minimal required packages for running installers.
+#
+# openssh carries the two-machine exchange. The e2e runs a builder container and
+# an offline one on a docker network, and a bundle crosses between them over a
+# transport declared exactly the way `ifiles` is on a real machine — so the
+# transport code is on the trip rather than beside it. Baked here rather than
+# installed at container start because the offline container blackholes hosts and
+# must not need apt to reach anything.
 RUN apt-get update && \
     apt-get install -y \
     sudo \
@@ -24,6 +31,8 @@ RUN apt-get update && \
     ca-certificates \
     file \
     unzip \
+    openssh-client \
+    openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root test user with sudo access
@@ -80,7 +89,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/opt/build-u
 # above leaves those parents root-owned, and the install then dies at
 # `failed to create directory /home/testuser/.cache/uv: Permission denied` —
 # which is every test in the offline and restricted environments, at 7 seconds.
-RUN rm -rf /home/testuser/dotfiles \
+# The run record goes with it. The layer above applies as a machine named
+# `buildkitsandbox`, so it writes `latest-buildkitsandbox` into the shared state
+# directory — another box's state, baked into every container built from this
+# image. A container then holds two `latest-*` entries, and anything reading them
+# as one gets the build's rather than its own.
+RUN rm -rf /home/testuser/dotfiles /home/testuser/.local/state/dotfiles \
     && mkdir -p /home/testuser/dotfiles \
     && chown -R testuser:testuser /home/testuser
 

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
-from dotfiles import paths
+from dotfiles import providers
 from dotfiles.providers import Kind
 from dotfiles.providers import winget
 
@@ -30,9 +30,11 @@ def staged(tmp_path, monkeypatch) -> Path:
     carries nothing for this row is the broken bundle `providers.Result.refused`
     says must read as a failure.
     """
-    directory = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    directory = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (directory / winget.BUNDLE_BINARIES).mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', directory)
+    (directory / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return directory
 
 

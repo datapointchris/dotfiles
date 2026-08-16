@@ -35,11 +35,34 @@ import json
 from collections.abc import Sequence
 
 from dotfiles import paths
+from dotfiles import publishing
 from dotfiles import reconcile
+from dotfiles import remote as transport
+from dotfiles import vocabulary
 from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
+
+
+def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
+    """Every status on a machine's shelf, newest first.
+
+    Here rather than in the command that lists them, because three callers resolve
+    the same set and one of them is `bundle create --against latest`. A second
+    listing written there would be a second place this naming convention is known.
+
+    Mirrors `offline_bundle.on_remote`, which answers the same question about the
+    other shelf. Both return nothing where the shelf has never been created, and
+    both let a transport failure travel — `remote.listed` is where that split is
+    decided and why it is not a boolean.
+    """
+    directory = transport.statuses_for(where, machine)
+    listed = transport.listed(where, directory)
+    if listed is None:
+        return ()
+    named = (name for name in listed if name.startswith(publishing.PREFIX) and name.endswith(publishing.SUFFIX))
+    return tuple(sorted(named, reverse=True))
 
 
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
@@ -105,7 +128,9 @@ a resource's `--json` answers an object keyed on `resources`, not on `pending`.
 """
 
 
-def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check') -> dict[str, object]:
+def document(
+    results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check', written_by: str = ''
+) -> dict[str, object]:
     """The versioned interchange document, from every read door.
 
     Versioned because it crosses machines: the work box's output is what decides
@@ -118,6 +143,17 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
     otherwise be indistinguishable — and the bundle builder wants the plan's rows
     rather than the check's.
 
+    **`scope` names which resources it covers, and a reader has to honour it.**
+    One shape now comes from three widths: every resource from `check`, one from a
+    resource-scoped door, and the publishable subset from `status show`. Without
+    it, a consumer diffing this against a declaration reads "the resources this
+    document does not mention" as "resources this machine has nothing for" —
+    which is the sweep-as-deletion failure `standards/cli-design.md` § "A
+    narrowing default reads as a deletion to anything that reconciles by sweep"
+    measures. Additive, so `VERSION` does not move: a reader that ignores it is
+    exactly as correct as it was, which was correct for the one width that
+    existed.
+
     **One shape for one resource and for nine.** The resource-scoped verbs emitted
     a bare row for a single result and an array for several, on the argument that a
     reader tells those apart on the first byte. It can, and having to is the defect:
@@ -129,14 +165,18 @@ def document(results: Sequence[ResourceResult], machine: str, when: dt.datetime,
     identically through either door — and § "Two front doors on one dataset spell
     everything identically" is why a second spelling has nothing to distinguish.
     """
-    return {
+    composed: dict[str, object] = {
         'version': VERSION,
         'verb': verb,
         'machine': machine,
         'checked': when.isoformat(),
+        'scope': sorted({vocabulary.parse_address(result.address)[0] for result in results}),
         'verdict': _worst(results),
         'resources': [result.as_dict() for result in results],
     }
+    if written_by:
+        composed[publishing.WRITTEN_BY] = written_by
+    return composed
 
 
 def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> dict[str, object]:

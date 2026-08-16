@@ -228,9 +228,75 @@ def bin_dir() -> Path:
     return Path.home() / BIN_DIR
 
 
-def bundle_file(name: str) -> Path:
-    """One entry in the offline bundle, whether or not a bundle is present."""
-    return paths.BUNDLE_DIR / name
+MANIFEST = 'manifest.txt'
+"""What makes a staged directory a bundle.
+
+Here rather than in `providers.bundle`, which reads the file: this module decides
+what counts as a bundle at all, and `staged_bundles` skips a directory without
+one. `bundle.py` imports the name from here, so there is one definition.
+"""
+
+
+def staged_bundles() -> tuple[Path, ...]:
+    """Every unpacked bundle, newest first.
+
+    Newest first is the whole ordering contract: a sparse bundle staged over a
+    full one has to win for the entries it carries and fall through for the rest.
+    Sorted on the directory name, which carries the UTC stamp `bundle_name`
+    writes for exactly this.
+
+    A directory without a manifest is not a bundle and is skipped rather than
+    refused — a half-finished unpack should not make every staged bundle beside it
+    unreadable.
+    """
+    if not paths.staging_dir().is_dir():
+        return ()
+    found = (path for path in paths.staging_dir().iterdir() if (path / MANIFEST).is_file())
+    return tuple(sorted(found, key=lambda path: path.name, reverse=True))
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Located:
+    """One staged file, and which bundle it came out of."""
+
+    path: Path
+    root: Path
+
+    @property
+    def bundle(self) -> str:
+        return self.root.name
+
+    def beside(self, name: str) -> Path:
+        """A sibling file from the *same* bundle, never the newest one holding it.
+
+        `checksums.txt` is why this exists. A checksum has to be the one published
+        for the asset actually staged, and resolving the two independently across
+        the stack pairs a newer bundle's checksum with an older bundle's binary —
+        which fails verification on a machine where nothing is wrong.
+        """
+        return self.root / name
+
+
+def locate(relative: str) -> Located | None:
+    """The newest staged bundle carrying this file, or None where none does."""
+    for root in staged_bundles():
+        found = root / relative
+        if found.exists():
+            return Located(found, root)
+    return None
+
+
+def bundle_file(relative: str) -> Path:
+    """Where a staged file is, or where it would be if anything carried it.
+
+    A path either way, because every caller asks `.is_file()` and a `None` would
+    make each of them answer that question a second way. The path for a file
+    nothing carries is under the staging directory itself, which exists on no
+    machine and so reads as absent — and reads as a sensible location in the
+    message a provider builds from it.
+    """
+    found = locate(relative)
+    return found.path if found else paths.staging_dir() / relative
 
 
 def place(source: Path, destination: Path) -> None:

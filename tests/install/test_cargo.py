@@ -23,6 +23,7 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -51,9 +52,11 @@ def home(tmp_path, monkeypatch) -> Path:
 @pytest.fixture
 def staged(tmp_path, monkeypatch) -> Path:
     """An offline bundle with nothing in it yet."""
-    staging = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    staging = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staging / cargo.BUNDLE_BINARIES).mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', staging)
+    (staging / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staging
 
 
@@ -150,7 +153,7 @@ def test_offline_with_nothing_staged_says_where_it_looked(home, staged, ready, c
 
     assert not result.ok
     assert result.kind is Kind.NOT_IN_BUNDLE
-    assert str(staged / cargo.BUNDLE_BINARIES) in result.detail
+    assert str(paths.staging_dir()) in result.detail, 'a stack has no one bundle directory to name'
 
 
 def test_a_manifest_row_naming_a_file_the_bundle_lacks_is_a_miss(home, staged, ready, crates) -> None:

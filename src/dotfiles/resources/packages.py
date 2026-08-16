@@ -35,6 +35,7 @@ from dotfiles import releases
 from dotfiles import versions
 from dotfiles.coordinates import PackageManager
 from dotfiles.privilege import Privilege
+from dotfiles.providers import bundle
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
@@ -525,7 +526,12 @@ def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
     now = dt.datetime.now(dt.UTC)
     found = {}
     for item in present:
-        version = ghrelease.bundle_version(item.name)
+        # Newest bundle first, and both of its answers before the next bundle's.
+        # A sparse bundle says what upstream published two ways — a row for what
+        # it carried, `current` for what it measured and left out — and asking
+        # every bundle for the first shape before any for the second lets an
+        # older full bundle's row beat a newer measurement.
+        version = ghrelease.published_version(item.name)
         if version:
             found[_wanted(item).key] = releases.Cached(version=version, checked=now)
     return found
@@ -672,6 +678,18 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
     if observed.from_bundle:
+        # A sparse bundle explains most of what it left out, so an entry it does
+        # not explain is a different finding: the declaration gained it after the
+        # status the bundle was planned from was taken, and nothing has ever
+        # measured it. Saying "carries no version" there sends the reader looking
+        # for a bundle that is not the problem.
+        # Every staged bundle, not any of them. One full bundle in the stack makes
+        # an absence a gap again, so an entry missing from the *full* bundle was
+        # being reported against the sparse one — the bundle that is not the
+        # problem, and the wrong artefact to go and rebuild.
+        described = bundle.descriptions()
+        if described and all(one.sparse for one in described):
+            return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
     return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'

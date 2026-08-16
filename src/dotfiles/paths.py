@@ -116,19 +116,58 @@ holding exactly the sentence to print is `$(<file)` with no fork at all.
 def cache_home() -> Path:
     """Where this tool's caches live, re-read on every call.
 
-    A function as well as the constant below, because a cache is the one thing a
-    test legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob
-    that already means that — the same reasoning as `evidence.uv_tool_dir`. A
-    constant bound at import cannot be redirected without patching this module.
+    A function rather than a constant, because a cache is the one thing a test
+    legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob that
+    already means that — the same reasoning as `evidence.uv_tool_dir`. A constant
+    bound at import cannot be redirected without patching this module, which is a
+    name somebody has to remember to rebind.
     """
     return xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
 
 
-CACHE_HOME = cache_home()
+def archive_dir() -> Path:
+    """Bundle archives, whether `bundle create` built one or `bundle download` fetched it.
 
-# Where install.sh untars an offline bundle, and where every provider looks for
-# one. Still under $HOME because nothing has moved it yet, not because that is
-# right: a staged bundle has to be deleted by hand along with the tarball beside
-# it. The plan moves staging to $XDG_RUNTIME_DIR so it evaporates on reboot.
-# $DOTFILES_BUNDLE overrides it for a test.
-BUNDLE_DIR = Path(os.environ.get('DOTFILES_BUNDLE') or Path.home() / 'installers')
+    A downloaded archive arrives with its `.json` record beside it; a built one has
+    none until `bundle upload` composes one, which it does into a temporary
+    directory because the record describes the transfer rather than the file.
+    """
+    return cache_home() / 'bundles'
+
+
+def status_cache() -> Path:
+    """Status documents fetched from the remote, which a sparse build is planned from.
+
+    A cache and unambiguously so: each is a few kilobytes, the machine that wrote
+    it still has it, and losing one costs a second download.
+    """
+    return cache_home() / 'status'
+
+
+def staging_dir() -> Path:
+    """One directory per unpacked bundle, named after the archive it came from.
+
+    A directory *of* bundles rather than one bundle, so a sparse bundle can land on
+    top of a full one without merging into it. `providers.locate` reads across them
+    newest-first, which is what makes an entry a sparse bundle omits fall through to
+    the older full bundle that still carries it. Merging into one tree instead
+    refreshes the files and replaces the manifest, leaving everything the older
+    bundle staged on disk and unlisted.
+
+    Named after the archive so a machine can say which bundle a file came from.
+
+    **Cache rather than state**, which is the harder half of the classification
+    here. The usual test is whether losing it costs only time, and for the machine
+    this exists for it very nearly does not — a work box behind a firewall cannot
+    re-fetch these from upstream. It is a cache all the same, because the transport
+    that delivered them is still there and `bundle download` fetches them again.
+    What it must not be is state: `STATE_HOME` is a Syncthing folder, and a
+    gigabyte of archives there replicates across the fleet.
+
+    A function rather than a constant, for the reason `cache_home` gives and this
+    one needs twice over: `$DOTFILES_BUNDLE` is read on every call, so the
+    bootstrap and a test can both point staging somewhere and be obeyed. Bound at
+    import, each of these is a name a harness has to rebind by hand, and the one
+    nobody remembers is what writes into the real `~/.cache`.
+    """
+    return Path(os.environ.get('DOTFILES_BUNDLE') or cache_home() / 'staged')

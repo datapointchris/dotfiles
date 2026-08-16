@@ -201,7 +201,7 @@ def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result
     if offline:
         return Result(
             False,
-            f'go installs from {GO_DOWNLOAD_URL}, which the offline bundle at {paths.BUNDLE_DIR} does not stage',
+            f'go installs from {GO_DOWNLOAD_URL}, which no bundle staged at {paths.staging_dir()} carries it',
             kind=Kind.NOT_IN_BUNDLE,
             refused=True,
         )

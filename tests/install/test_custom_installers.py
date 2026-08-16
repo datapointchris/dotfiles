@@ -26,6 +26,7 @@ from dotfiles import evidence
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles import resolve
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
@@ -56,9 +57,11 @@ def home(tmp_path, monkeypatch) -> Path:
 
 @pytest.fixture
 def bundle(tmp_path, monkeypatch) -> Path:
-    staged = tmp_path / 'installers'
+    root = tmp_path / 'staged'
+    staged = root / 'dotfiles-offline-v20260814T190203Z-box-linux-x86_64'
     (staged / 'scripts').mkdir(parents=True)
-    monkeypatch.setattr(paths, 'BUNDLE_DIR', staged)
+    (staged / providers.MANIFEST).write_text('')
+    monkeypatch.setenv('DOTFILES_BUNDLE', str(root))
     return staged
 
 
@@ -321,7 +324,7 @@ class TestCheckoutTools:
 
         assert not result.ok
         assert result.kind is Kind.NOT_IN_BUNDLE
-        assert str(bundle) in result.detail
+        assert str(paths.staging_dir()) in result.detail
         assert runs.calls == []
 
     def test_a_bundled_script_is_preferred_over_the_network(self, declared, home, bundle, effected):

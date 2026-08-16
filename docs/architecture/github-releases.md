@@ -231,20 +231,24 @@ the asset — that needs a signature verified against a key distributed out of b
 
 ## Offline
 
-A bundle staged under `~/installers/` is preferred over the network whenever it
-holds the asset, not only when offline: those bytes were verified against their
-release when the bundle was built, and re-downloading them spends a request to
-arrive at the same file.
+A staged bundle is preferred over the network whenever it holds the asset, not
+only when offline: those bytes were verified against their release when the bundle
+was built, and re-downloading them spends a request to arrive at the same file.
+
+Several bundles can be staged at once and `providers.locate` reads across them
+newest first — see [Offline Bundles](offline-bundles.md).
 
 Offline resolves the version from the bundle's `manifest.txt` rather than the
 release API — the network that makes a bundle necessary is the same one that
 blocks the API, and the asset filename is built from the version, so a version
 fetched live names a file the bundle does not contain the moment upstream ships.
 
-An offline install verifies against `installers/checksums.txt` and **never falls
-through to the network**, which would spend a timeout arriving at "upstream
-publishes nothing" — a statement about upstream that is really a statement about
-the bundle. `create_bundle.py` records only digests it verified against upstream
+An offline install verifies against the `checksums.txt` **in the bundle that
+staged the asset**, and never falls through to the network — which would spend a
+timeout arriving at "upstream publishes nothing", a statement about upstream that
+is really a statement about the bundle. Resolving the file and its digest
+independently across the stack would pair a newer bundle's checksum with an older
+bundle's binary and fail verification where nothing is wrong. `create_bundle.py` records only digests it verified against upstream
 while building, so an asset whose release publishes nothing usable is simply
 absent from that file.
 
