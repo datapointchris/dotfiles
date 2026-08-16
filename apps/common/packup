@@ -129,7 +129,7 @@ cleanup() {
 
   # Remove temporary IPC files
   if [[ -n "${PROGRESS_FILE:-}" ]]; then
-    rm -f "$PROGRESS_FILE"
+    rm -f "$PROGRESS_FILE" "$PROGRESS_FILE.staging"
   fi
 
   # Clear progress line (cosmetic, can't fail)
@@ -274,6 +274,19 @@ validate_paths() {
 # Progress Display
 # ============================================================================
 
+# The spinner reads this file while the count loop writes it, and `echo >file`
+# truncates before it writes. A read landing in that window gets an empty string,
+# which reaches printf's %'d as `invalid number` on stderr across the progress
+# line. Staging plus mv is rename(2), so a reader sees one value or the previous
+# one and never a half-written file.
+write_progress_count() {
+  local count="$1"
+  local progress_file="$2"
+
+  echo "$count" >"$progress_file.staging"
+  mv "$progress_file.staging" "$progress_file"
+}
+
 start_progress_count_only() {
   local progress_file="$1"
   local start_time="$2"
@@ -413,11 +426,11 @@ create_archive() {
         local now
         now=$(date +%s%N)
         if [[ $((now - last_update)) -ge $UPDATE_INTERVAL_NS ]]; then
-          echo "$processed" >"$PROGRESS_FILE" # Background spinner reads this
+          write_progress_count "$processed" "$PROGRESS_FILE"
           last_update=$now
         fi
       done
-      echo "$processed" >"$PROGRESS_FILE" # Final count
+      write_progress_count "$processed" "$PROGRESS_FILE"
     }
 
   # Re-enable pipefail now that archiving is complete
@@ -427,9 +440,8 @@ create_archive() {
   # Post-Archive Cleanup and Validation
   # ==========================================================================
 
-  # Read the count before removing the file the spinner watches. The count loop's
-  # last write races this read; the sleep narrows the window rather than closing it.
-  sleep 0.1
+  # bash waits for every process in a pipeline, so the count loop's final write
+  # has landed by the time control reaches here.
   PROCESSED_FILES=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
 
   rm -f "$PROGRESS_FILE" # the spinner loop exits when this is gone
