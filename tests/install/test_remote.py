@@ -345,6 +345,38 @@ class TestListing:
         assert transport.exists(configured, '/artefacts/nowhere') is False
 
 
+class TestTellingAbsenceFromFailure:
+    """`listed` has three answers because a listing has three outcomes.
+
+    A boolean probe in front of a raising call re-collapsed the distinction that
+    call exists to preserve: a transport failure answered as an empty shelf, and
+    `bundle create --against latest` then built a full bundle on a run where a
+    perfectly good status was sitting on a server nobody could reach.
+    """
+
+    def test_a_directory_that_lists_answers_with_its_rows(self, configured: transport.Remote, server: Path) -> None:
+        (server / 'artefacts').mkdir()
+        (server / 'artefacts' / 'a.tar.gz').write_text('x')
+
+        assert transport.listed(configured, '/artefacts') == ('a.tar.gz',)
+
+    def test_a_directory_that_was_never_created_answers_none(self, configured: transport.Remote, server: Path) -> None:
+        """Absence is established by an ancestor that lists, which is what proves
+        the remote is reachable and leaves the missing child as the explanation."""
+        (server / 'artefacts').mkdir()
+
+        assert transport.listed(configured, '/artefacts/never-created') is None
+
+    def test_an_unreachable_remote_raises_rather_than_reading_as_absent(self, configured: transport.Remote) -> None:
+        """Nothing up to the root lists, so nothing establishes absence. The
+        refusal travels rather than a caller being told the shelf is empty."""
+        with pytest.raises(transport.RemoteError) as refused:
+            transport.listed(configured, '/artefacts/bundles/box')
+
+        assert refused.value.code is ExitCode.ISSUE
+        assert 'box' in str(refused.value)
+
+
 class TestPushing:
     def test_a_file_lands_in_the_named_directory(self, configured: transport.Remote, server: Path, tmp_path: Path) -> None:
         (server / 'artefacts').mkdir()

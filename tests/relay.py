@@ -42,6 +42,12 @@ def main(argv):
         # yet is the ordinary state of a fresh remote.
         return 0 if ROOT.is_dir() else 4
     if verb == "list":
+        # A listing fails for reasons that are not absence — an expired token, a
+        # reset connection — and a fake that could only fail by absence could not
+        # produce the case where the two are told apart. `deny_listing` writes it.
+        if (ROOT / ".deny-list").is_file():
+            print("403 token expired", file=sys.stderr)
+            return 5
         directory = resolve(rest[0])
         if not directory.is_dir():
             print(f"{{rest[0]}} is not a directory", file=sys.stderr)
@@ -120,6 +126,16 @@ def install_relay(bin_dir: Path, server: Path, name: str = 'relay') -> Path:
     """Put the fake transport on PATH, serving one directory as the remote."""
     server.mkdir(parents=True, exist_ok=True)
     return executable(bin_dir, name, RELAY.format(python=sys.executable, root=str(server)))
+
+
+def deny_listing(server: Path) -> None:
+    """Make every listing fail for a reason that is not absence.
+
+    The probe still answers, which is the shape that matters: a machine whose
+    remote is reachable and whose listing is refused is the one a boolean `exists`
+    reported as an empty shelf.
+    """
+    (server / '.deny-list').write_text('')
 
 
 def install_spy(bin_dir: Path, record: Path, *, name: str = 'spy', code: int = 0) -> Path:

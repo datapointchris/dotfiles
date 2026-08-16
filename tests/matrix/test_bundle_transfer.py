@@ -21,13 +21,14 @@ from pathlib import Path
 import pytest
 import typer
 from relay import declare
+from relay import deny_listing
 from relay import install_relay
 
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import remote as transport
+from dotfiles import status as status_commands
 from dotfiles.commands import staging
-from dotfiles.commands import status as status_commands
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import RESOURCES
 from dotfiles.vocabulary import ExitCode
@@ -146,6 +147,21 @@ class TestUploading:
         assert ran.exit_code == ExitCode.ISSUE
         assert 'does not say which machine' in ran.stderr
         assert list(shelf(server).iterdir()) == []
+
+    def test_a_landed_upload_stays_converged_when_the_retention_nudge_cannot_list(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """Nothing a verb does after its effect has landed may change its exit
+        code. The nudge ran after both pushes and after `success` printed, so a
+        refused listing reported a completed upload as a failure and invited a
+        caller to send it again."""
+        built = archive(sandbox.root, NEWEST)
+        deny_listing(server)
+
+        ran = cli('bundle', 'upload', str(built), catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert (shelf(server) / f'{NEWEST}.tar.gz').is_file()
 
     def test_an_unconfigured_machine_refuses_and_names_the_command_that_configures_it(
         self, sandbox: Sandbox, cli: Callable[..., Invocation]
@@ -320,17 +336,30 @@ class TestPruning:
         assert (sandbox.staging / NEWEST).is_dir()
         assert not (sandbox.staging / OLDER).exists()
 
-    def test_the_summary_reports_the_limit_that_was_applied(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-        """Both sweeps floor at one, so `--keep 0` retains one. The closing line
-        printed the flag rather than the number, which is the one thing that did
-        not happen."""
+    def test_a_limit_below_one_is_refused_rather_than_clamped(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """A flag the run cannot honour says so. Clamped in silence, `--keep 0`
+        swept to one bundle while the caller believed it had asked for none."""
         (sandbox.staging / NEWEST).mkdir(parents=True)
         (sandbox.staging / NEWEST / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
 
         ran = cli('bundle', 'prune', '--keep', '0', '--yes')
 
-        assert '1 kept per machine' in ran.stdout
-        assert '0 kept per machine' not in ran.stdout
+        assert ran.exit_code == ExitCode.USAGE
+        assert 'the floor is 1' in ran.stderr
+        assert (sandbox.staging / NEWEST).is_dir()
+
+    def test_the_summary_reports_the_limit_that_was_applied(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Through the machine door rather than out of the sentence. The number
+        only existed inside rendered prose, so the test that checked it was
+        parsing the report rather than reading the value."""
+        (sandbox.staging / NEWEST).mkdir(parents=True)
+        (sandbox.staging / NEWEST / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+        ran = cli('bundle', 'prune', '--keep', '1', '--yes', '--json')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert ran.document['kept'] == 1
+        assert ran.document['removed'] == []
 
     def test_the_newest_survives_a_limit_of_zero(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """A machine with nothing staged cannot converge offline at all, so a limit
@@ -555,6 +584,35 @@ class TestResolvingLatestForASparseBuild:
         assert '2 machines share' in str(refused.value)
         assert 'status download' in str(refused.value)
 
+    def test_the_refusal_names_every_candidate_by_the_box_that_wrote_it(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """It pasted `--status {listed[0]}`, which is the newest by timestamp
+        alone — so the remedy walked straight into the ambiguity it had just
+        declined to resolve, on a path with no guard behind it."""
+        self.published(server, '20260101T010000Z', wrote='abcd1234')
+        self.published(server, '20260909T120000Z', wrote='99887766')
+
+        with pytest.raises(typer.BadParameter) as refused:
+            staging._status_for('latest', MACHINE)
+
+        said = str(refused.value)
+        assert 'abcd1234' in said
+        assert '99887766' in said
+        assert '--status NAME' in said
+
+    def test_a_refused_listing_stops_rather_than_building_a_full_bundle(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """The probe answers and the listing does not, which is the case a boolean
+        `exists` read as an empty shelf. Falling back there spends half an hour of
+        downloads on a run where a perfectly good status was on the server."""
+        self.published(server, '20260909T120000Z')
+        deny_listing(server)
+
+        with pytest.raises(transport.RemoteError):
+            staging._status_for('latest', MACHINE)
+
     def test_one_machine_publishing_twice_is_not_ambiguous(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Paired with the refusal above, because a check that fired on every
         second publish would make the ordinary case unusable."""
@@ -670,9 +728,10 @@ class TestPinningTheFullBase:
         self.staged(sandbox, OLDER, SPARSE_NEWEST)
 
         ran = cli('bundle', 'prune', '--keep', '1', '--yes')
+        machine_readable = cli('bundle', 'prune', '--keep', '1', '--yes', '--json')
 
         assert 'pinned' in ran.stdout + ran.stderr
-        assert 'plus 1 pinned as a full base' in ran.stdout
+        assert machine_readable.document['pinned'] == [OLDER]
 
     def test_a_newer_full_bundle_unpins_the_older_one(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """What bounds the stack. The pin moves rather than accumulating, so a

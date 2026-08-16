@@ -60,7 +60,7 @@ leak that a denylist silently permits.
 """
 
 
-PROTOCOL_KEYS = ('machine',)
+PROTOCOL_KEYS = ('machine', 'written_by')
 """Fields the exchange itself is built on, excluded from the byte scan.
 
 `machine` is the manifest name, and `remote.statuses_for` builds the shelf
@@ -72,6 +72,13 @@ deliberately not what goes here.
 Measured 2026-08-15: on a box named `archlinux` running the
 `archlinux-personal-workstation` manifest, the hostname is a substring of the
 shelf key, and the gate refused its own protocol.
+
+`written_by` is `status.discriminator`, which is what tells two boxes sharing a
+manifest apart and is *already* the trust decision this module cares about: a
+`FLEET` box publishes its hostname because the hostname is not a secret there,
+and anything else publishes a blake2b digest that identifies nothing. Excluding
+it here is not a hole in the boundary — it is the same boundary, decided once
+where the coordinate is known rather than twice.
 """
 
 

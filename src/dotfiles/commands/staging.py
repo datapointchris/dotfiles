@@ -32,9 +32,9 @@ from dotfiles import paths
 from dotfiles import providers
 from dotfiles import reconcile
 from dotfiles import remote as transport
+from dotfiles import status as status_document
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
-from dotfiles.commands import status as status_commands
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import VERDICT_MARKS
@@ -61,6 +61,16 @@ class BundleTransferError(Refusal):
 
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
+
+KeepOption = typer.Option(
+    None,
+    '--keep',
+    help=f'How many to retain per machine (default: remote.keep_bundles in config, or {transport.DEFAULT_KEEP})',
+)
+"""Interpolated rather than typed, so changing the default cannot leave the help wrong.
+
+standards/help.md § "Never write a sentence a later release will make false" — a
+copied constant is a sentence with nothing checking it."""
 
 ArchOption = typer.Option(None, '--arch', help='CPU of the machine that will install this bundle')
 """Module scope because the annotation is an enum.
@@ -209,7 +219,7 @@ def _status_for(named: str | None, machine: str) -> Path | None:
         return found
 
     where = transport.reachable()
-    listed = status_commands.remote_statuses(where, machine)
+    listed = status_document.on_remote(where, machine)
     if not listed:
         warn(f'the remote holds no status for {machine}, so this builds a full bundle')
         hint(f'publish one from that machine to make the next build sparse: dotfiles status upload --machine {machine}')
@@ -219,14 +229,19 @@ def _status_for(named: str | None, machine: str) -> Path | None:
     # status filename carries a digest of the hostname. Nothing here can tell
     # which of them a bundle is for, so picking the most recent would diff one
     # Mac's plan against the other's installed set and report the result as
-    # measured, which is the outcome the `machine` guard below exists to prevent
-    # and cannot see.
-    published = {status_commands.wrote(name) for name in listed}
+    # measured.
+    published = {status_document.wrote(name) for name in listed}
     if len(published) > 1:
+        # Every candidate with the box that wrote it, rather than the newest
+        # pre-filled. Pasting one made the refusal's own remedy the route into the
+        # ambiguity it had just declined to resolve — `help.md` § "An example says
+        # what it is for, not just what to type".
+        newest_per_box = {status_document.wrote(name): name for name in reversed(listed)}
+        offered = '\n'.join(f'  {box or "an unrecognised box"}: --status {name}' for box, name in sorted(newest_per_box.items()))
         raise typer.BadParameter(
             f'--against latest: {len(published)} machines share the {machine} manifest and have published, '
-            f'so "latest" does not name one. Fetch the one you mean and pass its path: '
-            f'dotfiles status download --machine {machine} --status {listed[0]} --print-path'
+            f'so "latest" does not name one. Fetch the one you mean:\n'
+            f'  dotfiles status download --machine {machine} --status NAME --print-path\n{offered}'
         )
 
     destination = paths.status_cache() / listed[0]
@@ -307,26 +322,31 @@ def upload(
         transport.push(where, sidecar, directory)
 
     success(f'uploaded {found.name} to {landed.rsplit("/", 1)[0]}')
-    _report_retention(where, directory)
+    _report_retention(where, machine)
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _report_retention(where: transport.Remote, directory: str) -> None:
+def _report_retention(where: transport.Remote, machine: str) -> None:
     """Say what has accumulated, and never remove it.
 
     Reported rather than swept, so nothing this tool does as a side effect of an
     upload deletes bytes from a server. `bundle prune` is where that happens, and
     it is typed.
+
+    **Nothing here may change the verb's exit code.** The archive and its record
+    have already landed by the time this runs and `success` has already printed, so
+    a `RemoteError` from the listing reported a completed upload as a failure and
+    invited a caller to send it again. `_prune_remote` suppresses the same class
+    for the same reason.
+
+    Counted through `on_remote` and `retention`, which is what `prune --remote`
+    will use, so the number named here is the number that command acts on.
     """
-    archives = tuple(name for name in transport.names(where, directory) if not name.endswith(offline_bundle.SIDECAR_SUFFIX))
-    base = offline_bundle.base_of(archives)
-    # Counted the way `prune --remote` will sweep, or the nudge names a number
-    # that command then declines to act on. No pinned row here: this path reports
-    # and never removes, so all it owes the reader is a count that matches.
-    superseded = tuple(name for name in transport.superseded(archives, where.keep_bundles) if name != base)
-    if superseded:
-        render_note(f'{len(superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {superseded[0]}')
-        hint('remove them with: dotfiles bundle prune --remote')
+    with contextlib.suppress(transport.RemoteError):
+        sweep = offline_bundle.retention(offline_bundle.on_remote(where, machine), where.keep_bundles)
+        if sweep.superseded:
+            render_note(f'{len(sweep.superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {sweep.superseded[0]}')
+            hint('remove them with: dotfiles bundle prune --remote')
 
 
 @bundle_app.command('list')
@@ -439,7 +459,7 @@ def download(
     directory = transport.bundles_for(where, named)
     record = offline_bundle.record_on_remote(where, directory, wanted)
     _describe(wanted, record, len(listed))
-    if not _confirmed(wanted, yes=yes, no_input=no_input):
+    if not _confirmed('Download this bundle?', f'fetched {wanted}', yes=yes, no_input=no_input):
         error('nothing was downloaded')
         raise typer.Exit(ExitCode.ISSUE)
 
@@ -474,19 +494,27 @@ def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
     render_note(f'{held} bundle(s) on the remote for this machine')
 
 
-def _confirmed(name: str, *, yes: bool, no_input: bool) -> bool:
-    """Whether to spend the transfer, asked the way every prompt here is asked.
+def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool) -> bool:
+    """Whether to go ahead, asked the way every prompt here is asked.
 
-    Not destructive by the test standards/cli-design.md § "Destructive operations
-    require an explicit flag" applies — a download writes into a cache — so the
-    default is no rather than the friction being higher. What it protects is the
-    transfer itself, which on a restricted network is minutes.
+    **One helper for all three prompts, because three copies had already
+    diverged**: declining a download printed a sentence and exited ISSUE,
+    declining a local sweep printed a different sentence and exited ISSUE, and
+    declining a remote sweep printed nothing and exited ISSUE — so somebody who
+    answered `n` got a non-zero status with no reason on screen. The caller still
+    owns what happens next; what is shared is how the question is put and what a
+    machine without a terminal is told instead.
+
+    Default no everywhere. Two of the three are destructive by the test
+    standards/cli-design.md § "Destructive operations require an explicit flag"
+    applies, and the third protects a transfer that is minutes on the network this
+    exists for.
     """
     if yes:
         return True
     if no_input or not sys.stdin.isatty():
-        raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have fetched {name}')
-    return typer.confirm('Download this bundle?', default=False, err=True)
+        raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have {would_have}')
+    return typer.confirm(question, default=False, err=True)
 
 
 @bundle_app.command('check')
@@ -599,11 +627,12 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
 
 @bundle_app.command('prune')
 def prune(
-    keep: int | None = typer.Option(None, '--keep', help='How many to retain per machine (default: remote.keep_bundles in config, or 5)'),
+    keep: int | None = KeepOption,
     remote_too: bool = typer.Option(False, '--remote', help="Also remove what is past the limit on the remote's shelf"),
-    machine: str = typer.Option(None, '--machine', help='Whose remote shelf to sweep (default: this machine)'),
+    machine: str = typer.Option(None, '--machine', help='Whose bundles to sweep (default: every machine in the cache)'),
     yes: bool = typer.Option(False, '--yes', help='Skip the confirmation'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
+    as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -640,11 +669,13 @@ def prune(
     # `is not None`, because 0 is a number somebody types meaning it. As a
     # sentinel for "read the config" it was honoured as five, which is the one
     # answer the caller did not ask for.
-    # Clamped here rather than at each sweep, so the number reported is the number
-    # applied. Both sweeps floored at one and the closing line printed the flag,
-    # so `--keep 0` swept to one bundle and said `0 kept per machine`.
-    retained = max(keep if keep is not None else _configured_keep(), 1)
-    sweep = _superseded_locally(retained)
+    if keep is not None and keep < 1:
+        raise typer.BadParameter(
+            f'--keep {keep}: a machine with nothing staged cannot converge offline at all, so the floor is 1',
+            param_hint='--keep',
+        )
+    retained = keep if keep is not None else max(_configured_keep(), 1)
+    sweep = _superseded_locally(retained, machine)
     superseded = sweep.superseded
 
     if superseded or sweep.pinned:
@@ -652,25 +683,31 @@ def prune(
             render_row('superseded', name, _age_of(name), 'yellow')
         for name in sweep.pinned:
             render_row('pinned', name, 'the newest full bundle, which the sparse bundles above it read through')
-        # The same pair the remote sweep has. What is here is what a firewalled
-        # box cannot download again, and a machine with no [remote] declared —
-        # the ordinary state — has no `bundle download` to recover with.
-        #
         # Asked only where something goes. A run whose only candidate was the base
         # has nothing to confirm, and the pinned row above already said why.
-        if superseded and not yes:
-            if no_input or not sys.stdin.isatty():
-                raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have removed {len(superseded)} locally')
-            if not typer.confirm(f'Remove {len(superseded)} local bundle(s)?', default=False, err=True):
-                error('nothing was removed locally')
-                raise typer.Exit(ExitCode.ISSUE)
+        if superseded and not _confirmed(
+            f'Remove {len(superseded)} local bundle(s)?', f'removed {len(superseded)} locally', yes=yes, no_input=no_input
+        ):
+            error('nothing was removed locally')
+            raise typer.Exit(ExitCode.ISSUE)
 
     swept = _prune_local(superseded)
     for name in swept:
         render_row('removed', name, 'past the retention limit', 'yellow')
 
-    if remote_too:
-        _prune_remote(machine, retained, yes=yes, no_input=no_input)
+    remotely = _prune_remote(machine, retained, yes=yes, no_input=no_input) if remote_too else ()
+
+    if as_json:
+        emit_json(
+            {
+                'machine': machine or '',
+                'kept': retained,
+                'removed': list(swept),
+                'pinned': list(sweep.pinned),
+                'removed_remotely': list(remotely),
+            }
+        )
+        raise typer.Exit(ExitCode.CONVERGED)
 
     held = f', plus {len(sweep.pinned)} pinned as a full base' if sweep.pinned else ''
     console.print(f'{len(swept)} removed locally, {retained} kept per machine{held}')
@@ -683,20 +720,7 @@ def _configured_keep() -> int:
     return found.remote.keep_bundles if found.remote else transport.DEFAULT_KEEP
 
 
-@dc.dataclass(frozen=True, slots=True)
-class Sweep:
-    """What a local sweep would remove, and what the limit wanted and cannot have."""
-
-    superseded: tuple[str, ...] = ()
-    pinned: tuple[str, ...] = ()
-    """A base the count would otherwise have taken.
-
-    Only those. A base still inside the kept N is retained by the count and needs
-    no line saying so, which keeps an ordinary sweep's output unchanged.
-    """
-
-
-def _superseded_locally(keep: int) -> Sweep:
+def _superseded_locally(keep: int, machine: str | None) -> offline_bundle.Sweep:
     """What a local sweep would remove, counted per machine and named, removing nothing.
 
     Separate from the removal so the confirmation has something to show. A prompt
@@ -710,16 +734,9 @@ def _superseded_locally(keep: int) -> Sweep:
         (offline_bundle.stem(path) for path in paths.archive_dir().glob(offline_bundle.ARCHIVES)) if paths.archive_dir().is_dir() else ()
     )
     staged = (path.name for path in providers.staged_bundles())
-    held = tuple({*archives, *staged})
-
-    superseded: list[str] = []
-    pinned: list[str] = []
-    for owned in offline_bundle.by_machine(held).values():
-        base = offline_bundle.base_of(owned)
-        past = transport.superseded(owned, max(keep, 1))
-        superseded.extend(name for name in past if name != base)
-        pinned.extend(name for name in past if name == base)
-    return Sweep(tuple(superseded), tuple(pinned))
+    grouped = offline_bundle.by_machine(tuple({*archives, *staged}))
+    narrowed = {machine: grouped.get(machine, ())} if machine else grouped
+    return offline_bundle.swept(narrowed, keep)
 
 
 def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
@@ -742,36 +759,37 @@ def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(removed)
 
 
-def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) -> None:
-    """Remove what is past the limit on a machine's shelf, having said what first."""
+def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) -> tuple[str, ...]:
+    """Remove what is past the limit on a machine's shelf, having said what first.
+
+    Answers what it removed, so the caller's `--json` reports the remote half
+    rather than describing a run that was only half measured.
+
+    A shelf holds one machine's bundles, so this names one where the local sweep
+    covers every machine in the cache. That asymmetry is the shelf's, not the
+    flag's.
+    """
     where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     directory = transport.bundles_for(where, named)
-    listed = offline_bundle.on_remote(where, named)
-    past = transport.superseded(listed, max(keep, 1))
-    base = offline_bundle.base_of(listed)
-    superseded = tuple(name for name in past if name != base)
+    sweep = offline_bundle.retention(offline_bundle.on_remote(where, named), keep)
+    superseded = sweep.superseded
     # Rendered before the guard below, or a sweep whose only candidate was the
     # base returns saying nothing is past the limit — which is false. Something
     # was, and it was deliberately held back.
-    for name in (one for one in past if one == base):
+    for name in sweep.pinned:
         render_row('pinned', name, 'the newest full bundle, which the sparse bundles above it read through')
 
     if not superseded:
         render_note(f'nothing on the remote for {named} is past the {keep} kept')
-        return
+        return ()
 
     for name in superseded:
         render_row('superseded', name, _age_of(name), 'yellow')
-    if not yes:
-        if no_input or not sys.stdin.isatty():
-            raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have removed {len(superseded)} from {directory}')
-        if not typer.confirm(f'Remove {len(superseded)} bundle(s) from {directory}?', default=False, err=True):
-            # ISSUE rather than returning into a converged exit, matching the
-            # local sweep and `bundle download`. Declining printed a red ✗ and
-            # exited 0, so a caller shelling out read success while the text said
-            # nothing had happened.
-            raise typer.Exit(ExitCode.ISSUE)
+    question = f'Remove {len(superseded)} bundle(s) from {directory}?'
+    if not _confirmed(question, f'removed {len(superseded)} from {directory}', yes=yes, no_input=no_input):
+        error(f'nothing was removed from {directory}')
+        raise typer.Exit(ExitCode.ISSUE)
 
     for name in superseded:
         transport.remove(where, f'{directory}/{name}')
@@ -781,3 +799,4 @@ def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) 
         with contextlib.suppress(transport.RemoteError):
             transport.remove(where, f'{directory}/{name}{offline_bundle.SIDECAR_SUFFIX}')
     success(f'removed {len(superseded)} from {directory}')
+    return superseded

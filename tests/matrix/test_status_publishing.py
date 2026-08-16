@@ -25,8 +25,8 @@ from relay import install_relay
 from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
+from dotfiles import status as status_commands
 from dotfiles import vocabulary
-from dotfiles.commands import status as status_commands
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import Sandbox

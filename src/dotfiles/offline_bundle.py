@@ -35,7 +35,18 @@ from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
 from dotfiles.refusal import Refusal
 
-ARCHIVES = 'dotfiles-offline-*.tar.gz'
+ARCHIVE_SUFFIX = '.tar.gz'
+"""What a bundle archive ends in, and the only thing that makes a listed name one.
+
+Named because two readers of a remote shelf have to agree on it. `on_remote`
+keeps what ends in this; the retention nudge kept everything that was not a
+record, so a `.part` from an interrupted upload or a `.DS_Store` from browsing the
+share counted as a bundle in one and not the other — and it sorts before
+`dotfiles-`, so the nudge named it as the oldest bundle while the sweep it points
+at would not touch it.
+"""
+
+ARCHIVES = f'dotfiles-offline-*{ARCHIVE_SUFFIX}'
 """What `bundle create` names its output, which is how one is recognised."""
 
 
@@ -347,10 +358,10 @@ def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
     listings would be two places the naming convention is known.
     """
     directory = transport.bundles_for(where, machine)
-    if not transport.exists(where, directory):
+    listed = transport.listed(where, directory)
+    if listed is None:
         return ()
-    listed = transport.names(where, directory)
-    return tuple(sorted((name for name in listed if name.endswith('.tar.gz')), reverse=True))
+    return tuple(sorted((name for name in listed if name.endswith(ARCHIVE_SUFFIX)), reverse=True))
 
 
 def record_on_remote(where: transport.Remote, directory: str, name: str) -> Record:
@@ -515,6 +526,58 @@ def by_machine(names: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
     for name in names:
         grouped.setdefault(manifest_of(name), []).append(name)
     return {machine: tuple(sorted(held)) for machine, held in grouped.items()}
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Sweep:
+    """What retention would remove, and what the limit wanted and cannot have."""
+
+    superseded: tuple[str, ...] = ()
+    pinned: tuple[str, ...] = ()
+    """A base the count would otherwise have taken.
+
+    Only those. A base still inside the kept N is retained by the count and needs
+    no line saying so, which keeps an ordinary sweep's output unchanged.
+    """
+
+
+def retention(names: tuple[str, ...], keep: int) -> Sweep:
+    """What a sweep of one machine's bundles would remove, and what it pins.
+
+    **One function because the rule has three parts and three callers had all
+    three.** The local sweep, the remote sweep and the post-upload nudge each
+    composed `base_of`, `superseded` and drop-the-base by hand, each carried a
+    comment explaining why it agreed with the other two, and they had already
+    stopped agreeing: one counted against the configured limit raw and two against
+    the floor. `standards/python.md` § "Ask whatever owns a fact; never work it out
+    a second time" is the rule, and a fourth caller is where three sites stop
+    agreeing for good.
+
+    Floored at one here, so the number applied is the number every caller reports.
+
+    Pure and taking names, so the two sweeps that read a remote and the one that
+    reads a cache all answer by the identical rule without any of them holding a
+    transport.
+    """
+    past = transport.superseded(names, max(keep, 1))
+    base = base_of(names)
+    return Sweep(tuple(name for name in past if name != base), tuple(name for name in past if name == base))
+
+
+def swept(grouped: dict[str, tuple[str, ...]], keep: int) -> Sweep:
+    """Retention across several machines' bundles, counted per machine and merged.
+
+    The local cache holds more than one machine's archives — `bundle download
+    --machine X` writes a peer's beside this one's — and the limit counts per
+    machine. A remote shelf holds one machine's, so it asks `retention` directly.
+    """
+    superseded: list[str] = []
+    pinned: list[str] = []
+    for owned in grouped.values():
+        sweep = retention(owned, keep)
+        superseded.extend(sweep.superseded)
+        pinned.extend(sweep.pinned)
+    return Sweep(tuple(superseded), tuple(pinned))
 
 
 def newest(*searched: Path, machine: str = '') -> Path | None:

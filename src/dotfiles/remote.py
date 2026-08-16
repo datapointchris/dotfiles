@@ -463,8 +463,53 @@ def names(remote: Remote, directory: str) -> tuple[str, ...]:
     return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
 
 
+def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
+    """Every entry, `None` where the directory is genuinely not there, raising otherwise.
+
+    **Three answers, because a listing has three outcomes and a bool carries two.**
+    A directory that has never been created and a transport that could not be
+    reached are opposite findings, and every caller here acts differently on them:
+    the first means "nothing has been published yet, build a full bundle", and the
+    second means "stop, because a perfectly good status may be sitting on a server
+    nobody could reach". Collapsing them turns a network fault into half an hour of
+    downloads with nothing on screen saying a call failed.
+
+    Absence is established by walking up. A transport reports one exit status for
+    every kind of failure, so nothing in its answer says which this was — but an
+    ancestor that lists proves the remote is reachable, which leaves the missing
+    child as the only explanation. Nothing listing all the way to the root is
+    unreachable, and that raises.
+
+    The walk costs extra round trips only on the failure path. A directory that
+    lists answers in one call, which is every ordinary run.
+    """
+    ran = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
+    if ran.ok:
+        return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
+    if _reachable_above(remote, directory):
+        return None
+    raise RemoteError(f'{remote.transport.program} could not list {directory}\n{ran.transcript.strip()}', code=ExitCode.ISSUE)
+
+
+def _reachable_above(remote: Remote, directory: str) -> bool:
+    """Whether any ancestor of a directory lists, which is what proves it is merely absent."""
+    root = remote.root.rstrip('/')
+    walking = directory.rstrip('/')
+    while walking != root and '/' in walking.removeprefix(root):
+        walking = walking.rsplit('/', 1)[0]
+        if _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
+            return True
+    return False
+
+
 def exists(remote: Remote, directory: str) -> bool:
-    """Whether a remote directory can be listed at all, without raising on absence."""
+    """Whether a remote directory is there, for a caller that will create it if not.
+
+    `push` alone, and only because its recovery is `mkdir` — which raises on its
+    own when the remote is unreachable, so the distinction `listed` draws is one
+    that path does not have to draw for itself. Every caller that *reads* a shelf
+    goes through `listed`, where guessing costs a wrong bundle.
+    """
     return _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory}).ok
 
 

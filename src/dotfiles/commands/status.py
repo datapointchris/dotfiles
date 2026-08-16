@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
-import hashlib
 import json
 import tempfile
 from pathlib import Path
@@ -58,58 +57,6 @@ app = typer.Typer(no_args_is_help=True, help='What this machine has installed, f
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 MachineOption = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)')
-
-PREFIX = 'dotfiles-status-v'
-SUFFIX = '.json'
-
-
-def discriminator(trust: axes.NetworkTrust) -> str:
-    """What tells this box apart from the others sharing its manifest.
-
-    Two machines legitimately share one manifest — `macos-personal-workstation` is
-    both Macs — so a filename keyed on the manifest alone has one silently
-    overwrite the other, which is the collision standards/data.md § "In a synced
-    directory, every machine writes its own file" exists to make unreachable.
-
-    **Which answer depends on the trust coordinate, because the constraint does.**
-    On a fleet machine the hostname is not a secret and it is what a reader wants:
-    a shelf listing says `macmini` rather than eight hex characters nobody can
-    resolve. Off the fleet the hostname is an employer asset tag, so a blake2b
-    digest disambiguates and identifies nothing. Anything that is not `FLEET` gets
-    the digest, which is the direction a privacy boundary has to fail in.
-
-    A hostname carrying a hyphen also falls back, because `wrote` recovers this by
-    splitting on the last one and the manifest name it follows is full of them.
-    """
-    named = paths.machine_id()
-    if trust is axes.NetworkTrust.FLEET and '-' not in named:
-        return named
-    return hashlib.blake2b(named.encode(), digest_size=4).hexdigest()
-
-
-def filename(machine: str, when: dt.datetime, trust: axes.NetworkTrust) -> str:
-    stamped = when.astimezone(dt.UTC).strftime('%Y%m%dT%H%M%SZ')
-    return f'{PREFIX}{stamped}-{machine}-{discriminator(trust)}{SUFFIX}'
-
-
-def wrote(name: str) -> str:
-    """Which box published a status, from the discriminator in its own filename.
-
-    The discriminator is what makes two machines sharing one manifest write two
-    files instead of overwriting each other, so it is also the only thing that
-    tells their documents apart afterwards. A reader that ignores it picks
-    whichever published last, and the `machine` field cannot object because both
-    carry the same one.
-
-    A hostname on a fleet machine and a digest off it, and this returns whichever
-    is there — the two are told apart by being read rather than by being parsed,
-    since a caller wants an identity to group on and not the kind of one it is.
-
-    Empty where the name is not one of ours, which groups strangers together
-    rather than inventing an owner for each.
-    """
-    stem = name.removesuffix(SUFFIX)
-    return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -173,8 +120,9 @@ def composed(machine: str | None) -> Composed:
     # of them a release binary. Offline the same walk reports 36, with versions,
     # which is exactly what a builder diffs against.
     walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
-    document = status_document.document(walked.results, named, began, verb='plan')
-    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, session.machine.coordinates.network_trust)
+    trust = session.machine.coordinates.network_trust
+    document = status_document.document(walked.results, named, began, verb='plan', written_by=status_document.discriminator(trust))
+    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, trust)
 
 
 @app.command('show')
@@ -230,7 +178,7 @@ def upload(
     found = composed(machine)
     publishing.refuse_unpublishable(found.document)
 
-    name = filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
+    name = status_document.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
     directory = transport.statuses_for(where, found.machine)
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / name
@@ -263,7 +211,7 @@ def publish_after_apply(machine: str | None) -> None:
     try:
         composition = composed(machine)
         publishing.refuse_unpublishable(composition.document)
-        name = filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
+        name = status_document.filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
         with tempfile.TemporaryDirectory() as workspace:
             local = Path(workspace) / name
             local.write_text(json.dumps(composition.document, indent=2) + '\n')
@@ -286,7 +234,7 @@ def list_statuses(
     verbosity(verbose, quiet)
     where = transport.reachable()
     named = machine or resolved(None).machine_name
-    listed = remote_statuses(where, named)
+    listed = status_document.on_remote(where, named)
     shown = listed[:limit] if limit else listed
 
     if as_json:
@@ -300,19 +248,6 @@ def list_statuses(
     if limit and len(listed) > limit:
         hint(f'see the rest with: dotfiles status list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
-
-
-def remote_statuses(where: transport.Remote, machine: str) -> tuple[str, ...]:
-    """Every status on a machine's shelf, newest first.
-
-    Public because `bundle create --against latest` resolves one through it, and a
-    second listing written there would be a second place the naming is known.
-    """
-    directory = transport.statuses_for(where, machine)
-    if not transport.exists(where, directory):
-        return ()
-    listed = transport.names(where, directory)
-    return tuple(sorted((name for name in listed if name.startswith(PREFIX) and name.endswith(SUFFIX)), reverse=True))
 
 
 @app.command('download')
@@ -334,7 +269,7 @@ def download(
     verbosity(verbose, quiet)
     where = transport.reachable()
     named = machine or resolved(None).machine_name
-    listed = remote_statuses(where, named)
+    listed = status_document.on_remote(where, named)
     if not listed:
         error(f'the remote holds no status for {named} at {transport.statuses_for(where, named)}')
         hint(f'publish one from that machine with: dotfiles status upload --machine {named}')
