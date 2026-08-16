@@ -68,6 +68,41 @@ class Companion:
 
 
 @dc.dataclass(frozen=True, slots=True)
+class LaunchAgent:
+    """How launchd is told to keep a release's daemon running.
+
+    Authored here rather than taken out of the archive, which is the opposite call
+    to `ReleaseArtifact.unit` beside it and is decided by what upstream publishes.
+    syncthing's `etc/linux-systemd/user/syncthing.service` is the same unit its
+    distro packages install, so copying it here would be a second copy of a working
+    file. Its `etc/macos-launchd/syncthing.plist` is an example: the file names
+    `/Users/USERNAME` four times, runs the binary out of `~/bin`, and its own README
+    says to edit it and to turn off the browser it opens on every login. Nothing can
+    install that as published, which is why Homebrew generates its own rather than
+    shipping it.
+
+    Built with `plistlib` for `providers/schedule.py`'s reason: serialising the same
+    dict on both sides is what makes `check` an exact comparison rather than a diff
+    of whitespace launchd does not care about.
+    """
+
+    label: str
+    """launchd's name for the job, which is what `launchctl` addresses it by.
+
+    Upstream's own reverse-DNS label, so a machine that still has the Homebrew
+    service carries two visibly different jobs rather than one this repo might
+    adopt by accident.
+    """
+
+    arguments: tuple[str, ...] = ()
+    """What follows the binary in `ProgramArguments`.
+
+    The binary itself is not here: it is wherever the install placed it, which is
+    the same fact `_exec_at` rewrites into the systemd unit for the same reason.
+    """
+
+
+@dc.dataclass(frozen=True, slots=True)
 class ReleaseArtifact:
     """One release asset, and how to get a binary out of it."""
 
@@ -90,7 +125,9 @@ class ReleaseArtifact:
     daemon that never runs.
 
     Linux only, and the asset function decides: syncthing's macOS zip carries the
-    same `etc/linux-systemd/` directory, where it means nothing.
+    same `etc/linux-systemd/` directory, where it means nothing. `AGENTS` is the
+    macOS half, and it is a table rather than a field here because what it declares
+    does not come out of the archive.
     """
 
     extras: tuple[str, ...] = ()
@@ -445,6 +482,23 @@ Nothing else on disk says a companion is owed, which is why reading it from here
 is what lets `check` see one is gone: fzf installs cleanly without `fzf-tmux` and
 the tmux popup binding then silently does nothing, surfacing days later at a
 keystroke rather than in any verdict.
+"""
+
+AGENTS: dict[str, LaunchAgent] = {
+    'syncthing': LaunchAgent('net.syncthing.syncthing', ('serve', '--no-browser', '--no-restart')),
+}
+"""Which tools launchd supervises on a Mac, by entry name.
+
+The arguments are the systemd unit's, so one release is supervised the same way on
+both platforms: `--no-restart` makes syncthing exit rather than restart itself, and
+the supervisor is then the only thing deciding when it comes back — `KeepAlive`
+here, `Restart=on-failure` there. `--no-browser` because a daemon loaded at login
+must not open one.
+
+Keyed by entry name and off `ReleaseArtifact` for `COMPANIONS`' reason, which is
+the whole argument for a second table: an asset is named from a tag and a target,
+so reading a fact off one costs a release lookup and therefore a network call.
+`check` asks what a machine owes without either.
 """
 
 

@@ -23,6 +23,8 @@ import os
 from pathlib import Path
 
 import pytest
+from matrix.harness import PACKAGE_MANAGERS
+from matrix.harness import REFUSED
 from matrix.harness import cached
 from matrix.harness import executable
 from matrix.harness import receipt
@@ -30,8 +32,11 @@ from matrix.harness import reporting
 from matrix.harness import session
 from matrix.harness import staged_bundle
 
+from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import providers
 from dotfiles import releases
+from dotfiles.coordinates import Target
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
 from dotfiles.providers import cargo
@@ -47,6 +52,51 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import packages
 from dotfiles.session import Session
+
+
+@pytest.fixture(autouse=True)
+def a_home_this_test_owns(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`$HOME` named as the directory `harness.session` builds a home in, and its
+    `~/.local/bin` put on `PATH`.
+
+    Two halves of one machine that have to agree. `session` hands the `Session` a
+    home under `tmp_path`, while every provider resolves `providers.bin_dir` off
+    `Path.home()` — the *process's* home, not the Session's. Unnamed, a release
+    measured by provenance reads the developer's real `~/.local/bin`: the test then
+    passes on a runner and fails at a desk that happens to have the tool, which is
+    the fixture reading the machine it runs on that `fake_bin` exists to stop.
+
+    Autouse because the hole is one a test cannot see it has, and behind `fake_bin`
+    on `PATH` because that is the order a real machine has — a shadowed package
+    manager answers ahead of anything installed.
+    """
+    home = tmp_path / 'home'
+    (home / '.local' / 'bin').mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv('HOME', str(home))
+    monkeypatch.setenv('PATH', f'{fake_bin}{os.pathsep}{home / ".local" / "bin"}{os.pathsep}{os.environ["PATH"]}')
+    # Anything resolving an XDG directory prefers the variable over `$HOME`, so a
+    # developer whose `$XDG_CONFIG_HOME` is set has `ghrelease.unit_dir` reading
+    # their real `~/.config/systemd/user` — where this desk will have a syncthing
+    # unit the moment the migration this file tests is run on it.
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(home / '.config'))
+    return home
+
+
+def released(name: str, version: str | None = None) -> Path:
+    """A release this machine has, at the path its own provider chose.
+
+    `evidence.by_release` measures a release entry at `providers.bin_dir()` rather
+    than on `PATH`, so a binary anywhere else is one this repo did not install — the
+    whole distinction the provenance check exists to draw. Placing through
+    `bin_dir()` rather than a literal keeps the fixture and the code reading one
+    answer.
+    """
+    return reporting(providers.bin_dir(), name, version) if version is not None else executable(providers.bin_dir(), name)
+
+
+def released_script(name: str, script: str) -> Path:
+    """The same placement, for a test that needs the binary to answer its own way."""
+    return executable(providers.bin_dir(), name, script)
 
 
 def verdicts(live: Session) -> dict[str, Verdict]:
@@ -106,7 +156,7 @@ def test_an_unreadable_entry_does_not_take_out_the_whole_scan(tmp_path: Path) ->
     forbidden = tmp_path / 'forbidden'
     forbidden.mkdir()
     (forbidden / 'target').write_text('')
-    searched = tmp_path / 'bin'
+    searched = tmp_path / 'searched'
     searched.mkdir()
     executable(searched, 'reachable')
     (searched / 'denied').symlink_to(forbidden / 'target')
@@ -128,7 +178,7 @@ def test_narrowing_the_scan_answers_the_same_for_the_names_asked_about(tmp_path:
     holds. On WSL with Windows interop left on those round trips cross drvfs and
     the untouched names are in the tens of thousands.
     """
-    searched = tmp_path / 'bin'
+    searched = tmp_path / 'searched'
     searched.mkdir()
     for name in ('wanted', 'ignored'):
         executable(searched, name)
@@ -358,8 +408,58 @@ LAZYGIT = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygi
 DECLARES_LAZYGIT = {'machine': 'box', 'platform': 'linux', 'github_releases': ['lazygit']}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Provenance: which copy of a release counts as installed
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Measured on macmini 2026-08-16. Homebrew's syncthing sat on PATH at the version
+# the release publishes, so `packages plan` reported an entry satisfied that
+# nothing here had ever installed — and `brew uninstall` would have taken the tool
+# off the machine with every verb still calling it converged.
+
+
+def test_a_release_at_the_path_this_provider_chose_is_installed(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    released('lazygit', 'lazygit version 0.45.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert verdicts(live) == {'ghrelease/lazygit': Verdict.MATCHED}
+
+
+def test_a_release_another_manager_put_on_path_is_not_this_declaration_satisfied(
+    tmp_path: Path, fake_bin: Path, release_cache: Path
+) -> None:
+    """The version is right and the provenance is not, which is the whole finding:
+    what answers `--version` is a binary this repo did not place and cannot keep."""
+    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+
+    assert verdicts(live) == {'ghrelease/lazygit': Verdict.MISSING}
+
+
+def test_the_copy_that_does_answer_is_named(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """A row reading "not installed" on a machine whose `lazygit --version` answers
+    is the reading that sends somebody looking for a broken installer."""
+    elsewhere = reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+    observed = packages.RESOURCE.observe(live, live.plan)
+
+    assert str(elsewhere) in observed.evidence['ghrelease/lazygit'].detail
+
+
+def test_a_release_installed_nowhere_is_still_plainly_missing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The common case, and the one the naming above must not clutter."""
+    live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
+    observed = packages.RESOURCE.observe(live, live.plan)
+    found = observed.evidence['ghrelease/lazygit']
+
+    assert found.verdict is Verdict.MISSING
+    assert str(providers.bin_dir() / 'lazygit') in found.detail
+
+
 def test_a_release_behind_the_latest_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -369,7 +469,7 @@ def test_a_release_behind_the_latest_is_stale(tmp_path: Path, fake_bin: Path, re
 
 
 def test_a_release_at_the_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    released('lazygit', 'lazygit version 0.45.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -379,7 +479,7 @@ def test_a_release_at_the_latest_reports_nothing(tmp_path: Path, fake_bin: Path,
 def test_a_release_ahead_of_the_cache_is_not_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """The cache is allowed to be behind reality. A tool newer than the last
     answer is not out of date; it is the cache that is."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.46.0')
+    released('lazygit', 'lazygit version 0.46.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -391,7 +491,7 @@ def test_a_tool_ahead_of_a_measured_release_is_stale(tmp_path: Path, fake_bin: P
     installed the high version, and `at_least` calls it current forever. Measured
     against a figure established this run, above the newest release is drift —
     there is no install anything here can perform that produces it."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 2.10.0')
+    released('lazygit', 'lazygit version 2.10.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
     measured = dc.replace(packages.RESOURCE.observe(live, live.plan), consulted_network=True)
@@ -407,7 +507,7 @@ def test_a_tool_ahead_of_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, rel
     """A staged bundle holds the bytes a fresh install would use, so it is as
     authoritative as a refresh — which is what carries this to the firewalled
     machine, where the stranded version is and the network is not."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 2.10.0')
+    released('lazygit', 'lazygit version 2.10.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -416,7 +516,7 @@ def test_a_tool_ahead_of_its_bundle_is_stale(tmp_path: Path, fake_bin: Path, rel
 
 def test_an_expired_cache_reports_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """The rule the cache exists to keep: it may be out of date, it may not lie."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'}, age=releases.TTL + dt.timedelta(hours=1))
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -426,7 +526,7 @@ def test_an_expired_cache_reports_unknown_rather_than_current(tmp_path: Path, fa
 
 
 def test_no_cache_at_all_reports_unknown(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
     assert [change.verdict for change in changes(live)] == [Verdict.UNKNOWN]
@@ -435,7 +535,7 @@ def test_no_cache_at_all_reports_unknown(tmp_path: Path, fake_bin: Path, release
 def test_a_tool_taking_the_version_subcommand_is_still_measured(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """terrascan rejects the flag and takes the subcommand. Probing only the flag
     reported an installed, current tool as unmeasurable."""
-    executable(fake_bin, 'lazygit', '#!/bin/sh\n[ "$1" = version ] || exit 1\nprintf "version: v0.45.0\\n"\n')
+    released_script('lazygit', '#!/bin/sh\n[ "$1" = version ] || exit 1\nprintf "version: v0.45.0\\n"\n')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -443,7 +543,7 @@ def test_a_tool_taking_the_version_subcommand_is_still_measured(tmp_path: Path, 
 
 
 def test_a_binary_that_answers_neither_probe_is_unknown(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    executable(fake_bin, 'lazygit', '#!/bin/sh\nexit 1\n')
+    released_script('lazygit', '#!/bin/sh\nexit 1\n')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -455,7 +555,7 @@ def test_a_binary_that_answers_neither_probe_is_unknown(tmp_path: Path, fake_bin
 def test_an_unparseable_version_is_unknown_rather_than_behind(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """Reporting it behind would send `apply` to reinstall a tool nothing
     established was wrong."""
-    reporting(fake_bin, 'lazygit', 'built from source')
+    released('lazygit', 'built from source')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
@@ -545,7 +645,7 @@ def test_the_declared_source_decides_which_endpoint_is_asked(tmp_path: Path, fak
 def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """A pin names the release, so the declaration is the whole answer. This is
     what keeps a pinned tool checkable on a machine that never reaches GitHub."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'version': '0.45.0'}]}
     live = session(tmp_path, declared, DECLARES_LAZYGIT)
 
@@ -555,7 +655,7 @@ def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin:
 
 
 def test_a_release_at_its_pin_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    released('lazygit', 'lazygit version 0.45.0')
     declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'version': '0.45.0'}]}
     live = session(tmp_path, declared, DECLARES_LAZYGIT)
 
@@ -617,7 +717,7 @@ def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Pat
     empty and answers UNKNOWN for everything installed. Offline the bundle is the
     upstream instead, which is what makes extracting a newer one onto a built
     machine upgrade anything at all."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -625,7 +725,7 @@ def test_offline_a_tool_behind_its_bundle_is_stale(tmp_path: Path, fake_bin: Pat
 
 
 def test_offline_a_tool_at_its_bundles_version_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.45.0')
+    released('lazygit', 'lazygit version 0.45.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -638,7 +738,7 @@ def test_offline_a_tool_the_bundle_does_not_carry_says_so_rather_than_reporting_
     """The rule the cache exists to keep, applied to the other upstream: it may be
     out of date, it may not lie. A bundle with no row for a tool is a different
     finding from a cache nobody has filled, and the detail says which."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'something-else': '1.0.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -660,7 +760,7 @@ def test_offline_never_writes_what_the_bundle_holds_into_the_release_cache(
     spend. An unwritten cache alone would not prove the request never went out,
     so `consulted_network` is asserted beside it.
     """
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
 
@@ -681,7 +781,7 @@ def test_offline_the_bundle_answers_under_whichever_category_staged_the_tool(
     send the rest of the plan to a network the offline machine does not have —
     which is the whole failure the bundle exists to prevent.
     """
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'}, category=category)
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -698,7 +798,7 @@ def test_offline_with_no_bundle_at_all_is_a_miss_never_a_stale_answer(
     because the real one may exist on the machine running this and the test would
     then read whatever it holds.
     """
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-extracted'))
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), offline=True)
 
@@ -715,7 +815,7 @@ def test_an_online_run_ignores_a_staged_bundle(tmp_path: Path, fake_bin: Path, r
     let the bundle answer and still pass. What is asserted is *which* one was
     read, not that the verdict came out stale.
     """
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     staged_bundle(tmp_path, monkeypatch, {'lazygit': '0.45.0'})
     cached(release_cache, {'jesseduffield/lazygit': 'v0.46.0'})
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
@@ -729,7 +829,7 @@ def test_an_online_run_ignores_a_staged_bundle(tmp_path: Path, fake_bin: Path, r
 def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """`check` runs at a prompt and unattended on a timer. The default must not
     spend one API call per declared release."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
     observed = packages.RESOURCE.observe(live, live.plan)
@@ -739,7 +839,7 @@ def test_a_check_that_may_not_refresh_never_reaches_the_network(tmp_path: Path, 
 
 def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """`--refresh` means "spend the network on being current", and there is none."""
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), refresh=True, offline=True)
 
     observed = packages.RESOURCE.observe(live, live.plan)
@@ -774,7 +874,7 @@ def test_a_reinstall_reaches_what_currency_cannot_measure(tmp_path: Path, fake_b
     """The reason it is checked ahead of the comparison rather than after. A version
     string nothing can parse is UNKNOWN and `Repair.NONE`, so measuring alone can
     never repair it — and that is exactly the tool worth reinstalling."""
-    reporting(fake_bin, 'lazygit', 'built from source')
+    released('lazygit', 'built from source')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
     live = dc.replace(session(tmp_path, LAZYGIT, DECLARES_LAZYGIT), reinstall=True)
 
@@ -816,7 +916,18 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False, again=False):
+    def record(entry, target=None, *, offline=False, again=False, before_place=None):
+        """The engine's shape rather than only its name.
+
+        `before_place` is what the release provider hands in to displace a package
+        once the asset is downloaded and verified, so a spy that ignored it would
+        report an install nothing was cleared for — and would pass every ordering
+        assertion below while the real engine did something else.
+        """
+        if before_place is not None:
+            cleared = before_place()
+            if not cleared.ok:
+                return cleared
         attempted.append(entry.name)
         return ghrelease.Result(True, f'{entry.name} installed', kind=Kind.APPLIED)
 
@@ -836,13 +947,185 @@ def only_change(live: Session) -> Change:
     return found[0]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Migrating a release off the package manager that owns its name
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The end-to-end half of `tests/resources/test_superseded_packages.py`, which
+# measures the blocker and the advice. This drives the real `perform`, because a
+# green measurement says nothing about whether the removal actually happens or
+# whether it happens first.
+
+SYNCTHING = {'github_releases': [{'name': 'syncthing', 'repo': 'syncthing/syncthing', 'supersedes': ['syncthing']}]}
+DECLARES_SYNCTHING = {'machine': 'box', 'platform': 'linux', 'github_releases': ['syncthing']}
+
+BREW_HOLDING_SYNCTHING = '#!/bin/sh\n[ "$1" = list ] || exit 0\ncase "$2" in --formula) printf \'syncthing\\n\' ;; esac\n'
+"""A Homebrew holding syncthing as a formula, and as nothing else.
+
+The `--formula`/`--cask` split is the real client's, and encoding it is what stops
+the fake agreeing with every question put to it: answered for both, one installed
+package reads as two and the blocker is reported under whichever list was asked
+first. `standards/testing.md` § "A fake enforces the service's constraints".
+"""
+
+
+@pytest.fixture
+def only_brew_answers(fake_bin: Path) -> None:
+    """Every other package manager refusing, so the host's distro cannot answer.
+
+    The hazard `fake_bin`'s own docstring names, reached here for real: this desk's
+    pacman holds a syncthing, so an unshadowed run reported the blocker under
+    `pacman` and would report none at all on a runner. The sandbox shadows the same
+    list for the same reason.
+    """
+    for refused in PACKAGE_MANAGERS:
+        executable(fake_bin, refused, REFUSED)
+
+
+@pytest.fixture
+def removals(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, list[str]]]:
+    """Record what would be removed, instead of taking a package off this machine.
+
+    Patched at `syspkg` rather than at the provider, so what is asserted is the
+    manager and the names the engine resolved — `standards/testing.md` § "Assert
+    invariants by spying on argv, not by inspecting the result".
+    """
+    attempted: list[tuple[str, list[str]]] = []
+
+    def record(manager: str, names, privilege) -> ghrelease.Result:
+        attempted.append((manager, list(names)))
+        return ghrelease.Result(True, f'{manager}: removed', kind=Kind.APPLIED)
+
+    monkeypatch.setattr(syspkg, 'uninstall', record)
+    return attempted
+
+
+def test_a_release_a_manager_still_owns_is_refused_rather_than_installed_beside_it(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], removals: list, unprivileged: Privilege
+) -> None:
+    """Both copies ship a service, so installing over it leaves two daemons on one
+    config directory — worse than either state alone."""
+    executable(fake_bin, 'brew', BREW_HOLDING_SYNCTHING)
+    live = session(tmp_path, SYNCTHING, DECLARES_SYNCTHING)
+
+    change = only_change(live)
+
+    assert change.repair is Repair.BY_HAND
+    assert not change.actionable
+    assert installs == []
+
+
+def test_force_removes_the_package_and_installs_the_release(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], removals: list, unprivileged: Privilege
+) -> None:
+    executable(fake_bin, 'brew', BREW_HOLDING_SYNCTHING)
+    live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)
+
+    change = only_change(live)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert change.actionable
+    assert outcome.status is OutcomeStatus.DONE
+    assert removals == [('brew', ['syncthing'])]
+    assert installs == ['syncthing']
+
+
+def test_a_removal_that_fails_stops_the_install(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], monkeypatch: pytest.MonkeyPatch, unprivileged: Privilege
+) -> None:
+    """The ordering, asserted by what happens when the first half does not.
+
+    Placing the release binary while the package's service is still loaded is the
+    two-daemon state the refusal exists to prevent, so a removal that failed must
+    not be followed by the install it was clearing the way for.
+    """
+    executable(fake_bin, 'brew', BREW_HOLDING_SYNCTHING)
+    monkeypatch.setattr(syspkg, 'uninstall', lambda *_: ghrelease.Result(False, 'brew said no', kind=Kind.COMMAND_FAILED))
+    live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.FAILED
+    assert installs == []
+
+
+def test_a_release_that_cannot_be_fetched_leaves_the_package_installed(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, removals: list, monkeypatch: pytest.MonkeyPatch, unprivileged: Privilege
+) -> None:
+    """The other half of the ordering, and the one that costs the machine its tool.
+
+    Every step before the write can fail — an unresolvable tag, a refused download,
+    a checksum that does not match — and the box being displaced is the box that has
+    syncthing. Removing first and failing there stops the fleet's file sync with
+    nothing installed in its place, so the removal has to sit after the bytes are on
+    disk and verified.
+    """
+    executable(fake_bin, 'brew', BREW_HOLDING_SYNCTHING)
+
+    def unreachable(entry, target=None, *, offline=False, before_place=None):
+        return ghrelease.Result(False, 'someone/syncthing did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
+
+    monkeypatch.setattr(ghrelease, 'install', unreachable)
+    live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.FAILED
+    assert removals == []
+
+
+def test_a_release_nothing_else_owns_is_installed_without_removing_anything(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], removals: list, unprivileged: Privilege
+) -> None:
+    """`--force` authorises a removal; it does not ask for one. A machine that has
+    already migrated must not have a package taken off it on every apply."""
+    live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)
+
+    packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert removals == []
+    assert installs == ['syncthing']
+
+
+def test_a_binary_that_is_only_unsupervised_is_supervised_rather_than_reinstalled(
+    tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], monkeypatch: pytest.MonkeyPatch, unprivileged: Privilege
+) -> None:
+    """`evidence` reports an unsupervised daemon as MISSING, and the repair for that
+    is not a download.
+
+    Left to fall through, the row spends a tag resolution, a download and a checksum
+    on a state no download changes — every apply, for as long as the supervisor will
+    not load, while `check` goes on reporting the same drift.
+    """
+    (tmp_path / 'home' / '.local' / 'bin').mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'home' / '.local' / 'bin' / 'syncthing').write_text('#!/bin/sh\n')
+    supervised: list[str] = []
+
+    def record(entry: catalog.GithubRelease, target: Target) -> providers.Result:
+        supervised.append(entry.name)
+        return APPLIED_NOTHING
+
+    monkeypatch.setattr(ghrelease, 'unsupervised', lambda name, executable: 'the agent is not loaded')
+    monkeypatch.setattr(ghrelease, 'supervise', record)
+    live = session(tmp_path, SYNCTHING, DECLARES_SYNCTHING)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert supervised == ['syncthing']
+    assert installs == [], 'a supervisor that would not load cost a full release download'
+
+
+APPLIED_NOTHING = ghrelease.Result(True, 'supervised', kind=Kind.APPLIED)
+
+
 def test_a_stale_release_is_upgraded_rather_than_reported(
     tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
 ) -> None:
     """The verdict the phase registry cannot act on, because a phase has no plan
     to read it from."""
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
-    reporting(fake_bin, 'lazygit', 'lazygit version 0.44.0')
+    released('lazygit', 'lazygit version 0.44.0')
     live = session(tmp_path, LAZYGIT, DECLARES_LAZYGIT)
 
     change = only_change(live)
@@ -919,7 +1202,7 @@ def test_a_tool_that_arrived_since_the_report_is_skipped(
     nobody asked about with whatever upstream calls latest now."""
     live = session(tmp_path, declaration, manifest)
     change = only_change(live)
-    executable(fake_bin, arrived)
+    released(arrived)
 
     outcome = packages.RESOURCE.perform(live, change, unprivileged)
 

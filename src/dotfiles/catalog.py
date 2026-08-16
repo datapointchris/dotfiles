@@ -413,6 +413,22 @@ class GithubRelease(Entry):
     requires_wsl_host: bool = False
     checksum: str = CHECKSUM_REQUIRED
 
+    supersedes: tuple[str, ...] = ()
+    """Package names this release took over from, which a machine may still have.
+
+    The same field and the same declared-rather-than-discovered reasoning as
+    `SystemPackage.supersedes`, and one thing is different: the name is held by a
+    manager this entry has nothing to do with. syncthing is `syncthing` under both
+    pacman and Homebrew, and this entry is what says the release is now the fleet's
+    one install path for it.
+
+    What makes it a blocker rather than a duplicate is the service. Two syncthings
+    on one machine is two daemons over one config directory and one port, so an
+    install that placed the release binary beside a running Homebrew service would
+    make the machine worse — which is why this refuses instead of shadowing, and why
+    `--force` removing the package is part of the same act as installing.
+    """
+
     @property
     def executable(self) -> str:
         """neovim declares the full symlink it creates, so the name comes off its end."""

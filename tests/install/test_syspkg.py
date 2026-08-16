@@ -109,6 +109,89 @@ def test_every_manager_that_installs_can_also_be_asked_and_upgraded() -> None:
     assert set(syspkg.UPGRADE) == set(syspkg.INSTALL)
 
 
+def test_every_manager_a_reader_is_told_to_remove_with_can_also_be_removed_with() -> None:
+    """`REMOVE` is a sentence to paste and `UNINSTALL` is argv to run, and a manager
+    in one and not the other fails at a different time than the commit that added
+    it: absent from `UNINSTALL` it raises KeyError inside a repair, absent from
+    `REMOVE` it offers a blank command to whoever was refused."""
+    assert set(syspkg.UNINSTALL) == set(syspkg.REMOVE)
+    assert set(syspkg.UNINSTALL) >= syspkg.REMOVES_AS_ROOT
+
+
+def test_the_sentence_a_reader_gets_asks_before_it_removes(fake_bin: Path) -> None:
+    """The one difference between the two tables, and the reason they are written
+    out rather than derived from each other. `--noconfirm` in front of a person is
+    a removal they were never shown; its absence in a run nobody is watching is a
+    prompt on a closed stdin."""
+    assert '--noconfirm' not in syspkg.REMOVE['pacman']
+    assert '--noconfirm' in syspkg.UNINSTALL['pacman']
+
+
+def test_a_removal_runs_the_managers_own_uninstall(fake_bin: Path, unprivileged) -> None:
+    """Spied on argv rather than the result, per `standards/testing.md`: what is
+    being asserted is the command the engine built, and brew's own answer is about
+    the machine the suite happens to run on."""
+    log = fake_bin / 'argv'
+    executable(fake_bin, 'brew', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
+
+    result = syspkg.uninstall('brew', ['syncthing'], unprivileged)
+
+    assert result.ok, result.detail
+    assert log.read_text().splitlines() == ['uninstall syncthing']
+
+
+def test_the_apt_removal_cannot_take_more_than_the_name_it_was_given(fake_bin: Path) -> None:
+    """`apt-get remove -y` resolves reverse dependencies and `-y` answers the
+    confirmation that would have shown the list, so one authorised removal takes an
+    unbounded set. `dpkg --remove` refuses exactly where `pacman -R` does, which is
+    what makes `--force` mean the same thing on both distros."""
+    assert syspkg.UNINSTALL['apt'][:2] == ('dpkg', '--remove')
+    assert '-y' not in syspkg.UNINSTALL['apt']
+
+
+def test_a_systemd_package_has_its_unit_stopped_before_it_is_removed(fake_bin: Path, monkeypatch) -> None:
+    """Neither `pacman -R` nor `apt-get remove` stops a running daemon, so without
+    this the displaced process outlives its own package and holds the ports and the
+    state directory the replacement is about to be pointed at."""
+    stopped: list[str] = []
+    monkeypatch.setattr(syspkg.systemd, 'disable', lambda unit: stopped.append(unit))
+    executable(fake_bin, 'systemctl', '#!/bin/sh\nexit 0\n')
+
+    syspkg.stop_service('pacman', 'syncthing', 'syncthing.service')
+
+    assert stopped == ['syncthing.service']
+
+
+def test_a_homebrew_package_has_its_service_stopped_through_brew(fake_bin: Path) -> None:
+    """The label Homebrew generates is its own, so `brew services` is what knows it."""
+    log = fake_bin / 'argv'
+    executable(fake_bin, 'brew', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
+
+    syspkg.stop_service('brew', 'syncthing', '')
+
+    assert log.read_text().splitlines() == ['services stop syncthing']
+
+
+def test_a_package_declaring_no_unit_stops_nothing_on_linux(fake_bin: Path, monkeypatch) -> None:
+    """Most superseded packages are commands. A blank unit name must not become a
+    `systemctl --user disable --now` against the empty string."""
+    stopped: list[str] = []
+    monkeypatch.setattr(syspkg.systemd, 'disable', lambda unit: stopped.append(unit))
+    executable(fake_bin, 'systemctl', '#!/bin/sh\nexit 0\n')
+
+    syspkg.stop_service('pacman', 'ripgrep', '')
+
+    assert stopped == []
+
+
+def test_a_manager_that_refuses_the_removal_says_so(fake_bin: Path, unprivileged) -> None:
+    """A failed removal is what stops the install that was clearing the way for it,
+    so it has to come back as a failure rather than as a quiet success."""
+    executable(fake_bin, 'brew', '#!/bin/sh\nexit 1\n')
+
+    assert not syspkg.uninstall('brew', ['syncthing'], unprivileged).ok
+
+
 def test_the_networked_reads_are_the_ones_with_no_local_index() -> None:
     """Flathub's available versions live on Flathub and the App Store has no
     offline catalogue. Everything else answers off a local index, which is what

@@ -329,8 +329,7 @@ def test_force_never_reaches_a_name_project_scripts_declares(sandbox: Sandbox, c
     )
     declare(sandbox, 'apps/common/dotfiles', 'the bash front door\n')
     declare(sandbox, 'apps/common/notes', 'the notes app\n')
-    installed = sandbox.home / '.local' / 'bin' / 'dotfiles'
-    installed.parent.mkdir(parents=True)
+    installed = sandbox.user_bin / 'dotfiles'
     installed.write_text('the installed console script\n')
 
     ran = cli('symlinks', 'apply', '--force', '--json')
@@ -349,8 +348,7 @@ def test_a_plain_apply_refuses_a_binary_another_installer_left_in_local_bin(sand
     without `--force` exactly as it refuses a foreign config.
     """
     declare(sandbox, 'apps/common/notes', 'the notes app\n')
-    installed = sandbox.home / '.local' / 'bin' / 'notes'
-    installed.parent.mkdir(parents=True)
+    installed = sandbox.user_bin / 'notes'
     installed.write_text(SOMEBODY_ELSE)
 
     ran = cli('symlinks', 'apply', '--json')

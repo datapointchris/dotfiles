@@ -41,6 +41,129 @@ restored on its own when fzf is already current — a companion is a separate fi
 under `~/.local/bin`, and nothing about the binary being current says it is still
 there.
 
+## Supervision, for the one release that publishes a daemon
+
+Most of these are commands and a command needs nothing beyond being on PATH.
+syncthing is a daemon, so installing the binary and stopping there produces a
+machine with the tool present and nothing running it — which no verb reported,
+because every verb was asking about the binary.
+
+Linux takes upstream's own file. The tarball carries
+`etc/linux-systemd/user/syncthing.service`, which is the same unit its distro
+packages install, so `ReleaseArtifact.unit` names it and the engine places it under
+`$XDG_CONFIG_HOME/systemd/user` with the `ExecStart` pointed at where the binary
+actually landed. Only the path moves; the arguments stay upstream's, so a release
+that changes them is followed rather than overridden.
+
+macOS cannot do the same, and the reason is worth stating because the archive looks
+like it can. The macOS zip does carry `etc/macos-launchd/syncthing.plist`, and that
+file is an *example*: it names `/Users/USERNAME` four times, runs the binary out of
+`~/bin`, and its own README tells the reader to edit it and to turn off the browser
+it opens at every login. Nothing can install it as published, which is why Homebrew
+generates its own rather than shipping it. So the LaunchAgent is authored here, in
+`releases.AGENTS`, and serialised with `plistlib` — the same call
+`providers/schedule.py` makes, for the same reason: comparing two serialisations of
+one dict is exact, where comparing XML is a diff of whitespace launchd ignores.
+
+The two platforms also differ in what placing the file buys, and that difference is
+the init systems' rather than a choice here. A plist under `~/Library/LaunchAgents`
+is loaded at the next login whether or not anything asked, so the file is the
+declaration and `launchctl bootstrap` only saves the wait — which is why a
+`launchctl` that will not answer warns and the install still succeeds, while a plist
+that cannot be *written* fails it. A systemd user unit is inert until something
+enables it, so the install runs `daemon-reload` and `enable --now` and a failure
+there fails the install. Placing the file and stopping is a daemon that never runs,
+which is exactly the state `check` reported as converged on the one box in the fleet
+that actually runs syncthing.
+
+`providers/launchd.py` and `providers/systemd.py` own the mechanics either side —
+where the file goes, how it is reloaded, whether it is loaded. Both are shared with
+`providers/schedule.py`, which declares a different job through the same calls: the
+directory launchd reads, plistlib on both sides of a comparison, and reloading
+before enabling are facts about the init systems rather than anything either caller
+chose.
+
+`AGENTS` is its own table rather than a field on `ReleaseArtifact`, for the reason
+`COMPANIONS` is: an asset is named from a tag and a target, so reading a fact off
+one costs a release lookup and therefore a network call. `check` asks what a machine
+owes without either — and it asks three questions on each platform, because a
+supervision file that is present but *stale* is the state nobody can see. launchd
+goes on running the definition it loaded and systemd the unit it read at boot, so a
+daemon whose arguments moved in this repo is running the old ones with nothing on
+the machine saying so.
+
+The Linux comparison is narrower than the macOS one, and the difference is where the
+file comes from. A plist is authored here, so it can be compared byte for byte. A
+unit comes out of the archive, so there is nothing to compare it against without a
+download — what *is* checkable offline is the half the engine authors, the
+`ExecStart` path, and that is the half that goes wrong: a unit still naming
+`/usr/bin` after the package it came from was removed is exec-not-found on every
+start.
+
+**A daemon that is only unsupervised is supervised, not reinstalled.** The row reads
+`MISSING`, which is what it is, and the repair for it is not a download — left to
+fall through it spends a tag resolution, a download and a checksum on a state no
+download changes, every apply, for as long as the supervisor will not load.
+
+## One install path per tool, and what makes it real
+
+A declaration naming `github_releases` while Homebrew owns the binary is not one
+install path; it is two, with the check agreeing with the wrong one. That was
+syncthing until 2026-08-16 — pacman on Arch, a Homebrew formula on both Macs, and a
+`packages plan` that reported nothing because the version was right.
+
+Two things close it, and they are different questions.
+
+**Provenance.** A release entry is measured at the path this provider chose —
+`~/.local/bin/<command>` — rather than wherever PATH resolves the name. The narrow
+version is enough: nothing reads a receipt or asks who wrote the file, so a copy put
+there by hand still counts, which is the same trust PATH was already being given,
+moved to one directory. Where another copy answers, the row names it, because "not
+installed" on a machine whose `syncthing --version` works is the reading that sends
+somebody looking for a broken installer.
+
+**Displacement.** `supersedes` on a release entry names the package it took over
+from — `syncthing` under both pacman and Homebrew. It is a blocker rather than a
+duplicate because both of those ship a service: two syncthings on one machine is two
+daemons over one config directory and one port, so installing beside the package
+would make the machine worse. `check` reports it, `apply` declines it, and the row
+carries both ways out — the removal to paste, and
+`dotfiles packages apply --package <name> --force`, which does the removal and the
+install as one act.
+
+`--force` is the same word `symlinks apply` uses and means the same thing:
+authorisation to destroy what this repo did not create so it can converge over it.
+It clears a superseded *release* and deliberately not a superseded system package —
+there the manager is the thing refusing, and authorising this repo to overwrite what
+it did not create says nothing to pacman. It is recorded on the run, because it is
+the only flag here that decides something was removed and a record omitting it makes
+a forced run byte-identical to an ordinary install.
+
+**The order inside that one act is the part that matters.** The replacement is
+downloaded and verified first, and the removal runs from inside the install once the
+bytes are on disk. The machine being displaced is the machine that has the tool, and
+every step before the write can fail — an unresolvable tag, a refused download, a
+checksum that does not match. Removing first and failing there leaves the box with
+neither copy and the fleet's file sync stopped, which no re-run repairs. What still
+goes before the new binary lands is the old *supervisor*: neither `brew uninstall`
+nor `pacman -R` stops a running daemon, so the process would otherwise outlive its
+own package and hold the ports and the state directory the replacement is about to
+be pointed at — recreating, by the act of honouring it, the state `supersedes` exists
+to prevent.
+
+`UNINSTALL['apt']` is `dpkg --remove` rather than `apt-get remove -y`, and that is
+the same concern one level down. `pacman -R` refuses while another installed package
+needs the one being removed, so an authorisation to remove one name cannot take a
+set; apt resolves reverse dependencies instead and `-y` answers the confirmation
+that would have shown the list. `dpkg --remove` is apt's fail-safe spelling of the
+same act, and this is only ever handed one name a `supersedes` row already wrote
+down.
+
+Removal stays otherwise unautomated, and the reason is in `syspkg.REMOVE`: an
+uninstall inferred from what a declaration does not name takes a package off a
+machine on the strength of a typo. A `supersedes` row is the opposite of inferred —
+it is written down, reviewed in a commit, and named on the row that refuses.
+
 ## Why asset naming is code, not `packages.yml`
 
 **Rejected:** a `url_pattern` field with a placeholder vocabulary.

@@ -32,6 +32,7 @@ from typing import Protocol
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
@@ -226,6 +227,37 @@ def by_command(item: DesiredItem) -> Evidence:
     return Evidence(Verdict.MATCHED, found) if found else Evidence(Verdict.MISSING, f'{item.executable} is not on PATH')
 
 
+def by_release(item: DesiredItem) -> Evidence:
+    """A release binary at the path this provider chose, not any binary of that name.
+
+    `by_command` answers "is a syncthing installed", which is a different question
+    from "is the syncthing this declaration asks for installed" — and the two
+    disagree wherever another manager ships the same tool. Measured on macmini
+    2026-08-16: Homebrew's syncthing sat on PATH answering the version the release
+    publishes, so `dotfiles packages plan` had nothing to say about an entry no part
+    of this repo had ever satisfied. `brew uninstall` would have taken the tool off
+    the machine with every verb still calling it converged.
+
+    Narrow on purpose. The claim is that a binary *this* provider installed is at a
+    path it chose, which `ghrelease.installed_at` owns — nothing here reads a receipt
+    or asks who wrote the file, so a copy placed there by hand still counts. That is
+    the same trust `by_command` already puts in PATH, moved to one directory.
+
+    The other copy is named where there is one. A row reading "not installed" on a
+    machine whose `syncthing --version` answers is the reading that sends somebody
+    looking for a broken installer.
+    """
+    if not item.executable:
+        return Evidence(Verdict.UNKNOWN, 'installs no binary and declares no path, so nothing here can measure it')
+    placed = ghrelease.installed_at(item.executable)
+    if placed.exists():
+        return Evidence(Verdict.MATCHED, str(placed))
+    elsewhere = shutil.which(item.executable)
+    if elsewhere:
+        return Evidence(Verdict.MISSING, f'{placed} does not exist; the {item.executable} on PATH is {elsewhere}')
+    return Evidence(Verdict.MISSING, f'{placed} does not exist')
+
+
 def by_path(item: DesiredItem) -> Evidence:
     """A declared `installed_path`, for an entry that puts nothing on PATH.
 
@@ -378,10 +410,38 @@ def by_registry(item: DesiredItem, installed: Inventory) -> Evidence:
     answered = [installer for installer in declared_names(item) if installed.get(INSTALLER_QUERIES[installer]) is not None]
     if not answered:
         return Evidence(Verdict.UNKNOWN, 'no package manager on this machine could be asked')
-    return Evidence(Verdict.MISSING, f'not installed by {", ".join(answered)}', blocked_by=blocker(item, installed, answered))
+    found = blocker(item, installed, answered, under_force='')
+    return Evidence(Verdict.MISSING, f'not installed by {", ".join(answered)}', blocked_by=found)
 
 
-def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str]) -> Blocker | None:
+DISPLACE = 'dotfiles packages apply --package {name} --force'
+"""How a release entry says it will take over from the package still holding its name.
+
+Narrowed to the one entry rather than spelled `packages apply --force`, because the
+flag reaches everything the run covers and a reader pasting the wider form authorises
+a removal per superseded entry on the machine. `standards/help.md` § "An error is the
+help screen for the failure in hand" is what makes it a command rather than a mention
+of the flag.
+"""
+
+
+def superseded(item: DesiredItem, installed: Inventory) -> Blocker | None:
+    """A package this release took over from, still installed under any manager.
+
+    `by_registry` asks `blocker` about the installers the entry itself declares a name
+    under. A release entry declares none — no package manager installing it is what
+    makes it a release — so the question goes to every manager that answered.
+
+    Over `syspkg.REMOVE`'s keys rather than `INSTALLER_QUERIES`', because a manager
+    with no removal command has no sentence to report and indexing it would raise
+    rather than offer a blank one. `mas` is that manager: the App Store ships no
+    uninstall verb.
+    """
+    answered = [installer for installer in syspkg.REMOVE if installed.get(INSTALLER_QUERIES[installer]) is not None]
+    return blocker(item, installed, answered, under_force=DISPLACE.format(name=item.name))
+
+
+def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str], *, under_force: str) -> Blocker | None:
     """A package this entry supersedes that the machine still has, or None.
 
     Only over the installers that answered. An entry superseded on Arch says
@@ -393,13 +453,17 @@ def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str]) ->
     has nothing standing in its way by definition, and the superseded name being
     present beside it is then a fact about the machine that no longer decides
     anything.
+
+    `under_force` has no default, per `standards/python.md` § "Fail fast instead of
+    defaulting": both answers are live, and a site that did not say which would
+    silently answer for whichever caller was written first.
     """
-    superseded = getattr(item.entry, 'supersedes', ())
+    taken_over = getattr(item.entry, 'supersedes', ())
     for installer in answered:
         inventory = installed.get(INSTALLER_QUERIES[installer]) or frozenset()
-        for name in superseded:
+        for name in taken_over:
             if name in inventory:
-                return Blocker(name, f'{syspkg.REMOVE[installer]} {name}')
+                return Blocker(name, f'{syspkg.REMOVE[installer]} {name}', manager=installer, under_force=under_force)
     return None
 
 

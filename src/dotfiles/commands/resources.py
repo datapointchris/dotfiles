@@ -297,8 +297,15 @@ def _apply_resource(
             # The same three the composite records, for the same reason: a row is
             # read back against what the run covered and why it was actionable.
             # `selection` is this door's `skip`, spelled as the addresses the noun
-            # and its `--source` resolved to.
-            flags={'selection': ', '.join(addresses), 'package': sorted(packages), 'reinstall': reinstall},
+            # and its `--source` resolved to. `force` joins them because it is the
+            # one flag here that decides something was *removed* — without it a
+            # forced run's row is byte-identical to an ordinary install.
+            flags={
+                'selection': ', '.join(addresses),
+                'package': sorted(packages),
+                'force': force,
+                'reinstall': reinstall,
+            },
         )
     )
 
@@ -364,11 +371,20 @@ def packages_apply(
     owner: str = OwnerOption,
     package: list[str] = PackageOption,
     reinstall: bool = ReinstallOption,
+    force: bool = typer.Option(False, '--force', help='Remove a package that a declared release supersedes'),
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
     """Install every declared package that is missing.
+
+    `--force` is the deliberate answer to one refusal, and the same word `symlinks
+    apply` uses for the same thing: authorisation to replace what this repo did not
+    create. Here what it replaces is a package — a release declaring `supersedes` is
+    refused for as long as another manager holds the name, because installing beside
+    it would leave two copies of one daemon over one config directory. With the flag,
+    the removal and the install are one act. `--package NAME` narrows it to the one
+    entry, which is what `check` prints.
 
     `--reinstall` additionally installs the ones that are already there, from
     whichever source this run has — the proxy and the release API online, the
@@ -392,6 +408,7 @@ def packages_apply(
         source,
         owner,
         packages=frozenset(package or ()),
+        force=force,
         reinstall=reinstall,
         as_json=as_json,
     )

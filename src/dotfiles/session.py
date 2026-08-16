@@ -102,11 +102,25 @@ class Session:
     """
 
     force: bool = False
-    """Authorisation to replace what this repo did not create.
+    """Authorisation to destroy what this repo did not create, to converge over it.
 
     Not a switch between reading and writing — `check` never writes whatever this
-    says. It is the deliberate answer to a refusal, for adopting a machine that
-    already had dotfiles of its own.
+    says. It is the deliberate answer to a refusal, and there are two:
+
+    - a file under `$HOME` this repo did not put there, replaced by the symlink
+      that belongs at its path, for adopting a machine that already had dotfiles
+      of its own;
+    - a **system package** a declared release supersedes, removed by its own
+      manager so the release can take the name, because the two ship one daemon
+      between them and a machine running both is worse than a machine running
+      either.
+
+    The second is the wider blast radius by a long way and it is narrowed by
+    declaration rather than by this flag: only a `Blocker` carrying an
+    `under_force` command is cleared, which is a superseded *release*. A
+    superseded system package refuses whatever this says — there the manager is
+    what refuses, and authorising this repo to overwrite what it did not create
+    says nothing to pacman.
     """
 
     packages: frozenset[str] = frozenset()
@@ -138,8 +152,9 @@ class Session:
     every release — which is exactly the case § "Scope is structural" sanctions a
     set-wide act for, and `--package` is how a caller spends less.
 
-    Distinct from `force` above, which authorises overwriting a *foreign* file and
-    decides nothing about what is installed.
+    Distinct from `force` above, which authorises destroying something *foreign* —
+    a file this repo did not write, or a package another manager owns — and decides
+    nothing about which release is installed in its place.
     """
 
     @classmethod

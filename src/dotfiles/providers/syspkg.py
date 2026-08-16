@@ -37,6 +37,7 @@ from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
+from dotfiles.providers import systemd
 
 REMOVE: dict[str, str] = {
     'pacman': 'sudo pacman -R',
@@ -46,21 +47,62 @@ REMOVE: dict[str, str] = {
     'cask': 'brew uninstall --cask',
     'flatpak': 'flatpak uninstall',
 }
-"""How a person is told to remove a package, which nothing here ever runs.
+"""How a person is told to remove a package. Strings to read and paste, not argv.
 
-Strings for a human to read and paste, not argv for `run`. Removal is the one
-act this repo deliberately does not automate: a declaration names what a machine
-should have, an uninstall is inferred from what it does not name, and a typo in
-that inference takes a package off the machine. So the engine measures the need
-and stops, and the sentence it stops with is built from here.
+Removal is inferred nowhere: a declaration names what a machine should have, and an
+uninstall worked out from what it does not name takes a package off the machine on
+the strength of a typo. The one removal this repo performs is the one that is
+*named* and then *authorised* — a release's `supersedes` row, reviewed in a commit,
+with `--force` typed on the apply — and `UNINSTALL` below is what performs it.
+Everything else measures the need and stops, with the sentence it stops with built
+from here.
 
 `aur` removes as `pacman`, because an AUR package is a pacman package once it is
 installed. `mas` has no entry at all — the App Store ships no uninstall verb, so
 there is no command to offer and a wrong one would be worse than none. Nothing
 looks one up for it either: `evidence.blocker` indexes this directly, over the
-installers `evidence.declared_names` returns, and an App Store app is measured by
-`by_app_store` instead. An installer added to that function and not to this
-mapping raises here rather than offering a blank command.
+installers `evidence.declared_names` and `evidence.superseded` return, and an App
+Store app is measured by `by_app_store` instead. An installer added to either and
+not to this mapping raises here rather than offering a blank command.
+"""
+
+UNINSTALL: dict[str, tuple[str, ...]] = {
+    'pacman': ('pacman', '-R', '--noconfirm'),
+    'aur': ('pacman', '-R', '--noconfirm'),
+    'apt': ('dpkg', '--remove'),
+    'brew': ('brew', 'uninstall'),
+    'cask': ('brew', 'uninstall', '--cask'),
+    'flatpak': ('flatpak', 'uninstall', '-y'),
+}
+"""How each manager is told to remove one named package unattended.
+
+Deliberately not derived from `REMOVE` and not the source of it, because the two are
+written for different readers. A person pasting `sudo pacman -R syncthing` is asked
+before anything happens, which is right at a prompt and a deadlock in a run nobody is
+watching, so deriving either from the other would put `--noconfirm` in front of a
+person or a prompt in front of a timer.
+
+**`dpkg --remove` rather than `apt-get remove -y`, and that is the second difference.**
+`pacman -R` refuses while another installed package needs the one being removed, so an
+authorisation to remove one name cannot take a set. apt resolves reverse dependencies
+instead, and `-y` answers the confirmation that would have shown the list — so the same
+`--force` authorising one removal on Arch authorises an unbounded one on Debian. `dpkg
+--remove` is apt's fail-safe spelling of the same act: same database, same package
+state, and it refuses exactly where pacman does. What it does not do is resolve
+dependencies, which is the whole point here — this is only ever handed one name that a
+`supersedes` row already wrote down.
+
+Keyed identically to `REMOVE`, and a manager missing from one is missing from both:
+`uninstall` reads this and `evidence.blocker` reads that, so a manager present in only
+one would offer a sentence nothing can run, or run something nobody was shown.
+"""
+
+REMOVES_AS_ROOT: frozenset[str] = frozenset({'pacman', 'aur', 'apt'})
+"""Which removals escalate, which is not the same set as `ESCALATES`.
+
+`aur` is the difference. yay escalates itself for the parts of a *build* that need
+it, which is why it is absent from `ESCALATES`; removing what it built is `pacman -R`
+and that escalates like any other pacman write.
 """
 
 INSTALL: dict[str, tuple[str, ...]] = {
@@ -239,6 +281,55 @@ def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
 
     if completed.ok:
         return Result(True, f'{manager}: {" ".join(names)}', kind=Kind.APPLIED)
+    return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
+
+
+def stop_service(manager: str, package: str, unit: str) -> None:
+    """Stop whatever supervises a package, before the package goes.
+
+    Neither `pacman -R` nor `brew uninstall` stops a running daemon: the process
+    outlives its own package, holding the ports and the state directory the
+    replacement is about to be pointed at — which is the two-daemons-over-one-config
+    state `GithubRelease.supersedes` exists to prevent, recreated by the very act of
+    honouring it.
+
+    Best effort, and deliberately so. A package with no service, a service already
+    stopped, and a `brew` that never registered one all report failure, and all three
+    are the ordinary case. What is not tolerable is not trying.
+
+    `unit` comes from the release's own declaration rather than from the package,
+    because upstream and the distro package publish the same unit filename — which
+    is what makes the name knowable here at all.
+    """
+    if manager in REMOVES_AS_ROOT and unit and systemd.available():
+        systemd.disable(unit)
+    elif manager in {'brew', 'cask'} and shutil.which('brew'):
+        effects.run(['brew', 'services', 'stop', package], output=Output.QUIET)
+
+
+def uninstall(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
+    """Take named packages off the machine, for a caller that was authorised to.
+
+    Nothing here decides that it should happen. `evidence.superseded` measures the
+    package, an entry's `supersedes` names it, and `--force` authorises it — so this
+    is handed a list somebody wrote down and confirmed, which is the whole of what
+    separates it from the inference `REMOVE` refuses to make.
+
+    Streamed on both branches for `install`'s reason: a removal that resolves reverse
+    dependencies can take a while, and a silent transaction reads as a hung run.
+    """
+    command = [*UNINSTALL[manager], *names]
+    try:
+        completed = (
+            privilege.run(command, reason=f'remove {", ".join(names)} with {manager}', output=Output.STREAM)
+            if manager in REMOVES_AS_ROOT
+            else effects.run(command)
+        )
+    except PrivilegeUnavailable:
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
+
+    if completed.ok:
+        return Result(True, f'{manager}: removed {" ".join(names)}', kind=Kind.APPLIED)
     return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
 

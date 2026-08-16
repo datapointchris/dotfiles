@@ -25,6 +25,7 @@ the network attempt it is, through the guard.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -102,8 +103,12 @@ def only_the_sandbox_on_path(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) 
     another on a runner. `/bin/sh` stays reachable regardless — the stubs name it
     absolutely in their shebang — and a `git` that is no longer findable exits 127,
     which `effects.run` already treats as an answer.
+
+    `~/.local/bin` stays, because it is not the system: it is where this machine's
+    own installs land, and dropping it makes a runtime the test installed invisible
+    to the run being measured.
     """
-    monkeypatch.setenv('PATH', str(sandbox.bin))
+    monkeypatch.setenv('PATH', f'{sandbox.bin}{os.pathsep}{sandbox.user_bin}')
 
 
 def declares(sandbox: Sandbox, **gates: Any) -> None:

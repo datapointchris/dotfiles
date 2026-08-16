@@ -934,8 +934,17 @@ github_releases:
   # and an apt platform had no key to install from. Naming it here is what lets
   # the scheduler declare it without widening what `core` means for every
   # minimal server in the fleet.
+  #
+  # `supersedes` names the same word under pacman and Homebrew, which is what makes
+  # this the fleet's one install path rather than a third one beside them. It is a
+  # blocker rather than a duplicate because both of those ship a service: two
+  # syncthings on one machine is two daemons over one config directory and one port,
+  # so the release has to displace the package rather than land next to it. The
+  # displacement needs `--force`; without it `check` names the package and the
+  # command.
   - name: syncthing
     repo: syncthing/syncthing
+    supersedes: [syncthing]
     description: Continuous file synchronization between the fleet's machines
     tags: [cli, network, sync]
 

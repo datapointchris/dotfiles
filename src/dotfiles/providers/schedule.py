@@ -18,14 +18,13 @@ call per release against an unauthenticated 60/hour limit.
 from __future__ import annotations
 
 import os
-import plistlib
 import shutil
 from pathlib import Path
 
 from dotfiles import coordinates as axes
-from dotfiles.effects import Output
-from dotfiles.effects import run
 from dotfiles.providers import Kind
+from dotfiles.providers import launchd
+from dotfiles.providers import systemd
 from dotfiles.providers.sysconfig import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
@@ -127,7 +126,7 @@ def _systemd_files() -> dict[Path, str]:
 
 
 def _observe_systemd() -> State:
-    if shutil.which('systemctl') is None:
+    if not systemd.available():
         return State(Verdict.UNKNOWN, 'no systemctl, so nothing can schedule a check here', repair=Repair.NONE)
 
     wrong = [path for path, content in _systemd_files().items() if not path.is_file() or path.read_text() != content]
@@ -135,7 +134,7 @@ def _observe_systemd() -> State:
         verdict = Verdict.MISSING if all(not path.is_file() for path in wrong) else Verdict.STALE
         return State(verdict, f'{", ".join(path.name for path in wrong)} differs from what this repo declares')
 
-    if not run(['systemctl', '--user', 'is-enabled', f'{UNIT}.timer'], output=Output.QUIET).ok:
+    if not systemd.enabled(f'{UNIT}.timer'):
         return State(Verdict.STALE, f'{UNIT}.timer is installed but not enabled')
     return State(Verdict.MATCHED)
 
@@ -145,9 +144,7 @@ def _apply_systemd() -> Result:
     for path, content in _systemd_files().items():
         path.write_text(content)
 
-    # Reload before enable, or systemd enables the copy it read at boot.
-    run(['systemctl', '--user', 'daemon-reload'], output=Output.QUIET)
-    enabled = run(['systemctl', '--user', 'enable', '--now', f'{UNIT}.timer'], output=Output.QUIET)
+    enabled = systemd.enable(f'{UNIT}.timer')
     if not enabled.ok:
         return Result(False, f'could not enable {UNIT}.timer: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     return Result(True, f'{UNIT}.timer enabled, every {_cadence()}', kind=Kind.APPLIED)
@@ -159,18 +156,12 @@ def _apply_systemd() -> Result:
 
 
 def _agent_path() -> Path:
-    return Path.home() / 'Library' / 'LaunchAgents' / f'{LABEL}.plist'
+    return launchd.agent_path(LABEL)
 
 
 def _agent_content() -> bytes:
-    """Built with `plistlib` rather than as a string.
-
-    A hand-written plist is XML that has to be escaped correctly forever, and the
-    comparison would be against text whose whitespace launchd does not care about
-    but a diff does. Serialising the same dict on both sides makes the check
-    exact.
-    """
-    return plistlib.dumps(
+    """The job this repo declares for the scheduled check."""
+    return launchd.serialise(
         {
             'Label': LABEL,
             # --refresh for the reason in _service_content: the findings gated on
@@ -193,7 +184,7 @@ def _observe_launchd() -> State:
         return State(Verdict.MISSING, f'{agent} does not exist')
     if agent.read_bytes() != _agent_content():
         return State(Verdict.STALE, f'{agent} differs from what this repo declares')
-    if not run(['launchctl', 'print', f'gui/{os.getuid()}/{LABEL}'], output=Output.QUIET).ok:
+    if not launchd.loaded(LABEL):
         return State(Verdict.STALE, f'{LABEL} is installed but not loaded')
     return State(Verdict.MATCHED)
 
@@ -203,10 +194,7 @@ def _apply_launchd() -> Result:
     agent.parent.mkdir(parents=True, exist_ok=True)
     agent.write_bytes(_agent_content())
 
-    # Boot out first: `bootstrap` refuses a label already loaded, so an agent
-    # whose interval changed would keep the old one and report success.
-    run(['launchctl', 'bootout', f'gui/{os.getuid()}/{LABEL}'], output=Output.QUIET)
-    loaded = run(['launchctl', 'bootstrap', f'gui/{os.getuid()}', str(agent)], output=Output.QUIET)
+    loaded = launchd.reload(LABEL)
     if not loaded.ok:
         return Result(False, f'could not load {LABEL}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     return Result(True, f'{LABEL} loaded, every {_cadence()}', kind=Kind.APPLIED)

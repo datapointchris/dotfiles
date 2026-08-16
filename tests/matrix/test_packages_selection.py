@@ -77,6 +77,25 @@ def test_the_machine_every_row_starts_from_is_converged(cli: Callable[..., Invoc
     assert cli('packages', 'apply').exit_code == ExitCode.CONVERGED
 
 
+def test_every_flag_that_narrowed_or_authorised_the_run_is_in_its_record(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A row is read back against what the run covered and what it was allowed to do.
+
+    `force` is the one that matters most and the one most easily left out: it is the
+    only flag here that decides something was *removed*, so a record omitting it
+    makes a forced run byte-identical to an ordinary install. Asserted from a
+    converged machine, because what is under test is the record's shape rather than
+    what the run did.
+    """
+    cli('packages', 'apply', '--force', '--package', 'ruff')
+
+    assert sandbox.latest_record['flags'] == {
+        'selection': 'packages',
+        'package': ['ruff'],
+        'force': True,
+        'reinstall': False,
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # --source
 # ─────────────────────────────────────────────────────────────────────────────
@@ -124,7 +143,7 @@ def test_an_unknown_source_names_the_sections_that_would_have_worked(cli: Callab
 def test_a_source_narrowing_measures_only_the_provider_it_names(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """The narrowing is real and not cosmetic: a release gone missing is drift for
     the whole resource and converged for a run narrowed to the uv tools."""
-    (sandbox.bin / 'lazygit').unlink()
+    (sandbox.user_bin / 'lazygit').unlink()
 
     assert cli('packages', 'plan', '--source', 'github_releases').exit_code == ExitCode.DRIFT
     assert cli('packages', 'plan', '--source', 'uv_tools').exit_code == ExitCode.CONVERGED
@@ -241,7 +260,7 @@ def test_a_package_narrowing_measures_only_the_entry_it_names(sandbox: Sandbox, 
     `--source` and `--owner` rows above assert one level up: a release gone missing
     is drift for the whole resource and converged for a run narrowed to the uv
     tool beside it."""
-    (sandbox.bin / 'lazygit').unlink()
+    (sandbox.user_bin / 'lazygit').unlink()
 
     assert cli('packages', 'plan').exit_code == ExitCode.DRIFT
     assert cli('packages', 'plan', '--package', 'lazygit').exit_code == ExitCode.DRIFT

@@ -262,6 +262,20 @@ def test_no_read_verb_offers_a_ceiling() -> None:
             assert '--through' not in options, f'{"/".join(path)} is a read verb offering a ceiling'
 
 
+def test_no_read_verb_offers_force() -> None:
+    """`--force` authorises a write that cannot be undone — a foreign file replaced,
+    a package removed — so it belongs on the verb that writes and nowhere else.
+    `standards/cli-design.md` § "A flag appears only on the commands that read it".
+
+    Over the whole tree rather than over the one resource that has it today, which
+    is the difference this section exists for: a literal list of resources cannot
+    tell "nobody added one" from "somebody added one and nothing looked".
+    """
+    for path, options in ACCEPTED.items():
+        if path[-1] in {'plan', 'check'}:
+            assert '--force' not in options, f'{"/".join(path)} is a read verb offering --force'
+
+
 def test_no_apply_offers_refresh_because_every_apply_already_refreshes() -> None:
     """`apply` resolves with `refresh=not offline`, so being current is not
     something a caller opts into. An install writes a version onto the machine, and

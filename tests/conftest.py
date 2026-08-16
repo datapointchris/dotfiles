@@ -163,6 +163,12 @@ INSTALLING = {
 
 A pair rather than a binary name, because `go version` and `uv --version` are
 reads a unit test may legitimately want and only the second word separates them.
+
+Removals are deliberately absent, and so are the two supervisors. Every test that
+drives one puts a fake `brew`, `pacman`, `launchctl` or `systemctl` on PATH and
+asserts the argv it was handed — which is the pattern `standards/testing.md` asks
+for, and a denylisted pair blocks it whether the binary on PATH is real or not. The
+one call that pattern does not reach is `no_stopping_this_machines_daemons`.
 """
 
 
@@ -238,6 +244,32 @@ def no_installing_on_this_machine(request, monkeypatch):
 
     monkeypatch.setattr(subprocess, 'run', refuse_installs(subprocess.run))
     monkeypatch.setattr(subprocess, 'Popen', refuse_installs(subprocess.Popen))
+
+
+@pytest.fixture(autouse=True)
+def no_stopping_this_machines_daemons(request, monkeypatch):
+    """Refuse the one supervisor call PATH shadowing does not already contain.
+
+    Every other `systemctl` and `launchctl` in this package is reached only through
+    a code path whose tests narrow PATH — `providers/schedule.py`'s through
+    `fake_bin`, `ghrelease.supervise`'s through the `home` fixture — so a fake
+    answers and the argv is what gets asserted. `systemd.disable` is the exception:
+    `syspkg.stop_service` reaches it from a *displacement*, which a test stubs at
+    `syspkg.uninstall` one line further on, and the manager deciding the branch is
+    the machine's rather than the test's. On this desk that call stops syncthing.
+
+    A test that means to exercise it overrides `systemd.disable` with a spy of its
+    own, which shadows this for the duration.
+    """
+    if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
+        return
+
+    from dotfiles.providers import systemd
+
+    def refuse(unit):
+        raise WouldInstall(f'systemctl --user disable --now {unit} would stop a daemon on this machine — spy on it, or mark the test e2e')
+
+    monkeypatch.setattr(systemd, 'disable', refuse)
 
 
 @pytest.fixture(scope='session', autouse=True)

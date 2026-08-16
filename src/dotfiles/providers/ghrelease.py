@@ -17,6 +17,13 @@ the variation moved into `providers.releases.ReleaseArtifact`, where a bare bina
     TARBALL / ZIP         unpack, then take `path` out of it, plus any `extras`
     ReleaseArtifact.tree  unpack into ~/.local and symlink `path` out of the tree
 
+An eighth step reaches the one release that publishes a daemon rather than a
+command: a supervision file, `ReleaseArtifact.unit` out of the archive on Linux and
+`releases.AGENTS` written into `~/Library/LaunchAgents` on a Mac. `supervise` is
+why that half is here and not in `install/system.yml` — a `systemd_units` row can
+narrow on an OS family and on a *system* package, and neither says "the machines
+declaring this release", so the row would reach every Linux box in the fleet.
+
 Nothing here decides *whether* to install. Its caller does, from a `diff` it
 already computed. An engine deciding again would be a second opinion, free to
 disagree with the report the user was just shown.
@@ -27,12 +34,15 @@ from __future__ import annotations
 import enum
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles.coordinates import Arch
+from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.output import err_console
 from dotfiles.output import warn
@@ -42,26 +52,59 @@ from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
+from dotfiles.providers import launchd
 from dotfiles.providers import local_dir
 from dotfiles.providers import locate
+from dotfiles.providers import systemd
+from dotfiles.providers.releases import AGENTS
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
 from dotfiles.providers.releases import Archive
+from dotfiles.providers.releases import LaunchAgent
 from dotfiles.providers.releases import ReleaseArtifact
 
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
 
-__all__ = ['Result', 'bin_dir', 'bundle_file', 'install', 'local_dir', 'locate', 'missing_companions', 'resolve_tag', 'unresolved']
+__all__ = [
+    'Result',
+    'bin_dir',
+    'bundle_file',
+    'declared_unit',
+    'install',
+    'installed_at',
+    'local_dir',
+    'locate',
+    'missing_companions',
+    'resolve_tag',
+    'supervise',
+    'unit_dir',
+    'unresolved',
+    'unsupervised',
+]
 
 
-def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = False, tag: str | None = None) -> Result:
+def install(
+    entry: catalog.GithubRelease,
+    target: Target,
+    *,
+    offline: bool = False,
+    tag: str | None = None,
+    before_place: Callable[[], Result] | None = None,
+) -> Result:
     """Put one declared release on this machine.
 
     `tag` is for a caller that already resolved one to decide *whether* to
     install — passing it back is what keeps that decision from costing a second
     API call, and from being made about a different release than the one that
     then gets installed.
+
+    `before_place` is what a caller that has to destroy something first hands in.
+    It runs once the asset is downloaded and verified and before a byte is
+    written to `~/.local/bin`, which is the only ordering that does not risk
+    leaving the machine with neither copy: every step above it reaches the
+    network or a checksum and can fail, and the caller's step is the one that
+    cannot be undone. A failure from it stops the install and is reported as-is.
 
     Every failure returns rather than raises, and names the step it failed at.
     An install stage runs the whole list before reporting, because a broken
@@ -94,6 +137,11 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         if refused:
             return Result(False, refused, kind=Kind.UNVERIFIED)
 
+        if before_place is not None:
+            cleared = before_place()
+            if not cleared.ok:
+                return cleared
+
         placed = _place(asset, entry.executable, download, staging)
         if not placed.ok:
             return placed
@@ -104,6 +152,10 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
 
     if not shutil.which(entry.executable):
         return Result(False, f'{entry.executable} installed but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
+
+    supervised = supervise(entry, target)
+    if not supervised.ok:
+        return supervised
     return Result(True, f'{entry.name} {tag}', kind=Kind.APPLIED)
 
 
@@ -265,9 +317,23 @@ def _permitted(entry: catalog.GithubRelease, because: str, *excused_by: str) -> 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def installed_at(executable: str) -> Path:
+    """Where this provider puts a release binary, which is the whole of its provenance.
+
+    One path for every shape below: a raw download, a decompressed one, a member of
+    an archive, and the symlink a tree install leaves pointing into `~/.local`. So
+    "did this install it" is one question with one answer, and the caller asking it
+    is `evidence.by_release`.
+
+    A function rather than a constant, for the reason `bin_dir` is one: read at
+    import it would freeze the developer's home into every test in the process.
+    """
+    return bin_dir() / executable
+
+
 def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Path) -> Result:
     """Get binaries out of what was downloaded and into `~/.local/bin`."""
-    target = bin_dir() / executable
+    target = installed_at(executable)
     target.parent.mkdir(parents=True, exist_ok=True)
 
     if asset.archive is Archive.RAW:
@@ -345,6 +411,170 @@ def _exec_at(unit: str, binary: Path) -> str:
 def unit_dir() -> Path:
     """Where systemd reads a user unit, which is not where binaries go."""
     return paths.xdg_home('XDG_CONFIG_HOME', '.config') / 'systemd' / 'user'
+
+
+def agent_plist(agent: LaunchAgent, binary: Path) -> bytes:
+    """The job this repo declares for a release's daemon.
+
+    `KeepAlive` and `RunAtLoad` are here rather than per agent because they are what
+    declaring an agent at all means: the thing being supervised is a daemon, so it
+    starts when the job loads and comes back when it exits. That is the pair
+    `Restart=on-failure` and `WantedBy=default.target` answer on the other platform.
+
+    The two log paths are not optional. launchd sends a job's output nowhere by
+    default, so a daemon that will not start leaves no evidence anywhere — which is
+    why `providers/schedule.py` names both files even to point them at /dev/null.
+    Here they are real, because a sync daemon's log is the thing anyone debugging it
+    wants.
+    """
+    logs = Path.home() / 'Library' / 'Logs'
+    return launchd.serialise(
+        {
+            'Label': agent.label,
+            'ProgramArguments': [str(binary), *agent.arguments],
+            'KeepAlive': True,
+            'RunAtLoad': True,
+            'ProcessType': 'Background',
+            'LowPriorityIO': True,
+            'StandardOutPath': str(logs / f'{binary.name}.log'),
+            'StandardErrorPath': str(logs / f'{binary.name}-errors.log'),
+        }
+    )
+
+
+def supervise(entry: catalog.GithubRelease, target: Target) -> Result:
+    """Hand a declared daemon to whichever supervisor this machine has.
+
+    Public because a machine whose binary is current and whose supervisor is not
+    owes only this — `registry.ReleaseProvider` calls it directly rather than
+    spending a download on a state no download changes.
+
+    **The two platforms differ in what placing the file buys, and that difference is
+    the init systems' rather than this design's.** A plist under
+    `~/Library/LaunchAgents` is loaded at the next login whether or not anything
+    asked, so the file *is* the declaration and bootstrapping it only saves the
+    wait — which is why a `launchctl` that will not answer warns instead of failing.
+    A systemd user unit is inert until something enables it, so writing one and
+    stopping is a daemon that never runs, and the enable is part of the install.
+    """
+    if target.is_darwin:
+        return _supervise_launchd(entry) if entry.name in AGENTS else Result(True, '', kind=Kind.UNCHANGED)
+    if systemd.available() and declared_unit(entry.name):
+        return _supervise_systemd(entry)
+    return Result(True, '', kind=Kind.UNCHANGED)
+
+
+def unsupervised(name: str, executable: str) -> str:
+    """Why a declared daemon is not supervised on this machine, or '' where it is.
+
+    The observation half of `supervise`, and answered without resolving a release
+    for `missing_companions`' reason: a checker offline, or one that has spent its
+    API budget, still gets an answer.
+
+    Three states rather than two on each platform, because a *stale* supervision
+    file is the one nobody can see. launchd goes on running the definition it
+    loaded and systemd the unit it read at boot, so a daemon whose arguments moved
+    in this repo is running the old ones with nothing on the machine saying so.
+
+    Which supervisor is asked is decided by whether it is on the machine, where
+    `supervise` above is handed the declared target. This is the right test for a
+    reading and the wrong one for a write: the question here is whether launchd or
+    systemd can be *asked*, and a machine where neither can be owes no supervision
+    — while an install already knows what kind of machine it is installing for.
+    `sysconfig._observe_unit` opens with the same guard for the same reason.
+    """
+    if launchd.available() and name in AGENTS:
+        return _unsupervised_launchd(name, executable)
+    if systemd.available() and declared_unit(name):
+        return _unsupervised_systemd(name, executable)
+    return ''
+
+
+def declared_unit(name: str) -> str:
+    """The unit filename a declared release publishes, or '' where it declares none.
+
+    Read off `ASSETS` without resolving a release, which is why the tag and the
+    target are placeholders: `ReleaseArtifact.unit` is a constant of the builder
+    rather than a fact about a particular release, and asking upstream for one
+    would cost `check` an API call per entry.
+    """
+    build = ASSETS.get(name)
+    if build is None:
+        return ''
+    asset = build('0', Target(OSFamily.LINUX, Arch.X86_64))
+    return Path(asset.unit).name if asset.unit else ''
+
+
+def _supervise_launchd(entry: catalog.GithubRelease) -> Result:
+    """Write the plist and load it, failing only on the write.
+
+    The agent is on disk and the next login loads it, so failing on a refused
+    `launchctl` would report a machine broken over the step whose whole value is
+    not having to log out — and would leave the binary installed and the run
+    non-zero. A plist that cannot be *written* is a failure, for the reason a
+    declared unit the archive lacks is one: silently skipping it installs a daemon
+    that never runs.
+    """
+    agent = AGENTS[entry.name]
+    plist = launchd.agent_path(agent.label)
+    try:
+        plist.parent.mkdir(parents=True, exist_ok=True)
+        plist.write_bytes(agent_plist(agent, installed_at(entry.executable)))
+    except OSError as unwritable:
+        return Result(False, f'could not write {plist}: {unwritable.strerror}', kind=Kind.WRITE_FAILED)
+
+    if not (launchd.available() and launchd.reload(agent.label).ok):
+        warn(f'{plist} is written and launchctl would not load {agent.label}, so {entry.executable} starts at the next login')
+    return Result(True, str(plist), kind=Kind.APPLIED)
+
+
+def _supervise_systemd(entry: catalog.GithubRelease) -> Result:
+    """Reload the manager and enable the unit `_place` wrote.
+
+    A failure here fails the install, which is the opposite call to launchd's above
+    and is decided by the same question: what does the file buy on its own. Nothing,
+    here — an unenabled user unit is a daemon that does not start at the next login
+    or any login after it.
+    """
+    unit = declared_unit(entry.name)
+    placed = unit_dir() / unit
+    if not placed.is_file():
+        return Result(False, f'{placed} was not placed, so nothing keeps {entry.executable} running', kind=Kind.ARCHIVE_INCOMPLETE)
+    enabled = systemd.enable(unit)
+    if not enabled.ok:
+        return Result(False, f'could not enable {unit}: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(True, str(placed), kind=Kind.APPLIED)
+
+
+def _unsupervised_launchd(name: str, executable: str) -> str:
+    agent = AGENTS[name]
+    plist = launchd.agent_path(agent.label)
+    if not plist.is_file():
+        return f'{plist} does not exist, so nothing keeps {executable} running'
+    if plist.read_bytes() != agent_plist(agent, installed_at(executable)):
+        return f'{plist} differs from what this repo declares'
+    if not launchd.loaded(agent.label):
+        return f'{agent.label} is installed and launchd has not loaded it'
+    return ''
+
+
+def _unsupervised_systemd(name: str, executable: str) -> str:
+    """The three states, with the middle one narrowed to what is knowable offline.
+
+    The unit's body comes out of the release archive rather than from this repo, so
+    there is nothing here to compare it against without a download. What `_place`
+    *does* author is the `ExecStart` path, and that is the half that goes wrong —
+    a unit still naming `/usr/bin` after the package it came from was removed is
+    exec-not-found on every start.
+    """
+    placed = unit_dir() / declared_unit(name)
+    if not placed.is_file():
+        return f'{placed} does not exist, so nothing keeps {executable} running'
+    if _exec_at(placed.read_text(), installed_at(executable)) != placed.read_text():
+        return f'{placed} does not start {installed_at(executable)}'
+    if not systemd.enabled(placed.name):
+        return f'{placed.name} is installed and systemd has not enabled it'
+    return ''
 
 
 def _unplaceable(executable: str, target: Path) -> str:

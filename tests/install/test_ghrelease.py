@@ -18,6 +18,7 @@ import contextlib
 import gzip
 import io
 import os
+import plistlib
 import stat
 import tarfile
 import zipfile
@@ -34,12 +35,20 @@ from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import Kind
 from dotfiles.providers import ghrelease
+from dotfiles.providers import launchd
 from dotfiles.providers import releases
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Companion
+from dotfiles.providers.releases import LaunchAgent
 from dotfiles.providers.releases import ReleaseArtifact
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
+DARWIN = Target(OSFamily.DARWIN, Arch.ARM64)
+
+AGENT = LaunchAgent('com.example.demo', ('serve', '--no-browser'))
+"""A declared agent for a tool no release publishes, for the reason `registered`
+gives about assets: every real name in the table is measured against a live
+release, so borrowing one to test a placement inherits its spelling."""
 
 PAYLOAD = b'#!/bin/sh\necho installed\n'
 
@@ -518,16 +527,314 @@ class TestPreconditions:
         assert result.kind is Kind.NOT_ON_PATH
 
 
+class TestLaunchAgent:
+    """The macOS half of a supervised release, which upstream cannot publish for us.
+
+    syncthing's archive does carry `etc/macos-launchd/syncthing.plist`, and it is an
+    example rather than a unit: `/Users/USERNAME` four times, the binary out of
+    `~/bin`, and a README telling the reader to edit it. So the plist is authored in
+    `releases.AGENTS` where the systemd unit is taken from the archive, and these
+    assert the half that has no upstream file to compare against.
+    """
+
+    def test_a_declared_agent_lands_where_launchd_reads_it(self, home, bundle):
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        assert result.ok, result.detail
+        placed = home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist'
+        assert plistlib.loads(placed.read_bytes())['Label'] == 'com.example.demo'
+
+    def test_the_plist_runs_the_binary_this_install_placed(self, home, bundle):
+        """The same correction `_exec_at` makes to a systemd unit, and the reason it
+        cannot come from upstream: the published example names `~/bin/syncthing` and
+        a release install puts the binary under `~/.local/bin`."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+
+        install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        placed = plistlib.loads((home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist').read_bytes())
+        assert placed['ProgramArguments'] == [str(home / '.local' / 'bin' / 'demo'), 'serve', '--no-browser']
+
+    def test_the_job_is_a_daemon_rather_than_a_one_shot(self, home, bundle):
+        """What declaring an agent at all means. Without `KeepAlive` launchd runs it
+        once and forgets it, which is a sync daemon that stops at the first restart
+        and a machine nothing reports as wrong."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+
+        install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        placed = plistlib.loads((home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist').read_bytes())
+        assert placed['KeepAlive'] is True
+        assert placed['RunAtLoad'] is True
+        assert placed['StandardErrorPath'].endswith('demo-errors.log'), 'launchd sends a job output nowhere by default'
+
+    def test_a_linux_target_gets_no_agent(self, home, bundle):
+        """The declaration is macOS's half, so the same entry on Linux is supervised
+        by the unit out of the archive and by nothing here."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=LINUX, agent=AGENT)
+
+        assert result.ok, result.detail
+        assert not (home / 'Library' / 'LaunchAgents').exists()
+
+    def test_a_release_declaring_no_agent_writes_nothing_there(self, home, bundle):
+        """Every entry but one declares none, so the directory must not appear on a
+        Mac that asked for nothing."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+
+        install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN)
+
+        assert not (home / 'Library' / 'LaunchAgents').exists()
+
+    def test_a_plist_that_cannot_be_written_fails_the_install(self, home, bundle):
+        """The same bet the declared unit makes: silently skipping the supervision
+        installs a daemon that never runs, which is worse than a failed install."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+        (home / 'Library').mkdir()
+        (home / 'Library' / 'LaunchAgents').write_text('not a directory')
+
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        assert not result.ok
+        assert result.kind is Kind.WRITE_FAILED
+
+    def test_the_agent_is_booted_out_before_it_is_bootstrapped(self, home, bundle):
+        """`bootstrap` refuses a label already loaded, so without the bootout an
+        agent whose arguments changed keeps the definition launchd holds and the
+        command still reports success."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+        log = recording(home, 'launchctl')
+
+        install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        verbs = [line.split()[0] for line in log.read_text().splitlines()]
+        assert verbs == ['bootout', 'bootstrap']
+
+    def test_a_machine_launchctl_will_not_answer_on_still_installs(self, home, bundle):
+        """A plist under `~/Library/LaunchAgents` is loaded at the next login whether
+        or not anything asked, so the load is a convenience and failing the install
+        over it would strand the binary for the sake of not logging out."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
+        recording(home, 'launchctl', exit_code=1)
+
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
+
+        assert result.ok, result.detail
+        assert (home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist').is_file()
+
+
+class TestSupervisionEvidence:
+    """What `check` reads, answered without resolving a release.
+
+    `missing_companions`' property, for the same reason: a checker offline or out of
+    API budget still gets an answer, so nothing here has a tag or a target.
+    """
+
+    def test_a_tool_declaring_no_agent_owes_nothing(self, home):
+        assert ghrelease.unsupervised('demo', 'demo') == ''
+
+    def test_a_machine_with_no_launchd_owes_nothing(self, home):
+        """The platform test, and it is the honest one: the question is whether
+        launchd can be asked, and a Linux box that declares the same release is
+        supervised by its unit instead."""
+        with supervised('demo', AGENT):
+            assert ghrelease.unsupervised('demo', 'demo') == ''
+
+    def test_an_absent_plist_is_reported(self, home):
+        recording(home, 'launchctl')
+
+        with supervised('demo', AGENT):
+            assert 'does not exist' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_a_plist_that_differs_from_the_declaration_is_reported(self, home):
+        """The state nobody can see. launchd goes on running the definition it
+        loaded, so an agent whose arguments moved in this repo is running the old
+        ones with nothing on the machine saying so."""
+        recording(home, 'launchctl')
+        placed = home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist'
+        placed.parent.mkdir(parents=True)
+        placed.write_bytes(ghrelease.agent_plist(LaunchAgent(AGENT.label, ('serve',)), home / '.local' / 'bin' / 'demo'))
+
+        with supervised('demo', AGENT):
+            assert 'differs from what this repo declares' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_a_plist_launchd_has_not_loaded_is_reported(self, home):
+        recording(home, 'launchctl', exit_code=1)
+        _write_agent(home, AGENT)
+
+        with supervised('demo', AGENT):
+            assert 'has not loaded it' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_a_loaded_agent_owes_nothing(self, home):
+        recording(home, 'launchctl')
+        _write_agent(home, AGENT)
+
+        with supervised('demo', AGENT):
+            assert ghrelease.unsupervised('demo', 'demo') == ''
+
+
+UNIT = 'etc/linux-systemd/user/demo.service'
+
+UNIT_BODY = b'[Unit]\nDescription=demo\n\n[Service]\nExecStart=/usr/bin/demo serve\n\n[Install]\nWantedBy=default.target\n'
+
+
+def with_unit(tmp_path: Path, bundle: Path) -> ReleaseArtifact:
+    """A release that publishes its own unit, staged the way syncthing's is."""
+    archive = tmp_path / 'demo.tar.gz'
+    tarball(archive, {'demo': PAYLOAD, UNIT: UNIT_BODY})
+    stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+    return ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit=UNIT)
+
+
+class TestSystemdUnit:
+    """The Linux half of a supervised release, which is a write rather than a file.
+
+    A plist under `~/Library/LaunchAgents` is loaded at the next login whether or not
+    anything asked. A systemd user unit is inert until something enables it, so
+    placing the file and stopping is a daemon that never runs — and `check` reported
+    that machine converged, on the one box in the fleet that actually runs syncthing.
+    """
+
+    def test_a_placed_unit_is_enabled(self, home, bundle, tmp_path, monkeypatch):
+        log = recording(home, 'systemctl')
+
+        result = install_one(with_unit(tmp_path, bundle), entry(), offline=True)
+
+        assert result.ok, result.detail
+        assert log.read_text().splitlines() == ['--user daemon-reload', '--user enable --now demo.service']
+
+    def test_the_reload_comes_before_the_enable(self, home, bundle, tmp_path, monkeypatch):
+        """Without it systemd enables the copy it read at boot, which for a unit this
+        install has just written is the previous one or nothing at all."""
+        log = recording(home, 'systemctl')
+
+        install_one(with_unit(tmp_path, bundle), entry(), offline=True)
+
+        assert log.read_text().index('daemon-reload') < log.read_text().index('enable')
+
+    def test_an_enable_that_fails_fails_the_install(self, home, bundle, tmp_path, monkeypatch):
+        """The opposite call to launchd's, and the same question decides both: what
+        does the file buy on its own. Nothing here."""
+        recording(home, 'systemctl', exit_code=1)
+
+        result = install_one(with_unit(tmp_path, bundle), entry(), offline=True)
+
+        assert not result.ok
+        assert result.kind is Kind.COMMAND_FAILED
+
+    def test_a_machine_with_no_systemd_installs_without_one(self, home, bundle, tmp_path):
+        """A container or a WSL host without a user manager owes no unit, and the
+        binary is still what was asked for."""
+        result = install_one(with_unit(tmp_path, bundle), entry(), offline=True)
+
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo').is_file()
+
+
+class TestUnitEvidence:
+    """The Linux half of `unsupervised`, and the three states it separates.
+
+    The unit's body comes out of the archive rather than from this repo, so there is
+    nothing to compare it against offline — except the one part `_place` authors,
+    which is the `ExecStart` path. That is also the half that goes wrong: a unit
+    still naming `/usr/bin` after the package it came from was removed is
+    exec-not-found on every start.
+    """
+
+    def test_a_machine_with_no_systemd_owes_nothing(self, home, bundle, tmp_path):
+        with registered(with_unit(tmp_path, bundle), entry()):
+            assert ghrelease.unsupervised('demo', 'demo') == ''
+
+    def test_an_absent_unit_is_reported(self, home, bundle, tmp_path):
+        recording(home, 'systemctl')
+
+        with registered(with_unit(tmp_path, bundle), entry()):
+            assert 'does not exist' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_a_unit_starting_something_else_is_reported(self, home, bundle, tmp_path):
+        """The state the migration produces: the release places a unit and the
+        `ExecStart` still names the path the removed package used."""
+        recording(home, 'systemctl')
+        _write_unit(home, UNIT_BODY.decode())
+
+        with registered(with_unit(tmp_path, bundle), entry()):
+            assert 'does not start' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_a_unit_systemd_has_not_enabled_is_reported(self, home, bundle, tmp_path):
+        recording(home, 'systemctl', exit_code=1)
+        _write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
+
+        with registered(with_unit(tmp_path, bundle), entry()):
+            assert 'has not enabled it' in ghrelease.unsupervised('demo', 'demo')
+
+    def test_an_enabled_unit_owes_nothing(self, home, bundle, tmp_path):
+        recording(home, 'systemctl')
+        _write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
+
+        with registered(with_unit(tmp_path, bundle), entry()):
+            assert ghrelease.unsupervised('demo', 'demo') == ''
+
+
+def _write_unit(home: Path, body: str) -> Path:
+    placed = ghrelease.unit_dir() / 'demo.service'
+    placed.parent.mkdir(parents=True, exist_ok=True)
+    placed.write_text(body)
+    return placed
+
+
+def _write_agent(home: Path, agent: LaunchAgent) -> Path:
+    """The plist exactly as an install would have left it, so a comparison passes."""
+    placed = launchd.agent_path(agent.label)
+    placed.parent.mkdir(parents=True, exist_ok=True)
+    placed.write_bytes(ghrelease.agent_plist(agent, home / '.local' / 'bin' / 'demo'))
+    return placed
+
+
+def recording(home: Path, name: str, *, exit_code: int = 0) -> Path:
+    """A binary on this test's PATH that writes its arguments down and exits.
+
+    `standards/testing.md` § "Assert invariants by spying on argv": the question is
+    which command the engine built, and the real `launchctl` would answer about the
+    machine the suite happens to run on.
+    """
+    log = home / f'{name}.argv'
+    placed = home / '.local' / 'bin' / name
+    placed.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit {exit_code}\n')
+    placed.chmod(0o755)
+    return log
+
+
+@contextlib.contextmanager
+def supervised(name: str, agent: LaunchAgent):
+    """Declare one entry's LaunchAgent for the duration of a test.
+
+    In place rather than by rebinding, because `ghrelease` imports the table by
+    name — the same reason `registered` mutates `ASSETS` rather than replacing it.
+    """
+    table = dict(releases.AGENTS)
+    releases.AGENTS[name] = agent
+    try:
+        yield
+    finally:
+        releases.AGENTS.clear()
+        releases.AGENTS.update(table)
+
+
 def install_one(
     asset: ReleaseArtifact,
     declared: catalog.GithubRelease,
     *,
     offline: bool,
     companions: tuple[Companion, ...] = (),
+    target: Target = LINUX,
+    agent: LaunchAgent | None = None,
 ) -> ghrelease.Result:
     """Run the engine against one synthetic asset."""
-    with registered(asset, declared, companions):
-        return ghrelease.install(declared, LINUX, offline=offline)
+    with registered(asset, declared, companions), supervised(declared.name, agent) if agent else contextlib.nullcontext():
+        return ghrelease.install(declared, target, offline=offline)
 
 
 @contextlib.contextmanager

@@ -125,6 +125,17 @@ class Observed:
     answered about the home of the process doing the measuring.
     """
 
+    force: bool = False
+    """Whether this run may clear a blocker by removing what holds it.
+
+    Carried for `reinstall`'s reason — `diff` is handed the plan and the observation
+    and nothing else — and it decides something narrower than the flag's name
+    suggests. Only a blocker carrying a `under_force` command is cleared, which is a
+    superseded *release*; a superseded system package is refused whatever this says,
+    because the manager is the thing refusing and authorising this repo to overwrite
+    what it did not create says nothing to pacman.
+    """
+
     reinstall: bool = False
     """Whether this run was told to install its items again whatever their state.
 
@@ -201,6 +212,7 @@ class PackagesResource:
             consulted_network=consulted,
             from_bundle=session.offline,
             home=session.home,
+            force=session.force,
             reinstall=session.reinstall,
         )
 
@@ -222,7 +234,8 @@ class PackagesResource:
         for item in plan.for_resource(NAME):
             evidence = observed.evidence[item.address]
             if evidence.verdict is not Verdict.MATCHED:
-                repair = repair_for(item, evidence.verdict, observed.met, evidence.blocked_by)
+                blocking = evidence.blocked_by.standing(observed.force) if evidence.blocked_by else None
+                repair = repair_for(item, evidence.verdict, observed.met, blocking)
                 changes.append(
                     Change(
                         NAME,
@@ -231,7 +244,7 @@ class PackagesResource:
                         evidence.verdict,
                         repair=repair,
                         detail=evidence.detail,
-                        advice=advice_for(item, repair, evidence.blocked_by),
+                        advice=advice_for(item, repair, blocking),
                         desired=item,
                     )
                 )

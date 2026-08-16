@@ -239,12 +239,29 @@ class VendoredProvider(CatalogProvider):
 class ReleaseProvider(VendoredProvider):
     """A binary published as a GitHub release asset, and the files that ship beside it."""
 
+    def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        """The binary at the path this provider chose, and what still holds its name.
+
+        `ev.by_release` is the provenance half. The blocker is asked only where that
+        answered `MISSING`, per `ev.blocker`'s own rule: a release already installed
+        has nothing standing in its way, and the superseded package beside it is then
+        a duplicate on PATH, which `packages._shadowing` reports.
+        """
+        found = ev.by_release(item)
+        if found.verdict is not Verdict.MISSING:
+            return found
+        blocking = ev.superseded(item, installed)
+        return dc.replace(found, blocked_by=blocking) if blocking else found
+
     def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
-        """The binary, and then whatever the release does not publish.
+        """The binary, then whatever the release does not publish, then its daemon.
 
         A companion is a separate file under `~/.local/bin`, so a present and
         current binary says nothing about whether it is still there — and a
-        machine missing one is not converged, however current the binary is.
+        machine missing one is not converged, however current the binary is. A
+        LaunchAgent is the same shape one directory over: an entry `releases.AGENTS`
+        names is a daemon, and a daemon launchd has not been given is a tool that is
+        installed and not doing its job.
 
         Reported as `MISSING` because that is what it is and what makes it
         actionable — the detail carries which file, so a row naming the tool never
@@ -257,15 +274,88 @@ class ReleaseProvider(VendoredProvider):
         if found.verdict is not Verdict.MATCHED:
             return found
         absent = ghrelease.missing_companions(item.name)
-        if not absent:
-            return found
-        return ev.Evidence(Verdict.MISSING, f'{item.executable} is installed, but {", ".join(absent)} is not beside it')
+        if absent:
+            return ev.Evidence(Verdict.MISSING, f'{item.executable} is installed, but {", ".join(absent)} is not beside it')
+        owed = ghrelease.unsupervised(item.name, item.executable)
+        if owed:
+            return ev.Evidence(Verdict.MISSING, owed)
+        return found
 
-    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+        """Displace whatever holds this entry's name, then install it.
+
+        One act rather than two, and the ordering inside it is the reason. The
+        replacement is downloaded and verified *first*, and `_displace` runs from
+        inside `ghrelease.install` once the bytes are on disk — because the machine
+        being displaced is the one that has the tool, and every step before the write
+        can fail: an unresolvable tag, a refused download, a checksum that does not
+        match. Removing first and failing there leaves the box with no syncthing at
+        all and the fleet's file sync stopped.
+
+        The old supervisor still goes before the new binary lands, which is what
+        `supersedes` exists to prevent — two daemons over one config directory and
+        one port.
+
+        A run that is not authorised to remove the package never reaches the removal —
+        the blocker `measure` attaches makes the change `BY_HAND`.
+        """
+        if arrived := self._arrived(change, item):
+            return arrived
+        if supervision := self._supervision_only(session, change, item):
+            return Outcome.from_result(change, supervision)
+        return Outcome.from_result(change, self.fetch(session, item, privilege=privilege))
+
+    def _supervision_only(self, session: Session, change: Change, item: DesiredItem) -> providers.Result | None:
+        """Give a present, current binary its supervisor, without fetching it again.
+
+        `evidence` reports an unsupervised daemon as MISSING, which is what it is; the
+        repair for it is not a reinstall. Without this the row falls through to
+        `fetch`, which spends a tag resolution, a download and a checksum on a state
+        no download changes — every apply, for as long as the supervisor will not load.
+        """
+        if change.verdict is not Verdict.MISSING or ev.by_release(item).verdict is not Verdict.MATCHED:
+            return None
+        if ghrelease.missing_companions(item.name):
+            return None
+        if not ghrelease.unsupervised(item.name, item.executable):
+            return None
+        entry = item.entry
+        if not isinstance(entry, catalogs.GithubRelease):
+            return None
+        return ghrelease.supervise(entry, coordinates.target_for(session.machine.coordinates))
+
+    def _displace(self, session: Session, item: DesiredItem, privilege: Privilege) -> providers.Result:
+        """Remove the superseded package where this run authorised it.
+
+        Measured against `session.inventories`, which is the same reading `observe`
+        decided from — so what `apply` removes is what `check` named, rather than a
+        second opinion taken between the report and the write. `_arrived` above is
+        the live re-check, and it is about the binary, which is the half that moves.
+
+        Stopping the old supervisor is part of the removal rather than a step beside
+        it. Neither `brew uninstall` nor `pacman -R` stops a running daemon, so the
+        process outlives its own package and holds the ports and the config directory
+        the replacement is about to be pointed at.
+        """
+        if not session.force:
+            return providers.Result(True, '', kind=providers.Kind.UNCHANGED)
+        blocking = ev.superseded(item, session.inventories)
+        if blocking is None:
+            return providers.Result(True, '', kind=providers.Kind.UNCHANGED)
+        syspkg.stop_service(blocking.manager, blocking.package, ghrelease.declared_unit(item.name))
+        return syspkg.uninstall(blocking.manager, [blocking.package], privilege)
+
+    def fetch(self, session: Session, item: DesiredItem, *, privilege: Privilege | None = None) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.GithubRelease):
             return providers.Result(False, f'{item.name} is not a github_releases entry', kind=providers.Kind.DECLARATION_INVALID)
-        return ghrelease.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+        before_place = None if privilege is None else lambda: self._displace(session, item, privilege)
+        return ghrelease.install(
+            entry,
+            coordinates.target_for(session.machine.coordinates),
+            offline=session.offline,
+            before_place=before_place,
+        )
 
 
 @dc.dataclass(frozen=True, slots=True)

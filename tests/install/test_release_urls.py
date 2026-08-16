@@ -178,6 +178,23 @@ class TestCorpus:
     def test_every_declared_release_has_an_asset_function_to_ask(self):
         assert set(providers.ASSETS) == declared_releases()
 
+    def test_every_supervised_release_is_one_a_manifest_declares(self):
+        """A LaunchAgent for an entry nothing installs is a plist for a binary that
+        will never be there, and `unsupervised` would report it missing forever.
+
+        One-way, unlike the assets above: every release needs an asset function and
+        almost none of them is a daemon."""
+        assert set(providers.AGENTS) <= declared_releases()
+
+    def test_a_supervised_release_declares_what_it_takes_over_from(self):
+        """The pair that makes one install path real. An agent says the tool is a
+        daemon; `supersedes` is what stops a second copy of that daemon running
+        beside it out of Homebrew or pacman — and a machine carrying both shares one
+        config directory and one port between them."""
+        declared = {entry.name: entry for entry in catalog.load().section('github_releases')}
+
+        assert all(declared[name].supersedes for name in providers.AGENTS)
+
 
 def asset_under_test(case: Case, resolved_urls) -> tuple[str, str, str]:
     """(repo, tag, asset_name) for a case, failing on the case that owns it."""

@@ -298,6 +298,22 @@ class Sandbox:
     machine: str = MACHINE
 
     @property
+    def user_bin(self) -> Path:
+        """`~/.local/bin` under this sandbox, which is where the providers install.
+
+        Derived from `home` rather than declared beside `bin`, because it is not a
+        directory this harness chose: `providers.bin_dir` decides it, and a second
+        spelling here would be free to point somewhere the code never writes.
+
+        Apart from `bin`, and the two are different questions. `bin` is a directory
+        this harness puts in *front* of the machine so a shadow answers instead of
+        whatever is really installed. This is where the machine's own tools live, so
+        a release binary placed here is one the release provider is entitled to
+        claim — which is the whole of what `evidence.by_release` measures.
+        """
+        return self.home / '.local' / 'bin'
+
+    @property
     def staging(self) -> Path:
         """Where staged bundles live, which is what `$DOTFILES_BUNDLE` names."""
         return self.bundle.parent
@@ -387,7 +403,7 @@ class Sandbox:
           moves an exit code to 3.
 
         A test that wants one of them back removes it: `sandbox.env_file.unlink()`,
-        `(sandbox.bin / 'uv').unlink()`.
+        `(sandbox.user_bin / 'uv').unlink()`.
 
         Silent when the declaration will not load. A matrix test writing a broken
         manifest on purpose is measuring the refusal, and a settle that raised
@@ -412,7 +428,24 @@ class Sandbox:
         return executable(self.bin, name, script)
 
     def installed(self, name: str, version: str | None = None) -> Path:
-        """A declared tool present on `PATH`, reporting `version` when asked."""
+        """A declared tool this machine has, reporting `version` when asked.
+
+        In `~/.local/bin` rather than the shadow directory, because that is where
+        every provider that installs a binary puts one and a release entry is
+        measured at that path rather than on `PATH` — a copy anywhere else is what
+        `evidence.by_release` exists to report as *not this repo's*. The other
+        providers are answered by `PATH`, which reaches here as well, so one
+        placement serves both.
+        """
+        return reporting(self.user_bin, name, version) if version is not None else executable(self.user_bin, name)
+
+    def elsewhere(self, name: str, version: str | None = None) -> Path:
+        """The same tool, installed by something that is not this repo.
+
+        A machine whose Homebrew or pacman put a binary on `PATH` at a path no
+        provider here chose. The shadow directory is exactly that: on `PATH`, ahead
+        of everything, and not `~/.local/bin`.
+        """
         return reporting(self.bin, name, version) if version is not None else executable(self.bin, name)
 
     def uv_installed(self, name: str, pin: str | None = None, repo: str | None = None) -> None:
@@ -513,7 +546,7 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     # `bundle` is deliberately absent from this list. `_stage_bundle` treats an
     # existing directory as an already-staged bundle, so creating it would make
     # `--offline` skip the staging path a matrix row is there to measure.
-    for directory in (box.home, box.repo, box.bin, box.cache, box.config, box.data, box.state, box.runs, box.uv_tools):
+    for directory in (box.home, box.repo, box.bin, box.user_bin, box.cache, box.config, box.data, box.state, box.runs, box.uv_tools):
         directory.mkdir(parents=True, exist_ok=True)
 
     # `offline_bundle.newest` searches the working directory before `$HOME`, and
@@ -537,6 +570,10 @@ def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None
     `PATH` keeps `/usr/bin:/bin` behind the sandbox bin, for the reason
     `tests/conftest.py`'s `fake_bin` gives: without them `git`, `bash` and `sh`
     raise FileNotFoundError and the harness cannot run its own helpers.
+
+    `~/.local/bin` sits between them, in the order a real machine has: shadows
+    ahead of everything so a fake package manager answers, then the tools this
+    machine installed, then the system.
     """
     monkeypatch.setenv('HOME', str(box.home))
     monkeypatch.setenv('XDG_CACHE_HOME', str(box.cache))
@@ -547,7 +584,7 @@ def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv('DOTFILES_DIR', str(box.repo))
     monkeypatch.setenv('DOTFILES_BUNDLE', str(box.staging))
     monkeypatch.setenv('MACHINE', box.machine)
-    monkeypatch.setenv('PATH', f'{box.bin}{os.pathsep}/usr/bin{os.pathsep}/bin')
+    monkeypatch.setenv('PATH', f'{box.bin}{os.pathsep}{box.user_bin}{os.pathsep}/usr/bin{os.pathsep}/bin')
 
 
 def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:

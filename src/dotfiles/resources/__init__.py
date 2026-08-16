@@ -91,6 +91,35 @@ class Blocker:
     package: str
     removal: str
 
+    manager: str = ''
+    """Which manager holds it, for a repair that runs the removal rather than
+    printing it.
+
+    An identifier, where `removal` is a sentence: `syspkg` still owns every command,
+    and this is what it is asked with. Empty where nothing measured one, which is
+    what a hand-built value in a test looks like.
+    """
+
+    under_force: str = ''
+    """The command that clears this blocker as part of an apply, or '' where a person
+    clears it.
+
+    Only the release provider fills it in, and the emptiness elsewhere is the point.
+    A superseded *package* still blocks an install that `--force` cannot help with:
+    the manager is the thing refusing, and authorising this repo to overwrite what it
+    did not create says nothing to pacman. Naming a flag there would advertise a fix
+    that turns a clear refusal into a failed transaction.
+    """
+
+    def standing(self, force: bool) -> Blocker | None:
+        """This blocker, or None where the run is authorised to clear it.
+
+        One owner for the rule, because the two readers must not disagree: `diff`
+        decides whether `apply` may act, and the provider then acts. Split, a run
+        could plan an install whose blocker it declines to remove.
+        """
+        return None if force and self.under_force else self
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Change:
@@ -517,7 +546,8 @@ def advice_for(item: DesiredItem, repair: Repair, blocked_by: Blocker | None = N
     if repair is not Repair.BY_HAND:
         return ''
     if blocked_by is not None:
-        return f'{blocked_by.package} is installed and conflicts with this; remove it first: {blocked_by.removal}'
+        by_hand = f'{blocked_by.package} is installed and conflicts with this; remove it first: {blocked_by.removal}'
+        return f'{by_hand} — or let apply do it: {blocked_by.under_force}' if blocked_by.under_force else by_hand
     if item.precondition is Precondition.GITHUB_AUTH:
         return GITHUB_AUTH_ADVICE
     if item.precondition is Precondition.AMD_GPU:
