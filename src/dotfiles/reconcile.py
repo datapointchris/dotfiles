@@ -581,6 +581,7 @@ def survey(
     owner: str | None = None,
     packages: frozenset[str] = frozenset(),
     offline: bool = False,
+    announce_bundle: bool = True,
     report: Callable[[ResourceResult], None] | None = None,
 ) -> Surveyed:
     """Measure the machine once, folding and reporting each resource as it lands.
@@ -610,7 +611,14 @@ def survey(
     spend, and `resources.packages._upstream` already ignores it on this branch — so
     passing it through would be one more place the two could come to disagree.
     """
-    if offline:
+    # `announce_bundle` is off for a caller that is not rehearsing an install.
+    # `status show` walks offline to get versions rather than to install anything,
+    # and on a machine with nothing staged the note read "holds no manifest.txt,
+    # so nothing can be installed from it" and pointed at `bundle stage` — advice
+    # away from the next real step, in the state that is the first turn of the
+    # loop. Not gated on `report is not None`: `plan --offline --json` and
+    # `check --offline --json` both pass None and both genuinely install from it.
+    if offline and announce_bundle:
         report_bundle(offline_bundle.describe())
     session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
     selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)

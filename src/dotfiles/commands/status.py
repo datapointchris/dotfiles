@@ -32,8 +32,6 @@ from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import reconcile
 from dotfiles import remote as transport
-from dotfiles import runs
-from dotfiles import sinks
 from dotfiles import status as status_document
 from dotfiles import vocabulary
 from dotfiles.commands import QuietOption
@@ -158,8 +156,15 @@ def composed(machine: str | None) -> Composed:
     session = resolved(machine)
     named = session.machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
-    identity = runs.begin(named, 'plan')
-    sinks.open_log(identity)
+    # No run record, which is the same choice `commands/resources.py` made for the
+    # resource-scoped read doors. `runs.write` re-points `latest` at whatever it
+    # wrote, so composing a document after an offline apply took that pointer off
+    # the apply and put it on a two-resource plan — on the box whose run records
+    # are the only account of what happened there, and where `report path` exists
+    # so a failed apply's record can be uploaded. It also ran before the gate
+    # could refuse, so a document that never left still cost the apply its
+    # pointer.
+    began = dt.datetime.now(dt.UTC)
     # Offline, and that is what makes the document useful rather than a
     # convenience. This says what the machine *has*, which is measured by running
     # each tool — never by asking upstream. The online lens resolves every release
@@ -167,9 +172,8 @@ def composed(machine: str | None) -> Composed:
     # fail and the rows vanish: 25 examined entries, none of them a version, none
     # of them a release binary. Offline the same walk reports 36, with versions,
     # which is exactly what a builder diffs against.
-    walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, report=None)
-    sinks.keep(walked.events, identity, {'skip': sorted(withheld), 'offline': True})
-    document = status_document.document(walked.results, named, identity.started, verb='plan')
+    walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
+    document = status_document.document(walked.results, named, began, verb='plan')
     return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, session.machine.coordinates.network_trust)
 
 

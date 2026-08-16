@@ -243,6 +243,29 @@ class TestPublishing:
         assert status_commands.discriminator(axes.NetworkTrust.FLEET) != 'my-laptop'
         assert status_commands.wrote(name) == status_commands.discriminator(axes.NetworkTrust.FLEET)
 
+    def test_composing_a_document_writes_no_run_record(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """`runs.write` re-points `latest` at whatever it wrote. Composing after an
+        offline apply took that pointer off the apply and put it on a two-resource
+        plan — on the box whose run records are the only account of what happened
+        there, and where `report path` exists so a failed apply's record can be
+        uploaded."""
+        before = sorted(path.name for path in paths.RUNS_DIR.iterdir()) if paths.RUNS_DIR.is_dir() else []
+
+        cli('status', 'upload')
+
+        after = sorted(path.name for path in paths.RUNS_DIR.iterdir()) if paths.RUNS_DIR.is_dir() else []
+        assert after == before
+
+    def test_showing_a_status_does_not_name_the_bundle(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """It walks offline to get versions rather than to install anything. On a
+        machine with nothing staged the note pointed at `bundle stage` — advice
+        away from the next real step, in the state that is the first turn of the
+        loop."""
+        ran = cli('status', 'show', catch_exceptions=True)
+
+        assert 'manifest.txt' not in ran.stderr
+        assert 'bundle stage' not in ran.stderr
+
     def test_the_shelf_is_keyed_on_the_manifest(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         cli('status', 'upload')
 
