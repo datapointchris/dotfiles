@@ -164,6 +164,18 @@ class Staging:
         """
         return next(iter(self.bundles), self.directory)
 
+    @property
+    def base(self) -> Path | None:
+        """The newest staged bundle carrying the whole declaration.
+
+        What the sparse bundles above it read through, and what retention pins.
+        Read off the descriptions this already holds rather than off the names,
+        because they are here — the sweeps use the name rule because a remote
+        listing has nothing else.
+        """
+        paired = zip(self.bundles, self.descriptions, strict=True)
+        return next((path for path, described in paired if not described.sparse), None)
+
     def breakdown(self) -> str:
         """The per-category counts, which is what says whether a bundle is usable.
 
@@ -444,6 +456,49 @@ def manifest_of(name: str) -> str:
     """
     found = NAMED.match(name.removesuffix('.tar.gz'))
     return found.group('manifest') if found else ''
+
+
+SPARSE_SUFFIX = '-sparse'
+"""What `create_bundle.bundle_name` appends where a build left something out."""
+
+
+def carries_everything(name: str, described: bundle.Description | None = None) -> bool:
+    """Whether a bundle holds the whole declaration rather than a difference.
+
+    From the name unless a caller already has the document. A remote listing is
+    names and nothing else — the sidecar carries `completeness` and reading one
+    per row is a transfer per bundle, which `bundle list` already declined to
+    spend for this same fact — so a rule that needs the document cannot serve both
+    sweeps. The two cannot disagree on a bundle this tool built: `build` computes
+    the name's suffix and sets `built_from` under one condition, and `describe`
+    reads completeness off `built_from` alone.
+
+    An unnamed shape reads as full, which is the direction that costs one retained
+    file rather than a deleted one.
+    """
+    if described is not None:
+        return not described.sparse
+    return not name.removesuffix('.tar.gz').endswith(SPARSE_SUFFIX)
+
+
+def base_of(names: tuple[str, ...]) -> str | None:
+    """The newest full bundle in one machine's set, which retention must not remove.
+
+    `providers.locate` reads the stack newest-first, so a sparse bundle wins for
+    what it carries and falls through to the older full bundle for the rest. That
+    fallthrough is what makes a sparse bundle possible, and retention could not
+    see it: a name sorts as its stamp does and a full bundle is always the oldest,
+    so it was always the first thing a sweep took. `prune` promised the newest is
+    never removed, which is true and insufficient when the newest is sparse.
+
+    Pinned only while it is the newest full one, so a newer full build releases the
+    older and the stack stays bounded at the limit plus one.
+
+    None for a machine holding only sparse bundles. Nothing is pinned there and
+    retention behaves as it did, which is right — a stack with no base is already
+    broken and holding one of its members back cannot repair it.
+    """
+    return max((name for name in names if carries_everything(name)), default=None)
 
 
 def by_machine(names: tuple[str, ...]) -> dict[str, tuple[str, ...]]:

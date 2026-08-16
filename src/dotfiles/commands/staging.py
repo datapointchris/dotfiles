@@ -318,8 +318,12 @@ def _report_retention(where: transport.Remote, directory: str) -> None:
     upload deletes bytes from a server. `bundle prune` is where that happens, and
     it is typed.
     """
-    archives = [name for name in transport.names(where, directory) if not name.endswith(offline_bundle.SIDECAR_SUFFIX)]
-    superseded = transport.superseded(tuple(archives), where.keep_bundles)
+    archives = tuple(name for name in transport.names(where, directory) if not name.endswith(offline_bundle.SIDECAR_SUFFIX))
+    base = offline_bundle.base_of(archives)
+    # Counted the way `prune --remote` will sweep, or the nudge names a number
+    # that command then declines to act on. No pinned row here: this path reports
+    # and never removes, so all it owes the reader is a count that matches.
+    superseded = tuple(name for name in transport.superseded(archives, where.keep_bundles) if name != base)
     if superseded:
         render_note(f'{len(superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {superseded[0]}')
         hint('remove them with: dotfiles bundle prune --remote')
@@ -520,6 +524,7 @@ def check(
             {
                 'bundle': str(staged.directory),
                 'bundles': [path.name for path in staged.bundles],
+                'base': staged.base.name if staged.base else None,
                 'built': staged.built,
                 'sparse': staged.sparse,
                 'covered': list(found.covered),
@@ -531,6 +536,13 @@ def check(
         raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
     reconcile.report_bundle(staged)
+    # Here rather than in `report_bundle`, which the apply gate and the `--offline`
+    # rehearsals of `plan` and `check` all share — a per-bundle listing in four
+    # places is browse density inside a nudge. Rendered without colour, matching
+    # the `measured` rows below: a pin is a fact rather than a warning.
+    for path, described in zip(staged.bundles, staged.descriptions, strict=True):
+        pin = ', pinned — the sparse bundles above it read through it' if path == staged.base else ''
+        render_row('staged', path.name, f'{"sparse" if described.sparse else "full"}{pin}')
     for name in found.uncovered:
         render_row('uncovered', name, 'no staged bundle carries a file for it, so an offline run cannot measure or install it', 'yellow')
     for name in found.measured:
@@ -606,6 +618,15 @@ def prune(
     archive whose staged directory is gone is one `bundle stage` away, so keeping
     the two in step is what makes the limit mean one thing.
 
+    **The newest full bundle per machine is pinned, whatever the limit.** A sparse
+    bundle carries only a difference and falls through to the full one beneath it
+    for everything else, so sweeping that base makes every tool the sparse bundle
+    deliberately omitted unrecoverable — on the box that cannot fetch another. A
+    name sorts as its stamp does and the base is always the oldest, so it was
+    always the first thing taken; at the default limit that lands after five
+    sparse builds rather than only at `--keep 1`. A newer full build unpins the
+    older, which bounds the stack at the limit plus one.
+
     **The limit counts per machine, not across the cache.** `bundle download
     --machine X` writes another box's archive beside this one's, so a sweep that
     counted them together would let five downloads for a peer age out the only
@@ -623,15 +644,21 @@ def prune(
     # applied. Both sweeps floored at one and the closing line printed the flag,
     # so `--keep 0` swept to one bundle and said `0 kept per machine`.
     retained = max(keep if keep is not None else _configured_keep(), 1)
-    superseded = _superseded_locally(retained)
+    sweep = _superseded_locally(retained)
+    superseded = sweep.superseded
 
-    if superseded:
+    if superseded or sweep.pinned:
         for name in superseded:
             render_row('superseded', name, _age_of(name), 'yellow')
+        for name in sweep.pinned:
+            render_row('pinned', name, 'the newest full bundle, which the sparse bundles above it read through')
         # The same pair the remote sweep has. What is here is what a firewalled
         # box cannot download again, and a machine with no [remote] declared —
         # the ordinary state — has no `bundle download` to recover with.
-        if not yes:
+        #
+        # Asked only where something goes. A run whose only candidate was the base
+        # has nothing to confirm, and the pinned row above already said why.
+        if superseded and not yes:
             if no_input or not sys.stdin.isatty():
                 raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have removed {len(superseded)} locally')
             if not typer.confirm(f'Remove {len(superseded)} local bundle(s)?', default=False, err=True):
@@ -645,7 +672,8 @@ def prune(
     if remote_too:
         _prune_remote(machine, retained, yes=yes, no_input=no_input)
 
-    console.print(f'{len(swept)} removed locally, {retained} kept per machine')
+    held = f', plus {len(sweep.pinned)} pinned as a full base' if sweep.pinned else ''
+    console.print(f'{len(swept)} removed locally, {retained} kept per machine{held}')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -655,7 +683,20 @@ def _configured_keep() -> int:
     return found.remote.keep_bundles if found.remote else transport.DEFAULT_KEEP
 
 
-def _superseded_locally(keep: int) -> tuple[str, ...]:
+@dc.dataclass(frozen=True, slots=True)
+class Sweep:
+    """What a local sweep would remove, and what the limit wanted and cannot have."""
+
+    superseded: tuple[str, ...] = ()
+    pinned: tuple[str, ...] = ()
+    """A base the count would otherwise have taken.
+
+    Only those. A base still inside the kept N is retained by the count and needs
+    no line saying so, which keeps an ordinary sweep's output unchanged.
+    """
+
+
+def _superseded_locally(keep: int) -> Sweep:
     """What a local sweep would remove, counted per machine and named, removing nothing.
 
     Separate from the removal so the confirmation has something to show. A prompt
@@ -672,9 +713,13 @@ def _superseded_locally(keep: int) -> tuple[str, ...]:
     held = tuple({*archives, *staged})
 
     superseded: list[str] = []
+    pinned: list[str] = []
     for owned in offline_bundle.by_machine(held).values():
-        superseded.extend(transport.superseded(owned, max(keep, 1)))
-    return tuple(superseded)
+        base = offline_bundle.base_of(owned)
+        past = transport.superseded(owned, max(keep, 1))
+        superseded.extend(name for name in past if name != base)
+        pinned.extend(name for name in past if name == base)
+    return Sweep(tuple(superseded), tuple(pinned))
 
 
 def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
@@ -702,7 +747,16 @@ def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) 
     where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     directory = transport.bundles_for(where, named)
-    superseded = transport.superseded(offline_bundle.on_remote(where, named), max(keep, 1))
+    listed = offline_bundle.on_remote(where, named)
+    past = transport.superseded(listed, max(keep, 1))
+    base = offline_bundle.base_of(listed)
+    superseded = tuple(name for name in past if name != base)
+    # Rendered before the guard below, or a sweep whose only candidate was the
+    # base returns saying nothing is past the limit — which is false. Something
+    # was, and it was deliberately held back.
+    for name in (one for one in past if one == base):
+        render_row('pinned', name, 'the newest full bundle, which the sparse bundles above it read through')
+
     if not superseded:
         render_note(f'nothing on the remote for {named} is past the {keep} kept')
         return

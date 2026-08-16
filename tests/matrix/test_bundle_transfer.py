@@ -638,3 +638,59 @@ class TestReportingHowOldABundleIs:
     def test_an_ordinary_age_is_unchanged(self) -> None:
         assert staging._elapsed(dt.timedelta(days=3)) == '3 day(s)'
         assert staging._elapsed(dt.timedelta(hours=5)) == '5 hour(s)'
+
+
+SPARSE_NEWEST = 'dotfiles-offline-v20260909T120000Z-box-linux-x86_64-sparse'
+
+
+class TestPinningTheFullBase:
+    """A sparse bundle falls through to the full one beneath it, and retention
+    could not see that: a name sorts as its stamp does, so the base is always the
+    oldest and always the first thing a sweep takes."""
+
+    def staged(self, sandbox: Sandbox, *names: str) -> None:
+        for name in names:
+            (sandbox.staging / name).mkdir(parents=True)
+            (sandbox.staging / name / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+    def test_the_newest_full_bundle_survives_a_limit_that_would_take_it(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Every tool the sparse bundle deliberately omitted has no other source,
+        on the box that cannot fetch one."""
+        self.staged(sandbox, OLDER, SPARSE_NEWEST)
+
+        ran = cli('bundle', 'prune', '--keep', '1', '--yes')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert (sandbox.staging / OLDER).is_dir()
+        assert (sandbox.staging / SPARSE_NEWEST).is_dir()
+
+    def test_the_pin_is_named_rather_than_silent(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """`prune --keep 1` on a stack of two keeping two reads as a broken limit
+        without a word about why."""
+        self.staged(sandbox, OLDER, SPARSE_NEWEST)
+
+        ran = cli('bundle', 'prune', '--keep', '1', '--yes')
+
+        assert 'pinned' in ran.stdout + ran.stderr
+        assert 'plus 1 pinned as a full base' in ran.stdout
+
+    def test_a_newer_full_bundle_unpins_the_older_one(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """What bounds the stack. The pin moves rather than accumulating, so a
+        machine holds one base and the limit's worth of everything else."""
+        self.staged(sandbox, OLDER, NEWEST)
+
+        cli('bundle', 'prune', '--keep', '1', '--yes')
+
+        assert (sandbox.staging / NEWEST).is_dir()
+        assert not (sandbox.staging / OLDER).exists()
+
+    def test_a_stack_of_only_sparse_bundles_sweeps_as_before(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Nothing is pinned where there is no base. A stack with none is already
+        broken and holding a member back cannot repair it."""
+        older_sparse = f'{OLDER}-sparse'
+        self.staged(sandbox, older_sparse, SPARSE_NEWEST)
+
+        cli('bundle', 'prune', '--keep', '1', '--yes')
+
+        assert (sandbox.staging / SPARSE_NEWEST).is_dir()
+        assert not (sandbox.staging / older_sparse).exists()
