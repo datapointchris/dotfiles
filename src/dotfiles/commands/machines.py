@@ -206,8 +206,9 @@ def machine_requirements(
     """What this machine needs that `apply` will never supply.
 
     The register in `install/flags.yml`: values that must be set by hand below
-    the OVERRIDES marker, and files restored from a backup. Everything the repo
-    knows a machine needs while deliberately not knowing its contents.
+    the OVERRIDES marker, and files that arrive from somewhere other than this
+    repo. Everything the repo knows a machine needs while deliberately not
+    knowing its contents.
 
     Declaration, not state — it answers for any machine, including one you are
     not standing on, so it never reports whether a file is actually there.
@@ -256,7 +257,7 @@ def _render_requirements(machine: machines.Machine) -> None:
                 console.print(f'{EVIDENCE_INDENT}{"":<{width}}  the file it names has to be there too', markup=False, highlight=False)
 
     if files := machine.required_files:
-        _section('files', f'{len(files)} restored from a backup, never written by apply')
+        _section('files', f'{len(files)} restored by hand, never written by apply')
         width = max(len(entry.path) for entry in files)
         for entry in files:
             console.print(f'{EVIDENCE_INDENT}{entry.path:<{width}}  {entry.description}', markup=False, highlight=False)

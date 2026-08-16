@@ -90,10 +90,15 @@ required:
 # must never know its contents — one level up: a required file rather than a
 # required value.
 #
-# These are restored by safekeep, not created by hand and not installed, so they
-# are absent between `dotfiles apply` and the restore step of a rebuild. That
-# window is why `doctor` reporting one missing is the accurate state of the
-# machine rather than a fault in the install.
+# None of these is created by hand or installed, so they are absent between
+# `dotfiles apply` and whatever puts them back. That window is why `doctor`
+# reporting one missing is the accurate state of the machine rather than a fault
+# in the install.
+#
+# Where a file comes back from is per entry and is what `restore:` names. Off the
+# fleet that is safekeep. A credential's is Vaultwarden, which is where every
+# fleet secret that no browser flow mints already lives — a token is not restored
+# from a backup of the machine that lost it.
 #
 # `dotfiles machines requirements` lists this register, and `--safekeep` emits it
 # as the `[[back_up_paths]]` blocks safekeep's own config wants — which is what
@@ -155,12 +160,21 @@ required_files:
   # because that resolves against `system_packages` only and ntfy is a
   # `github_releases` entry.
   #
-  # A per-machine token rather than the shared read token, so revocation is one
-  # machine rather than all of them.
+  # Machine-local and never synced, like every other credential on the fleet —
+  # `~/.claude/.credentials.json` sits inside a *synced* folder and is stignored
+  # out of it, which is a decision rather than an oversight. Sitting beside a
+  # deployed symlink is fine here for the same reason `~/.config/waybar/` mixes
+  # both: nothing carries this directory, so there is no link for Syncthing to
+  # replicate.
+  #
+  # It is unlike gh, icb, nomad and meso in the way that matters, though. Those
+  # mint their own token through a browser and a rebuilt desk runs `auth login`;
+  # ntfy has no such flow, so nothing here can regenerate itself and the only
+  # answer to "where does it come back from" is the vault.
   - name: ntfy token.env
     path: ~/.config/ntfy/token.env
     description: The read token this machine's ntfy subscriber authenticates with
-    restore: "restore it with safekeep, or mint a new one with `ntfy token add --label <host> chris` and write it as a single NTFY_TOKEN=<token> line at mode 600"
+    restore: "copy it from Vaultwarden, which also holds the ntfy admin password and the ci/grafana tokens, and write it as a single NTFY_TOKEN=<token> line at mode 600"
     display_stack: wayland
     file_must_exist: true
     consumers:
