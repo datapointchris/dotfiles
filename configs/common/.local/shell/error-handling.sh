@@ -20,7 +20,9 @@
 #   require_commands curl tar
 #   verify_file /tmp/package.tar.gz "Downloaded package"
 #
-# No trap handlers: a script wanting strict mode sets 'set -euo pipefail' itself.
+# No trap handlers are registered here. Strict mode is opt-in via
+# enable_strict_mode, and cleanup runs only if the caller writes
+# 'trap run_cleanup EXIT' itself.
 # ================================================================
 
 # Source logging library
@@ -75,8 +77,8 @@ run_cleanup() {
 # Strict Mode
 # ================================================================
 
-# Turns on strict mode and registers no traps, whatever the name suggests.
-enable_error_traps() {
+# The opt-in that keeps this library from setting shell options at source time.
+enable_strict_mode() {
   set -euo pipefail
 }
 

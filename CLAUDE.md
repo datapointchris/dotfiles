@@ -103,7 +103,7 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 | Logged/monitored scripts | logging.sh | `log_info/success/warning/error/fatal` |
 | Visual/interactive scripts | formatting.sh | `print_success/error/warning/info` |
 | Visual structure | formatting.sh | `print_header/section/banner/title` |
-| Cleanup/error traps | error-handling.sh | `enable_error_traps`, `register_cleanup` |
+| Cleanup and strict mode | error-handling.sh | `enable_strict_mode`, `register_cleanup` |
 
 **GitHub Release Installers** (⚠️ Python, not a script per tool):
 

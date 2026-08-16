@@ -153,10 +153,14 @@ test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
 PKG=$(layer_value pkg) || PKG=''
 test_file "the ${PKG:-pkg} layer is deployed" "$SHELL_DIR/pkg/${PKG}/${PKG}.sh"
 
-# Test they can be sourced
+# Test they can be sourced. The symbol each one names is only the evidence that
+# the file loaded — what a library exports is asserted against the repo tree in
+# tests/shell/, which is the tree a commit can actually change. Naming a symbol
+# here that a commit renames gates the commit on a redeploy that cannot happen
+# until it lands.
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"
 test_cmd "formatting.sh loads" "source ~/.local/shell/formatting.sh && command -v print_header"
-test_cmd "error-handling.sh loads" "source ~/.local/shell/error-handling.sh && command -v enable_error_traps"
+test_cmd "error-handling.sh loads" "source ~/.local/shell/error-handling.sh && command -v register_cleanup"
 
 # ================================================================
 # 3. CRITICAL SYMLINKS

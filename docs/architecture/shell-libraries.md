@@ -15,8 +15,8 @@ therefore never touch shell options — only the script decides its own error
 handling. A library contains function definitions, variable assignments and
 conditional logic, and nothing else.
 
-`error-handling.sh` follows this by exposing `enable_error_traps` as an explicit
-opt-in rather than setting strict mode on load — the name is the only trap in it. Every library is checked for the
+`error-handling.sh` follows this by exposing `enable_strict_mode` as an explicit
+opt-in rather than setting strict mode on load. Every library is checked for the
 violation by `tests/shell/test_shell_libraries.py`; see
 [Library Flag Pollution](../learnings/library-flag-pollution.md) for the
 incident that produced the test.
@@ -201,7 +201,7 @@ The flag list and its per-machine defaults live in `install/flags.yml`; this lib
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/error-handling.sh`
 
-Three things those names do not carry. `enable_error_traps` installs no handler — its whole body is
+Three things those names do not carry. `enable_strict_mode` installs no handler — its whole body is
 `set -euo pipefail`, run in the caller's shell — so the cleanup a script registers runs only if that
 script also writes `trap run_cleanup EXIT`, which is the line the library's own usage block at the
 foot of the file shows. The `verify_*` and `require_*` helpers are fatal rather than falsy — they
@@ -215,7 +215,7 @@ thing here that retries, for the reason in
 #!/usr/bin/env bash
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/error-handling.sh"
-enable_error_traps
+enable_strict_mode
 
 # Register cleanup
 TMP_DIR=$(mktemp -d)

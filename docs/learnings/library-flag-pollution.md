@@ -27,7 +27,7 @@ detect_platform() { ... }
 - Libraries are sourced into the caller's shell — any side effect persists
 - `set -e` is particularly dangerous because it causes silent exits
 - Capture `$-` before and after sourcing, and assert the flag set is unchanged
-- The fix in `error-handling.sh` is different: it provides `enable_error_traps` as an explicit opt-in function, so the caller chooses when to enable strict mode
+- The fix in `error-handling.sh` is different: it provides `enable_strict_mode` as an explicit opt-in function, so the caller chooses when to enable strict mode
 
 ## Testing
 
