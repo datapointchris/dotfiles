@@ -1,61 +1,30 @@
-# fleet's machine config: where this machine keeps each of the shared files
-# fleet reads, as opposed to what those files say.
+# fleet's machine config: where this machine keeps the shared files fleet reads,
+# as opposed to what those files say.
 #
-# Every one is a literal, never a shared shell variable: ~/.env is a shell file,
-# so anything running under a systemd timer sources no profile and resolves the
-# path to nothing. See standards/data.md § "A shared file is named in config;
-# only the tool's own default is compiled in".
+# Literals, never a shared shell variable: ~/.env is a shell file, so anything
+# running under a systemd timer sources no profile and resolves the path to
+# nothing. See standards/data.md § "A shared file is named in config; only the
+# tool's own default is compiled in".
+
+# Where the declarations live — the repo registry, the machine roster, the host
+# inventory, the standards, the schedule, the tool contracts and the secret
+# declaration. One key, because they ship as one git repo and their location is
+# one fact.
 #
-# Separate keys rather than one section, because these are different files with
-# different lifetimes and a machine may share one and not another.
+# fleet still takes a key per file, and this names none of them. Those are
+# overrides for the machine that genuinely keeps one somewhere else, and setting
+# all seven here said the same thing seven times — after which the directory
+# could only be recovered by inferring it back out of the paths.
 #
-# Each names the terminal-library-fleet clone rather than the ~/dev symlink that
-# resolves into it. ~/dev is a Syncthing folder, so the link is a second hop a
-# rebuilt machine has not restored yet, while the clone is what `dotfiles apply`
-# puts there.
+# The clone, not the ~/dev symlink that resolves into it. ~/dev is a Syncthing
+# folder, so the link is a second hop a rebuilt machine has not restored yet,
+# while the clone is what `fleet machine library clone` puts there.
+library_dir: ~/.local/share/terminal-library-fleet
 
-repos_registry: ~/.local/share/terminal-library-fleet/repos.json
-
-# The fleet's machines, named separately from its repos because the two are
-# different files with different lifetimes.
-machines_registry: ~/.local/share/terminal-library-fleet/machines.json
-
-# The homelab inventory /etc/hosts is rendered from. A fifth shared file rather
-# than a section of one of the others: homelab's deploys read this one and
-# nothing else here.
-hosts_registry: ~/.local/share/terminal-library-fleet/hosts.json
-
-# The standards `fleet audit` grades against. This pointed at ~/dev/standards
-# until that symlink was retired on 2026-08-12, and every grade then failed on a
-# missing file while `fleet audit plan` went on reporting its count from the
-# registry without ever opening the directory. The lesson is that the value went
-# stale, not that naming it here was wrong.
-standards_dir: ~/.local/share/terminal-library-fleet/standards
-
-# What the fleet runs unattended. A declaration — which machine owns a job and
-# how often it runs — so it sits with the registries rather than in state. What
-# each machine actually ran is per-machine state under $XDG_STATE_HOME, and
-# deliberately not here.
-schedule_file: ~/.local/share/terminal-library-fleet/schedule.json
-
-# What each tool promises — its tier, and the tools it invokes as subprocesses.
-# A sixth file rather than a section of the repo registry, because a tool is not
-# a repo: icb ships from ichrisbirch, dotfiles ships eight, and half the repos
-# ship none.
-tools_registry: ~/.local/share/terminal-library-fleet/tools.json
-
-# What each machine must hold on disk that no repo may contain. Plaintext: it
-# says the name, the path and the mode, never the value. The values sit encrypted
-# in `secrets/` beside it, which fleet derives from this path rather than taking
-# a key of its own.
+# Where that clone comes from, for a machine that has none of it.
 #
-# The declaration is readable without a key on purpose. A rebuilt machine has no
-# age key yet, and that is exactly when somebody needs to be told what is missing.
-secrets_file: ~/.local/share/terminal-library-fleet/secrets.yaml
-
-# Where the six declarations above are cloned from, for a machine that has none
-# of them. fleet has no compiled-in default for this and should not — which repo
-# holds a fleet's declarations is a fact about that fleet. This file is the only
-# place that knows, and it lands before the clone does, which is what lets
-# `fleet machine library clone` work on a box with nothing.
+# fleet compiles in no default and should not: which repo holds a fleet's
+# declarations is a fact about that fleet. This file is the only thing that
+# knows, and it lands with `dotfiles apply` — before the clone it names exists,
+# which is what lets a box with nothing run `fleet machine library clone`.
 library_remote: https://github.com/datapointchris/terminal-library-fleet.git
