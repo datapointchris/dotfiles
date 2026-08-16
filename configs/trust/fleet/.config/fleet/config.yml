@@ -43,3 +43,19 @@ schedule_file: ~/.local/share/terminal-library-fleet/schedule.json
 # a repo: icb ships from ichrisbirch, dotfiles ships eight, and half the repos
 # ship none.
 tools_registry: ~/.local/share/terminal-library-fleet/tools.json
+
+# What each machine must hold on disk that no repo may contain. Plaintext: it
+# says the name, the path and the mode, never the value. The values sit encrypted
+# in `secrets/` beside it, which fleet derives from this path rather than taking
+# a key of its own.
+#
+# The declaration is readable without a key on purpose. A rebuilt machine has no
+# age key yet, and that is exactly when somebody needs to be told what is missing.
+secrets_file: ~/.local/share/terminal-library-fleet/secrets.yaml
+
+# Where the six declarations above are cloned from, for a machine that has none
+# of them. fleet has no compiled-in default for this and should not — which repo
+# holds a fleet's declarations is a fact about that fleet. This file is the only
+# place that knows, and it lands before the clone does, which is what lets
+# `fleet machine library clone` work on a box with nothing.
+library_remote: https://github.com/datapointchris/terminal-library-fleet.git
