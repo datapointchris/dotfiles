@@ -156,7 +156,25 @@ through a rebuild, and it is the one that most needs to unpack something.
 **The checksums an asset is verified against come from the bundle that staged
 it**, not from the newest bundle holding a `checksums.txt`. A digest is published
 for one build of one release, so pairing a newer bundle's file with an older
-bundle's binary fails verification on a machine where nothing is wrong.
+bundle's binary fails verification on a machine where nothing is wrong. A
+companion is resolved the same way and for the same reason: `fzf-tmux` carries no
+version in its name, so an unpinned lookup hands an older `fzf` a newer bundle's
+script.
+
+**Retention pins the newest full bundle per machine.** The stack only works while
+the base is there — everything a sparse bundle omitted is read through it — and a
+name sorts as its stamp does, so the base is always the oldest and was always the
+first thing a sweep took. At the default limit of five that lands after five
+sparse builds rather than only at `--keep 1`. A newer full build unpins the older
+one, which bounds a machine's stack at the limit plus one.
+
+**Which version a tool is measured against comes from the newest bundle that
+answers, not from the newest answer of a given kind.** A bundle says what upstream
+published two ways — a manifest row for what it carried, `current` for what it
+measured and left out — and asking every bundle for a row before any for its
+`current` lets a stale row from the base beat a fresh measurement above it. That
+reported the machine as ahead of the newest release, and an offline apply repaired
+it by installing the older binary.
 
 ### Why the cache and not state
 
