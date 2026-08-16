@@ -106,8 +106,11 @@ reaches a server unasked is a change in posture rather than a convenience.
 
 **Nothing but packages and versions leaves that machine.** The document is
 composed over an allowlist of resources, and the bytes are read for this machine's
-hostname and account before any of them move. Both guards, and why there are two,
-are in `docs/architecture/offline-bundles.md`.
+hostname and account before any of them move. A row carrying one of those names is
+withheld and named on screen rather than refusing the whole document — a tool's own
+version banner can relay a hostname it got from somewhere else, and refusing for
+one row took the return leg off a working machine. Both guards, why there are two,
+and why the row is the unit are in `docs/architecture/offline-bundles.md`.
 
 The builder is `src/dotfiles/create_bundle.py`. It was shell until the naming
 above proved the problem — a bash function has no return value, so "produce a

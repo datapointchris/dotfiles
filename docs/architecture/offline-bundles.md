@@ -20,8 +20,8 @@ describe in a sentence.
   status download ──┐                     ┌── status show   packages, toolchains
         (pull)      │                     │        │
                     │                     │        ▼
-                    │                     │   redaction gate ── refuses on
-                    ▼                     │        │            hostname / account
+                    │                     │   redaction gate ── withholds the row,
+                    ▼                     │        │            refuses the rest
   bundle create --against <status>        └── status upload
         │                                          ▲
         │  resolve upstream for every item         │
@@ -168,6 +168,13 @@ first thing a sweep took. At the default limit of five that lands after five
 sparse builds rather than only at `--keep 1`. A newer full build unpins the older
 one, which bounds a machine's stack at the limit plus one.
 
+One function decides all of it — `offline_bundle.retention` — and the local sweep,
+the remote sweep and the post-upload nudge all ask it. Composed by hand at each of
+the three, they had already stopped agreeing about whether the limit was floored.
+`--keep 0` is a usage error rather than a silent clamp to one, and `bundle prune
+--json` carries what was removed, kept and pinned so nothing has to read it out of
+the closing sentence.
+
 **Which version a tool is measured against comes from the newest bundle that
 answers, not from the newest answer of a given kind.** A bundle says what upstream
 published two ways — a manifest row for what it carried, `current` for what it
@@ -204,9 +211,32 @@ Two independent guards, in `src/dotfiles/publishing.py`:
   hostname and account. An allowlist protects against a new resource and not
   against a new field on a row.
 
+**The second guard has three answers, because a row can carry a name the machine
+did not write.** A row's `observed` is whatever a tool printed about itself, and
+`syncthing --version` reports the host that built the Arch package — so on a box
+named `archlinux` the string `syncthing@archlinux` reached the scan and refused a
+document that identified nothing. Refusing the whole thing took the return leg off
+a working machine for one row out of a hundred. A row carrying one of the names is
+now **withheld** and named on screen; a name with no row to drop still refuses the
+document. Nothing carrying an identity leaves under either rule, and a withheld row
+lands in the state the format already means by absence — unmeasured, so the builder
+carries the tool rather than assuming it current.
+
+Loosening the match itself was rejected. Word boundaries still match
+`syncthing@archlinux`, a minimum length stops protecting `mbp`, and an escape hatch
+is a hole in the one boundary that must not have one.
+
 Shelves key on the **manifest**, never on `paths.machine_id()`. Two Macs share one
 manifest, so a status filename carries a discriminator after it or the second
 upload overwrites the first.
+
+**The discriminator is in the document as well as in the name.** A filename can be
+renamed and `bundle create --against` takes any path, so `written_by` carries it in
+the bytes and `status.published_by` prefers that over parsing the name. The builder
+records it into `bundle.json` as `built_for`, and the target — the only end that
+knows which box it is — refuses a sparse bundle planned against its twin. Without
+that, one Mac's bundle omitted every tool the *other* Mac had current and reported
+the omissions as measured.
 
 **Which discriminator depends on the trust coordinate.** On a fleet machine it is
 the bare hostname — not a secret there, and a shelf listing that says `macmini`
