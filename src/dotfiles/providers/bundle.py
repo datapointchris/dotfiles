@@ -274,6 +274,32 @@ def sparse_bundles() -> tuple[Description, ...]:
     return tuple(described for described in descriptions() if described.sparse)
 
 
+def published(name: str, *categories: str) -> str | None:
+    """What upstream published for a tool, from the newest bundle that answers.
+
+    Asked per bundle rather than per kind of answer. A bundle says what upstream
+    published two ways — a manifest row for what it carried, and `current` for
+    what it measured and left out — and both are that one bundle's answer about
+    that one moment.
+
+    Asking every bundle's rows before any bundle's `current` orders the two by
+    kind instead of by age, and the stack this feature builds is exactly where
+    that goes wrong: a sparse bundle carries no row for a tool it measured, so an
+    older full bundle's row survives the merge in `rows()` and wins. The machine
+    is then told it is ahead of the newest release, and an offline apply repairs
+    it by reinstalling the older binary the full bundle still holds.
+    """
+    wanted = {f'{category}/{name}' for category in categories}
+    for root in staged_bundles():
+        row = next((one for one in parse(_text(root)) if one.name == name and one.category in categories), None)
+        if row and row.version:
+            return row.version
+        found = next((version for key, version in description_of(root).current.items() if key in wanted), None)
+        if found:
+            return found
+    return None
+
+
 def staged(name: str, *categories: str) -> Staged | None:
     """What the bundle holds for one tool, or None where it holds nothing.
 

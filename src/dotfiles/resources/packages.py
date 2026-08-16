@@ -526,12 +526,12 @@ def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
     now = dt.datetime.now(dt.UTC)
     found = {}
     for item in present:
-        # What the bundle carries, then what a sparse one says it measured and
-        # left out. Both are the bundle answering "what did upstream publish",
-        # and a run that read only the first would report every tool a sparse
-        # bundle deliberately omitted as unmeasurable — which is the whole cost
-        # a sparse bundle exists to avoid paying.
-        version = ghrelease.bundle_version(item.name) or ghrelease.measured_version(item.name)
+        # Newest bundle first, and both of its answers before the next bundle's.
+        # A sparse bundle says what upstream published two ways — a row for what
+        # it carried, `current` for what it measured and left out — and asking
+        # every bundle for the first shape before any for the second lets an
+        # older full bundle's row beat a newer measurement.
+        version = ghrelease.published_version(item.name)
         if version:
             found[_wanted(item).key] = releases.Cached(version=version, checked=now)
     return found

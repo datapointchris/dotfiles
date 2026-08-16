@@ -52,19 +52,44 @@ def status_for(machine: str = 'box', **installed: str) -> dict[str, object]:
                 'address': 'packages',
                 'verdict': 'converged',
                 'detail': '',
-                'examined': [{'item': f'github-release/{name}', 'detail': version, 'group': ''} for name, version in installed.items()],
+                'examined': [{'item': f'ghrelease/{name}', 'detail': version, 'group': ''} for name, version in installed.items()],
             }
         ],
     }
 
 
 class TestReadingAStatus:
-    def test_the_installed_versions_are_keyed_on_the_tool_name(self) -> None:
-        """A row's `item` is the address a plan uses, and a bundle row is keyed on
-        the name — so the provider half is dropped once, here."""
+    def test_the_installed_versions_are_keyed_on_the_plan_address(self) -> None:
+        """The whole `provider/name`, because that is the identity the rest of the
+        chain uses. Two providers naming one tool would otherwise collapse into
+        whichever resource was walked last."""
         found = create_bundle.installed_versions(status_for(lazygit='0.45.0', fd='10.2.0'))
 
-        assert found == {'lazygit': '0.45.0', 'fd': '10.2.0'}
+        assert found == {'ghrelease/lazygit': '0.45.0', 'ghrelease/fd': '10.2.0'}
+
+    def test_a_changed_row_answers_where_examined_is_empty(self) -> None:
+        """The case that made every sparse build a full one. `_unreported` drops an
+        item that produced a change, and offline every tool with no bundle row is
+        UNKNOWN — so on a target with nothing staged `examined` is empty and the
+        versions are all in `others`."""
+        document = status_for()
+        resource = document['resources'][0]  # type: ignore[index]
+        resource['others'] = [{'item': 'ghrelease/lazygit', 'observed': '0.45.0', 'verdict': 'unknown'}]  # type: ignore[index]
+
+        found = create_bundle.installed_versions(document)
+
+        assert found == {'ghrelease/lazygit': '0.45.0'}
+
+    def test_an_examined_row_wins_over_a_changed_one(self) -> None:
+        """`detail` on an examined row is the measured version. Where an item
+        appears twice the measured one is the answer."""
+        document = status_for(lazygit='0.45.0')
+        resource = document['resources'][0]  # type: ignore[index]
+        resource['others'] = [{'item': 'ghrelease/lazygit', 'observed': '0.44.0', 'verdict': 'unknown'}]  # type: ignore[index]
+
+        found = create_bundle.installed_versions(document)
+
+        assert found == {'ghrelease/lazygit': '0.45.0'}
 
     def test_a_document_of_the_wrong_generation_is_refused(self, tmp_path: Path) -> None:
         """Version 1 carried counts and no rows, so a builder handed one would find
@@ -96,26 +121,26 @@ class TestDecidingWhatToLeaveOut:
     def test_a_tool_at_the_version_upstream_publishes_is_left_out(self, tmp_path: Path) -> None:
         made = self.built(tmp_path, lazygit=INSTALLED)
 
-        assert made.already_current('binary', 'lazygit', INSTALLED) is True
+        assert made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED) is True
         assert made.current == {'binary/lazygit': INSTALLED}
 
     def test_a_tool_behind_upstream_is_carried(self, tmp_path: Path) -> None:
         made = self.built(tmp_path, lazygit='0.44.0')
 
-        assert made.already_current('binary', 'lazygit', INSTALLED) is False
+        assert made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED) is False
         assert made.current == {}
 
     def test_a_tool_the_target_does_not_have_is_carried(self, tmp_path: Path) -> None:
         made = self.built(tmp_path, somethingelse='1.0.0')
 
-        assert made.already_current('binary', 'lazygit', INSTALLED) is False
+        assert made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED) is False
 
     def test_a_row_whose_detail_is_prose_rather_than_a_version_is_carried(self, tmp_path: Path) -> None:
         """The safe direction. A detail like "not installed" compares False, so the
         tool goes into the bundle rather than being declared current."""
         made = self.built(tmp_path, lazygit='not installed')
 
-        assert made.already_current('binary', 'lazygit', INSTALLED) is False
+        assert made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED) is False
 
     def test_a_full_build_leaves_nothing_out_however_current_the_target_is(self, tmp_path: Path) -> None:
         """Paired with the first case: without `--against` there is no premise to
@@ -124,12 +149,12 @@ class TestDecidingWhatToLeaveOut:
 
         made = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'box', dt.datetime(2026, 9, 9, tzinfo=dt.UTC))
 
-        assert made.already_current('binary', 'lazygit', INSTALLED) is False
+        assert made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED) is False
         assert made.describe().completeness is bundle.Completeness.FULL
 
     def test_a_sparse_build_describes_itself_as_one(self, tmp_path: Path) -> None:
         made = self.built(tmp_path, lazygit=INSTALLED)
-        made.already_current('binary', 'lazygit', INSTALLED)
+        made.already_current('ghrelease', 'binary', 'lazygit', INSTALLED)
 
         described = made.describe()
         assert described.completeness is bundle.Completeness.SPARSE
@@ -175,6 +200,32 @@ class TestWhatTheTargetDecides:
         the builder had measured as one nothing could measure.
         """
         self.staged(sandbox, {}, sparse=True, current={'winget/lazygit': INSTALLED}, built_from='a-status.json')
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert not [row for row in rows if 'lazygit' in row['item']]
+
+    def test_a_newer_sparse_bundle_outranks_an_older_full_one(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """The stack this feature builds, and the one shape nothing covered.
+
+        A sparse bundle carries no row for a tool it measured, so an older full
+        bundle's row survives the merge in `rows()`. Asking every bundle for a row
+        before any bundle for its `current` then ranks by kind of answer rather
+        than by age: the machine is told it is ahead of the newest release, and
+        `apply --offline` repairs that by reinstalling the older binary the full
+        bundle still holds.
+        """
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.44.0'}, name='dotfiles-offline-v20260101T000000Z-box-linux-x86_64')
+        sandbox.stage_bundle(
+            {},
+            name='dotfiles-offline-v20260201T000000Z-box-linux-x86_64-sparse',
+            sparse=True,
+            current={'binary/lazygit': INSTALLED},
+            built_from='a-status.json',
+        )
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)

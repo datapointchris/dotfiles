@@ -376,12 +376,26 @@ class DownloadCache:
 
 
 def installed_versions(document: Any) -> dict[str, str]:
-    """What a status document says the target has, keyed by tool name.
+    """What a status document says the target has, keyed by the plan address.
 
-    Read off `examined`, which is the itemised installed set every resource
-    produces. The row's `item` is the address a plan uses — `provider/name` — and
-    the name is what a bundle row is keyed on, so the provider half is dropped
-    here rather than at every comparison.
+    Three lists rather than `examined` alone, and that is what makes a sparse
+    build possible at all. `examined` is the itemised set of items that produced
+    *no* change, because `reconcile._unreported` subtracts every item that did —
+    and the document is composed offline, where a tool the target has no bundle
+    row for is `UNKNOWN`, which is a change. So on a machine with nothing staged
+    every bundlable tool lands in `others` and `examined` is empty. Reading it
+    alone returns nothing, no tool is ever found current, and `--against` builds a
+    full bundle that still names and describes itself sparse.
+
+    `examined` wins where an item appears twice: its `detail` is the measured
+    version, where a changed row carries the same fact in `observed`.
+
+    Keyed on the whole `provider/name` address, because that is the identity the
+    rest of the chain uses — `Description.current` is keyed `category/name` and
+    `bundle.measured_in` matches the whole key, on the reasoning that one tool is
+    a `binary` on one machine and a `cargo` on another. Dropping the provider half
+    here would let two providers naming one tool collapse into whichever resource
+    was walked last.
 
     A row whose detail is evidence prose rather than a version answers nothing and
     is kept anyway: the comparison it fails is what decides the tool goes in the
@@ -394,9 +408,10 @@ def installed_versions(document: Any) -> dict[str, str]:
     for resource in document.get('resources') or ():
         if not isinstance(resource, dict):
             continue
-        for row in resource.get('examined') or ():
-            if isinstance(row, dict) and isinstance(row.get('item'), str):
-                found[str(row['item']).split('/', 1)[-1]] = str(row.get('detail', ''))
+        for listed, field in (('others', 'observed'), ('findings', 'observed'), ('examined', 'detail')):
+            for row in resource.get(listed) or ():
+                if isinstance(row, dict) and isinstance(row.get('item'), str) and row.get(field):
+                    found[str(row['item'])] = str(row[field])
     return found
 
 
@@ -445,12 +460,18 @@ class Bundle:
         self.built_from = path.name
         self.installed = installed_versions(document)
 
-    def already_current(self, category: str, name: str, version: str) -> bool:
+    def already_current(self, provider: str, category: str, name: str, version: str) -> bool:
         """Whether the target has this exact version, so the bundle can leave it out.
 
         Recorded in `current` as it answers, so the two cannot disagree: what a
         sparse bundle omits and what it says it measured are decided in one place
         rather than assembled twice.
+
+        The provider and the category are both taken because they are different
+        keys into different maps. `installed` is keyed on the plan address the
+        target reported, and `current` on the category a bundle row uses — `go`
+        against `go-binary`, `ghrelease` against `binary`. Collapsing either to a
+        bare name lets two providers naming one tool answer for each other.
 
         `versions.exactly` is the comparator a pinned entry is already checked
         with, asked rather than reimplemented — standards/python.md § "Ask
@@ -460,7 +481,7 @@ class Bundle:
         """
         if not self.built_from:
             return False
-        reported = self.installed.get(name)
+        reported = self.installed.get(f'{provider}/{name}')
         if not reported or not versions.exactly(reported, version):
             return False
         self.current[f'{category}/{name}'] = version
@@ -475,10 +496,16 @@ class Bundle:
     def describe(self) -> bundle_format.Description:
         """What this bundle is, for the file that answers that question.
 
-        `current` is empty on a full build and is what makes it full: a bundle
-        that omitted nothing has nothing to say about what it omitted, so its
-        completeness is read off the map rather than passed in beside it and the
-        two cannot disagree.
+        Completeness follows `built_from` — whether the build was planned against
+        a report of what the target already had — and never `bool(current)`.
+        `bundle_name` fixes the `-sparse` suffix before a single tool has been
+        measured, so it can only key on the same thing. A build planned against a
+        report that turned out to omit nothing would then be named `-sparse` while
+        its document read `full`, which is the disagreement between an archive and
+        its own description that `bundle check` exists to make impossible.
+
+        So a sparse build with an empty `current` is a legitimate artefact and
+        says what it is: planned against a report, and it left nothing out.
         """
         return bundle_format.Description(
             created=self.when.astimezone(dt.UTC).isoformat().replace('+00:00', 'Z'),
@@ -724,7 +751,7 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         entry = item.entry
         assert isinstance(entry, catalog.WingetPackage)
         version = fetch_latest_version(entry.repo)
-        if bundle.already_current('winget', entry.name, version):
+        if bundle.already_current('winget', 'winget', entry.name, version):
             log.info('  %s (%s) is what the target already has', entry.name, version)
             continue
         asset = github_asset(entry.repo, version, winget.stage(entry, version))
@@ -780,7 +807,7 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
             raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
         version = tag.removeprefix(entry.release_tag_prefix)
 
-        if bundle.already_current('binary', tool, version):
+        if bundle.already_current('ghrelease', 'binary', tool, version):
             log.info('  %s (%s) is what the target already has', tool, version)
             continue
 
@@ -837,11 +864,11 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     for entry in bundleable(items):
         assert isinstance(entry, catalog.GoTool)
         version = fetch_latest_version(entry.github_repo)
-        # `entry.name`, because `installed_versions` keys the target's map on the
-        # name half of a plan address. The `record` below keeps `entry.executable`,
-        # which is what `gotool` looks a row up by — the two are different
-        # questions and a Go tool declaring `command` is where they diverge.
-        if bundle.already_current('go-binary', entry.name, version):
+        # `entry.name`, because the target reported itself under the plan address
+        # `go/<name>`. The `record` below keeps `entry.executable`, which is what
+        # `gotool` opens the staged file as — the two are different questions, and
+        # a Go tool declaring `command` is where they diverge.
+        if bundle.already_current('go', 'go-binary', entry.name, version):
             log.info('  %s (%s) is what the target already has', entry.executable, version)
             continue
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
@@ -869,7 +896,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
     for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
         version = fetch_latest_version(entry.github_repo)
-        if bundle.already_current('cargo', entry.name, version):
+        if bundle.already_current('cargo', 'cargo', entry.name, version):
             log.info('  %s (%s) is what the target already has', entry.name, version)
             continue
         filename = cargo.stage(entry, version, target)

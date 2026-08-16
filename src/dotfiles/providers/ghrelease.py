@@ -151,6 +151,18 @@ def measured_version(name: str) -> str | None:
     return bundle.measured(name, *bundle.CATEGORIES)
 
 
+def published_version(name: str) -> str | None:
+    """What the staged stack says upstream published, newest bundle answering first.
+
+    Both halves of one bundle before either half of the next, which is what keeps
+    the answer ordered by bundle age rather than by which shape it arrived in.
+    Separate from `bundle_version` because that one must name a tag whose asset is
+    on disk — `resolve_tag` builds an asset name out of it — and a version a sparse
+    bundle only measured has no file by definition.
+    """
+    return bundle.published(name, *bundle.CATEGORIES)
+
+
 def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
     """Why no tag could be decided, in the caller's words rather than a bare None.
 

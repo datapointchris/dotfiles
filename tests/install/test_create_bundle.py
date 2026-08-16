@@ -713,8 +713,14 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         entry = kind.from_mapping(declared)
         return entry, planned(entry, section)
 
-    def bundle_for(self, tmp_path, monkeypatch, section, installed):
-        """A bundle planned against a status reporting `installed` for the tool."""
+    def bundle_for(self, tmp_path, monkeypatch, section, provider, installed):
+        """A bundle planned against a status reporting `installed` for the tool.
+
+        The row's `item` is the real plan address, because that whole string is
+        the key `already_current` looks the target up by. A placeholder provider
+        here would make every case pass against a map nothing in production
+        produces.
+        """
         os_name = 'windows' if section == 'winget_packages' else 'linux'
         bundle = create_bundle.Bundle(tmp_path / 'installers', os_name, 'x86_64', 'box', BUILT_AT)
         entry, item = self.planned_for(section)
@@ -726,7 +732,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
                     'version': status.VERSION,
                     'machine': 'box',
                     'scope': ['packages'],
-                    'resources': [{'address': 'packages', 'examined': [{'item': f'x/{installed[0]}', 'detail': installed[1]}]}],
+                    'resources': [{'address': 'packages', 'examined': [{'item': f'{provider}/{installed[0]}', 'detail': installed[1]}]}],
                 }
             )
         )
@@ -742,18 +748,25 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         return bundle, entry, item
 
     @pytest.mark.parametrize(
-        ('section', 'stage', 'named', 'category'),
+        ('section', 'stage', 'named', 'provider', 'category'),
         [
-            ('cargo_packages', 'add_cargo_binaries', 'fd-find', 'cargo'),
-            ('go_tools', 'add_go_binaries', 'go-task', 'go-binary'),
-            ('winget_packages', 'add_winget_binaries', 'ripgrep', 'winget'),
+            ('cargo_packages', 'add_cargo_binaries', 'fd-find', 'cargo', 'cargo'),
+            ('go_tools', 'add_go_binaries', 'go-task', 'go', 'go-binary'),
+            ('winget_packages', 'add_winget_binaries', 'ripgrep', 'winget', 'winget'),
         ],
         ids=['cargo', 'go', 'winget'],
     )
-    def test_a_tool_the_target_already_has_is_neither_downloaded_nor_recorded(self, tmp_path, monkeypatch, section, stage, named, category):
+    def test_a_tool_the_target_already_has_is_neither_downloaded_nor_recorded(
+        self, tmp_path, monkeypatch, section, stage, named, provider, category
+    ):
         """The download is refused outright rather than merely unasserted: a loop
-        that skipped the record and fetched anyway would pass a row count."""
-        bundle, _, item = self.bundle_for(tmp_path, monkeypatch, section, (named, self.VERSION))
+        that skipped the record and fetched anyway would pass a row count.
+
+        `provider` and `category` differ for a Go tool — the target reports itself
+        under `go/` and a bundle row is keyed `go-binary/`, which is why
+        `already_current` takes both.
+        """
+        bundle, _, item = self.bundle_for(tmp_path, monkeypatch, section, provider, (named, self.VERSION))
 
         getattr(create_bundle, stage)(bundle, create_bundle.DownloadCache(enabled=False), (item,))
 
@@ -797,7 +810,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
     def test_a_tool_the_target_is_behind_on_is_still_staged(self, tmp_path, monkeypatch):
         """Paired with every case above, which a loop that staged nothing at all
         would satisfy."""
-        bundle, entry, item = self.bundle_for(tmp_path, monkeypatch, 'cargo_packages', ('fd-find', 'v9.0.0'))
+        bundle, entry, item = self.bundle_for(tmp_path, monkeypatch, 'cargo_packages', 'cargo', ('fd-find', 'v9.0.0'))
         payload = tmp_path / 'build' / entry.executable
         payload.parent.mkdir(parents=True, exist_ok=True)
         payload.write_bytes(b'#!/bin/sh\nexit 0\n')
