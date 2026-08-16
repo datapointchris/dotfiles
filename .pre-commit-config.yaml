@@ -212,9 +212,20 @@ repos:
         stages: [pre-commit]
 
       # Drift check: packages.yml ↔ manifests ↔ what can install them
+      #
+      # DOTFILES_DIR names the tree being committed rather than being inherited.
+      # `.zshenv` exports it as ~/dotfiles so the CLI cannot deploy a worktree's
+      # config over the machine, and paths.py lets it win unconditionally — both
+      # deliberate. A hook picking it up out of the environment is the accident:
+      # it then pairs the primary checkout's declaration with this tree's code.
+      # Measured 2026-08-16 with a bogus github_releases entry added here and
+      # nowhere else — bare, the check passed; with $PWD, it exited 3. So a
+      # worktree that breaks its own declaration commits clean, which is the
+      # drift this hook exists to catch. pre-commit runs from the top level of
+      # whichever tree is committing, so $PWD is that tree.
       - id: machines-check
         name: dotfiles machines check (declaration drift)
-        entry: uv run dotfiles machines check
+        entry: bash -c 'DOTFILES_DIR="$PWD" exec uv run dotfiles machines check'
         language: system
         pass_filenames: false
         files: ^(install/|src/dotfiles/)
