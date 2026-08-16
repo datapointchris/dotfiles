@@ -21,21 +21,29 @@ The gate below is the second half, and it exists because an allowlist protects
 against a new *resource* and not against a new *field*. It reads the bytes about
 to leave and refuses on the two names that identify this box.
 
-**The match is an unanchored substring test, and a box whose hostname is a common
-word or a package name could never publish.** The document unavoidably carries
-`go-toolchain/go`, `uv-toolchain/uv` and a row per installed tool, so hostnames
-like `go`, `uv` or `node` would be refused permanently with advice pointing at a
-document containing nothing personal. Measured 2026-08-16 against a real 30 KB
-document: none of `archlinux`, `macmini`, `mbp` or the account name occurs in it,
-so no machine here is reachable by this. It also fails closed — the refusal is
-loud and nothing leaves. Every loosening costs more than it buys: word boundaries
-still match `"go-toolchain/go"`, a minimum length stops protecting `mbp`, and an
-escape hatch is a hole in the one boundary that must not have one. If it ever
-fires, rename the box or add the colliding field to `PROTOCOL_KEYS`.
+**The match is an unanchored substring test, and it fires on strings this machine
+did not write.** The document carries a row per installed tool, and a row's
+`observed` is whatever that tool printed about itself — so a hostname can arrive
+inside a third-party version banner having identified nothing. That is not
+hypothetical and it is not rare: on a box named `archlinux`, `syncthing
+--version` reports `syncthing@archlinux`, the build host the Arch package stamps
+into its own banner.
+
+**So the gate has three answers, not two.** A row carrying one of the names is
+*withheld* — it does not travel, and neither does the name. Only a name with no
+row to drop refuses the document. `screened` is that, and the reasoning for
+per-row rather than per-document is there.
+
+Loosening the match itself was rejected and stays rejected. Word boundaries still
+match `syncthing@archlinux`, a minimum length stops protecting `mbp`, and an
+escape hatch is a hole in the one boundary that must not have one. Withholding is
+not a loosening — nothing carrying a name leaves under either rule, and what
+changes is only how much else goes with it.
 """
 
 from __future__ import annotations
 
+import dataclasses as dc
 import getpass
 import json
 from collections.abc import Mapping
@@ -161,18 +169,99 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(problems)
 
 
-def refuse_unpublishable(document: Any) -> None:
-    """Raise where a document may not be published, naming every reason at once.
+ROW_KEYS = ('others', 'findings', 'examined')
+"""The per-item lists inside a resource, which is where a relayed string lands.
+
+A row's `observed` is whatever the tool printed about itself and this machine
+composed none of it. Every other string in the document was written here.
+"""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Screened:
+    """A document with the rows that could not travel taken out, and what remains wrong."""
+
+    document: dict[str, Any]
+    withheld: tuple[str, ...] = ()
+    problems: tuple[str, ...] = ()
+
+
+def screened(document: Any, identities: Mapping[str, str]) -> Screened:
+    """Drop the rows carrying a name that must not leave, then judge what is left.
+
+    **A row is the unit, because the fault is per row and refusing is not.** One
+    tool's version banner collided with this machine's hostname — `syncthing
+    v2.1.3 ... syncthing@archlinux`, the Arch package relaying its own build host
+    — and the whole document was refused for it, which took the return leg off
+    this machine entirely while a hundred innocent rows were sitting in it. A row
+    that cannot travel does not travel; nothing else changes.
+
+    Withholding is not a loosening. Nothing carrying the name leaves either way,
+    and the row's absence is a state the format already has a meaning for: a tool
+    in neither the manifest nor `current` is unmeasurable, so the builder carries
+    it rather than assuming it is current. The failure direction is a slightly
+    larger bundle.
+
+    **What cannot be withheld is still refused.** A name outside these lists — in
+    the header, in a resource's own fields — has no row to drop and comes back as
+    a problem, which is the whole document refused exactly as before.
+
+    Measured 2026-08-16, and it reverses what this module recorded on the same
+    date. The claim was that no fleet hostname occurs in a real document, and it
+    was true when it was taken: `0fd84143` moved syncthing from the system
+    packages into `github_releases` hours later, and a `github_releases` row
+    reports `--version` output where a pacman row reports a package version.
+    """
+    if not isinstance(document, dict):
+        return Screened(document, (), redacted(document, identities))
+
+    withheld: list[str] = []
+    resources = []
+    for resource in document.get('resources') or ():
+        if not isinstance(resource, dict):
+            resources.append(resource)
+            continue
+        kept = dict(resource)
+        for key in ROW_KEYS:
+            rows = resource.get(key)
+            if not isinstance(rows, list):
+                continue
+            kept[key] = [row for row in rows if not _names_the_machine(row, identities)]
+            withheld.extend(_named(row) for row in rows if _names_the_machine(row, identities))
+        resources.append(kept)
+
+    remaining = {**document, 'resources': resources}
+    return Screened(remaining, tuple(withheld), redacted(remaining, identities))
+
+
+def _names_the_machine(row: Any, identities: Mapping[str, str]) -> bool:
+    lowered = json.dumps(row).lower()
+    return any(value and value.lower() in lowered for value in identities.values())
+
+
+def _named(row: Any) -> str:
+    """What to call a withheld row, which is the address a reader would look it up by."""
+    return str(row.get('item') or row.get('resource') or 'an unnamed row') if isinstance(row, dict) else 'an unnamed row'
+
+
+def publishable(document: Any) -> Screened:
+    """The document as it may travel, or a refusal naming every reason at once.
 
     Called before the bytes move rather than after, so a refusal never leaves half
     an artefact on a server — `standards/cli-design.md` § "Everything that can
     refuse runs before the first byte of data", applied to a remote instead of to
     stdout.
+
+    Answers the screened document rather than checking the caller's, because a
+    caller that published the one it already held would send the rows this just
+    took out. There is no arrangement of two calls that cannot get that wrong,
+    which is why there is one.
     """
-    problems = redacted(document, identifying())
-    if problems:
+    found = screened(document, identifying())
+    if found.problems:
         raise Unpublishable(
-            'this document carries more than packages and versions, so it stays here:\n' + '\n'.join(problems),
+            'this document carries more than packages and versions, so it stays here:\n' + '\n'.join(found.problems),
             code=ExitCode.ISSUE,
             advice='dotfiles status show --json is what would have been sent',
         )
+    return found

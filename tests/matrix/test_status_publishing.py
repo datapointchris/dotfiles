@@ -185,10 +185,94 @@ class TestTheGate:
 
     def test_the_refusal_carries_an_issue_and_names_what_would_have_been_sent(self) -> None:
         with pytest.raises(publishing.Unpublishable) as refused:
-            publishing.refuse_unpublishable({'scope': ['identity'], 'rows': []})
+            publishing.publishable({'scope': ['identity'], 'resources': []})
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'dotfiles status show --json' in refused.value.advice
+
+
+def relayed(banner: str) -> dict[str, object]:
+    """A document shaped like a real one, with a version string a tool printed.
+
+    The shape the authored fixtures above cannot produce, and the reason this
+    escaped every one of them: `observed` carries whatever the binary said about
+    itself, and `syncthing --version` says `syncthing@<build host>`.
+    """
+    return {
+        'version': 2,
+        'machine': 'a-manifest',
+        'scope': list(publishing.PUBLISHABLE),
+        'resources': [
+            {
+                'address': 'packages',
+                'others': [
+                    {'item': 'ghrelease/syncthing', 'observed': banner},
+                    {'item': 'cargo/bat', 'observed': 'bat 0.26.0'},
+                ],
+            }
+        ],
+    }
+
+
+class TestWithholdingARowRatherThanRefusingTheDocument:
+    """A relayed version banner is not this machine identifying itself.
+
+    Refusing the whole document for one of them took the return leg off a working
+    box while a hundred innocent rows sat in it. The row is the unit of the fault,
+    so the row is the unit of the remedy.
+    """
+
+    def test_the_row_carrying_the_name_does_not_travel(self) -> None:
+        screen = publishing.screened(relayed('syncthing v2.1.3 (linux-amd64) syncthing@pf5xmxfy 2026-08-05'), NAMED)
+
+        rows = screen.document['resources'][0]['others']  # type: ignore[index]
+        assert [row['item'] for row in rows] == ['cargo/bat']
+        assert 'pf5xmxfy' not in json.dumps(screen.document).lower()
+
+    def test_the_withheld_row_is_named_rather_than_dropped_in_silence(self) -> None:
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@pf5xmxfy'), NAMED)
+
+        assert screen.withheld == ('ghrelease/syncthing',)
+
+    def test_what_is_left_publishes(self) -> None:
+        """The whole point. The document travels, one row lighter."""
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@pf5xmxfy'), NAMED)
+
+        assert screen.problems == ()
+        assert len(screen.document['resources'][0]['others']) == 1  # type: ignore[index,arg-type]
+
+    def test_the_production_door_screens_against_this_machine(self) -> None:
+        """`publishable` reads the real names rather than taking them, which is the
+        split `identifying` exists for — so this is the one assertion that has to
+        use the machine the suite is running on."""
+        banner = f'syncthing v2.1.3 syncthing@{paths.machine_id()}'
+
+        screen = publishing.publishable(relayed(banner))
+
+        assert screen.withheld == ('ghrelease/syncthing',)
+        assert screen.problems == ()
+
+    def test_an_untouched_document_is_unchanged_and_withholds_nothing(self) -> None:
+        clean = relayed('syncthing v2.1.3 (linux-amd64) syncthing@some-build-host')
+
+        screen = publishing.screened(clean, NAMED)
+
+        assert screen == publishing.Screened(clean, (), ())
+
+    def test_a_name_with_no_row_to_drop_still_refuses_the_document(self) -> None:
+        """Withholding is not a way out. A name outside the per-item lists has
+        nothing to withhold, so the document is refused exactly as before."""
+        document = {'version': 2, 'machine': 'a-manifest', 'scope': list(publishing.PUBLISHABLE), 'note': 'pf5xmxfy', 'resources': []}
+
+        screen = publishing.screened(document, NAMED)
+
+        assert screen.withheld == ()
+        assert screen.problems == ('this machine name appears in it',)
+
+    def test_a_scope_outside_the_publishable_set_is_not_withholdable_either(self) -> None:
+        screen = publishing.screened({'scope': ['identity'], 'resources': []}, NAMED)
+
+        assert screen.problems and 'identity' in screen.problems[0]
 
 
 class TestPublishing:

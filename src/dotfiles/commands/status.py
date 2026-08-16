@@ -50,7 +50,6 @@ from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceVerdict
-from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What this machine has installed, for the machine that builds its bundles')
@@ -137,6 +136,15 @@ def show(
     The same document `plan --json` emits, narrowed to the resources a bundle can
     act on. `scope` in it says which those are, so a reader never has to infer that
     an unmentioned resource has nothing rather than was not looked at.
+
+    **What `--json` prints is what would be sent**, screened rows and all, because
+    the advice on a refusal says exactly that and a document shown unscreened would
+    make it false.
+
+    The verdict on the headline is about *publishability*, not about the machine —
+    it is what this command's exit code answers, and the resource rows below carry
+    the machine's own verdict. Rendering one and exiting the other left a reader
+    working out which of two vocabularies a `3` had come from.
     """
     verbosity(verbose, quiet)
     found = composed(machine)
@@ -145,19 +153,21 @@ def show(
     # still exited CONVERGED, so `status show && status upload` walked straight
     # into the refusal the first command had already found. `remote check` derives
     # its verdict from its faults the same way.
-    problems = publishing.redacted(found.document, publishing.identifying())
+    screen = publishing.screened(found.document, publishing.identifying())
 
     if as_json:
-        emit_json(found.document)
-        raise typer.Exit(ExitCode.ISSUE if problems else ExitCode.CONVERGED)
+        emit_json(screen.document)
+        raise typer.Exit(ExitCode.ISSUE if screen.problems else ExitCode.CONVERGED)
 
-    word = 'issue' if problems else str(found.document['verdict'])
+    word = 'issue' if screen.problems else str(ResourceVerdict.CONVERGED)
     console.print(section_line(VERDICT_MARKS[word], 'status', f'{found.machine} — {found.scope}', VERDICT_COLOURS[word]))
     for result in found.results:
         render_row(str(result.verdict), result.address, result.detail)
-    for problem in problems:
+    for name in screen.withheld:
+        render_row('withheld', name, 'it carries a name that identifies this machine, so the row stays here')
+    for problem in screen.problems:
         render_row('issue', 'unpublishable', problem, VERDICT_COLOURS['issue'])
-    raise typer.Exit(ExitCode.ISSUE if problems else ExitCode.CONVERGED)
+    raise typer.Exit(ExitCode.ISSUE if screen.problems else ExitCode.CONVERGED)
 
 
 @app.command('upload')
@@ -176,17 +186,19 @@ def upload(
     verbosity(verbose, quiet)
     where = transport.reachable()
     found = composed(machine)
-    publishing.refuse_unpublishable(found.document)
+    screen = publishing.publishable(found.document)
 
     name = status_document.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
     directory = transport.statuses_for(where, found.machine)
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / name
-        local.write_text(json.dumps(found.document, indent=2) + '\n')
+        local.write_text(json.dumps(screen.document, indent=2) + '\n')
         transport.push(where, local, directory)
 
     success(f'uploaded {name} to {directory}')
     render_note(f'covering {found.scope} and nothing else')
+    for withheld in screen.withheld:
+        render_note(f'{withheld} was left out: its version string names this machine')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -199,25 +211,27 @@ def publish_after_apply(machine: str | None) -> None:
     capability, and a converge that reaches a server unasked is a change in
     posture — the loop is worth automating and is not worth automating quietly.
 
-    Every failure is a warning rather than an exit code. The apply already
-    succeeded and its verdict is about the machine; failing the run because a
-    server did not answer would report a converged box as broken. The gate is the
-    one exception in spirit and not in mechanism: it refuses, the refusal is
-    reported here, and nothing leaves.
+    **Every failure is a warning rather than an exit code, and that means every
+    one.** The apply already succeeded and its verdict is about the machine;
+    failing the run because a server did not answer would report a converged box as
+    broken. Catching `Refusal` alone left the sentence false — this wraps a full
+    offline survey plus `json.dumps`, a `write_text` and a `TemporaryDirectory`, so
+    a read-only `/tmp` ended a converged apply in a traceback. The reasoning does
+    not distinguish faults by class, so neither does the handler.
     """
     found = transport.read()
     if found.remote is None or not found.remote.publish_status_after_offline_apply:
         return
     try:
         composition = composed(machine)
-        publishing.refuse_unpublishable(composition.document)
+        screen = publishing.publishable(composition.document)
         name = status_document.filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
         with tempfile.TemporaryDirectory() as workspace:
             local = Path(workspace) / name
-            local.write_text(json.dumps(composition.document, indent=2) + '\n')
+            local.write_text(json.dumps(screen.document, indent=2) + '\n')
             transport.push(found.remote, local, transport.statuses_for(found.remote, composition.machine))
-    except Refusal as refused:
-        warn(f'this machine converged and its status was not published: {refused}')
+    except Exception as failed:
+        warn(f'this machine converged and its status was not published: {failed}')
         return
     render_note(f'published {name}, so the next bundle can be built against it')
 
