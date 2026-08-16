@@ -22,7 +22,7 @@ cheap probe is per tool and it *inverts* between them, which is why each one
 carries the measurement that picked it: `gh auth token` is 30ms where
 `gh auth status` is 333ms, while for the personal data CLIs `auth status` is the
 4ms one and `auth token` costs 215ms. Two of them have no cheap CLI probe at all
-and are answered by a file.
+and are answered by what the tool left on disk.
 
 **Nothing here is ever written**, exactly as `identity.py` is nothing. A login is
 interactive and personal — a browser flow, a password, a device code — so an
@@ -38,9 +38,11 @@ a later pass would start rather than here.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses as dc
 import os
 import shutil
+import sqlite3
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
@@ -325,18 +327,43 @@ def _atuin_syncs(session: Session) -> bool:
         return True
 
 
+def _atuin_session(session: Session) -> bool:
+    """Whether atuin holds a sync token, asked of both places it has kept one.
+
+    atuin 18 moved the token out of `~/.local/share/atuin/session` and into a
+    `session` row in `meta.db`, leaving a `files_migrated` row beside it to mark
+    the move. Measured 2026-08-15, straight after a `register` and a `sync` that
+    both succeeded: the file is absent and the row is there. Reading the file
+    alone reports a working login as missing forever, and the machine would be
+    told to run the login it had just run — which is the upstream move this
+    probe's own docstring predicted and the reason it says so.
+
+    Read-only through a URI, so the probe can neither create the database it is
+    asking about nor take a write lock on one atuin is mid-sync in. Any sqlite
+    complaint is a no rather than a raise: `observe` guards `OSError` alone, and
+    a locked store is a question that could not be asked rather than a resource
+    that could not be examined.
+    """
+    if (_data_home(session) / 'atuin' / 'session').is_file():
+        return True
+    meta = _data_home(session) / 'atuin' / 'meta.db'
+    if not meta.is_file():
+        return False
+    try:
+        with contextlib.closing(sqlite3.connect(f'file:{meta}?mode=ro', uri=True)) as store:
+            stored = store.execute("select value from meta where key = 'session'").fetchone()
+    except sqlite3.Error:
+        return False
+    return bool(stored and stored[0])
+
+
 def _atuin(session: Session) -> Credential:
-    """The session file, because `atuin status` reaches the sync server.
+    """The stored token, because `atuin status` reaches the sync server.
 
     `atuin status` measures 13ms on this box only because it is logged out and
-    stops at the missing file; once a session exists it queries the server, so the
+    stops before the network; once a session exists it queries the server, so the
     one machine state where the answer is yes is the one that costs a round trip.
-
-    `~/.local/share/atuin/session` is atuin's own documented location — the
-    annotated config the binary embeds names it for linux and mac — and
-    `atuin login` is what writes it. It is an implementation detail rather than a
-    CLI contract, so an upstream move would make this read logged out forever;
-    there is no cheaper local answer, and `atuin status` is not a fallback.
+    There is no cheaper local answer, and `atuin status` is not a fallback.
 
     The one tool on the roster whose login is optional, so it is the one that
     asks whether a login is wanted before asking whether one is held. Everything
@@ -349,9 +376,9 @@ def _atuin(session: Session) -> Credential:
         return _uninstalled('atuin')
     if not _atuin_syncs(session):
         return Credential(Verdict.UNKNOWN, 'auto_sync is off, so history stays on this machine and no server holds an account')
-    if (_data_home(session) / 'atuin' / 'session').is_file():
+    if _atuin_session(session):
         return Credential(Verdict.MATCHED, 'a sync session is stored')
-    return Credential(Verdict.MISSING, 'no session file, so nothing reaches the configured server', advice='log in with `atuin login`')
+    return Credential(Verdict.MISSING, 'no stored session, so nothing reaches the configured server', advice='log in with `atuin login`')
 
 
 def _claude(session: Session) -> Credential:

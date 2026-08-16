@@ -9,7 +9,9 @@ box for the wrong reason and inverts the day somebody logs in.
 
 from __future__ import annotations
 
+import contextlib
 import os
+import sqlite3
 import stat
 from pathlib import Path
 
@@ -346,16 +348,58 @@ def test_a_github_token_answers_for_a_machine_with_no_gh_binary(xdg: Path, fake_
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_an_atuin_session_file_is_the_whole_answer(xdg: Path, fake_bin: Path) -> None:
-    """`atuin status` queries the sync server once a session exists, so the one
-    machine state where the answer is yes is the one that costs a round trip."""
-    executable(fake_bin, 'atuin')
-    session = build(xdg, 'atuin')
-    stored = Path(os.environ['XDG_DATA_HOME']) / 'atuin' / 'session'
-    stored.parent.mkdir(parents=True)
-    stored.write_text('token\n')
+def atuin_data() -> Path:
+    """`~/.local/share/atuin`, under the sandboxed root, made ready to write into."""
+    directory = Path(os.environ['XDG_DATA_HOME']) / 'atuin'
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
 
-    assert changes(session) == ()
+
+def atuin_meta(**rows: str) -> Path:
+    """A `meta.db` shaped the way atuin 18 writes one.
+
+    Built rather than copied from this machine, so the test says what the schema
+    has to look like instead of inheriting whatever the desk happens to hold.
+    """
+    meta = atuin_data() / 'meta.db'
+    with contextlib.closing(sqlite3.connect(meta)) as store:
+        store.execute('create table meta (key text primary key, value text)')
+        store.executemany('insert into meta values (?, ?)', rows.items())
+        store.commit()
+    return meta
+
+
+def test_an_atuin_session_row_is_the_whole_answer(xdg: Path, fake_bin: Path) -> None:
+    """Where atuin 18 keeps the token: a `session` row in `meta.db`, with
+    `files_migrated` beside it marking the move off the old file."""
+    executable(fake_bin, 'atuin')
+    atuin_meta(host_id='019f9508d27e', session='6A0yy0Abamd', files_migrated='true')
+
+    assert changes(build(xdg, 'atuin')) == ()
+
+
+def test_the_session_file_older_atuin_wrote_still_answers(xdg: Path, fake_bin: Path) -> None:
+    """A machine that has not run an atuin new enough to migrate keeps the file,
+    and it is still a login. Read first because it costs a stat where the other
+    costs opening a database."""
+    executable(fake_bin, 'atuin')
+    (atuin_data() / 'session').write_text('token\n')
+
+    assert changes(build(xdg, 'atuin')) == ()
+
+
+@pytest.mark.parametrize('rows', [{}, {'host_id': '019f9508d27e'}, {'session': ''}])
+def test_a_meta_db_holding_no_session_names_the_login_command(xdg: Path, fake_bin: Path, rows: dict[str, str]) -> None:
+    """`meta.db` exists from the first run, logged in or not, so its presence is
+    not the answer. An empty value is `logout`, which clears the row rather than
+    dropping it."""
+    executable(fake_bin, 'atuin')
+    atuin_meta(**rows)
+
+    (found,) = changes(build(xdg, 'atuin'))
+
+    assert found.verdict is Verdict.MISSING
+    assert 'atuin login' in found.advice
 
 
 def test_a_missing_atuin_session_names_the_login_command(xdg: Path, fake_bin: Path) -> None:
@@ -365,6 +409,17 @@ def test_a_missing_atuin_session_names_the_login_command(xdg: Path, fake_bin: Pa
 
     assert found.verdict is Verdict.MISSING
     assert 'atuin login' in found.advice
+
+
+def test_a_meta_db_that_will_not_open_is_a_no_rather_than_a_raise(xdg: Path, fake_bin: Path) -> None:
+    """`observe` guards `OSError` alone, so a sqlite complaint reaching it would
+    cost every other tool on the roster its measurement."""
+    executable(fake_bin, 'atuin')
+    (atuin_data() / 'meta.db').write_text('not a database at all\n')
+
+    (found,) = changes(build(xdg, 'atuin'))
+
+    assert found.verdict is Verdict.MISSING
 
 
 def atuin_config(written: str) -> Path:
