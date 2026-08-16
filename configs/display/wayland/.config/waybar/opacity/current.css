@@ -1,3 +1,0 @@
-/* Waybar opacity - managed by theme tool */
-/* opacity: 0.90 */
-@define-color waybar-bg alpha(@bg, 0.90);

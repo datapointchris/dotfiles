@@ -1,5 +1,11 @@
 /* Waybar Styling */
-/* Theme colors imported from themes/current.css */
+
+/* Three drop directories, none of them declared in this repo. `theme` fills
+   themes/ and opacity/, `font` fills fonts/, and each mkdirs its own before
+   writing. A file here instead would deploy as a symlink into the checkout,
+   and both tools write with `cat >`, which follows a symlink — so setting the
+   opacity would edit the git tree and share one machine's value with every
+   other. Absent until a tool has run, which GTK reports as a warning. */
 @import "themes/current.css";
 @import "fonts/current.css";
 @import "opacity/current.css";
