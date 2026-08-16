@@ -26,7 +26,6 @@ from enum import StrEnum
 from pathlib import Path
 
 from dotfiles import checkout
-from dotfiles import commands
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import offline_bundle
@@ -816,8 +815,16 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle() -> ExitCode | None:
+def _stage_bundle(machine: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
+
+    `machine` is the name the caller already resolved, threaded rather than read
+    again. `offline_bundle.target()` answers `$MACHINE` or the default, so an
+    `apply --machine X --offline` measured a correct bundle against the wrong name
+    and refused it — and `--machine` is most likely to be typed explicitly during
+    a rebuild, which is exactly when this path runs. `Session.resolve` has already
+    proven the manifest exists, where `target()` swallows that refusal into `''`
+    and silently disables the guard.
 
     Staged rather than refused, because unpacking a tarball that is sitting right
     there is what `--offline` already promised: the bootstrap has always done it
@@ -851,7 +858,7 @@ def _stage_bundle() -> ExitCode | None:
     """
     extracted = None
     if not providers.staged_bundles():
-        archive = offline_bundle.newest() or _fetched_bundle()
+        archive = offline_bundle.newest(machine=machine) or _fetched_bundle(machine)
         if archive is None:
             # Two different findings, and the second is the one a person cannot
             # work out from the first. A directory under staging that carries no
@@ -873,19 +880,31 @@ def _stage_bundle() -> ExitCode | None:
             )
 
         try:
-            offline_bundle.stage(archive, offline_bundle.target())
+            offline_bundle.stage(archive, machine)
         except offline_bundle.StagingError as unreadable:
-            return refusal.report(NoBundle(str(unreadable), advice='name a readable one: dotfiles bundle stage PATH'))
+            return refusal.report(NoBundle(str(unreadable), advice=unreadable.advice or 'name a readable one: dotfiles bundle stage PATH'))
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
     report_bundle(staged)
     if not staged.readable:
         return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
+    # Every description rather than the newest, because `providers.locate` reads
+    # across the whole stack — a peer's bundle underneath a good one still supplies
+    # files. `stage` refuses at the moment of unpacking and this catches what is
+    # already there, staged by hand or left by an earlier run under another name.
+    foreign = sorted({one.machine for one in staged.descriptions if one.machine and machine and one.machine != machine})
+    if foreign:
+        return refusal.report(
+            NoBundle(
+                f'a staged bundle was built for {", ".join(foreign)} and this machine is {machine}',
+                advice=f'remove it from {paths.staging_dir()}, or apply with --machine',
+            )
+        )
     return None
 
 
-def _fetched_bundle() -> Path | None:
+def _fetched_bundle(machine: str) -> Path | None:
     """The newest bundle the remote holds, where this machine asked to be sent one.
 
     Off unless `remote.fetch_bundle_when_none_is_staged` says otherwise, and the
@@ -912,7 +931,6 @@ def _fetched_bundle() -> Path | None:
         if not answer.ok:
             warn(f'could not reach the remote after {answer.attempts} attempt(s), so nothing was fetched')
             return None
-        machine = commands.resolved(None).machine_name
         listed = offline_bundle.on_remote(found.remote, machine)
         if not listed:
             return None
@@ -1083,7 +1101,7 @@ def apply_machine(
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
 
-    if offline and (unstaged := _stage_bundle()):
+    if offline and (unstaged := _stage_bundle(session.machine_name)):
         return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`

@@ -895,7 +895,7 @@ class TestARunThatNeverStarted:
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
     ) -> None:
         monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-staged'))
-        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        monkeypatch.setattr(offline_bundle, 'newest', lambda *searched, machine='': None)
         walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
         code = reconcile.apply_machine(engine.Selection.everything(), offline=True)
@@ -913,7 +913,7 @@ class TestARunThatNeverStarted:
         the walk, so nothing else on the path has had a reason to think about the
         stream a `--json` caller is reading."""
         monkeypatch.setenv('DOTFILES_BUNDLE', str(tmp_path / 'never-staged'))
-        monkeypatch.setattr(offline_bundle, 'newest', lambda: None)
+        monkeypatch.setattr(offline_bundle, 'newest', lambda *searched, machine='': None)
         walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
         reconcile.apply_machine(engine.Selection.everything(), offline=True, as_json=True)

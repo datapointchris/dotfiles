@@ -462,7 +462,7 @@ def by_machine(names: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
     return {machine: tuple(sorted(held)) for machine, held in grouped.items()}
 
 
-def newest(*searched: Path) -> Path | None:
+def newest(*searched: Path, machine: str = '') -> Path | None:
     """The bundle archive to stage, or None where there is none to find.
 
     Ranked across every directory rather than taking the first that holds any.
@@ -470,9 +470,22 @@ def newest(*searched: Path) -> Path | None:
     directories order unambiguously — and the cache a download writes into is a
     third place a tarball legitimately sits, which no first-directory-wins order
     can rank against a copy beside the checkout.
+
+    `machine` skips archives built for another one. Without it the ranking and
+    the refusal disagree: `bundle download --machine X` writes a peer's archive
+    into the same cache, so a peer bundle that sorts newest wins here and is then
+    refused by `stage`, ending the run while this machine's own installable
+    bundle sits in the same directory with nothing able to reach it.
+
+    A stranger — a name this tool did not write, which `manifest_of` answers `''`
+    for — still passes, because a hand-carried tarball is a legitimate thing to
+    stage and `stage`'s own `bundle.json` check is the backstop. `''` means no
+    filter at all, which is the half-configured box `stage` already tolerates.
     """
     directories = searched or (paths.archive_dir(), Path.cwd(), Path.home())
     found = [archive for directory in directories if directory.is_dir() for archive in directory.glob(ARCHIVES)]
+    if machine:
+        found = [archive for archive in found if manifest_of(archive.name) in ('', machine)]
     return max(found, key=lambda archive: archive.name, default=None)
 
 

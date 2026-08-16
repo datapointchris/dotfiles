@@ -243,7 +243,9 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
     in — the download cache, beside the checkout, and `$HOME`. That is the same
     discovery the bootstrap does, for the same reason.
     """
-    found = Path(archive) if archive else offline_bundle.newest()
+    # Filtered to this machine, because a peer's archive downloaded to look at
+    # would otherwise sort newest, be picked here, and be refused a line later.
+    found = Path(archive) if archive else offline_bundle.newest(machine=offline_bundle.target())
     if found is None:
         error(f'no bundle archive in {paths.archive_dir()}, {Path.cwd()} or {Path.home()}, and none named')
         hint('fetch one with: dotfiles bundle download')
