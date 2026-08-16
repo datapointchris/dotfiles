@@ -87,6 +87,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_git_variants(root))
     findings.extend(_colliding_variants(root))
     findings.extend(_registry_paths(root))
+    findings.extend(_remote_tables(root))
     return tuple(findings)
 
 
@@ -442,4 +443,55 @@ def _registry_paths(root: Path) -> list[Finding]:
             continue
         disagreement = '; '.join(f'{where} says {path}' for where, path in sorted(named.items()))
         findings.append(Finding('registry', Severity.ERROR, f'the {trust} variant names more than one registry — {disagreement}'))
+    return findings
+
+
+REMOTE_TABLE = 'remote'
+DOTFILES_CONFIG = '.config/dotfiles/config.toml'
+
+
+def _remote_tables(root: Path) -> list[Finding]:
+    """Every variant of this tool's own config declares the same remote, or none does.
+
+    A bundle is built on one machine and collected on another, and the two are on
+    opposite sides of the trust axis — so they read different copies of this file
+    and have to arrive at one server. A copy that drifts does not fail: the upload
+    succeeds onto a shelf the other end never lists, which reads as a handoff that
+    was never built.
+
+    Omission is checked as well as disagreement, and it is the likelier fault. One
+    variant edited and the other forgotten leaves the declared copies trivially in
+    agreement while the machine that was forgotten has no remote at all.
+    """
+    declared: dict[str, Any] = {}
+    absent: list[str] = []
+    findings: list[Finding] = []
+    for config in sorted((root / 'configs').rglob(DOTFILES_CONFIG)):
+        relative = str(config.relative_to(root))
+        try:
+            table = tomllib.loads(config.read_text()).get(REMOTE_TABLE)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as unreadable:
+            findings.append(Finding(REMOTE_TABLE, Severity.ERROR, f'{relative} cannot be read — {unreadable}'))
+            continue
+        if table is None:
+            absent.append(relative)
+        else:
+            declared[relative] = table
+
+    if not declared:
+        return findings
+    if absent:
+        findings.append(
+            Finding(
+                REMOTE_TABLE,
+                Severity.ERROR,
+                f'{", ".join(sorted(declared))} declares a {REMOTE_TABLE} table and {", ".join(absent)} does not, '
+                f'so the machines reading each address different servers',
+            )
+        )
+    # Compared as parsed values rather than as text, so whitespace and key order
+    # are not a difference and a retyped table is only reported when it says
+    # something else.
+    if not all(table == next(iter(declared.values())) for table in declared.values()):
+        findings.append(Finding(REMOTE_TABLE, Severity.ERROR, f'{", ".join(sorted(declared))} declare different {REMOTE_TABLE} tables'))
     return findings

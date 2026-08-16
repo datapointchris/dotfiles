@@ -13,3 +13,17 @@
 # `dotfiles config show` reports what each key resolved to and which rung answered.
 
 repos_registry = "~/.config/repos.json"
+
+# Both trust variants declare this table identically; a validator holds them to it.
+[remote]
+root = "/dotfiles"
+
+[remote.transport]
+program  = "ifiles"
+probe    = ["auth", "status"]
+list     = ["list", "{dir}"]
+upload   = ["upload", "{local}", "{dir}"]
+download = ["download", "{remote}", "{local}"]
+mkdir    = ["mkdir", "{dir}"]
+# stdin is closed here, and ifiles refuses an unconfirmed delete off a terminal.
+delete   = ["delete", "{remote}", "--force"]

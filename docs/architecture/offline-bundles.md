@@ -58,8 +58,13 @@ list     = ["list", "{dir}"]
 upload   = ["upload", "{local}", "{dir}"]
 download = ["download", "{remote}", "{local}"]
 mkdir    = ["mkdir", "{dir}"]
-delete   = ["delete", "{remote}"]
+delete   = ["delete", "{remote}", "--force"]
 ```
+
+A template carries whatever flag makes the program answer without a terminal.
+`ifiles` refuses an unconfirmed delete when stdin is closed, and stdin is closed
+for every transport call — so retention without `--force` is reported and never
+performed.
 
 **The whole contract is that `list` prints one name per line on stdout.** There is
 no JSON dialect and no field mapping, because everything needed to rank a bundle

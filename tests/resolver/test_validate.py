@@ -380,7 +380,7 @@ def test_a_tree_with_no_git_variants_says_nothing(tmp_path: Path) -> None:
     assert validate.declaration(tree(tmp_path)) == ()
 
 
-def registry_tree(root: Path, *, configs: dict[str, str]) -> Path:
+def configs_tree(root: Path, *, configs: dict[str, str]) -> Path:
     """A configs/ tree whose files are written verbatim.
 
     `configs` maps a path under `configs/` to the file's whole text. Verbatim
@@ -403,7 +403,7 @@ NONFLEET_REGISTRY = '~/.config/repos.json'
 def test_one_registry_per_trust_variant_is_silent(tmp_path: Path) -> None:
     """The shape the fleet actually deploys: every tool in a trust variant naming
     the same file, and the two variants deliberately naming different ones."""
-    root = registry_tree(
+    root = configs_tree(
         tmp_path,
         configs={
             'trust/fleet/.config/indy/config.toml': f'repos_registry = "{FLEET_REGISTRY}"\n',
@@ -421,7 +421,7 @@ def test_two_registries_in_one_trust_variant_is_an_error(tmp_path: Path) -> None
     Both files deploy to the same machine, so a tool reading the odd one out
     answers about a different set of repos and says nothing about having done so.
     """
-    root = registry_tree(
+    root = configs_tree(
         tmp_path,
         configs={
             'trust/fleet/.config/indy/config.toml': f'repos_registry = "{FLEET_REGISTRY}"\n',
@@ -442,7 +442,7 @@ def test_a_registry_named_outside_the_trust_variants_is_an_error(tmp_path: Path,
     cannot be right for both — which is exactly how the fleet's registry came to be
     named in a config the work box also deploys."""
     relative = f'{directory}/.config/syncer/config.toml'
-    root = registry_tree(tmp_path, configs={relative: f'repos_registry = "{FLEET_REGISTRY}"\n'})
+    root = configs_tree(tmp_path, configs={relative: f'repos_registry = "{FLEET_REGISTRY}"\n'})
 
     assert messages(validate.declaration(root), Severity.ERROR) == [
         f'configs/{relative} names repos_registry outside configs/trust/, so it deploys the same registry '
@@ -454,7 +454,7 @@ def test_a_commented_out_registry_is_not_a_declaration(tmp_path: Path) -> None:
     """Parsed rather than matched. Every one of these files carries a comment block
     explaining the key, and a check that grepped would read its own documentation as
     a second declaration."""
-    root = registry_tree(
+    root = configs_tree(
         tmp_path,
         configs={
             'common/.config/syncer/config.toml': f'# repos_registry = "{FLEET_REGISTRY}"\ndefault_policy = "standard"\n',
@@ -468,7 +468,7 @@ def test_a_commented_out_registry_is_not_a_declaration(tmp_path: Path) -> None:
 def test_a_yaml_config_that_is_not_a_mapping_is_not_a_declaration(tmp_path: Path) -> None:
     """An empty document parses to None and a list parses to a list. Neither
     declares a key, and `.get` on either raises rather than reporting."""
-    root = registry_tree(tmp_path, configs={'common/.config/aerc/accounts.yml': '', 'common/.config/zk/tags.yaml': '- one\n- two\n'})
+    root = configs_tree(tmp_path, configs={'common/.config/aerc/accounts.yml': '', 'common/.config/zk/tags.yaml': '- one\n- two\n'})
 
     assert validate.declaration(root) == ()
 
@@ -476,8 +476,90 @@ def test_a_yaml_config_that_is_not_a_mapping_is_not_a_declaration(tmp_path: Path
 def test_a_config_that_will_not_parse_is_an_error(tmp_path: Path) -> None:
     """Reported rather than raised, so one unparseable file is a finding beside the
     others instead of a traceback that loses every check after it."""
-    root = registry_tree(tmp_path, configs={'trust/fleet/.config/indy/config.toml': 'repos_registry = "unterminated\n'})
+    root = configs_tree(tmp_path, configs={'trust/fleet/.config/indy/config.toml': 'repos_registry = "unterminated\n'})
 
     assert [message.split(' — ')[0] for message in messages(validate.declaration(root), Severity.ERROR)] == [
         'configs/trust/fleet/.config/indy/config.toml cannot be read'
     ]
+
+
+DOTFILES_CONFIG = '.config/dotfiles/config.toml'
+REMOTE = """
+[remote]
+root = "/dotfiles"
+
+[remote.transport]
+program = "ifiles"
+probe = ["auth", "status"]
+list = ["list", "{dir}"]
+upload = ["upload", "{local}", "{dir}"]
+download = ["download", "{remote}", "{local}"]
+"""
+
+
+def test_the_same_remote_table_in_both_trust_variants_is_silent(tmp_path: Path) -> None:
+    """The shape the fleet deploys. A bundle is built on one side of the trust axis
+    and collected on the other, so the two copies have to name one server."""
+    root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': REMOTE, f'trust/nonfleet/{DOTFILES_CONFIG}': REMOTE})
+
+    assert validate.declaration(root) == ()
+
+
+def test_no_variant_declaring_a_remote_is_silent(tmp_path: Path) -> None:
+    """Having no remote is the ordinary state of a machine that never exchanges a
+    bundle, so the check is about agreement and never about presence."""
+    named = 'repos_registry = "~/.config/repos.json"\n'
+    root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': named, f'trust/nonfleet/{DOTFILES_CONFIG}': named})
+
+    assert validate.declaration(root) == ()
+
+
+def test_a_remote_declared_in_one_variant_and_not_the_other_is_an_error(tmp_path: Path) -> None:
+    """The likelier half of the drift, and the half a value comparison cannot see.
+    One file edited and the other forgotten leaves the declared copies trivially in
+    agreement while the forgotten machine has no remote at all."""
+    root = configs_tree(
+        tmp_path,
+        configs={
+            f'trust/fleet/{DOTFILES_CONFIG}': REMOTE,
+            f'trust/nonfleet/{DOTFILES_CONFIG}': 'repos_registry = "~/.config/repos.json"\n',
+        },
+    )
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        'configs/trust/fleet/.config/dotfiles/config.toml declares a remote table and '
+        'configs/trust/nonfleet/.config/dotfiles/config.toml does not, so the machines reading each address different servers'
+    ]
+
+
+def test_two_variants_declaring_different_remote_tables_is_an_error(tmp_path: Path) -> None:
+    """An upload onto a shelf the other end never lists succeeds, which reads as a
+    handoff that was never built."""
+    root = configs_tree(
+        tmp_path,
+        configs={f'trust/fleet/{DOTFILES_CONFIG}': REMOTE, f'trust/nonfleet/{DOTFILES_CONFIG}': REMOTE.replace('/dotfiles', '/backups')},
+    )
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        'configs/trust/fleet/.config/dotfiles/config.toml, configs/trust/nonfleet/.config/dotfiles/config.toml '
+        'declare different remote tables'
+    ]
+
+
+def test_the_same_table_written_out_differently_is_not_a_difference(tmp_path: Path) -> None:
+    """Compared as parsed values, so key order and alignment are not findings — a
+    check that diffed the text would report every reformatting as a drifted server."""
+    retyped = """
+[remote]
+root   = "/dotfiles"
+
+[remote.transport]
+download = ["download", "{remote}", "{local}"]
+upload   = ["upload", "{local}", "{dir}"]
+list     = ["list", "{dir}"]
+probe    = ["auth", "status"]
+program  = "ifiles"
+"""
+    root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': REMOTE, f'trust/nonfleet/{DOTFILES_CONFIG}': retyped})
+
+    assert validate.declaration(root) == ()
