@@ -1454,6 +1454,37 @@ def test_an_undeclared_own_tool_is_not_something_apply_can_repair(tmp_path: Path
     assert change.advice
 
 
+def test_a_run_narrowed_to_one_package_reports_none_of_the_others(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--package` narrows the declaration, and this reads the machine against it.
+    Answering from a one-entry plan calls every other tool of that owner
+    undeclared and advises removing the only copy on the box."""
+    go_bin(tmp_path)
+    fake_go(monkeypatch, fake_bin, ('task', 'github.com/go-task/task'), ('gum', 'github.com/go-task/gum'))
+    executable(fake_bin, 'task')
+    executable(fake_bin, 'gum')
+    declares_both = {
+        'go_tools': [
+            {'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'},
+            {'name': 'gum', 'package': 'github.com/go-task/gum'},
+        ]
+    }
+    live = session(tmp_path, declares_both, {'machine': 'box', 'platform': 'linux', 'go_tools': ['task', 'gum']})
+
+    assert undeclared_own(dc.replace(live, packages=frozenset({'task'}))) == []
+
+
+def test_a_run_narrowed_to_an_owner_still_answers(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--owner` narrows to that owner's whole set, so the declaration still
+    explains everything of theirs the machine holds."""
+    go_bin(tmp_path)
+    fake_go(monkeypatch, fake_bin, ('frobnicate', 'github.com/go-task/frobnicate'))
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    found = undeclared_own(dc.replace(live, owner='go-task'))
+
+    assert [change.item for change in found] == ['frobnicate']
+
+
 def test_a_go_that_cannot_answer_reports_nothing_rather_than_failing(tmp_path: Path, fake_bin: Path) -> None:
     """A box with no Go toolchain, or one too old to carry build info, has nothing
     to say here. A probe that raised would take the whole of `check` down with it."""

@@ -207,7 +207,7 @@ class PackagesResource:
             met=session.preconditions,
             reported=_reported_versions(present),
             shadowed=_shadowing(mine, evidence, plan, session.repo),
-            undeclared=_undeclared_own_tools(plan, session.home),
+            undeclared=_undeclared_own_tools(session, plan),
             latest=latest,
             consulted_network=consulted,
             from_bundle=session.offline,
@@ -301,7 +301,7 @@ class PackagesResource:
         return registry.install(session, change, privilege)
 
 
-def _undeclared_own_tools(plan: Plan, home: Path) -> dict[str, str]:
+def _undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     """Go binaries built from an owner this machine declares tools from, and does
     not declare.
 
@@ -320,14 +320,23 @@ def _undeclared_own_tools(plan: Plan, home: Path) -> dict[str, str]:
     Scoped to owners the plan already names, because that is the whole of this
     repo's basis for calling a module ours. A machine declaring nothing of an
     owner's reports nothing of theirs, which is correct and not merely cautious.
+
+    A whole-machine run only, because the question is whether the *declaration*
+    explains the machine and `--package` narrows the declaration to one entry.
+    Everything else that owner published then falls outside the declared set:
+    `packages apply --package forge` advised removing fleet, ifiles, todoui and
+    toolbox, and `~/go/bin` holds the only copy of each. `--owner` narrows to one
+    owner's whole set, which still answers.
     """
+    if session.packages:
+        return {}
     owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
     if not owners:
         return {}
     declared = {item.executable for item in plan.items if item.executable}
     return {
         binary: module
-        for binary, module in gotool.installed_modules(home / 'go' / 'bin').items()
+        for binary, module in gotool.installed_modules(session.home / 'go' / 'bin').items()
         if binary not in declared and catalog.owner_of(module) in owners
     }
 
