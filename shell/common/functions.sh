@@ -1,8 +1,7 @@
 # shellcheck shell=bash
-# shellcheck disable=all
-# SC2016 = fzf preview commands use single quotes intentionally
-# SC2154 = Variables referenced but not assigned (from sourced files)
-# disable=all applied for fzf external functions compatibility
+# SC2016 = fzf preview commands are single-quoted so fzf expands {} , not the shell
+# SC2154 = variables assigned by colors.sh and the other sourced libraries
+# shellcheck disable=SC2016,SC2154
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/colors.sh"
@@ -213,7 +212,7 @@ f() {
   shift
 
   # Store option flags with separating spaces, or just set as single space
-  options="$@"
+  options="$*"
   if [ -z "${options}" ]; then
     options=" "
   else
@@ -255,6 +254,7 @@ f() {
   arguments="$(cat /tmp/fzf_tmp)"
 
   # Add the command with the sanitised arguments to our .bash_history
+  # shellcheck disable=SC2086 # unquoted on purpose: the three parts are one command line
   echo $program$options$arguments >>~/.bash_history
 
   # Reload the ~/.bash_history into the shell's active history
@@ -280,7 +280,7 @@ fif() {
     return 1
   fi
   local file
-  file="$(rga --max-count=1 --ignore-case --files-with-matches --no-messages "$*" | fzf-tmux +m --preview="rga --ignore-case --pretty --context 10 '"$*"' {}")" && echo "opening $file" && open "$file" || return 1
+  file="$(rga --max-count=1 --ignore-case --files-with-matches --no-messages "$*" | fzf-tmux +m --preview="rga --ignore-case --pretty --context 10 '$*' {}")" && echo "opening $file" && open "$file" || return 1
 }
 
 # fgst - pick files from `git status -s`
@@ -307,7 +307,7 @@ fgst() {
 #--> Pick an in-progress GitHub Actions run on this branch and watch it live
 gh-watch() {
   gh run list \
-    --branch $(git rev-parse --abbrev-ref HEAD) \
+    --branch "$(git rev-parse --abbrev-ref HEAD)" \
     --json status,name,databaseId \
     | jq -r '.[] | select(.status != "completed") | (.databaseId | tostring) + "\t" + (.name)' \
     | fzf -1 -0 | awk '{print $1}' | xargs gh run watch
@@ -336,11 +336,11 @@ git-alias() {
 #--> Switch or create tmux sessions via fzf; tm <name> attaches or creates it
 tm() {
   [[ -n "$TMUX" ]] && change="switch-client" || change="attach-session"
-  if [ $1 ]; then
-    tmux $change -t "$1" 2>/dev/null || (tmux new-session -d -s $1 && tmux $change -t "$1")
+  if [ -n "$1" ]; then
+    tmux "$change" -t "$1" 2>/dev/null || (tmux new-session -d -s "$1" && tmux "$change" -t "$1")
     return
   fi
-  session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) && tmux $change -t "$session" || echo "No sessions found."
+  session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) && tmux "$change" -t "$session" || echo "No sessions found."
 }
 
 # sesh wrapper: warm up tmux + run resurrect restore synchronously before the
@@ -382,7 +382,7 @@ tmux-reload() {
   local sessions
   sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null)
   if [[ -z "$sessions" ]]; then
-    echo "$(color_yellow "No active tmux sessions")" >&2
+    color_yellow "No active tmux sessions" >&2
     return 1
   fi
 
@@ -402,7 +402,7 @@ fzf-man-widget() {
   manpage="echo {} | sed 's/\([[:alnum:][:punct:]]*\) (\([[:alnum:]]*\)).*/\2 \1/'"
   batman="${manpage} | xargs -r man | col -bx | bat --language=man --plain --color always"
   man -k . | sort \
-    | awk -v cyan=$(tput setaf 6) -v blue=$(tput setaf 4) -v res=$(tput sgr0) -v bld=$(tput bold) '{ $1=cyan bld $1; $2=res blue $2; } 1' \
+    | awk -v cyan="$(tput setaf 6)" -v blue="$(tput setaf 4)" -v res="$(tput sgr0)" -v bld="$(tput bold)" '{ $1=cyan bld $1; $2=res blue $2; } 1' \
     | fzf \
       -q "$1" \
       --ansi \
@@ -603,21 +603,16 @@ function commithelp() {
 
   # Analyze patterns and suggest commit types
   local suggestions=()
-  # shellcheck disable=SC2034  # confidence reserved for future use
-  local confidence=""
 
   # Check for dependency files (high confidence)
   if echo "$staged_files" | grep -qE '(package\.json|package-lock\.json|requirements\.txt|Pipfile\.lock|go\.mod|go\.sum|Gemfile\.lock|composer\.lock|yarn\.lock|pnpm-lock\.yaml|uv\.lock)$'; then
     suggestions+=("$(color_green "✓") $(color_blue "deps:") Update package versions")
-    confidence="high"
   fi
 
   # Check for lock files only (very high confidence for deps)
   if echo "$staged_files" | grep -qE '(package-lock\.json|Pipfile\.lock|go\.sum|Gemfile\.lock|yarn\.lock|pnpm-lock\.yaml|uv\.lock)$'; then
     if [ ${#suggestions[@]} -eq 0 ]; then
       suggestions+=("$(color_green "✓✓") $(color_blue "deps:") Lock file updates (very likely)")
-      # shellcheck disable=SC2034
-      confidence="very-high"
     fi
   fi
 
@@ -658,24 +653,9 @@ function commithelp() {
     fi
   fi
 
-  # Check file extensions for code vs docs vs config
   local has_code=false
-  # shellcheck disable=SC2034  # has_docs/has_config reserved for future use
-  local has_docs=false
-  local has_config=false
-
   if echo "$staged_files" | grep -qE '\.(js|ts|py|go|rs|java|cpp|c|rb|php|swift|kt|sh|bash|zsh)$'; then
     has_code=true
-  fi
-
-  if echo "$staged_files" | grep -qE '\.(md|txt|rst|adoc)$'; then
-    # shellcheck disable=SC2034
-    has_docs=true
-  fi
-
-  if echo "$staged_files" | grep -qE '\.(json|yaml|yml|toml|ini|cfg)$'; then
-    # shellcheck disable=SC2034
-    has_config=true
   fi
 
   # General suggestions based on file types

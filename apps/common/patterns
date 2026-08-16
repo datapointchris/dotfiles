@@ -148,7 +148,6 @@ delete_entries() {
   fi
 
   local timestamps_to_delete
-  local timestamps_to_delete
   # shellcheck disable=SC2001  # sed is cleanest for trimming trailing spaces in pipeline
   timestamps_to_delete=$(echo "$selected" | cut --delimiter='|' --fields=1 | sed 's/ *$//' | jq --raw-input --slurp 'split("\n") | map(select(length > 0))')
   local temp_file
