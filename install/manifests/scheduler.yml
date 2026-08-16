@@ -56,11 +56,16 @@ yazi_plugins: false
 nvim_plugins: true
 configure_zsh: true
 
-# `gh` for the private repos the sweep clones, `claude` for the graders it spawns,
-# `atuin` because zsh init expects it. Naming a tool is what makes this machine
-# report the login as missing until it is done, which on a box nobody watches is
-# the difference between a sweep that grades nothing and one that says why.
+# `gh` for the private repos the sweep clones, `claude` for the graders it spawns.
+# Naming a tool is what makes this machine report the login as missing until it is
+# done, which on a box nobody watches is the difference between a sweep that
+# grades nothing and one that says why.
+#
+# Not atuin. This resource declares a login, and what zsh init needs is the
+# binary — `atuin init zsh` runs and the shell starts clean with no session at
+# all, measured 2026-08-16 on this box. Nobody types here, so there is no history
+# worth syncing to the server, and declaring it produces a red line on every
+# check that nobody will ever act on. The binary stays in `github_releases`.
 auth:
   - gh
   - claude
-  - atuin
