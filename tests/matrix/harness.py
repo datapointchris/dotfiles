@@ -489,9 +489,11 @@ def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     `$GITHUB_TOKEN` alone flips a private-repo entry from `BY_HAND` to `AUTOMATIC`,
     so the same test passes at a desk and fails on the runner. `$LOG_LEVEL` moves the console threshold that `-v` and `-q` are being
     asserted against, and the `DOTFILES_*` settings twins answer `config show`
-    before the config file can.
+    before the config file can. `$ATUIN_CONFIG_DIR` reaches past `$XDG_CONFIG_HOME`
+    to the desk's own atuin config, whose `auto_sync` decides whether a login is
+    asked for at all.
     """
-    for variable in ('GITHUB_TOKEN', 'LOG_LEVEL', 'FORCE_COLOR', 'CLICOLOR_FORCE'):
+    for variable in ('GITHUB_TOKEN', 'LOG_LEVEL', 'FORCE_COLOR', 'CLICOLOR_FORCE', 'ATUIN_CONFIG_DIR'):
         monkeypatch.delenv(variable, raising=False)
     for variable in list(os.environ):
         if variable.startswith('DOTFILES_') and variable not in {'DOTFILES_DIR', 'DOTFILES_BUNDLE'}:

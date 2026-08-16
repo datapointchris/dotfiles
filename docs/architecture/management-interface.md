@@ -456,7 +456,7 @@ A converged machine is not necessarily a working one. Every binary can be instal
 every symlink deployed and every flag set while the CLIs that do the work sit logged out
 — which was the state of the Arch box on 2026-08-12, with `learning`, `meso`, `nomad`
 and `atuin` all unauthenticated and `dotfiles check` reporting a screen of converged
-rows. The `auth` resource closes that gap, and four decisions inside it are worth
+rows. The `auth` resource closes that gap, and the decisions inside it are worth
 stating because the code cannot state them about itself.
 
 **The manifest names which tools, the module says how each is asked.** A machine's
@@ -479,6 +479,18 @@ CLIs `auth status` is the 4ms one — it reads the keychain and makes no HTTP ca
 `auth token` refreshes at 215ms. `atuin` and `aws` have no cheap CLI probe at all and are
 answered by a file, because `atuin status` queries the sync server once a session exists
 and `aws sts get-caller-identity` is 698ms and networked.
+
+**One login on the roster is optional, so its probe asks the config before it asks for
+a session.** Every other tool here is useless logged out. atuin logged out is a working
+local history store: it still records exit code, working directory and host, still backs
+Ctrl-R, and still answers `doit` and `toolbox remind` about this machine. Its probe
+therefore reads `auto_sync` out of the machine's own atuin config, and where sync is off
+it reports `UNKNOWN` — the bucket an uninstalled tool already lands in, because there is
+no login in question either way. atuin's own default for that setting is on, so a config
+that is absent or will not parse leaves the check armed rather than answering it by
+accident. Turning fleet-wide history back on is one line in
+`configs/common/.config/atuin/config.toml`, and the check re-arms on every machine with
+it.
 
 **Nothing is ever repaired, and `apply` cannot reach it.** A login is a browser flow, a
 password or a device code, so every finding is `Repair.BY_HAND` and therefore never

@@ -41,6 +41,7 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import shutil
+import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -300,6 +301,30 @@ def _keychain_cli(tool: str) -> Probe:
     return probe
 
 
+def _atuin_syncs(session: Session) -> bool:
+    """Whether this machine's atuin config asks for a sync at all.
+
+    `true` where the file is absent or will not parse, which is atuin's own
+    default for the setting: a machine that never deployed a config still wants
+    to hear that it is logged out, and a typo in the TOML must not silently
+    answer the question it stopped this from reading.
+
+    `ValueError` rather than `TOMLDecodeError`, which is the rest of this repo's
+    idiom. `read_text` decodes, so one stray byte raises `UnicodeDecodeError` —
+    also a `ValueError`, and one that travels straight through the `OSError`
+    guard in `_asked` and costs every other tool its measurement.
+
+    `ATUIN_CONFIG_DIR` is the knob atuin itself honours, and `atuin info` prints
+    it, so a machine that moves the config is read where it actually keeps it.
+    """
+    declared = os.environ.get('ATUIN_CONFIG_DIR')
+    directory = Path(declared) if declared else _config_home(session) / 'atuin'
+    try:
+        return bool(tomllib.loads((directory / 'config.toml').read_text()).get('auto_sync', True))
+    except (OSError, ValueError):
+        return True
+
+
 def _atuin(session: Session) -> Credential:
     """The session file, because `atuin status` reaches the sync server.
 
@@ -312,12 +337,21 @@ def _atuin(session: Session) -> Credential:
     `atuin login` is what writes it. It is an implementation detail rather than a
     CLI contract, so an upstream move would make this read logged out forever;
     there is no cheaper local answer, and `atuin status` is not a fallback.
+
+    The one tool on the roster whose login is optional, so it is the one that
+    asks whether a login is wanted before asking whether one is held. Everything
+    else here cannot do its job logged out; atuin logged out is a local history
+    store that still records, searches and answers `doit` and `toolbox` about
+    this machine. `UNKNOWN` for that case, which is where `_uninstalled` already
+    puts a tool with nothing to log in to.
     """
     if not shutil.which('atuin'):
         return _uninstalled('atuin')
+    if not _atuin_syncs(session):
+        return Credential(Verdict.UNKNOWN, 'auto_sync is off, so history stays on this machine and no server holds an account')
     if (_data_home(session) / 'atuin' / 'session').is_file():
         return Credential(Verdict.MATCHED, 'a sync session is stored')
-    return Credential(Verdict.MISSING, 'no session file, so history sync is off', advice='log in with `atuin login`')
+    return Credential(Verdict.MISSING, 'no session file, so nothing reaches the configured server', advice='log in with `atuin login`')
 
 
 def _claude(session: Session) -> Credential:

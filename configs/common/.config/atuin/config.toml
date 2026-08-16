@@ -9,15 +9,21 @@
 # fallback for anything reading history — `doit kit usage` and toolbox remind
 # both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
-# Fleet-wide history through the self-hosted server on atuin-lxc, reachable only
-# from the LAN. History is encrypted client-side, so the server holds ciphertext
-# and ~/.local/share/atuin/key never leaves the machine — a box without that key
+# History stays on the machine that typed it. No account exists on any server,
+# so every box answers only about itself — which narrows `doit`'s machine-scoped
+# items and `toolbox remind` to one desk each.
+#
+# `sync_address` is where `auto_sync = true` would send it: the self-hosted
+# server on atuin-lxc, reachable only from the LAN, never api.atuin.sh. History
+# is encrypted client-side, so that server holds ciphertext and
+# ~/.local/share/atuin/key never leaves the machine — a box without that key
 # syncs records it cannot read. The key belongs in Vaultwarden; losing it loses
-# the history.
+# the history. `dotfiles auth check` follows this flag: it asks for a login only
+# where sync is on.
 #
 # An IP rather than atuin.homelab: the hosts file is copied to each machine by
 # hand, so a name resolves only where that copy is current.
-auto_sync = true
+auto_sync = false
 sync_address = "http://10.0.20.31:8888"
 
 # Only triggered when a command runs, so a quiet shell syncs no more often than

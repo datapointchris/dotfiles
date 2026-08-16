@@ -57,7 +57,15 @@ def xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point both XDG roots at the sandbox, so no probe can reach the real home."""
     monkeypatch.setenv('XDG_DATA_HOME', str(tmp_path / '.local' / 'share'))
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / '.config'))
-    for name in ('GITHUB_TOKEN', 'AWS_ACCESS_KEY_ID', 'AWS_SHARED_CREDENTIALS_FILE', 'BBKT_TOKEN', 'JIRA_API_TOKEN', 'JIRA_CONFIG_FILE'):
+    for name in (
+        'GITHUB_TOKEN',
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SHARED_CREDENTIALS_FILE',
+        'BBKT_TOKEN',
+        'JIRA_API_TOKEN',
+        'JIRA_CONFIG_FILE',
+        'ATUIN_CONFIG_DIR',
+    ):
         monkeypatch.delenv(name, raising=False)
     return tmp_path
 
@@ -357,6 +365,41 @@ def test_a_missing_atuin_session_names_the_login_command(xdg: Path, fake_bin: Pa
 
     assert found.verdict is Verdict.MISSING
     assert 'atuin login' in found.advice
+
+
+def atuin_config(written: str) -> Path:
+    """The client config at the path `atuin info` prints, under the sandboxed root."""
+    config = Path(os.environ['XDG_CONFIG_HOME']) / 'atuin' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(written)
+    return config
+
+
+def test_atuin_with_sync_turned_off_has_no_login_to_be_missing(xdg: Path, fake_bin: Path) -> None:
+    """The one name on the roster whose login is optional. Every other tool here
+    is useless logged out; atuin logged out is a local history store that still
+    records, searches and answers `doit` about this machine."""
+    executable(fake_bin, 'atuin')
+    atuin_config('auto_sync = false\n')
+
+    (found,) = changes(build(xdg, 'atuin'))
+
+    assert found.verdict is Verdict.UNKNOWN
+    assert found.repair is Repair.NONE
+    assert not found.declined
+
+
+@pytest.mark.parametrize('written', ['auto_sync = true\n', 'sync_frequency = "5m"\n', 'auto_sync = [unparseable\n'])
+def test_anything_short_of_sync_off_still_asks_atuin_for_a_session(xdg: Path, fake_bin: Path, written: str) -> None:
+    """atuin's own default is on, so a setting left out and a file that will not
+    parse both leave the question armed. A typo in the TOML silencing the check
+    is the failure worth pinning: it answers by accident and reads as deliberate."""
+    executable(fake_bin, 'atuin')
+    atuin_config(written)
+
+    (found,) = changes(build(xdg, 'atuin'))
+
+    assert found.verdict is Verdict.MISSING
 
 
 @pytest.mark.parametrize('written', [b'', b'   \n'])
