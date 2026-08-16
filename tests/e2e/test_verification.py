@@ -156,3 +156,23 @@ def test_nothing_declared_is_installed_twice(converged_machine: Machine) -> None
     found = unexplained_copies(converged_machine, declared_items(converged_machine.environment))
 
     assert not found, f'declared tools answering to more than one copy nothing explains: {found}'
+
+
+def test_a_login_shell_on_the_finished_machine_reports_nothing(converged_machine: Machine) -> None:
+    """A converged machine's shell has nothing left to complain about.
+
+    `tests/shell/test_zshrc_startup.py` asks the same question against a home
+    assembled by hand, which is fast and is where the rule is stated. This asks it
+    of a machine that actually converged, where the plugins are installed and the
+    flags are the manifest's rather than a fixture's approximation of them — so a
+    config that reports something only a real install can produce is caught here
+    and nowhere else.
+
+    Measured 2026-08-16 on scheduler-lxc: every shell wrote `broot not found`,
+    because the manifest omits a tool `.zshrc` assumed. Nothing in this matrix ran
+    that manifest, and nothing at any level started a shell and read stderr.
+    """
+    started = converged_machine.exec("zsh -i -c true 2>&1 >/dev/null | grep -F '❌' || true")
+    reported = [line.strip() for line in started.stdout.splitlines() if line.strip()]
+
+    assert not reported, 'a shell on the finished machine reported:\n' + '\n'.join(reported)

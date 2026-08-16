@@ -431,7 +431,28 @@ RESTRICTED = Environment(
     build_image=('bash', str(DOCKER_DIR / 'build-base.sh')),
 )
 
-ENVIRONMENTS = (ARCHLINUX, WSL, OFFLINE, RESTRICTED)
+SCHEDULER = Environment(
+    name='scheduler',
+    image='debian:12',
+    user='scheduleruser',
+    home='/home/scheduleruser',
+    manifest='scheduler',
+    # The only environment here whose manifest is not a workstation, and the only
+    # one on apt at `system_packages: core`. Every cargo and github_release entry
+    # the profile names has to resolve there, and nothing else in this matrix asks
+    # that question — archlinux is pacman, and the other three run the wsl-work
+    # manifest.
+    #
+    # debian:12 rather than ubuntu, because the machine this stands in for is a
+    # Proxmox LXC cloned from a Debian 12 template.
+    prepare=(
+        'apt-get update && apt-get install -y --no-install-recommends sudo git ca-certificates',
+        'useradd -m -s /bin/bash scheduleruser',
+        "printf '%s\\n' 'scheduleruser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
+    ),
+)
+
+ENVIRONMENTS = (ARCHLINUX, WSL, OFFLINE, RESTRICTED, SCHEDULER)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

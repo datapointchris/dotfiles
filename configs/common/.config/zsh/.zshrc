@@ -573,6 +573,18 @@ cache_eval uv uv generate-shell-completion zsh
 
 cache_eval direnv direnv hook zsh
 
+# An integration below is offered, not required: a manifest that never declares
+# the tool is a machine that does not want it, so its absence is a skip and not
+# a fault. log_error writes whatever ZSHRC_DEBUG says, while log stays quiet, so
+# reporting an absence through log_error puts a line on every start of every
+# shell that a reader can do nothing about — and teaches them to stop reading
+# stderr, which is where the real faults go. Measured 2026-08-16 on
+# scheduler-lxc, whose manifest declares neither yazi nor broot.
+#
+# The flag-gated plugin blocks further down are a different case and stay as
+# they are: a plugin whose flag is on and whose file is missing is a machine
+# that asked for something and did not get it.
+
 # yazi
 if command -v yazi >/dev/null 2>&1; then
   y() {
@@ -580,7 +592,7 @@ if command -v yazi >/dev/null 2>&1; then
   }
   log "Setup" "yazi"
 else
-  log_error "Setup" "yazi not found"
+  log "Skip" "yazi (not installed)"
 fi
 
 # broot — manual shell integration so broot --install never touches dotfiles
@@ -595,7 +607,7 @@ if command -v broot >/dev/null 2>&1; then
   }
   log "Setup" "broot"
 else
-  log_error "Setup" "broot not found"
+  log "Skip" "broot (not installed)"
 fi
 
 # ------------------------------------------------------------------ #
