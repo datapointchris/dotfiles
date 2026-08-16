@@ -368,7 +368,7 @@ def builder(request: pytest.FixtureRequest) -> Iterator[Machine]:
         # Its own shelf by the same name the peer uses, so one script and one
         # config serve both machines rather than the builder getting a special case.
         exchange.authorize(subject, subject)
-        exchange.declare_transport(subject, name)
+        exchange.declare_transport(subject, subject)
         yield subject
     finally:
         if keeping_containers(request.config):
@@ -393,7 +393,7 @@ def exchanging(machine: Machine, builder: Machine) -> tuple[Machine, Machine]:
 
     exchange.join(machine.container)
     exchange.authorize(machine, builder)
-    exchange.declare_transport(machine, builder.container)
+    exchange.declare_transport(machine, builder)
     return machine, builder
 
 

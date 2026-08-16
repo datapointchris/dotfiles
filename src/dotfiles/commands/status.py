@@ -138,8 +138,15 @@ def composed(machine: str | None) -> Composed:
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
-    walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, report=None)
-    sinks.keep(walked.events, identity, {'skip': sorted(withheld), 'offline': False})
+    # Offline, and that is what makes the document useful rather than a
+    # convenience. This says what the machine *has*, which is measured by running
+    # each tool — never by asking upstream. The online lens resolves every release
+    # against GitHub first, so on the firewalled box this exists for those lookups
+    # fail and the rows vanish: 25 examined entries, none of them a version, none
+    # of them a release binary. Offline the same walk reports 36, with versions,
+    # which is exactly what a builder diffs against.
+    walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, report=None)
+    sinks.keep(walked.events, identity, {'skip': sorted(withheld), 'offline': True})
     document = status_document.document(walked.results, named, identity.started, verb='plan')
     return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named)
 

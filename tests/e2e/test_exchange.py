@@ -74,6 +74,27 @@ def test_dotfiles_reports_the_remote_as_reachable(builder: Machine) -> None:
     assert reported.get('root') == exchange.SHELF_ROOT
 
 
+def test_a_status_reaches_the_shelf_over_the_transport(builder: Machine) -> None:
+    """The return leg, at the rung below a machine install.
+
+    `status upload` is the only path that composes a document *and* passes it
+    through the redaction gate, so it is where a gate that refuses everything
+    shows up. Asserted here rather than only in the round trip, because that test
+    needs a converged machine and answers this same question forty minutes later.
+
+    The builder is not converged and does not need to be — what is under test is
+    whether a real document survives the gate and crosses, not what it reports.
+    """
+    published = builder.exec(f'cd {builder.environment.home}/dotfiles && uv run dotfiles status upload')
+
+    assert published.returncode == 0, published.stderr or published.stdout
+
+    shelf = f'{exchange.SHELF_ROOT}/status/{builder.environment.manifest}'
+    listed = builder.read(f'{exchange.TRANSPORT} list {shelf}')
+
+    assert listed.strip(), f'nothing landed on {shelf}'
+
+
 def test_an_unreachable_peer_is_told_apart_from_an_empty_shelf(builder: Machine) -> None:
     """Pointed at a host that does not exist, the probe fails rather than reporting
     an empty shelf — which is the answer that decides between refusing and building
@@ -82,6 +103,6 @@ def test_an_unreachable_peer_is_told_apart_from_an_empty_shelf(builder: Machine)
     try:
         assert not builder.succeeds(f'{exchange.TRANSPORT} probe')
     finally:
-        builder.exec(f'printf %s {builder.container} > /etc/shelf-host', user='root', check=True)
+        builder.exec(f'printf %s {exchange.peer_address(builder)} > /etc/shelf-host', user='root', check=True)
 
     assert builder.succeeds(f'{exchange.TRANSPORT} probe'), 'the peer was not restored'

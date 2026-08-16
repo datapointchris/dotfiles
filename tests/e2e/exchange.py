@@ -155,7 +155,19 @@ def authorize(peer: Machine, builder: Machine) -> None:
     )
 
 
-def declare_transport(machine: Machine, shelf_host: str) -> None:
+def peer_address(peer: Machine) -> str:
+    """`user@container`, which is what the transport connects as.
+
+    The account is spelled out rather than left to ssh's default, because a
+    *converged* machine has this repo's `~/.ssh/config` deployed and that file
+    decides the user. So the offline box dialled the builder as `chris` and was
+    refused, while the builder — which installs nothing — defaulted correctly and
+    passed every test at the cheaper rung.
+    """
+    return f'{peer.environment.user}@{peer.container}'
+
+
+def declare_transport(machine: Machine, peer: Machine) -> None:
     """Install the transport script and the config that names it.
 
     The config is written the way a person writes one, into
@@ -176,7 +188,7 @@ def declare_transport(machine: Machine, shelf_host: str) -> None:
     # Which peer to reach, in a file rather than the script, so one script serves
     # both machines and the builder reaches its own shelf by the name the peer
     # uses. Not an export: `Machine.exec` runs `bash -c`, which reads no profile.
-    machine.exec(f'printf %s {shlex.quote(shelf_host)} > /etc/shelf-host', user='root', check=True)
+    machine.exec(f'printf %s {shlex.quote(peer_address(peer))} > /etc/shelf-host', user='root', check=True)
 
 
 CONFIG = """\
@@ -202,6 +214,19 @@ machine's own opt-in and a test that wants one turns it on explicitly — a
 harness that shipped them enabled would be asserting against a machine nobody
 configured that way.
 """
+
+
+def ran(machine: Machine, command: str) -> str:
+    """Run a command and fail with what it said, not with its exit code alone.
+
+    `Machine.exec(check=True)` raises `CalledProcessError`, whose repr is the argv
+    and a number. The transport and every verb here refuse with a sentence naming
+    the reason, and that sentence is on stderr — so the one thing worth reading is
+    the one thing the failure drops.
+    """
+    done = machine.exec(command)
+    assert done.returncode == 0, f'{command!r} exited {done.returncode}\n{done.stderr or done.stdout}'
+    return done.stdout.strip()
 
 
 def carry(source: Machine, destination: Machine, path: str) -> str:

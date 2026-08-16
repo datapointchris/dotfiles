@@ -276,8 +276,14 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
 
     The assertion is the omission rather than the size. A smaller archive is the
     point and not the property — a build that omitted the wrong things would be
-    smaller too. What has to hold is that the machine reads what was left out as
-    current instead of as something nothing could measure.
+    smaller too. What has to hold is that every omission is *accounted for*: read
+    either as carried by the full bundle underneath, or as measured and current.
+
+    Not `measured` specifically, because this machine installed from a full bundle
+    and the sparse one stages on top of it. The stack answering for those files is
+    the feature working, so everything the sparse build omitted reads as covered
+    here. `tests/matrix/test_sparse_bundles.py` owns the case where a sparse bundle
+    stands alone and `measured` is the only possible answer.
     """
     machine, builder = exchanging
 
@@ -285,15 +291,15 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
     # pass the document through the redaction gate, so a trip built on `show`
     # cannot reach a gate that refuses every real document — which is what one did
     # for the whole life of the branch.
-    machine.exec('dotfiles status upload', check=True)
+    exchange.ran(machine, 'dotfiles status upload')
 
     built = exchange.build_bundle_in(builder, machine.environment.manifest, against='latest')
     name = built.rsplit('/', 1)[-1]
     assert name.endswith('-sparse.tar.gz'), f'a sparse build has to say so in its own name: {name}'
-    builder.exec(f'cd {builder.environment.home}/dotfiles && dotfiles bundle upload', check=True)
+    exchange.ran(builder, f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle upload')
 
-    machine.exec('dotfiles bundle download --yes', check=True)
-    machine.exec(f'dotfiles bundle stage $HOME/.cache/dotfiles/bundles/{name}', check=True)
+    exchange.ran(machine, 'dotfiles bundle download --yes')
+    exchange.ran(machine, f'dotfiles bundle stage $HOME/.cache/dotfiles/bundles/{name}')
 
     # The bundle's own account of what it left out, read off the copy that
     # crossed rather than the one that was built, so a document the installing
@@ -305,7 +311,7 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
 
     checked = json.loads(machine.read('dotfiles bundle check --json') or '{}')
     left_out = {key.split('/', 1)[-1] for key in described['current']}
-    reported_missing = left_out & set(checked['uncovered'])
+    accounted = set(checked['covered']) | set(checked['measured'])
 
-    assert not reported_missing, f'omitted and reported missing: {sorted(reported_missing)}'
-    assert left_out & set(checked['measured']), 'nothing the build left out was reported as measured'
+    assert not left_out & set(checked['uncovered']), f'omitted and reported missing: {sorted(left_out & set(checked["uncovered"]))}'
+    assert left_out <= accounted, f'omitted and unaccounted for: {sorted(left_out - accounted)}'

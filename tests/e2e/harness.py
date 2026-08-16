@@ -635,7 +635,7 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-$(hostname -s | tr "[:upper:]" "[:lower:]")'
+LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-$(echo "$HOSTNAME" | cut -d. -f1 | tr "[:upper:]" "[:lower:]")'
 """`paths.LATEST_RUN`, spelled for a shell because it is read inside the container.
 
 The suffix is *derived*, never globbed. `paths.LATEST_RUN` gained a
@@ -650,8 +650,12 @@ Which it does, because the base image bakes a record from the build. That build
 runs as a machine named `buildkitsandbox`, and its `latest-buildkitsandbox`
 lives in the image beside the container's own.
 
-`hostname -s`, lowercased, is `paths.machine_id` in shell. One box per container,
-so it resolves to exactly one path or to nothing at all."""
+`$HOSTNAME` cut at the first dot and lowercased is `paths.machine_id` in shell,
+which reads `socket.gethostname()`. Bash sets that variable itself, so it needs no
+binary — `hostname` is absent on the Arch image, where deriving through it
+resolved to `latest-` and matched nothing on every environment but Ubuntu.
+
+One box per container, so it resolves to exactly one path or to none at all."""
 
 INSTALL_LOG = '.dotfiles-install-log'
 INSTALL_STATUS = '.dotfiles-install-status'
