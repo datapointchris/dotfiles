@@ -39,6 +39,7 @@ from dotfiles import catalog
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import publishing
 from dotfiles import resolve
 from dotfiles import status
 from dotfiles import versions
@@ -423,6 +424,14 @@ def read_status(path: Path) -> dict[str, Any]:
     would find no `examined` anywhere and quietly bundle the entire declaration,
     reporting it as a sparse build. That is worse than refusing, because the
     output is plausible.
+
+    **Scope-checked for the same reason, through the door the version check does
+    not cover.** One shape now comes from three widths, and a `check --json` or a
+    resource-scoped document is a perfectly valid version 2 that says nothing
+    about packages. Handed one, the builder measures nothing, carries everything,
+    and writes it under a `-sparse` name — which `carries_everything` reads off
+    the name, so `base_of` will not pin it and retention can sweep the only
+    complete bundle on the box that cannot fetch another.
     """
     try:
         document = json.loads(path.read_text())
@@ -430,6 +439,15 @@ def read_status(path: Path) -> dict[str, Any]:
         raise BundleError(f'{path} is not a readable status document: {unreadable}') from unreadable
     if not isinstance(document, dict) or document.get('version') != status.VERSION:
         raise BundleError(f'{path} is not a version {status.VERSION} status document, so its rows cannot be trusted')
+
+    scope = document.get('scope')
+    covered = sorted(set(scope) & set(publishing.PUBLISHABLE)) if isinstance(scope, list) else []
+    if isinstance(scope, list) and not covered:
+        raise BundleError(
+            f'{path} covers {", ".join(str(one) for one in scope) or "nothing"}, and a bundle is planned against '
+            f'{" or ".join(publishing.PUBLISHABLE)}\n'
+            'publish one from that machine with: dotfiles status upload'
+        )
     return document
 
 
@@ -441,6 +459,7 @@ class Bundle:
         self.machine = machine
         self.when = when
         self.built_from = ''
+        self.built_for = ''
         self.current: dict[str, str] = {}
         self.installed: dict[str, str] = {}
         self.binaries = staging / 'binaries'
@@ -506,6 +525,12 @@ class Bundle:
 
         So a sparse build with an empty `current` is a legitimate artefact and
         says what it is: planned against a report, and it left nothing out.
+
+        `built_for` is which *box* the premise came from, where `machine` is the
+        manifest. Two machines share one manifest, so the manifest cannot say
+        whether a sparse bundle's omissions are true of the box unpacking it — and
+        the builder never knows which box it is building for. Recorded here so the
+        target, which does know, can refuse it.
         """
         return bundle_format.Description(
             created=self.when.astimezone(dt.UTC).isoformat().replace('+00:00', 'Z'),
@@ -513,6 +538,7 @@ class Bundle:
             platform=f'{self.os_name}/{self.arch}',
             completeness=bundle_format.Completeness.SPARSE if self.built_from else bundle_format.Completeness.FULL,
             built_from=self.built_from,
+            built_for=self.built_for,
             current=dict(self.current),
         )
 
@@ -1228,6 +1254,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     with tempfile.TemporaryDirectory() as workspace:
         bundle = Bundle(Path(workspace) / ARCHIVE_MEMBER, os_name, arch, manifest_name, built_at)
         if reported is not None and against is not None:
+            bundle.built_for = status.published_by(reported, against.name)
             bundle.plan_against(against, reported)
             log.info('Sparse: against %s, which reports %d installed tool(s)', against.name, len(bundle.installed))
 

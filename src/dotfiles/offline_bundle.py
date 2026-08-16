@@ -277,12 +277,21 @@ def describe(extracted: Path | None = None) -> Staging:
     `extracted` is passed by the one caller that just unpacked something, so the
     description can say so. Discovering it instead would mean comparing mtimes
     against the run's own start, which is a guess where the caller already knows.
+
+    **One walk, handed to all three readers.** Walking separately for the paths,
+    the rows and the descriptions made the only way they could disagree a
+    `ValueError` out of `Staging.base`, which zips two of them `strict=True` — and
+    that escapes `reconcile._stage_bundle`, which catches `StagingError`, as a
+    traceback out of `apply --offline`. A second `bundle stage` or a hand-unpacked
+    directory during a run is what reaches it. One walk removes the failure and
+    two of the three reads.
     """
+    staged = providers.staged_bundles()
     return Staging(
         paths.staging_dir(),
-        bundle.rows(),
-        bundles=providers.staged_bundles(),
-        descriptions=bundle.descriptions(),
+        bundle.rows_in(staged),
+        bundles=staged,
+        descriptions=tuple(bundle.description_of(root) for root in staged),
         extracted=extracted,
     )
 
@@ -429,6 +438,25 @@ def target() -> str:
     """
     try:
         return commands.resolved(None).machine_name
+    except Refusal:
+        return ''
+
+
+def this_box() -> str:
+    """Which box this is among those sharing its manifest, for the same checks.
+
+    The discriminator, resolved the way a status filename resolves it — so a
+    sparse bundle built against this box's report and one built against its
+    twin's are told apart by the same string that kept their two reports from
+    overwriting each other.
+
+    Empty on the same terms as `target`, and for the same reason: a half-built
+    machine has to be able to unpack a bundle.
+    """
+    from dotfiles import status
+
+    try:
+        return status.discriminator(commands.resolved(None).machine.coordinates.network_trust)
     except Refusal:
         return ''
 
@@ -657,11 +685,23 @@ def stage(archive: Path, machine: str) -> Path:
         # Read from what came out rather than from the archive, so what is checked
         # is what would be installed from. Refused before the move, so a rejected
         # bundle leaves nothing behind for `newest` to pick up next run.
-        built_for = bundle.description_of(unpacked[0]).machine
+        described = bundle.description_of(unpacked[0])
+        built_for = described.machine
         if machine and built_for and built_for != machine:
             raise StagingError(
                 f'{archive.name} was built for {built_for} and this machine is {machine}',
                 advice=f'fetch this one instead: dotfiles bundle download --machine {machine}',
+            )
+        # The manifest cannot answer this one. Two boxes share it, so a sparse
+        # bundle planned against the twin's report omits every tool the twin has
+        # current and records the omissions as measured — about a machine that
+        # never reported. Only a sparse bundle carries the claim, so only a sparse
+        # bundle is refused.
+        box = this_box()
+        if box and described.built_for and described.built_for != box:
+            raise StagingError(
+                f'{archive.name} was planned against what {described.built_for} had installed, and this box is {box}',
+                advice=f'build one against this box: dotfiles status upload, then bundle create --machine {machine} --against latest',
             )
 
         if staged.exists():

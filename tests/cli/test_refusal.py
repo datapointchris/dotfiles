@@ -22,8 +22,12 @@ class Retryable(Refusal):
     code = ExitCode.USAGE
 
 
-def raising(error: Exception):
-    """A leaf that does nothing but fail, registered under a name nothing else uses."""
+def raising(error: BaseException):
+    """A leaf that does nothing but fail, registered under a name nothing else uses.
+
+    `BaseException` rather than `Exception`, because `KeyboardInterrupt` is one and
+    it is exactly the case the boundary has to answer for.
+    """
 
     def leaf() -> None:
         raise error
@@ -31,7 +35,7 @@ def raising(error: Exception):
     return leaf
 
 
-def invoke(error: Exception):
+def invoke(error: BaseException):
     app.command('boundary-probe')(raising(error))
     try:
         return runner.invoke(app, ['boundary-probe'], catch_exceptions=False)
@@ -104,3 +108,22 @@ def test_a_typer_exit_still_carries_its_own_code() -> None:
     ran = invoke(typer.Exit(ExitCode.CONVERGED))
 
     assert ran.exit_code == ExitCode.CONVERGED
+
+
+def test_an_aborted_prompt_does_not_report_the_machine_as_drifted() -> None:
+    """click exits 1 on `Abort`, and 1 is DRIFT here. Ctrl-D at a prune prompt
+    therefore said pending changes about a run that measured nothing and changed
+    nothing, while answering `n` at the same prompt said ISSUE. The TTY guard
+    beside each prompt covers the piped case and stops at the keyboard."""
+    ran = invoke(typer.Abort())
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.exit_code != ExitCode.DRIFT
+
+
+def test_an_interrupt_is_the_same_answer_as_an_abort() -> None:
+    """Ctrl-C is the other way a person leaves a prompt, and python exits 1 on it
+    for reasons that have nothing to do with this tool's vocabulary."""
+    ran = invoke(KeyboardInterrupt())
+
+    assert ran.exit_code == ExitCode.ISSUE

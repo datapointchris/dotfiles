@@ -95,7 +95,25 @@ class Boundary(TyperGroup):
     """
 
     def invoke(self, ctx: Any) -> Any:
+        """Every exit this tool owns, including the ones the framework hardcodes to 1.
+
+        **A tool that spends 1 on a verdict owes a branch for the framework's
+        default.** click exits 1 on `Abort`, which is what a prompt raises at EOF
+        and what Ctrl-D produces at a live terminal — so declining a prune by
+        answering `n` exited 3 while aborting the same prompt exited 1, and 1 is
+        `DRIFT`: pending changes, reported by a run that measured nothing and
+        changed nothing. The TTY guard beside each prompt covers the piped case and
+        stops at the keyboard.
+
+        Here rather than at each prompt because the branch is about what an exit
+        code means in this tool, and there are four prompts. `typer.Abort` is
+        `click.exceptions.Abort` re-exported, so naming it costs no `click` import
+        — which is the seam this class is careful to protect.
+        """
         try:
             return super().invoke(ctx)
         except Refusal as refused:
             raise typer.Exit(report(refused)) from refused
+        except (typer.Abort, KeyboardInterrupt) as aborted:
+            error('nothing was done')
+            raise typer.Exit(ExitCode.ISSUE) from aborted

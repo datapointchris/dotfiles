@@ -502,6 +502,63 @@ class TestRefusingAForeignBundle:
 
         assert offline_bundle.stage(tarball, '').is_dir()
 
+
+class TestRefusingAPremiseFromTheOtherBox:
+    """The manifest cannot answer this, which is the whole reason it exists.
+
+    Two Macs both declare `macos-personal-workstation`, so a sparse bundle
+    planned against one of them passes the machine check on the other — and its
+    omissions are recorded as measured about a box that never reported.
+    """
+
+    def planned_against(self, at: Path, box: str, *, sparse: bool = True) -> Path:
+        staging = at / 'contents' / 'installers'
+        staging.mkdir(parents=True)
+        (staging / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        described = bundle.Description(
+            machine='macos-personal-workstation',
+            completeness=bundle.Completeness.SPARSE if sparse else bundle.Completeness.FULL,
+            built_from='a-status.json' if sparse else '',
+            built_for=box,
+        )
+        (staging / bundle.DOCUMENT).write_text(json.dumps(described.as_dict()))
+        tarball = at / f'{BUNDLE}.tar.gz'
+        with tarfile.open(tarball, 'w:gz') as packed:
+            packed.add(staging, arcname='installers')
+        return tarball
+
+    def test_a_bundle_planned_against_the_twin_is_refused_and_names_both(self, tmp_path, staging, monkeypatch) -> None:
+        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
+        tarball = self.planned_against(tmp_path, 'mbp')
+
+        with pytest.raises(offline_bundle.StagingError) as refused:
+            offline_bundle.stage(tarball, 'macos-personal-workstation')
+
+        assert 'mbp' in str(refused.value)
+        assert 'macmini' in str(refused.value)
+
+    def test_a_bundle_planned_against_this_box_stages(self, tmp_path, staging, monkeypatch) -> None:
+        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
+        tarball = self.planned_against(tmp_path, 'macmini')
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+
+    def test_a_full_bundle_carries_no_premise_and_is_never_refused(self, tmp_path, staging, monkeypatch) -> None:
+        """Only a sparse bundle claims anything about what the target already had,
+        so only a sparse bundle can be wrong about which target."""
+        monkeypatch.setattr(offline_bundle, 'this_box', lambda: 'macmini')
+        tarball = self.planned_against(tmp_path, '', sparse=False)
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+
+    def test_a_box_that_cannot_name_itself_stages_anything(self, tmp_path, staging, monkeypatch) -> None:
+        """Same terms as the machine check above: a half-built box has to be able
+        to unpack a bundle, or the guard is what stops the rebuild."""
+        monkeypatch.setattr(offline_bundle, 'this_box', lambda: '')
+        tarball = self.planned_against(tmp_path, 'mbp')
+
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation').is_dir()
+
     def test_the_resolver_answers_empty_rather_than_raising_on_a_bare_machine(self, home, monkeypatch) -> None:
         """What feeds the case above. `commands.resolved` refuses a machine nothing
         names, and that refusal must not reach the caller as a failed stage.

@@ -108,6 +108,33 @@ class TestReadingAStatus:
         with pytest.raises(create_bundle.BundleError, match='readable'):
             create_bundle.read_status(path)
 
+    def test_a_document_covering_nothing_bundlable_is_refused(self, tmp_path: Path) -> None:
+        """One shape comes from three widths, so a valid version 2 can say nothing
+        about packages. Accepted, it measures nothing, carries everything, and is
+        named `-sparse` — and a `-sparse` name is what stops `base_of` pinning the
+        only complete bundle on a box that cannot fetch another."""
+        path = tmp_path / 'symlinks.json'
+        path.write_text(json.dumps({'version': 2, 'machine': 'box', 'scope': ['symlinks'], 'resources': []}))
+
+        with pytest.raises(create_bundle.BundleError, match='packages'):
+            create_bundle.read_status(path)
+
+    def test_a_document_covering_one_of_the_two_is_enough(self, tmp_path: Path) -> None:
+        """Paired with the refusal above. A resource-scoped `packages` document is
+        a legitimate premise and a check that wanted both would reject it."""
+        path = tmp_path / 'packages.json'
+        path.write_text(json.dumps({'version': 2, 'machine': 'box', 'scope': ['packages'], 'resources': []}))
+
+        assert create_bundle.read_status(path)['scope'] == ['packages']
+
+    def test_a_document_naming_no_scope_at_all_is_still_read(self, tmp_path: Path) -> None:
+        """`scope` is additive and documents published before it exist. Refusing
+        one would break the machines the loop is already running on."""
+        path = tmp_path / 'unscoped.json'
+        path.write_text(json.dumps({'version': 2, 'machine': 'box', 'resources': []}))
+
+        assert create_bundle.read_status(path)['machine'] == 'box'
+
 
 class TestDecidingWhatToLeaveOut:
     def built(self, tmp_path: Path, **installed: str) -> create_bundle.Bundle:

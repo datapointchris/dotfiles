@@ -89,6 +89,15 @@ class Description:
     platform: str = ''
     completeness: Completeness = Completeness.FULL
     built_from: str = ''
+    built_for: str = ''
+    """Which box's status the omissions were measured against, where one was.
+
+    `machine` is the manifest and two boxes share one, so it cannot answer whether
+    a sparse bundle's omissions are true here. This can, and the target is the only
+    end that knows its own answer — `offline_bundle.stage` is where the comparison
+    happens. Empty on a full bundle and on one built before this field existed,
+    both of which stage without the question being asked.
+    """
     current: Mapping[str, str] = dc.field(default_factory=dict)
     """Entries the bundler measured on the target and deliberately did not carry,
     against the upstream version it resolved for each.
@@ -116,6 +125,7 @@ class Description:
             'platform': self.platform,
             'completeness': str(self.completeness),
             'built_from': self.built_from,
+            'built_for': self.built_for,
             'current': dict(self.current),
         }
 
@@ -139,6 +149,7 @@ def description_from(document: Any) -> Description:
         platform=str(document.get('platform', '')),
         completeness=Completeness.SPARSE if named == Completeness.SPARSE else Completeness.FULL,
         built_from=str(document.get('built_from', '')),
+        built_for=str(document.get('built_for', '')),
         current={str(key): str(value) for key, value in current.items()} if isinstance(current, dict) else {},
         version=int(document['version']) if isinstance(document.get('version'), int) else VERSION,
     )
@@ -154,8 +165,8 @@ class Staged:
     filename: str
 
 
-def rows() -> tuple[Staged, ...]:
-    """Every staged file across every staged bundle, newest bundle winning.
+def rows_in(roots: tuple[Path, ...]) -> tuple[Staged, ...]:
+    """Every staged file across the bundles handed in, newest bundle winning.
 
     Merged rather than concatenated, on `(category, name)`. That pair is the
     identity a provider looks a row up by — one tool is a `binary` on one machine
@@ -165,12 +176,20 @@ def rows() -> tuple[Staged, ...]:
     Nothing at all where no bundle is staged, and an unreadable manifest is the
     same answer as an absent one. Both are already correct and already handled by
     every caller.
+
+    Takes the walk rather than doing it, so a caller assembling several views of
+    one staging directory reads it once and cannot get two answers.
     """
     merged: dict[tuple[str, str], Staged] = {}
-    for root in reversed(staged_bundles()):
+    for root in reversed(roots):
         for row in parse(_text(root)):
             merged[row.category, row.name] = row
     return tuple(merged.values())
+
+
+def rows() -> tuple[Staged, ...]:
+    """The same, for a caller holding no walk of its own."""
+    return rows_in(staged_bundles())
 
 
 def _text(root: Path) -> str:
