@@ -240,12 +240,14 @@ repos:
       # The rest of `configs/` is program configuration, and a keymap cannot
       # break an installer. What it can break is the shape of a tree: a directory
       # no coordinate selects, which deploys to nobody and says nothing, or two
-      # variants claiming one target, which is last-write-wins and silent.
+      # variants claiming one target, which is last-write-wins and silent. It can
+      # also break another program's keymap, which errors nowhere at all —
+      # tests/configs holds the cross-file comparisons that catch that.
       # tests/symlinks and tests/shell are the two that read the real trees, and
       # between them they are also the whole of `shell/`'s coverage.
       - id: pytest-trees
         name: pytest (deployed trees)
-        entry: uv run pytest tests/symlinks tests/shell
+        entry: uv run pytest tests/symlinks tests/shell tests/configs
         language: system
         pass_filenames: false
         files: ^(configs/|shell/)
