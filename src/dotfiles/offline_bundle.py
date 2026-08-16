@@ -425,6 +425,11 @@ def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> P
             f'{name} does not match the digest its record publishes, so it did not arrive whole',
             advice='run it again: dotfiles bundle download',
         )
+    # Kept beside the archive, which is what `paths.archive_dir` already says
+    # happens and nothing did. A machine that downloads today and stages in a
+    # month otherwise has no digest left to re-check, and `_prune_local` was
+    # unlinking a path nothing ever wrote.
+    (paths.archive_dir() / f'{name}{SIDECAR_SUFFIX}').write_text(json.dumps(record.as_dict(), indent=2) + '\n')
     return destination
 
 

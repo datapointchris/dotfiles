@@ -80,6 +80,27 @@ def test_every_reconciling_leaf_takes_the_verbosity_pair(path: tuple[str, ...], 
     assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
 
 
+STAGING = [(path, command) for path, command in LEAVES if path[0] in {'bundle', 'status', 'remote'}]
+"""Every leaf of the offline loop, which renders evidence rows to a terminal.
+
+Scoped to these three groups rather than to the whole tree, and the boundary is
+measured rather than chosen: the read-only `show`/`list`/`path` leaves elsewhere
+do not take the pair either, and giving it to all of them is a change larger than
+the feature that surfaced the question. What this asserts is that the loop is
+internally consistent, which is the asymmetry `--dry-run` and `--force` each grew
+one subcommand at a time.
+"""
+
+
+@pytest.mark.parametrize(('path', 'command'), STAGING, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
+def test_every_leaf_of_the_offline_loop_takes_the_verbosity_pair(path: tuple[str, ...], command: click.Command) -> None:
+    """`bundle create` is the loudest verb in the group — one line per staged
+    asset — and was one of the two with no way to quieten it."""
+    flags = {name for param in command.params for name in param.opts}
+    assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
+    assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
+
+
 @pytest.mark.parametrize(('path', 'command'), LEAVES, ids=lambda value: '/'.join(value) if isinstance(value, tuple) else '')
 def test_every_leaf_is_a_documented_verb(path: tuple[str, ...], command: click.Command) -> None:
     verb = path[-1]

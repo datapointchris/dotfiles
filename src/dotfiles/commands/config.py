@@ -96,6 +96,18 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     console.print(f'  {"REMOTE":<{width}}  {_remote(remote)}')
     if remote.remote:
         console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep_bundles}')
+        console.print(f'  {"":<{width}}  {_kept_from(remote.remote)}')
+
+
+def _kept_from(found: transport.Remote) -> str:
+    """Which layer decided the retention limit, the way the registers above say it.
+
+    standards/configuration.md § "A resolved value reports which layer set it" —
+    the failure it prevents is a plausible value rather than a wrong one. This
+    number governs deletion from a server, and unattributed beside rows that all
+    carry `from {source}` it read as declared on a machine that declared nothing.
+    """
+    return f'from {transport.TABLE}.keep_bundles' if found.keep_bundles_declared else 'this tool’s default'
 
 
 def _remote(found: transport.Configured) -> str:

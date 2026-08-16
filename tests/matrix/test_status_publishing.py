@@ -347,6 +347,8 @@ class TestPublishing:
         loop."""
         ran = cli('status', 'show', catch_exceptions=True)
 
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert 'status' in ran.stdout + ran.stderr
         assert 'manifest.txt' not in ran.stderr
         assert 'bundle stage' not in ran.stderr
 

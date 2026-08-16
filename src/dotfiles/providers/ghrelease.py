@@ -140,18 +140,6 @@ def bundle_version(name: str) -> str | None:
     return row.version if row and row.version else None
 
 
-def measured_version(name: str) -> str | None:
-    """The version a sparse bundle measured for a tool it deliberately did not carry.
-
-    An offline run compares against whatever the bundle says upstream published,
-    and a sparse bundle says that two ways: a manifest row for what it brought,
-    and `current` for what it measured and left behind. Reading only the first
-    reports every up-to-date tool as unmeasurable, which is the whole cost a
-    sparse bundle would otherwise carry.
-    """
-    return bundle.measured(name, *bundle.CATEGORIES)
-
-
 def published_version(name: str) -> str | None:
     """What the staged stack says upstream published, newest bundle answering first.
 

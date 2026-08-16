@@ -318,6 +318,29 @@ class TestDownloading:
         assert 'built' in said
         assert 'sparse' in said
 
+    def test_a_downloaded_archive_keeps_its_record_beside_it(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """`paths.archive_dir` already said this happens and nothing wrote one, so
+        a machine that downloaded today had no digest to re-check next month and
+        `prune` unlinked a path that never existed."""
+        published(server, NEWEST)
+
+        ran = cli('bundle', 'download', '--yes')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        sidecar = paths.archive_dir() / f'{NEWEST}.tar.gz{offline_bundle.SIDECAR_SUFFIX}'
+        assert sidecar.is_file()
+        assert json.loads(sidecar.read_text())['sha256']
+
+
+class TestStaging:
+    def test_a_named_path_that_is_not_there_is_a_usage_error(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """A typo is the caller's mistake, which is USAGE. It reached `stage` and
+        came back ISSUE, so a mistyped path read to a caller as a machine fault."""
+        ran = cli('bundle', 'stage', '/nope/not-here.tar.gz', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.USAGE
+        assert 'not-here.tar.gz' in ran.stderr
+
 
 class TestPruning:
     def test_local_archives_and_staged_bundles_are_swept_to_the_same_depth(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -501,11 +524,16 @@ class TestTheAutomaticPaths:
         assert 'needs a staged bundle' in ran.stderr
 
     def test_an_offline_apply_publishes_nothing_by_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+        """Paired with the exit code and a positive fact. An apply that died while
+        staging satisfied the negative on its own, and this is the only thing
+        pinning the publish half of "both automatic paths default off"."""
         sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
         sandbox.stage_bundle({'lazygit': '0.45.0'})
+        sandbox.installed('lazygit', '0.45.0')
 
-        cli('apply', '--offline', catch_exceptions=True)
+        ran = cli('apply', '--offline', catch_exceptions=True)
 
+        assert ran.exit_code == ExitCode.CONVERGED
         assert not (server / 'artefacts' / 'status').exists()
 
     def test_it_publishes_where_the_machine_asked_for_that(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:

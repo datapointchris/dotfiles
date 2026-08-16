@@ -158,6 +158,16 @@ class Remote:
     root: str
     transport: Transport
     keep_bundles: int = DEFAULT_KEEP
+    keep_bundles_declared: bool = False
+    """Whether the table set the limit, or this tool's default answered.
+
+    Carried rather than inferred from the number, because a machine that declares
+    the same value as the default is indistinguishable by comparison — and
+    standards/configuration.md § "A resolved value reports which layer set it"
+    names that exactly: *"the failure this prevents is not a wrong value, it is a
+    plausible one."* The value governs deletion from a server.
+    """
+
     fetch_bundle_when_none_is_staged: bool = False
     publish_status_after_offline_apply: bool = False
 
@@ -339,6 +349,7 @@ def read(config: settings.Config | None = None) -> Configured:
             root=str(root),
             transport=transport,
             keep_bundles=int(keep_bundles),
+            keep_bundles_declared='keep_bundles' in table,
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
         )

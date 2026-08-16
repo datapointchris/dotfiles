@@ -125,6 +125,8 @@ def create(
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
     no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
 ) -> None:
     """Download every installer this repo needs into one archive.
 
@@ -159,6 +161,7 @@ def create(
     """
     from dotfiles import create_bundle
 
+    verbosity(verbose, quiet)
     chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
     offered = [str(value) for value in axes.Arch]
     chosen_arch = _pointed_at(str(arch) if arch else None, '--arch', offered, "That machine's CPU", no_input=no_input)
@@ -250,7 +253,11 @@ def _status_for(named: str | None, machine: str) -> Path | None:
 
 
 @bundle_app.command('stage')
-def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (default: the newest one found)')) -> None:
+def stage(
+    archive: str = typer.Argument(None, help='Path to a bundle archive (default: the newest one found)'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
     """Unpack a bundle so an install can read it, without installing anything.
 
     Named only where the default is wrong. A bundle's name carries a stamp nobody
@@ -258,6 +265,7 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
     in — the download cache, beside the checkout, and `$HOME`. That is the same
     discovery the bootstrap does, for the same reason.
     """
+    verbosity(verbose, quiet)
     # Filtered to this machine, because a peer's archive downloaded to look at
     # would otherwise sort newest, be picked here, and be refused a line later.
     found = Path(archive) if archive else offline_bundle.newest(machine=offline_bundle.target())
@@ -265,6 +273,12 @@ def stage(archive: str = typer.Argument(None, help='Path to a bundle archive (de
         error(f'no bundle archive in {paths.archive_dir()}, {Path.cwd()} or {Path.home()}, and none named')
         hint('fetch one with: dotfiles bundle download')
         raise typer.Exit(ExitCode.ISSUE)
+
+    # A named path that is not there is the caller's mistake, which is USAGE. It
+    # reached `stage` and came back as ISSUE, so a typo read to a caller as a
+    # machine fault. `upload` above answers the same question the same way.
+    if archive and not found.is_file():
+        raise typer.BadParameter(f'{found} is not a file', param_hint='ARCHIVE')
 
     staged = offline_bundle.stage(found, offline_bundle.target())
 

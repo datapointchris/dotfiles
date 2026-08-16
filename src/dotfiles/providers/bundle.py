@@ -267,32 +267,6 @@ def measured_in(described: tuple[Description, ...], name: str, *categories: str)
     return None
 
 
-def measured(name: str, *categories: str) -> str | None:
-    """The version a sparse bundle measured on this machine and did not carry.
-
-    The other half of what a sparse bundle says. A row in the manifest is a file to
-    install; a key here is a tool the builder resolved upstream, found this machine
-    already had, and deliberately left out — so the version it names is what
-    upstream published, and comparing an installed tool against it answers exactly
-    the question a carried row would have.
-
-    A tool in neither is unmeasurable, and stays unmeasurable. That is the third
-    state `Completeness` exists for: absence with no explanation is a declaration
-    that changed after the status was taken, and calling it current would be a
-    guess.
-
-    Newest bundle first, and the first that mentions it wins — the same order
-    `providers.locate` reads files in, so what a bundle says about a tool and what
-    it holds for one cannot come from different bundles.
-    """
-    return measured_in(descriptions(), name, *categories)
-
-
-def sparse_bundles() -> tuple[Description, ...]:
-    """Every staged bundle that carries less than the whole declaration, newest first."""
-    return tuple(described for described in descriptions() if described.sparse)
-
-
 def published(name: str, *categories: str) -> str | None:
     """What upstream published for a tool, from the newest bundle that answers.
 
