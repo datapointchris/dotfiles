@@ -28,12 +28,81 @@ class TestChecksumAssetSelection:
         names = ['checksums.txt.keyless.sig', 'checksums.txt.pem', 'checksums.txt']
         assert github_release.select_checksum_asset(names, 'tool.zip') == 'checksums.txt'
 
-        for aux in ['checksums.txt.sig', 'checksums.txt.asc', 'checksums.json', 'checksums.txt-bsd']:
+        for aux in ['checksums.txt.sig', 'checksums.json', 'checksums.txt-bsd']:
             assert github_release.select_checksum_asset([aux], 'tool.zip') is None
+
+        # `checksums.txt.asc` is deliberately not in that list. A clearsigned file
+        # carries readable digests and a detached one carries none, and the name
+        # cannot tell them apart — so it is taken only as a last resort, and a
+        # detached one yields nothing rather than a comparison against a
+        # signature. The three cases are asserted separately above.
+
+    def test_a_clearsigned_checksums_file_is_read_when_it_is_the_only_one(self):
+        """syncthing publishes `sha256sum.txt.asc` and no unsigned counterpart.
+
+        The plaintext digests sit inside the clearsign wrapper, so the file is
+        usable — skipping every `.asc` meant syncthing could not verify at all and
+        would have had to declare an exception that was not true.
+        """
+        names = ['syncthing-linux-amd64-v2.1.3.tar.gz', 'sha256sum.txt.asc', 'sha1sum.txt.asc']
+        chosen = github_release.select_checksum_asset(names, 'syncthing-linux-amd64-v2.1.3.tar.gz')
+
+        assert chosen == 'sha256sum.txt.asc'
+
+    def test_an_unsigned_checksums_file_still_wins_over_the_signed_one(self):
+        """A detached `.asc` beside its plaintext is a signature over that file.
+
+        Reading the plaintext is both cheaper and unambiguous, so the wrapper is
+        only ever a fallback for a project that publishes nothing else.
+        """
+        names = ['checksums.txt', 'checksums.txt.asc']
+
+        assert github_release.select_checksum_asset(names, 'tool.zip') == 'checksums.txt'
+
+    def test_a_detached_signature_over_an_asset_is_never_a_checksums_file(self):
+        """`syncthing-source-v2.1.3.tar.gz.asc` signs a tarball rather than listing
+        digests, and its stem is an asset name rather than a checksums name."""
+        names = ['tool.tar.gz', 'tool.tar.gz.asc', 'syncthing-source-v2.1.3.tar.gz.asc']
+
+        assert github_release.select_checksum_asset(names, 'tool.tar.gz') is None
 
     def test_a_release_publishing_nothing_usable_returns_none(self):
         assert github_release.select_checksum_asset(['tool.tar.gz', 'README.md'], 'tool.tar.gz') is None
         assert github_release.select_checksum_asset([], 'tool.tar.gz') is None
+
+
+class TestClearsignedChecksums:
+    """A PGP clearsigned file carries its plaintext between the two markers."""
+
+    CLEARSIGNED = (
+        '-----BEGIN PGP SIGNED MESSAGE-----\n'
+        'Hash: SHA256\n'
+        '\n'
+        'aaaa1111  other-v1.tar.gz\n'
+        'bbbb2222  tool.tar.gz\n'
+        '-----BEGIN PGP SIGNATURE-----\n'
+        'iQIzBAEBCgAdFiEE\n'
+        '-----END PGP SIGNATURE-----\n'
+    )
+
+    def test_the_digest_is_read_through_the_wrapper(self):
+        assert github_release.checksum_for_asset(self.CLEARSIGNED, 'tool.tar.gz') == 'bbbb2222'
+
+    def test_the_signature_block_is_not_mistaken_for_digests(self):
+        """The armoured signature is base64 and would otherwise be scanned as
+        checksum lines, where a bare token on its own line is trusted when nothing
+        else matches."""
+        assert github_release.checksum_for_asset(self.CLEARSIGNED, 'absent.tar.gz') is None
+
+    def test_a_detached_signature_yields_nothing_rather_than_garbage(self):
+        """No SIGNED MESSAGE block means no plaintext, so there is nothing to read
+        and the caller falls through to its unverified path."""
+        detached = '-----BEGIN PGP SIGNATURE-----\niQIzBAEBCgAdFiEE\n-----END PGP SIGNATURE-----\n'
+
+        assert github_release.checksum_for_asset(detached, 'tool.tar.gz') is None
+
+    def test_an_ordinary_file_is_unaffected(self):
+        assert github_release.checksum_for_asset('cccc3333  tool.tar.gz\n', 'tool.tar.gz') == 'cccc3333'
 
 
 class TestChecksumLookup:

@@ -52,6 +52,21 @@ CHECKSUM_AUX_PATTERN = re.compile(r'\.(sig|asc|pem|gpgsig|bundle|json|crt|cert)$
 
 CHECKSUM_SIDECAR_SUFFIXES = ('.sha256', '.sha256sum', '.sha256.txt', '.sha256sum.txt')
 
+CLEARSIGNED_CHECKSUM_PATTERN = re.compile(r'^(sha\d*sums?|checksums?)[\w.-]*\.asc$', re.IGNORECASE)
+"""A checksums file published only as PGP clearsigned text, which is readable.
+
+Anchored on the stem so it matches `sha256sum.txt.asc` and never
+`syncthing-source-v2.1.3.tar.gz.asc` — the first lists digests inside a signed
+wrapper, the second is a detached signature over one tarball. Name alone cannot
+prove which, so this is a last resort after the plain scan, and a file that turns
+out to be detached yields no digest and falls through to the unverified path
+rather than comparing an asset against a signature.
+
+syncthing is why: it publishes `sha256sum.txt.asc` and no unsigned counterpart,
+so skipping every `.asc` meant it could not verify and would have had to declare
+an exception that was false.
+"""
+
 RELEASE_URL_PATTERN = re.compile(r'^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$')
 
 
@@ -112,7 +127,13 @@ def select_checksum_asset(asset_names: list[str], asset_name: str) -> str | None
             continue
         if re.search(r'checksum|sha256sums?$', name, re.IGNORECASE):
             return name
-    return None
+
+    signed = sorted(name for name in asset_names if CLEARSIGNED_CHECKSUM_PATTERN.match(name))
+    # sha256 ahead of sha1 where a project publishes both, which syncthing does.
+    for name in signed:
+        if '256' in name:
+            return name
+    return signed[0] if signed else None
 
 
 def checksum_for_asset(checksums_text: str, asset_name: str, from_sidecar: bool = False) -> str | None:
