@@ -1,0 +1,26 @@
+# abtop — htop for AI coding agents.
+#
+# Trust-scoped rather than common because the install is fleet-only: the two
+# personal workstations name abtop in cargo_packages and the work box does not.
+# Move both together if that changes — a config here for a machine without the
+# binary is an orphan, and a binary without the config falls back to the btop
+# theme.
+#
+# abtop rewrites this file itself: `t` cycles the theme and calls save_theme(),
+# which writes through the symlink into the repo. A theme tried at the keyboard
+# shows up as a dirty working tree here, so either commit it or `git restore`.
+theme = "tokyo-night"
+
+# Not a display filter — MultiCollector::with_hidden never constructs a hidden
+# agent's collector, so this also drops their process scan and JSONL parse.
+# Neither binary is installed on any machine here, and neither is declared in
+# packages.yml. Matched case-insensitively against each collector's agent_cli.
+hidden_agents = ["codex", "opencode"]
+
+show_context = true
+show_quota = true
+show_tokens = true
+show_projects = true
+show_ports = false
+show_sessions = true
+show_mcp = false

@@ -1212,6 +1212,17 @@ cargo_packages:
     reports_version: false
     tags: [cli, gui]
 
+  # No linux_target or darwin_target: abtop publishes exactly the triples
+  # `_default_target` builds — abtop-x86_64-unknown-linux-gnu.tar.xz and
+  # abtop-x86_64-apple-darwin.tar.xz — so an override would restate the default.
+  # The asset carries no version, hence {target} alone in the pattern.
+  - name: abtop
+    command: abtop
+    description: htop for AI coding agents — sessions, tokens, context, quota
+    github_repo: graykode/abtop
+    binary_pattern: "abtop-{target}.tar.xz"
+    tags: [cli, tui, development]
+
 
 # ================================================================
 # WINGET PACKAGES (Windows)
