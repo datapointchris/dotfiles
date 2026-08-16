@@ -76,6 +76,11 @@ def home(tmp_path, monkeypatch) -> Path:
     (root / '.local' / 'bin').mkdir(parents=True)
     monkeypatch.setenv('HOME', str(root))
     monkeypatch.setenv('PATH', str(root / '.local' / 'bin'))
+    # `bin_dir` reads $HOME, but anything resolving an XDG directory prefers the
+    # variable — so a developer whose $XDG_CONFIG_HOME is set has the engine write
+    # into their real config directory from a test. Measured 2026-08-16: a unit
+    # placement test put demo.service in the running user's ~/.config/systemd/user.
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(root / '.config'))
     return root
 
 
@@ -141,6 +146,77 @@ class TestPlacement:
         # Named by its basename, wherever it sat in the archive.
         assert placed.joinpath('other').read_bytes() == b'other'
         assert not placed.joinpath('absent').exists()
+
+    def test_a_declared_unit_is_placed_where_systemd_reads_it(self, home, bundle, tmp_path):
+        """A release that ships its own supervision should not need a copy of it.
+
+        syncthing publishes `etc/linux-systemd/user/syncthing.service` inside the
+        tarball — the same unit its distro packages install. Moving syncthing off
+        pacman and brew to one release everywhere took the packaging with it, and
+        this is what puts the unit back without hand-maintaining a duplicate that
+        drifts from upstream.
+        """
+        archive = tmp_path / 'demo.tar.gz'
+        tarball(archive, {'demo': PAYLOAD, 'etc/linux-systemd/user/demo.service': b'[Unit]\n'})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        result = install_one(asset, entry(), offline=True)
+
+        assert result.ok, result.detail
+        placed = home / '.config' / 'systemd' / 'user' / 'demo.service'
+        assert placed.read_bytes() == b'[Unit]\n'
+
+    def test_a_unit_does_not_land_among_the_binaries(self, home, bundle, tmp_path):
+        """`extras` places into the bin directory, which is wrong for a unit: it
+        would put a systemd file on PATH and leave systemd unable to find it."""
+        archive = tmp_path / 'demo.tar.gz'
+        tarball(archive, {'demo': PAYLOAD, 'etc/linux-systemd/user/demo.service': b'[Unit]\n'})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        install_one(asset, entry(), offline=True)
+
+        assert not (home / '.local' / 'bin' / 'demo.service').exists()
+
+    def test_a_unit_is_not_marked_executable(self, home, bundle, tmp_path):
+        """A binary earns the bit and a config file does not. systemd runs a unit
+        it never executes, so the mode is only ever misleading."""
+        archive = tmp_path / 'demo.tar.gz'
+        tarball(archive, {'demo': PAYLOAD, 'etc/linux-systemd/user/demo.service': b'[Unit]\n'})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        install_one(asset, entry(), offline=True)
+
+        placed = home / '.config' / 'systemd' / 'user' / 'demo.service'
+        assert not placed.stat().st_mode & 0o111
+
+    def test_a_release_declaring_no_unit_writes_nothing_there(self, home, bundle, tmp_path):
+        """Every other release in the catalog declares none, so the directory must
+        not appear on a machine that asked for nothing."""
+        archive = tmp_path / 'demo.tar.gz'
+        tarball(archive, {'demo': PAYLOAD})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
+
+        assert not (home / '.config' / 'systemd' / 'user' / 'demo.service').exists()
+
+    def test_a_declared_unit_the_archive_lacks_fails_rather_than_passing_quietly(self, home, bundle, tmp_path):
+        """Unlike an extra, which upstream adds and removes release by release, a
+        unit is declared because this fleet decided to supervise the tool. Missing,
+        the tool installs and never runs, which is the silent half-install the
+        declaration exists to prevent."""
+        archive = tmp_path / 'demo.tar.gz'
+        tarball(archive, {'demo': PAYLOAD})
+        stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
+
+        asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
+        result = install_one(asset, entry(), offline=True)
+
+        assert not result.ok
+        assert result.kind is Kind.ARCHIVE_INCOMPLETE
 
     def test_a_missing_extra_is_passed_over_rather_than_failing(self, home, bundle, tmp_path):
         """tenv's proxy set has grown release by release, so demanding all of them

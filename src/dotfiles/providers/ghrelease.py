@@ -291,7 +291,20 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
         if not effects.install(beside, placed):
             return Result(False, _unplaceable(Path(extra).name, placed), kind=Kind.WRITE_FAILED)
 
+    if asset.unit:
+        source = unpacked / asset.unit
+        if not source.is_file():
+            return Result(False, f'{asset.name} contains no {asset.unit}', kind=Kind.ARCHIVE_INCOMPLETE)
+        placed = unit_dir() / Path(asset.unit).name
+        if not effects.install(source, placed, executable=False):
+            return Result(False, _unplaceable(Path(asset.unit).name, placed), kind=Kind.WRITE_FAILED)
+
     return Result(True, str(target), kind=Kind.APPLIED)
+
+
+def unit_dir() -> Path:
+    """Where systemd reads a user unit, which is not where binaries go."""
+    return paths.xdg_home('XDG_CONFIG_HOME', '.config') / 'systemd' / 'user'
 
 
 def _unplaceable(executable: str, target: Path) -> str:

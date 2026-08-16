@@ -76,6 +76,23 @@ class ReleaseArtifact:
     path: str = ''
     """Where the binary sits inside the archive, when it is not at the root."""
 
+    unit: str = ''
+    """A systemd user unit inside the archive, placed under $XDG_CONFIG_HOME/systemd/user.
+
+    A release that ships its own supervision should not need a copy of it kept
+    here. syncthing publishes `etc/linux-systemd/user/syncthing.service` — the
+    same unit its distro packages install — and moving it off pacman and brew to
+    one release everywhere took that packaging with it.
+
+    Unlike `extras`, a declared unit that the archive lacks is a failure. An extra
+    is upstream's set, which grows and shrinks release by release; a unit is this
+    fleet deciding the tool is supervised, and silently skipping it installs a
+    daemon that never runs.
+
+    Linux only, and the asset function decides: syncthing's macOS zip carries the
+    same `etc/linux-systemd/` directory, where it means nothing.
+    """
+
     extras: tuple[str, ...] = ()
     """Other binaries in the same archive, placed beside the first under their own names.
 
@@ -261,7 +278,12 @@ def syncthing(tag: str, target: Target) -> ReleaseArtifact:
     stem = f'syncthing-{system}-{arch}-{tag}'
     if target.is_darwin:
         return ReleaseArtifact(f'{stem}.zip', Archive.ZIP, path=f'{stem}/syncthing')
-    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/syncthing')
+    return ReleaseArtifact(
+        f'{stem}.tar.gz',
+        Archive.TARBALL,
+        path=f'{stem}/syncthing',
+        unit=f'{stem}/etc/linux-systemd/user/syncthing.service',
+    )
 
 
 TENV_PROXIES = ('terraform', 'tofu', 'terragrunt', 'terramate', 'atmos', 'tf')

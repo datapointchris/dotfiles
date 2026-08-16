@@ -512,7 +512,7 @@ def make_executable(path: Path) -> None:
 NEW_SUFFIX = '.dotfiles-new'
 
 
-def install(source: Path, target: Path) -> bool:
+def install(source: Path, target: Path, *, executable: bool = True) -> bool:
     """Put a downloaded file at `target`, even when `target` is running.
 
     Through a temporary name in the target's own directory and `os.replace`,
@@ -542,7 +542,12 @@ def install(source: Path, target: Path) -> bool:
     ok = True
     try:
         shutil.copy2(source, beside)
-        beside.chmod(beside.stat().st_mode | 0o111)
+        # A binary earns the bit; a systemd unit is read rather than run, so the
+        # mode would only mislead whoever next lists the directory.
+        if executable:
+            beside.chmod(beside.stat().st_mode | 0o111)
+        else:
+            beside.chmod(beside.stat().st_mode & ~0o111)
         os.replace(beside, target)
     except OSError:
         ok = False
