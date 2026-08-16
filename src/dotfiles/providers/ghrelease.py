@@ -37,6 +37,7 @@ from dotfiles.coordinates import Target
 from dotfiles.output import err_console
 from dotfiles.output import warn
 from dotfiles.providers import Kind
+from dotfiles.providers import Located
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
@@ -97,7 +98,7 @@ def install(entry: catalog.GithubRelease, target: Target, *, offline: bool = Fal
         if not placed.ok:
             return placed
 
-    missing = _companions(entry.name, tag, offline=offline)
+    missing = _companions(entry.name, tag, locate(f'{BUNDLE_BINARIES}/{asset.name}'), offline=offline)
     if missing:
         return Result(False, missing, kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED)
 
@@ -405,7 +406,7 @@ def missing_companions(name: str) -> tuple[str, ...]:
     return tuple(companion.name for companion in COMPANIONS.get(name, ()) if not (bin_dir() / companion.name).exists())
 
 
-def _companions(name: str, tag: str, *, offline: bool) -> str:
+def _companions(name: str, tag: str, staged_asset: Located | None, *, offline: bool) -> str:
     """Fetch the files that ship with a tool without being in its release.
 
     '' when there is nothing to do or it was done. A companion is not optional,
@@ -415,14 +416,22 @@ def _companions(name: str, tag: str, *, offline: bool) -> str:
     and a companion is fetched at that binary's tag so the two are a matched pair.
     Whether one is *missing* is `missing_companions`, and it belongs to the
     observation rather than to this.
+
+    `staged_asset` is the bundle the binary came out of, and the companion is
+    taken from beside it — the same pinning `_verify` does for a checksum, for the
+    same reason. A companion filename carries no version, so an unpinned lookup
+    returns whichever staged bundle is newest: a binary from an older full bundle
+    would take `fzf-tmux` from a newer sparse one, which is the mismatched pair
+    the paragraph above says must not happen. None where the binary came off the
+    network, and the companion follows it there.
     """
     for companion in COMPANIONS.get(name, ()):
         destination = bin_dir() / companion.name
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         url = companion.url(tag)
-        cached = bundle_file(f'{BUNDLE_BINARIES}/{companion.name}')
-        if cached.is_file():
+        cached = staged_asset.beside(f'{BUNDLE_BINARIES}/{companion.name}') if staged_asset else None
+        if cached is not None and cached.is_file():
             shutil.copy2(cached, destination)
         elif offline:
             return f'{companion.name} is not in the offline bundle and cannot be downloaded'

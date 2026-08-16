@@ -807,6 +807,39 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         assert bundle.entries == []
         assert bundle.current == {'binary/lazygit': 'v0.45.0'}
 
+    def test_a_tool_that_owes_companions_is_carried_even_when_the_target_has_it(self, tmp_path, monkeypatch):
+        """`already_current` records `binary/<tool>` alone and the `continue` skips
+        the companion loop, so omitting the tool drops its companions and records
+        nothing about them.
+
+        `missing_companions` exists because a companion can go missing while the
+        binary is current, and it runs on the target after the status was taken.
+        On the machine that cannot fetch anything that is a dead end — the binary
+        is not in the bundle either, so there is nothing to reinstall from.
+        """
+        entry = catalog.GithubRelease.from_mapping({'name': 'fzf', 'repo': 'junegunn/fzf'})
+        bundle = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'box', BUILT_AT)
+        status_path = tmp_path / 'status.json'
+        status_path.write_text(
+            json.dumps(
+                {
+                    'version': status.VERSION,
+                    'machine': 'box',
+                    'scope': ['packages'],
+                    'resources': [{'address': 'packages', 'examined': [{'item': 'ghrelease/fzf', 'detail': '0.55.0'}]}],
+                }
+            )
+        )
+        bundle.plan_against(status_path, json.loads(status_path.read_text()))
+        monkeypatch.setattr(create_bundle.ghrelease, 'resolve_tag', lambda entry, **kwargs: 'v0.55.0')
+        monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
+        monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', lambda _cache, _asset, destination, _label: destination.write_bytes(b'x'))
+
+        create_bundle.add_github_releases(bundle, create_bundle.DownloadCache(enabled=False), (planned(entry, 'github_releases'),))
+
+        assert [row.split('|')[1] for row in bundle.entries] == ['fzf', 'fzf-tmux']
+        assert bundle.current == {}, 'a carried tool is never also recorded as measured'
+
     def test_a_tool_the_target_is_behind_on_is_still_staged(self, tmp_path, monkeypatch):
         """Paired with every case above, which a loop that staged nothing at all
         would satisfy."""

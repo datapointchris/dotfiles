@@ -807,7 +807,18 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
             raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
         version = tag.removeprefix(entry.release_tag_prefix)
 
-        if bundle.already_current('ghrelease', 'binary', tool, version):
+        # A tool that owes companions is carried whatever the target reported.
+        # `already_current` records only `binary/<tool>` in `current`, and the
+        # `continue` skips the companion loop below — so a sparse bundle drops
+        # both the binary and its companions and says nothing about either.
+        # `missing_companions` exists because a companion can go missing while the
+        # binary is current, and it runs on the target after the status was taken.
+        # Hit that on the one machine that cannot fetch anything and there is no
+        # recovery: the binary is not in the bundle either.
+        #
+        # The `not COMPANIONS` test short-circuits first, deliberately, because
+        # `already_current` mutates `current` as it answers.
+        if not releases.COMPANIONS.get(tool) and bundle.already_current('ghrelease', 'binary', tool, version):
             log.info('  %s (%s) is what the target already has', tool, version)
             continue
 
