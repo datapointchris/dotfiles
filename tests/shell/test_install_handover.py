@@ -229,3 +229,69 @@ def test_the_bootstrap_refuses_when_nothing_is_staged_and_nothing_can_be(tmp_pat
     assert ran.returncode == 1
     assert 'no bundle' in ran.stderr
     assert not argv_log.exists(), 'uv was never reached'
+
+
+def test_a_second_top_level_member_does_not_kill_a_correct_stage(tmp_path: Path) -> None:
+    """An AppleDouble sidecar from a tarball repacked on macOS is the real case.
+    Under `set -eu` a leftover in the scratch directory used to abort the run
+    after the bundle had already been staged, with `rmdir: failed to remove` as
+    the whole diagnosis."""
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    bootstrap_bundle(tmp_path, name)
+    stray = tmp_path / '._sidecar'
+    stray.write_text('resource fork')
+    with tarfile.open(tmp_path / f'{name}.tar.gz', 'w:gz') as packed:
+        packed.add(tmp_path / f'{name}-contents' / ARCHIVE_MEMBER, arcname=ARCHIVE_MEMBER)
+        packed.add(stray, arcname='._sidecar')
+
+    ran, staging, _ = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 0, ran.stderr
+    assert (staging / name / 'manifest.txt').is_file()
+
+
+def test_an_archive_carrying_no_manifest_is_refused_by_name_not_by_member(tmp_path: Path) -> None:
+    """The member is found by its manifest, the way `offline_bundle.stage` finds
+    it. Naming it made this the only reader in the fleet that cared what the
+    producer called the directory."""
+    contents = tmp_path / 'contents' / 'something-else'
+    contents.mkdir(parents=True)
+    (contents / 'notes.txt').write_text('not a bundle')
+    with tarfile.open(tmp_path / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz', 'w:gz') as packed:
+        packed.add(contents, arcname='something-else')
+
+    ran, _, argv_log = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 1
+    assert 'no manifest.txt' in ran.stderr
+    assert not argv_log.exists(), 'uv was never reached'
+
+
+def test_a_bundle_built_for_another_machine_is_refused_before_the_move(tmp_path: Path) -> None:
+    """After the bootstrap something is always staged, so `reconcile._stage_bundle`
+    never validates again on this machine. This is the path where the guard has to
+    be, and `bundle download --machine X` writes a peer's archive into the same
+    cache the bootstrap searches."""
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    bootstrap_bundle(tmp_path, name)
+    described = tmp_path / f'{name}-contents' / ARCHIVE_MEMBER / 'bundle.json'
+    described.write_text('{"machine": "macos-personal-workstation", "completeness": "full"}\n')
+    with tarfile.open(tmp_path / f'{name}.tar.gz', 'w:gz') as packed:
+        packed.add(tmp_path / f'{name}-contents' / ARCHIVE_MEMBER, arcname=ARCHIVE_MEMBER)
+
+    ran, staging, _ = run_bootstrap(tmp_path)
+
+    assert ran.returncode == 1
+    assert 'was built for macos-personal-workstation' in ran.stderr
+    assert not (staging / name).exists(), 'a refused bundle leaves nothing behind'
+
+
+def test_a_bundle_naming_no_machine_still_stages(tmp_path: Path) -> None:
+    """Silence is not evidence of a mismatch, and refusing on it would make every
+    archive built before `bundle.json` unusable — on the machine that most needs
+    to unpack one."""
+    name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    ran, staging, _ = run_bootstrap(tmp_path, name)
+
+    assert ran.returncode == 0, ran.stderr
+    assert (staging / name / 'manifest.txt').is_file()

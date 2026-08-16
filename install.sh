@@ -136,8 +136,12 @@ if [ -n "$OFFLINE" ]; then
     stem=$(bundle_stem "$archive")
     echo "staging $archive"
     # Into a scratch directory and moved, because the archive's single member is
-    # named `installers` whatever the tarball is called — extracting in place
+    # named for the producer whatever the tarball is called — extracting in place
     # would land every bundle on one directory of that name.
+    #
+    # The member is found by its manifest rather than by its name, which is the
+    # rule `offline_bundle.stage` uses. Naming it here made this the only reader
+    # in the fleet that cared what the producer called it.
     #
     # The destination is removed after the extract succeeds, not before, so this
     # fails in the same order `offline_bundle.stage` does. Removing first means a
@@ -146,9 +150,33 @@ if [ -n "$OFFLINE" ]; then
     rm -rf "$STAGING/.unpacking"
     mkdir -p "$STAGING/.unpacking"
     tar -xzf "$archive" -C "$STAGING/.unpacking"
+
+    member=""
+    for candidate in "$STAGING"/.unpacking/*/; do
+      [ -d "$candidate" ] || continue
+      [ -z "$member" ] || die "$archive carries more than one directory, so it is not a dotfiles bundle"
+      member="${candidate%/}"
+    done
+    if [ -z "$member" ] || [ ! -f "$member/manifest.txt" ]; then
+      die "$archive carries no manifest.txt, so it is not a dotfiles bundle"
+    fi
+
+    # The same refusal `offline_bundle.stage` makes, and this is the path that
+    # needs it most: after the bootstrap something is always staged, so the CLI's
+    # own check never runs again on this machine. A bundle naming no machine
+    # stages, which is the rebuild state and the one that most needs to unpack.
+    built_for=$(sed -n 's/.*"machine"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$member/bundle.json" 2>/dev/null | head -n 1)
+    if [ -n "$built_for" ] && [ "$built_for" != "$MACHINE" ]; then
+      rm -rf "$STAGING/.unpacking"
+      die "$archive was built for $built_for and this machine is $MACHINE"
+    fi
+
     rm -rf "$STAGING/${stem:?}"
-    mv "$STAGING/.unpacking/installers" "$STAGING/$stem"
-    rmdir "$STAGING/.unpacking"
+    mv "$member" "$STAGING/$stem"
+    # `rm -rf`, not `rmdir`: the member is discovered rather than named, so the
+    # scratch directory legitimately holds whatever else the archive carried, and
+    # under `set -eu` a non-empty one would kill the run after a correct stage.
+    rm -rf "$STAGING/.unpacking"
   fi
   BUNDLE=$(staged_bundle)
   [ -n "$BUNDLE" ] || die "offline: no bundle in ${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/bundles, ./ or ~/, and nothing staged under $STAGING
