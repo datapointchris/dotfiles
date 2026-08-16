@@ -82,8 +82,22 @@ required:
     file_must_exist: true
     consumers:
       - ~/homelab/pyinfra/inventory.py
+      - ~/homelab/pyinfra/deploys/ssh_trust.py
       - ~/homelab/scripts/lib/inventory.sh
       - ~/homelab/scripts/vaultwarden-upgrade.sh
+
+  # The roster beside the inventory above, on the same two axes and for the same
+  # reason. It carries each workstation's public key, which is what lets the
+  # homelab authorize a fleet machine from one declaration rather than from a
+  # copy that goes stale the day a machine is rebuilt.
+  - name: MACHINES_JSON
+    description: Absolute path to this machine's fleet machine roster
+    network_trust: fleet
+    capacity: workstation
+    file_must_exist: true
+    consumers:
+      - ~/homelab/pyinfra/deploys/ssh_trust.py
+      - ~/homelab/scripts/lib/machines.sh
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
