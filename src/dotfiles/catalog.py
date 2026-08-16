@@ -796,6 +796,10 @@ class GroupMembership(SystemConfig):
     """Whether to create the group when the package that owns it did not."""
 
 
+SCOPES = ('system', 'user')
+"""Which systemd manager owns a unit. There is no third."""
+
+
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class SystemdUnit(SystemConfig):
     """A unit's enablement, and optionally that it is running. `name` is the unit."""
@@ -807,6 +811,24 @@ class SystemdUnit(SystemConfig):
     """An *additional* requirement to start it, and only meaningful beside
     `enabled: true` — disabling a unit has never stopped one, and asserting that
     it also stopped would report drift on the machine that just disabled it."""
+
+    scope: str = 'system'
+    """Which manager reads and writes this unit.
+
+    `user` puts `--user` in every invocation, which is the only way a unit under
+    `~/.config/systemd/user/` can be reached at all. Not a narrowing key: it does
+    not decide whether a row applies to a machine, only how that machine is asked.
+    """
+
+    def problems(self) -> tuple[str, ...]:
+        # `SystemConfig.problems(self)` rather than `super()`, for the reason
+        # ManagedFile.problems spells out.
+        wrong = []
+        if self.scope not in SCOPES:
+            wrong.append(f'declares scope {self.scope!r}; a unit is owned by the {" or ".join(SCOPES)} manager')
+        if self.scope == 'user' and self.needs_root:
+            wrong.append("declares scope user with needs_root; `sudo systemctl --user` reaches root's manager, not this account's")
+        return (*wrong, *SystemConfig.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

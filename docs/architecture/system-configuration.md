@@ -143,7 +143,7 @@ install path calls it: WSL borrows the engine from Docker Desktop, and
 for a machine that cannot have Docker Desktop. Making it a resource would make it
 something the installer runs, which is the opposite of what that page says.
 
-## Every read is unprivileged, every write is not
+## Every read is unprivileged, and almost every write is not
 
 This is the property the whole subsystem is built around, and it is a constraint
 the providers satisfy rather than a happy accident:
@@ -155,6 +155,15 @@ the providers satisfy rather than a happy accident:
 | `tee` a file under `/etc` | read it — these are all mode 0644 |
 | `chsh` | the passwd entry's shell field |
 | `defaults write` | `defaults export` — and it needs no privilege either way |
+
+`scope: user` is the exception on the systemd row, and it is the first one there.
+A user unit is enabled through `systemctl --user` against the calling account, so
+its *write* needs no root either — `needs_root: false` is what the row says so
+with, and sudo would be actively wrong, reaching root's manager instead of this
+account's. Its read has a failure mode the system one does not: `--user` goes
+over the session bus, and a shell without one cannot reach the manager at all.
+That is reported UNKNOWN rather than as drift, because an unreachable manager is
+not a machine that has drifted.
 
 So `check` never escalates, which is what lets it run at a prompt, unattended on
 a timer, and inside a container with no passwordless sudo. A row that

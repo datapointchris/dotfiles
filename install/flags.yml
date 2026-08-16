@@ -144,6 +144,28 @@ required_files:
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig
 
+  # The ntfy subscriber's token, which is why client.yml can be a repo variant at
+  # all — the unit passes it as $NTFY_TOKEN and ntfy binds that to --token, so the
+  # committed config carries no credential.
+  #
+  # Narrowed on the display stack to match the two files it serves, which sit in
+  # `configs/display/wayland/`. Trust would be the obvious axis and is wrong here:
+  # the thing that decides whether a machine subscribes is whether it has a
+  # desktop to raise a notification on, and `requires_package` cannot express it
+  # because that resolves against `system_packages` only and ntfy is a
+  # `github_releases` entry.
+  #
+  # A per-machine token rather than the shared read token, so revocation is one
+  # machine rather than all of them.
+  - name: ntfy token.env
+    path: ~/.config/ntfy/token.env
+    description: The read token this machine's ntfy subscriber authenticates with
+    restore: "restore it with safekeep, or mint a new one with `ntfy token add --label <host> chris` and write it as a single NTFY_TOKEN=<token> line at mode 600"
+    display_stack: wayland
+    file_must_exist: true
+    consumers:
+      - configs/display/wayland/.config/systemd/user/ntfy-client.service
+
   # Off the fleet only, which is the axis that actually decides it. safekeep is
   # how a machine outside Syncthing gets the files above back; on the fleet the
   # sync is the transport and Proxmox holds the backups, so a fleet machine with

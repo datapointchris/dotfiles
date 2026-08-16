@@ -238,6 +238,129 @@ def test_enabling_a_unit_passes_the_verb_the_entry_asks_for(fake_bin: Path, tmp_
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# systemd units — user scope
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def user_unit(**fields: object) -> catalog.SystemdUnit:
+    return catalog.SystemdUnit.from_mapping({'name': 'ntfy-client.service', 'scope': 'user', 'needs_root': False, **fields})
+
+
+def test_a_user_unit_is_asked_of_the_user_manager(fake_bin: Path, tmp_path: Path) -> None:
+    """The two managers are blind to each other, so the wrong one answers about a
+    unit it has never heard of."""
+    log = tmp_path / 'systemctl-calls'
+    executable(fake_bin, 'systemctl', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\necho enabled\nexit 0\n')
+
+    sysconfig.observe(user_unit(enabled=True))
+
+    assert log.read_text().splitlines()[0].startswith('--user is-enabled')
+
+
+def test_a_system_unit_is_not_asked_of_the_user_manager(fake_bin: Path, tmp_path: Path) -> None:
+    log = tmp_path / 'systemctl-calls'
+    executable(fake_bin, 'systemctl', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\necho enabled\nexit 0\n')
+
+    sysconfig.observe(unit(enabled=True))
+
+    assert '--user' not in log.read_text()
+
+
+def test_an_unreachable_user_bus_is_unknown_rather_than_drift(fake_bin: Path) -> None:
+    """`systemctl --user` goes over the session bus, and with no bus it exits 1
+    with the error on stderr — the same exit code a disabled unit gives. A shell
+    without a bus is the live case: non-interactive SSH, which the fleet has to
+    every workstation. Reporting drift there would be a repair `apply` runs
+    against a manager it cannot reach.
+
+    Measured 2026-08-16: a manager that answered always writes a word to stdout.
+    A bus failure leaves it empty, and that is the only thing separating them.
+    """
+    executable(fake_bin, 'systemctl', '#!/bin/sh\necho "Failed to connect to user scope bus" >&2\nexit 1\n')
+
+    state = sysconfig.observe(user_unit(enabled=True))
+
+    assert state.verdict is Verdict.UNKNOWN
+    assert state.repair is Repair.NONE
+
+
+def test_a_user_unit_the_manager_calls_disabled_is_still_drift(fake_bin: Path) -> None:
+    """The guard above must not swallow a real answer. `disabled` exits 1 too."""
+    executable(fake_bin, 'systemctl', '#!/bin/sh\necho disabled\nexit 1\n')
+
+    assert sysconfig.observe(user_unit(enabled=True)).verdict is Verdict.STALE
+
+
+def test_a_unit_file_newer_than_the_manager_has_loaded_is_stale(fake_bin: Path) -> None:
+    """This repo deploys the unit file at Stage.SYMLINKS and enables it at
+    Stage.SYSTEM_CONFIG. Nothing in between tells the manager to re-read it, so
+    without this the file changes, the row reports MATCHED, and the machine goes
+    on running the definition it read at boot."""
+    executable(
+        fake_bin, 'systemctl', '#!/bin/sh\n[ "$1" = "--user" ] && shift\ncase "$1" in show) echo yes ;; *) echo enabled ;; esac\nexit 0\n'
+    )
+
+    state = sysconfig.observe(user_unit(enabled=True))
+
+    assert state.verdict is Verdict.STALE
+    assert 'newer than the manager has loaded' in state.detail
+
+
+def test_a_reload_is_issued_before_the_unit_is_enabled(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """Order matters: enabling against a definition the manager has not read is
+    what leaves a service running the old one."""
+    log = tmp_path / 'systemctl-calls'
+    script = (
+        '#!/bin/sh\n'
+        f'printf "%s\\n" "$*" >> {log}\n'
+        '[ "$1" = "--user" ] && shift\n'
+        'case "$1" in show) echo yes ;; *) echo enabled ;; esac\n'
+        'exit 0\n'
+    )
+    executable(fake_bin, 'systemctl', script)
+
+    assert sysconfig.apply(user_unit(enabled=True), granted).ok
+
+    issued = [line for line in log.read_text().splitlines() if 'show' not in line]
+    assert issued[0] == '--user daemon-reload'
+    assert issued[1] == '--user enable ntfy-client.service'
+
+
+def test_a_failed_reload_stops_the_apply_rather_than_enabling_anyway(fake_bin: Path, granted: Privilege) -> None:
+    """Every other write here checks its result. Enabling after a failed reload
+    reports APPLIED over a machine still running the old definition."""
+    script = (
+        '#!/bin/sh\n'
+        '[ "$1" = "--user" ] && shift\n'
+        'case "$1" in\n'
+        '  show) echo yes; exit 0 ;;\n'
+        '  daemon-reload) exit 1 ;;\n'
+        '  *) echo enabled; exit 0 ;;\n'
+        'esac\n'
+    )
+    executable(fake_bin, 'systemctl', script)
+
+    result = sysconfig.apply(user_unit(enabled=True), granted)
+
+    assert not result.ok
+    assert 'daemon-reload' in result.detail
+
+
+def test_a_user_unit_declaring_needs_root_is_refused(fake_bin: Path) -> None:
+    """`sudo systemctl --user` reaches root's manager, not this account's — a
+    wrong answer with no error, which is why it fails at load instead."""
+    entry = catalog.SystemdUnit.from_mapping({'name': 'ntfy-client.service', 'scope': 'user', 'needs_root': True})
+
+    assert any('needs_root' in problem for problem in entry.problems())
+
+
+def test_a_scope_that_is_not_a_manager_is_refused() -> None:
+    entry = catalog.SystemdUnit.from_mapping({'name': 'ntfy-client.service', 'scope': 'sytem'})
+
+    assert any('is owned by the system or user manager' in problem for problem in entry.problems())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Group membership
 # ─────────────────────────────────────────────────────────────────────────────
 

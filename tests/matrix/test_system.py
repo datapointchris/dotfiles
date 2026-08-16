@@ -800,8 +800,9 @@ def test_a_row_declaring_it_needs_no_root_is_planned_as_needing_none(sandbox: Sa
     """Current behaviour on the read side, and it is the honest half.
 
     `needs_root` is a field on `SystemConfig`, so any of the four kinds may carry
-    it; only the `steps` rows declare it today, which is why the mismatch below
-    is latent rather than live.
+    it. The `steps` rows and the one `scope: user` systemd unit declare it today,
+    and the mismatch below is still latent because neither is the kind this case
+    arranges.
     """
     a_file_declaring_it_needs_no_root(sandbox)
 

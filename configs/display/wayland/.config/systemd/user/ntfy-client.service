@@ -1,0 +1,16 @@
+[Unit]
+Description=ntfy desktop notification subscriber
+After=graphical-session.target
+
+[Service]
+# The leading dash tolerates the file being absent. It is restored by safekeep
+# rather than deployed, so it is legitimately missing between `dotfiles apply`
+# and the restore — and `required_files` already reports that gap, so the unit
+# does not need to be the detector as well.
+EnvironmentFile=-%h/.config/ntfy/token.env
+ExecStart=%h/.local/bin/ntfy subscribe --config %h/.config/ntfy/client.yml --from-config
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -2,8 +2,13 @@
 
 Every observation is unprivileged, which is the whole reason this subsystem can be
 *checked* at all. The reads are `getent group docker`, `systemctl is-enabled`,
-`grep -q autologin` — none needs root. Interleaving them with the writes would
-mean a password just to see the plan.
+`systemctl --user is-enabled`, `grep -q autologin` — none needs root. Interleaving
+them with the writes would mean a password just to see the plan.
+
+The `--user` read is the one that can fail to happen at all rather than answer.
+It goes over the session bus, so a shell without one — non-interactive SSH is the
+live case — cannot reach the manager, and that is reported UNKNOWN rather than as
+drift.
 
 Nothing here says `sudo`. A privileged write takes an authorized `Privilege` and
 refuses without one, so a machine with no root still converges everything else and
@@ -221,36 +226,94 @@ def _apply_group(entry: catalog.GroupMembership, escalation: Escalation) -> Resu
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _systemctl(entry: catalog.SystemdUnit) -> list[str]:
+    """The manager that owns this row. Each is blind to the other's units."""
+    return ['systemctl', '--user'] if entry.scope == 'user' else ['systemctl']
+
+
+def _manager_answered(reading: Completed) -> bool:
+    """Whether the reply came from a manager rather than from a failure to reach one.
+
+    `systemctl --user` talks over the session bus, and with no bus it exits 1 with
+    `Failed to connect to user scope bus` on stderr — indistinguishable by exit
+    code from a unit that is simply disabled. A manager that answered always puts
+    a word on stdout: `enabled`, `disabled`, `static`, `not-found`. A bus failure
+    leaves stdout empty, which is the discriminator.
+
+    Measured 2026-08-16: a directory check cannot do this. `/run/user/<uid>/systemd`
+    exists on this box while `env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS
+    systemctl --user is-enabled` still fails — reachability belongs to the calling
+    process's environment, not to a path. Non-interactive SSH is the live case.
+    """
+    return bool(reading.stdout.strip())
+
+
 def _observe_unit(entry: catalog.SystemdUnit) -> State:
     if shutil.which('systemctl') is None:
         return State(Verdict.UNKNOWN, 'no systemctl on this machine', repair=Repair.NONE)
 
-    enabled = run(['systemctl', 'is-enabled', entry.name], output=Output.QUIET).ok
-    if enabled is not entry.enabled:
+    reading = run([*_systemctl(entry), 'is-enabled', entry.name], output=Output.QUIET)
+    if entry.scope == 'user' and not _manager_answered(reading):
+        return State(Verdict.UNKNOWN, f"no user manager answered, so {entry.name}'s enablement is unmeasurable", repair=Repair.NONE)
+
+    if reading.ok is not entry.enabled:
         wanted = 'enabled' if entry.enabled else 'disabled'
         return State(Verdict.STALE, f'{entry.name} should be {wanted}')
+
+    # A unit file this repo deploys changes at Stage.SYMLINKS, and the manager
+    # goes on running the copy it read at boot until something reloads it. Ask
+    # systemd rather than diffing the file: it already tracks whether what is on
+    # disk is newer than what is loaded, and a deployed symlink's content always
+    # matches the repo by construction, so a diff would answer the wrong question.
+    if _needs_reload(entry):
+        return State(Verdict.STALE, f'{entry.name} on disk is newer than the manager has loaded')
 
     if not (entry.enabled and entry.active):
         return State(Verdict.MATCHED)
     if not SYSTEMD_RUNTIME.is_dir():
         return State(Verdict.MATCHED, f'{entry.name} is enabled; whether it is running is unmeasurable without a running systemd')
-    if run(['systemctl', 'is-active', entry.name], output=Output.QUIET).ok:
+    if run([*_systemctl(entry), 'is-active', entry.name], output=Output.QUIET).ok:
         return State(Verdict.MATCHED)
     return State(Verdict.STALE, f'{entry.name} is enabled but not running')
 
 
+def _needs_reload(entry: catalog.SystemdUnit) -> bool:
+    """Whether the manager is still running an older copy of this unit's file.
+
+    Only asked of user scope, because that is the only scope whose unit *file*
+    this repo deploys. The system units here are the OS's own — this repo enables
+    `docker.socket` and disables `gdm` and writes neither — so there is no edit of
+    ours for the system manager to have missed.
+    """
+    if entry.scope != 'user' or not entry.enabled:
+        return False
+    reading = run([*_systemctl(entry), 'show', '-p', 'NeedDaemonReload', '--value', entry.name], output=Output.QUIET)
+    return reading.stdout.strip() == 'yes'
+
+
 def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
+    # Through the escalation like every other write here, rather than reading
+    # first and deciding: a read issued before the privilege gate runs on a
+    # machine that has already refused the repair.
+    if entry.scope == 'user':
+        reloaded = escalation.run([*_systemctl(entry), 'daemon-reload'], reason=f'reload the manager before enabling {entry.name}')
+        if not reloaded.ok:
+            return Result(False, f'systemctl daemon-reload failed: {reloaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+
     verb = 'enable' if entry.enabled else 'disable'
-    changed = escalation.run(['systemctl', verb, entry.name], reason=f'{verb} {entry.name}')
+    changed = escalation.run([*_systemctl(entry), verb, entry.name], reason=f'{verb} {entry.name}')
     if not changed.ok:
         return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     if not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
         return Result(True, f'{entry.name} {verb}d', kind=Kind.APPLIED)
 
-    started = escalation.run(['systemctl', 'start', entry.name], reason=f'start {entry.name}')
+    # `restart` rather than `start`: a reload replaces the definition without
+    # touching the running process, so a unit that was already up would keep the
+    # old one and `start` on a running unit does nothing.
+    started = escalation.run([*_systemctl(entry), 'restart', entry.name], reason=f'restart {entry.name}')
     if not started.ok:
-        return Result(False, f'systemctl start {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+        return Result(False, f'systemctl restart {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     return Result(True, f'{entry.name} enabled and started', kind=Kind.APPLIED)
 
 

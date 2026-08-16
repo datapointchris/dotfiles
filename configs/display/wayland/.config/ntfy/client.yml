@@ -1,0 +1,19 @@
+# ntfy desktop client. The token is not here: the unit passes it as $NTFY_TOKEN
+# from an EnvironmentFile, which ntfy binds to --token, so this file carries no
+# credential and can live in a public repo.
+#
+# Under `display/wayland` rather than an os or trust directory because the
+# commands below are the display stack — notify-send reaches dunst over the
+# session D-Bus, and a machine at `display_stack: none` has nothing to show a
+# notification on.
+default-host: https://ntfy.ichrisbirch.com
+
+# Each message runs `command` in sh with $NTFY_TITLE/$NTFY_MESSAGE/etc. set.
+# The mkdir is not redundant: on a rebuilt machine ~/.local/state/ntfy does not
+# exist yet, and the append fails silently, leaving notifications working and the
+# alert history empty.
+subscribe:
+  - topic: homelab-alerts
+    command: 'mkdir -p "$HOME/.local/state/ntfy"; printf "%s  [%s] %s\n" "$(date +%H:%M:%S)" "$NTFY_TITLE" "$NTFY_MESSAGE" >> $HOME/.local/state/ntfy/notify.log; /usr/bin/notify-send "$NTFY_TITLE" "$NTFY_MESSAGE"'
+  - topic: ci-failures
+    command: 'mkdir -p "$HOME/.local/state/ntfy"; printf "%s  [%s] %s\n" "$(date +%H:%M:%S)" "$NTFY_TITLE" "$NTFY_MESSAGE" >> $HOME/.local/state/ntfy/notify.log; /usr/bin/notify-send -u critical "$NTFY_TITLE" "$NTFY_MESSAGE"'

@@ -11,10 +11,11 @@
 # shape of the question — declared, observed, repaired — which is why these are
 # catalog rows and not a second mechanism.
 #
-# Every observation here is unprivileged and every repair needs root. That is
-# what makes `dotfiles check` able to report this subsystem from a plain shell,
-# and it is why the writes go through one authorization in
-# `src/dotfiles/privilege.py` instead of a `sudo` per script.
+# Every observation here is unprivileged, which is what makes `dotfiles check`
+# able to report this subsystem from a plain shell. Almost every repair needs
+# root, and the ones that do go through one authorization in
+# `src/dotfiles/privilege.py` instead of a `sudo` per script. `needs_root: false`
+# is how a row says it is one of the exceptions.
 #
 # Narrowing is per entry, and an entry carries only the key that decides it:
 #   requires_package   a system package this machine's manifest installs
@@ -22,6 +23,11 @@
 #   <axis>             any coordinate SystemConfig carries a field for, today
 #                      os_family, host and display_stack — plus machine and platform
 # An entry with none of them applies to every machine.
+#
+# `scope: user` on a systemd unit narrows nothing. It says which manager reads
+# and writes the row — `systemctl --user`, against the calling account rather
+# than the system — and pairs with `needs_root: false`, because sudo would reach
+# root's manager instead of this account's.
 
 group_memberships:
   - name: docker
@@ -40,6 +46,19 @@ systemd_units:
     description: TTY auto-login into Hyprland replaces the display manager
     display_stack: wayland
     enabled: false
+
+  # The first user unit this repo declares, and the first row here whose write
+  # needs no root. `display_stack: wayland` matches the one directory that
+  # deploys the unit file; `requires_package: ntfy` cannot be used, because that
+  # resolves against `system_packages` and ntfy is a `github_releases` entry, so
+  # the row would apply to no machine at all.
+  - name: ntfy-client.service
+    description: Desktop notification subscriber for homelab alerts
+    display_stack: wayland
+    scope: user
+    needs_root: false
+    enabled: true
+    active: true
 
 managed_files:
   - name: tty1-autologin
