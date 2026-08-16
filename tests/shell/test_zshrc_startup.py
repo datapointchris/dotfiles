@@ -70,6 +70,15 @@ def deployed_home(root: Path) -> Path:
     setting `ZDOTDIR` in the environment does not reach zsh — the system file
     runs first and overwrites it. The config has to sit at the path that file
     names, which is why this builds a home rather than pointing at the repo.
+
+    A host without that system file is the other half, and it is silent. zsh
+    then reads `$HOME/.zshenv` and `$HOME/.zshrc`, finds neither, and starts a
+    shell that sourced no config at all — on which every assertion about an
+    absence passes and only an assertion about a *presence* fails. The home
+    `.zshenv` written below stands in for the system file, so the same two files
+    run either way. Measured 2026-08-16: a GitHub runner ships no such
+    `/etc/zsh/zshenv`, and `br` was reported missing from a `.zshrc` that had
+    never been read.
     """
     home = root / 'home'
     shell_dir = home / '.local' / 'shell'
@@ -79,6 +88,7 @@ def deployed_home(root: Path) -> Path:
     shutil.copytree(ZSH_CONFIG, home / '.config' / 'zsh')
     for source in SHELL_LIBRARIES:
         shutil.copytree(source, shell_dir, dirs_exist_ok=True)
+    (home / '.zshenv').write_text('export ZDOTDIR="$HOME/.config/zsh"\nsource "$ZDOTDIR/.zshenv"\n')
 
     plugin = home / '.config' / 'zsh' / 'plugins' / 'git-open'
     plugin.mkdir(parents=True)
@@ -145,6 +155,21 @@ def test_the_tools_that_are_absent_are_the_ones_this_asserts_about(tmp_path: Pat
     result = start(home, snippet='command -v broot >/dev/null && echo present || echo absent')
 
     assert result.stdout.strip().endswith('absent')
+
+
+def test_the_fixture_home_is_one_zsh_actually_reads(tmp_path: Path) -> None:
+    """Every other test here is vacuous on a shell that sourced nothing.
+
+    An assertion about an absent tool, and an assertion that stderr carried no
+    error, both hold perfectly for a `.zshrc` zsh never opened — so the fixture's
+    own failure looks exactly like the config behaving. `flag_enabled` is defined
+    by a library `.zshrc` sources, which no bare shell has.
+    """
+    home = deployed_home(tmp_path)
+
+    result = start(home, snippet='typeset -f flag_enabled >/dev/null && echo sourced || echo bare')
+
+    assert result.stdout.strip().endswith('sourced')
 
 
 def test_the_integration_is_wired_when_the_tool_is_there(tmp_path: Path) -> None:
