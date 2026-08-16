@@ -192,18 +192,24 @@ def show(
     """
     verbosity(verbose, quiet)
     found = composed(machine)
+    # Measured once and read by both doors, so the exit code and the rows cannot
+    # disagree. A document carrying the hostname rendered a red issue row and
+    # still exited CONVERGED, so `status show && status upload` walked straight
+    # into the refusal the first command had already found. `remote check` derives
+    # its verdict from its faults the same way.
+    problems = publishing.redacted(found.document, publishing.identifying())
 
     if as_json:
         emit_json(found.document)
-        raise typer.Exit(ExitCode.CONVERGED)
+        raise typer.Exit(ExitCode.ISSUE if problems else ExitCode.CONVERGED)
 
-    word = str(found.document['verdict'])
+    word = 'issue' if problems else str(found.document['verdict'])
     console.print(section_line(VERDICT_MARKS[word], 'status', f'{found.machine} — {found.scope}', VERDICT_COLOURS[word]))
     for result in found.results:
         render_row(str(result.verdict), result.address, result.detail)
-    for problem in publishing.redacted(found.document, publishing.identifying()):
+    for problem in problems:
         render_row('issue', 'unpublishable', problem, VERDICT_COLOURS['issue'])
-    raise typer.Exit(ExitCode.CONVERGED)
+    raise typer.Exit(ExitCode.ISSUE if problems else ExitCode.CONVERGED)
 
 
 @app.command('upload')

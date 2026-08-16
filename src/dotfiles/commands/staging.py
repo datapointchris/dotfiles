@@ -378,7 +378,15 @@ def _elapsed(since: dt.timedelta) -> str:
     Rounded, and deliberately: the question is whether a bundle is fresh, and
     `3 days` answers it where `3 days, 4:07:19.284` makes a reader do arithmetic
     to reach the same conclusion.
+
+    Clamped at zero first. `timedelta` normalises a negative by borrowing, so five
+    minutes in the future is `days=-1, seconds=86100` and reads as 23 hours ago.
+    The builder stamps the name and the offline box renders this, so a few minutes
+    of skew between two machines is ordinary — and freshness is the whole content
+    of the `bundle download` confirmation, misreported in the direction that
+    argues against downloading.
     """
+    since = max(since, dt.timedelta(0))
     if since.days >= 1:
         return f'{since.days} day(s)'
     hours = since.seconds // 3600
@@ -611,7 +619,10 @@ def prune(
     # `is not None`, because 0 is a number somebody types meaning it. As a
     # sentinel for "read the config" it was honoured as five, which is the one
     # answer the caller did not ask for.
-    retained = keep if keep is not None else _configured_keep()
+    # Clamped here rather than at each sweep, so the number reported is the number
+    # applied. Both sweeps floored at one and the closing line printed the flag,
+    # so `--keep 0` swept to one bundle and said `0 kept per machine`.
+    retained = max(keep if keep is not None else _configured_keep(), 1)
     superseded = _superseded_locally(retained)
 
     if superseded:

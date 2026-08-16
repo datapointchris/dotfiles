@@ -12,6 +12,7 @@ means and what one transport invocation does. This owns what the verbs do with i
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import tarfile
 from collections.abc import Callable
@@ -319,6 +320,18 @@ class TestPruning:
         assert (sandbox.staging / NEWEST).is_dir()
         assert not (sandbox.staging / OLDER).exists()
 
+    def test_the_summary_reports_the_limit_that_was_applied(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Both sweeps floor at one, so `--keep 0` retains one. The closing line
+        printed the flag rather than the number, which is the one thing that did
+        not happen."""
+        (sandbox.staging / NEWEST).mkdir(parents=True)
+        (sandbox.staging / NEWEST / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+
+        ran = cli('bundle', 'prune', '--keep', '0', '--yes')
+
+        assert '1 kept per machine' in ran.stdout
+        assert '0 kept per machine' not in ran.stdout
+
     def test_the_newest_survives_a_limit_of_zero(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """A machine with nothing staged cannot converge offline at all, so a limit
         that emptied the staging directory would take away its only way to install
@@ -608,3 +621,20 @@ class TestResolvingLatestForASparseBuild:
 
         assert staging._status_for(None, MACHINE) is None
         assert not paths.status_cache().exists()
+
+
+class TestReportingHowOldABundleIs:
+    """`_age_of` is the first line of the `bundle download` confirmation, so it is
+    the one fact that prompt exists to convey."""
+
+    def test_a_future_stamp_reads_as_no_time_at_all(self) -> None:
+        """`timedelta` normalises a negative by borrowing, so five minutes ahead is
+        `days=-1, seconds=86100` and used to read as 23 hours ago. The builder
+        stamps the name and the offline box renders it, so skew between two clocks
+        is ordinary — and it misreported in the direction that argues against
+        downloading."""
+        assert staging._elapsed(dt.timedelta(minutes=-5)) == '0 minute(s)'
+
+    def test_an_ordinary_age_is_unchanged(self) -> None:
+        assert staging._elapsed(dt.timedelta(days=3)) == '3 day(s)'
+        assert staging._elapsed(dt.timedelta(hours=5)) == '5 hour(s)'

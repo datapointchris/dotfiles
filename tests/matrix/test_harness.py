@@ -192,14 +192,13 @@ def test_the_home_every_path_resolves_through_is_the_sandbox_one(sandbox: Sandbo
 @pytest.mark.parametrize(
     ('name', 'attribute'),
     [
-        ('CACHE_HOME', 'cache'),
         ('STATE_HOME', 'state'),
         ('RUNS_DIR', 'state'),
         ('staging_dir', 'staging'),
         ('archive_dir', 'cache'),
         ('status_cache', 'cache'),
     ],
-    ids=['cache', 'state', 'runs', 'staged', 'archives', 'statuses'],
+    ids=['state', 'runs', 'staged', 'archives', 'statuses'],
 )
 def test_every_directory_the_package_writes_to_is_under_the_sandbox(sandbox: Sandbox, name: str, attribute: str) -> None:
     """Each is a separate chance to write into the real fleet's state directory,

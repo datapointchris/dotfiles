@@ -683,7 +683,12 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
         # status the bundle was planned from was taken, and nothing has ever
         # measured it. Saying "carries no version" there sends the reader looking
         # for a bundle that is not the problem.
-        if bundle.sparse_bundles():
+        # Every staged bundle, not any of them. One full bundle in the stack makes
+        # an absence a gap again, so an entry missing from the *full* bundle was
+        # being reported against the sparse one — the bundle that is not the
+        # problem, and the wrong artefact to go and rebuild.
+        described = bundle.descriptions()
+        if described and all(one.sparse for one in described):
             return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'

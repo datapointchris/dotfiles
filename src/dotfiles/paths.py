@@ -116,16 +116,13 @@ holding exactly the sentence to print is `$(<file)` with no fork at all.
 def cache_home() -> Path:
     """Where this tool's caches live, re-read on every call.
 
-    A function as well as the constant below, because a cache is the one thing a
-    test legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob
-    that already means that — the same reasoning as `evidence.uv_tool_dir`. A
-    constant bound at import cannot be redirected without patching this module.
+    A function rather than a constant, because a cache is the one thing a test
+    legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob that
+    already means that — the same reasoning as `evidence.uv_tool_dir`. A constant
+    bound at import cannot be redirected without patching this module, which is a
+    name somebody has to remember to rebind.
     """
     return xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
-
-
-CACHE_HOME = cache_home()
-"""This tool's cache root, for a caller that wants it once rather than per path."""
 
 
 def archive_dir() -> Path:

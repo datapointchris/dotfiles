@@ -596,7 +596,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
 
     repo = paths._repo_root()  # noqa: SLF001 — the module's own derivation, re-run rather than reimplemented
     state = paths.xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
-    cache = paths.cache_home()
 
     derived = {
         'REPO_ROOT': repo,
@@ -610,7 +609,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
         'LATEST_RUN': state / f'latest-{paths.MACHINE_ID}',
         'STATUS_FILE': state / f'status-{paths.MACHINE_ID}.json',
         'NUDGE_FILE': state / f'nudge-{paths.MACHINE_ID}',
-        'CACHE_HOME': cache,
     }
     for name, value in derived.items():
         monkeypatch.setattr(paths, name, value)

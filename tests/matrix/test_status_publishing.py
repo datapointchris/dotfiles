@@ -347,3 +347,21 @@ def test_a_published_status_comes_back_intact(sandbox: Sandbox, server: Path, cl
 
     assert fetched == sent
     assert fetched['scope'] and fetched['resources'], 'a round trip of nothing would satisfy the line above'
+
+
+def test_a_document_the_gate_would_refuse_exits_issue(sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch) -> None:
+    """`status show && status upload` walked into a refusal the first command had
+    already measured. `remote check` derives its verdict from its faults the same
+    way, and this is the one finding this verb produces."""
+    monkeypatch.setattr(publishing, 'identifying', lambda: {'this machine name': 'packages'})
+
+    ran = cli('status', 'show', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'unpublishable' in ran.stderr
+
+
+def test_a_clean_document_still_exits_converged(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    ran = cli('status', 'show', catch_exceptions=True)
+
+    assert ran.exit_code == ExitCode.CONVERGED
