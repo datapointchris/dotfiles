@@ -610,6 +610,24 @@ else
   log "Skip" "broot (not installed)"
 fi
 
+# worktree — a child process cannot move the shell that spawned it, so `choose`
+# prints the path and this is what walks into it. Named apart from the binary
+# rather than wrapping it: `worktree` is already a git subcommand, and a function
+# shadowing it would make `worktree remove` fail somewhere new.
+if command -v worktree >/dev/null 2>&1; then
+  wt() {
+    local chosen
+    chosen=$(worktree choose "$@") || return
+    # Backing out of the picker is a decision, not a failure. Returning the empty
+    # test's 1 would light the prompt's status indicator every time.
+    [[ -n "$chosen" ]] || return 0
+    cd "$chosen"
+  }
+  log "Setup" "worktree"
+else
+  log "Skip" "worktree (not installed)"
+fi
+
 # ------------------------------------------------------------------ #
 # ZSH PLUGINS (manually cloned to ~/.config/zsh/plugins)
 # ------------------------------------------------------------------ #

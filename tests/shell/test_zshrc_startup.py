@@ -195,7 +195,43 @@ def test_the_integration_is_wired_when_the_tool_is_there(tmp_path: Path) -> None
     assert reported(result) == [], 'a start with broot present reported:\n' + '\n'.join(reported(result))
 
 
-@pytest.mark.parametrize('tool', ('broot', 'yazi'))
+def test_wt_walks_into_the_path_the_picker_printed(tmp_path: Path) -> None:
+    """`worktree choose` prints a path because a child cannot move its parent's shell.
+
+    `wt` is the half that does the moving, so wiring it is the whole feature —
+    and the cd has to actually happen, which `typeset -f` alone would not show.
+    Backing out of the picker is asserted separately below.
+    """
+    home = deployed_home(tmp_path)
+    fake = home / 'bin'
+    fake.mkdir()
+    target = home / 'chosen'
+    target.mkdir()
+    (fake / 'worktree').write_text(f'#!/bin/sh\necho {target}\n')
+    (fake / 'worktree').chmod(0o755)
+
+    result = start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='wt; pwd')
+
+    assert result.stdout.strip().endswith(str(target))
+    assert reported(result) == [], 'a start with worktree present reported:\n' + '\n'.join(reported(result))
+
+
+def test_backing_out_of_the_picker_is_not_a_failure(tmp_path: Path) -> None:
+    """fzf exits 0 with no selection when you press escape, and `worktree choose`
+    passes that through. Letting the empty test supply the status would return 1,
+    which the prompt renders as a failed command every time you change your mind."""
+    home = deployed_home(tmp_path)
+    fake = home / 'bin'
+    fake.mkdir()
+    (fake / 'worktree').write_text('#!/bin/sh\nexit 0\n')
+    (fake / 'worktree').chmod(0o755)
+
+    result = start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='wt; echo "rc=$?"')
+
+    assert result.stdout.strip().endswith('rc=0')
+
+
+@pytest.mark.parametrize('tool', ('broot', 'yazi', 'worktree'))
 def test_neither_branch_of_an_optional_tool_writes_to_stderr(tmp_path: Path, tool: str) -> None:
     """Both tools carry the same shape, so both are held to the same rule.
 
