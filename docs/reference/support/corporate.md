@@ -131,7 +131,9 @@ unasked when it finds nothing staged.
 Each bundle keeps its own directory rather than merging into one. The newest
 carrying a file answers for it and an older one still answers for the rest, which
 is what lets a sparse bundle carry only what changed. `dotfiles bundle prune`
-sweeps what is past the retention limit, and never the newest.
+sweeps what is past the retention limit, and never the newest — nor the newest
+*full* bundle, which is what every sparse one above it reads through. Expect it to
+keep one more than the limit names, and to say which and why.
 
 This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
 it builds a bundle, starts a container blackholed to exactly the hosts this page's
