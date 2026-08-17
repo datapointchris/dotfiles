@@ -13,6 +13,15 @@ repos_registry = "~/.config/repos.json"
 # OVERRIDES marker in ~/.env. It is a personal API key, so it cannot enter this
 # repo, and this file is deployed rather than hand-written — a secret here would
 # either be committed or block the symlink.
+#
+# Sync is off here and on in the fleet copy. A personal task list syncing from a
+# work machine sends personal data across an employer's egress to a domain that
+# is nobody's business but mine, authenticated with a personal key — which is the
+# arrangement data-loss monitoring is built to notice, and it is the same standing
+# rule the atuin config follows: nothing written at work travels home.
+#
+# The URL stays so the file still says where sync would go, and turning it on is
+# then one word rather than a lookup.
 [sync]
-enabled = true
+enabled = false
 api_url = "https://api.ichrisbirch.com"
