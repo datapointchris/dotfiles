@@ -206,13 +206,13 @@ def test_the_results_file_names_the_manifest_and_no_account() -> None:
 
 
 def test_no_measurement_is_committed_to_this_repo() -> None:
-    """A rendered measurement names which hosts one network permits and denies.
+    """A rendered measurement is one machine's answer on one day, not a declaration.
 
-    Off the fleet that network is an employer's, and this repo is public — so the
-    render staying clean is only half of it, and the other half is that no output
-    of it is ever committed. `--output` deliberately has no default for the same
-    reason. Asserted on the tree rather than remembered, because the file that
-    reappears is the one somebody wrote with `-o` while debugging.
+    Committed, it reads as a fact about the repo and is wrong the moment either
+    end changes — which is why `--output` has no default and why the rehearsal
+    derives its own probes instead. Asserted on the tree rather than remembered,
+    because the file that reappears is the one somebody wrote with `-o` while
+    debugging.
     """
     tracked = subprocess.run(
         ['git', '-C', str(paths.REPO_ROOT), 'ls-files', '-z'], capture_output=True, text=True, check=True

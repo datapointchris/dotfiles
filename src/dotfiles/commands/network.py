@@ -5,13 +5,12 @@ One verb, because the question has one answer and `check` is already the word fo
 rendering destination in the same family as `--json`, not a write the flag turns
 on, and the default is a pure read like every other `check`.
 
-**`--output` has no default, and that is a safety property rather than an
-omission.** A rendered measurement names which hosts one network permits and
-which it denies. Off the fleet that network is an employer's, and this repo is
-public, so no output of this verb belongs in it — `tests/install/test_network.py`
-asserts none is tracked. A default path is how one arrives anyway: it turns a
-routine check into a write, and the write lands in a working tree somebody later
-commits without reading.
+**`--output` has no default, and that is a property rather than an omission.** A
+rendered measurement is one machine's answer on one day, and it can only be
+re-taken from the same network — so committed it goes stale where nothing can
+refresh it, and `tests/install/test_network.py` asserts none is tracked. A default
+path is how one arrives anyway: it turns a routine check into a write, and the
+write lands in a working tree somebody later commits without reading.
 
 Nothing here decides what the firewalled e2e containers block. That is declared
 in `tests/e2e/harness.py`, against a plan resolved from the manifest, so the

@@ -351,10 +351,9 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     above exists.
 
     Matched without regard to case, because the two names arrive here normalized
-    and a document carries whatever the OS rendered. `machine_id` lowercases, and
-    Windows reports a hostname in upper — so an asset tag is exactly the string a
-    case-sensitive test reads straight past, and it reached a committed file that
-    way.
+    and a document carries whatever the OS rendered. `machine_id` lowercases and
+    Windows reports a hostname in upper, so the two never meet as typed and a
+    case-sensitive pass reads an asset tag straight past.
     """
     scanned = {key: value for key, value in document.items() if key not in PROTOCOL_KEYS} if isinstance(document, dict) else document
     lowered = json.dumps(scanned).lower()

@@ -171,8 +171,8 @@ replay the derived request, user agent included — a synthesized one reported
 crates.io blocked on what was really a 403.
 
 No measurement of a real network is committed here, and
-`tests/install/test_network.py` fails if one appears. A results file names which
-hosts an employer permits and denies, and this repo is public.
+`tests/install/test_network.py` fails if one appears. A recorded verdict is one
+machine's answer on one day; the declaration is what every machine resolves.
 
 **The container is authenticated from the host's `gh`.** Sixty anonymous API calls
 an hour are shared with the host's public IP and one full install spends most of

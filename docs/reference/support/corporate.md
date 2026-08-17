@@ -13,10 +13,10 @@ rarely "the internet is blocked" and usually "GitHub release assets are blocked
 but the API is not", which changes what you need to carry in.
 
 Pass `--output <path>` to record the run somewhere outside the repo. `--output`
-has no default on purpose, and the results never belong in version control: the
-file names which hosts one network permits and which it denies, and on a
-restricted machine that network is an employer's while this repo is public. Keep
-it under `$XDG_STATE_HOME` if you want to diff two runs after the rules change.
+has no default on purpose, and the results never belong in version control: a
+recorded verdict is one machine's answer on one day, and it can only be re-taken
+from that same network, so it goes stale where nothing can refresh it. Keep it
+under `$XDG_STATE_HOME` if you want to diff two runs after the rules change.
 `tests/install/test_network.py` fails the suite if a measurement is ever tracked.
 
 Note what the run itself looks like from the other side. It is around forty-five

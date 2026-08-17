@@ -17,13 +17,14 @@ current stable tags carry zero assets. Moving it to `cargo_packages` therefore:
   binary upstream actually published, so the firewalled WSL work box compiles it
   from source too.
 
-Measured on that box 2026-08-07 with `dotfiles network check`: crates.io is
-**reachable**, and GitHub *release asset downloads* are **blocked** while the
-release API is not. So the compile does succeed there — an earlier
-reading claiming no crates.io access was wrong. The consequence is subtler than a
-hard failure: `cargo binstall` can resolve any crate but cannot download a single
-prebuilt binary, so on that machine it silently falls back to source builds for
-*every* cargo package unless the bundle carries them.
+The failure mode to know is the quiet one, and it does not need the registry to be
+unreachable. `cargo binstall` resolves a crate's version through the crates.io API
+and then fetches the binary from wherever the project publishes its releases —
+two different hosts, and only the second one has to be refused. When it is,
+binstall resolves every crate and downloads no prebuilt binary at all, falling
+back to a source build for *every* cargo package rather than failing. Run
+`dotfiles network check` on the machine in question if you need to know which half
+is answering.
 
 Contrast `ripgrep`, which ships prebuilt binaries for every target on each release —
 it moves to `cargo binstall` cleanly and even works on minimal LXC servers.

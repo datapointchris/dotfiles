@@ -114,8 +114,9 @@ RESTRICTED_MANIFEST = 'wsl-work-workstation'
 
 The manifest names the tools, so `network.derive` builds every URL an install
 would reach from the declaration itself. Nothing here records what any real
-network answered, which is the property that matters: a file of measured verdicts
-is a map of one employer's perimeter, and it does not belong in a public repo.
+network answered, which is the property that matters: a recorded verdict can only
+be re-taken from the network it describes, so it goes stale between runs and the
+rehearsal drifts from the declaration it is supposed to be testing.
 """
 
 BLOCKED_HOSTS = (
