@@ -1,20 +1,22 @@
-"""Sending a run record to the remote, and what is taken out of it on the way.
+"""What is taken out of a run record on the way to the remote.
 
 A record is read by a person diagnosing a failure, which is what makes masking the
 right screen for it rather than the row-withholding a status document gets. These
 assert the property that follows: the line survives, the name does not.
+
+**Only the transformation.** Which records are chosen and where they land are
+visible through the verb, so they are rows in `tests/matrix/test_report_upload.py`
+against a real fake transport. Asserting them here as well meant faking
+`transport.reachable`, `reports_for`, `listed` and `push` — the four functions the
+selection defect lived between, which is the seam that hid it.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
-
-import pytest
 
 from dotfiles.commands import report
-from dotfiles.coordinates import NetworkTrust
 
 NAMES = {'the Windows account': 'ab12345', 'this machine name': 'wkstn01x'}
 
@@ -71,41 +73,6 @@ def test_a_path_under_this_home_reads_as_a_person_writes_it(tmp_path: Path, monk
     line = json.loads(staged.read_text())
 
     assert line['argv'] == ['~/.local/bin/dotfiles', '--version']
-
-
-def test_a_hyphen_in_the_hostname_still_finds_this_box_its_own_records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`runs/` is Syncthing-shared, so the send has to name a box, and the only
-    name any record was filed under is the bare hostname. `discriminator` answers
-    a different question and hands a hyphenated hostname a blake2b digest — which
-    matched no filename, sent nothing, and named a box appearing nowhere in
-    `report list`."""
-    directory = tmp_path / 'runs'
-    directory.mkdir()
-    mine = '20260817T195934Z-scheduler-lxc-check.json'
-    for name in (mine, '20260817T200117Z-macmini-check.json'):
-        (directory / name).write_text(json.dumps({'machine': 'linux-lxc-server', 'outcomes': []}))
-
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', directory)
-    monkeypatch.setattr('dotfiles.paths.MACHINE_ID', 'scheduler-lxc')
-    monkeypatch.setattr(
-        report,
-        'resolved',
-        lambda _: SimpleNamespace(
-            machine=SimpleNamespace(coordinates=SimpleNamespace(network_trust=NetworkTrust.FLEET)),
-            machine_name='linux-lxc-server',
-        ),
-    )
-    pushed: list[str] = []
-    monkeypatch.setattr(report.transport, 'reachable', lambda: SimpleNamespace())
-    monkeypatch.setattr(report.transport, 'reports_for', lambda where, machine: '/shelf/reports')
-    monkeypatch.setattr(report.transport, 'listed', lambda where, shelf: ())
-    monkeypatch.setattr(report.transport, 'push', lambda where, local, shelf: pushed.append(local.name))
-
-    shelf, sent = report._send(None)
-
-    assert sent == 1
-    assert pushed == [mine], "a peer's record is not this box's to publish"
-    assert shelf == '/shelf/reports'
 
 
 def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path) -> None:

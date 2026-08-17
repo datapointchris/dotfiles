@@ -152,6 +152,51 @@ def test_a_box_with_no_records_of_its_own_refuses_and_writes_nothing(
     assert not shelf(server).exists() or list(shelf(server).iterdir()) == []
 
 
+@pytest.fixture
+def publishing_server(sandbox: Sandbox) -> Path:
+    """A remote this machine has asked to publish to after every apply."""
+    root = sandbox.root / 'server'
+    (root / 'artefacts').mkdir(parents=True)
+    install_relay(sandbox.bin, root)
+    declare(sandbox.config, extra='publish_reports_after_apply = true\n')
+    return root
+
+
+def test_an_apply_publishes_its_own_record_where_the_machine_asked_for_that(
+    sandbox: Sandbox, publishing_server: Path, named: str, cli: Callable[..., Invocation]
+) -> None:
+    """The automatic half of the verb, and the half nothing drove. A record
+    describes what a run did, so the run that failed is the one worth reading —
+    which is why this publishes whatever the verdict, unlike the status."""
+    cli('apply')
+
+    landed = sorted(path.name for path in shelf(publishing_server).iterdir())
+    assert landed, 'the apply filed a record and the machine asked for it to be sent'
+    assert all(named in name for name in landed)
+
+
+def test_an_apply_publishes_nothing_unless_the_machine_asked(
+    sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
+) -> None:
+    """Off by default. A converge that reaches a server unasked is a change in
+    posture on an employer network, so the flag is the whole permission."""
+    ran = cli('apply')
+
+    assert ran.exit_code in {ExitCode.CONVERGED, ExitCode.DRIFT}
+    assert not shelf(server).exists() or list(shelf(server).iterdir()) == []
+
+
+def test_a_remote_that_cannot_be_reached_does_not_fail_the_apply(sandbox: Sandbox, named: str, cli: Callable[..., Invocation]) -> None:
+    """The apply's verdict is about the machine. Failing it because a server did
+    not answer would report a converged box as broken."""
+    declare(sandbox.config, program='no-such-transport', extra='publish_reports_after_apply = true\n')
+
+    ran = cli('apply', catch_exceptions=True)
+
+    assert ran.exit_code in {ExitCode.CONVERGED, ExitCode.DRIFT}
+    assert sandbox.filed_records, 'the run still recorded what it did on this machine'
+
+
 @pytest.mark.parametrize('named', HOSTNAMES, indirect=True)
 def test_a_refused_listing_is_reported_rather_than_read_as_an_empty_shelf(
     sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
