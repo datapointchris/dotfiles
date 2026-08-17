@@ -222,8 +222,10 @@ Everything above the `# OVERRIDES` marker comes from the manifest and `flags.yml
 rewritten on every apply. Everything below it is preserved verbatim, which is what makes
 the file safe to regenerate while it holds API tokens. A file with no marker predates
 generation, so all of it is treated as hand-written and moved below — lossless by
-construction. Syncing also takes a `.bak` and writes through a temp file and a rename,
-because a half-written `~/.env` would take a machine's secrets with it.
+construction. Syncing writes through a temp file and a rename, because a half-written
+`~/.env` would take a machine's secrets with it. The rename is atomic, so the file is
+either the old one or the new one and no sidecar copy is left beside it to be swept
+into the next backup.
 
 The bootstrap is genuinely circular — `~/.env` names the manifest, and the manifest
 generates `~/.env` — so a bare machine still has one line to type by hand. Only

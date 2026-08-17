@@ -256,19 +256,19 @@ def test_a_regeneration_keeps_every_hand_written_line_below_the_marker(sandbox: 
     assert 'export ALPHA_FLAG="${ALPHA_FLAG:-true}"' in written
 
 
-def test_an_apply_with_nothing_to_repair_takes_no_backup_over_the_last_one(sandbox: Sandbox, cli: Run) -> None:
+def test_an_apply_with_nothing_to_repair_does_not_rewrite_the_file(sandbox: Sandbox, cli: Run) -> None:
     """A finding only a person can settle must not provoke a write.
 
-    The loop this rules out was measured: STALE, apply, DONE, STALE again, with a
-    fresh `.env.bak` taken over the last one every round until the backup is of
-    nothing. The absent backup is the evidence, because `envfile.write` copies the
-    file before it touches it — so a backup existing means the file was rewritten.
+    The loop this rules out was measured: STALE, apply, DONE, STALE again, every
+    round rewriting a file that had not moved. The file's own bytes are the
+    evidence, since a rewrite that changed nothing is still the write this forbids.
     """
     identity_overridden_below_the_marker(sandbox)
+    settled = (sandbox.home / '.env').read_text()
 
     cli('env', 'apply')
 
-    assert not (sandbox.home / '.env.bak').exists()
+    assert (sandbox.home / '.env').read_text() == settled
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -628,14 +628,14 @@ def test_an_unparseable_flag_below_the_marker_is_reported_and_not_planned(sandbo
 
 
 def test_applying_an_unparseable_flag_writes_nothing(sandbox: Sandbox, cli: Run) -> None:
-    """No write means no backup, which is the fact that separates this from the loop
-    it used to sit in: an `apply` that reported DONE, rolled `.env.bak` over the last
-    one, and left the machine reading `maybe`."""
+    """An untouched file is what separates this from the loop it sits beside: an
+    `apply` reporting DONE, rewriting the section above the marker, and leaving the
+    machine still reading `maybe`."""
     unparseable_flag_below_the_marker(sandbox)
-    (sandbox.home / '.env.bak').unlink(missing_ok=True)
+    settled = (sandbox.home / '.env').read_text()
 
     assert cli('env', 'apply').exit_code == ExitCode.CONVERGED
-    assert not (sandbox.home / '.env.bak').exists()
+    assert (sandbox.home / '.env').read_text() == settled
 
 
 def test_an_apply_settles_a_flag_that_parses_as_neither_true_nor_false(sandbox: Sandbox, cli: Run) -> None:

@@ -214,8 +214,7 @@ def _identity(machine, observed: Observed) -> list[Change]:
     override below the marker is the last assignment in the file, so the shell
     takes it whatever the section above says: `apply` owns only the section above,
     so offering it as repairable buys a `check` that finds it, an `apply` that
-    reports DONE, a fresh `.env.bak` over the last one, and a machine that has not
-    moved.
+    reports DONE, and a machine that has not moved.
     """
     expected_values = {'MACHINE': machine.name, **envfile.coordinate_exports(machine)}
 
@@ -278,8 +277,7 @@ def _flags(machine, observed: Observed) -> list[Change]:
     shell cannot read is drift wherever it was written, but only the generated half
     is `apply`'s to rewrite: an unparseable assignment below the marker is still
     the last one in the file, so offering it as repairable buys a `check` that
-    finds it, an `apply` that reports DONE, a fresh `.env.bak` over the last one,
-    and a machine that has not moved.
+    finds it, an `apply` that reports DONE, and a machine that has not moved.
     """
     changes = []
     for name, expected in machine.flags.items():
@@ -321,6 +319,30 @@ def _unparseable(name: str, actual: str, generated: bool, path: Path) -> Change:
     )
 
 
+def exportable(machine, observed: Observed) -> dict[str, str]:
+    """The required values the generated section carries, and what it should say.
+
+    Only a name some rung *outside* `~/.env` can answer, which is what
+    `SHARED_PATHS` membership means: a `DOTFILES_`-prefixed variable, or a key in
+    this tool's config.toml. Exporting one of those is load-bearing, because a
+    machine answering in config.toml has nothing in `~/.env` for a shell to read.
+
+    A name whose only rung is its own environment variable is answered by the file
+    being read. Exporting it writes a second copy of what the marker already holds,
+    and the copy's presence depends on whether a shell sourced `~/.env` first — so
+    an interactive apply adds the line, a timer or a `zsh -c` finds no rung and
+    orphans it, and the pair rewrite one converged machine forever.
+
+    Public because `envfile.render` writes the same set, and the file `apply`
+    produces must not disagree with the file `check` demands about who owns a line.
+    """
+    return {
+        entry.name: found.exported
+        for entry in machine.required_values
+        if entry.name in settings.SHARED_PATHS and (found := observed.resolved.of(entry.name))
+    }
+
+
 def _config(observed: Observed) -> list[Change]:
     """This tool's own config.toml, when it exists and cannot be parsed.
 
@@ -351,19 +373,22 @@ def _unexported(machine, observed: Observed) -> list[Change]:
     Fires on the file rather than on the resolution: a resolved name satisfies
     this resource while every consumer reading the environment still finds
     nothing.
+
+    Over `exportable` rather than the whole register, so the half of it that
+    `~/.env` already answers is left where the marker put it.
     """
     return [
         Change(
             NAME,
             Stage.ENVIRONMENT,
-            entry.name,
+            name,
             Verdict.STALE,
             repair=Repair.AUTOMATIC,
             detail=f'{found.source} answers it and the generated section does not export it',
-            observed=observed.generated.get(entry.name, ''),
+            observed=observed.generated.get(name, ''),
         )
-        for entry in machine.required_values
-        if (found := observed.resolved.of(entry.name)) and observed.generated.get(entry.name) != found.exported
+        for name, expected in exportable(machine, observed).items()
+        if observed.generated.get(name) != expected and (found := observed.resolved.of(name))
     ]
 
 
@@ -410,7 +435,14 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     """
     changes = []
     for entry in machine.required_values:
-        answer = observed.values.get(entry.name) or (found.value if (found := observed.resolved.of(entry.name)) else '')
+        # The file first, and for a name outside `SHARED_PATHS` it is the only
+        # place asked. Its sole rung is an ambient variable, which is a shell this
+        # run happens to have started in rather than an answer the machine keeps —
+        # accepting it reports converged on a box whose `~/.env` says nothing, and
+        # the next shell finds nothing.
+        answer = observed.values.get(entry.name) or ''
+        if not answer and entry.name in settings.SHARED_PATHS and (found := observed.resolved.of(entry.name)):
+            answer = found.value
         if not answer:
             changes.append(
                 Change(
@@ -526,9 +558,11 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
     whether the declaration still produces the name at all, so a variable named
     unusually cannot slip past.
     """
-    # A required value belongs to the declaration exactly while a rung answers it.
-    answered = {entry.name for entry in machine.required_values if observed.resolved.of(entry.name)}
-    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags, *answered}
+    # One source for who owns a generated line, shared with `_unexported` and
+    # `render`. Asking the rungs directly made ownership depend on whether a shell
+    # had sourced ~/.env, so the two functions disagreed by context and each undid
+    # the other's write.
+    declared = {'MACHINE', *envfile.coordinate_exports(machine), *machine.flags, *exportable(machine, observed)}
     return [
         Change(
             NAME,

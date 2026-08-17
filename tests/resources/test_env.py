@@ -230,11 +230,15 @@ def test_a_refresh_replaces_the_generated_section_and_nothing_else(tmp_path: Pat
     assert values['OPENAI_API_KEY'] == 'sk-secret'
 
 
-def test_the_previous_file_is_backed_up(tmp_path: Path, env_file: Path) -> None:
+def test_a_write_leaves_nothing_beside_the_file(tmp_path: Path, env_file: Path) -> None:
+    """The rename is atomic, so the file is either the old one or the new one. A
+    sidecar copy protects nothing further and is picked up by whatever backs up the
+    directory, which restores it and suffixes it again."""
     env_file.write_text('export OPENAI_API_KEY=sk-secret\n')
     envfile.write(env_file, machine(tmp_path))
 
-    assert (env_file.parent / (env_file.name + '.bak')).read_text() == 'export OPENAI_API_KEY=sk-secret\n'
+    assert [path.name for path in tmp_path.iterdir() if path.name.startswith('.env')] == ['.env']
+    assert envfile.read(env_file)['OPENAI_API_KEY'] == 'sk-secret'
 
 
 def test_the_file_is_written_private(tmp_path: Path, env_file: Path) -> None:
@@ -369,19 +373,20 @@ def test_an_overridden_identity_is_named_but_is_not_ours_to_write(tmp_path: Path
 
 def test_an_overridden_identity_settles_rather_than_being_rewritten_each_run(tmp_path: Path, unprivileged: Privilege) -> None:
     """The loop a whole-file comparison produces: STALE, apply, DONE, STALE again,
-    with a fresh `.env.bak` taken over the last one every round until the backup is
-    of nothing. `perform`'s re-observation guard never fires, because the finding
-    stays actionable however many times it is repaired."""
+    every round rewriting a file that has not moved. `perform`'s re-observation
+    guard never fires, because the finding stays actionable however many times it
+    is repaired."""
     live = session(tmp_path)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
         target.write('export MACHINE="elsewhere"\n')
+    settled = live.env_file.read_text()
 
     for _ in range(3):
         for change in [found for found in changes(tmp_path) if found.actionable]:
             env_resource.RESOURCE.perform(session(tmp_path), change, unprivileged)
 
-    assert not (tmp_path / '.env.bak').exists()
+    assert live.env_file.read_text() == settled
     assert envfile.read(live.env_file)['MACHINE'] == 'elsewhere'
 
 
@@ -578,19 +583,55 @@ def test_a_value_that_names_no_file_is_never_tested_for_one(tmp_path: Path) -> N
 
 def test_a_required_value_is_named_without_its_value_wherever_it_sits(tmp_path: Path, monkeypatch) -> None:
     """The register holds an employer's account name and an employee id. `Examined`
-    reaches a screen and `--json`, and `_unexported` exports an answered value into
-    the generated half — the half that otherwise prints what it holds."""
+    reaches a screen and `--json`, so no half of the file prints one. `HOSTS_JSON`
+    is the one the generated section does carry, which is what makes it the case
+    worth pinning."""
+    monkeypatch.setenv('DOTFILES_HOSTS_JSON', '/srv/hosts.json')
+    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    assert 'HOSTS_JSON' in envfile.read_generated(live.env_file), 'the generated half carries it, so the screen is load-bearing'
+
+    inventory = env_resource.RESOURCE.observe(live, live.plan).inventory
+
+    assert {row.item: row.detail for row in inventory}['HOSTS_JSON'] == 'set by hand'
+    assert not any('/srv/hosts.json' in row.detail for row in inventory)
+
+
+def test_a_value_only_a_shell_can_answer_is_never_written_above_the_marker(tmp_path: Path, monkeypatch) -> None:
+    """`~/.env` is its own store: it has no config key and no DOTFILES_ twin, so a
+    shell reads it from below the marker and a copy above says the same thing twice.
+    The copy is also what an employee id gets printed out of."""
     monkeypatch.setenv('WINDOWS_USER', 'ab12345')
     declared = {**FLAGS, 'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name'}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
 
-    assert 'ab12345' in live.env_file.read_text(), 'the generated half exports it, which is what makes the screen load-bearing'
+    assert 'WINDOWS_USER' not in envfile.read_generated(live.env_file)
+    assert 'ab12345' not in live.env_file.read_text()
 
-    inventory = env_resource.RESOURCE.observe(live, live.plan).inventory
 
-    assert {row.item: row.detail for row in inventory}['WINDOWS_USER'] == 'set by hand'
-    assert not any('ab12345' in row.detail for row in inventory)
+def test_the_same_machine_is_converged_with_and_without_a_shell(tmp_path: Path, monkeypatch) -> None:
+    """`.zshrc` sources `~/.env`, so an interactive run resolves WINDOWS_USER and a
+    timer, a `docker exec` or a `zsh -c` does not. Resolving it decided who owned
+    the generated line, so the two contexts each undid the other's write and one
+    correct machine reported drift forever."""
+    declared = {**FLAGS, 'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+    with live.env_file.open('a') as target:
+        target.write('export WINDOWS_USER=ab12345\n')
+    settled = live.env_file.read_text()
+
+    for context in ('ab12345', None):
+        monkeypatch.delenv('WINDOWS_USER', raising=False)
+        if context:
+            monkeypatch.setenv('WINDOWS_USER', context)
+
+        assert changes(tmp_path, flags=declared) == (), f'drift reported with WINDOWS_USER={context}'
+        envfile.write(live.env_file, live.machine)
+        assert live.env_file.read_text() == settled
 
 
 def test_every_declared_precondition_names_a_value_the_repo_declares() -> None:

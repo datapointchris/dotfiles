@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import tempfile
 from pathlib import Path
 
@@ -99,9 +98,15 @@ def render(machine: Machine) -> str:
         lines += ['', assignment(name, value)]
 
     if values := machine.required_values:
+        # Only a name some rung outside this file can answer, which is the split
+        # `resources.env.exportable` states in full. A name whose sole rung is its
+        # own environment variable is answered by this file being read, so writing
+        # it above the marker duplicates what is already below it.
         resolved = settings.resolve_all([entry.name for entry in values], settings.read_config())
-        answered = [(entry, found) for entry in values if (found := resolved.of(entry.name))]
-        unanswered = [entry for entry in values if not resolved.of(entry.name)]
+        exportable = [entry for entry in values if entry.name in settings.SHARED_PATHS]
+        answered = [(entry, found) for entry in exportable if (found := resolved.of(entry.name))]
+        exported = {entry.name for entry, _ in answered}
+        unanswered = [entry for entry in values if entry.name not in exported]
 
         if answered:
             lines += ['']
@@ -210,14 +215,10 @@ def write(path: Path, machine: Machine) -> bool:
     if overrides:
         content += overrides if overrides.endswith('\n') else overrides + '\n'
 
-    if path.exists():
-        # Built by name rather than with_suffix: pathlib treats a leading-dot
-        # name as all stem, so `.env` has no suffix to append to.
-        shutil.copy2(path, path.parent / (path.name + '.bak'))
-
     # Written to a temp file in the same directory and renamed, so an interrupted
     # write cannot leave a machine with a truncated ~/.env — which would take its
-    # secrets with it.
+    # secrets with it. The rename is atomic, so the file is either the old one or
+    # the new one and never a third thing beside them.
     handle, staged = tempfile.mkstemp(dir=str(path.parent), prefix='.env.')
     try:
         with os.fdopen(handle, 'w') as target:
