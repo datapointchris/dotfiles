@@ -274,8 +274,24 @@ was measured. `docs/development/docs-audit.md` is the record: what was found
 wrong, the baseline to compare against, and the re-measure commands. Read it
 before running another docs review, and add to it rather than editing it — it
 is a dated snapshot and the only place here where enumerations are the content.
-`docker.md`, `tmux-sessions.md` and `management-interface.md` are the models to
+`docker.md`, `tmux-sessions.md` and `custom-installers.md` are the models to
 imitate; the shared property is that nothing in them changes when code changes.
+
+**A page never explains a mechanism the module docstring explains** (⚠️ MANDATORY):
+
+The code is the canonical source for how something works, and a docstring sits
+where the edit happens. A page that walks through the same mechanism has to be
+edited by every change to it, and only one of the two copies is next to the
+code. Keep one sentence and name the module: "the resolution order, and why
+there is no compiled-in default under it, are the module docstring in
+`src/dotfiles/settings.py`."
+
+A constraint an editor must meet belongs in both places, which
+`standards/documentation.md` § "Document a constraint at the edit site"
+requires. A mechanism does not. The tell is measurable — the shingle count in
+`docs/development/docs-audit.md` § "Third pass" ranks the whole corpus by it in
+seconds, and a page scoring in the hundreds is a second copy of the code's own
+words.
 
 `refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
 markdown as well as shell, so a doc citing a moved file now fails the commit.
