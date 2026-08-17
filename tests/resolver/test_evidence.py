@@ -139,6 +139,29 @@ def test_a_pseudo_versioned_module_is_not_an_answer(monkeypatch, gobin) -> None:
     assert asked == [binary], 'the toolchain is still asked first; its answer is what is rejected'
 
 
+def test_a_devel_module_is_not_an_answer_either(monkeypatch, gobin) -> None:
+    """`(devel)` is the toolchain's other way of saying it resolved no version.
+
+    It is the one that does not look like one: parentheses rather than a
+    version-shaped string, so a test for a pseudo-version suffix passes it through
+    as a tag and `versions.parse` then returns None. The tool measures UNKNOWN with
+    a correct banner sitting unread, and UNKNOWN carries no repair — so the item is
+    never compared, never updated, and never reported as a problem either.
+
+    Every goreleaser build writes it, which makes this the normal state of a Go tool
+    installed from a release asset rather than through the module proxy. Measured
+    2026-08-17 against upstream's own `ascii-image-converter` tarball: `mod (devel)`
+    beside a banner reading `v1.13.1`.
+    """
+    binary = gobin / 'ascii-image-converter'
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'ascii-image-converter' else None)
+    probed(monkeypatch, (0, 'v1.13.1'))
+    asked = module_version(monkeypatch, '(devel)')
+
+    assert evidence.reported_version('ascii-image-converter') == 'v1.13.1'
+    assert asked == [binary], 'the toolchain is still asked first; its answer is what is rejected'
+
+
 def test_a_go_binary_go_cannot_name_is_unknown_rather_than_its_banner(monkeypatch, gobin) -> None:
     """`go` missing, or a binary it does not recognise, is "cannot say" — not a
     reason to hand back the placeholder this whole path exists to avoid."""

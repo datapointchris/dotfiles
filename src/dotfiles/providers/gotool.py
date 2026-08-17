@@ -97,6 +97,22 @@ version string to guess what produced it — this is the toolchain saying, in it
 own notation, that there was no tag to resolve.
 """
 
+UNVERSIONED = '(devel)'
+"""What `go` writes in the `mod` record of a binary built outside a module release.
+
+The second notation the toolchain has for "no version here", and the one that does
+not look like one — parentheses rather than a version-shaped string, so it reads as
+a tag to anything testing for a pseudo-version suffix. `versions.parse` then returns
+None for it, and a tool with a perfectly good banner measures as UNKNOWN.
+
+Every goreleaser build writes it, which makes this the normal state of a Go tool
+installed from a release asset rather than through the module proxy — the offline
+bundle's whole path. Measured 2026-08-17 against upstream's own
+`ascii-image-converter_Linux_amd64_64bit.tar.gz`: `mod (devel)` beside a banner
+reading `v1.13.1`, and the work box had carried the tool as unmeasurable since it
+restored from a bundle.
+"""
+
 
 def tagged(version: str | None) -> bool:
     """Whether `go` resolved this binary from a release rather than a commit.
@@ -114,7 +130,7 @@ def tagged(version: str | None) -> bool:
     `development` banner. No single record is authoritative; each fails in its own
     way, and only the module's failure announces itself.
     """
-    return bool(version) and PSEUDO_VERSION.search(version or '') is None
+    return bool(version) and version != UNVERSIONED and PSEUDO_VERSION.search(version or '') is None
 
 
 def installed_modules(directory: Path) -> dict[str, str]:
