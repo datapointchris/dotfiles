@@ -22,9 +22,12 @@ import shutil
 from pathlib import Path
 
 from dotfiles import coordinates as axes
+from dotfiles import providers
 from dotfiles.providers import Kind
+from dotfiles.providers import gotool
 from dotfiles.providers import launchd
 from dotfiles.providers import systemd
+from dotfiles.providers import toolchain
 from dotfiles.providers.sysconfig import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
@@ -99,8 +102,44 @@ def _service_content() -> str:
     # failing the run.
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
-        f'[Service]\nType=oneshot\nExecStart={_executable()} check --refresh\n'
+        f'[Service]\nType=oneshot\nEnvironment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
     )
+
+
+def _unit_path() -> str:
+    """The directories this repo installs into, ahead of what the manager carries.
+
+    `_executable` above records that a user manager inherits no interactive PATH,
+    and pins the binary against it. The run *inside* that binary shells out too,
+    and had the same problem one level down.
+
+    A user manager starts at `/usr/local/sbin:/usr/local/bin:/usr/sbin:...` and
+    gains more only if a login session pushed it there — which nothing declares,
+    so the same unit answered differently per machine. Measured 2026-08-17:
+    scheduler-lxc, headless, reported twelve installed tools missing on every run
+    for as long as the timer had existed, while a desk running the identical unit
+    reported one difference.
+
+    `evidence.by_command` resolves a declared tool with `shutil.which`, so this is
+    what decides those verdicts until that stops being true. Resolving each
+    provider against the directory it installs into is the deeper repair and is
+    not this: it redefines what "installed" means for every provider that chose a
+    directory, and the suite's `fake_bin` fixture encodes the PATH meaning across
+    dozens of tests.
+    """
+    ours = [str(providers.bin_dir()), str(Path.home() / toolchain.CARGO_BIN), str(gotool.gobin()), str(toolchain.GO_ROOT / 'bin')]
+    return os.pathsep.join(dict.fromkeys([*ours, *SYSTEM_PATH]))
+
+
+SYSTEM_PATH = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin')
+"""What a user manager carries with no session to inherit from, written down.
+
+The installing shell's own `PATH` is not used, and that is the point rather than
+an omission. It carries whatever that shell happened to have — a `uv run` venv, an
+fnm multishell directory named after a pid, a plugin checkout — and a unit built
+from it pins the schedule to directories that outlive nothing. `_executable`
+records the same trap for the binary; this is it for the environment.
+"""
 
 
 def _timer_content() -> str:

@@ -21,10 +21,12 @@ from pathlib import Path
 import pytest
 
 from dotfiles import paths
+from dotfiles import providers
 from dotfiles import reconcile
 from dotfiles import status
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
+from dotfiles.providers import gotool
 from dotfiles.providers import schedule
 from dotfiles.providers import steps
 from dotfiles.reconcile import ResourceResult
@@ -336,3 +338,27 @@ def test_the_nudge_is_keyed_on_the_host_not_the_manifest(state: Path) -> None:
     for shell in ('zsh', 'bash'):
         line = next(line for line in status.snippet(shell).splitlines() if 'nudge=' in line)
         assert 'MACHINE' not in line
+
+
+def test_the_unit_declares_the_directories_this_repo_installs_into() -> None:
+    """A user manager inherits no interactive PATH. Measured on scheduler-lxc
+    2026-08-17: headless, it carried only the system default, and the same unit on
+    a desk carried a login session's — so one machine reported twelve installed
+    tools missing and the other reported one difference, with nothing declaring
+    the difference."""
+    unit = schedule._service_content()
+    declared = next(line for line in unit.splitlines() if line.startswith('Environment=PATH='))
+
+    entries = declared.removeprefix('Environment=PATH=').split(':')
+    assert str(providers.bin_dir()) in entries
+    assert str(gotool.gobin()) in entries
+    assert '/usr/bin' in entries
+
+
+def test_the_unit_path_is_declared_rather_than_inherited(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The installing shell's PATH carries a uv venv and an fnm directory named
+    after a pid. A unit built from it pins the schedule to directories that
+    outlive nothing, which is the trap `_executable` records for the binary."""
+    monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
+
+    assert '/tmp/some-venv/bin' not in schedule._service_content()
