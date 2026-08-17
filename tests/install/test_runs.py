@@ -209,8 +209,8 @@ class TestListing:
         older.started_at = '2026-08-01T00:00:00Z'
         runs.write(older, runs_dir)
 
-        assert len(runs.list_runs(runs_dir, machine='macmini')) == 1
-        assert len(runs.list_runs(runs_dir, machine='mbp')) == 1
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='macmini')] == ['macmini']
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='mbp')] == ['mbp']
         assert {runs.read(path).box for path in runs.list_runs(runs_dir)} == {'macmini', 'mbp'}
 
     def test_a_record_written_before_the_host_field_still_names_its_machine(self, runs_dir):
@@ -223,13 +223,19 @@ class TestListing:
         assert runs.read(written).box == 'macos-personal-workstation'
 
     def test_a_machine_whose_name_contains_hyphens_still_filters(self, runs_dir):
+        """Asserting which record comes back rather than how many. One record per
+        machine makes a count of 1 the answer for the filter and for its exact
+        inverse, so `==` could become `!=` in `list_runs` with this still green —
+        and did, in the form that sent `report upload` looking for a digest."""
         runs.write(a_run(machine='macos-personal-workstation'), runs_dir)
         record = a_run(machine='linux-lxc-server')
         record.started_at = '2026-08-01T00:00:00Z'
         runs.write(record, runs_dir)
 
-        assert len(runs.list_runs(runs_dir, machine='linux-lxc-server')) == 1
-        assert len(runs.list_runs(runs_dir, machine='macos-personal-workstation')) == 1
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='linux-lxc-server')] == ['linux-lxc-server']
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='macos-personal-workstation')] == [
+            'macos-personal-workstation'
+        ]
 
     def test_filtering_by_verb(self, runs_dir):
         runs.write(a_run(verb='apply'), runs_dir)
@@ -237,7 +243,7 @@ class TestListing:
         record.started_at = '2026-08-01T00:00:00Z'
         runs.write(record, runs_dir)
 
-        assert len(runs.list_runs(runs_dir, verb='check')) == 1
+        assert [runs.read(path).verb for path in runs.list_runs(runs_dir, verb='check')] == ['check']
 
     def test_latest_points_at_the_newest_record(self, runs_dir, monkeypatch):
         """Both halves are per-machine now that the fleet shares runs/: the link
