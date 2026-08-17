@@ -16,19 +16,28 @@ import dataclasses
 import dataclasses as dc
 import json
 import statistics
+import tempfile
 from collections import defaultdict
 from collections.abc import Iterable
 from collections.abc import Iterator
+from collections.abc import Mapping
 from pathlib import Path
 
 import typer
 from rich.table import Table
 
+from dotfiles import publishing
+from dotfiles import remote as transport
 from dotfiles import runs
+from dotfiles.commands import QuietOption
+from dotfiles.commands import VerboseOption
+from dotfiles.commands import resolved
+from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.output import render_note
 from dotfiles.output import warn
 from dotfiles.resources import UNCONVERGED
 from dotfiles.vocabulary import ExitCode
@@ -265,6 +274,136 @@ def show(identifier: str = typer.Argument(..., help='Run id, or a unique prefix'
 def path(identifier: str = typer.Argument(None, help='Run id (default: the newest)')) -> None:
     """Print a run record's path, for piping into another command."""
     print(_find(identifier))
+
+
+@app.command('upload')
+def upload(
+    identifier: str = typer.Argument(None, help='Run id (default: every record the remote does not have)'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Send this machine's run records to the remote, masked.
+
+    Bare it is a reconcile rather than a push: the shelf is listed, and only the
+    records missing from it are sent. So it is idempotent, it is the whole answer
+    to "keep these in sync", and it needs no second verb — running it twice sends
+    nothing the second time. `standards/cli-design.md` § "One closed verb
+    vocabulary across every resource" is why this is `upload` beside `status
+    upload` and `bundle upload` rather than a `sync` that means the same act under
+    a third name.
+
+    **Both files, always.** A run writes a `.json` of what it decided and a
+    `.jsonl` of what it ran, and each answers half of a failure — the first its
+    scope, the second its cause. Sending one is the shape that makes somebody ask
+    for the other.
+
+    Only this box's own records. `$XDG_STATE_HOME` is a Syncthing folder on the
+    fleet, so the runs directory holds every machine's, and a bare "upload
+    everything" would put a peer's records on this machine's shelf.
+    """
+    verbosity(verbose, quiet)
+    directory, sent = _send(identifier)
+    if not sent:
+        render_note(f'{directory} already has every record for this machine')
+        raise typer.Exit(ExitCode.CONVERGED)
+    render_note(f'sent {sent} file(s) to {directory}')
+
+
+def _send(identifier: str | None) -> tuple[str, int]:
+    """The shelf written to, and how many files reached it.
+
+    Its own function because `publish_after_apply` needs the same act without the
+    verb's verbosity handling or its exit codes — a command function calling
+    another command function inherits both, and typer's argument defaults are not
+    the same thing as Python's.
+    """
+    where = transport.reachable()
+    session = resolved(None)
+    trust = session.machine.coordinates.network_trust
+    box = publishing.discriminator(trust)
+
+    directory = transport.reports_for(where, session.machine_name)
+    chosen = [_find(identifier)] if identifier else runs.list_runs(machine=box)
+    if not chosen:
+        error(f'no runs recorded for {box}')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    already = frozenset(transport.listed(where, directory) or ())
+    identities = publishing.identifying(trust)
+    sent = 0
+    for record in chosen:
+        for local in (record, record.with_suffix('.jsonl')):
+            if not local.is_file() or local.name in already:
+                continue
+            transport.push(where, _masked_copy(local, identities), directory)
+            sent += 1
+    return directory, sent
+
+
+def _screened(payload: object, identities: Mapping[str, str]) -> object:
+    """Rooted first, then masked, and the order is what keeps the file readable.
+
+    `rooted` turns every path under this home into `~/…`, which is both how a
+    person writes one and how the account name leaves most of the document. What
+    masking then finds is the handful that are not paths — an answer a command
+    printed, a domain in an argument — and those become a placeholder because
+    there is no shorter true form of them.
+
+    Masking first would reach the same names and spell them
+    `/home/<account-this-runs-as>/.local/bin/dotfiles`, which is a path nobody can
+    read and a `~` that was available the whole time.
+    """
+    return publishing.masked(publishing.rooted(payload, str(Path.home())), identities)
+
+
+def _masked_copy(local: Path, identities: Mapping[str, str]) -> Path:
+    """The same file with every identifying name taken out, written beside itself.
+
+    A temporary copy rather than a rewrite, because the record on this machine is
+    the account of what happened here and screening it in place would take that
+    away from the one box entitled to it.
+
+    `.jsonl` is handled line by line so the file stays line-delimited JSON: the
+    whole file is not one document, and a raw-text pass would hold until a name
+    contained a character JSON escapes.
+    """
+    staged = Path(tempfile.mkdtemp(prefix='dotfiles-report-')) / local.name
+    if local.suffix == '.jsonl':
+        lines = (_screened(json.loads(line), identities) for line in local.read_text().splitlines() if line.strip())
+        staged.write_text(''.join(json.dumps(line) + '\n' for line in lines))
+        return staged
+    staged.write_text(json.dumps(_screened(json.loads(local.read_text()), identities), indent=2) + '\n')
+    return staged
+
+
+def publish_after_apply() -> None:
+    """Publish this run's record, where the machine asked for that to be automatic.
+
+    Off unless `remote.publish_reports_after_apply` says otherwise, for the reason
+    `status.publish_after_apply` gives: a converge that reaches a server unasked is
+    a change in posture on an employer network.
+
+    **Unlike the status, this publishes a failed run too.** A status describes what
+    the machine *is*, and one composed from a half-finished apply describes a
+    machine part way through being something else. A record describes what a run
+    *did*, and the run that failed is the one worth reading.
+
+    Every failure is a warning rather than an exit code. The apply's verdict is
+    about the machine, and failing it because a server did not answer would report
+    a converged box as broken.
+    """
+    found = transport.read()
+    if found.remote is None or not found.remote.publish_reports_after_apply:
+        return
+    try:
+        directory, sent = _send(None)
+    except typer.Exit:
+        return
+    except Exception as failed:
+        warn(f'this run finished and its record was not published: {failed}')
+        return
+    if sent:
+        render_note(f'published {sent} file(s) to {directory}')
 
 
 @app.command('stats')

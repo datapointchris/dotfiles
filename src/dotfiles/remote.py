@@ -94,7 +94,16 @@ machine that says nothing.
 """
 
 
-KEYS = frozenset({'root', 'keep_bundles', 'transport', 'fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'})
+FLAGS = ('fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply', 'publish_reports_after_apply')
+"""The boolean settings in the `[remote]` table, in the order they are shown.
+
+One list, read by the parser and by `config show`, so a setting added later is
+rendered and attributed without a second place to remember. A renderer holding its
+own copy shows every flag but the newest, and a setting that is on reads as a
+machine that does not have it.
+"""
+
+KEYS = frozenset({'root', 'keep_bundles', 'transport', *FLAGS})
 """Every key the `[remote]` table may hold, so anything else can be named."""
 
 
@@ -171,6 +180,7 @@ class Remote:
 
     fetch_bundle_when_none_is_staged: bool = False
     publish_status_after_offline_apply: bool = False
+    publish_reports_after_apply: bool = False
 
     def directory(self, *parts: str) -> str:
         """A remote path under the configured root, always absolute from it.
@@ -184,12 +194,18 @@ class Remote:
 
 BUNDLES = 'bundles'
 STATUSES = 'status'
-"""The two kinds of artefact under `root`, and dotfiles decides both.
+REPORTS = 'reports'
+"""The three kinds of artefact under `root`, and dotfiles decides all of them.
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
-— which is what every `--machine` flag here reads and what `bundles_for` and
-`statuses_for` build. These two are kinds, not shelves: one word for both would
-leave the term with two referents on one help screen.
+— which is what every `--machine` flag here reads and what `bundles_for`,
+`statuses_for` and `reports_for` build. These are kinds, not shelves: one word for
+both would leave the term with two referents on one help screen.
+
+`reports` differs from the other two in who reads it. A bundle and a status are
+consumed by this tool, on the other end of the offline loop. A report is consumed
+by a person, which is why it is the one kind whose contents are masked rather than
+row-screened — `publishing.masked` records why.
 
 
 A remote's layout is this tool's to choose because both ends of the exchange are
@@ -211,6 +227,10 @@ def bundles_for(remote: Remote, machine: str) -> str:
 
 def statuses_for(remote: Remote, machine: str) -> str:
     return remote.directory(STATUSES, machine)
+
+
+def reports_for(remote: Remote, machine: str) -> str:
+    return remote.directory(REPORTS, machine)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -345,6 +365,8 @@ def read(config: settings.Config | None = None) -> Configured:
     problems.extend([problem] if problem else [])
     publish, problem = _flag(table, 'publish_status_after_offline_apply')
     problems.extend([problem] if problem else [])
+    reports, problem = _flag(table, 'publish_reports_after_apply')
+    problems.extend([problem] if problem else [])
 
     transport, faults = _transport(table.get('transport'))
     problems.extend(faults)
@@ -359,6 +381,7 @@ def read(config: settings.Config | None = None) -> Configured:
             from_table=frozenset(set(table) & KEYS),
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
+            publish_reports_after_apply=reports,
         )
     )
 

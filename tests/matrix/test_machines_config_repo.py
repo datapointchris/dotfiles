@@ -29,6 +29,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import remote as transport
 from dotfiles.output import EVIDENCE_INDENT
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
@@ -1055,17 +1056,13 @@ REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'cons
 FINDING_KEYS = {'section', 'severity', 'message'}
 SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote'}
 SETTING_KEYS = {'name', 'value', 'source', 'exists', 'advice'}
-REMOTE_KEYS = {
-    'declared',
-    'problem',
-    'root',
-    'program',
-    'operations',
-    'keep_bundles',
-    'from_table',
-    'fetch_bundle_when_none_is_staged',
-    'publish_status_after_offline_apply',
-}
+REMOTE_KEYS = {'declared', 'problem', 'root', 'program', 'operations', 'keep_bundles', 'from_table', *transport.FLAGS}
+"""The shape of the `remote` block, with the flags read from where they are named.
+
+Spelling them again here would assert that `config show --json` emits the set this
+test happens to list, which is the same fact from two places — and the copy that
+falls behind fails the run for a setting that is working.
+"""
 
 
 def test_the_resolved_plan_document_carries_the_whole_machine_and_every_item(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

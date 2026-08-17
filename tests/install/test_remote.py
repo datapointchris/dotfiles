@@ -127,6 +127,15 @@ class TestReadingTheTable:
         assert found.remote.keep_bundles == transport.DEFAULT_KEEP
         assert found.remote.fetch_bundle_when_none_is_staged is False
         assert found.remote.publish_status_after_offline_apply is False
+        assert found.remote.publish_reports_after_apply is False
+
+    def test_every_flag_is_a_field_and_a_key(self) -> None:
+        """`FLAGS` is what `config show` renders and what the parser accepts. A name
+        in one and not the others is a setting that reads as absent on a machine
+        that has it set."""
+        for name in transport.FLAGS:
+            assert name in transport.KEYS, f'{name} is not accepted in the table'
+            assert name in transport.Remote.__dataclass_fields__, f'{name} is not a field'
 
     def test_every_fault_in_a_hand_edited_table_is_reported_at_once(self, config_home: Path) -> None:
         """Three mistakes otherwise cost three runs, and each run's one line reads

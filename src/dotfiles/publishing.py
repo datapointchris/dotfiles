@@ -58,6 +58,7 @@ import getpass
 import hashlib
 import json
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -218,6 +219,60 @@ def rooted(value: Any, home: str) -> Any:
         return {key: rooted(item, home) for key, item in value.items()}
     if isinstance(value, list):
         return [rooted(item, home) for item in value]
+    return value
+
+
+def placeholder(what: str) -> str:
+    """What a masked name is replaced by, built from the reason it is masked.
+
+    Derived rather than tabulated, so there is no second structure to keep in step
+    with `identifying`. A leading article goes because `<the-windows-account>`
+    reads worse than `<windows-account>` and carries nothing extra.
+    """
+    return '<' + what.lower().removeprefix('the ').replace(' ', '-') + '>'
+
+
+def masked(value: Any, identities: Mapping[str, str]) -> Any:
+    """Every identifying name replaced in place, keeping the shape around it.
+
+    The counterpart to `screened` for a document with no rows to drop. A run
+    record is a stream of commands, and dropping the line an identifier appears
+    in takes the command, its exit code and its timing with it — which is the
+    half a person reads a log for. `/mnt/c/Users/<windows-account>/AppData/…`
+    still says which path failed; a missing line says nothing.
+
+    **Masking rather than withholding is a choice about what the artefact is
+    for.** A status document is consumed by a bundle builder, and a row it never
+    sees is a tool it carries anyway — the cost is a larger bundle. A run record
+    is consumed by a person diagnosing a failure, and a line they never see is a
+    fault they cannot find. Neither leaks the name; what differs is how much of
+    the surrounding evidence survives, and only one of the two can afford to lose
+    it.
+
+    Case-insensitive, because `redacted` is: `machine_id` lowercases and Windows
+    reports a hostname in upper, so `PF5XMXFY` is the literal that a
+    case-sensitive pass reads straight past and the gate then refuses the
+    document for. Longest first, so a name that contains another does not leave
+    the shorter one's placeholder embedded in a half-substituted string.
+
+    Recursive over the whole document for the reason `rooted` is: an account name
+    can appear in any string a resource chose to write, and the field it appears
+    in next is the one nobody thought of — `transcript` and `target` were both
+    found that way.
+    """
+    named = sorted(((value, placeholder(what)) for what, value in identities.items() if value), key=lambda pair: len(pair[0]), reverse=True)
+    return _masking(value, named)
+
+
+def _masking(value: Any, named: list[tuple[str, str]]) -> Any:
+    if isinstance(value, str):
+        for name, token in named:
+            value = re.sub(re.escape(name), token, value, flags=re.IGNORECASE)
+        return value
+    if isinstance(value, dict):
+        return {key: _masking(item, named) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_masking(item, named) for item in value]
     return value
 
 

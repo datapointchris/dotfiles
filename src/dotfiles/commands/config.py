@@ -71,8 +71,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'operations': sorted(str(name) for name in remote.remote.transport.commands) if remote.remote else [],
                     'keep_bundles': remote.remote.keep_bundles if remote.remote else 0,
                     'from_table': sorted(remote.remote.from_table) if remote.remote else [],
-                    'fetch_bundle_when_none_is_staged': bool(remote.remote and remote.remote.fetch_bundle_when_none_is_staged),
-                    'publish_status_after_offline_apply': bool(remote.remote and remote.remote.publish_status_after_offline_apply),
+                    **{name: bool(remote.remote and getattr(remote.remote, name)) for name in transport.FLAGS},
                 },
             }
         )
@@ -98,11 +97,10 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     if remote.remote:
         console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep_bundles}')
         console.print(f'  {"":<{width}}  {_kept_from(remote.remote)}')
-        # Every setting in the table, not the one that grew an attribution. The
-        # second decides whether a document leaves the machine unasked, which is
-        # at least as worth seeing as a retention count — and both were reachable
-        # through `--json` alone while this block described the rest.
-        for name in ('fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply'):
+        # Every setting in the table, read from the one list that names them.
+        # These decide whether a document leaves the machine unasked, which is at
+        # least as worth seeing as a retention count.
+        for name in transport.FLAGS:
             console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({_layer(remote.remote, name)})')
 
 

@@ -207,6 +207,58 @@ class TestTheGate:
         assert publishing.identifying(axes.NetworkTrust.FLEET) == {'the account this runs as': getpass.getuser()}
 
 
+class TestMaskingKeepsTheEvidence:
+    """A run record is read by a person, so a name is replaced rather than dropped."""
+
+    NAMES = {'the Windows account': 'ab12345', 'this machine name': 'pf5xmxfy'}
+
+    def test_the_placeholder_says_what_was_taken_out(self) -> None:
+        assert publishing.placeholder('the Windows account') == '<windows-account>'
+        assert publishing.placeholder('this machine name') == '<this-machine-name>'
+
+    def test_the_path_around_the_name_survives(self) -> None:
+        """The whole point against withholding: the line still says which path
+        failed, and a dropped line says nothing at all."""
+        masked = publishing.masked({'target': '/mnt/c/Users/ab12345/AppData/Local/Fonts'}, self.NAMES)
+
+        assert masked['target'] == '/mnt/c/Users/<windows-account>/AppData/Local/Fonts'
+
+    def test_it_reaches_every_field_rather_than_named_ones(self) -> None:
+        """`transcript` and `target` were both found carrying paths after `argv`
+        was the only field anyone had thought of."""
+        masked = publishing.masked({'argv': ['echo', 'ab12345'], 'inner': {'transcript': 'ab12345 failed'}}, self.NAMES)
+
+        assert masked['argv'] == ['echo', '<windows-account>']
+        assert masked['inner']['transcript'] == '<windows-account> failed'
+
+    def test_case_does_not_let_a_name_through(self) -> None:
+        """`machine_id` lowercases and Windows reports a hostname in upper, which
+        is the literal that made connectivity-results.txt a leak."""
+        assert publishing.masked('PF5XMXFY', self.NAMES) == '<this-machine-name>'
+
+    def test_a_longer_name_is_replaced_before_one_it_contains(self) -> None:
+        """Shortest-first leaves the longer name half-substituted and still legible."""
+        masked = publishing.masked('ab12345-laptop', {'short': 'ab12345', 'long': 'ab12345-laptop'})
+
+        assert masked == '<long>'
+
+    def test_a_value_nobody_declared_masks_nothing(self) -> None:
+        assert publishing.masked('untouched', {'the Windows account': ''}) == 'untouched'
+
+    def test_a_non_string_is_carried_through(self) -> None:
+        masked = publishing.masked({'returncode': 0, 'seconds': 1.5, 'cwd': None}, self.NAMES)
+
+        assert masked == {'returncode': 0, 'seconds': 1.5, 'cwd': None}
+
+    def test_what_is_masked_no_longer_refuses_the_document(self) -> None:
+        """The two halves in sequence: masking is what makes a record publishable
+        at all, since the gate would otherwise refuse every one of them."""
+        record = {'outcomes': [{'target': '/mnt/c/Users/ab12345'}]}
+
+        assert publishing.redacted(record, self.NAMES) != ()
+        assert publishing.redacted(publishing.masked(record, self.NAMES), self.NAMES) == ()
+
+
 class TestTheValuesSetByHand:
     """`WINDOWS_USER` and `WINDOWS_DOMAIN` are identifiers the machine cannot derive."""
 

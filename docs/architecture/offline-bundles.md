@@ -50,6 +50,7 @@ root = "/dotfiles"
 keep_bundles = 5
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
+publish_reports_after_apply = false
 
 [remote.transport]
 program  = "ifiles"
@@ -280,10 +281,11 @@ ago a bundle was built — which is the first question anyone asks of one.
 There is no index file. An index is one object several machines write, and it goes
 stale against the directory listing that is the actual truth.
 
-## The two automatic paths are off by default
+## The automatic paths are off by default
 
-`fetch_bundle_when_none_is_staged` and `publish_status_after_offline_apply` each
-close one half of the loop without a command being typed. Both default false.
+`fetch_bundle_when_none_is_staged`, `publish_status_after_offline_apply` and
+`publish_reports_after_apply` each do something without a command being typed.
+All three default false.
 
 That is the point rather than caution. The work box sits on an employer network
 where the concern is monitoring rather than capability, so a converge that reaches
@@ -295,8 +297,36 @@ and a failure lets that refusal happen — "the remote would not answer" is a wo
 thing to end an apply on than "there is no bundle", which is what the caller can
 act on and is true either way.
 
-The publish runs only after a converged offline apply. A document from a failed
-one describes a machine part way through being something else.
+The status publish runs only after a converged offline apply. A document from a
+failed one describes a machine part way through being something else.
+
+**The report publish runs whatever the verdict**, and the asymmetry is the point.
+A status says what the machine *is*; a record says what a run *did*, and the run
+that failed is the one worth reading. Gating it on convergence would publish only
+the records nobody needs.
+
+## A report is masked, where a status is row-screened
+
+Both are read for the names that identify this box, and they do different things
+about what they find, because a different reader is on the other end.
+
+A status document is consumed by the bundle builder. A row it never sees is a tool
+the builder carries anyway, so the row is withheld and the cost is a slightly
+larger bundle.
+
+A run record is consumed by a person diagnosing a failure. Dropping the line an
+identifier appears in takes the command, its exit code and its timing with it —
+which is the whole of what a log is read for. So the name is replaced in place:
+`/mnt/c/Users/<windows-account>/AppData` still says which path failed.
+
+Paths are rooted to `~` before masking, and the order matters. Masking first
+reaches the same names and spells them `/home/<account-this-runs-as>/.local/bin`,
+which is unreadable and throws away a `~` that was available.
+
+Neither screen is what stops a credential. `effects.SECRET_SHAPES` and
+`CREDENTIAL_WORDS` scrub those before a record is written at all, so what is on
+disk has already been through them — `gh auth token` is on the default `check`
+path and its answer is dropped where it ran.
 
 ## Related
 

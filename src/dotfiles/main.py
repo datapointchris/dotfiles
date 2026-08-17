@@ -378,6 +378,12 @@ def _converged(
     )
     if offline and code is ExitCode.CONVERGED:
         status_commands.publish_after_apply(machine)
+    # Not gated on the verdict, unlike the status above. A status describes what
+    # this machine *is*, so one composed from a half-finished apply describes a
+    # machine part way through being something else. A record describes what the
+    # run *did*, and the run that failed is the one worth reading — gating it on
+    # convergence would publish only the records nobody needs.
+    report.publish_after_apply()
     return code
 
 
