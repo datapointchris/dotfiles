@@ -6,9 +6,8 @@ and cannot branch on a feature flag, which is why it is a variant rather than an
 entry in `install/flags.yml`.
 
 `hyprland.conf` holds only the environment variables and one `source` line per
-area. Everything else is in `conf/`: `monitors`, `workspaces`, `input`,
-`appearance`, `keybindings`, `windowrules`, `autostart`. The split exists so a
-change has one obvious home and a syntax error names the area it broke.
+area. Everything else is a file under `conf/`, one per area. The split exists so
+a change has one obvious home and a syntax error names the area it broke.
 `hypridle.conf`, `hyprlock.conf` and `hyprpaper.conf` sit alongside because those
 are separate daemons with their own config files, not part of the compositor's.
 
@@ -20,11 +19,10 @@ with `SHIFT` to move the window. Two machines, one set of muscle memory. Read th
 AeroSpace config alongside this one before changing either; a binding that exists
 on only one desk is the failure this arrangement is avoiding.
 
-Every binding uses `bindd` rather than `bind`. The extra field is a description,
-and `rofi-keybinds` (`apps/display/wayland/rofi-keybinds`) parses it to build the
-cheatsheet on `SUPER+SHIFT+/`. A `bind` written without a description silently
-disappears from that list, so it is `bindd` throughout even where the description
-reads as obvious.
+Prefer `bindd` over `bind`. The extra field is a description, and `rofi-keybinds`
+(`apps/display/wayland/rofi-keybinds`) parses it to build the cheatsheet on
+`SUPER+SHIFT+/`. A binding written without a description silently disappears from
+that list, so write one even where it reads as obvious.
 
 ## Workspaces are named, not numbered
 

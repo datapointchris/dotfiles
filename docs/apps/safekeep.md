@@ -21,16 +21,14 @@ safekeep writes a manifest to a network drive that has to be read by a different
 different machine, on a different OS, possibly years later. `MANIFEST_VERSION = 1` was the tell: it
 already versioned its data and had no version of its own.
 
-## What changed on this side
+## A machine gets safekeep only by declaring it
 
-It is no longer a symlinked script. It installs through `git_uv_tools` in `install/packages.yml`,
-alongside `refcheck` and `syncer` — category 4 in
-[App Installation Patterns](../learnings/app-installation-patterns.md).
+It installs through `git_uv_tools` in `install/packages.yml`, alongside `refcheck` and `syncer` —
+category 4 in [App Installation Patterns](../learnings/app-installation-patterns.md).
 
-The consequence worth knowing: **a machine gets safekeep only if its manifest lists it.** A
-symlinked app arrives on every machine that gets `apps/` symlinks; a git uv tool arrives only where
-it is declared. It is listed in the Arch, macOS, and WSL manifests, and deliberately not in
-`linux-lxc-server`, which takes no Python CLIs at all.
+That is the difference worth knowing. A symlinked app arrives on every machine that gets `apps/`
+symlinks; a git uv tool arrives only where a manifest names it. `linux-lxc-server` deliberately
+does not, because it takes no Python CLIs at all.
 
 Its terminal style comes from [pytermstyle](https://github.com/datapointchris/pytermstyle), the
 package extracted from this repo's former `appcore/formatting.py`. That extraction is what made the
@@ -39,5 +37,4 @@ move possible: a script cannot take a `sys.path` hack with it when it leaves.
 ## See Also
 
 - [Backup](backup.md) — the archive and snapshot tools that stayed in this repo
-- [Tool Composition](../architecture/tool-composition.md) — how safekeep fits into the toolchain
 - [App Installation Patterns](../learnings/app-installation-patterns.md) — the four install patterns

@@ -1,9 +1,8 @@
 # Restricted Networks
 
 The work machine sits behind a firewall that blocks most of what an install
-reaches for. Three pieces of machinery exist for it, and none of them are the
-generic advice about proxies and registry mirrors — that was the previous
-content of this page, and it described an installer this repo does not use.
+reaches for. Everything here is built for that machine, and none of it is proxy
+or registry-mirror configuration.
 
 ## Find out what is actually blocked
 
@@ -19,24 +18,17 @@ from that same network, so it goes stale where nothing can refresh it. Keep it
 under `$XDG_STATE_HOME` if you want to diff two runs after the rules change.
 `tests/install/test_network.py` fails the suite if a measurement is ever tracked.
 
-Note what the run itself looks like from the other side. It is around forty-five
-requests to distinct external hosts in quick succession, and it classifies TLS
-interception, so it reads as egress mapping to anything watching. Run it once
-when you need the answer, not on a schedule.
+Note what the run itself looks like from the other side. It is a burst of
+requests to distinct external hosts, and it classifies TLS interception, so it
+reads as egress mapping to anything watching. Run it once when you need the
+answer, not on a schedule.
 
 ## Install without the network
 
 `dotfiles bundle create` downloads every GitHub release binary, cargo binary and
-install script into a single tarball, on a machine that *has* the network.
-`--machine` names the manifest to build for and `--arch` its CPU. Neither has a
-default: this runs on a machine that is deliberately not the one being built for,
-so a default silently targets whichever box was convenient when it was written.
-Both offer a numbered list on a terminal, and a scripted caller that omits one
-gets a usage error rather than a prompt.
-
-The OS is not asked for. The manifest declares it, and the CPU is the only thing
-a manifest never states — which is why building for Apple Silicon differs from
-building for an Intel Mac by `--arch` alone.
+install script into a single tarball, on a machine that *has* the network. It
+builds for a machine that is deliberately not the one running it.
+`dotfiles bundle create --help` says what that means for each flag.
 
 It also carries what the bootstrap itself needs before any of that can run: the
 `uv` binary for the target platform, and a wheelhouse holding the CLI's whole
@@ -61,31 +53,11 @@ wants it. The build log is unaffected — it goes to stderr either way — and t
 path is printed only after the cache prune finishes, so nothing downstream sees a
 bundle that is still being written.
 
-## Move it without touching either machine's filesystem
-
-`dotfiles remote check` says whether this machine can exchange anything at all: is
-a transport declared, is the program installed, does the remote answer. It
+`dotfiles remote check` answers whether the upload has anywhere to go. It
 measures the listing rather than inferring it from `command -v`, because a box
 with the binary and no credential answers that perfectly and fails at the first
-upload.
-
-The transport is whatever the machine declares. `docs/architecture/offline-bundles.md`
-holds the config shape and why it is that shape.
-
-From the work box:
-
-```bash
-dotfiles bundle download          # newest for this machine; confirms, then verifies
-dotfiles bundle stage <path>      # or let `apply --offline` do it
-dotfiles apply --machine wsl-work-workstation --offline
-dotfiles status upload            # so the next bundle can be built against it
-```
-
-The download names the bundle, how long ago it was built, what platform it is for
-and how big it is, and asks — the transfer is minutes on a restricted network and
-the thing worth knowing first is whether it was built for this machine at all. The
-digest published beside the archive is checked on arrival; a mismatch deletes the
-file rather than leaving a corrupt archive that every later run would pick up.
+upload. `docs/architecture/offline-bundles.md` holds the transport config shape
+and why it is that shape.
 
 ## Carry only what changed
 
@@ -137,20 +109,19 @@ unasked when it finds nothing staged.
 Each bundle keeps its own directory rather than merging into one. The newest
 carrying a file answers for it and an older one still answers for the rest, which
 is what lets a sparse bundle carry only what changed. `dotfiles bundle prune`
-sweeps what is past the retention limit, and never the newest — nor the newest
-*full* bundle, which is what every sparse one above it reads through. Expect it to
-keep one more than the limit names, and to say which and why.
+sweeps what is past the retention limit, and its help says which bundles are
+pinned against that limit and what sweeping one would cost.
 
 This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
-it builds a bundle, starts a container blackholed to exactly the hosts this page's
-results file reports blocked, and asserts the install completes from cache. If you
-change the bundle format, that is what catches it.
+it builds a bundle, starts a container blackholed to a declared set of hosts, and
+asserts the install completes from cache. If you change the bundle format, that is
+what catches it.
 
-The container's blocklist is declared in `tests/e2e/harness.py` as `BLOCKED_HOSTS`
-and everything else the plan reaches stays resolvable, so the rig needs no record
-of any real network. It asserts both halves — that the blocked hosts really are
-unreachable, and that the reachable ones really are. Only the first was ever
-checked, and the test drifted stricter than intended: it blackholed `github.com`
+The blocklist is declared in `tests/e2e/harness.py` as `BLOCKED_HOSTS` and
+everything else the plan reaches stays resolvable, so the rig needs no record of
+any real network. It asserts both halves — that the blocked hosts really are
+unreachable, and that the reachable ones really are. Asserting only the blocked
+half let the rig drift stricter than intended: it blackholed `github.com`
 outright, so theme, font and bashselfupdate failed to clone in a rehearsal of a
 network where they clone fine, and the log read as though the bundle had a gap it
 does not have.
@@ -169,11 +140,6 @@ It falls back to the bundle when a bundle is present, rather than only under
 `--offline`. Reaching a network is not the same as reaching the Store on that
 box — winget is blocked there while `github.com` is not — so a run that has bytes
 staged uses them whichever way it was invoked.
-
-A separate Windows bundler existed while the Windows side was reached from WSL.
-It went with that bridge, and the capability moved into `create_bundle.py` rather
-than going with it, which is where it belongs now that Windows is an ordinary
-machine rather than something addressed across `/mnt/c`.
 
 Several of those projects publish no Windows checksum at all. That is stated per
 tool rather than passed over, so what was and was not verified stays visible in

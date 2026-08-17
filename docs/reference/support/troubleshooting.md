@@ -38,18 +38,11 @@ does nothing:
 
 ```sh
 eza -l ~/.config/zsh/.zshrc   # should point into ~/dotfiles
-dotfiles symlinks apply       # prunes dangling links and recreates all of them
+dotfiles symlinks apply       # reconcile every declared link
 ```
 
-`apply` prunes the links a deletion left dangling and then recreates every
-declared one. It never unlinks everything first: that gave a daemon watching its
-own config a window to find the file gone and write itself a default. It is
-idempotent, and it is the only deployment verb — there is no create-only pass to
-pick between.
+## ZDOTDIR lives in a different file per distribution
 
-## ZDOTDIR
-
-The system file differs by distribution, which is the part that catches people.
 `ls /etc/zshenv /etc/zsh/zshenv` says which one this machine has; whichever it
 is should contain `export ZDOTDIR="$HOME/.config/zsh"`. Reaching for the wrong
 spelling is silent, because zsh reads the other and says nothing. `dotfiles apply`
@@ -59,23 +52,11 @@ or was never run, the bootstrap having only installed the CLI.
 There is deliberately no `~/.zshenv` or `~/.zprofile`; see
 [Architecture](../../architecture/index.md).
 
-## Neovim
+## A Neovim "module not found" is a stale symlink, not a plugin problem
 
-```sh
-nvim -c "Lazy sync" -c "qa"        # force plugin sync
-rm -rf ~/.local/share/nvim/lazy/   # clear the plugin cache and re-sync
-:checkhealth vim.lsp               # from inside nvim, for LSP problems
-```
+That is true whenever the error arrives immediately after a repo change. Run
+`dotfiles symlinks apply` before touching anything in `lazy.nvim`.
 
-A "module not found" error immediately after a repo change is usually a stale
-symlink rather than a plugin problem — run `dotfiles symlinks apply` first.
+## Ghostty needs a full restart for some theme changes
 
-## Theme
-
-```sh
-theme verify     # checks the theme system end to end
-theme current
-```
-
-Ghostty needs a full restart for some changes; see
-[Ghostty Shader Reload](../../learnings/ghostty-shader-reload.md).
+See [Ghostty Shader Reload](../../learnings/ghostty-shader-reload.md).

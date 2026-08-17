@@ -8,15 +8,6 @@ Route the Arch box's spare HDMI output to the work desk's secondary monitor, on 
 
 Arch Linux only.
 
-## Quick Start
-
-```bash
-work-monitor           # Toggle the output
-work-monitor on        # Enable and switch to workspace 9
-work-monitor off       # Disable
-work-monitor status    # Report current state
-```
-
 Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++super+shift+9++ moves the focused window there.
 
 ## The Problem This Solves
@@ -35,7 +26,7 @@ The output is declared disabled in `conf/monitors.conf`, after the catch-all so 
 
 Because the rule is applied at runtime and the config default is `disable`, a Hyprland reload always returns to the single-monitor state.
 
-Whether the output is currently on is tracked in `$XDG_STATE_HOME/work-monitor/enabled` rather than read back from `hyprctl monitors`. This matters more than it looks: while the Dell is showing the work laptop, hotplug detect is dropped and an enabled output does not appear in that list at all. Querying Hyprland would therefore report "off" whenever the monitor is pointed elsewhere — which is precisely when the toggle needs to work — and pressing the key would re-enable instead of disabling.
+Whether the output is currently on is tracked in a state file rather than read back from `hyprctl monitors`, for the reason in the comment above `STATE_FILE` in `apps/display/wayland/work-monitor`.
 
 The one gap is a config reload while the output is on: `hyprctl reload` restores the `disable` rule but leaves the state file, so the next toggle reads as "turn it off" when it is already off. Press it twice, or run `work-monitor off` to resync. Both are harmless and idempotent.
 

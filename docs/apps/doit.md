@@ -5,8 +5,8 @@ icon: material/target
 # doit
 
 **The menu suite moved out of this repository in August 2026.** `menu`, `menu-next`, `menu-review`,
-`menu-labs`, `menu-dashboard` and `workflows` are now one tool, `doit`, at
-[datapointchris/doit](https://github.com/datapointchris/doit) — where its documentation is now
+`menu-labs`, `menu-dashboard` and `workflows` are one tool, `doit`, at
+[datapointchris/doit](https://github.com/datapointchris/doit) — where its documentation is
 maintained.
 
 This page is a pointer, not a copy. Two copies get a chance to disagree, and the one shipping beside
@@ -19,54 +19,26 @@ three `sys.path.insert(parents[2])` hacks, a top-level `tests/menucore/`, five P
 re-pinning the same revision, and a bash dispatcher that `exec`'d five separately-symlinked binaries
 while pretending to be one tool. Around 5,800 lines, including the workflows browser that folded in.
 
-The cards and Labs left too, to [datapointchris/terminal-library](https://github.com/datapointchris/terminal-library).
-Content is authored far more often than code, and keeping it in the tool's repo would have meant a
-release every time a card changed.
+The cards and Labs went to a second repo,
+[datapointchris/terminal-library](https://github.com/datapointchris/terminal-library), rather than
+travelling with the tool. Content is authored far more often than code. Co-locating them would have
+meant cutting a release every time a card changed.
 
-## What changed on this side
+## A machine gets doit only if its manifest names it
 
-Six symlinked scripts became one `git_uv_tools` install, like `refcheck` and `safekeep` — category 4
-in [App Installation Patterns](../learnings/app-installation-patterns.md). The same consequence
-applies: **a machine gets `doit` only if its manifest lists it**, where a symlinked app arrived on
-every machine that got `apps/` symlinks.
+Six symlinked scripts became one `git_uv_tools` install, alongside `refcheck` and `safekeep` —
+category 4 in [App Installation Patterns](../learnings/app-installation-patterns.md). That
+distinction is the one to carry. A symlinked app lands on every machine that gets `apps/` symlinks,
+while a git uv tool reaches only the machines whose manifest declares it.
 
-Two couplings stayed here and were rewired rather than removed:
+## `register.yml` is config, and config stays out of the repo
 
-- The shell startup nudge is now `cache_eval -b doit doit-nudge doit shell init zsh`. `doit` emits
-  the block and `.zshrc` only caches it — an `eval` would put a Python start in front of every
-  shell, which is the one thing [Shell Libraries](../architecture/shell-libraries.md) does not allow.
-- `bind m` and `bind t` in `tmux.conf` now call `doit launch` and `doit workflows show`.
-
-One more block does the same for the line editor: `cache_eval -b doit doit-widgets doit shell
-widgets zsh` defines the ZLE widget that lands a `doit choose` pick on the command line. `doit`
-emits no `bindkey` with it, because a subprocess cannot see what this machine's keymap already
-holds — so `apply_shell_keybindings` binds `^X^D` to it, beside the two Claude widgets.
-
-`shell/common/completions.zsh` is gone entirely. It existed only to hand-write `_menu`, and `doit`
-generates its own completion.
-
-`apps/common/tool-usage` followed in August 2026, superseded by `doit kit usage` and `doit kit
-unused`. It ranked the registry's `custom-tools` entries by hits in the flat zsh history; `doit`
-folds the same question over everything you own — the registry, shell functions, aliases, git
-aliases and forgit shortcuts — and reads atuin first, so it carries recency as well as frequency and
-answers for the whole fleet rather than one box. Its registry entry went with it.
-
-## Config and state
-
-Both moved to `doit`'s own XDG paths, and both are Syncthing folders declared in
-`homelab/containers/syncthing-lxc/folders-manifest.yml`:
-
-| What | Where |
-| --- | --- |
-| `pursuits.yml`, `register.yml`, `sources.yml` | `~/.config/doit/` |
-| review/labs state, draw history, nudge marker | `~/.local/state/doit/` |
-| cards and Labs | `~/.local/share/terminal-library/`, cloned on first run |
-
-`register.yml` used to live under `$XDG_DATA_HOME/menu-review/` as a symlink into this repo. It is
-hand-edited config that the tool only ever reads, it is personal, and both `doit` repos are public —
-so it belongs in the config directory and outside version control.
+`doit`'s config and state live under its own XDG paths, and both directories are Syncthing folders
+declared in `homelab/containers/syncthing-lxc/folders-manifest.yml`. `register.yml` is the entry
+worth explaining. It is hand-edited, the tool only ever reads it, and it is personal — while both
+`doit` repos are public. So it belongs in a synced config directory rather than under version
+control.
 
 ## See Also
 
-- [Tool Composition](../architecture/tool-composition.md) — how the remaining tools compose
 - [App Installation Patterns](../learnings/app-installation-patterns.md) — the four install patterns

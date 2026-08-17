@@ -30,32 +30,6 @@ and writes `ZDOTDIR` into the system zshenv itself, picking `/etc/zsh/zshenv` or
 Rebuilding a machine from scratch, including what the automation cannot do:
 [Rebuilding a Machine](reference/rebuilding-a-machine.md).
 
-## Structure
-
-`configs/`, `apps/`, and `shell/` each carry `<axis>/<value>/` directories beside
-a shared `common/` base — `eza -1 -D configs apps shell` shows which exist, and
-most do not. An axis earns a directory only where something actually differs
-along it. `MACHINE` is the only value chosen by hand anywhere in the repo; it
-selects a manifest, and the manifest declares the coordinates.
-
-`install/` handles provisioning — manifests in `install/manifests/`,
-the Windows-side scripts WSL needs in `install/wsl/`, what those scripts share in
-`install/common/lib/`, and every package in `install/packages.yml`.
-
-Some tools are developed elsewhere and installed from GitHub rather than living
-here: `sesh` (Go), `theme` and `font` (cloned to
-`~/.local/share/`), and the Python tools under `git_uv_tools`. The four install
-patterns and when each applies are in
-[App Installation Patterns](learnings/app-installation-patterns.md).
-
-## Key concepts
-
-- **Machine manifests** decide what installs where, and what `platform` a machine declares
-- **Symlinks** deploy configs from the repo into `$HOME` — `dotfiles symlinks apply` after any rename or delete
-- **Feature flags** (`install/flags.yml`) turn behaviour on per machine, tested with `flag_enabled`
-- **Theme** applies one palette across ghostty, tmux, btop and Neovim
-- **Composition** — tools emit parseable data and leave the UI to fzf, gum, or a script
-
 ## Finding things
 
 Every tool has `--help`, and that is the reference for its flags. For what

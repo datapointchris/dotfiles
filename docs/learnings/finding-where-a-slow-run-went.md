@@ -27,27 +27,23 @@ visible from a verdict row:
 
 ## Solution
 
-Read the run, then read the commands. Both are printed now.
+Read the run, then read the commands.
 
 ```bash
 dotfiles check                  # a row per resource, with what measuring it cost
 dotfiles report latest          # the same, plus the run's slowest commands
 ```
 
-A resource over two seconds is coloured on its verdict row, and a single command
-over five seconds reports itself while the run is still going:
+A slow resource is coloured on its verdict row. A slow command reports itself while
+the run is still going:
 
 ```text
 slow command  command=dpkg-query -W -f=${Package}\n  seconds=291.4
 ```
 
-Where that is not enough, the full stream is one line per command with its
-duration, written for every run:
-
-```bash
-jq -r 'select(.event == "ran") | "\(.seconds)\t\(.argv | join(" "))"' \
-  "$(dotfiles report path | sed 's/\.json$/.jsonl/')" | sort -rn | head
-```
+`dotfiles logs` is the noun that owns the full stream, one line per command with its
+duration, written for every run. The jq recipe that sorts it is in the docstring of
+`src/dotfiles/commands/report.py`.
 
 ## Key Learnings
 

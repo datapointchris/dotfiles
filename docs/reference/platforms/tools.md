@@ -5,152 +5,83 @@ What is installed on a machine is `doit kit list`, or
 only the tools where the *choice* of method needed a decision, and the
 per-platform quirks that decision produced.
 
-## The one split-method tool
+## Binary names are uniform on every platform
 
-**atuin** installs from GitHub releases on Linux like fzf and neovim, but macOS
-falls back to Homebrew. It publishes no Intel-macOS release binary — only Apple
-Silicon — and `cargo binstall` would fall through to compiling from source.
-brew's bottle covers both Mac architectures, so every Mac uses it while every
+`~/.local/bin` is the user binary directory everywhere, and a tool answers to
+the same name on every machine. The Ubuntu `batcat`/`fdfind` rename never
+arises, because `bat` and `fd` install through `cargo binstall` rather than apt.
+That uniformity is a consequence of the
+[package strategy](../../architecture/package-management.md), not an accident.
+
+## atuin is the one split-method tool
+
+atuin installs from GitHub releases on Linux, like fzf and neovim. macOS falls
+back to Homebrew. Upstream publishes no Intel-macOS release binary, only Apple
+Silicon, and `cargo binstall` would fall through to compiling from source.
+brew's bottle covers both Mac architectures. So every Mac takes brew while every
 other platform takes the uniform GitHub-releases path.
 
-## Version Managers
+## fnm reaches non-interactive shells, and nvm cannot
 
-### Node.js and npm (via fnm)
-
-Node.js versions come from **fnm**, installed as a cargo package. Repos across the
-portfolio pin different versions in `.nvmrc` — several want 24, meso wants 26 — and
-running the wrong one is not a subtle failure: ichrisbirch's frontend suite dies
-outright on 26 with `localStorage is undefined`.
+Node.js versions come from **fnm**, installed as a cargo package. Repos across
+the portfolio pin different versions in `.nvmrc` — several want 24, meso wants
+26. Running the wrong one is not a subtle failure: ichrisbirch's frontend suite
+dies outright on 26 with `localStorage is undefined`.
 
 `src/dotfiles/providers/toolchain.py` installs the fleet default and links it
 as fnm's `default` alias. `.zshenv` puts `~/.local/share/fnm/aliases/default/bin`
-on PATH ahead of everything else, so scripts, editors, agents and pre-commit hooks
-resolve `node` to that version without any shell integration. `.zshrc` layers
-`fnm env --use-on-cd` over it, so entering a directory with an `.nvmrc` switches.
+on PATH ahead of everything else. Scripts, editors, agents and pre-commit hooks
+therefore resolve `node` to that version with no shell integration at all.
+`.zshrc` layers `fnm env --use-on-cd` over it, so entering a directory with an
+`.nvmrc` switches.
 
-This is the arrangement nvm could not provide: nvm is a shell function defined in
-`.zshrc`, so it never existed in a non-interactive shell. fnm is a binary, so the
-default alias and `fnm exec` work anywhere. Removing nvm on the grounds that
-per-project switching was unused was the wrong diagnosis of a real problem.
+nvm is a shell function defined in `.zshrc`, so it does not exist in a
+non-interactive shell. fnm is a binary, so the default alias and `fnm exec` work
+anywhere. Dropping nvm on the grounds that per-project switching was unused was
+the wrong diagnosis of a real problem.
 
-The brew/pacman `node` package stays installed, but only as the bootstrap npm the
+The brew/pacman `node` package stays declared, but only as the bootstrap npm the
 installer needs before fnm has fetched anything.
 
-```bash
-# macOS
-brew install node
+## npm's prefix is set twice, because the two stages run in the wrong order
 
-# Arch Linux
-sudo pacman -S nodejs npm
-```
+npm's global prefix points at `~/.local/share/npm` through an XDG-located user
+config at `~/.config/npm/npmrc`, deployed from
+`configs/common/.config/npm/npmrc`. `.zshrc` points npm at that file by
+exporting `NPM_CONFIG_USERCONFIG`. This keeps globally-installed tools — LSPs,
+formatters — in a user-writable location, independent of the Node.js package
+itself. On Arch, where system npm's default prefix is `/usr`, it is what makes
+`npm install -g` work without sudo.
 
-**Configuration**:
-
-npm's global prefix is set to `~/.local/share/npm` by an XDG-located user config
-at `~/.config/npm/npmrc` (deployed from `configs/common/.config/npm/npmrc`), which
-`.zshrc` points npm at by exporting `NPM_CONFIG_USERCONFIG`. This keeps
-globally-installed tools (LSPs, formatters) in `~/.local/share/npm/bin` — a
-user-writable location — independent of the Node.js package itself. On Arch, where
-system npm's default prefix is `/usr`, this is what makes `npm install -g` work
-without sudo.
-
-The installing side does not rely on that file. `providers/npm.py` passes
-`NPM_CONFIG_PREFIX` on every call, because the npmrc above is a symlink the
-symlink stage deploys and that stage runs *after* the npm one — on a first
-install the file does not exist yet, npm falls back to its built-in prefix, and
-every global install dies with EACCES. The environment variable outranks every
-config file, so it holds in both orders.
-
-### Python (via uv)
-
-uv provides **consistent Python management** across all platforms.
-
-**All Platforms**:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Tool Installation**:
-
-```bash
-# Same commands on all platforms
-uv tool install ruff
-uv tool install mypy
-uv tool install basedpyright
-uv tool install sqlfluff
-uv tool install mdformat
-```
-
-Tools installed to: `~/.local/bin` (consistent across platforms)
+The installing side cannot rely on that file. The npmrc is a symlink, and the
+symlink stage runs *after* the npm one. On a first install the file does not
+exist yet, npm falls back to its built-in prefix, and every global install dies
+with EACCES. So `src/dotfiles/providers/npm.py` passes `NPM_CONFIG_PREFIX` on
+every call. The environment variable outranks every config file, so it holds in
+both orders.
 
 ## Platform-Specific Quirks
 
 === "macOS"
 
-    **GNU Coreutils**:
+    GNU coreutils install from Homebrew under unprefixed names, prepended to
+    PATH. GNU therefore wins over BSD in scripts as well as in interactive
+    shells, so write GNU syntax — `sed -i`, never `sed -i ''`.
 
-    - Installed via Homebrew with unprefixed names prepended to PATH
-    - GNU takes precedence over BSD in both interactive shells and scripts
-    - Use GNU syntax: `sed -i` NOT `sed -i ''`
-
-    **Homebrew Location**:
-
-    - Intel Mac: `/usr/local`
-    - Apple Silicon: `/opt/homebrew`
-    - Scripts should detect automatically
-
-    **macOS-Specific Tools**:
-
-    - `aerospace` - Tiling window manager
-    - `borders` - Window border highlights (JankyBorders)
+    Homebrew's prefix differs by architecture: `/usr/local` on Intel,
+    `/opt/homebrew` on Apple Silicon. `BREW_PREFIXES` in
+    `src/dotfiles/providers/bootstrap.py` is the pair every caller resolves
+    through, so nothing hardcodes one.
 
 === "Ubuntu/WSL"
 
-    **WSL-Specific Configuration** (`/etc/wsl.conf`):
+    Fonts install to Windows with no manual step and no admin rights, because
+    the per-user font directory under `%LOCALAPPDATA%` needs neither. The
+    `windows-fonts` step in `install/system.yml` installs them and points
+    fontconfig at that directory, so `fc-list` and the `font` CLI both see what
+    Windows has.
 
-    ```ini
-    [boot]
-    systemd=true
-
-    [interop]
-    appendWindowsPath=false
-
-    [user]
-    default=chris
-    ```
-
-    **Font Installation**:
-
-    Fonts are installed to Windows automatically (no manual steps):
-
-    - Directory: `%LOCALAPPDATA%\Microsoft\Windows\Fonts` (user fonts, no admin)
-    - Registry: `HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`
-    - Fontconfig: Configured to see Windows fonts by the `windows-fonts` step
-
-    The `font` CLI and `fc-list` both see Windows-installed fonts.
-
-    **Snap Packages**:
-
-    - Some tools only available via snap
-    - Snap integration varies
-
-=== "Arch Linux"
-
-    **AUR Helper** (yay):
-
-    - Required for AUR packages
-    - Installed during setup
-    - Command: `yay -S <package>`
-
-    **pacman Configuration**:
-
-    - Enable color output
-    - Enable parallel downloads
-    - Configured automatically during install
-
-    **Rolling Release**:
-
-    - More frequent updates
-    - May encounter breaking changes
-    - Test updates in VM first
+    `/etc/wsl.conf` belongs to the distro and this repo does not deploy it.
+    `apps/host/wsl/wsl-tools` reports what it holds and what each setting buys —
+    most usefully that `appendWindowsPath=false` is what takes the Windows
+    directories back off PATH.

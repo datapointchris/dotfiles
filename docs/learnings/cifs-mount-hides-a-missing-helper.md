@@ -3,8 +3,8 @@
 ## Problem
 
 A freshly installed WSL Ubuntu distro could not mount the work network drive.
-`mount-h` — now a wrapper around `mount-cifs` in the work box's machine-local
-`~/.local/shell/local.sh` — failed with:
+`mount-h`, a wrapper around `mount-cifs` in the work box's machine-local
+`~/.local/shell/local.sh`, failed with:
 
 ```text
 mount error(113): No route to host
@@ -28,9 +28,9 @@ unreachable host rather than as a missing helper.
 ## Solution
 
 Declare the dependency where the machine build reads it, so a rebuilt distro gets
-it without anyone remembering. `install/packages.yml` gained an apt-only entry, and
-`get_system_packages` skips any entry lacking the requested manager key, so Arch
-and macOS ignore it with no placeholder values:
+it without anyone remembering. `install/packages.yml` carries an apt-only entry. An
+entry without a key for the running package manager is skipped, so Arch and macOS
+ignore this one with no placeholder values:
 
 ```yaml
 - name: cifs-utils
