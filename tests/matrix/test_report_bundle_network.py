@@ -193,7 +193,7 @@ def test_the_listing_filters_narrow_by_what_the_filename_carries(
     ran = cli('report', 'list', *flags, '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.document == expected
+    assert [row['run'] for row in ran.document] == expected
 
 
 def test_a_limit_of_zero_lists_nothing(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -294,7 +294,7 @@ def test_latest_follows_this_box_link_rather_than_the_newest_record(sandbox: San
     listed = cli('report', 'list', '--json')
     latest = cli('report', 'latest')
 
-    assert listed.document[0] == '20260202T000000Z-box-plan'
+    assert listed.document[0]['run'] == '20260202T000000Z-box-plan'
     assert latest.stdout.startswith('writtenlast1')
 
 
@@ -546,16 +546,19 @@ def test_a_verb_answering_about_one_record_refuses_where_a_verb_answering_about_
 def test_a_verb_that_only_names_a_record_survives_an_unreadable_one(
     argv: tuple[str, ...], expected: list[str] | None, sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
-    """The two verbs that answer from the filename alone. `list --json` emits stems
-    and `path` prints one, so neither opens the file — which is the same property
-    that makes the filter matrix above read no records."""
+    """Neither verb loses a record to a file it cannot parse. `path` answers from
+    the filename alone, and `list --json` reads each record for its outcome and
+    still gives the unreadable one a row — dropping it would take a run out of the
+    listing over a truncated file, which is the answer least useful to whoever is
+    looking for the run that went wrong."""
     corrupt_store(sandbox)
 
     ran = cli(*argv)
 
     assert ran.exit_code == ExitCode.CONVERGED
     if expected is not None:
-        assert ran.document == expected
+        assert [row['run'] for row in ran.document] == expected
+        assert [row['outcome'] for row in ran.document] == ['unreadable', 'ok']
 
 
 def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -591,7 +594,7 @@ def test_the_machine_filter_ignores_a_file_it_cannot_name(sandbox: Sandbox, cli:
 
     ran = cli('report', 'list', '--machine', 'box', '--json')
 
-    assert ran.document == ['20260101T000000Z-box-plan']
+    assert [row['run'] for row in ran.document] == ['20260101T000000Z-box-plan']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

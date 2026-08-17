@@ -11,6 +11,7 @@ is the rendering that omitted the same path while answering every other question
 from __future__ import annotations
 
 import datetime as dt
+import json
 from pathlib import Path
 
 import pytest
@@ -193,3 +194,26 @@ def test_streaks_are_counted_per_machine(runs_dir: Path) -> None:
 
     assert {entry.machine for entry in found} == {MACHINE, 'linux-lxc-server'}
     assert all(entry.applies == 3 for entry in found)
+
+
+def test_the_json_list_carries_the_same_outcome_the_table_prints(runs_dir: Path) -> None:
+    """Identifiers alone made this stream answer a narrower question than the table
+    beside it: a caller asking which machine is unhealthy got filenames and had to
+    open each record, which is the fan-out the table stopped doing."""
+    recorded(runs_dir, Event('packages', Refusal('packages could not be examined')))
+
+    result = runner.invoke(app, ['report', 'list', '--json'])
+
+    assert result.exit_code == 0
+    rows = json.loads(result.stdout)
+    assert rows, result.stdout
+    assert set(rows[0]) == {'run', 'machine', 'verb', 'outcome'}
+    assert 'unconverged' in rows[0]['outcome']
+
+
+def test_the_json_list_says_ok_for_a_run_with_nothing_wrong(runs_dir: Path) -> None:
+    recorded(runs_dir, Event('packages', Outcome(change('zk', Verdict.MISSING), OutcomeStatus.DONE)))
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['outcome'] == 'ok'

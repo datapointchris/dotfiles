@@ -92,6 +92,20 @@ def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
             warn(str(unreadable))
 
 
+def _listed(path: Path) -> dict[str, str]:
+    """One listing row: what the filename says, plus what the record concluded.
+
+    A record that will not parse still gets its row. The alternative drops a run
+    out of a listing over a truncated file, which is the answer least useful to
+    whoever is looking for the run that went wrong.
+    """
+    try:
+        record = runs.read(path)
+    except runs.Unreadable:
+        return {'run': path.stem, 'machine': '', 'verb': '', 'outcome': 'unreadable'}
+    return {'run': path.stem, 'machine': record.machine, 'verb': record.verb, 'outcome': _unsuccessful(record) or 'ok'}
+
+
 def _find(identifier: str | None) -> Path:
     """Resolve a run id to its record, or the newest run when none is given."""
     if identifier is None:
@@ -246,7 +260,19 @@ def list_runs(
     """List recorded runs, newest first."""
     found = runs.list_runs(machine=machine, verb=verb, limit=limit)
     if as_json:
-        emit_json([path.stem for path in found])
+        # Identifiers alone made this stream answer a narrower question than the
+        # table beside it: a caller asking which machine is unhealthy got filenames
+        # and had to open each record to find out, which is the fan-out the table
+        # stopped doing. `outcome` is the same string the table prints, so the two
+        # cannot drift into disagreeing about what a run concluded.
+        #
+        # Every record gets a row, including one that will not parse — which is why
+        # this reads each path itself rather than through `_readable`, whose whole
+        # job is to drop those. A listing is the answer to "what is here", and a
+        # fleet-shared `runs/` is where a truncated file is least surprising and
+        # least acceptable to silently omit. The unreadable row carries the run and
+        # says so, and the fields it cannot know are empty rather than guessed.
+        emit_json([_listed(path) for path in found])
         return
     if not found:
         return
