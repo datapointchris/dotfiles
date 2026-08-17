@@ -20,6 +20,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from pathlib import Path
 
+from dotfiles import diagnose
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.effects import Output
@@ -134,12 +135,23 @@ def failure(name: str, completed: effects.Completed) -> str:
     The last lines rather than the first. A vendor installer prints its banner,
     progress and environment checks before it fails, so the head of a transcript is
     reliably the part that has nothing to do with the failure.
+
+    **A line naming a cause is carried out of the head when the tail lost it.** curl
+    is the transport that breaks the rule above: it prints its diagnosis first and
+    five lines of advice after it, so the tail of a rejected certificate is `please
+    visit the webpage mentioned above` and `unable to get local issuer certificate`
+    — the text `diagnose.explain` matches on — falls outside the budget. Measured on
+    the work box, 2026-08-17: eight applies recorded a claude-code failure whose
+    every line was curl's boilerplate, and the CA advice written for that machine
+    never once reached it.
     """
     said = [line for line in completed.transcript.splitlines() if line.strip()]
     if not said:
         return f'the {name} install script exited {completed.returncode}'
-    tail = '\n'.join(said[-TRANSCRIPT_LINES:])
-    return f'the {name} install script exited {completed.returncode}\n{tail}'
+    tail = said[-TRANSCRIPT_LINES:]
+    buried = '' if diagnose.cause_line(tail) else diagnose.cause_line(said)
+    kept = [buried, *tail] if buried else tail
+    return '\n'.join([f'the {name} install script exited {completed.returncode}', *kept])
 
 
 TRANSCRIPT_LINES = 3
@@ -147,6 +159,7 @@ TRANSCRIPT_LINES = 3
 
 Three, because `Outcome.from_result` renders every line after the first as its own
 indented advice row, so this is a budget in screen rows on a report that may carry
-several failures. Enough for a curl error plus the line that provoked it, and short
-of a stack of shell traces. The whole transcript is in the run's debug stream for
-anyone who needs the rest."""
+several failures. Enough for a failing command plus the line that provoked it, and
+short of a stack of shell traces. A carried cause line is spent on top of this, so
+a rejected certificate costs four rows rather than three. The whole transcript is in
+the run's debug stream for anyone who needs the rest."""

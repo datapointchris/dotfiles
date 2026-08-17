@@ -23,6 +23,21 @@ from dotfiles.providers import script
 
 INTERCEPTED = 'certificate verify failed: unable to get local issuer certificate'
 
+CURL_REJECTED_A_CERTIFICATE = """curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+"""
+"""Verbatim, from `20260817T211750Z-pf5xmxfy-apply.jsonl` on the work box.
+
+Written out rather than shortened because the shape is the subject: five non-blank
+lines, the cause on the first and three lines of closing advice at the end. A
+paraphrase with the marker anywhere else is the test that passed while the machine
+it was written for got nothing.
+"""
+
 
 class TestTheReasonLeavesTheTransport:
     def test_a_refused_certificate_is_carried_out_rather_than_becoming_False(self, tmp_path, monkeypatch) -> None:
@@ -161,6 +176,31 @@ class TestAFailedScriptSaysWhatItSaid:
 
         assert 'the real cause' in script.failure('uv', completed)
         assert script.failure('uv', completed).count('banner') <= script.TRANSCRIPT_LINES
+
+    def test_curls_own_layout_keeps_the_cause_the_tail_would_drop(self) -> None:
+        """curl prints its diagnosis first and five lines of advice after it, so the
+        tail is boilerplate and the marker falls outside the budget. Recorded on the
+        work box eight times on 2026-08-17, every line of it curl's closing advice."""
+        completed = effects.Completed(command=('bash',), returncode=60, transcript=CURL_REJECTED_A_CERTIFICATE)
+
+        said = script.failure('claude-code', completed)
+
+        assert 'unable to get local issuer certificate' in said
+        assert 'please visit the webpage mentioned above' in said
+
+    def test_a_carried_cause_reaches_the_advice_the_machine_is_owed(self) -> None:
+        """The whole point of keeping it: `explain` matches on that line, so trimming it
+        left the one machine this diagnosis was written for reading raw curl text."""
+        completed = effects.Completed(command=('bash',), returncode=60, transcript=CURL_REJECTED_A_CERTIFICATE)
+
+        explained = diagnose.explain('packages/custom/claude-code', script.failure('claude-code', completed))
+
+        assert diagnose.INTERCEPTED_CAUSE in explained
+
+    def test_a_cause_already_in_the_tail_is_not_repeated(self) -> None:
+        completed = effects.Completed(command=('bash',), returncode=60, transcript=f'downloading\ncurl: (60) {INTERCEPTED}\n')
+
+        assert script.failure('claude-code', completed).count(INTERCEPTED) == 1
 
 
 @pytest.mark.parametrize('code', [6, 7, 28, 35, 60])

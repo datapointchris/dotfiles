@@ -32,6 +32,7 @@ from __future__ import annotations
 import dataclasses as dc
 import re
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
 
 from dotfiles import effects
@@ -510,6 +511,22 @@ Matched on the strerror text rather than on an errno number, because these
 arrive as the `str()` of an exception a provider caught, and the number is not
 always in it. Ordered, and the first match wins.
 """
+
+
+def cause_line(lines: Iterable[str]) -> str:
+    """The first line carrying text `explain` can read a cause from, or ''.
+
+    Here rather than in the caller because the markers are this module's, and a
+    provider deciding which of its own output is worth keeping has to ask the same
+    question `explain` will ask later. Reaching into `INTERCEPTED` from outside put
+    that answer in two places, and the copy is the one that goes stale when a
+    marker is added.
+
+    Only interception, because it is the one cause a marker alone establishes. The
+    `WRITE_FAILURES` markers need a path out of the message and a probe against the
+    filesystem, so a line matching one is a candidate rather than a cause.
+    """
+    return next((line for line in lines if any(marker in line for marker in INTERCEPTED)), '')
 
 
 def explain(item: str, message: str) -> str:
