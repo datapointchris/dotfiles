@@ -1,387 +1,87 @@
 # GitHub Releases
 
-Twenty-three tools install from a prebuilt binary a project published on a GitHub
-release. This is how, and — more usefully — why the parts that look like they
-should be configuration are not.
-
-Read the code alongside it: `src/dotfiles/providers/releases.py` names what each
-release publishes, `src/dotfiles/providers/ghrelease.py` is the install engine,
-and `src/dotfiles/github_release.py` holds the checksum and asset-resolution
-rules the offline bundler shares.
-
-## The split
-
-One function per tool answers *what does this release publish and where is the
-binary inside it*, and one engine answers *how does a published asset become a
-binary on PATH*. Every tool goes through the same engine; only the naming varies,
-because only the naming does vary.
-
-The engine is one sequence — resolve a tag, name the asset, fetch it, verify it,
-unpack it, place what came out, confirm it answers on PATH — and it reads three
-fields to cover every shape upstream ships in:
-
-- `Archive.RAW` — the download is the binary (hadolint, terraformer, yq)
-- `Archive.GZIP` — a gzipped binary rather than an archive (tree-sitter alone)
-- `Archive.TARBALL` / `Archive.ZIP` — unpack, take `path`, plus any `extras`
-- `ReleaseArtifact.tree` — unpack under `~/.local` and symlink `path` out of it (neovim)
-
-That last one exists because `nvim` will not start without the runtime files
-packaged beside it, so the thing being installed is a directory, not a file.
-
-`extras` are other binaries in the same archive, placed under their own names:
-tenv's proxy shims (`terraform`, `tofu`, `terragrunt`, …), yazi's `ya`. Each is
-placed if present and passed over if not, because tenv's set has grown release by
-release — an install demanding all of them would break on the release before the
-one that added a name.
-
-`companions` are files fetched at the release's tag that the release does not
-publish. `fzf-tmux` is the only one: a shell script in fzf's repo tree, and the
-reason `prefix+s` opens a popup. It is fetched again whenever fzf installs, and
-restored on its own when fzf is already current — a companion is a separate file
-under `~/.local/bin`, and nothing about the binary being current says it is still
-there.
-
-## Supervision, for the one release that publishes a daemon
-
-Most of these are commands and a command needs nothing beyond being on PATH.
-syncthing is a daemon, so installing the binary and stopping there produces a
-machine with the tool present and nothing running it — which no verb reported,
-because every verb was asking about the binary.
-
-Linux takes upstream's own file. The tarball carries
-`etc/linux-systemd/user/syncthing.service`, which is the same unit its distro
-packages install, so `ReleaseArtifact.unit` names it and the engine places it under
-`$XDG_CONFIG_HOME/systemd/user` with the `ExecStart` pointed at where the binary
-actually landed. Only the path moves; the arguments stay upstream's, so a release
-that changes them is followed rather than overridden.
-
-macOS cannot do the same, and the reason is worth stating because the archive looks
-like it can. The macOS zip does carry `etc/macos-launchd/syncthing.plist`, and that
-file is an *example*: it names `/Users/USERNAME` four times, runs the binary out of
-`~/bin`, and its own README tells the reader to edit it and to turn off the browser
-it opens at every login. Nothing can install it as published, which is why Homebrew
-generates its own rather than shipping it. So the LaunchAgent is authored here, in
-`releases.AGENTS`, and serialised with `plistlib` — the same call
-`providers/schedule.py` makes, for the same reason: comparing two serialisations of
-one dict is exact, where comparing XML is a diff of whitespace launchd ignores.
-
-The two platforms also differ in what placing the file buys, and that difference is
-the init systems' rather than a choice here. A plist under `~/Library/LaunchAgents`
-is loaded at the next login whether or not anything asked, so the file is the
-declaration and `launchctl bootstrap` only saves the wait — which is why a
-`launchctl` that will not answer warns and the install still succeeds, while a plist
-that cannot be *written* fails it. A systemd user unit is inert until something
-enables it, so the install runs `daemon-reload` and `enable --now` and a failure
-there fails the install. Placing the file and stopping is a daemon that never runs,
-which is exactly the state `check` reported as converged on the one box in the fleet
-that actually runs syncthing.
-
-`providers/launchd.py` and `providers/systemd.py` own the mechanics either side —
-where the file goes, how it is reloaded, whether it is loaded. Both are shared with
-`providers/schedule.py`, which declares a different job through the same calls: the
-directory launchd reads, plistlib on both sides of a comparison, and reloading
-before enabling are facts about the init systems rather than anything either caller
-chose.
-
-`AGENTS` is its own table rather than a field on `ReleaseArtifact`, for the reason
-`COMPANIONS` is: an asset is named from a tag and a target, so reading a fact off
-one costs a release lookup and therefore a network call. `check` asks what a machine
-owes without either — and it asks three questions on each platform, because a
-supervision file that is present but *stale* is the state nobody can see. launchd
-goes on running the definition it loaded and systemd the unit it read at boot, so a
-daemon whose arguments moved in this repo is running the old ones with nothing on
-the machine saying so.
-
-The Linux comparison is narrower than the macOS one, and the difference is where the
-file comes from. A plist is authored here, so it can be compared byte for byte. A
-unit comes out of the archive, so there is nothing to compare it against without a
-download — what *is* checkable offline is the half the engine authors, the
-`ExecStart` path, and that is the half that goes wrong: a unit still naming
-`/usr/bin` after the package it came from was removed is exec-not-found on every
-start.
-
-**A daemon that is only unsupervised is supervised, not reinstalled.** The row reads
-`MISSING`, which is what it is, and the repair for it is not a download — left to
-fall through it spends a tag resolution, a download and a checksum on a state no
-download changes, every apply, for as long as the supervisor will not load.
-
-## One install path per tool, and what makes it real
-
-A declaration naming `github_releases` while Homebrew owns the binary is not one
-install path; it is two, with the check agreeing with the wrong one. That was
-syncthing until 2026-08-16 — pacman on Arch, a Homebrew formula on both Macs, and a
-`packages plan` that reported nothing because the version was right.
-
-Two things close it, and they are different questions.
-
-**Provenance.** A release entry is measured at the path this provider chose —
-`~/.local/bin/<command>` — rather than wherever PATH resolves the name. The narrow
-version is enough: nothing reads a receipt or asks who wrote the file, so a copy put
-there by hand still counts, which is the same trust PATH was already being given,
-moved to one directory. Where another copy answers, the row names it, because "not
-installed" on a machine whose `syncthing --version` works is the reading that sends
-somebody looking for a broken installer.
-
-**Displacement.** `supersedes` on a release entry names the package it took over
-from — `syncthing` under both pacman and Homebrew. It is a blocker rather than a
-duplicate because both of those ship a service: two syncthings on one machine is two
-daemons over one config directory and one port, so installing beside the package
-would make the machine worse. `check` reports it, `apply` declines it, and the row
-carries both ways out — the removal to paste, and
-`dotfiles packages apply --package <name> --force`, which does the removal and the
-install as one act.
-
-`--force` is the same word `symlinks apply` uses and means the same thing:
-authorisation to destroy what this repo did not create so it can converge over it.
-It clears a superseded *release* and deliberately not a superseded system package —
-there the manager is the thing refusing, and authorising this repo to overwrite what
-it did not create says nothing to pacman. It is recorded on the run, because it is
-the only flag here that decides something was removed and a record omitting it makes
-a forced run byte-identical to an ordinary install.
-
-**The order inside that one act is the part that matters.** The replacement is
-downloaded and verified first, and the removal runs from inside the install once the
-bytes are on disk. The machine being displaced is the machine that has the tool, and
-every step before the write can fail — an unresolvable tag, a refused download, a
-checksum that does not match. Removing first and failing there leaves the box with
-neither copy and the fleet's file sync stopped, which no re-run repairs. What still
-goes before the new binary lands is the old *supervisor*: neither `brew uninstall`
-nor `pacman -R` stops a running daemon, so the process would otherwise outlive its
-own package and hold the ports and the state directory the replacement is about to
-be pointed at — recreating, by the act of honouring it, the state `supersedes` exists
-to prevent.
-
-`UNINSTALL['apt']` is `dpkg --remove` rather than `apt-get remove -y`, and that is
-the same concern one level down. `pacman -R` refuses while another installed package
-needs the one being removed, so an authorisation to remove one name cannot take a
-set; apt resolves reverse dependencies instead and `-y` answers the confirmation
-that would have shown the list. `dpkg --remove` is apt's fail-safe spelling of the
-same act, and this is only ever handed one name a `supersedes` row already wrote
-down.
-
-Removal stays otherwise unautomated, and the reason is in `syspkg.REMOVE`: an
-uninstall inferred from what a declaration does not name takes a package off a
-machine on the strength of a typo. A `supersedes` row is the opposite of inferred —
-it is written down, reviewed in a commit, and named on the row that refuses.
+A tool declared under `github_releases` in `install/packages.yml` installs from a
+prebuilt binary its project published on a release. Three modules carry it, and
+their docstrings are the account of the mechanism:
+`src/dotfiles/providers/releases.py` names what each release publishes,
+`src/dotfiles/providers/ghrelease.py` installs one, and
+`src/dotfiles/github_release.py` holds the asset and checksum rules the offline
+bundler shares. This page holds the decisions those docstrings do not.
 
 ## Why asset naming is code, not `packages.yml`
 
-**Rejected:** a `url_pattern` field with a placeholder vocabulary.
+**Rejected twice:** a `url_pattern` field with a placeholder vocabulary.
 
 ```yaml
 # Rejected
 github_releases:
-  - name: lazygit
-    url_pattern: "{repo}/releases/download/{version}/lazygit_{version}_{platform}_{arch}.tar.gz"
+  - name: <tool>
+    url_pattern: "{repo}/releases/download/{version}/{name}_{version}_{platform}_{arch}.tar.gz"
 ```
 
-Measured against every installer rather than assumed, twice. Most asset names do
-fit a placeholder vocabulary, and the ones that miss cluster tightly enough that
-two new placeholders would cover all but three. Those three are the answer:
+Measure the proposal against every entry before believing it. Most asset names do
+fit a vocabulary, and two more placeholders would take all but a handful. Those
+few defeat it outright — an architecture spelled one way per OS, a capitalisation
+nothing else uses, an archive format nothing else uses. Read them side by side in
+`providers/releases.py`.
 
-- `shellcheck` — `darwin.aarch64`, dots where everything else uses dashes, and
-  the only `.tar.xz` in the set
-- `trivy` — `macOS-ARM64` against `Linux-64bit`: capitalisation and a bit-width
-- `zk` — spells the same CPU two ways depending on the OS, `x86_64` on macOS
-  against `amd64` on Linux, which no flat placeholder can express at all
+The half-measure is what was actually paid for. `binary_pattern` and `install_dir`
+rode along on nearly every entry in this section while no reader gated on either,
+and both drifted into naming assets that did not exist. `dotfiles machines check`
+rejects them here for that reason: a field that only looks like configuration
+reads as authoritative to whoever edits the file next.
 
-The original rationale was "URL patterns vary enough that YAML templates become
-complex; inline keeps it explicit and traceable", and it holds unchanged in
-Python. What changed is that the alternative to a template is now a small typed
-function rather than a whole script.
+## Pinning exists for a machine upstream has broken
 
-This is enforced rather than restated. `dotfiles machines check` rejects `binary_pattern`
-and `install_dir` on a `github_releases` entry: both were carried on nearly every
-entry while every reader gated on a key this section does not use, so neither was
-read, neither was validated, and both drifted into naming assets that no longer
-existed. A field that only looks like configuration is worse than none, because
-it reads as authoritative to whoever edits the file next.
+Latest is the default, and almost every entry wants it.
 
-The parity in the other direction is checked: `dotfiles machines check` fails an entry
-with no asset function, and `tests/install/test_release_urls.py` fails a function
-naming a tool nothing declares.
+A `version:` earns its complexity operationally rather than theoretically. A
+machine has to be able to hold a known-good release while upstream is broken. An
+older distro has to be able to run an older build than the rest of the fleet.
 
-## Version pinning
+**Rejected:** always latest, with a pin spelled by editing the installer. The cost
+showed up in the data — constraint fields sat on four entries no code read, one of
+them eight versions stale.
 
-**Latest is the default.** An entry that declares nothing installs whatever the
-release API calls newest, which is what almost every entry wants.
+## One install path per binary takes two independent measurements
 
-**A `version:` in `packages.yml` is honoured, exactly.** The capability is
-operational rather than theoretical: a machine has to be able to hold a
-known-good release while upstream is broken, and an older distro has to be able
-to run an older build than the rest of the fleet.
+A tool declared here while a package manager also ships it is not one install
+path. It is two, and a version check then agrees with whichever copy answers
+first. That was syncthing until 2026-08-16.
 
-The constraint is a **bare version, never a tag**, because the same release is
-spelled `v0.56.0` by lazygit, `0.8.30` by terraformer and `cli/v0.9.0` by the
-personal CLIs. Matching it against published tags is what lets one spelling work
-everywhere, and `catalog.py` refuses a constraint written as a tag.
+Closing it needs two mechanisms, and no single module pairs them up because each
+knows only its own end. **Provenance** narrows the question from "is a syncthing
+installed" to "is the one this declaration asks for installed", in
+`evidence.by_release`. **Displacement** declares the package name a release took
+over from, in `catalog.GithubRelease.supersedes`, and refuses to install beside
+it. Provenance alone reports the machine honestly and converges nothing.
+Displacement alone has no measurement to fire on.
 
-Two failure modes are deliberate and both are loud: a pin no release matches
-aborts rather than falling through to latest, and a `packages.yml` that cannot be
-read raises rather than resolving as though nothing were pinned. Falling through
-is the exact outcome a pin exists to prevent.
+## Verification defends the transfer, not the publisher
 
-The earlier answer here was "always latest, pin by editing the script", and the
-cost showed up in the data: `version:` and `min_version:` sat on four entries no
-code read, one of them eight versions stale.
+Every download is checked against the SHA-256 the release published, before
+extraction. An entry whose upstream cannot supply one declares that in
+`packages.yml`; `catalog.CHECKSUM_STATES` says why the exceptions are separate
+values.
 
-## Prefixed release tags
-
-Four entries are CLIs living in a monorepo that also releases an API and a web
-app, so they are tagged `cli/v0.9.0` and `releases/latest` there answers with
-whichever component shipped most recently. `release_tag_prefix` narrows the
-lookup to releases carrying it. Without that, asking for `icb` reports the CLI
-outdated every time the API releases, and current every time the API releases
-after it.
-
-## Projects that tag without releasing
-
-`aws/aws-cli` tags every build and publishes no GitHub release at all —
-`releases/latest` answers 404. That is not a `github_releases` entry (its bytes
-come from AWS's own CDN) but it is measured the same way, so `version_source:
-tags` on the entry sends the lookup to `/tags` instead. Declared rather than
-discovered: falling back to tags when the release lookup fails would read a
-rate-limited minute as "this project tags instead", and start answering a
-different question with no way to tell.
-
-`latest_tag` takes the **greatest tag by version**, not the first one on the
-page. GitHub documents no ordering for that endpoint — it answers newest-first in
-practice — and comparing costs one pass over a list already in memory. One page
-of 100 is the whole of what it reads: a project that published a hundred tags
-since its latest is not one this repo is a version behind.
-
-## Private repositories
-
-The browser URL (`github.com/…/releases/download/…`) **404s on a private repo
-whatever token is presented**. Only the REST asset endpoint serves those, and
-only with `Accept: application/octet-stream`, so the asset id is resolved first
-and the browser URL is the fallback a public repo needs.
-
-This is also why the asset *spelling* has to be exact rather than merely
-downloadable. GitHub resolves release asset paths case-insensitively, so a
-misspelled asset downloads fine from a public repo and then silently misses both
-the asset-id lookup and the checksum entry recorded under the real name. lazygit
-was fetched as `Linux_x86_64` against a published `linux_x86_64` for exactly that
-reason, invisibly, because the download succeeded anyway.
-
-## The token goes to GitHub hosts and nowhere else
-
-`request` attached `Authorization: Bearer` to whatever URL it was handed, so a PAT
-reached `s3.amazonaws.com`, `awscli.amazonaws.com`, `releases.hashicorp.com` and
-`pypi.org` on any machine with `gh` logged in. The header is scoped by hostname
-**equality** — a suffix match hands the token to whoever registers
-`notgithub.com` — and the asset CDNs are excluded deliberately: they serve a
-pre-signed URL and S3 answers an unrecognised bearer token with a 400, which is
-how the leak surfaced in the first place.
-
-The client is `httpx2`, not `urllib.request`, for the same reason: httpx2 strips
-`Authorization` across a redirect on its own, so the hand-rolled redirect handler
-was a security mechanism maintained here against one the client's authors already
-maintain. Redirects are off by default and the timeout is 5s, both stated at the
-call site.
-
-## Checksum verification
-
-Every download is checked against the SHA-256 the release published, **before
-extraction** — so no unverified bytes are ever handed to a tar or zip reader.
-This brings releases level with `goselfupdate`, which each tool's own `update`
-command already uses.
-
-The rules live in `src/dotfiles/github_release.py` rather than in the engine,
-because the offline bundler needs the same ones: one verifies a download, the
-other records a digest the first will later trust. They were separate
-implementations, awk and Python, until the bundler was rewritten — and two
-implementations of rules this fiddly can disagree without anything saying so, the
-symptom being a bundle that verifies differently from a live install.
-`tests/install/test_github_release.py` covers every case named here.
-
-**Finding the checksum file.** Discovered from the release's asset list rather
-than guessed, because the naming is not consistent: `checksums.txt` (goreleaser),
-`SHA256SUMS` (just), `<tool>_<version>_checksums.txt` (fzf, trivy), or a per-asset
-`<asset>.sha256` sidecar (atuin, hadolint). A sidecar wins outright, since it
-names exactly one file and cannot be ambiguous. Detached signatures and
-certificates sit beside the checksums file and match a naive `*checksum*` search
-— tflint publishes `checksums.txt` next to `checksums.txt.keyless.sig` and
-`checksums.txt.pem` — so those are excluded by suffix, or the asset would be
-compared against a signature.
-
-**Reading it.** The `sha256sum` format both GNU and goreleaser emit: digest,
-whitespace, an optional `*` binary marker, then the name. A CI step written as
-`sha256sum ./*.tar.gz` records `./tool.tar.gz` while the asset is named
-`tool.tar.gz`, so an exact match is tried first and the base name only consulted
-when nothing matched exactly. A case-insensitive match is the last resort, for
-the lazygit case above.
-
-**Verification is required by default**, and an entry that cannot satisfy it says
-so in `packages.yml`:
-
-| `checksum:` | Meaning |
-| --- | --- |
-| `required` (default) | Must verify. An install that cannot stops. |
-| `unpublished` | The release publishes no checksum file at all. |
-| `unlisted` | It publishes one that does not name this asset. |
-
-The two exceptions are separate values because they are separate upstream facts,
-and one is one upstream fix away from being verifiable while the other is not.
-`yq` is the whole of `unlisted`: an rhash table with the name in column 0, which
-is not the `<digest>  <name>` shape every other publisher uses.
-
-Which entries declare which, and whether the declaration is still true, is
-measured against live releases rather than written down here:
+Whether a declared exception is still true is measured against live releases
+rather than written down here:
 
 ```bash
 uv run pytest tests/install/test_release_urls.py --e2e -k verifies
 ```
 
-That test fails in **both** directions — a project that starts publishing
-checksums must stop being an exception, and one that stops must be caught before
-an install refuses it. Defaulting to required is what makes the first automatic.
-
-Before this default existed, seven installers bypassed the shared library
-entirely because their archive shape did not fit it, and every one of those
-bypasses skipped verification silently — `hadolint` and `tenv` were installing
-unverified from releases that publish perfectly good checksums.
-
-**On failure.** A mismatch deletes the download and aborts, never negotiable, and
-deleting matters because a retry would otherwise verify or extract bytes that
-already failed. An unlisted asset is *not* deleted: nothing was compared, so
-nothing was proven wrong.
-
 **What this defends against.** A corrupted, truncated or intercepted download,
-given that the checksums file itself arrives over TLS from the same release. Not
-a compromised publishing account, which can rewrite the checksums file alongside
-the asset — that needs a signature verified against a key distributed out of band.
-
-## Offline
-
-A staged bundle is preferred over the network whenever it holds the asset, not
-only when offline: those bytes were verified against their release when the bundle
-was built, and re-downloading them spends a request to arrive at the same file.
-
-Several bundles can be staged at once and `providers.locate` reads across them
-newest first — see [Offline Bundles](offline-bundles.md).
-
-Offline resolves the version from the bundle's `manifest.txt` rather than the
-release API — the network that makes a bundle necessary is the same one that
-blocks the API, and the asset filename is built from the version, so a version
-fetched live names a file the bundle does not contain the moment upstream ships.
-
-An offline install verifies against the `checksums.txt` **in the bundle that
-staged the asset**, and never falls through to the network — which would spend a
-timeout arriving at "upstream publishes nothing", a statement about upstream that
-is really a statement about the bundle. Resolving the file and its digest
-independently across the stack would pair a newer bundle's checksum with an older
-bundle's binary and fail verification where nothing is wrong. `create_bundle.py` records only digests it verified against upstream
-while building, so an asset whose release publishes nothing usable is simply
-absent from that file.
+given that the digests arrive over TLS from the same release. Not a compromised
+publishing account, which can rewrite the checksums file alongside the asset. That
+needs a signature verified against a key distributed out of band.
 
 ## What is deliberately not here
 
-- **Signature verification** for the releases that publish one (sigstore bundles:
-  glow, tflint, trivy). Worth having; not done.
+- **Signature verification** for the releases that publish one. Worth having; not
+  done.
 - **Rollback.** Idempotency plus a pin covers the need.
-- **Per-tool install scripts.** There were twenty-three, and deleting them is
-  what this page describes. A new tool is a function next to the one above it.
+- **Per-tool install scripts.** A new tool adds a function to `releases.py`.
 
 ## Related
 

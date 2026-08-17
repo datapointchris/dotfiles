@@ -7,7 +7,11 @@ combined. The roster is
 explains the ones with a design decision behind them rather than listing every
 function, because a hand-copied roster drifts and this one had.
 
-## Sourcing Rules
+Scripts inside the repo source from `$DOTFILES_DIR/configs/common/.local/shell/`,
+scripts on an installed machine from `${SHELL_DIR:-$HOME/.local/shell}`, and
+interactive shells source nothing because `.zshrc` already did.
+
+## A sourced library never touches shell options
 
 A library loaded with `source` runs in the caller's shell, so any option it sets
 (`set -euo pipefail`, `shopt`) persists in the calling script. Libraries must
@@ -15,32 +19,27 @@ therefore never touch shell options — only the script decides its own error
 handling. A library contains function definitions, variable assignments and
 conditional logic, and nothing else.
 
-`error-handling.sh` follows this by exposing `enable_strict_mode` as an explicit
-opt-in rather than setting strict mode on load. Every library is checked for the
-violation by `tests/shell/test_shell_libraries.py`; see
-[Library Flag Pollution](../learnings/library-flag-pollution.md) for the
-incident that produced the test.
+`platform-detection.sh` broke that rule and carried `set -euo pipefail` at its
+top from November 2025 to August 2026. Every script that sourced it for one
+platform check inherited `-e`, including scripts written around `|| true` and
+their own error handling. The tell is a script that stops part-way through and
+prints nothing, because `-e` fires before any handler runs.
 
-## Library Overview
+`error-handling.sh` gets this right by exposing `enable_strict_mode` as an
+explicit opt-in rather than setting strict mode on load. Every library is checked
+for the violation by `tests/shell/test_shell_libraries.py`, which captures `$-`
+either side of sourcing and asserts the flag set is unchanged.
 
-### logging.sh - Status Messages with Log Prefixes
+## What each library is for
 
-**Location**: `~/.local/shell/logging.sh`
-**Purpose**: Core logging for scripts that output status messages and may be logged/monitored
-
-**When to use**:
-
-- Scripts run unattended or in CI/CD
-- Installation/update scripts that need logging
-- Any script whose output might be piped to log files
-- Scripts that need parseable output for tools like logsift
+### logging.sh — the `[LEVEL]` prefix is the whole point
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/logging.sh`
 
-**Output format**: every one of them emits a `[LEVEL]` prefix a log parser can key
-on, ahead of the color and the unicode icon a human reads. That prefix is the
-whole difference from `formatting.sh` below, and it is why a script that might be
-piped to a log file writes here instead.
+Every one of them emits a `[LEVEL]` prefix a log parser can key on, ahead of the
+color and the unicode icon a human reads. That prefix is the whole difference
+from `formatting.sh` below. A script that might be piped to a log file writes
+here instead.
 
 Two contracts the names do not carry. **Everything goes to stderr**, success and
 info included, so a script's stdout stays whatever the script is actually
@@ -48,29 +47,7 @@ producing. And `log_fatal` and `die` exit 1 rather than returning, which makes
 either one unusable inside a command substitution or a pipeline the caller means
 to survive.
 
-**Example**:
-
-```bash
-#!/usr/bin/env bash
-source "$HOME/.local/shell/logging.sh"
-
-log_info "Starting backup process..."
-log_success "Backed up 156 files"
-log_warning "Skipped 3 files (permissions denied)"
-log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
-```
-
-### formatting.sh - Visual Structure for Interactive Output
-
-**Location**: `~/.local/shell/formatting.sh`
-**Purpose**: Visual formatting for interactive scripts with headers, sections, banners
-
-**When to use**:
-
-- Interactive scripts run by humans at terminal
-- Scripts with visual sections/phases
-- Menu systems and interactive tools
-- Scripts that prioritize visual appeal over parseability
+### formatting.sh — visual structure, and the help grammar
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/formatting.sh`
 
@@ -136,35 +113,13 @@ screen. They emit the colour escape *outside* the padded field — `printf` coun
 toward a field width — and *before* the two-space indent, so the indent stays contiguous with the
 name for anything grepping the output for it.
 
-**Example**:
-
-```bash
-#!/usr/bin/env bash
-source "$HOME/.local/shell/formatting.sh"
-
-print_header "Backup Tool" "blue"
-print_section "Phase 1: Scanning"
-
-# Visual-only script - no logging needed
-for file in *.txt; do
-  print_success "Scanned: $file"
-done
-
-print_header_success "Backup Complete"
-```
-
-### flags.sh - Feature Flag Tests
-
-**Location**: `~/.local/shell/flags.sh`
-**Purpose**: One truthy test for every on/off switch, so a flag reads the same from `.zshrc`, an installer, or an app
-**Dependencies**: None — deliberately, so it can load before colors and formatting do
-
-**When to use**:
-
-- Any code that asks whether a feature is wanted on this machine
-- Never for whether a tool is *installed* — that stays a `command -v` check
+### flags.sh — one truthy test, no dependencies
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/flags.sh`
+
+It depends on nothing, deliberately, so it can load before colors and formatting
+do. Use it for whether a feature is *wanted* on this machine, never for whether a
+tool is *installed* — that stays a `command -v` check.
 
 `flag_enabled NAME [default]` is the one every caller wants: true when `$NAME` is truthy, with
 `default` applying when the variable is unset, empty, or holds an unrecognized value, and itself
@@ -176,91 +131,19 @@ Truthy is `1`/`true`/`yes`/`on` and falsey is `0`/`false`/`no`/`off`, each case-
 
 Unset means *enabled* because the model is load-everywhere-flag-decides: a machine whose `~/.env` predates a flag keeps the feature rather than silently losing it. Anything that should start life off passes an explicit `0`.
 
-**Example**:
-
-```bash
-source "$HOME/.local/shell/flags.sh"
-
-flag_enabled SHELL_NUDGE && cache_eval -b doit doit-nudge doit shell init zsh
-flag_enabled ZSHRC_DEBUG 0 && print_startup_timings
-```
-
 The flag list and its per-machine defaults live in `install/flags.yml`; this library only answers the question.
 
-### error-handling.sh - Robust Error Management
-
-**Location**: `~/.local/shell/error-handling.sh`
-**Purpose**: Cleanup registration, verification helpers, and download retry
-**Dependencies**: Sources logging.sh
-
-**When to use**:
-
-- Scripts that create temporary files/directories
-- Download/installation scripts needing retry logic
-- Scripts that must undo their own mess on the way out
+### error-handling.sh — cleanup, fatal verification, one retry
 
 **Functions**: `rg -o '^[a-z_][a-z0-9_]*\(\)' configs/common/.local/shell/error-handling.sh`
 
-Three things those names do not carry. `enable_strict_mode` installs no handler — its whole body is
-`set -euo pipefail`, run in the caller's shell — so the cleanup a script registers runs only if that
-script also writes `trap run_cleanup EXIT`, which is the line the library's own usage block at the
-foot of the file shows. The `verify_*` and `require_*` helpers are fatal rather than falsy — they
-call `log_fatal`, so a caller cannot branch on the result. And `download_file_with_retry` is the only
-thing here that retries, for the reason in
+Sources `logging.sh`. Three things those names do not carry. `enable_strict_mode` installs no
+handler — its whole body is `set -euo pipefail`, run in the caller's shell — so the cleanup a script
+registers runs only if that script also writes `trap run_cleanup EXIT`, which is the line the
+library's own usage block at the foot of the file shows. The `verify_*` and `require_*` helpers are
+fatal rather than falsy — they call `log_fatal`, so a caller cannot branch on the result. And
+`download_file_with_retry` is the only thing here that retries, for the reason in
 [Why Downloads Retry but Scripts Do Not](#why-downloads-retry-but-scripts-do-not).
-
-**Example**:
-
-```bash
-#!/usr/bin/env bash
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/error-handling.sh"
-enable_strict_mode
-
-# Register cleanup
-TMP_DIR=$(mktemp -d)
-register_cleanup "rm -rf $TMP_DIR"
-trap run_cleanup EXIT
-
-# Verify prerequisites
-require_commands curl tar jq
-
-# Download with retry
-download_file_with_retry \
-  "https://example.com/package.tar.gz" \
-  "$TMP_DIR/package.tar.gz" \
-  "Package archive" \
-  3
-
-# Verify and install
-verify_file "$TMP_DIR/package.tar.gz" "Downloaded package"
-safe_move "$TMP_DIR/binary" "$HOME/.local/bin/binary" "Binary"
-
-exit_success
-```
-
-## Sourcing Patterns
-
-### From Scripts in Repo (use DOTFILES_DIR)
-
-```bash
-DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
-source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-```
-
-### From Scripts After Installation (use SHELL_DIR or HOME)
-
-```bash
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/logging.sh"
-source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/error-handling.sh"
-```
-
-### From Interactive Shell (already sourced in .zshrc)
-
-Functions are available directly in interactive shells - no need to source.
 
 ## Why Downloads Retry but Scripts Do Not
 
