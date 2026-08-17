@@ -34,6 +34,11 @@ stdout carries what a command produced: the table, the JSON, the path `choose`
 picked, the path `new` created. Everything written for a human to read goes to
 stderr, so `cd "$(worktree choose)"` cannot pick up a warning instead of a path.
 
+Every subprocess is echoed to stderr before it runs, indented and green, exactly
+as it could be re-typed. A fetch, a rebase and a push onto the default branch are
+what `land` is, and a tool that moves branches on your behalf should say which
+ones it moved. `-q` on any command hides them; the verdict keeps its channel.
+
 Python rather than shell because the work stopped being control flow: measuring
 columns, matching sessions to worktrees by path, and emitting one set of rows as
 both a table and JSON. The shell version padded columns in awk and passed records
@@ -178,10 +183,30 @@ def say_error(message: str) -> None:
         ERR.print(escape(rest), highlight=False)
 
 
+ECHO = True
+
+
+def set_echo(enabled: bool) -> None:
+    global ECHO
+    ECHO = enabled
+
+
+def run(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    """The only place a subprocess starts, so none of them can run unannounced.
+
+    The line is `shlex.join`ed and carries absolute paths, which makes it the
+    command itself rather than a description of one: a run that stopped somewhere
+    unexpected is replayed by pasting the line back. `-q` is what turns it off,
+    and the fzf preview passes it because a preview pane is a rendered artifact.
+    """
+    if ECHO:
+        ERR.print(f'    [green]$ {escape(shlex.join(argv))}[/]', highlight=False)
+    return subprocess.run(argv, capture_output=True, text=True, **kwargs)
+
+
 def git(cwd: Path, *args: str) -> str:
     """Run git in `cwd` and return its stdout, raising on a non-zero exit."""
-    result = subprocess.run(['git', '-C', str(cwd), *args], capture_output=True, text=True, check=True)
-    return result.stdout.strip()
+    return run(['git', '-C', str(cwd), *args], check=True).stdout.strip()
 
 
 def git_optional(cwd: Path, *args: str) -> str | None:
@@ -191,13 +216,13 @@ def git_optional(cwd: Path, *args: str) -> str | None:
     fetched, a HEAD symref a --no-tags clone never received. Anywhere else a git
     failure means a broken worktree, and that has to be seen rather than defaulted.
     """
-    result = subprocess.run(['git', '-C', str(cwd), *args], capture_output=True, text=True)
+    result = run(['git', '-C', str(cwd), *args])
     return result.stdout.strip() if result.returncode == 0 else None
 
 
 def git_effect(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     """Run git for its effect, handing the result back for the caller to judge."""
-    return subprocess.run(['git', '-C', str(cwd), *args], capture_output=True, text=True)
+    return run(['git', '-C', str(cwd), *args])
 
 
 def worktree_root() -> Path:
@@ -257,7 +282,7 @@ def live_sessions() -> tuple[Session, ...]:
     """
     if shutil.which('claude-sessions') is None:
         return ()
-    result = subprocess.run(['claude-sessions', '--json'], capture_output=True, text=True)
+    result = run(['claude-sessions', '--json'])
     if result.returncode != 0:
         say_warning('claude-sessions failed; listing worktrees without the sessions in them')
         return ()
@@ -443,7 +468,7 @@ def capture_pane(pane: str) -> str | None:
     """What is on a session's screen, colour included, or None if tmux cannot say."""
     if shutil.which('tmux') is None:
         return None
-    result = subprocess.run(['tmux', 'capture-pane', '-ep', '-t', pane], capture_output=True, text=True)
+    result = run(['tmux', 'capture-pane', '-ep', '-t', pane])
     return result.stdout.rstrip() if result.returncode == 0 else None
 
 
@@ -453,10 +478,14 @@ def preview_command() -> str:
     sys.executable rather than the script itself: this process already resolved
     the dependencies into an environment, and going back through the shebang would
     make uv resolve them again on every keystroke that moves the cursor.
+
+    `-q` because the pane is a rendered artifact rather than a session: the git
+    reads behind a preview say nothing about the worktree it is previewing, and
+    they would be redrawn on every keystroke that moves the cursor.
     """
     interpreter = shlex.quote(sys.executable)
     script = shlex.quote(str(Path(__file__).resolve()))
-    return f'FORCE_COLOR=1 {interpreter} {script} show {{1}}'
+    return f'FORCE_COLOR=1 {interpreter} {script} show -q {{1}}'
 
 
 def cmd_choose(repo_filter: str | None) -> int:
@@ -472,7 +501,7 @@ def cmd_choose(repo_filter: str | None) -> int:
     rows = [f'{FZF_DELIMITER}{header}', *(f'{w.path}{FZF_DELIMITER}{line}' for w, line in zip(worktrees, rendered, strict=True))]
 
     picker = 'fzf-tmux' if os.environ.get('TMUX') and shutil.which('fzf-tmux') else 'fzf'
-    result = subprocess.run(
+    result = run(
         [
             picker,
             '--delimiter',
@@ -495,8 +524,6 @@ def cmd_choose(repo_filter: str | None) -> int:
             preview_command(),
         ],
         input='\n'.join(rows),
-        capture_output=True,
-        text=True,
     )
 
     chosen = result.stdout.strip()
@@ -645,20 +672,27 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             'Worktrees live under $WORKTREE_ROOT (default ~/.worktrees/<repo>/<slug>). '
             "'list' and 'choose' read every repo there. "
+            'Every command it runs is echoed to stderr as you could re-type it; -q hides them. '
             "For work that grew into a large feature, 'git push -u origin HEAD' and open a PR instead."
         ),
     )
     commands = parser.add_subparsers(dest='command', metavar='<command>')
 
-    new = commands.add_parser('new', help="isolate a session, off origin's default branch; prints the path")
+    # argparse parses a group's options before the subcommand name, so a -q
+    # declared on `parser` turns `worktree land -q` into an unrecognized argument.
+    # A parent puts it on every leaf, which is where it is typed.
+    quiet = argparse.ArgumentParser(add_help=False)
+    quiet.add_argument('-q', '--quiet', action='store_true', help='hide the commands this runs')
+
+    new = commands.add_parser('new', parents=[quiet], help="isolate a session, off origin's default branch; prints the path")
     new.add_argument('slug', help='names both the directory and the branch')
 
-    commands.add_parser('land', help='rebase, push onto the default branch, then clean up')
+    commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')
 
-    drop = commands.add_parser('drop', help='abandon this worktree without landing it')
+    drop = commands.add_parser('drop', parents=[quiet], help='abandon this worktree without landing it')
     drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
 
-    listing = commands.add_parser('list', help="every worktree on this machine, or one repo's")
+    listing = commands.add_parser('list', parents=[quiet], help="every worktree on this machine, or one repo's")
     listing.add_argument('repo', nargs='?', help='narrow to one repo')
     listing.add_argument('--json', action='store_true', dest='as_json', help='the same rows for a script to read')
     # Scope is structural here: `list` is the whole machine and `list <repo>` is
@@ -668,10 +702,10 @@ def build_parser() -> argparse.ArgumentParser:
     listing.add_argument('--all', action='store_true', help=argparse.SUPPRESS)
     listing.set_defaults(subparser=listing)
 
-    show = commands.add_parser('show', help='what one worktree carries, and which session is in it')
+    show = commands.add_parser('show', parents=[quiet], help='what one worktree carries, and which session is in it')
     show.add_argument('path', nargs='?', help='defaults to the worktree you are standing in')
 
-    choose = commands.add_parser('choose', help='pick one with fzf; prints the path it chose')
+    choose = commands.add_parser('choose', parents=[quiet], help='pick one with fzf; prints the path it chose')
     choose.add_argument('repo', nargs='?', help='narrow to one repo')
 
     return parser
@@ -701,6 +735,7 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    set_echo(not getattr(args, 'quiet', False))
     try:
         return dispatch(parser, args)
     except Refused as refusal:

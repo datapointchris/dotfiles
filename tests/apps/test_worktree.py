@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import stat
 import subprocess
 import sys
@@ -363,6 +364,64 @@ class TestUsage:
         assert result.stdout == ''
 
 
+class TestEcho:
+    """Every subprocess is announced before it runs.
+
+    `land` fetches, rebases and pushes onto the default branch, and the branch it
+    moved is not recoverable from the one line it prints afterwards. The echo is
+    asserted as text a shell would take, not as a message: what makes it worth
+    having is that a stopped run is replayed by pasting a line back.
+    """
+
+    def commands(self, result: subprocess.CompletedProcess[str]) -> list[str]:
+        return [line.strip().removeprefix('$ ') for line in plain(result.stderr).splitlines() if line.strip().startswith('$ ')]
+
+    def test_the_git_that_moves_a_branch_is_named(self, fleet, run):
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        run(fleet['primary'], 'new', 'alpha')
+        commit_in(alpha, 'a.txt')
+
+        result = run(alpha, 'land')
+
+        assert f'git -C {alpha} rebase --quiet origin/main' in self.commands(result)
+        assert f'git -C {alpha} push --quiet origin HEAD:main' in self.commands(result)
+
+    def test_an_echoed_line_runs_as_it_stands(self, fleet, run):
+        """Pasteable is the claim, so the assertion pastes one."""
+        result = run(fleet['primary'], 'list')
+
+        replayed = subprocess.run(shlex.split(self.commands(result)[0]), capture_output=True, text=True)
+
+        assert replayed.returncode == 0
+
+    def test_what_is_not_git_is_announced_too(self, fleet, run, bin_dir):
+        """One choke point, or the next subprocess added here escapes it."""
+        stub_sessions(bin_dir, session('one', fleet['primary']))
+
+        result = run(fleet['primary'], 'list')
+
+        assert 'claude-sessions --json' in self.commands(result)
+
+    def test_quiet_hides_the_commands_and_keeps_the_verdict(self, fleet, run):
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        run(fleet['primary'], 'new', 'alpha')
+        commit_in(alpha, 'a.txt')
+
+        result = run(alpha, 'land', '-q')
+
+        assert self.commands(result) == []
+        assert 'Landed 1 commit' in plain(result.stderr)
+
+    def test_no_command_reaches_stdout(self, fleet, run):
+        """One line of it on stdout and a caller's parse fails as malformed JSON."""
+        run(fleet['primary'], 'new', 'alpha')
+
+        result = run(fleet['primary'], 'list', '--json')
+
+        assert self.commands(result) != [], 'the echo is on, so stdout is the thing under test'
+        assert len(json.loads(result.stdout)) == 2
+
+
 class TestListing:
     def test_it_reads_every_repo_not_just_the_one_you_are_in(self, fleet, run):
         run(fleet['primary'], 'new', 'alpha')
@@ -573,10 +632,11 @@ class TestChoose:
     def test_the_preview_runs_show_against_the_path_field(self, fleet, populated, picker):
         _, _, argv = picker(fleet['primary'], behaviour='exit 130')
 
-        preview = next(line for line in argv.read_text().splitlines() if ' show {1}' in line)
+        preview = next(line for line in argv.read_text().splitlines() if ' show ' in line)
 
-        assert preview.endswith('show {1}')
+        assert preview.endswith('{1}')
         assert 'FORCE_COLOR=1' in preview, 'a preview is a pipe, so colour has to be asked for'
+        assert ' -q ' in preview, 'the pane previews a worktree, not the git reads behind it'
 
     def test_a_repo_argument_narrows_the_picker(self, fleet, populated, picker, run):
         run(fleet['other'], 'new', 'beta')
