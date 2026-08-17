@@ -10,9 +10,15 @@ unit and a LaunchDaemon: the check reads `$HOME`, `~/.env` and the user's
 release cache, so running it as root would measure a machine nobody uses. It also
 means nothing here escalates.
 
-What it buys, beyond the nudge: the run keeps `releases.json` warm, so an
-interactive `check` reads cached upstream versions instead of spending an API
-call per release against an unauthenticated 60/hour limit.
+**Off unless a machine declares `schedule.enabled`, and that is the whole of how
+this row decides who runs one.** A timer is periodic by construction, so what it
+sends becomes a beacon: this one runs `check --refresh`, which is a call per
+declared release through a thread pool, every six hundred seconds, to one host.
+On a machine behind an employer's egress that is a workstation calling out on an
+exact interval, which is the pattern network monitoring exists to surface — so
+the schedule is opted into per machine rather than installed everywhere and
+tuned. What it buys where it is on: the run keeps `releases.json` warm, so an
+interactive check spends no API calls.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from pathlib import Path
 
 from dotfiles import coordinates as axes
 from dotfiles import providers
+from dotfiles import settings
 from dotfiles.providers import Kind
 from dotfiles.providers import gotool
 from dotfiles.providers import launchd
@@ -36,17 +43,43 @@ from dotfiles.resources import Verdict
 LABEL = 'com.datapointchris.dotfiles-check'
 UNIT = 'dotfiles-check'
 
+TABLE = 'schedule'
+"""The config table saying whether this machine wants a periodic check."""
+
+
+def enabled(config: settings.Config | None = None) -> bool:
+    """Whether to install the timer at all, declared rather than inferred.
+
+    **Off unless a machine says otherwise**, which is the direction
+    `remote.publish_reports_after_apply` already fails in and for the same reason.
+    A timer is a standing background process that outlives the session installing
+    it, and this one runs `check --refresh` — one request per declared release,
+    every ten minutes, forever. Behind an employer's egress that is a workstation
+    calling out on an exact interval, which is the pattern network monitoring
+    exists to surface. Something with that reach is opted into, never defaulted
+    into.
+
+    A config key rather than a coordinate the code works out for itself. Both
+    deployed configs state it, including the one that matches this default, so the
+    key is visible on whichever box is being read and the answer needs no
+    knowledge of what happens when it is absent.
+    """
+    found = config if config is not None else settings.read_config()
+    table = found.values.get(TABLE)
+    return bool(table.get('enabled', False)) if isinstance(table, dict) else False
+
+
 INTERVAL_SECONDS = 60 * 10
 """Every ten minutes. The record each run writes is the fleet's drift series, so
 this cadence is what sets its resolution — how far a machine has moved, and how
 far behind another one it sits, are only answerable as often as someone measured.
 
-Affordable because the refresh is authenticated: 24 declared releases at six runs
-an hour is 144 calls against GitHub's 5000, and a rate-limited answer keeps the
-previous one rather than failing the run."""
+Affordable at this cadence because the run is local: filesystem reads and version
+banners off binaries already on the box. A schedule this tight would not be
+defensible for anything that left the machine."""
 
 
-def _cadence() -> str:
+def cadence() -> str:
     if INTERVAL_SECONDS % 3600 == 0:
         return f'{INTERVAL_SECONDS // 3600}h'
     return f'{INTERVAL_SECONDS // 60}m'
@@ -100,6 +133,10 @@ def _service_content() -> str:
     # without it that finding is never reached. Nobody is waiting on a timer, and
     # an unanswering upstream degrades to "upstream did not answer" rather than
     # failing the run.
+    #
+    # What this costs on a watched network is why `enabled` is off by default
+    # rather than why the flag is absent here: the requests are the point of the
+    # refresh, so a machine that does not want them declines the whole schedule.
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
         f'[Service]\nType=oneshot\nEnvironment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
@@ -186,7 +223,7 @@ def _apply_systemd() -> Result:
     enabled = systemd.enable(f'{UNIT}.timer')
     if not enabled.ok:
         return Result(False, f'could not enable {UNIT}.timer: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{UNIT}.timer enabled, every {_cadence()}', kind=Kind.APPLIED)
+    return Result(True, f'{UNIT}.timer enabled, every {cadence()}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -236,7 +273,7 @@ def _apply_launchd() -> Result:
     loaded = launchd.reload(LABEL)
     if not loaded.ok:
         return Result(False, f'could not load {LABEL}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{LABEL} loaded, every {_cadence()}', kind=Kind.APPLIED)
+    return Result(True, f'{LABEL} loaded, every {cadence()}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,11 +281,57 @@ def _apply_launchd() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _installed() -> tuple[Path, ...]:
+    """The files this row writes, whichever manager this machine has."""
+    if _is_darwin():
+        return (_agent_path(),)
+    return tuple(_systemd_files())
+
+
+def _observe_declined() -> State:
+    """A machine that turned the schedule off should have no schedule.
+
+    Absent rather than merely unmanaged, because a timer installed before the
+    machine declined goes on firing and nothing else would ever mention it. That
+    is the whole failure this row exists for, read the other way round: a schedule
+    nobody can check is a schedule that silently keeps running.
+    """
+    found = [path for path in _installed() if path.exists()]
+    if not found:
+        return State(Verdict.MATCHED, f'no periodic check, and {TABLE}.enabled is off')
+    return State(Verdict.STALE, f'{", ".join(path.name for path in found)} still installed while {TABLE}.enabled is off')
+
+
+def _remove() -> Result:
+    """Stop the schedule and take its files away.
+
+    The manager is told first and the files go second. A file removed while the
+    manager still holds the job leaves it running with nothing on disk to explain
+    it, which is worse than either state on its own.
+    """
+    if _is_darwin():
+        stopped = launchd.bootout(LABEL)
+        if not stopped.ok and _agent_path().exists() and launchd.loaded(LABEL):
+            return Result(False, f'could not unload {LABEL}: {stopped.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    else:
+        stopped = systemd.disable(f'{UNIT}.timer')
+        if not stopped.ok and systemd.enabled(f'{UNIT}.timer'):
+            return Result(False, f'could not disable {UNIT}.timer: {stopped.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+
+    for path in _installed():
+        path.unlink(missing_ok=True)
+    return Result(True, f'periodic check removed, because {TABLE}.enabled is off', kind=Kind.APPLIED)
+
+
 def observe() -> State:
+    if not enabled():
+        return _observe_declined()
     return _observe_launchd() if _is_darwin() else _observe_systemd()
 
 
 def apply() -> Result:
+    if not enabled():
+        return _remove()
     return _apply_launchd() if _is_darwin() else _apply_systemd()
 
 

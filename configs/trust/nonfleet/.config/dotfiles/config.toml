@@ -14,9 +14,33 @@
 
 repos_registry = "~/.config/repos.json"
 
+# No periodic `dotfiles check` on a machine outside the fleet. The run sends one
+# request per declared release, so a timer makes this box call the same host every
+# ten minutes for as long as it is powered on — and here that traffic crosses an
+# employer's egress, where a workstation beaconing on an exact interval is the
+# pattern monitoring exists to surface.
+#
+# Nothing is lost that a person cannot ask for: `dotfiles check` answers on
+# demand, and the shell nudge simply has no fresh status to read.
+#
+# Stated rather than left to the default it matches, so the key is visible on the
+# machine where it matters most. A validator holds both variants to naming it.
+[schedule]
+enabled = false
+
 # Both trust variants declare this table identically; a validator holds them to it.
+#
+# The three flags are stated rather than left to the defaults they match, for the
+# reason [schedule] is: a machine that reaches a server unasked should say so in
+# its own config, and a reader should not have to know a compiled-in default to
+# know what this box does. Every one is off, so nothing here contacts the remote
+# on its own — a bundle or a run record moves when somebody types the verb.
+# Turning one on for a while is a local edit to this file.
 [remote]
 root = "/dotfiles"
+fetch_bundle_when_none_is_staged = false
+publish_status_after_offline_apply = false
+publish_reports_after_apply = false
 
 [remote.transport]
 program  = "ifiles"

@@ -22,9 +22,28 @@ repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 hosts_json = "~/.local/share/terminal-library-fleet/hosts.json"
 machines_json = "~/.local/share/terminal-library-fleet/machines.json"
 
+# The periodic `dotfiles check`, on here because this is a machine on its own
+# network. The run makes one request per declared release every ten minutes, and
+# on a fleet box that traffic goes to the same places everything else here does.
+#
+# Off is the compiled-in default, so this line is what turns it on. Stated in the
+# nonfleet copy too even though it matches that default — a validator holds both
+# variants to naming the key, because a reader should not have to know what
+# happens when it is absent to know what this machine does.
+[schedule]
+enabled = true
+
 # Both trust variants declare this table identically; a validator holds them to it.
+#
+# The three flags are stated rather than left to the defaults they match, for the
+# reason [schedule] is: a machine that reaches a server unasked should say so in
+# its own config. Every one is off, so a bundle or a run record moves when
+# somebody types the verb and never as a side effect of converging.
 [remote]
 root = "/dotfiles"
+fetch_bundle_when_none_is_staged = false
+publish_status_after_offline_apply = false
+publish_reports_after_apply = false
 
 [remote.transport]
 program  = "ifiles"

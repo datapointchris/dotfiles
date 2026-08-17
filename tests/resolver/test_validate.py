@@ -484,7 +484,13 @@ def test_a_config_that_will_not_parse_is_an_error(tmp_path: Path) -> None:
 
 
 DOTFILES_CONFIG = '.config/dotfiles/config.toml'
-REMOTE = """
+SCHEDULE = '[schedule]\nenabled = false\n'
+"""Every dotfiles config states this, so a synthetic tree that omits it is reporting
+the schedule finding rather than whatever the test is about."""
+
+REMOTE = (
+    SCHEDULE
+    + """
 [remote]
 root = "/dotfiles"
 
@@ -495,6 +501,7 @@ list = ["list", "{dir}"]
 upload = ["upload", "{local}", "{dir}"]
 download = ["download", "{remote}", "{local}"]
 """
+)
 
 
 def test_the_same_remote_table_in_both_trust_variants_is_silent(tmp_path: Path) -> None:
@@ -508,7 +515,7 @@ def test_the_same_remote_table_in_both_trust_variants_is_silent(tmp_path: Path) 
 def test_no_variant_declaring_a_remote_is_silent(tmp_path: Path) -> None:
     """Having no remote is the ordinary state of a machine that never exchanges a
     bundle, so the check is about agreement and never about presence."""
-    named = 'repos_registry = "~/.config/repos.json"\n'
+    named = SCHEDULE + 'repos_registry = "~/.config/repos.json"\n'
     root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': named, f'trust/nonfleet/{DOTFILES_CONFIG}': named})
 
     assert validate.declaration(root) == ()
@@ -522,7 +529,7 @@ def test_a_remote_declared_in_one_variant_and_not_the_other_is_an_error(tmp_path
         tmp_path,
         configs={
             f'trust/fleet/{DOTFILES_CONFIG}': REMOTE,
-            f'trust/nonfleet/{DOTFILES_CONFIG}': 'repos_registry = "~/.config/repos.json"\n',
+            f'trust/nonfleet/{DOTFILES_CONFIG}': SCHEDULE + 'repos_registry = "~/.config/repos.json"\n',
         },
     )
 
@@ -546,10 +553,49 @@ def test_two_variants_declaring_different_remote_tables_is_an_error(tmp_path: Pa
     ]
 
 
+def test_a_config_that_does_not_state_the_schedule_is_an_error(tmp_path: Path) -> None:
+    """Silence and `enabled = false` mean the same thing and read differently.
+
+    The value is off when nothing says otherwise, so an unstated key leaves a
+    reader unable to tell a machine that decided from a copy somebody forgot. The
+    schedule is a standing process that calls out on an interval, which is a thing
+    the files should answer for directly.
+    """
+    root = configs_tree(
+        tmp_path,
+        configs={
+            f'trust/fleet/{DOTFILES_CONFIG}': REMOTE,
+            f'trust/nonfleet/{DOTFILES_CONFIG}': REMOTE.replace(SCHEDULE, ''),
+        },
+    )
+
+    assert messages(validate.declaration(root), Severity.ERROR) == [
+        'configs/trust/nonfleet/.config/dotfiles/config.toml does not state schedule.enabled, '
+        'so whether this machine runs a periodic check is readable only from the compiled-in default'
+    ]
+
+
+def test_the_two_variants_may_disagree_about_the_schedule(tmp_path: Path) -> None:
+    """Unlike the remote, where disagreement is the fault. The whole point of this
+    key is that one side runs a timer and the other does not, so the check is about
+    each file answering rather than about the two matching."""
+    root = configs_tree(
+        tmp_path,
+        configs={
+            f'trust/fleet/{DOTFILES_CONFIG}': REMOTE.replace('enabled = false', 'enabled = true'),
+            f'trust/nonfleet/{DOTFILES_CONFIG}': REMOTE,
+        },
+    )
+
+    assert validate.declaration(root) == ()
+
+
 def test_the_same_table_written_out_differently_is_not_a_difference(tmp_path: Path) -> None:
     """Compared as parsed values, so key order and alignment are not findings — a
     check that diffed the text would report every reformatting as a drifted server."""
-    retyped = """
+    retyped = (
+        SCHEDULE
+        + """
 [remote]
 root   = "/dotfiles"
 
@@ -560,6 +606,7 @@ list     = ["list", "{dir}"]
 probe    = ["auth", "status"]
 program  = "ifiles"
 """
+    )
     root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': REMOTE, f'trust/nonfleet/{DOTFILES_CONFIG}': retyped})
 
     assert validate.declaration(root) == ()

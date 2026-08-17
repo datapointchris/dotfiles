@@ -61,6 +61,17 @@ def loaded(label: str) -> bool:
     return effects.run(['launchctl', 'print', f'{_domain()}/{label}'], output=Output.QUIET).ok
 
 
+def bootout(label: str) -> Completed:
+    """Take the job out of launchd, for a machine that no longer declares it.
+
+    Its own function rather than the first half of `reload`, because the two
+    differ in what a failure means: mid-reload a bootout of a job launchd does not
+    hold is the ordinary case and the bootstrap after it is the verdict, while
+    here it is the whole act and the caller reports what it said.
+    """
+    return effects.run(['launchctl', 'bootout', f'{_domain()}/{label}'], output=Output.QUIET)
+
+
 def reload(label: str) -> Completed:
     """Boot the job out and back in, because `bootstrap` refuses a loaded label.
 

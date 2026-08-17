@@ -20,9 +20,11 @@ from pathlib import Path
 
 import pytest
 
+from dotfiles import effects
 from dotfiles import paths
 from dotfiles import providers
 from dotfiles import reconcile
+from dotfiles import settings
 from dotfiles import status
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
@@ -183,11 +185,25 @@ def test_every_supported_shell_bounds_the_age_of_what_it_prints() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def want_schedule(*, enabled: bool) -> Path:
+    """Write this machine's answer to `schedule.enabled`, wherever its config is.
+
+    Through `settings.config_file()` rather than a path built here, so a fixture
+    that redirects `$XDG_CONFIG_HOME` and one that redirects `$HOME` both land in
+    the right place without either knowing which rung resolved it.
+    """
+    path = settings.config_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f'[{schedule.TABLE}]\nenabled = {str(enabled).lower()}\n')
+    return path
+
+
 @pytest.fixture
 def linux(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
     monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    want_schedule(enabled=True)
     return tmp_path / 'config' / 'systemd' / 'user'
 
 
@@ -287,11 +303,67 @@ def test_an_installed_but_disabled_timer_is_stale(linux: Path, fake_bin: Path) -
     assert schedule.observe().verdict is Verdict.STALE
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Whether the machine wants a schedule at all
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_machine_that_names_nothing_gets_no_schedule(linux: Path, fake_bin: Path) -> None:
+    """The default, and it is off in the direction a background process has to fail.
+
+    A timer outlives the session that installed it and calls out every ten
+    minutes. Arriving because nobody wrote a key is how a machine ends up with one
+    nobody decided to run.
+    """
+    settings.config_file().unlink()
+    executable(fake_bin, 'systemctl')
+
+    assert not schedule.enabled()
+    assert schedule.observe().verdict is Verdict.MATCHED
+    assert not (linux / 'dotfiles-check.timer').exists()
+
+
+def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The failure this row exists for, read the other way round.
+
+    A schedule nobody can check is a schedule that silently stops. A schedule
+    installed before the machine declined is one that silently keeps running, and
+    on a watched network that is the half that costs something.
+
+    `systemd.disable` is spied rather than faked through PATH, which is what the
+    `no_stopping_this_machines_daemons` guard asks for — the real call stops a
+    daemon on whichever desk the suite is running on.
+    """
+    executable(fake_bin, 'systemctl')
+    steps.apply('check-schedule', Privilege())
+    assert (linux / 'dotfiles-check.timer').is_file()
+
+    want_schedule(enabled=False)
+    assert schedule.observe().verdict is Verdict.STALE
+
+    stopped: list[str] = []
+
+    def spy(unit: str) -> effects.Completed:
+        stopped.append(unit)
+        return effects.Completed((), 0, '')
+
+    monkeypatch.setattr(schedule.systemd, 'disable', spy)
+    removed = steps.apply('check-schedule', Privilege())
+
+    assert removed.ok
+    assert stopped == ['dotfiles-check.timer'], 'the manager is told before the files go, or the job outlives its own unit'
+    assert not (linux / 'dotfiles-check.timer').exists()
+    assert not (linux / 'dotfiles-check.service').exists()
+    assert schedule.observe().verdict is Verdict.MATCHED
+
+
 @pytest.fixture
 def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('HOME', str(tmp_path))
+    monkeypatch.delenv('XDG_CONFIG_HOME', raising=False)
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
     monkeypatch.setattr(schedule, '_is_darwin', lambda: True)
+    want_schedule(enabled=True)
     return tmp_path / 'Library' / 'LaunchAgents' / f'{schedule.LABEL}.plist'
 
 

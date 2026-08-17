@@ -1054,7 +1054,7 @@ PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
 REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
 FINDING_KEYS = {'section', 'severity', 'message'}
-SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote'}
+SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote', 'schedule'}
 SETTING_KEYS = {'name', 'value', 'source', 'exists', 'advice'}
 REMOTE_KEYS = {'declared', 'problem', 'root', 'program', 'operations', 'keep_bundles', 'from_table', *transport.FLAGS}
 """The shape of the `remote` block, with the flags read from where they are named.
@@ -1109,3 +1109,5 @@ def test_the_settings_document_carries_the_file_and_every_rung_s_answer(sandbox:
     # the count is whatever SHARED_PATHS currently holds.
     assert document['settings']
     assert all(set(entry) == SETTING_KEYS for entry in document['settings'])
+    # A sandbox names no schedule, and off is what a machine that names none gets.
+    assert document['schedule'] == {'enabled': False}

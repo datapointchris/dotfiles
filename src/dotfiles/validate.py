@@ -93,6 +93,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_colliding_variants(root))
     findings.extend(_registry_paths(root))
     findings.extend(_remote_tables(root))
+    findings.extend(_schedule_declared(root))
     return tuple(findings)
 
 
@@ -499,4 +500,37 @@ def _remote_tables(root: Path) -> list[Finding]:
     # something else.
     if not all(table == next(iter(declared.values())) for table in declared.values()):
         findings.append(Finding(REMOTE_TABLE, Severity.ERROR, f'{", ".join(sorted(declared))} declare different {REMOTE_TABLE} tables'))
+    return findings
+
+
+SCHEDULE_TABLE = 'schedule'
+
+
+def _schedule_declared(root: Path) -> list[Finding]:
+    """Every variant of this tool's own config says whether it wants the timer.
+
+    Unlike the remote, the two variants are *expected* to disagree — that is the
+    point of the key. What is checked is that each one answers, because the value
+    is off when nothing says otherwise and a silent copy reads identically to a
+    machine that decided. The schedule is a standing background process that calls
+    out on an interval, so which machines run one should be readable from the
+    files rather than inferred from a default.
+    """
+    findings: list[Finding] = []
+    for config in sorted((root / 'configs').rglob(DOTFILES_CONFIG)):
+        relative = str(config.relative_to(root))
+        try:
+            table = tomllib.loads(config.read_text()).get(SCHEDULE_TABLE)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+            # Already reported by `_remote_tables`, which reads the same file.
+            continue
+        if not isinstance(table, dict) or not isinstance(table.get('enabled'), bool):
+            findings.append(
+                Finding(
+                    SCHEDULE_TABLE,
+                    Severity.ERROR,
+                    f'{relative} does not state {SCHEDULE_TABLE}.enabled, so whether this machine runs a periodic '
+                    f'check is readable only from the compiled-in default',
+                )
+            )
     return findings

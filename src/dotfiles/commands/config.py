@@ -20,6 +20,7 @@ from dotfiles import remote as transport
 from dotfiles import settings
 from dotfiles.output import console
 from dotfiles.output import emit_json
+from dotfiles.providers import schedule
 
 app = typer.Typer(no_args_is_help=True, help="This tool's own config file and what it resolves to")
 
@@ -38,6 +39,12 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     answers, and a reader sent here by a refusal that could not find one arrives
     asking what is declared — an answer that omitted it would send them to `cat`
     after all.
+
+    The schedule is here for a sharper version of the same reason. It decides
+    whether a background process runs on this machine every ten minutes, and it is
+    the one setting whose effect is invisible from the terminal that set it — so
+    the question "does this box run a timer" has to be answerable without reading
+    a unit file.
     """
     config = settings.read_config()
     path = settings.config_file()
@@ -73,6 +80,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'from_table': sorted(remote.remote.from_table) if remote.remote else [],
                     **{name: bool(remote.remote and getattr(remote.remote, name)) for name in transport.FLAGS},
                 },
+                'schedule': {'enabled': schedule.enabled(config)},
             }
         )
         return
@@ -102,6 +110,14 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         # least as worth seeing as a retention count.
         for name in transport.FLAGS:
             console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({_layer(remote.remote, name)})')
+
+    console.print()
+    wanted = schedule.enabled(config)
+    stated = isinstance(config.values.get(schedule.TABLE), dict) and 'enabled' in config.values[schedule.TABLE]
+    console.print(f'  {"SCHEDULE":<{width}}  {"a check every " + schedule.cadence() if wanted else "no periodic check"}')
+    console.print(
+        f'  {"":<{width}}  {schedule.TABLE}.enabled {"on" if wanted else "off"} ({str(path) if stated else "this tool’s default"})'
+    )
 
 
 def _layer(found: transport.Remote, key: str) -> str:
