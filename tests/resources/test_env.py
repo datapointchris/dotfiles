@@ -576,6 +576,23 @@ def test_a_value_that_names_no_file_is_never_tested_for_one(tmp_path: Path) -> N
     assert changes(tmp_path, flags=declared) == ()
 
 
+def test_a_required_value_is_named_without_its_value_wherever_it_sits(tmp_path: Path, monkeypatch) -> None:
+    """The register holds an employer's account name and an employee id. `Examined`
+    reaches a screen and `--json`, and `_unexported` exports an answered value into
+    the generated half — the half that otherwise prints what it holds."""
+    monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+    declared = {**FLAGS, 'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name'}]}
+    live = session(tmp_path, MANIFEST, declared)
+    envfile.write(live.env_file, live.machine)
+
+    assert 'ab12345' in live.env_file.read_text(), 'the generated half exports it, which is what makes the screen load-bearing'
+
+    inventory = env_resource.RESOURCE.observe(live, live.plan).inventory
+
+    assert {row.item: row.detail for row in inventory}['WINDOWS_USER'] == 'set by hand'
+    assert not any('ab12345' in row.detail for row in inventory)
+
+
 def test_every_declared_precondition_names_a_value_the_repo_declares() -> None:
     """A typo in `requires_values` would silently never fire, because a name no
     machine declares resolves as not applicable everywhere."""

@@ -64,6 +64,14 @@ class Observed:
     value drift anywhere and call the machine converged.
     """
 
+    by_hand: frozenset[str]
+    """The required values this machine declares, whose contents never reach a screen.
+
+    Required rather than defaulted, for the reason `generated` is: an empty set is
+    a valid reading of a machine that declares no such value, so a default would
+    make an `Observed` built without one print every identifier it holds.
+    """
+
     resolved: settings.Resolved
     """Every name the register declares, answered once, from the same reading of
     config.toml that `config_problem` reports on.
@@ -99,10 +107,16 @@ class Observed:
 
         The generated half carries its value, because that value is the answer: a
         flag says whether a machine wants something running, and `MACHINE` names
-        the manifest everything else derives from. The half below the marker is
-        named without one: a required value is machine-local precisely because the
-        repo must never hold it, and printing it on a screen somebody screenshots
-        undoes that.
+        the manifest everything else derives from.
+
+        A required value is the exception, and it is screened by name rather than
+        by which half holds it. It is machine-local precisely because the repo must
+        never hold it, and printing it on a screen somebody screenshots undoes
+        that. `Examined` also reaches `--json`, so the interchange document a
+        disconnected machine hands another one would carry it. Screening by name is
+        what makes both true wherever the value sits: `_unexported` promotes an
+        answered value into the generated section, so the register's own names
+        appear in the half that otherwise prints what it holds.
 
         Nothing here asks what drifted. `diff` decides that, and `reconcile.sift`
         drops any item it reported — so a stale flag appears once, as a finding,
@@ -110,7 +124,7 @@ class Observed:
         """
         if not self.exists:
             return ()
-        generated = tuple(Examined(key, self.generated[key]) for key in sorted(self.generated))
+        generated = tuple(Examined(key, 'set by hand' if key in self.by_hand else self.generated[key]) for key in sorted(self.generated))
         below = tuple(Examined(key, 'set below the marker') for key in sorted(set(self.values) - set(self.generated)))
         files = tuple(Examined(path, 'present') for path in sorted(self.present_files))
         return generated + below + files
@@ -132,6 +146,7 @@ class EnvResource:
             exists=path.exists(),
             values=envfile.read(path),
             present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present(resolved)),
+            by_hand=frozenset(entry.name for entry in plan.machine.required_values),
             generated=envfile.read_generated(path),
             resolved=resolved,
             named_files=settings.describe(config, path),
