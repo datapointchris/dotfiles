@@ -20,6 +20,15 @@
 #
 # Reads the token from the hand-managed ntfy client config rather than carrying
 # one, so no secret enters this repo.
+#
+# Under trust/fleet rather than common/ because of what it does when it runs
+# somewhere else. The default host is a homelab address, the transport is plain
+# HTTP carrying a bearer token, and a dropped stream reconnects every five
+# seconds forever. On an employer's network that RFC1918 address belongs to
+# somebody else's machine, so the loop is an authenticated request repeated at
+# whatever is really there — which is the shape lateral movement has. It was
+# deployed to every box and kept off the work one only by that machine happening
+# to have no ntfy config, which is an accident rather than a decision.
 
 set -euo pipefail
 

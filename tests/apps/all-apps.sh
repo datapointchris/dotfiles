@@ -128,9 +128,6 @@ echo "User Apps:"
 test_cmd "notes help" "notes --help"
 test_cmd "packup help" "packup --help"
 test_cmd "printcolors available" "command -v printcolors"
-# --help only: a bare run subscribes and never returns, which the 5s timeout
-# would report as a failure rather than the success it actually is.
-test_cmd "claude-ci-watch help" "claude-ci-watch --help"
 test_cmd "tmux-rearrange help" "tmux-rearrange --help"
 test_cmd "worktree help" "worktree --help"
 
@@ -219,6 +216,14 @@ test_cmd "fzf installed" "command -v fzf"
 # ================================================================
 # 7. COORDINATE-SPECIFIC APPS
 # ================================================================
+if [[ "$(layer_value trust)" == fleet ]]; then
+  echo ""
+  echo "Fleet:"
+  # --help only: a bare run subscribes and never returns, which the 5s timeout
+  # would report as a failure rather than the success it actually is.
+  test_cmd "claude-ci-watch help" "claude-ci-watch --help"
+fi
+
 if deploys_layer os/darwin; then
   echo ""
   echo "macOS:"
