@@ -12,11 +12,11 @@ from pathlib import Path
 
 from dotfiles.commands import report
 
-NAMES = {'the Windows account': 'ab12345', 'this machine name': 'pf5xmxfy'}
+NAMES = {'the Windows account': 'ab12345', 'this machine name': 'wkstn01x'}
 
 
 def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path) -> None:
-    local = tmp_path / '20260817T131536Z-pf5xmxfy-apply.json'
+    local = tmp_path / '20260817T131536Z-wkstn01x-apply.json'
     local.write_text(
         json.dumps(
             {
@@ -37,7 +37,7 @@ def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path) -> None:
 def test_a_stream_stays_line_delimited(tmp_path: Path) -> None:
     """Parsed and re-emitted per line rather than as one document, because the
     whole file is not JSON and a raw-text pass breaks on a name JSON escapes."""
-    local = tmp_path / '20260817T131536Z-pf5xmxfy-apply.jsonl'
+    local = tmp_path / '20260817T131536Z-wkstn01x-apply.jsonl'
     local.write_text(
         json.dumps({'argv': ['cmd.exe', '/C', 'echo %USERNAME%'], 'answer': 'ab12345', 'returncode': 0})
         + '\n'
@@ -60,7 +60,7 @@ def test_a_path_under_this_home_reads_as_a_person_writes_it(tmp_path: Path, monk
     `/home/<account-this-runs-as>/.local/bin/dotfiles`, which is unreadable and
     throws away a `~` that was available."""
     monkeypatch.setattr(report.Path, 'home', staticmethod(lambda: Path('/home/chris')))
-    local = tmp_path / '20260817T131536Z-pf5xmxfy-apply.jsonl'
+    local = tmp_path / '20260817T131536Z-wkstn01x-apply.jsonl'
     local.write_text(json.dumps({'argv': ['/home/chris/.local/bin/dotfiles', '--version']}) + '\n')
 
     staged = report._masked_copy(local, {'the account this runs as': 'chris'})
@@ -73,7 +73,7 @@ def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path) -> None:
     """The local copy is the account of what happened here, and this box is the one
     entitled to it. Masking in place would take that away to protect it from
     itself."""
-    local = tmp_path / '20260817T131536Z-pf5xmxfy-apply.json'
+    local = tmp_path / '20260817T131536Z-wkstn01x-apply.json'
     original = json.dumps({'outcomes': [{'message': '/mnt/c/Users/ab12345'}]})
     local.write_text(original)
 

@@ -250,10 +250,10 @@ def masked(value: Any, identities: Mapping[str, str]) -> Any:
     it.
 
     Case-insensitive, because `redacted` is: `machine_id` lowercases and Windows
-    reports a hostname in upper, so `PF5XMXFY` is the literal that a
-    case-sensitive pass reads straight past and the gate then refuses the
-    document for. Longest first, so a name that contains another does not leave
-    the shorter one's placeholder embedded in a half-substituted string.
+    reports a hostname in upper, so an asset tag is the shape a case-sensitive
+    pass reads straight past and the gate then refuses the document for. Longest
+    first, so a name that contains another does not leave the shorter one's
+    placeholder embedded in a half-substituted string.
 
     Recursive over the whole document for the reason `rooted` is: an account name
     can appear in any string a resource chose to write, and the field it appears
@@ -352,9 +352,9 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
 
     Matched without regard to case, because the two names arrive here normalized
     and a document carries whatever the OS rendered. `machine_id` lowercases, and
-    Windows reports a hostname in upper — so the literal string that made
-    `connectivity-results.txt` a leak, `PF5XMXFY`, is one a case-sensitive test
-    reads straight past.
+    Windows reports a hostname in upper — so an asset tag is exactly the string a
+    case-sensitive test reads straight past, and it reached a committed file that
+    way.
     """
     scanned = {key: value for key, value in document.items() if key not in PROTOCOL_KEYS} if isinstance(document, dict) else document
     lowered = json.dumps(scanned).lower()

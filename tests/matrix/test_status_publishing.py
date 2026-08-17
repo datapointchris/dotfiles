@@ -86,7 +86,7 @@ class TestWhatTheDocumentCovers:
         assert set(ran.document['scope']) > set(publishing.PUBLISHABLE)
 
 
-NAMED = {'this machine name': 'pf5xmxfy', 'the account this runs as': 'a-work-account'}
+NAMED = {'this machine name': 'wkstn01x', 'the account this runs as': 'a-work-account'}
 """The two names the gate refuses, chosen rather than read off this machine.
 
 A test that reads `paths.machine_id()` and `getpass.getuser()` can only assert
@@ -101,16 +101,15 @@ class TestTheGate:
     def test_a_document_naming_this_box_is_refused(self) -> None:
         """The second guard, and the one the allowlist cannot be: an allowlist
         protects against a new resource, never against a new field on a row."""
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'pf5xmxfy'}]}, NAMED)
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'wkstn01x'}]}, NAMED)
 
         assert problems == ('this machine name appears in it',)
 
     def test_a_document_naming_this_box_in_another_case_is_refused(self) -> None:
         """`machine_id` lowercases and Windows reports a hostname in upper, so the
-        two never meet as typed. `PF5XMXFY` is the literal that made
-        `connectivity-results.txt` a leak, and a case-sensitive test reads it
-        straight past."""
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'PF5XMXFY'}]}, NAMED)
+        two never meet as typed. An asset tag is the shape that reached a committed
+        file this way, and a case-sensitive test reads it straight past."""
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'WKSTN01X'}]}, NAMED)
 
         assert problems == ('this machine name appears in it',)
 
@@ -135,7 +134,7 @@ class TestTheGate:
         has ever been. Measured on a box named `archlinux` running
         `archlinux-personal-workstation`, where the hostname is a substring of the
         key the exchange is organised by."""
-        document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'pf5xmxfy-work-workstation', 'rows': []}
+        document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'wkstn01x-work-workstation', 'rows': []}
 
         assert publishing.redacted(document, NAMED) == ()
 
@@ -171,7 +170,7 @@ class TestTheGate:
         assert rooted['count'] == 2, 'a non-string value is carried through unchanged'
 
     def test_every_reason_is_reported_at_once(self) -> None:
-        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'pf5xmxfy a-work-account'}]}, NAMED)
+        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'wkstn01x a-work-account'}]}, NAMED)
 
         assert len(problems) == 3
 
@@ -210,7 +209,7 @@ class TestTheGate:
 class TestMaskingKeepsTheEvidence:
     """A run record is read by a person, so a name is replaced rather than dropped."""
 
-    NAMES = {'the Windows account': 'ab12345', 'this machine name': 'pf5xmxfy'}
+    NAMES = {'the Windows account': 'ab12345', 'this machine name': 'wkstn01x'}
 
     def test_the_placeholder_says_what_was_taken_out(self) -> None:
         assert publishing.placeholder('the Windows account') == '<windows-account>'
@@ -234,7 +233,7 @@ class TestMaskingKeepsTheEvidence:
     def test_case_does_not_let_a_name_through(self) -> None:
         """`machine_id` lowercases and Windows reports a hostname in upper, which
         is the literal that made connectivity-results.txt a leak."""
-        assert publishing.masked('PF5XMXFY', self.NAMES) == '<this-machine-name>'
+        assert publishing.masked('WKSTN01X', self.NAMES) == '<this-machine-name>'
 
     def test_a_longer_name_is_replaced_before_one_it_contains(self) -> None:
         """Shortest-first leaves the longer name half-substituted and still legible."""
@@ -333,20 +332,20 @@ class TestWithholdingARowRatherThanRefusingTheDocument:
     """
 
     def test_the_row_carrying_the_name_does_not_travel(self) -> None:
-        screen = publishing.screened(relayed('syncthing v2.1.3 (linux-amd64) syncthing@pf5xmxfy 2026-08-05'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 (linux-amd64) syncthing@wkstn01x 2026-08-05'), NAMED)
 
         rows = screen.document['resources'][0]['others']  # type: ignore[index]
         assert [row['item'] for row in rows] == ['cargo/bat']
-        assert 'pf5xmxfy' not in json.dumps(screen.document).lower()
+        assert 'wkstn01x' not in json.dumps(screen.document).lower()
 
     def test_the_withheld_row_is_named_rather_than_dropped_in_silence(self) -> None:
-        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@pf5xmxfy'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@wkstn01x'), NAMED)
 
         assert screen.withheld == ('ghrelease/syncthing',)
 
     def test_what_is_left_publishes(self) -> None:
         """The whole point. The document travels, one row lighter."""
-        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@pf5xmxfy'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@wkstn01x'), NAMED)
 
         assert screen.problems == ()
         assert len(screen.document['resources'][0]['others']) == 1  # type: ignore[index,arg-type]
@@ -372,7 +371,7 @@ class TestWithholdingARowRatherThanRefusingTheDocument:
     def test_a_name_with_no_row_to_drop_still_refuses_the_document(self) -> None:
         """Withholding is not a way out. A name outside the per-item lists has
         nothing to withhold, so the document is refused exactly as before."""
-        document = {'version': 2, 'machine': 'a-manifest', 'scope': list(publishing.PUBLISHABLE), 'note': 'pf5xmxfy', 'resources': []}
+        document = {'version': 2, 'machine': 'a-manifest', 'scope': list(publishing.PUBLISHABLE), 'note': 'wkstn01x', 'resources': []}
 
         screen = publishing.screened(document, NAMED)
 
