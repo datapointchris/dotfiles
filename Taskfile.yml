@@ -113,6 +113,25 @@ tasks:
     cmds:
       - fd -e py -e sh -e bash . src tests install configs apps shell | entr -c uv run pytest
 
+  # Coverage says a line ran; these say whether anything asserted on what it did.
+  # `tests/mutation/README.md` is what each bucket means and why a rendering
+  # mutant is planted and then kept out of the score.
+
+  test:mutation:
+    desc: 'Plant one bug at a time and count the ones nothing noticed: task test:mutation -- src/dotfiles/runs.py'
+    cmds:
+      - uv run python tests/mutation/run.py {{.CLI_ARGS}}
+
+  test:mutation:diff:
+    desc: 'The same, over only the lines this branch changed against main'
+    cmds:
+      - uv run python tests/mutation/run.py --since origin/main {{.CLI_ARGS}}
+
+  test:mutation:report:
+    desc: What the last mutation run concluded, and which survivors are new since the one before
+    cmds:
+      - uv run python tests/mutation/score.py {{.CLI_ARGS}}
+
   # The ladder, cheapest rung first. `tests/e2e/levels.py` is what each one costs
   # and what it can answer; these exist so reaching for the right one is typing a
   # name rather than remembering a file path and a flag combination.

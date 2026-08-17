@@ -34,8 +34,9 @@ skips = ["B113", "B311"]
 skip = '*.css.map'
 # Each of these is a name or literal, not prose: ags and noice are tools
 # (Aylur's GTK Shell, folke/noice.nvim), fpr is gpg's fingerprint record field,
-# te is a `<leader>te` keybinding, afterall is a test-framework hook.
-ignore-words-list = "astroid,aNULL,ANULL,anull,ags,noice,fpr,te,afterall,unparseable"
+# te is a `<leader>te` keybinding, afterall is a test-framework hook, notin is
+# the `ast.NotIn` comparison node.
+ignore-words-list = "astroid,aNULL,ANULL,anull,ags,noice,fpr,te,afterall,unparseable,notin"
 check-filenames = true
 
 
@@ -44,6 +45,19 @@ parallel = true
 branch = true
 source = ["install", "src/dotfiles"]
 omit = []
+# Without these a test that drives the CLI through `python -m dotfiles.main`
+# measures nothing: `commands/manage.py::update` read 0% while
+# `tests/cli/test_update.py` was exercising it against real git repositories.
+# pytest-cov 7 dropped its own subprocess support in favour of them.
+#
+# `subprocess` puts the serialized config in the environment, which the .pth file
+# coverage ships into site-packages reads at interpreter start. `parallel` above
+# is what gives each of those children a data file of its own.
+#
+# `_exit` and `execv` are the two ways this package leaves a process without
+# running the atexit that saves the data — `update` ends `--reinstall` at
+# `os._exit`, and `edit` hands the process to $EDITOR.
+patch = ["subprocess", "_exit", "execv"]
 
 [tool.coverage.paths]
 install = ["install"]
@@ -52,7 +66,16 @@ dotfiles = ["src/dotfiles"]
 [tool.coverage.report]
 fail_under = 70
 show_missing = true
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@abstractmethod"]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "@abstractmethod",
+  # A Protocol body and a NotImplementedError stub are unreachable by
+  # construction, so counting them leaves statements no test can ever take and a
+  # percentage that cannot reach itself.
+  "^\\s*\\.\\.\\.$",
+  "raise NotImplementedError",
+]
 
 
 [tool.docformatter]
