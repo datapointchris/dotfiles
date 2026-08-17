@@ -242,6 +242,23 @@ def test_the_font_directory_is_written_and_then_matches(windows: Path, home: Pat
     assert steps.observe('windows-fonts').verdict is Verdict.MATCHED
 
 
+def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, home: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """This observe runs on the ten-minute timer, and asking forks `cmd.exe`.
+
+    A Linux process spawning `cmd.exe` to read `%USERNAME%` is user-discovery
+    behaviour, and at a fixed interval it stops being an event and becomes a
+    pattern. The account cannot change without the directory it names changing
+    too, so a file still pointing at a real directory is the whole answer.
+    """
+    assert steps.apply('windows-fonts', Privilege()).ok
+
+    asked = tmp_path / 'cmd-was-called'
+    executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\nprintf "chris.birch\\r\\n"\n')
+
+    assert steps.observe('windows-fonts').verdict is Verdict.MATCHED
+    assert not asked.exists(), 'a converged machine forked cmd.exe to re-learn an account that had not changed'
+
+
 def test_a_fonts_conf_pointing_somewhere_else_is_stale(windows: Path, home: Path) -> None:
     """The Windows username can change — a re-imaged work laptop, a domain
     rename — and a config pointing at the old path silently finds no fonts."""

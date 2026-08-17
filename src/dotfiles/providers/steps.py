@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 from collections.abc import Callable
@@ -281,23 +282,50 @@ def _fontconfig_content(fonts: Path) -> str:
     )
 
 
+FONT_DIR_ELEMENT = re.compile(r'<dir>([^<]*)</dir>')
+
+
+def _fonts_dir_in(written: str) -> Path | None:
+    """The directory a deployed fontconfig already points at."""
+    found = FONT_DIR_ELEMENT.search(written)
+    return Path(found.group(1)) if found else None
+
+
 def _windows_fonts() -> State:
     """Nothing to do without a mounted Windows filesystem, and that is not drift.
 
     A container or a plain Linux box at the wsl host coordinate has no `/mnt/c`.
     Erroring there put an `[ERROR]` in every Docker rehearsal, which is how a real
     error comes to be scrolled past.
+
+    **A converged machine is answered off its own file, and never by asking
+    Windows.** `_windows_fonts_directory` forks `cmd.exe` across the WSL boundary,
+    and this observe runs on the ten-minute timer `providers/schedule.py` installs
+    — so deriving the path every time spawned a Windows process 144 times a day to
+    re-learn an account name that does not change. Read back, it is two filesystem
+    reads. The account is asked for only when the file is absent, points somewhere
+    that no longer exists, or does not match what this repo would write, which is
+    the run that was going to repair something anyway.
+
+    Endpoint monitoring is the reason it matters rather than the cost. A Linux
+    process spawning `cmd.exe` to read `%USERNAME%` is user-discovery behaviour,
+    and on a fixed interval it is a pattern rather than an event.
     """
+    if not WINDOWS_MOUNT.is_dir():
+        return State(Verdict.MATCHED, 'no Windows filesystem to take fonts from')
+
+    target = Path.home() / FONTCONFIG
+    deployed = target.read_text() if target.is_file() else ''
+    already = _fonts_dir_in(deployed)
+    if already is not None and already.is_dir() and deployed == _fontconfig_content(already):
+        return State(Verdict.MATCHED)
+
     fonts = _windows_fonts_directory()
     if fonts is None:
         return State(Verdict.MATCHED, 'no Windows filesystem to take fonts from')
     if not fonts.is_dir():
         return State(Verdict.MATCHED, f'{fonts} does not exist; Windows creates it on the first non-admin font install')
-
-    target = Path.home() / FONTCONFIG
-    if target.is_file() and target.read_text() == _fontconfig_content(fonts):
-        return State(Verdict.MATCHED)
-    return State(Verdict.MISSING if not target.is_file() else Verdict.STALE, f'{target} does not point at {fonts}')
+    return State(Verdict.MISSING if not deployed else Verdict.STALE, f'{target} does not point at {fonts}')
 
 
 def _write_fontconfig() -> Result:
