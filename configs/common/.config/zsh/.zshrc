@@ -325,7 +325,6 @@ cache_eval icb icb completion zsh
 cache_eval learning learning completion zsh
 cache_eval meso meso completion zsh
 cache_eval nomad nomad completion zsh
-cache_eval toolbox toolbox completion zsh
 # ifiles completes remote paths by calling the server, so each Tab there is a
 # request rather than a lookup. The generated script is static; the network call
 # happens inside `ifiles __complete`.

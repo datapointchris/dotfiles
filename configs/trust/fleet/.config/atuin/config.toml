@@ -6,7 +6,7 @@
 # needs — exit code, working directory, and session — in ~/.local/share/atuin/history.db.
 #
 # The flat ~/.local/state/zsh/history keeps being written too, so it stays the
-# fallback for anything reading history — `doit kit usage` and toolbox remind
+# fallback for anything reading history — `doit kit usage` and `doit review`
 # both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
 # Fleet-wide history through the self-hosted server on atuin-lxc, reachable only

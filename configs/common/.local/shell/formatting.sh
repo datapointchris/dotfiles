@@ -719,8 +719,8 @@ formatting_demo() {
     echo "  formatting_demo banners   # Show only banners"
     echo ""
     print_section "Discover More" "cyan"
-    echo "Run 'toolbox search formatting' to see all available functions"
-    echo "Run 'toolbox show print_header' for details on a specific function"
+    echo "Run 'doit find formatting' to see all available functions"
+    echo "Run 'doit show print_header' for details on a specific function"
     echo ""
   }
 
