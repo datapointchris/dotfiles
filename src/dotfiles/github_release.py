@@ -38,9 +38,13 @@ import httpx2
 
 from dotfiles import versions
 
-# Some hosts answer a default client identification with a 403 where they serve
-# curl fine.
-USER_AGENT = 'curl/8.0 (dotfiles-installer)'
+# Named rather than borrowed. Some hosts answer httpx's default identification
+# with a 403 where they serve a named agent fine, which is what the string is for
+# — but claiming to be `curl/8.0` was solving that by lying. A TLS-inspecting
+# proxy fingerprints the handshake and compares it to the agent, and a Python
+# client presenting curl's name is a mismatch scored as evasion, which is a thing
+# to be asked about rather than a thing to be.
+USER_AGENT = 'dotfiles-installer (+https://github.com/datapointchris/dotfiles)'
 
 REQUEST_TIMEOUT_SECONDS = 300
 
