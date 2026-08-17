@@ -490,10 +490,15 @@ therefore reads `auto_sync` out of the machine's own atuin config, and where syn
 it reports `UNKNOWN` — the bucket an uninstalled tool already lands in, because there is
 no login in question either way. atuin's own default for that setting is on, so a config
 that is absent or will not parse leaves the check armed rather than answering it by
-accident. That flag is what makes the work box quiet without a second declaration: its
-copy of the config is the `trust/nonfleet` one, sync is off there because a git-only node
-behind a corporate firewall is the wrong place to send shell history from, and the row
-reports nothing to do.
+accident. That branch catches a machine whose config turned sync off after it declared
+the login, and it is the reason a typo in the TOML cannot silence the check by accident.
+
+**A machine that will never hold an atuin account does not declare one.** `auth:` is the
+roster of logins a machine has to be able to make, so a permanent no belongs there rather
+than in a row explaining itself on every run. The work box is that machine: its copy of the
+config is the `trust/nonfleet` one, sync is off because a git-only node behind a corporate
+firewall is the wrong place to send shell history from, and `scheduler.yml` leaves atuin out
+for the same reason in its own words.
 
 **Nothing is ever repaired, and `apply` cannot reach it.** A login is a browser flow, a
 password or a device code, so every finding is `Repair.BY_HAND` and therefore never

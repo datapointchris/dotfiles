@@ -112,9 +112,14 @@ configure_zsh: true
 #
 # The personal data CLIs are absent because this box does not install them. bbkt
 # and jira are the work box's own, and neither is on any other machine.
+#
+# Not atuin. Its `trust/nonfleet` config turns `auto_sync` off, so no server holds
+# an account for this box and there is no login to be missing — the binary still
+# records, searches and answers locally. Declared, the check carries a row about
+# it on every run that nobody will ever act on. `scheduler.yml` leaves it out for
+# the same reason.
 auth:
   - gh
-  - atuin
   - aws
   - bbkt
   - jira
