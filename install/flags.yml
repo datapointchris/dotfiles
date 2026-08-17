@@ -179,9 +179,11 @@ required_files:
   # decrypts with it; without it that command can say what is missing and write
   # none of it.
   #
-  # Declared on capacity rather than on trust because the work box needs one too:
-  # it is off the fleet and still has files no rebuild regenerates, and a machine
-  # that decrypts nothing is a machine whose secrets have no transport at all.
+  # Both axes, and trust is the one that decides it. The secrets this decrypts are
+  # the fleet's, the vault they come from is the fleet's, and the only consumer is
+  # a fleet binary — so a box off the fleet holding this key holds a credential
+  # nothing on it can use, for data it is not party to. Capacity narrows it the
+  # rest of the way: the servers run no desk and carry no such file.
   #
   # Not synced, and this is the one entry where that is structural rather than a
   # convention — a folder carrying the key that decrypts the secrets would put
@@ -190,6 +192,7 @@ required_files:
     path: ~/.config/sops/age/keys.txt
     description: This machine's age identity, which decrypts the secrets the fleet declares for it
     restore: "copy this machine's key from Vaultwarden at mode 600; if it is a new machine, mint one with `age-keygen`, add its public half to .sops.yaml in the library, and re-encrypt with the break-glass key"
+    network_trust: fleet
     capacity: workstation
     file_must_exist: true
     consumers:
