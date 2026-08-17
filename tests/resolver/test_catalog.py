@@ -103,6 +103,29 @@ def test_every_section_in_a_declaration_file_has_a_class(file: str, known: dict[
     )
 
 
+def test_a_row_can_narrow_on_the_trust_axis() -> None:
+    """`faillock-deny` is why the field exists, and what it protects is a machine.
+
+    Loosening an authentication control is a defensible choice on a box on its own
+    network and is somebody else's decision on a managed one. Without an axis to
+    say so, the row rewrites `/etc/security/faillock.conf` on the work machine —
+    this repo weakening a security control on hardware it does not own.
+    """
+    row = catalog.ManagedFile(name='faillock-deny', path='/etc/security/faillock.conf', append_line='deny = 5', network_trust='fleet')
+
+    assert row.narrowing['network_trust'] == 'fleet'
+    assert row.problems() == ()
+
+
+def test_a_row_narrowing_on_a_trust_value_that_does_not_exist_is_refused() -> None:
+    """The same load-time refusal the other three axes get. A typo'd value narrows
+    to nothing and the row silently applies to no machine, which reads as a repo
+    that simply never had the setting."""
+    row = catalog.ManagedFile(name='faillock-deny', path='/etc/security/faillock.conf', append_line='deny = 5', network_trust='corporate')
+
+    assert any('network_trust' in problem for problem in row.problems())
+
+
 def test_a_section_is_read_out_of_exactly_one_file() -> None:
     """The two maps partition the sections rather than overlapping.
 

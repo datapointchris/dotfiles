@@ -92,11 +92,22 @@ managed_files:
   # ten minutes `unlock_time` defaults to. Appending is the whole override: every
   # other setting stays on the built-in default because every other line is a
   # comment.
+  #
+  # Five rather than more, because this is a brute-force control and every step up
+  # buys attempts for whoever is guessing. Five clears the retrying-tool case and
+  # stays inside what a hardening baseline asks for.
+  #
+  # `network_trust: fleet`, because loosening an authentication control is a
+  # decision about a machine, and off the fleet the machine is somebody else's.
+  # Rewriting /etc/security/faillock.conf on a work box is this repo weakening a
+  # security control on hardware it does not own — and the built-in deny=3 is a
+  # perfectly good answer there.
   - name: faillock-deny
     description: Failed authentications tolerated before the account locks
     os_family: linux
+    network_trust: fleet
     path: /etc/security/faillock.conf
-    append_line: deny = 10
+    append_line: deny = 5
 
   # `/etc/vivaldi/policies`, not `/etc/opt/vivaldi/policies`. Every guide online
   # says the latter, because that is where Google-branded Chrome reads; Vivaldi

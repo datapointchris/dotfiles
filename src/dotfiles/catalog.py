@@ -748,12 +748,20 @@ class SystemConfig(Entry):
     os_family: str = ''
     host: str = ''
     display_stack: str = ''
-    """Coordinate narrowings, and only the three anything declares.
+    network_trust: str = ''
+    """Coordinate narrowings, and only the four anything declares.
 
     Hyprland replacing gdm is a fact about the display stack, not about Arch; the
-    Windows font path is a fact about the host, not about Ubuntu. A fourth axis is
-    a fourth field when a row needs one — until then declaring it is a load-time
+    Windows font path is a fact about the host, not about Ubuntu. A fifth axis is
+    a fifth field when a row needs one — until then declaring it is a load-time
     error rather than a key read by nothing.
+
+    `network_trust` is the newest, and `faillock-deny` is why. Loosening an
+    authentication control is a defensible choice on a machine on its own network
+    and is somebody else's decision on a managed one, so the row has to be able to
+    say which machines it describes. A rewrite of `/etc/security/faillock.conf`
+    that reached a work box would be this repo weakening a security control on
+    hardware it does not own.
 
     `capacity` was a fourth for one commit, for the rows that pointed a tool at
     the shared registry. Those rows became config files the tools read for
@@ -787,7 +795,12 @@ class SystemConfig(Entry):
     @property
     def narrowing(self) -> dict[str, str]:
         """The coordinates this row narrows on, keyed as `Coordinates` spells them."""
-        declared = (('os_family', self.os_family), ('host', self.host), ('display_stack', self.display_stack))
+        declared = (
+            ('os_family', self.os_family),
+            ('host', self.host),
+            ('display_stack', self.display_stack),
+            ('network_trust', self.network_trust),
+        )
         return {axis: value for axis, value in declared if value}
 
     def problems(self) -> tuple[str, ...]:
