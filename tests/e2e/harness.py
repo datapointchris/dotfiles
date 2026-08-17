@@ -120,7 +120,7 @@ rehearsal drifts from the declaration it is supposed to be testing.
 """
 
 BLOCKED_HOSTS = (
-    'claude.ai',
+    'awscli.amazonaws.com',
     'proxy.golang.org',
     'objects.githubusercontent.com',
     'release-assets.githubusercontent.com',
@@ -131,7 +131,11 @@ BLOCKED_HOSTS = (
 Chosen for the install paths each one closes, because that is what the rehearsal
 is for. A blocked registry kills a whole section and is what makes `go_tools`
 prove the bundle path. A blocked vendor host kills one custom installer while its
-neighbours keep working. The three CDNs are the case a host blocklist otherwise
+neighbours keep working — `awscli` plays that part, and terraform-ls or mount-s3
+would do as well, each being a custom installer with a vendor host to itself. What
+the part needs is any one of those three; theme, font and bashselfupdate cannot
+take it, since they share `raw.githubusercontent.com` and blocking it fails all
+three at once. The three CDNs are the case a host blocklist otherwise
 cannot express: github.com has to stay reachable for clones and the API, so the
 only way to rehearse a refused release download is to take down the hosts an
 asset redirects to.

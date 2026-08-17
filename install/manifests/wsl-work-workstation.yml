@@ -54,7 +54,10 @@ github_releases:
 custom_installers:
   # - bats
   - awscli
-  - claude-code
+  # claude.ai is blocked from this network — the docs do not load either, and the
+  # installer's curl gets a certificate no CA here signs. Declared, it is a failed
+  # install on every apply forever, which is how a red apply stops being read.
+  # - claude-code
   - terraform-ls
   - mount-s3
   - bashselfupdate

@@ -972,6 +972,10 @@ github_releases:
     # design in a container. Declared here so verification applies the same test
     # rather than reporting a machine that installed correctly as broken.
     requires_wsl_host: true
+    # reports_version: it takes `-o` and `-i` and nothing else. Both `--version` and
+    # `version` exit 1 onto its usage text, so currency is a question the binary has
+    # no way to answer and the work box carried an UNKNOWN row for it on every check.
+    reports_version: false
     checksum: unpublished
     description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
     tags: [cli, wsl]
