@@ -26,6 +26,7 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
+from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import remote as transport
 from dotfiles import runs
@@ -342,16 +343,23 @@ def _send(identifier: str | None) -> tuple[str, int]:
     verb's verbosity handling or its exit codes — a command function calling
     another command function inherits both, and typer's argument defaults are not
     the same thing as Python's.
+
+    **`MACHINE_ID` selects, and the trust coordinate only screens.** `runs.begin`
+    stamps every filename with the bare hostname on every box, so that is the one
+    name `list_runs` can match. `publishing.discriminator` answers a different
+    question — which name may *leave* here — and gives a blake2b digest to a
+    hostname carrying a hyphen or a box off the fleet. Selecting on it matched no
+    file at all and reported the digest, which appears in nothing the reader can
+    see.
     """
     where = transport.reachable()
     session = resolved(None)
     trust = session.machine.coordinates.network_trust
-    box = publishing.discriminator(trust)
 
     directory = transport.reports_for(where, session.machine_name)
-    chosen = [_find(identifier)] if identifier else runs.list_runs(machine=box)
+    chosen = [_find(identifier)] if identifier else runs.list_runs(machine=paths.MACHINE_ID)
     if not chosen:
-        error(f'no runs recorded for {box}')
+        error(f'no runs recorded for {paths.MACHINE_ID}')
         raise typer.Exit(ExitCode.ISSUE)
 
     already = frozenset(transport.listed(where, directory) or ())
