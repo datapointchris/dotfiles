@@ -158,6 +158,10 @@ def run_bootstrap(tmp_path: Path, *archives: str) -> tuple[subprocess.CompletedP
     environment = {
         **os.environ,
         'HOME': str(home),
+        # `newest_bundle` searches `$XDG_CACHE_HOME/dotfiles/bundles` before it
+        # looks anywhere else, so sandboxing $HOME alone leaves the real desk's
+        # bundles in scope — and the refusal tests then stage one and pass zero.
+        'XDG_CACHE_HOME': str(home / '.cache'),
         'DOTFILES_BUNDLE': str(staging),
         'UV_ARGV': str(argv_log),
         'PATH': f'{fake_bin}{os.pathsep}/usr/bin{os.pathsep}/bin',

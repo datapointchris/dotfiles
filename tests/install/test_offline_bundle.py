@@ -50,6 +50,11 @@ def home(tmp_path, monkeypatch) -> Path:
     root = tmp_path / 'home'
     root.mkdir()
     monkeypatch.setenv('HOME', str(root))
+    # The archive search reads `$XDG_CACHE_HOME/dotfiles/bundles`, and it is set on
+    # every real desk. Inherited, a test asserting that nothing can be staged finds
+    # whatever bundle that machine last built and unpacks it — half a gigabyte per
+    # test, into the temp directory, before failing on an answer it was handed.
+    monkeypatch.setenv('XDG_CACHE_HOME', str(root / '.cache'))
     return root
 
 
