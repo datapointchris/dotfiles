@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import getpass
 import socket
+import subprocess
 
 import pytest
 
@@ -138,10 +139,11 @@ def test_the_runtime_urls_are_the_installers_own() -> None:
     assert targets == {toolchain.UV_INSTALL_URL, toolchain.GO_VERSION_URL, toolchain.RUSTUP_URL}
 
 
-def test_the_results_file_is_the_shape_the_harness_parses() -> None:
-    """`tests/e2e/harness.py` splits this file on pipes to decide which hosts the
-    firewalled containers blackhole, so the column layout is an interface and not
-    a presentation choice."""
+def test_the_results_file_keeps_its_column_layout() -> None:
+    """`--output` writes this for a person to read and to diff against a later run,
+    so the columns are the format and not a presentation choice. Pinned here rather
+    than left to whoever next edits `render`, since the two runs being compared are
+    usually weeks apart and a silent reshuffle makes the diff unreadable."""
     machine = machines.load(WSL)
     measurement = network.Measurement(
         (
@@ -164,10 +166,10 @@ def test_the_results_file_is_the_shape_the_harness_parses() -> None:
 
 
 def test_the_recorded_reach_survives_the_file() -> None:
-    """The column the harness replays from, and the reason it exists.
+    """The column a reader replays a row from, and the reason it exists.
 
     A custom installer's section is `custom_installer` whether it clones or
-    downloads, so a reader deriving reach from the section name gets every one of
+    downloads, so anyone deriving reach from the section name gets every one of
     those wrong — and replays a `.git` URL as `curl --head`, which GitHub answers,
     so it passes for the wrong reason while a blocked git transport reads as
     reachable.
@@ -203,16 +205,23 @@ def test_the_results_file_names_the_manifest_and_no_account() -> None:
     assert not any(line.startswith(('Host:', 'User:')) for line in written.splitlines())
 
 
-def test_the_committed_record_carries_no_account_either() -> None:
-    """The file on disk, not just what the render would produce now.
+def test_no_measurement_is_committed_to_this_repo() -> None:
+    """A rendered measurement names which hosts one network permits and denies.
 
-    A render that stopped writing the two lines leaves whatever was written before
-    it sitting in the repo, and that copy is the one anybody reads.
+    Off the fleet that network is an employer's, and this repo is public — so the
+    render staying clean is only half of it, and the other half is that no output
+    of it is ever committed. `--output` deliberately has no default for the same
+    reason. Asserted on the tree rather than remembered, because the file that
+    reappears is the one somebody wrote with `-o` while debugging.
     """
-    written = (paths.REPO_ROOT / 'install' / 'offline' / 'connectivity-results.txt').read_text()
+    tracked = subprocess.run(
+        ['git', '-C', str(paths.REPO_ROOT), 'ls-files', '-z'], capture_output=True, text=True, check=True
+    ).stdout.split('\0')
+    found = [
+        name for name in tracked if name.endswith('.txt') and network.RESULTS_HEADER in (paths.REPO_ROOT / name).read_text(errors='ignore')
+    ]
 
-    assert 'Manifest: ' in written
-    assert not any(line.startswith(('Host:', 'User:')) for line in written.splitlines())
+    assert not found, f'a connectivity measurement is committed: {found}'
 
 
 def measured_through(monkeypatch: pytest.MonkeyPatch, probe: network.Probe, *, ok: bool, written: str) -> network.ProbeResult:
@@ -271,10 +280,11 @@ def test_a_clone_never_claims_a_landing(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_a_landing_reaches_the_results_file_and_an_absent_one_adds_no_column() -> None:
-    """The harness splits on pipes, so where the value sits is an interface.
+    """A row carries a sixth field only where the probe redirected off its own host.
 
-    The absent case is why `records_landings` reads the header: these two rows are
-    indistinguishable from a file written before the column existed.
+    The absent case is what the header exists to disambiguate: a file where nothing
+    redirected and one written before the column existed have identically shaped
+    rows and mean opposite things.
     """
     moved = network.ProbeResult(
         network.Probe('language_manager', 'uv installer', 'https://astral.sh/uv/install.sh'),

@@ -12,14 +12,17 @@ pass/fail line per host. Run it on the restricted machine first: the answer is
 rarely "the internet is blocked" and usually "GitHub release assets are blocked
 but the API is not", which changes what you need to carry in.
 
-Pass `--output install/offline/connectivity-results.txt` to record the run there.
-That path is named rather than defaulted on purpose — every unfirewalled machine
-finds everything reachable, so a default would let a check run anywhere replace
-the one record of what work actually blocks.
+Pass `--output <path>` to record the run somewhere outside the repo. `--output`
+has no default on purpose, and the results never belong in version control: the
+file names which hosts one network permits and which it denies, and on a
+restricted machine that network is an employer's while this repo is public. Keep
+it under `$XDG_STATE_HOME` if you want to diff two runs after the rules change.
+`tests/install/test_network.py` fails the suite if a measurement is ever tracked.
 
-The results file is committed deliberately. It is a record of one network's
-behaviour at one time, which is the only way to compare against it after the
-firewall rules change.
+Note what the run itself looks like from the other side. It is around forty-five
+requests to distinct external hosts in quick succession, and it classifies TLS
+interception, so it reads as egress mapping to anything watching. Run it once
+when you need the answer, not on a schedule.
 
 ## Install without the network
 
@@ -143,13 +146,14 @@ it builds a bundle, starts a container blackholed to exactly the hosts this page
 results file reports blocked, and asserts the install completes from cache. If you
 change the bundle format, that is what catches it.
 
-The container's network is derived from `connectivity-results.txt` rather than
-typed into the test, and it asserts both halves — that the blocked hosts really
-are unreachable, and that the reachable ones really are. Only the first was ever
-checked, and the test drifted stricter than the firewall: it blackholed
-`github.com` outright, so theme, font and bashselfupdate failed to clone in a test
-of a network where they clone fine, and the log read as though the bundle had a
-gap it does not have.
+The container's blocklist is declared in `tests/e2e/harness.py` as `BLOCKED_HOSTS`
+and everything else the plan reaches stays resolvable, so the rig needs no record
+of any real network. It asserts both halves — that the blocked hosts really are
+unreachable, and that the reachable ones really are. Only the first was ever
+checked, and the test drifted stricter than intended: it blackholed `github.com`
+outright, so theme, font and bashselfupdate failed to clone in a rehearsal of a
+network where they clone fine, and the log read as though the bundle had a gap it
+does not have.
 
 ## Windows tools when winget is blocked
 

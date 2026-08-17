@@ -456,10 +456,10 @@ RULE = '-' * 78
 LANDED_COLUMN = 'LANDED'
 """The header word that says a file records where each probe ended.
 
-Read by `tests/e2e/harness.py` to decide whether it can derive the blocked hosts
-from the rows or has to fall back to the CDN names it hardcodes. Named here
-because the file that writes the column is the one that should say what identifies
-it."""
+The header and not the rows, because the column is written only where a row
+redirected: a file where nothing redirected and one written before the column
+existed have identically shaped rows and mean opposite things. Named here because
+the code that writes the column is what should say how to recognise it."""
 
 
 def _row(verdict: ProbeResult) -> str:

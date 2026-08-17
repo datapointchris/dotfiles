@@ -17,9 +17,9 @@ current stable tags carry zero assets. Moving it to `cargo_packages` therefore:
   binary upstream actually published, so the firewalled WSL work box compiles it
   from source too.
 
-Measured on that box 2026-08-07 (`install/offline/connectivity-results.txt`):
-crates.io is **reachable**, and GitHub *release asset downloads* are **blocked**
-while the release API is not. So the compile does succeed there — an earlier
+Measured on that box 2026-08-07 with `dotfiles network check`: crates.io is
+**reachable**, and GitHub *release asset downloads* are **blocked** while the
+release API is not. So the compile does succeed there — an earlier
 reading claiming no crates.io access was wrong. The consequence is subtler than a
 hard failure: `cargo binstall` can resolve any crate but cannot download a single
 prebuilt binary, so on that machine it silently falls back to source builds for

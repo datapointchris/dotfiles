@@ -160,13 +160,19 @@ be — a real macOS account, or the current machine.
 
 ## What the container rig must not do
 
-**The firewall is derived from the measurement, never hand-listed.** The offline
-and restricted environments parse
-`install/offline/connectivity-results.txt`, which is why `github.com` stays
-*reachable*: its block on the real network is path-scoped, and blackholing the
-host took every clone-based installer down with it. The three asset CDNs express
-that path scoping as host rules. Probes replay the recorded request, user agent
-included — a synthesized one reported crates.io blocked on what was really a 403.
+**The probes are derived from the plan and only the blocklist is declared.** The
+offline and restricted environments resolve `wsl-work-workstation` through
+`network.derive`, so a tool added to that manifest is rehearsed without anyone
+regenerating a fixture. `BLOCKED_HOSTS` in `tests/e2e/harness.py` names what the
+rehearsed firewall takes down, which is why `github.com` stays *reachable*:
+blackholing it takes every clone-based installer with it, and the three asset CDNs
+are how a refused release download is expressed as a host rule instead. Probes
+replay the derived request, user agent included — a synthesized one reported
+crates.io blocked on what was really a 403.
+
+No measurement of a real network is committed here, and
+`tests/install/test_network.py` fails if one appears. A results file names which
+hosts an employer permits and denies, and this repo is public.
 
 **The container is authenticated from the host's `gh`.** Sixty anonymous API calls
 an hour are shared with the host's public IP and one full install spends most of

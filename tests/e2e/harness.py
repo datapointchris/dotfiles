@@ -107,24 +107,38 @@ def container_name(*parts: str) -> str:
     return '-'.join(('dotfiles-e2e', *parts, *suffix))
 
 
-CONNECTIVITY_RESULTS = UNDER_TEST / 'install' / 'offline' / 'connectivity-results.txt'
 DOCKER_DIR = UNDER_TEST / 'tests' / 'install' / 'docker'
 
-# The one thing a host blocklist cannot express is that the work firewall filters
-# by path: github.com serves clones, /releases/latest and the API while refusing
-# /releases/download/. Blackholing the CDNs a download redirects to is how that
-# becomes a host rule, and it is why a github.com row measured NO does not become
-# a github.com entry.
-#
-# Only for a results file predating the LANDED column, which records the host each
-# probe really ended on and so derives this. Three names because a hardcoded list
-# has to guess at every CDN GitHub might use; the derivation names the one it
-# measured, and is right on the day it is read rather than the day it was typed.
-ASSET_CDN_HOSTS = (
+RESTRICTED_MANIFEST = 'wsl-work-workstation'
+"""Whose plan the restricted rehearsal resolves, and the only thing read off a machine.
+
+The manifest names the tools, so `network.derive` builds every URL an install
+would reach from the declaration itself. Nothing here records what any real
+network answered, which is the property that matters: a file of measured verdicts
+is a map of one employer's perimeter, and it does not belong in a public repo.
+"""
+
+BLOCKED_HOSTS = (
+    'claude.ai',
+    'proxy.golang.org',
     'objects.githubusercontent.com',
     'release-assets.githubusercontent.com',
     'github-releases.githubusercontent.com',
 )
+"""The hosts this rig's firewall blackholes — a scenario, not a measurement.
+
+Chosen for the install paths each one closes, because that is what the rehearsal
+is for. A blocked registry kills a whole section and is what makes `go_tools`
+prove the bundle path. A blocked vendor host kills one custom installer while its
+neighbours keep working. The three CDNs are the case a host blocklist otherwise
+cannot express: github.com has to stay reachable for clones and the API, so the
+only way to rehearse a refused release download is to take down the hosts an
+asset redirects to.
+
+github.com is deliberately absent, and that is the whole reason the CDNs are
+named. Blackholing it takes theme, font, bashselfupdate and all four zsh plugins
+with it, which manufactures failures and reads as a real firewall in a log.
+"""
 
 SHADOW_BIN = '.dotfiles-shadow-bin'
 """Where the hostile `python3` lives, first on every PATH the rig hands out."""
@@ -158,30 +172,17 @@ PROBE_AGENT = 'dotfiles-connectivity-test (+https://github.com/datapointchris/do
 
 @dataclass(frozen=True)
 class Probe:
-    """One row of the measurement: what was tried, and what the work box got."""
+    """One source an install reaches, and this rig's verdict on it."""
 
     verdict: str
     section: str
     name: str
     target: str
     reach: str = ''
-    landed: str = ''
 
     @property
     def host(self) -> str:
         return urlsplit(self.target if '//' in self.target else f'https://{self.target}').netloc
-
-    @property
-    def effective_host(self) -> str:
-        """The host that actually answered — the one a firewall has to be given.
-
-        `-L` means the requested URL frequently is not the host serving the bytes:
-        claude.ai lands on downloads.claude.ai, astral.sh on releases.astral.sh, and
-        every release asset on a githubusercontent CDN. Blackholing the requested
-        host builds a firewall the work box does not have, and leaves the host that
-        really refuses resolvable.
-        """
-        return self.landed or self.host
 
     @property
     def reachable(self) -> bool:
@@ -189,19 +190,16 @@ class Probe:
 
     @property
     def cloned(self) -> bool:
-        """Whether this row was measured as a clone, which decides how it replays.
+        """Whether this source is reached by cloning, which decides how it replays.
 
-        The recorded REACH where the file carries one. The fallback is the section
-        name, and it is wrong for exactly the rows that matter: a custom installer
-        is `custom_installer` whether it clones or downloads, and theme, font and
-        bashselfupdate all clone — so every one of them replayed as `curl --head`
-        against a `.git` URL, which GitHub answers, so it passed for the wrong
+        Taken from REACH rather than from the section name, which is wrong for
+        exactly the rows that matter: a custom installer is `custom_installer`
+        whether it clones or downloads, and theme, font and bashselfupdate all
+        clone. Read off the section, every one of them replayed as `curl --head`
+        against a `.git` URL, which GitHub answers — so it passed for the wrong
         reason and a blocked git transport would have read as reachable.
-
-        Kept rather than removed because the committed file predates the column
-        and can only be regenerated behind the firewall it describes.
         """
-        return self.reach == 'clone' if self.reach else self.section.endswith('clone')
+        return self.reach == 'clone'
 
     def command(self) -> str:
         """The same request the measurement made, to re-run inside a container.
@@ -234,67 +232,55 @@ class Probe:
 
 
 def measured_probes() -> tuple[Probe, ...]:
-    """Every row of `install/offline/connectivity-results.txt`.
+    """Every source the restricted manifest's plan reaches, verdict included.
 
-    Derived rather than typed: that file is written by
-    `dotfiles network check --output` from the resolved plan, and
-    is committed precisely so this does not have to be guessed. A container that
-    blocks more than the firewall manufactures failures no machine has, and they
-    read as real ones in a log — clone-based installers dying is the shape it
-    takes, since git clone is reachable at work and theme, font, bashselfupdate
-    and every zsh plugin come down that way.
+    Resolved from the declaration through `network.derive`, which is the same
+    function `dotfiles network check` builds its requests from — so a tool added
+    to the manifest is rehearsed without anyone regenerating a file. A recorded
+    measurement could only ever be re-taken behind the firewall it described, and
+    went stale between every one of those runs.
+
+    The verdict is this rig's, from `BLOCKED_HOSTS`. A container that blocks more
+    than intended manufactures failures no machine has, and they read as real ones
+    in a log — clone-based installers dying is the shape it takes, since theme,
+    font, bashselfupdate and every zsh plugin come down that way.
     """
-    probes = []
-    for line in CONNECTIVITY_RESULTS.read_text().splitlines():
-        fields = [cell.strip() for cell in line.split('|')]
-        if len(fields) < 4 or fields[0] not in {'YES', 'NO'}:
-            continue
-        reach = fields[4] if len(fields) > 4 else ''
-        landed = fields[5] if len(fields) > 5 else ''
-        probes.append(Probe(verdict=fields[0], section=fields[1], name=fields[2], target=fields[3], reach=reach, landed=landed))
-    return tuple(probes)
-
-
-def records_landings() -> bool:
-    """Whether this file carries the LANDED column, read off its header.
-
-    The header and not the rows, because the column is written only where a row
-    redirected: a file where nothing redirected and a file written before the
-    column existed have identically shaped rows and mean opposite things. Guessing
-    from the rows would read the second as the first and silently drop the CDN
-    fallback, leaving the firewalled containers hostile to nothing.
-    """
-    return any(network.LANDED_COLUMN in line for line in CONNECTIVITY_RESULTS.read_text().splitlines() if 'TARGET' in line)
+    derived = network.derive(machines.load(RESTRICTED_MANIFEST))
+    return tuple(
+        Probe(
+            verdict='NO' if probe.host in BLOCKED_HOSTS else 'YES',
+            section=probe.section,
+            name=probe.name,
+            target=probe.target,
+            reach=str(probe.reach),
+        )
+        for probe in derived.probes
+    )
 
 
 def measured_network() -> tuple[tuple[str, ...], tuple[str, ...]]:
     """`(blocked, reachable)` hosts, for building the container's `--add-host` set.
 
-    Keyed on where a probe *ended*, not on what it asked for. A reachable row that
-    redirected proves both hosts answered and contributes both; a blocked one knows
-    only that the chain died, and the last host curl reached is the nearest thing to
-    a culprit there is.
-    """
-    probes = measured_probes()
-    reachable = {host for probe in probes if probe.reachable for host in (probe.host, probe.effective_host) if host}
-    blocked = {probe.effective_host for probe in probes if not probe.reachable and probe.effective_host}
+    The blocklist is declared and the reachable set is everything else the plan
+    names, which is the direction that cannot go wrong: a host nobody chose to
+    block stays resolvable, and a typo in `BLOCKED_HOSTS` blackholes nothing
+    rather than blackholing something the rig depends on.
 
-    # A host under both verdicts is a path-scoped block; taking the host down
-    # would take down the paths that work.
-    blocked = {host for host in blocked if host not in reachable}
-    if not records_landings():
-        blocked |= set(ASSET_CDN_HOSTS)
-    return tuple(sorted(blocked)), tuple(sorted(reachable))
+    Subtracted rather than intersected, so a blocked host never also arrives as an
+    `--add-host` pair pointing at the real address.
+    """
+    reachable = {probe.host for probe in measured_probes() if probe.host} - set(BLOCKED_HOSTS)
+    return tuple(sorted(BLOCKED_HOSTS)), tuple(sorted(reachable))
 
 
 def reachable_probes() -> tuple[Probe, ...]:
     """One probe per reachable host *per method*.
 
     Per host alone would be cheaper and would silently drop every clone: the
-    release rows come first in the file and claim `github.com`, so the git path —
-    the one carrying theme, font, bashselfupdate and all four zsh plugins — would
-    never be re-probed at all. Two probes for that host, forty-odd rows collapsed
-    to a dozen.
+    release rows come first and claim `github.com`, so the git path — the one
+    carrying theme, font, bashselfupdate and all four zsh plugins — would never be
+    re-probed at all. Two probes for that host, forty-odd rows collapsed to a
+    dozen.
     """
     seen: set[tuple[str, bool]] = set()
     chosen = []

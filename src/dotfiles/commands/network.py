@@ -5,13 +5,17 @@ One verb, because the question has one answer and `check` is already the word fo
 rendering destination in the same family as `--json`, not a write the flag turns
 on, and the default is a pure read like every other `check`.
 
-**`--output` names the path rather than defaulting to the committed one, and that
-is a safety property.** `install/offline/connectivity-results.txt` is the *work
-box's* measurement, taken behind the firewall it describes, and the firewalled e2e
-containers blackhole hosts based on it. A run on any unfirewalled machine finds
-everything reachable, so a default output path would let a routine check on the
-personal box silently replace the only record of what work blocks — and the
-containers would then rehearse no firewall at all while still reporting green.
+**`--output` has no default, and that is a safety property rather than an
+omission.** A rendered measurement names which hosts one network permits and
+which it denies. Off the fleet that network is an employer's, and this repo is
+public, so no output of this verb belongs in it — `tests/install/test_network.py`
+asserts none is tracked. A default path is how one arrives anyway: it turns a
+routine check into a write, and the write lands in a working tree somebody later
+commits without reading.
+
+Nothing here decides what the firewalled e2e containers block. That is declared
+in `tests/e2e/harness.py`, against a plan resolved from the manifest, so the
+rehearsal needs no record of any real network.
 
 The measurement is what tells `bundle create` what an offline machine will need,
 which is why this sits beside the bundler rather than among the resources — there

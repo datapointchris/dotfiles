@@ -17,8 +17,7 @@ from pathlib import Path
 import harness
 import pytest
 from harness import ARCHLINUX
-from harness import ASSET_CDN_HOSTS
-from harness import CONNECTIVITY_RESULTS
+from harness import BLOCKED_HOSTS
 from harness import CONTAINER_PATH_DIRS
 from harness import ENVIRONMENTS
 from harness import PROBE_AGENT
@@ -38,7 +37,6 @@ from harness import reachable_probes
 from harness import shadow_source
 from harness import shell_path
 
-from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Precondition
@@ -50,13 +48,12 @@ from dotfiles.resolve import Stage
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_measurement_was_actually_read() -> None:
-    """A parse that silently found nothing would make every assertion below
-    vacuous, and would blackhole an empty set — a container with no firewall at
-    all, passing."""
-    blocked, reachable = measured_network()
+def test_the_plan_was_actually_resolved() -> None:
+    """A derivation that silently found nothing would make every assertion below
+    vacuous, and would leave the reachable set empty — a container whose every
+    host is unresolvable, failing for a reason no firewall explains."""
+    _, reachable = measured_network()
     assert len(reachable) > 5
-    assert len(blocked) >= len(ASSET_CDN_HOSTS)
 
 
 def test_a_host_is_never_both_blocked_and_reachable() -> None:
@@ -66,10 +63,11 @@ def test_a_host_is_never_both_blocked_and_reachable() -> None:
 
 
 def test_github_stays_reachable_because_its_block_is_path_scoped() -> None:
-    """The measurement records a NO against a github.com URL — a release asset —
-    while every clone and the API are YES. Taking the host down would take the
-    working paths with it, which is what made theme, font and bashselfupdate fail
-    in a test of a network where they install fine.
+    """A release download has to fail while clones and the API keep working.
+
+    Taking github.com down takes the working paths with it, which is what made
+    theme, font and bashselfupdate fail in a test of a network where they install
+    fine. The CDN names are how that becomes expressible as a host rule.
     """
     blocked, reachable = measured_network()
     assert 'github.com' in reachable
@@ -79,72 +77,24 @@ def test_github_stays_reachable_because_its_block_is_path_scoped() -> None:
     )
 
 
-OLD_FORMAT_RESULTS = """\
-    | SECTION           | NAME                    | TARGET                          | REACH
-------------------------------------------------------------------------------
-NO  | github_asset      | release asset download  | https://github.com/o/r/releases/download/v1/x| download
-YES | git_clone         | dotfiles                | https://github.com/datapointchris/dotfiles.git| clone
-------------------------------------------------------------------------------
-"""
-"""A results file as it was written before the LANDED column, hand-built because
-nothing produces this shape any more. The committed file is one of these until the
-work box is next behind its own firewall to regenerate it."""
+def test_every_blocked_host_is_one_the_plan_actually_reaches() -> None:
+    """A name in `BLOCKED_HOSTS` that no probe targets blocks nothing.
 
-
-def network_against(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    results = tmp_path / 'connectivity-results.txt'
-    results.write_text(text)
-    monkeypatch.setattr(harness, 'CONNECTIVITY_RESULTS', results)
-    return measured_network()
-
-
-def test_a_file_without_the_landed_column_still_blackholes_the_asset_cdns(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The fallback, and it is load-bearing rather than tidy.
-
-    Deriving from the rows alone would contribute nothing here — the asset row names
-    github.com, which is reachable through the clone row, so the both-verdicts rule
-    strips it. The firewalled containers would blackhole an empty set and go on
-    reporting green while rehearsing no firewall at all.
+    It would still be counted, still emitted as an `--add-host` pair, and still
+    read as a firewall in the run header — so the rig would report a restricted
+    network while rehearsing a smaller one than it claims. The CDNs are exempt
+    because a redirect target is never a probe's own host.
     """
-    blocked, _ = network_against(monkeypatch, tmp_path, OLD_FORMAT_RESULTS)
+    reached = {probe.host for probe in harness.measured_probes()}
+    unused = [host for host in BLOCKED_HOSTS if host not in reached and not host.endswith('githubusercontent.com')]
 
-    assert set(ASSET_CDN_HOSTS) <= set(blocked)
-
-
-def test_a_file_with_the_landed_column_derives_the_cdn_instead(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Rendered rather than hand-written, because the header is the format marker and
-    only `network.render` writes it — a hand-built file here would keep passing after
-    the real one stopped saying what this reads."""
-    asset = network.ProbeResult(
-        network.Probe('github_asset', 'release asset download', 'https://github.com/o/r/releases/download/v1/x'),
-        False,
-        'release-assets.githubusercontent.com',
-    )
-    clone = network.ProbeResult(network.Probe('git_clone', 'dotfiles', network.DOTFILES_REPO, network.Reach.CLONE), True)
-    written = network.render(
-        machines.load('wsl-work-workstation'),
-        network.Measurement((asset, clone), ()),
-        when='w',
-        system='s',
-    )
-
-    blocked, _ = network_against(monkeypatch, tmp_path, written)
-
-    assert 'release-assets.githubusercontent.com' in blocked
-    assert 'github.com' not in blocked, 'the entry host is reachable through the clone row'
-    assert not set(ASSET_CDN_HOSTS) - {'release-assets.githubusercontent.com'} & set(blocked), (
-        'the hardcoded names are not added once the file says where the probe landed'
-    )
+    assert not unused, f'blocked but never reached, so blocking it rehearses nothing: {unused}'
 
 
-def test_what_the_work_box_reported_blocked_is_blocked() -> None:
-    """Read off the file rather than restated, so this cannot drift from it."""
-    rows = [line.split('|') for line in CONNECTIVITY_RESULTS.read_text().splitlines()]
-    verdicts = {cells[0].strip() for cells in rows if len(cells) >= 4}
-    assert {'YES', 'NO'} <= verdicts, 'the results file has no verdict column any more'
-
+def test_the_go_proxy_is_blocked_because_that_is_why_go_tools_are_bundled() -> None:
+    """The one blocked registry, named because a whole install section turns on it."""
     blocked, _ = measured_network()
-    assert 'proxy.golang.org' in blocked, 'the Go proxy is why go_tools are bundled'
+    assert 'proxy.golang.org' in blocked
 
 
 def test_only_a_firewalled_environment_blackholes_anything() -> None:
@@ -782,7 +732,6 @@ def test_the_replayed_probe_carries_the_fallback_the_measurement_used() -> None:
     `releases.hashicorp.com` answers HEAD with 405 for a named agent and 200 for
     curl's default, which is why the agent is part of the recorded request too.
     """
-    from dotfiles import network
 
     downloads = [probe for probe in harness.measured_probes() if not probe.cloned]
     assert downloads, 'no download probe recorded, so this would pass vacuously'
