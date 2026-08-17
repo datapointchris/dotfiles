@@ -175,19 +175,71 @@ class TestTheGate:
 
         assert len(problems) == 3
 
-    def test_the_names_it_refuses_are_this_machine_s(self) -> None:
+    def test_the_names_it_refuses_are_this_machine_s(self, monkeypatch) -> None:
         """The half the chosen names above cannot cover: that what reaches the gate
         in production is the hostname and the account rather than two constants."""
+        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+        monkeypatch.setenv('WINDOWS_DOMAIN', 'corp')
+
         assert publishing.identifying(axes.NetworkTrust.NONFLEET) == {
             'this machine name': paths.machine_id(),
             'the account this runs as': getpass.getuser(),
+            'the Windows account': 'ab12345',
+            'the Windows domain': 'corp',
         }
+
+    def test_a_machine_with_no_windows_side_contributes_no_name(self, monkeypatch, tmp_path) -> None:
+        """Empty rather than absent, because `redacted` already skips a falsy value.
+        A key that appears only sometimes would make the shape depend on the box."""
+        monkeypatch.delenv('WINDOWS_USER', raising=False)
+        monkeypatch.delenv('WINDOWS_DOMAIN', raising=False)
+        monkeypatch.setattr(publishing.Path, 'home', staticmethod(lambda: tmp_path))
+
+        named = publishing.identifying(axes.NetworkTrust.NONFLEET)
+
+        assert named['the Windows account'] == ''
+        assert publishing.redacted({'rows': ['nothing here']}, named) == ()
 
     def test_a_fleet_box_does_not_screen_for_a_name_it_publishes_on_purpose(self) -> None:
         """`written_by` carries the bare hostname on `FLEET`, deliberately. Screening
         rows against it too withholds a row to hide a string travelling one key
         over — the builder loses a tool and the name ships regardless."""
         assert publishing.identifying(axes.NetworkTrust.FLEET) == {'the account this runs as': getpass.getuser()}
+
+
+class TestTheValuesSetByHand:
+    """`WINDOWS_USER` and `WINDOWS_DOMAIN` are identifiers the machine cannot derive."""
+
+    def test_the_environment_answers_first(self, monkeypatch) -> None:
+        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+
+        assert publishing.declared_by_hand('WINDOWS_USER') == 'ab12345'
+
+    def test_the_env_file_answers_when_no_shell_sourced_it(self, monkeypatch, tmp_path) -> None:
+        """A scheduled run has no interactive shell behind it, and is exactly when
+        nobody is watching what left the box."""
+        monkeypatch.delenv('WINDOWS_USER', raising=False)
+        (tmp_path / '.env').write_text('# OVERRIDES\nWINDOWS_USER=ab12345\n')
+        monkeypatch.setattr(publishing.Path, 'home', staticmethod(lambda: tmp_path))
+
+        assert publishing.declared_by_hand('WINDOWS_USER') == 'ab12345'
+
+    def test_an_unset_value_is_empty_rather_than_a_refusal(self, monkeypatch, tmp_path) -> None:
+        monkeypatch.delenv('WINDOWS_USER', raising=False)
+        monkeypatch.setattr(publishing.Path, 'home', staticmethod(lambda: tmp_path))
+
+        assert publishing.declared_by_hand('WINDOWS_USER') == ''
+
+    def test_the_employee_id_refuses_a_document_carrying_it(self, monkeypatch) -> None:
+        """The case this exists for. `steps.windows_fonts` asks Windows for the
+        account and records the answer, so the id reaches a run record in an
+        `answer` and a `target` — matching no token shape and no credential word."""
+        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+        named = publishing.identifying(axes.NetworkTrust.NONFLEET)
+
+        problems = publishing.redacted({'rows': [{'target': '/mnt/c/Users/ab12345/AppData'}]}, named)
+
+        assert problems == ('the Windows account appears in it',)
 
     def test_the_refusal_carries_an_issue_and_names_what_would_have_been_sent(self) -> None:
         with pytest.raises(publishing.Unpublishable) as refused:

@@ -57,10 +57,13 @@ import datetime as dt
 import getpass
 import hashlib
 import json
+import os
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from dotfiles import coordinates as axes
+from dotfiles import envfile
 from dotfiles import paths
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
@@ -248,7 +251,35 @@ def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
     named = {'the account this runs as': getpass.getuser()}
     if trust is axes.NetworkTrust.FLEET:
         return named
-    return {'this machine name': paths.machine_id(), **named}
+    return {
+        'this machine name': paths.machine_id(),
+        **named,
+        'the Windows account': declared_by_hand('WINDOWS_USER'),
+        'the Windows domain': declared_by_hand('WINDOWS_DOMAIN'),
+    }
+
+
+def declared_by_hand(name: str) -> str:
+    """A value from the OVERRIDES half of `~/.env`, or empty where it is unset.
+
+    `WINDOWS_USER` is the employer's account name and `WINDOWS_DOMAIN` the domain
+    it authenticates against — the two entries `machines requirements` lists as
+    set by hand, which is what makes them identifiers rather than configuration.
+    They are not derivable from the machine the way a hostname is, so they are
+    read from where a person put them.
+
+    The environment first, because a run started from an interactive shell has
+    `~/.env` sourced already and that is every run a person watches. The file
+    second, because a scheduled run has no such shell and is exactly when nobody
+    is looking at what left the box.
+
+    Empty on a machine that declares neither, which is every fleet box. `redacted`
+    skips an empty value, so this adds nothing to a document that has no Windows
+    side — the coordinate does not have to be consulted twice.
+    """
+    if value := os.environ.get(name, '').strip():
+        return value
+    return envfile.read(Path.home() / '.env').get(name, '').strip()
 
 
 def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
