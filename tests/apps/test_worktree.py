@@ -387,10 +387,20 @@ class TestEcho:
         assert f'git -C {alpha} push --quiet origin HEAD:main' in self.commands(result)
 
     def test_an_echoed_line_runs_as_it_stands(self, fleet, run):
-        """Pasteable is the claim, so the assertion pastes one."""
+        """Pasteable is the claim, so the assertion pastes one.
+
+        A git line, and a worktree for it to be about. `discover` probes
+        `claude-sessions` before it runs any git, and the fixture's PATH ends in
+        the real one — so taking the first line asserts against whichever tools
+        the developer has installed, and finds nothing at all on a runner that
+        has neither them nor a worktree to list.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+
         result = run(fleet['primary'], 'list')
 
-        replayed = subprocess.run(shlex.split(self.commands(result)[0]), capture_output=True, text=True)
+        pasted = next(line for line in self.commands(result) if line.startswith('git '))
+        replayed = subprocess.run(shlex.split(pasted), capture_output=True, text=True)
 
         assert replayed.returncode == 0
 
