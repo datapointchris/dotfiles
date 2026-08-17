@@ -281,3 +281,125 @@ mechanical finds a page still describing the design you just replaced. The
 practical version: after landing a change that alters a *shape* — a layout, a
 lookup, a dispatch — grep `docs/` for the old vocabulary before the commit, not
 at the next audit. `PLATFORM` was one grep away for two days.
+
+---
+
+## Third pass: 2026-08-17
+
+A full audit, and the trigger was cost rather than staleness.
+`architecture/management-interface.md` took 57 commits in 31 days and 1333 lines
+of churn against a 565-line file. Chris named the standard it was failing: a doc
+is no good if it has to change on every commit.
+
+### Baseline
+
+| Measure | 2026-08-08 | 2026-08-17 (before) | After |
+| --- | --- | --- | --- |
+| Lines in `docs/` | 5,617 | 8,015 | 4,537 |
+| Files | 56 | 64 | 53 |
+| `docs/learnings/` files | 22 | 29 | 21 |
+| Shingle score, whole corpus | — | 3,174 across nine pages | 470 across all 53 |
+
+The corpus grew 43% in nine days. Every page added in that window described a
+subsystem that had just been written, which is the condition this pass is about.
+
+### The sixth failure mode, and the measurement that finds it
+
+**A page that restates a module docstring.** The first audit's rule catches an
+enumeration. The second's catches a mechanism whose shape changed. Neither
+catches prose that is *correct*, is *about a mechanism*, and already exists
+fifteen lines into the module it describes. Both copies then have to be edited,
+and only one of them is next to the code.
+
+It is measurable. Count six-word runs a page shares with any docstring under
+`src/dotfiles/`:
+
+```python
+import re, pathlib
+def shingles(text, n=6):
+    words = re.findall(r"[a-z_`.\-/]+", text.lower())
+    return {' '.join(words[i:i+n]) for i in range(max(0, len(words)-n))}
+src = shingles(' '.join(p.read_text() for p in pathlib.Path('src/dotfiles').rglob('*.py')))
+for f in sorted(pathlib.Path('docs').rglob('*.md')):
+    print(len(shingles(f.read_text()) & src), f)
+```
+
+The scale separates cleanly, and the ends of it were known before the number was
+computed. `configuration/docker.md` scored 1, `architecture/tmux-sessions.md` 1,
+`reference/tools/tasks.md` 0 — the three pages the earlier audits named as
+surviving because nothing in them changes when code changes.
+`architecture/github-releases.md` scored 613 over 390 lines,
+`offline-bundles.md` 557, `observability.md` 549, `management-interface.md` 529.
+A score in the hundreds means the page is a second copy of the code's own words.
+
+It took three passes to clear, and the second and third are the finding. A page
+handed a cut list came back half its length with its score barely moved —
+`system-configuration.md` went 300 lines to 296 and 301 to 293. Re-measuring is
+what caught it; reading the diff would not have. **A page is not done because it
+is shorter.** Run the count again and cut until it drops: those two finished at
+0 and 8, and `offline-bundles.md` and `github-releases.md` at 1 and 2 after a
+third pass. The highest score left in the corpus is 86.
+
+**The fix is not deletion.** A decision belongs in both places when the constraint
+is one an editor must meet, which `standards/documentation.md` § "Document a
+constraint at the edit site" requires. What comes out is the *mechanism* — the
+walkthrough, the per-field account, the measurements — replaced by one sentence
+naming the module. `architecture/custom-installers.md` is the model: 162 lines to
+48, holding the routing test and three rejected protocols, with
+`src/dotfiles/providers/custom.py` named for the rest.
+
+### What the second pass's test said
+
+`architecture/index.md` was named the page to watch. It was stale again, and
+three of its claims were false: a manifest example declaring `function_groups:`
+and `alias_groups:`, which `rg -uu` finds nowhere in the repo; a `npm_globals:`
+list triggering nvm, retired in favour of fnm; and an optional per-platform
+Neovim config layer that has never existed. That is failure twice, and the test
+says delete.
+
+It was rewritten instead, and the reason is the one the test does not cover: the
+page carries reasoning that exists nowhere else — the WSL-to-Windows bridge and
+why it refused to delete, the `MACHINE_ROLE` axis tried and removed, the
+mechanism-versus-values test with the `update-tldr` case that sat on the wrong
+side of it for months, and the four-level git identity chain. The stale half was
+enumeration; the durable half was decisions. **A page that is both gets cut in
+half, not deleted** — and if the enumerations grow back by the next audit, the
+test applies without an exemption.
+
+### What left the repo
+
+Eight pages moved to where their subject actually lives, which is the half of
+this pass that reduces future churn rather than current lines.
+
+- **Six to the hub** (`~/docs`): the libpcre2 symbol warning, stdin consumption
+  in `while read` loops, TTY detection inside command substitution, man page
+  overstrike, and font/terminal metadata. None named anything in this repo.
+- **One split**: the USB DAC note. The diagnosis is general and went to the hub;
+  the WirePlumber drop-in this repo deploys stayed.
+- **Two to the fleet standards**: the failure-registry lesson became
+  `cli-design.md` § "A value the caller needs back is returned, never parsed back
+  out of a stream", and the bootstrap-dependency lesson became `testing.md` §
+  "An end-to-end environment is the production image, not an approximation of
+  it". Both are rules every repo can break; neither was about dotfiles.
+- **`architecture/tool-composition.md` was deleted rather than moved.** Its
+  central claim — never build the picker in, compose at the shell — is a
+  position the fleet has since reversed. `cli-design.md` § "The interactive
+  picker is `choose`, and it is never `apply`" names `theme choose` and
+  `doit labs choose` as the shape. A page can go stale by being overtaken rather
+  than by being wrong about its own repo, and nothing mechanical finds that
+  either.
+
+### The test for next time
+
+Everything the first two passes said, plus: **run the shingle count before
+reading anything.** It ranks the corpus by the failure mode that costs the most
+and it takes seconds. A page scoring in the hundreds is a rewrite candidate
+before anyone has read a line of it.
+
+One thing this pass did not fix. The lesson in
+`learnings/cargo-binstall-needs-release-binaries.md` generalises — the install
+method is decided by what upstream publishes, not by what the tool is written in
+— and no standards file covers install-method selection. `dependencies.md` holds
+three rules and all three are about trust. Placing it means broadening that file
+or adding one, which is a decision about the fleet's own surface rather than
+about these docs.
