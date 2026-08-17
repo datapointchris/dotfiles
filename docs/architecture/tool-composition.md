@@ -6,7 +6,7 @@ presentation to whatever is downstream — fzf, gum, or a script. The pattern is
 borrowed from [sesh](https://github.com/joshmedeski/sesh): integration happens
 at the shell level, never inside the tool.
 
-`toolbox list` enumerates what exists; the per-tool pages are under
+`doit kit list` enumerates what exists; the per-tool pages are under
 [Apps](../apps/index.md). This page is only the reasoning that spans them.
 
 ## Design Decisions
@@ -16,15 +16,15 @@ at the shell level, never inside the tool.
 **Anti-pattern**:
 
 ```bash
-sesh --fzf          # Now sesh depends on fzf
-toolbox --interactive  # Now toolbox needs gum
+sesh --fzf              # Now sesh depends on fzf
+theme --interactive     # Now theme needs gum
 ```
 
 **Better**:
 
 ```bash
-sesh list | fzf     # sesh is independent
-toolbox list | gum choose  # toolbox doesn't know about gum
+sesh list | fzf         # sesh is independent
+theme list | gum choose # theme doesn't know about gum
 ```
 
 **Benefits**:
@@ -38,7 +38,7 @@ toolbox list | gum choose  # toolbox doesn't know about gum
 
 **Pragmatism over purity**:
 
-- **sesh/toolbox** are Go because: Complex logic, concurrent operations, type safety for config parsing
+- **sesh** is Go because: Complex logic, concurrent operations, type safety for config parsing
 - **theme/notes** are bash because: Simple text processing, YAML parsing with yq, shell integration
 
 **Rule of thumb**: If it's mostly calling other CLI tools and processing text, bash is simpler.
@@ -55,8 +55,8 @@ workflow themes     # yet another subcommand
 
 # Better: Focused tools
 sesh
-toolbox
 theme
+notes
 ```
 
 **Benefits**:
@@ -68,8 +68,9 @@ theme
 
 ### The rules that keep the federation thin
 
-The federated search moved to [doit](../apps/doit.md) with the rest of the menu suite, but the
-contract it depends on is still owned here, because `toolbox` is still here. Every collection is a
+The federated search lives in [doit](../apps/doit.md) and the collections it reads live in
+`terminal-library`, so nothing about it is owned here any more. The contract is recorded here
+because it is what the shell tools on this side are built to satisfy. Every collection is a
 **registry** — a store of things with a searchable index — and the composer above them owns no
 content of its own. Three rules keep it that way:
 
@@ -86,12 +87,10 @@ content of its own. Three rules keep it that way:
 registry is a file with a documented shape, so neither tool has to know the other exists.
 
 The registry moved to `terminal-library` because the collection outlives any one tool that parses
-it. `toolbox` still reads its own copy, deployed from `configs/common/.local/share/toolbox/`, so a
-tool added to one is absent from the other until both are edited. That duplicate is deliberate and
-temporary — item 310 deletes the dotfiles copy once `toolbox` itself is retired.
+it, and it is authored content rather than machine configuration — adding a tool is an edit to a
+content repo `doit content sync` pulls, never a deploy from here.
 
 ## Related
 
 - [doit](../apps/doit.md) — the composer these rules govern, now in its own repo
-- [Toolbox](../apps/toolbox.md) — the registry they read
 - [Shell Libraries](shell-libraries.md) — the help grammar every tool shares

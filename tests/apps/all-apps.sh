@@ -126,7 +126,6 @@ echo ""
 # ================================================================
 echo "User Apps:"
 test_cmd "notes help" "notes --help"
-test_cmd "toolbox list" "toolbox list"
 test_cmd "packup help" "packup --help"
 test_cmd "printcolors available" "command -v printcolors"
 # --help only: a bare run subscribes and never returns, which the 5s timeout

@@ -15,4 +15,4 @@ Reference validator for codebases — finds broken `source`/`bash` targets, stal
 
 ## See Also
 
-- [Toolbox](toolbox.md) — tool discovery across the installed toolchain
+- [Doit](doit.md) — tool discovery across the installed toolchain, and everything else it indexes

@@ -43,7 +43,7 @@ the Windows-side scripts WSL needs in `install/wsl/`, what those scripts share i
 `install/common/lib/`, and every package in `install/packages.yml`.
 
 Some tools are developed elsewhere and installed from GitHub rather than living
-here: `toolbox` and `sesh` (Go), `theme` and `font` (cloned to
+here: `sesh` (Go), `theme` and `font` (cloned to
 `~/.local/share/`), and the Python tools under `git_uv_tools`. The four install
 patterns and when each applies are in
 [App Installation Patterns](learnings/app-installation-patterns.md).
@@ -64,7 +64,7 @@ exists rather than how to call it:
 ```bash
 task --list-all      # every task (from inside the repo)
 dotfiles --help      # the same operations, from anywhere
-toolbox list         # installed tools, by category
+doit kit list        # everything indexed, by collection
 doit find <term>     # search tools, functions, aliases and keybindings at once
 theme list
 ```

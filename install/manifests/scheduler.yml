@@ -26,7 +26,6 @@ flatpak: false
 go_tools:
   - fleet     # the sweep, the schedule, and the timer that fires them
   - task      # Taskfile runner used across the repos
-  - toolbox   # tool discovery CLI
   - gdu       # the clones fill a disk, and this is how that gets diagnosed
 
 git_uv_tools:

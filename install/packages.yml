@@ -1669,12 +1669,6 @@ go_tools:
     binary_pattern: "sops-{version}.{os}.{go_arch}"
     description: Secrets manager for config files (encrypts with age/GPG/KMS)
 
-  - name: toolbox
-    package: github.com/datapointchris/toolbox
-    github_repo: datapointchris/toolbox
-    binary_pattern: "toolbox_{version_num}_{os}_{go_arch}.tar.gz"
-    description: CLI for discovering installed development tools
-
   - name: gowall
     package: github.com/Achno/gowall
     github_repo: Achno/gowall

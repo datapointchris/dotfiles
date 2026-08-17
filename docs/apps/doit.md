@@ -68,6 +68,5 @@ so it belongs in the config directory and outside version control.
 
 ## See Also
 
-- [Toolbox](toolbox.md) — still here, and still what `doit launch` reads for the installed-tool list
 - [Tool Composition](../architecture/tool-composition.md) — how the remaining tools compose
 - [App Installation Patterns](../learnings/app-installation-patterns.md) — the four install patterns

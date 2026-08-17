@@ -6,7 +6,7 @@ Cross-platform dotfiles that work across macOS, WSL Ubuntu, and Arch Linux. Beca
 
 A dotfiles setup that prioritizes shared configuration, with a per-coordinate directory only where a machine genuinely needs a different file. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
 
-Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`toolbox`) so you can actually remember what you installed.
+Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`doit`) so you can actually remember what you installed.
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `toolbox`: Go app via `go install github.com/datapointchris/...`
+- `doit`: Python app via `uv tool install git+https://github.com/datapointchris/doit`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 The core rule: a deployed path lives in exactly one directory. `declared()` in `src/dotfiles/resources/symlinks.py` walks each coordinate directory and appends without deduplicating, so the same relative path in `common/` and a coordinate directory is a collision producing two links at one target — never an override. There is no merge step, which is why a config that differs on one coordinate moves out of `common/` whole rather than being patched on top of it.
@@ -113,16 +113,17 @@ See [CLAUDE.md](CLAUDE.md) for the full philosophy (it's longer than it needs to
 
 ## Tool Discovery
 
-Installed something six months ago and forgot about it? The `toolbox` command has you covered:
+Installed something six months ago and forgot about it? `doit` has you covered:
 
 ```bash
-toolbox list              # See everything
-toolbox show ripgrep      # Details, examples, why you installed it
-toolbox search git        # Find git-related tools
-toolbox remind            # Surface something you forgot existed
+doit kit list             # See everything, every collection
+doit show ripgrep         # Details, examples, why you installed it
+doit find git             # Find git-related tools, cards and shortcuts
+doit kit remind           # Surface something you forgot existed
+doit kit unused           # What you own, can run, and never do
 ```
 
-Tools are documented in the registry with usage examples and tips, deployed from `configs/common/.local/share/toolbox/registry.yml`.
+Tools are documented with usage examples and tips in the `terminal-library` registry, which `doit content sync` keeps current. It is authored content rather than machine config, so it lives in its own repo and changing it needs no deploy.
 
 ## Common Tasks
 
@@ -141,7 +142,7 @@ dotfiles apply --reinstall --package lazygit  # Install one entry again, whateve
 dotfiles symlinks apply                 # Deploy configs (also: plan, check, show, unlink)
 
 # Discovery
-toolbox search python                   # Find Python tools
+doit find python                        # Find Python tools
 ```
 
 Run `dotfiles` for all commands, or `task --list-all` when working inside the repo.
@@ -192,4 +193,4 @@ MIT - do whatever you want with it
 
 ---
 
-**Tip**: Running `toolbox remind` occasionally is a good way to rediscover tools you installed and immediately forgot about.
+**Tip**: `doit kit remind` surfaces something you have not reached for in 90 days, and the weekly nudge runs it for you.

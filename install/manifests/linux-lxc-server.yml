@@ -25,7 +25,6 @@ flatpak: false
 
 go_tools:
   - task      # Taskfile runner used across the repos
-  - toolbox   # tool discovery CLI
   - gdu       # fast disk-usage analyzer (fills-up diagnosis)
   - sops      # decrypt homelab secrets in place
 

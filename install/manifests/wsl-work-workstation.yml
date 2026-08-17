@@ -22,7 +22,6 @@ go_tools:
   # - golangci-lint
   - gdu
   - sesh
-  - toolbox
   - todoui
   - bbkt
   - jira

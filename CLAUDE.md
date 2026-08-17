@@ -43,7 +43,7 @@ none of it.
 
 **App Installation Patterns** (⚠️ CRITICAL - Four distinct patterns):
 
-1. **Go Apps** (toolbox): Installed via `go install` from packages.yml
+1. **Go Apps** (sesh, task): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
    - Installer: `src/dotfiles/providers/gotool.py`, through `dotfiles packages apply`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
@@ -186,7 +186,6 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a coordinate variant under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
 - **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l 'current' configs/*/.config configs/*/*/.config` finds the pointers, and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
-- **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
 - **Pre-commit Hooks** - Quality control. The inventory is generated; read `.pre-commit-config.yaml` rather than a list here, per `standards/ci.md` § "Never restate the hook inventory in a repo's `CLAUDE.md`"
 
@@ -261,7 +260,7 @@ hub (`~/docs`), not here.
 A tool roster, a flag reference, a function table, a package list, a task list,
 a file enumeration, a count — each is true only at the instant it is written,
 and a reader who cannot verify it stops trusting the page. Write the command
-instead: `task --list-all`, `packages list --section=<x>`, `toolbox list`,
+instead: `task --list-all`, `packages list --section=<x>`, `doit kit list`,
 `eza -1 install/manifests/`, `rg '^[a-z_]+\(\)' <lib>`, `<tool> --help`.
 
 A doc earns its lines by explaining a decision, a rejected alternative, a
@@ -288,7 +287,6 @@ table, which is why the rule above is to not write one.
 - **dotfiles** (`dotfiles`) — the front door, usable from any directory. Three reconcile verbs, Terraform-shaped: `plan` (what `apply` would change), `apply`, and `check` (what is *wrong*, which a machine merely behind on versions is not). All three sit at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
 - **Symlinks Manager** — `dotfiles symlinks apply`
 - **Theme** (`theme`) — unified theming; `theme list` names the themes and `ls ~/tools/theme/lib/generators/` the apps
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools. The registry has moved to `terminal-library`, which `doit` reads; the copy here at `configs/common/.local/share/toolbox/registry.yml` is the one `toolbox` reads and is a deliberate duplicate that `icb` 310 removes. Add a tool to both, and see `docs/apps/toolbox.md`
 - **tmux Sessions** (`tmux-sessions`) — session switching, creation, and the cross-session window finder behind the two-line status bar. See `docs/architecture/tmux-sessions.md`
 - **Task** — `task --list-all` from inside the repo; nearly every task is a thin `uv run dotfiles ...` onto `src/dotfiles/`, so both front doors reach one implementation
 

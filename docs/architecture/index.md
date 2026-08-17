@@ -8,7 +8,7 @@ How the dotfiles repository is organized and why.
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `toolbox`: Go app via `go install github.com/datapointchris/toolbox`
+- `doit`: Python app via `uv tool install git+https://github.com/datapointchris/doit`
 - `sesh`: Go app via `go install github.com/joshmedeski/sesh/v2`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 

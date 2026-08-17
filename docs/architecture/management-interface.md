@@ -483,7 +483,7 @@ and `aws sts get-caller-identity` is 698ms and networked.
 **One login on the roster is optional, so its probe asks the config before it asks for
 a session.** Every other tool here is useless logged out. atuin logged out is a working
 local history store: it still records exit code, working directory and host, still backs
-Ctrl-R, and still answers `doit` and `toolbox remind` about this machine. Its probe
+Ctrl-R, and still answers `doit review` and `doit kit` about this machine. Its probe
 therefore reads `auto_sync` out of the machine's own atuin config, and where sync is off
 it reports `UNKNOWN` — the bucket an uninstalled tool already lands in, because there is
 no login in question either way. atuin's own default for that setting is on, so a config
@@ -543,11 +543,11 @@ real type system, a test suite, and dependencies it can declare.
 | Declaration drift | `dotfiles machines check` — packages.yml vs manifests vs installers |
 | Machine drift | `dotfiles plan` — this machine vs what its manifest declares |
 | What this tool's own config resolved to | `dotfiles config show` — the value and the rung that supplied it |
-| Tool discovery | `toolbox` (across all installed tools) |
+| Tool discovery | `doit kit` / `doit find` (across every collection you own) |
 | Cross-repo operations | `forge` |
 
 The `apps/` scripts (`notes`, `packup`, …) remain **independent user tools** with
-their own identity and `toolbox` discovery. Folding them into
+their own identity and `doit find` discovery. Folding them into
 `dotfiles <subcommand>` would be a regression, not a consolidation.
 
 An app leaves this directory when its data outgrows a file. `patterns` captured

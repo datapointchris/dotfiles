@@ -6,7 +6,7 @@
 
 ### 1. Go Apps (Remote Install via `go install`)
 
-**Examples**: `todoui`, `toolbox`
+**Examples**: `todoui`, `forge`
 
 **Installation**: Installed from GitHub via `go install` in packages.yml:
 
@@ -14,11 +14,11 @@
 go_tools:
   - name: todoui
     package: github.com/datapointchris/todoui
-  - name: toolbox
-    package: github.com/datapointchris/toolbox
+  - name: forge
+    package: github.com/datapointchris/forge
 ```
 
-**Development**: Source code lives in `~/tools/todoui/` and `~/tools/toolbox/`. Changes are tested locally with `go run .` or `go build`, then pushed to GitHub. Fresh installs get the latest from GitHub.
+**Development**: Source code lives in `~/tools/todoui/` and `~/tools/forge/`. Changes are tested locally with `go run .` or `go build`, then pushed to GitHub. Fresh installs get the latest from GitHub.
 
 **Binary location**: `~/go/bin/`
 

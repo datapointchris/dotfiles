@@ -9,12 +9,11 @@ and verbs; the pages here cover the parts `--help` cannot — why a tool exists,
 what it deliberately does not do, and how it fits the rest.
 
 Only tools with something to explain have a page. `eza ~/.local/bin` is the list
-of what is actually installed, and `toolbox list` is the searchable version.
+of what is actually installed, and `doit kit list` is the searchable version.
 
 ## Finding and choosing
 
 - **[Doit](doit.md)** — moved to its own repo; the page records why, and what stayed behind here
-- **[Toolbox](toolbox.md)** — the installed-tool registry and its `--brief` nudge
 
 ## Backup and integrity
 

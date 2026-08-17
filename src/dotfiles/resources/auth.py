@@ -368,8 +368,8 @@ def _atuin(session: Session) -> Credential:
     The one tool on the roster whose login is optional, so it is the one that
     asks whether a login is wanted before asking whether one is held. Everything
     else here cannot do its job logged out; atuin logged out is a local history
-    store that still records, searches and answers `doit` and `toolbox` about
-    this machine. `UNKNOWN` for that case, which is where `_uninstalled` already
+    store that still records, searches and answers `doit review` and `doit kit`
+    about this machine. `UNKNOWN` for that case, which is where `_uninstalled` already
     puts a tool with nothing to log in to.
     """
     if not shutil.which('atuin'):
