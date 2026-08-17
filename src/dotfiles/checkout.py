@@ -23,6 +23,14 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import warn
 
+STALE_AFTER = dt.timedelta(days=1)
+"""How old a fetch gets before the position stops reading as a current answer.
+
+A day, because that is the interval that produced the failure this guards: a
+checkout reported level against a fetch from the day before, and the pull that
+followed brought a great deal.
+"""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Position:
@@ -48,7 +56,19 @@ class Position:
         ever fetched.
         """
         line = f'{self._standing()} {self._measured(now)}'
-        return f'{line} — run: dotfiles update' if self.behind else line
+        return f'{line} — run: dotfiles update' if self.wants_a_fetch(now) else line
+
+    def wants_a_fetch(self, now: dt.datetime) -> bool:
+        """Behind is a fact. A stale measurement is the case where being behind is
+        unknowable, and both want the same next command.
+
+        Suggesting the update only when `behind` made the hint fire exactly when
+        the reading was fresh enough to be trusted, and stay silent when it was
+        not — the reader was told to act on the one reading that needed no action.
+        """
+        if self.behind:
+            return True
+        return self.fetched is None or (now - self.fetched) >= STALE_AFTER
 
     def _standing(self) -> str:
         if self.ahead and self.behind:
@@ -57,7 +77,11 @@ class Position:
             return f'{_commits(self.behind)} behind {self.upstream}'
         if self.ahead:
             return f'{_commits(self.ahead)} ahead of {self.upstream}, unpushed'
-        return f'up to date with {self.upstream}'
+        # "level with", never "up to date". Nothing here fetches, so the only
+        # thing measured is the distance to a remote-tracking ref that moves on
+        # fetch alone. "Up to date" asserts currency this cannot observe, and it
+        # is read as the whole answer while the age beside it is read as trim.
+        return f'level with {self.upstream}'
 
     def _measured(self, now: dt.datetime) -> str:
         if self.fetched is None:
@@ -92,13 +116,19 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
 def standing(now: dt.datetime, repo: Path = paths.REPO_ROOT) -> tuple[str, bool]:
     """The path is on the line because this tool is installed editable against a
     working tree, so a position with no directory named is a claim about one of
-    several candidate clones. The bool is `behind`, which the caller draws a mark
-    from — reading `.git` never fetches, so it does not move the exit code.
+    several candidate clones.
+
+    The bool is whether the row reads as drift, and it is `wants_a_fetch` rather
+    than `behind` — a reading taken a day ago cannot support a converged mark. It
+    drew one: a scheduler container showed the repo row converged and saying it
+    was up to date, against a fetch from the day before, and the update that
+    followed pulled a great deal. Reading `.git` never fetches, so this still does
+    not move the exit code.
     """
     position = read(repo)
     if position is None:
         return f'{repo}, tracking no upstream branch — nothing to compare against', False
-    return f'{repo} is {position.describe(now)}', bool(position.behind)
+    return f'{repo} is {position.describe(now)}', position.wants_a_fetch(now)
 
 
 DEPLOYMENT_BRANCH = 'main'

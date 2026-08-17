@@ -72,13 +72,13 @@ def clone(tmp_path: Path, remote: Path) -> Path:
 def test_a_fresh_clone_reports_that_nothing_has_fetched(clone: Path) -> None:
     """`git clone` writes no FETCH_HEAD, so there is no measurement to date.
 
-    Reported rather than smoothed into "up to date": that is the one case where a
-    converged-looking answer means nobody has asked.
+    Reported rather than smoothed into "up to date", and asked to fetch: this is
+    the case where a converged-looking answer means nobody has asked.
     """
     position = checkout.read(clone)
     assert position is not None
     assert position.fetched is None
-    assert position.describe(NOW) == 'up to date with origin/main (nothing has fetched since the clone)'
+    assert position.describe(NOW) == ('level with origin/main (nothing has fetched since the clone) — run: dotfiles update')
 
 
 def test_a_clone_behind_its_upstream_counts_what_it_is_missing(clone: Path, remote: Path) -> None:
@@ -150,16 +150,27 @@ def test_the_age_dates_the_last_look_not_the_last_change(clone: Path) -> None:
 @pytest.mark.parametrize(
     ('ahead', 'behind', 'minutes', 'expected'),
     [
-        (0, 0, 0, 'up to date with origin/main (fetched moments ago)'),
+        (0, 0, 0, 'level with origin/main (fetched moments ago)'),
         (0, 1, 5, '1 commit behind origin/main (fetched 5 minutes ago) — run: dotfiles update'),
         (0, 3, 90, '3 commits behind origin/main (fetched 1 hour ago) — run: dotfiles update'),
-        (2, 0, 60 * 24 * 3, '2 commits ahead of origin/main, unpushed (fetched 3 days ago)'),
+        (2, 0, 60, '2 commits ahead of origin/main, unpushed (fetched 1 hour ago)'),
+        (
+            2,
+            0,
+            60 * 24 * 3,
+            '2 commits ahead of origin/main, unpushed (fetched 3 days ago) — run: dotfiles update',
+        ),
         (1, 1, 60, '1 commit ahead of and 1 commit behind origin/main (fetched 1 hour ago) — run: dotfiles update'),
     ],
 )
 def test_the_line_names_the_counts_and_its_own_age(ahead: int, behind: int, minutes: int, expected: str) -> None:
     """Singular and plural both, because "1 commits behind" is what makes a
-    generated line read as generated and stop being trusted."""
+    generated line read as generated and stop being trusted.
+
+    The two unpushed rows differ only in the age of the reading. Ahead-and-not-
+    behind is a claim about where the upstream was when someone last looked, so
+    at three days it asks for a fetch and at one hour it does not.
+    """
     fetched = NOW - dt.timedelta(minutes=minutes)
     assert checkout.Position('origin/main', ahead, behind, fetched).describe(NOW) == expected
 
