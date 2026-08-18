@@ -215,7 +215,9 @@ the tool that deploys it — a coupling almost no other repo has, and one nothin
 - **Always run `dotfiles` from `~/dotfiles`, never from inside a worktree.** `DOTFILES_DIR` is
   exported in `.zshenv` to make the safe answer the default, but a shell that predates it, or one
   that overrides it, would resolve the repo root by walking up from the CWD and deploy the
-  worktree's config over the machine's.
+  worktree's config over the machine's. A session that entered its worktree with `EnterWorktree`
+  is inside one for every command it runs, so `cd ~/dotfiles &&` is the prefix that keeps an apply
+  pointed at the machine rather than at the branch.
 - `dotfiles check` and both apply paths warn when the checkout is off `main`
   (`checkout.stray_branch`). It is a warning, not a refusal — being on a branch here is a
   legitimate deliberate act, and the failure being guarded against is not knowing.

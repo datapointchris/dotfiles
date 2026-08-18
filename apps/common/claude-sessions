@@ -17,6 +17,9 @@ set -euo pipefail
 
 REGISTRY_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
 
+readonly ROW_OBJECT='{name, sessionId, status, waiting: .waitingFor, cwd, tmux, pid}'
+readonly ROW_TSV='[.name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
+
 # formatting.sh is sourced here rather than at the top because the hot path
 # runs over ssh from another machine, and every file this needs is another
 # way for a row to go missing from the fleet listing.
@@ -24,15 +27,18 @@ show_help() {
   SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
   source "$SHELL_DIR/formatting.sh"
   help_header "claude-sessions" "Live Claude Code sessions on this machine."
-  help_usage "claude-sessions [--json]"
+  help_usage "claude-sessions [--self] [--json]"
 
   help_section "Output"
   help_row "claude-sessions" "" "TSV: name, status, waiting, dir, pane"
   help_row "claude-sessions --json" "" "The same rows as a JSON array"
+  help_row "claude-sessions --self" "" "Only the session this process runs inside"
+  help_row "claude-sessions --self --json" "" "That one row as a JSON object"
 
   help_section "Notes"
   help_row "" "" "NAME is the address peers message, as /list-agents shows it"
   help_row "" "" "This machine only; a fleet-wide listing runs this on each box"
+  help_row "" "" "--self exits 1 when no session owns the caller"
   help_end
 }
 
@@ -52,25 +58,74 @@ live_descriptors() {
     done
 }
 
+# The session this process is running inside, found by walking the parent chain
+# until a pid the registry knows. A session has no other vantage on itself: the
+# registry is keyed by pid, /list-agents omits the caller by construction, and
+# nothing in the environment carries the name.
+#
+# procStart pins the identity wherever /proc answers. A descriptor outlives a
+# session killed without a clean exit, so a recycled pid could otherwise put a
+# dead session's name on a live one, and a wrong address is the whole fault this
+# lookup exists to prevent. An answer missing from either side is not a mismatch.
+owning_descriptor() {
+  local pid=$$ start recorded
+  while [[ -n $pid && $pid -gt 1 ]]; do
+    if [[ -f $REGISTRY_DIR/$pid.json ]]; then
+      start=$(awk '{print $22}' "/proc/$pid/stat" 2>/dev/null || true)
+      recorded=$(jq -r '.procStart // empty' "$REGISTRY_DIR/$pid.json")
+      if [[ -z $start || -z $recorded || $start == "$recorded" ]]; then
+        jq -c . "$REGISTRY_DIR/$pid.json"
+        return 0
+      fi
+    fi
+    pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d '[:space:]')
+  done
+  return 1
+}
+
 main() {
-  case "${1:-}" in
-    -h | --help | help)
-      show_help
-      return 0
-      ;;
-  esac
+  local want_json=false want_self=false descriptor
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h | --help | help)
+        show_help
+        return 0
+        ;;
+      --json) want_json=true ;;
+      --self) want_self=true ;;
+      *)
+        printf 'claude-sessions: unknown argument %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+    shift
+  done
+
+  if [[ $want_self == true ]]; then
+    if [[ ! -d $REGISTRY_DIR ]] || ! descriptor=$(owning_descriptor); then
+      printf 'claude-sessions: no live session owns this process\n' >&2
+      return 1
+    fi
+    if [[ $want_json == true ]]; then
+      printf '%s\n' "$descriptor" | jq "$ROW_OBJECT"
+    else
+      printf '%s\n' "$descriptor" | jq -r "$ROW_TSV"
+    fi
+    return 0
+  fi
 
   if [[ ! -d $REGISTRY_DIR ]]; then
-    [[ ${1:-} == --json ]] && printf '[]\n'
+    [[ $want_json == true ]] && printf '[]\n'
     return 0
   fi
 
-  if [[ ${1:-} == --json ]]; then
-    live_descriptors | jq -s 'map({name, sessionId, status, waiting: .waitingFor, cwd, tmux, pid})'
+  if [[ $want_json == true ]]; then
+    live_descriptors | jq -s "map($ROW_OBJECT)"
     return 0
   fi
 
-  live_descriptors | jq -r '[.name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
+  live_descriptors | jq -r "$ROW_TSV"
 }
 
 main "$@"

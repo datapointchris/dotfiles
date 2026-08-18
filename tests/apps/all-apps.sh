@@ -125,6 +125,7 @@ echo ""
 # 1. USER-FACING APPS
 # ================================================================
 echo "User Apps:"
+test_cmd "claude-sessions help" "claude-sessions --help"
 test_cmd "notes help" "notes --help"
 test_cmd "packup help" "packup --help"
 test_cmd "printcolors available" "command -v printcolors"
