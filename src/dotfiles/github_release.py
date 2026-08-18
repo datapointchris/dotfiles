@@ -74,6 +74,17 @@ an exception that was false.
 RELEASE_URL_PATTERN = re.compile(r'^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$')
 
 
+class Unreadable(Exception):
+    """The release API could not be read, so what upstream published is unknown.
+
+    Raised only where the alternative is a wrong sentence rather than a missing
+    one. `tag_for_version` answering None makes the caller say a pin names a
+    release that does not exist, which sends whoever reads it to `packages.yml`
+    to correct a version that was right — and 60 anonymous API calls an hour is
+    fewer than one full install spends.
+    """
+
+
 class Verification(enum.IntEnum):
     """Values are the CLI's exit codes, so the shell library can `case` on `$?`."""
 
@@ -380,11 +391,16 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
 
     None is a refusal, not a fallback. Answering "latest" for a pin nothing
     matches would defeat the only thing a pin does.
+
+    A list that could not be read raises rather than answering None, over the
+    same distinction `release_assets` draws: not knowing what upstream published
+    is not the same finding as upstream having published nothing, and the caller
+    renders the second as "publishes no release for that version".
     """
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (httpx2.HTTPError, json.JSONDecodeError):
-        return None
+    except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
+        raise Unreadable(f'could not read the releases of {repo}, so its published versions are unknown') from unreachable
 
     wanted = version.removeprefix('v')
     for release in releases:

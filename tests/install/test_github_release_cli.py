@@ -212,16 +212,19 @@ def test_a_pin_older_than_one_page_of_releases_is_refused_like_one_nothing_publi
 
 
 @unreadable
-def test_an_unreadable_listing_answers_nothing_rather_than_raising(monkeypatch, transport):
-    """Three ways the same page fails to arrive, and one answer.
+def test_an_unreadable_listing_raises_rather_than_reading_as_an_unpublished_pin(monkeypatch, transport):
+    """Three ways the same page fails to arrive, and none of them is a fact about
+    what upstream published.
 
-    Which is also the conflation worth knowing about: this None and the None
-    above are the same value, so `ghrelease.unresolved` reports a network that
-    would not answer as "upstream publishes no release for that version".
+    Answering None here is what made `ghrelease.unresolved` report a network that
+    would not answer as "pinned to X, which owner/repo publishes no release for"
+    — a sentence sending whoever reads it to `packages.yml` to correct a version
+    that was right.
     """
     monkeypatch.setattr(github_release, 'request', transport)
 
-    assert github_release.tag_for_version('owner/repo', '0.56.0') is None
+    with pytest.raises(github_release.Unreadable, match='could not read the releases'):
+        github_release.tag_for_version('owner/repo', '0.56.0')
 
 
 # ─────────────────────────────────────────────────────────────────────────────

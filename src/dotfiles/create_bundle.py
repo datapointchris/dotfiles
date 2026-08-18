@@ -840,7 +840,10 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         if build is None:
             raise BundleError(f"packages.yml github_releases entry '{tool}' has no asset function in providers/releases.py")
 
-        tag = ghrelease.resolve_tag(entry)
+        try:
+            tag = ghrelease.resolve_tag(entry)
+        except github_release.Unreadable as unreachable:
+            raise BundleError(str(unreachable)) from unreachable
         if tag is None:
             raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
         version = tag.removeprefix(entry.release_tag_prefix)

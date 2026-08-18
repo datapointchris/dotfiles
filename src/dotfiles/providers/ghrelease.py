@@ -114,7 +114,10 @@ def install(
     if build is None:
         return Result(False, f'nothing in providers.releases names an asset for {entry.name}', kind=Kind.DECLARATION_INVALID)
 
-    tag = tag or resolve_tag(entry, offline=offline)
+    try:
+        tag = tag or resolve_tag(entry, offline=offline)
+    except github_release.Unreadable as unreachable:
+        return Result(False, str(unreachable), kind=Kind.VERSION_UNRESOLVED)
     if tag is None:
         return Result(False, unresolved(entry, offline=offline), kind=Kind.VERSION_UNRESOLVED)
 
