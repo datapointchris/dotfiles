@@ -3,8 +3,9 @@
 #
 # Covers every shape the renderer has to survive: a stack, a draft, a `{}` node
 # the PullRequest fragment did not match, a PR authored in an upstream repo that
-# shares a basename with one of yours, checks in each state, and a review in each
-# state. Ages are relative to nothing — `created_at` is fixed, so the AGE column
+# shares a basename with one of yours, checks in each state, a review in each
+# state, and a PR the forge has decided nothing about that three reviewers have
+# posted on. Ages are relative to nothing — `created_at` is fixed, so the AGE column
 # grows as this fixture gets older, which is what makes the colour thresholds
 # visible without editing anything.
 cat <<'JSON'
@@ -16,6 +17,7 @@ cat <<'JSON'
   "createdAt":"2026-08-13T08:00:00Z",
   "additions":8,"deletions":3,"changedFiles":2,
   "reviewDecision":"REVIEW_REQUIRED",
+  "comments":{"nodes":[]},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":null}}]},
   "repository":{"name":"forge","nameWithOwner":"datapointchris/forge"}},
 
@@ -25,6 +27,7 @@ cat <<'JSON'
   "createdAt":"2026-08-09T10:00:00Z",
   "additions":319,"deletions":14,"changedFiles":7,
   "reviewDecision":"APPROVED",
+  "comments":{"nodes":[]},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
   "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
 
@@ -34,6 +37,7 @@ cat <<'JSON'
   "createdAt":"2026-08-12T10:00:00Z",
   "additions":1204,"deletions":386,"changedFiles":23,
   "reviewDecision":null,
+  "comments":{"nodes":[]},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"PENDING"}}}]},
   "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
 
@@ -43,6 +47,7 @@ cat <<'JSON'
   "createdAt":"2026-08-01T10:00:00Z",
   "additions":25,"deletions":2,"changedFiles":1,
   "reviewDecision":"CHANGES_REQUESTED",
+  "comments":{"nodes":[]},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"FAILURE"}}}]},
   "repository":{"name":"dotfiles","nameWithOwner":"datapointchris/dotfiles"}},
 
@@ -52,8 +57,24 @@ cat <<'JSON'
   "createdAt":"2026-07-14T09:00:00Z",
   "additions":76,"deletions":941,"changedFiles":12,
   "reviewDecision":"APPROVED",
+  "comments":{"nodes":[]},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
   "repository":{"name":"safekeep","nameWithOwner":"datapointchris/safekeep"}},
+
+ {"number":24,"body":"Reads the fleet review off the comments, so a reviewed PR stops reading as\nunreviewed.\n\nThe review is posted with `gh pr comment` and never `gh pr review`, so the\nforge decision stays empty however many have been posted.","title":"Count the reviews posted as comments",
+  "url":"https://github.com/datapointchris/dotfiles/pull/24",
+  "headRefName":"prs-review-count","baseRefName":"main","isDraft":false,
+  "createdAt":"2026-08-15T09:00:00Z",
+  "additions":94,"deletions":11,"changedFiles":5,
+  "reviewDecision":null,
+  "comments":{"nodes":[
+    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: 1 correctness"},
+    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: 2 break a rule"},
+    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: none"},
+    {"body":"<!-- pr-review v2 -->\n## PR review — merged\n\n**Reviewers**: 3"},
+    {"body":"Not a review. An ordinary comment, which the count leaves alone."}]},
+  "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
+  "repository":{"name":"dotfiles","nameWithOwner":"datapointchris/dotfiles"}},
 
  {"number":1188,"body":"Upstream contribution. Should never appear in your list.","title":"Upstream work that must never appear in your list",
   "url":"https://github.com/crate-ci/typos/pull/1188",
@@ -61,6 +82,7 @@ cat <<'JSON'
   "createdAt":"2026-06-01T09:00:00Z",
   "additions":3,"deletions":1,"changedFiles":1,
   "reviewDecision":null,
+  "comments":{"nodes":[]},
   "commits":{"nodes":[]},
   "repository":{"name":"typos","nameWithOwner":"crate-ci/typos"}}
 ]}}}

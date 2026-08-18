@@ -90,13 +90,6 @@ SIDE_PAD = 12
 TABLE_WIDTH = 120
 
 
-# Each glyph paired with the state it means, rather than a row of coloured dots
-# and one word after them. Three dots and the word "checks" says the column is
-# about checks and nothing about which dot is which.
-CHECKS_KEY = (('passing', 'green'), ('pending', 'yellow'), ('failing', 'red'), ('none yet', 'dim'))
-REVIEW_KEY = (('approved', 'green'), ('awaiting', 'cyan'), ('changes', 'red'), ('none yet', 'dim'))
-
-
 def spread(rows: list[list[Text]], width: int, right: frozenset[int] = frozenset()) -> list[Text]:
     """A table laid out to fill the width, every row on the same column stops.
 
@@ -143,6 +136,10 @@ class PullRequest:
 
     The three diff counts are None, never 0, from a provider that does not report
     them. A PR nobody counted is not a PR that changed nothing.
+
+    `review` is the forge's decision and `reviews` counts the reviews posted as
+    comments. The fleet's review is a comment and never a forge review, so a PR
+    three reviewers have read carries an empty decision and a count of three.
     """
 
     repo: str
@@ -158,6 +155,7 @@ class PullRequest:
     deletions: int | None
     changed_files: int | None
     review: str
+    reviews: int
     checks: str
     provider: str
     body: str
@@ -178,6 +176,7 @@ class PullRequest:
             deletions=row.get('deletions'),
             changed_files=row.get('changed_files'),
             review=row.get('review') or '',
+            reviews=row.get('reviews') or 0,
             checks=row.get('checks') or '',
             provider=row.get('provider') or '',
             body=row.get('body') or '',
@@ -283,10 +282,22 @@ def checks_cell(pr: PullRequest) -> Text:
 
 
 def review_cell(pr: PullRequest) -> Text:
-    style = REVIEW_STYLES.get(pr.review, 'dim')
+    """The forge decision where there is one, and otherwise how many reviews were posted.
+
+    The decision leads because it is the one that gates the merge. A posted review
+    does not, so it cannot overrule an `APPROVED` or a `CHANGES_REQUESTED` sitting
+    beside it — and where the forge has decided nothing, `no review` on a PR three
+    reviewers have read is the row saying the opposite of what happened.
+    """
+    if not pr.review and pr.reviews:
+        style = REVIEW_STYLES['REVIEW_REQUIRED']
+        word = f'{pr.reviews} posted'
+    else:
+        style = REVIEW_STYLES.get(pr.review, 'dim')
+        word = REVIEW_WORDS.get(pr.review, pr.review.lower())
     cell = Text()
     cell.append(f'{REVIEW_ICON}  ', style=style)
-    cell.append(f'review {REVIEW_WORDS.get(pr.review, pr.review.lower())}', style=style)
+    cell.append(f'review {word}', style=style)
     return cell
 
 

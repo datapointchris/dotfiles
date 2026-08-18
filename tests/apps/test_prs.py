@@ -63,6 +63,7 @@ def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
         'deletions': 4,
         'changed_files': 2,
         'review': '',
+        'reviews': 0,
         'checks': '',
         'provider': 'github',
         'body': f'what {repo} #{number} changes',
@@ -230,6 +231,23 @@ def test_a_state_nothing_has_reported_still_says_something(listing) -> None:
 
     assert 'checks not run' in only
     assert 'review no review' in only
+
+
+def test_a_pr_the_forge_decided_nothing_about_says_how_many_reviews_were_posted(listing) -> None:
+    """A fleet review is a comment, so the forge decision stays empty however many
+    have been posted. `no review` on a PR three reviewers read is the row saying
+    the opposite of what happened."""
+    only = listed(listing(pr('doit', 1, 'a-branch', reviews=3)))[0]
+
+    assert 'review 3 posted' in only
+
+
+def test_a_forge_decision_outranks_the_reviews_posted_beside_it(listing) -> None:
+    """A posted review does not gate the merge and `CHANGES_REQUESTED` does, so a
+    count cannot displace it. One line carries one state, and it is the blocking one."""
+    only = listed(listing(pr('doit', 1, 'a-branch', review='CHANGES_REQUESTED', reviews=3)))[0]
+
+    assert 'review changes' in only
 
 
 def test_a_draft_is_marked_the_way_fleet_marks_it(listing) -> None:

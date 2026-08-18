@@ -1,4 +1,4 @@
-"""`pull-requests` is the one query behind `prs`, `fleet prs` and doit's PRS lane.
+"""`pull-requests` is the one query behind `prs` and doit's PRS lane.
 
 The seam is the provider CLI, shadowed on PATH, because nothing else here is
 worth asserting: the mapping is short and the interesting failures are all about
@@ -76,6 +76,7 @@ def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **over
         'deletions': 4,
         'changedFiles': 2,
         'reviewDecision': None,
+        'comments': {'nodes': []},
         'commits': {'nodes': [{'commit': {'statusCheckRollup': None}}]},
         'repository': {'name': repo, 'nameWithOwner': f'datapointchris/{repo}'},
     }
@@ -158,6 +159,77 @@ def test_a_search_node_that_is_not_a_pull_request_is_dropped(run) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert [pr['number'] for pr in json.loads(result.stdout)] == [1]
+
+
+def review_comment(heading: str = '## PR review') -> dict[str, str]:
+    """A fleet review as it sits on a PR, marker first."""
+    return {'body': f'<!-- pr-review v2 -->\n{heading}\n\n**Findings**: 1 correctness'}
+
+
+def test_a_pr_reviewed_by_comment_is_counted_though_the_forge_decided_nothing(run) -> None:
+    """The fleet posts a review with `gh pr comment` and never `gh pr review`, so
+    `reviewDecision` is null on a PR that has been read end to end. Reporting the
+    decision alone said `no review` on dotfiles #23 while three reviews sat on it."""
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=github_stub(
+            graphql_node(
+                'dotfiles',
+                1,
+                'a-branch',
+                comments={'nodes': [review_comment(), review_comment()]},
+            )
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['reviews'] == 2
+    assert pr['review'] == ''
+
+
+def test_the_comment_that_unions_the_reviews_is_not_a_further_review(run) -> None:
+    """Reviewers run blind to each other and one further comment unions them, so
+    counting every marked comment reports one more reviewer than ran."""
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=github_stub(
+            graphql_node(
+                'dotfiles',
+                1,
+                'a-branch',
+                comments={
+                    'nodes': [
+                        review_comment(),
+                        review_comment(),
+                        review_comment(),
+                        review_comment('## PR review — merged'),
+                    ]
+                },
+            )
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['reviews'] == 3
+
+
+def test_an_ordinary_comment_is_not_mistaken_for_a_review(run) -> None:
+    """The marker is the discriminator the review standard put there. Counting
+    comments instead would make any conversation on a PR read as a review."""
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=github_stub(
+            graphql_node(
+                'dotfiles',
+                1,
+                'a-branch',
+                comments={'nodes': [{'body': 'rebased this onto main'}, {'body': '## PR review\n\nno marker'}]},
+            )
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert pr['reviews'] == 0
 
 
 def test_a_repo_the_registry_does_not_name_is_left_out(run) -> None:
