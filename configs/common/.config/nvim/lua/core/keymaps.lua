@@ -14,8 +14,7 @@ vim.keymap.set('n', '<leader>rr', '<cmd>source ~/.config/nvim/init.lua<cr>', { d
 vim.keymap.set('n', '<leader>rx', ':.lua<cr>', { desc = 'Reload: run current line as lua' })
 vim.keymap.set('v', '<leader>rx', ':lua<cr>', { desc = 'Reload: run selection as lua' })
 -- Full restart (Neovim 0.12+): relaunches the process and reattaches the UI,
--- unlike :source which only re-runs init.lua. Usable now that noice — which
--- crashed handling 0.12's new `restart` UI event — has been removed.
+-- unlike :source which only re-runs init.lua.
 vim.keymap.set('n', '<leader>rR', '<cmd>restart<cr>', { desc = 'Reload: full restart' })
 
 -- Visual undo-tree navigator, bundled with Neovim 0.12 as an optional package.
@@ -29,12 +28,12 @@ end, { desc = 'Undo-tree: toggle' })
 ----------------------------------------
 --- NOTIFICATIONS / MESSAGES -----------
 ----------------------------------------
--- fidget owns notifications (vim.notify); native ui2 owns messages + cmdline.
--- These replace the old <leader>n Noice maps (history/dismiss/search).
+-- fidget owns notifications (vim.notify); noice owns messages and the cmdline,
+-- so the history each one keeps is a different list.
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>nh', '<cmd>Fidget history<cr>', { desc = 'Notifications: history' })
   vim.keymap.set('n', '<leader>nd', '<cmd>Fidget clear<cr>', { desc = 'Notifications: dismiss' })
-  vim.keymap.set('n', '<leader>nm', '<cmd>messages<cr>', { desc = 'Messages: log' })
+  vim.keymap.set('n', '<leader>nm', '<cmd>Noice history<cr>', { desc = 'Messages: log' })
 end
 
 -- Move selected line / block of text in visual mode down / up
