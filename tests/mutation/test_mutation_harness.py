@@ -17,7 +17,6 @@ import datetime as dt
 import json
 import re
 import subprocess
-import sys
 import textwrap
 from pathlib import Path
 
@@ -29,6 +28,9 @@ from mutation import run as harness
 from mutation import score
 from mutation import subset
 from mutation import targets
+from mutation.toys import site as result
+from mutation.toys import toy_run
+from mutation.toys import toy_tree as build_toy
 
 
 def parsed(source: str) -> ast.Module:
@@ -330,10 +332,10 @@ def test_the_phase_suffix_is_stripped_so_pytest_can_address_the_test() -> None:
 
 def test_a_truncated_cache_is_measured_again_rather_than_raising(tmp_path: Path) -> None:
     """A run interrupted mid-write leaves half a map, and half a map produces kills against a subset that is missing rows."""
-    plan = toy_tree(tmp_path)
-    _, cached, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    setup = toy_tree(tmp_path)
+    _, cached, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     cached.write_text(json.dumps({'tests': ['tests/test_thing.py::test_over']})[:-4])
-    found, again, measured = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    found, again, measured = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert (again, measured) == (cached, True)
     assert found.for_line('src/toy/thing.py', 7)
 
@@ -351,12 +353,6 @@ def test_the_fingerprint_moves_when_a_test_file_changes(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Scoring
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def result(
-    status: str, bucket: str = classify.LOGIC, line: int = 1, description: str = 'a -> b', file: str = 'src/dotfiles/x.py'
-) -> score.SiteResult:
-    return score.SiteResult(file=file, line=line, col=0, kind='string', bucket=bucket, rule='r', description=description, status=status)
 
 
 def test_unreached_counts_against_the_score_so_deleting_tests_cannot_raise_it() -> None:
@@ -385,12 +381,6 @@ def test_a_timeout_is_scored_as_a_kill_and_reported_on_its_own() -> None:
     assert (counts.timed_out, counts.score) == (1, 0.5)
 
 
-def toy_run(results: list[score.SiteResult], targets_named: tuple[str, ...] = ('src/dotfiles/x.py',)) -> score.Run:
-    return score.Run(
-        started_at='20260101T000000Z', finished_at='20260101T000100Z', machine='box', targets=targets_named, results=tuple(results)
-    )
-
-
 def test_a_survivor_that_was_not_there_before_is_named() -> None:
     before = toy_run([result(score.KILLED, line=1), result(score.KILLED, line=2)])
     after = toy_run([result(score.KILLED, line=1), result(score.SURVIVED, line=2)])
@@ -416,10 +406,10 @@ def test_a_rendering_mutant_that_newly_dies_is_named_and_a_standing_one_is_not()
 
 
 def test_a_target_the_previous_run_did_not_measure_is_left_out_of_the_comparison() -> None:
-    before = toy_run([result(score.KILLED, file='src/dotfiles/a.py')], targets_named=('src/dotfiles/a.py',))
+    before = toy_run([result(score.KILLED, file='src/dotfiles/a.py')], targets=('src/dotfiles/a.py',))
     after = toy_run(
         [result(score.KILLED, file='src/dotfiles/a.py'), result(score.SURVIVED, file='src/dotfiles/b.py')],
-        targets_named=('src/dotfiles/a.py', 'src/dotfiles/b.py'),
+        targets=('src/dotfiles/a.py', 'src/dotfiles/b.py'),
     )
     found = score.compare(after, before)
     assert found.shared_targets == ('src/dotfiles/a.py',)
@@ -434,7 +424,7 @@ def test_a_run_is_recorded_under_the_machine_that_wrote_it(tmp_path: Path) -> No
     assert score.recorded(tmp_path, 'someone-else') == []
 
 
-def test_the_report_carries_the_counts_rather_than_a_verdict_sentence() -> None:
+def test_the_score_report_carries_the_counts_rather_than_a_verdict_sentence() -> None:
     lines = score.render(toy_run([result(score.KILLED), result(score.SURVIVED, line=7)]))
     assert any('50%' in line for line in lines)
     assert any('src/dotfiles/x.py:7:0' in line for line in lines)
@@ -442,8 +432,8 @@ def test_the_report_carries_the_counts_rather_than_a_verdict_sentence() -> None:
 
 def test_a_comparison_over_no_shared_target_is_left_out_rather_than_reported_as_unchanged() -> None:
     """`tally([])` scores 1.0, so an empty intersection would otherwise print a confident `100% -> 100%`."""
-    only_a = toy_run([result(score.SURVIVED, file='src/dotfiles/a.py')], targets_named=('src/dotfiles/a.py',))
-    only_b = toy_run([result(score.SURVIVED, file='src/dotfiles/b.py')], targets_named=('src/dotfiles/b.py',))
+    only_a = toy_run([result(score.SURVIVED, file='src/dotfiles/a.py')], targets=('src/dotfiles/a.py',))
+    only_b = toy_run([result(score.SURVIVED, file='src/dotfiles/b.py')], targets=('src/dotfiles/b.py',))
     assert not any('->' in line and '%' in line for line in score.render(only_b, score.compare(only_b, only_a)))
 
 
@@ -567,58 +557,47 @@ def test_label():
 """
 
 
-def toy_tree(tmp_path: Path) -> harness.Plan:
-    (tmp_path / 'src' / 'toy').mkdir(parents=True)
-    (tmp_path / 'src' / 'toy' / '__init__.py').write_text('')
-    (tmp_path / 'src' / 'toy' / 'thing.py').write_text(TOY_SOURCE)
-    (tmp_path / 'tests').mkdir()
-    (tmp_path / 'tests' / 'test_thing.py').write_text(TOY_TESTS)
-    (tmp_path / 'pyproject.toml').write_text('[tool.pytest.ini_options]\ntestpaths = ["tests"]\n')
-    return harness.Plan(
-        repo=tmp_path,
-        source_root=tmp_path / 'src',
-        cache_dir=tmp_path / 'cache',
-        pytest_prefix=(sys.executable, '-m', 'pytest'),
-        jobs=2,
-    )
+def toy_tree(tmp_path: Path) -> harness.Setup:
+    """This file's toy: a module with a function no test calls, so UNREACHED is reachable."""
+    return build_toy(tmp_path, TOY_SOURCE, TOY_TESTS)
 
 
 @pytest.fixture(scope='module')
-def toy_result(tmp_path_factory: pytest.TempPathFactory) -> tuple[harness.Plan, score.Run]:
+def toy_result(tmp_path_factory: pytest.TempPathFactory) -> tuple[harness.Setup, score.Run]:
     """One real end-to-end, shared by the assertions below because it costs a coverage pass and several pytest runs."""
-    plan = toy_tree(tmp_path_factory.mktemp('toy'))
-    contexts, _, measured = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    setup = toy_tree(tmp_path_factory.mktemp('toy'))
+    contexts, _, measured = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert measured
-    return plan, harness.measure(plan, ['src/toy/thing.py'], contexts, announce=lambda _: None)
+    return setup, harness.measure(setup, ['src/toy/thing.py'], contexts, announce=lambda _: None)
 
 
 @pytest.mark.replants
-def test_the_end_to_end_kills_the_comparison_the_toy_asserts_on(toy_result: tuple[harness.Plan, score.Run]) -> None:
+def test_the_end_to_end_kills_the_comparison_the_toy_asserts_on(toy_result: tuple[harness.Setup, score.Run]) -> None:
     killed = [item for item in toy_result[1].results if item.status == score.KILLED]
     assert ('comparison', 'Gt -> LtE') in {(item.kind, item.description) for item in killed}
 
 
 @pytest.mark.replants
-def test_the_end_to_end_reports_a_function_no_test_calls_as_unreached(toy_result: tuple[harness.Plan, score.Run]) -> None:
+def test_the_end_to_end_reports_a_function_no_test_calls_as_unreached(toy_result: tuple[harness.Setup, score.Run]) -> None:
     unreached = [item for item in toy_result[1].results if item.status == score.UNREACHED]
     assert [item.description for item in unreached] == ['2 -> 3']
 
 
 @pytest.mark.replants
-def test_a_mutant_ran_from_the_copy_and_the_source_tree_was_never_written(toy_result: tuple[harness.Plan, score.Run]) -> None:
+def test_a_mutant_ran_from_the_copy_and_the_source_tree_was_never_written(toy_result: tuple[harness.Setup, score.Run]) -> None:
     """The property that matters most, and it takes both halves.
 
     `configs/` and `shell/` are symlinked live into $HOME and the CLI is installed editable against `src/`, so a mutation written in
     place is deployed state. Bugs were planted and killed, *and* the file on disk is byte-identical — which together can only mean
     the mutants ran from the shadow copy.
     """
-    plan, run = toy_result
+    setup, run = toy_result
     assert [item for item in run.results if item.status == score.KILLED]
-    assert (plan.repo / 'src' / 'toy' / 'thing.py').read_text() == TOY_SOURCE
+    assert (setup.repo / 'src' / 'toy' / 'thing.py').read_text() == TOY_SOURCE
 
 
 @pytest.mark.replants
-def test_the_end_to_end_planted_every_site_it_did_not_skip(toy_result: tuple[harness.Plan, score.Run]) -> None:
+def test_the_end_to_end_planted_every_site_it_did_not_skip(toy_result: tuple[harness.Setup, score.Run]) -> None:
     run = toy_result[1]
     statuses = {item.status for item in run.results}
     assert score.HARNESS_ERROR not in statuses
@@ -628,28 +607,28 @@ def test_the_end_to_end_planted_every_site_it_did_not_skip(toy_result: tuple[har
 
 def test_a_control_that_fails_stops_the_run_before_anything_is_planted(tmp_path: Path) -> None:
     """Without this gate a bad pytest flag reads as every mutant dying, which is how the prototype first reported 100%."""
-    plan = toy_tree(tmp_path)
-    contexts, _, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
-    (plan.repo / 'tests' / 'test_thing.py').write_text(TOY_TESTS.replace('thing.over(4) is True', 'thing.over(4) is False'))
+    setup = toy_tree(tmp_path)
+    contexts, _, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
+    (setup.repo / 'tests' / 'test_thing.py').write_text(TOY_TESTS.replace('thing.over(4) is True', 'thing.over(4) is False'))
     with pytest.raises(RuntimeError, match='control run'):
-        harness.measure(plan, ['src/toy/thing.py'], contexts, announce=lambda _: None)
+        harness.measure(setup, ['src/toy/thing.py'], contexts, announce=lambda _: None)
 
 
 def test_the_context_pass_refuses_a_suite_that_is_not_green(tmp_path: Path) -> None:
-    plan = toy_tree(tmp_path)
-    (plan.repo / 'tests' / 'test_thing.py').write_text('def test_broken():\n    assert False\n')
+    setup = toy_tree(tmp_path)
+    (setup.repo / 'tests' / 'test_thing.py').write_text('def test_broken():\n    assert False\n')
     with pytest.raises(RuntimeError, match='has to be green'):
-        subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+        subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
 
 
 def test_the_context_map_is_reused_when_nothing_moved_and_dropped_when_something_does(tmp_path: Path) -> None:
-    plan = toy_tree(tmp_path)
-    first, cached, measured = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    setup = toy_tree(tmp_path)
+    first, cached, measured = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert measured
-    _, again, measured_again = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    _, again, measured_again = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert (again, measured_again) == (cached, False)
-    (plan.repo / 'tests' / 'test_thing.py').write_text(TOY_TESTS + '\n\ndef test_extra():\n    assert thing.label(1) == "under"\n')
-    _, moved, measured_after = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    (setup.repo / 'tests' / 'test_thing.py').write_text(TOY_TESTS + '\n\ndef test_extra():\n    assert thing.label(1) == "under"\n')
+    _, moved, measured_after = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert moved != cached
     assert measured_after
     assert json.loads(cached.read_text())['tests'] != json.loads(moved.read_text())['tests']

@@ -47,93 +47,52 @@ the rule that assigned it, so the classifier is audited rather than trusted.
 
 **PROSE-PINNED is the fourth bucket and it is reported as loudly as the score.**
 A rendering mutant that *died* means a test asserted on a sentence, which
-`docs/development/testing.md` forbids — "assert on the finding, never on the
-sentence describing it". Without this counter the score could be raised by
-writing exactly the assertions the standard bans.
+`docs/development/testing.md` forbids. Without this counter the score could be
+raised by writing exactly the assertions the standard bans, so it is compared
+against the previous run rather than capped at a number.
 
-It is compared against the previous run rather than capped at a number. An
-absolute ceiling would be a committed score under another name: set to whatever
-the suite happens to do today and edited upward the first time it fails. The
-direction cannot be gamed, so the run fails on a rendering mutant that dies where
-one did not die before.
-
-The counter earns its place immediately. On the first `report.py` run it named
-four dict keys inside `table.add_row(*(str(row[key]) for key in (...)))` — a
-machine contract the render-call rule had swallowed, found because a rendering
-mutant is not supposed to die. `classify._children` takes what a comprehension
-*reads* as logic wherever it sits.
+It earned its place on the first run, by naming four dict keys the render-call
+rule had swallowed inside a `table.add_row` comprehension — a machine contract,
+found because a rendering mutant is not supposed to die.
 
 ## What makes a number believable
 
-**The working tree is never mutated.** `configs/`, `shell/` and `apps/` are
-symlinked live into `$HOME` here and the CLI is installed editable against
-`src/`, so a mutation written in place is a mutated `dotfiles` deployed on the
-machine — and an interrupted run never puts it back. Each worker gets its own
-copy of `src/` in a temporary directory and shadows the checkout with
-`PYTHONPATH=<copy>/src`, which precedes the editable install's `.pth` entry on
-`sys.path`. The checkout is only ever read.
+Five guards, each with its reasoning in the constant or function that enforces
+it. This is the list; the arguments are one `rg` away and are not repeated here.
 
-**A control run happens before anything is planted.** The chosen subset runs
-against an unmutated round trip of the target through `ast.unparse`, and it has
-to pass. Without it a bad pytest flag makes every mutant look killed: the first
-prototype passed `--timeout`, which is not installed here, so pytest exited 4 on
-every mutant and reported a perfect score that was pure artifact.
+- **The working tree is never mutated** — a worker's copy, shadowed on
+  `PYTHONPATH`. `subset.pythonpath`.
+- **A control run passes before anything is planted**, or no kill is attributed.
+  `run.control`.
+- **A crash is not a kill.** Exit 1 alone kills. `run.outcome_for`.
+- **The shadowed source never has bytecode**, because a `.pyc` is revalidated on
+  whole-second mtimes. `run.NO_BYTECODE`.
+- **Attribution comes from pytest, not from its output.** `mutation/failures.py`.
 
-**A crash is not a kill.** Exit 1 means tests failed and is the only exit code
-that kills. 2, 3, 4 and 5 are interrupted, internal error, usage error and
-nothing collected — harness faults, reported separately and never scored.
-
-**The shadowed source never has bytecode.** A `.pyc` is revalidated against the
-source's size and its mtime *in whole seconds*, and mutants land on the same
-path in rapid succession — so two of equal length inside one second are
-indistinguishable to that check and the second imports the first one's
-bytecode. Both directions were measured on the toy in `test_redundancy.py`:
-`LIMIT = 3` -> `4` is the same length as the original and survived without ever
-being compiled, and `'under'` -> `'under-mutant'` is the same length as the
-`'over'` mutant that ran before it in the same worker, so it was reported killed
-by a test that never reaches the branch it changed. `PYTHONDONTWRITEBYTECODE`
-alone is half a fix, because an existing `.pyc` is still read, so the worker's
-copy also declines to bring `__pycache__` with it. Measured at no cost: only the
-copied `src/` recompiles and the checkout's `tests/` cache is untouched.
-
-Three smaller things follow from the same instinct. A mutant that produces no
-result inside three times the measured control duration is reported as a timeout
-rather than as a survivor, because a flipped loop condition hangs rather than
-passing. A site the harness declines to plant is still counted and given a
-reason, so nothing leaves the denominator silently. And every survivor gets a
-second run without `-x`, which confirms it against the whole subset instead of
-against whichever test happened to be first.
+A mutant that outruns three times the control is a timeout rather than a
+survivor, a site the harness declines to plant stays in the denominator with a
+reason, and every survivor is confirmed a second time without `-x`.
 
 ## Test selection is derived, never declared
 
-The suite runs once with `--cov-context=test`, and `coverage.CoverageData` then
-says which tests executed which line. Only a test that executes the mutated line
-can kill the mutant, so that context set is the exact subset. A hand-written
-module-to-tests map would be a second keying of the same fact and would rot from
-the first renamed test onward.
+The suite runs once with `--cov-context=test`, and only a test that executes the
+mutated line can kill the mutant — so that context set is the exact subset. The
+alternative is a hand-written module-to-tests map, which rots from the first
+renamed test onward.
 
-The map is cached under `$XDG_CACHE_HOME/dotfiles/mutation/`, keyed on a digest
-of the source and test trees, and regenerated rather than repaired — a stale
-context map is indistinguishable from a correct one until it produces a wrong
-kill.
-
-A line that only runs at import time carries no test name, because pytest imports
-during collection. Those get the union of every test that executes any line of
-the file, which over-reports survivors rather than inventing kills.
+`subset.py` holds the rest: how the map is cached and why it is regenerated
+rather than repaired, and what happens to a line that only runs at import time.
 
 ## What is recorded, and what is committed
 
 Each invocation writes a run to
-`$XDG_STATE_HOME/dotfiles/mutation-runs/<timestamp>-<machine-id>.json`. The
-machine suffix is there for the reason `paths.machine_id` gives: state is a
-Syncthing folder, and four boxes writing `<timestamp>.json` would overwrite one
-another.
+`$XDG_STATE_HOME/dotfiles/mutation-runs/`, under a name carrying the machine —
+that directory is a Syncthing folder, and `score.recorded` reads only this box's
+own history back.
 
-`targets.py` commits a **threshold** and never a score. A committed baseline is
-edited to match whatever the suite currently does, so it drifts upward on a good
-day and downward on a bad one and never fails. Where the score has *gone* is
-`score.compare`'s question, answered against the previous recorded run and
-naming each survivor that was not there before.
+`targets.py` commits a **threshold** and never a score, and `targets.THRESHOLD`
+says why a committed baseline always drifts instead of failing. Where the score
+has *gone* is `score.compare`'s question.
 
 ## Proving a test redundant
 
@@ -155,12 +114,10 @@ alone is proven necessary for the cost of reading a JSON file. It is a
 necessary condition and never a sufficient one, because executing a line is not
 constraining it — which is why the harness above exists at all.
 
-**Everything else has to have every one of its kills shared.** Each mutant is
-planted with the whole candidate set in the room and `-rfE` names the tests that
-failed, so a mutant carries its killer set. A candidate whose every kill is also
-somebody else's is subsumed, and the tests that subsume it are named. One
-holding a single kill alone is load-bearing, and the mutant proving it is
-printed.
+**Everything else has to have every one of its kills shared.** A mutant carries
+the tests that killed it, so a candidate whose every kill is also somebody
+else's is subsumed and the tests subsuming it are named. One holding a kill
+alone is load-bearing, and the mutant proving it is printed.
 
 **A test that kills nothing is unprovable, not deletable.** The operators are
 comparison swaps, boolean swaps, dropped negations and one-step tweaks to ints,
@@ -171,52 +128,29 @@ and those come back in their own bucket with the reason attached.
 
 ### What a naive version would get wrong
 
-**The scope is the union of the candidates' own footprints, and a test reaching
-outside it is unprovable.** A mutant nobody planted is a bug nobody looked for.
-This is what keeps a run honest and what makes it small enough to finish.
+Four, each argued where it is enforced.
 
-**Every site in scope is planted, not only the ones coverage attributes.**
-`planter` addresses a site by the line of its node and coverage records the line
-a statement starts on, so a constant on the third line of a call is executed and
-unattributed. Selecting by the measured map would leave those unplanted.
+- **A test reaching outside the scope is unprovable**, because a mutant nobody
+  planted is a bug nobody looked for. `redundancy.within`.
+- **Every site in scope is planted**, not only the ones coverage attributes to a
+  test. `redundancy.footprints`.
+- **A mutant that breaks import is attributed rather than discarded.** Reading it
+  as a harness fault blocked 715 of 718 proofs on the first real run.
+  `run.UNCOLLECTABLE`.
+- **A mutant that renames a parametrised case blocks only the tests it renamed**,
+  not the module. `run.vanished_in`.
 
-**A mutant that breaks import is attributed rather than discarded.** Changing
-`'darwin'` in `coordinates.py` makes the catalog refuse every manifest, so a
-test module importing it cannot be collected and the node ids named on the
-command line stop resolving — pytest exits 4, which the scoring run reads as a
-harness fault. That reading blocked 715 of 718 proofs on the first real run.
-A killer-recording run passes `--continue-on-collection-errors`, reads the file
-named in the summary, and attributes the kill to the tests the subset holds
-there. The original guard survives intact because attribution is what decides
-it: a genuine usage error prints no summary, so there are no killers and the
-result stays a harness fault.
+**The room is screened against an unmutated copy first**, which drops a test that
+fails whatever is planted and would otherwise subsume everybody.
+`redundancy.screen`; `tests/test_dependencies.py` is the real case.
 
-**A mutant that renames a parametrised case blocks only the tests it renamed.**
-`'apt'` -> `'apt-mutant'` in `coordinates.py` turns
-`test_every_package_manager_names_an_installer_family[apt]` into a node id
-nothing answers to, and pytest exits 4 having run none of the subset. Reading
-that as a blocked module cost 715 of 718 proofs for six mutants. The harness
-names the ids that vanished, re-runs the mutant against everyone still
-addressable, and records the rest as unmeasured — so those tests come back
-unprovable and nobody else is affected.
+**The per-test list is not a list of deletions.** Two tests duplicating each
+other are *both* redundant, and neither is once the other has gone, so the
+report separately marks the subset that survives being deleted in one act.
+`redundancy.prove`.
 
-**The room is screened against an unmutated copy first.** A test anchored on
-something beside the package — `pyproject.toml`, the checkout's layout — does
-not find it on the shadowed `PYTHONPATH`, so it fails against every mutant and
-against none, which would make it everybody's subsumer. Screening drops it and
-names it. `tests/test_dependencies.py` is the real case.
-
-**The per-test list is not a list of deletions.** Condition (b) is stated
-against the suite as it stands, so two tests that duplicate each other are
-*both* redundant and neither is once the other has gone. The report marks the
-subset that survives being deleted in one act, holding one representative of
-each such cluster back. `test_redundancy.py` measures both readings against the
-toy: dropping the joint set leaves the kill count unchanged and dropping every
-redundant test does not.
-
-Omitting a test with `--exclude` costs proofs and cannot manufacture one — a
-test absent from the room can only fail to be somebody's subsumer. That is what
-makes it safe to keep the slow tiers out of a run.
+Omitting a test with `--exclude` costs proofs and cannot manufacture one, which
+is what makes it safe to keep the slow tiers out of a run.
 
 ## Adding to it
 

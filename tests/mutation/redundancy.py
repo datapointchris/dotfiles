@@ -167,33 +167,33 @@ def forced_contexts(modules: Sequence[str], tests: Sequence[str], repo: Path) ->
     return subset.Contexts(tests=tuple(tests), lines=lines)
 
 
-def screen(plan: harness.Plan, room: Sequence[str], scratch: Path, scope: Sequence[str] = ()) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def screen(setup: harness.Setup, room: Sequence[str], scratch: Path, scope: Sequence[str] = ()) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """The room as it actually behaves against an unmutated copy, and whoever had to be dropped to get there.
 
     Run before anything is planted, for the same reason the harness runs a control: a failure that is already there is a failure
     every mutant inherits, and one test failing everywhere is one test subsuming everybody.
     """
-    workers = harness.Workers(dataclasses.replace(plan, jobs=1), scratch)
+    workers = harness.Workers(dataclasses.replace(setup, jobs=1), scratch)
     shadow, basetemp = workers.take()
     # The same text every mutant runs against. `ast.unparse` drops comments and
     # requotes every string, so a test sensitive to either passed the screen and
     # then aborted the whole run at the control — arriving as a harness error
     # with no test named, which is exactly what the screen exists to prevent.
     for relative in scope:
-        source = (plan.repo / relative).read_text()
-        harness.write_into(shadow, plan.source_root, relative, planter.round_trip(source))
+        source = (setup.repo / relative).read_text()
+        harness.write_into(shadow, setup.source_root, relative, planter.round_trip(source))
     kept: list[str] = list(room)
     dropped: list[str] = []
     for _ in range(SCREEN_ATTEMPTS):
         # An empty list is not an empty run: pytest given no arguments falls back to `testpaths` and screens the whole suite.
         if not kept:
             raise RuntimeError(f'screening dropped all {len(dropped)} tests in the room, so there is nothing left to prove with')
-        code, _, output = harness.run_pytest(
-            plan, shadow, kept, stop_early=False, timeout=harness.CONTROL_TIMEOUT, basetemp=basetemp, summary=True
+        code, _, output, reported = harness.run_pytest(
+            setup, shadow, kept, stop_early=False, timeout=harness.CONTROL_TIMEOUT, basetemp=basetemp, attributed=True
         )
         if code == 0:
             return tuple(kept), tuple(dropped)
-        failing = harness.killers_in(output, kept)
+        failing = harness.killers_in(reported, kept)
         if code != 1 or not failing:
             raise RuntimeError(f'screening the room exited {code} and named {len(failing)} tests\n{output[-2000:]}')
         dropped.extend(failing)
@@ -412,12 +412,12 @@ def killed_keys(run: score.Run) -> set[tuple[str, str]]:
 
 
 def verify(
-    plan: harness.Plan, scope: Sequence[str], run_set: Sequence[str], deleting: Sequence[str], before: score.Run, announce: Callable
+    setup: harness.Setup, scope: Sequence[str], run_set: Sequence[str], deleting: Sequence[str], before: score.Run, announce: Callable
 ) -> Verification:
     """Plant the scope a second time with the deletions taken out of the room, and name any mutant that lost its last killer."""
     kept = [name for name in run_set if name not in set(deleting)]
     announce(f'verifying: replanting {len(scope)} modules with {len(deleting)} tests deleted, {len(kept)} left in the room')
-    after = harness.measure(plan, list(scope), forced_contexts(scope, kept, plan.repo), announce=announce)
+    after = harness.measure(setup, list(scope), forced_contexts(scope, kept, setup.repo), announce=announce)
     was, now = killed_keys(before), killed_keys(after)
     return Verification(deleted=len(deleting), killed_before=len(was), killed_after=len(now), lost=tuple(sorted(was - now)))
 
@@ -476,7 +476,7 @@ def as_payload(found: Survey, verdicts: Verdicts) -> dict:
 
 
 def measure(
-    plan: harness.Plan,
+    setup: harness.Setup,
     contexts: subset.Contexts,
     prefixes: Sequence[str],
     *,
@@ -496,14 +496,14 @@ def measure(
     announce(f'proving {len(proving)} candidates over {len(scope)} modules, with {len(set(room) | set(proving))} tests in the room')
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-redundancy-') as scratch:
-        run_set, dropped = screen(plan, sorted(set(room) | set(proving)), Path(scratch), scope)
+        run_set, dropped = screen(setup, sorted(set(room) | set(proving)), Path(scratch), scope)
     if dropped:
         announce(f'{len(dropped)} tests dropped: they fail against an unmutated copy of the tree')
 
-    run = harness.measure(plan, list(scope), forced_contexts(scope, run_set, plan.repo), announce=announce)
+    run = harness.measure(setup, list(scope), forced_contexts(scope, run_set, setup.repo), announce=announce)
     verdicts = prove(run, proving, footprint, scope, run_set, dropped)
     if verified and verdicts.deletable:
-        verdicts = dataclasses.replace(verdicts, verified=verify(plan, scope, run_set, verdicts.deletable, run, announce))
+        verdicts = dataclasses.replace(verdicts, verified=verify(setup, scope, run_set, verdicts.deletable, run, announce))
     return found, verdicts
 
 
@@ -520,7 +520,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--refresh-contexts', action='store_true', help='Re-measure which tests execute which line')
     parsed = parser.parse_args(argv)
 
-    plan = harness.Plan(
+    setup = harness.Setup(
         repo=repo,
         source_root=repo / 'src',
         cache_dir=subset.cache_for(paths.cache_home() / 'mutation', repo),
@@ -530,16 +530,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     contexts, cached, measured = subset.load(
         repo,
-        plan.source_root,
-        plan.cache_dir,
-        pytest_prefix=plan.pytest_prefix,
-        pytest_args=plan.context_args,
-        trees=plan.trees,
+        setup.source_root,
+        setup.cache_dir,
+        pytest_prefix=setup.pytest_prefix,
+        pytest_args=setup.context_args,
+        trees=setup.trees,
         refresh=parsed.refresh_contexts,
     )
     harness.say(f'contexts {"measured" if measured else "cached"}: {cached}')
 
-    found, verdicts = measure(plan, contexts, parsed.prove, exclude=parsed.exclude, verified=parsed.verify)
+    found, verdicts = measure(setup, contexts, parsed.prove, exclude=parsed.exclude, verified=parsed.verify)
     for line in render(found, verdicts):
         harness.say(line)
     if parsed.json is not None:

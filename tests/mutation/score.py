@@ -47,7 +47,7 @@ class SiteResult:
     seconds: float = 0.0
     detail: str = ''
     killers: tuple[str, ...] = ()
-    """The tests that failed against this mutant, populated only by a `Plan(record_killers=True)` run.
+    """The tests that failed against this mutant, populated only by a `Setup(record_killers=True)` run.
 
     Empty on an ordinary run, where `-x` stops at the first failure and the rest is unmeasured. `redundancy.py` is what asks for it
     and the only thing that reads it, so an empty tuple here means nobody asked rather than nobody killed.

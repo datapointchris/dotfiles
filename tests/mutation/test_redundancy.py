@@ -4,10 +4,10 @@ The toy holds a test of each kind the prover has to tell apart: one that alone e
 that catch exactly the same bugs as each other, one whose only assertion no operator can violate. Deleting the ones it calls
 redundant leaves the toy's mutation score unchanged, and that is the property being measured — the report is only how it is read.
 
-The seams around the proof get their own tables. `killers_in` is where an attribution silently empties, so it is measured against
-the shapes pytest actually emits: a parametrised id carrying the separator, and two node ids where one is the other's prefix. And a
-kill nothing can be attributed to is driven through a stub pytest that exits 1 in silence, because that is the failure the whole
-proof rests on not happening quietly.
+The seams around the proof get their own tables. Attribution is where a proof silently empties, so the shapes that used to be
+ambiguous — a parametrised id carrying ` - `, one node id that is another's prefix, a class, a file that will not import — are
+driven against a real pytest rather than a fixture imitating one. And a kill nothing can be attributed to is driven through a stub
+pytest that exits 1 in silence, because that is the failure the whole proof rests on not happening quietly.
 """
 
 from __future__ import annotations
@@ -21,11 +21,15 @@ from pathlib import Path
 import pytest
 
 from mutation import classify
+from mutation import failures
 from mutation import planter
 from mutation import redundancy
 from mutation import run as harness
 from mutation import score
 from mutation import subset
+from mutation.toys import site
+from mutation.toys import toy_run
+from mutation.toys import toy_tree as build_toy
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The cheap condition
@@ -70,38 +74,88 @@ def test_a_candidate_reaching_outside_the_scope_is_not_within_it() -> None:
 # Attribution
 # ─────────────────────────────────────────────────────────────────────────────
 
-SUMMARIES = [
-    ('a plain failure', 'FAILED tests/x.py::test_a - assert False', ('tests/x.py::test_a',), ('tests/x.py::test_a',)),
-    ('an error counts too', 'ERROR tests/x.py::test_a - fixture blew up', ('tests/x.py::test_a',), ('tests/x.py::test_a',)),
-    ('a bare id with no message', 'FAILED tests/x.py::test_a', ('tests/x.py::test_a',), ('tests/x.py::test_a',)),
-    (
-        'a parametrised id carrying the separator',
-        'FAILED tests/x.py::test_a[a - b] - assert 1 == 2',
-        ('tests/x.py::test_a[a - b]',),
-        ('tests/x.py::test_a[a - b]',),
-    ),
-    (
-        'a prefix collision names only the test that failed',
-        'FAILED tests/x.py::test_ab - assert False',
-        ('tests/x.py::test_a', 'tests/x.py::test_ab'),
-        ('tests/x.py::test_ab',),
-    ),
+RECORDED = [
     (
         'a file that could not be collected takes every test the subset holds in it',
-        'ERROR tests/x.py - CatalogError: not an axis value',
+        ('tests/x.py',),
         ('tests/x.py::test_a', 'tests/x.py::test_b', 'tests/y.py::test_c'),
         ('tests/x.py::test_a', 'tests/x.py::test_b'),
     ),
-    ('a passing run names nobody', '3 passed in 0.4s', ('tests/x.py::test_a',), ()),
-    ('a test outside the subset is ignored', 'FAILED tests/y.py::test_z - boom', ('tests/x.py::test_a',), ()),
+    ('a run that recorded nothing names nobody', (), ('tests/x.py::test_a',), ()),
+    ('a test outside the subset is ignored', ('tests/y.py::test_z',), ('tests/x.py::test_a',), ()),
 ]
 
 
-@pytest.mark.parametrize(('name', 'output', 'subsetted', 'expected'), SUMMARIES, ids=[row[0] for row in SUMMARIES])
-def test_the_summary_is_read_by_matching_the_ids_pytest_was_handed(
-    name: str, output: str, subsetted: tuple[str, ...], expected: tuple[str, ...]
+@pytest.mark.parametrize(('name', 'reported', 'subsetted', 'expected'), RECORDED, ids=[row[0] for row in RECORDED])
+def test_attribution_intersects_what_was_recorded_with_what_was_handed(
+    name: str, reported: tuple[str, ...], subsetted: tuple[str, ...], expected: tuple[str, ...]
 ) -> None:
-    assert harness.killers_in(output, subsetted) == expected
+    """Only the collection rule is a rule. The rest is a set intersection, which is the point of recording node ids rather than
+    reading them back out of a sentence."""
+    assert harness.killers_in(reported, subsetted) == expected
+
+
+@pytest.mark.replants
+def test_pytest_records_the_ids_it_was_handed_however_they_are_shaped(tmp_path: Path) -> None:
+    """The shapes that made a prefix scrape ambiguous, asserted against real pytest rather than a fixture imitating it.
+
+    A parametrised id may contain ` - `, which used to be the separator between an id and its message. `test_a` is a prefix of
+    `test_ab`. A class adds a third `::` component. A file that will not import is named on its own.
+    """
+    (tmp_path / 'tests').mkdir()
+    (tmp_path / 'tests' / 'test_shapes.py').write_text(SHAPES)
+    (tmp_path / 'tests' / 'test_broken.py').write_text('import nothing_at_all  # noqa: F401\n\n\ndef test_never_runs():\n    pass\n')
+    handed = [
+        'tests/test_shapes.py::test_a',
+        'tests/test_shapes.py::test_ab',
+        'tests/test_shapes.py::test_parametrised[a - b]',
+        'tests/test_shapes.py::TestGrouped::test_inside',
+    ]
+    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), repo=tmp_path, pytest_prefix=(sys.executable, '-m', 'pytest'))
+
+    _, _, _, reported = harness.run_pytest(
+        setup, tmp_path, handed, stop_early=False, timeout=120.0, basetemp=tmp_path / 'bt', attributed=True
+    )
+
+    assert harness.killers_in(reported, handed) == (
+        'tests/test_shapes.py::TestGrouped::test_inside',
+        'tests/test_shapes.py::test_ab',
+        'tests/test_shapes.py::test_parametrised[a - b]',
+    )
+
+    _, _, _, broke = harness.run_pytest(
+        setup,
+        tmp_path,
+        ['tests/test_broken.py::test_never_runs'],
+        stop_early=False,
+        timeout=120.0,
+        basetemp=tmp_path / 'bt',
+        attributed=True,
+    )
+    assert harness.killers_in(broke, ['tests/test_broken.py::test_never_runs']) == ('tests/test_broken.py::test_never_runs',)
+
+
+SHAPES = """\
+import pytest
+
+
+def test_a():
+    assert True
+
+
+def test_ab():
+    assert False
+
+
+@pytest.mark.parametrize('value', ['a - b'])
+def test_parametrised(value):
+    assert False
+
+
+class TestGrouped:
+    def test_inside(self):
+        assert False
+"""
 
 
 VANISHED = 'ERROR: not found: /repo/tests/x.py::test_a[apt]\n(no match in any of [<Module x.py>])\n'
@@ -155,31 +209,6 @@ def test_two_mutants_at_one_address_are_refused_rather_than_merged() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # The proof
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def site(
-    status: str,
-    line: int = 1,
-    killers: tuple[str, ...] = (),
-    file: str = 'src/dotfiles/x.py',
-    unmeasured: tuple[str, ...] = (),
-) -> score.SiteResult:
-    return score.SiteResult(
-        file=file,
-        line=line,
-        col=0,
-        kind='string',
-        bucket=classify.LOGIC,
-        rule='r',
-        description='a -> b',
-        status=status,
-        killers=killers,
-        unmeasured=unmeasured,
-    )
-
-
-def toy_run(results: list[score.SiteResult], targets: tuple[str, ...] = ('src/dotfiles/x.py',)) -> score.Run:
-    return score.Run(started_at='20260101T000000Z', finished_at='20260101T000100Z', machine='box', targets=targets, results=tuple(results))
 
 
 def one_file(tests: list[str], file: str = 'src/dotfiles/x.py') -> dict[str, redundancy.Footprint]:
@@ -253,7 +282,7 @@ def test_a_test_covered_by_something_nobody_is_deleting_goes_in_the_joint_answer
     assert [proof.test for proof in verdicts.redundant if proof.together] == ['t::one']
 
 
-def test_the_report_carries_the_counts_rather_than_a_verdict_sentence() -> None:
+def test_the_redundancy_payload_carries_the_counts_rather_than_a_verdict_sentence() -> None:
     run = toy_run([site(score.KILLED, line=1, killers=('t::one', 't::two'))])
     found = redundancy.survey(contexts_from({'src/dotfiles/x.py': {1: (0, 1)}}, ('t::one', 't::two')))
     verdicts = redundancy.prove(run, ['t::two'], one_file(['t::one', 't::two']), ['src/dotfiles/x.py'], run_set=['t::one', 't::two'])
@@ -332,30 +361,18 @@ kills. They are what makes the joint answer visible from the outside rather than
 """
 
 
-def toy_tree(tmp_path: Path) -> harness.Plan:
-    (tmp_path / 'src' / 'toy').mkdir(parents=True)
-    (tmp_path / 'src' / 'toy' / '__init__.py').write_text('')
-    (tmp_path / 'src' / 'toy' / 'thing.py').write_text(TOY_SOURCE)
-    (tmp_path / 'tests').mkdir()
-    (tmp_path / 'tests' / 'test_thing.py').write_text(TOY_TESTS)
-    (tmp_path / 'pyproject.toml').write_text('[tool.pytest.ini_options]\ntestpaths = ["tests"]\n')
-    return harness.Plan(
-        repo=tmp_path,
-        source_root=tmp_path / 'src',
-        cache_dir=tmp_path / 'cache',
-        pytest_prefix=(sys.executable, '-m', 'pytest'),
-        jobs=2,
-        record_killers=True,
-    )
+def toy_tree(tmp_path: Path) -> harness.Setup:
+    """This file's toy, recording killers, because that is what a redundancy proof reads."""
+    return build_toy(tmp_path, TOY_SOURCE, TOY_TESTS, record_killers=True)
 
 
 @pytest.fixture(scope='module')
 def proved(tmp_path_factory: pytest.TempPathFactory) -> tuple[redundancy.Survey, redundancy.Verdicts]:
     """One real end-to-end, shared because it costs a coverage pass and a pytest run per planted site."""
-    plan = toy_tree(tmp_path_factory.mktemp('redundancy'))
-    contexts, _, measured = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
+    setup = toy_tree(tmp_path_factory.mktemp('redundancy'))
+    contexts, _, measured = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
     assert measured
-    return redundancy.measure(plan, contexts, ['tests/test_thing.py'], announce=lambda _: None)
+    return redundancy.measure(setup, contexts, ['tests/test_thing.py'], announce=lambda _: None)
 
 
 def test_the_only_test_calling_a_function_is_proven_necessary(proved: tuple[redundancy.Survey, redundancy.Verdicts]) -> None:
@@ -398,15 +415,15 @@ def test_no_test_is_both_redundant_and_load_bearing(proved: tuple[redundancy.Sur
 
 def kills(tmp_path: Path, dropped: Sequence[str] = ()) -> int:
     """How many logic mutants the toy's suite kills, with the named tests taken out of it."""
-    plan = toy_tree(tmp_path)
+    setup = toy_tree(tmp_path)
     suite = tmp_path / 'tests' / 'test_thing.py'
     for name in dropped:
         source = suite.read_text()
         kept = source.replace(f'def {name}():', f'def _dropped_{name}():')
         assert kept != source, name
         suite.write_text(kept)
-    contexts, _, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
-    return harness.measure(plan, ['src/toy/thing.py'], contexts, announce=lambda _: None).tally().killed
+    contexts, _, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
+    return harness.measure(setup, ['src/toy/thing.py'], contexts, announce=lambda _: None).tally().killed
 
 
 def named(test: str) -> str:
@@ -431,9 +448,9 @@ def test_deleting_any_test_it_proved_redundant_leaves_the_kills_unchanged(
 @pytest.mark.replants
 def test_the_verification_pass_replants_the_scope_and_finds_nothing_lost(tmp_path: Path) -> None:
     """The prover checking its own answer, end to end and against the real thing rather than against its bookkeeping."""
-    plan = toy_tree(tmp_path)
-    contexts, _, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
-    _, verdicts = redundancy.measure(plan, contexts, ['tests/test_thing.py'], verified=True, announce=lambda _: None)
+    setup = toy_tree(tmp_path)
+    contexts, _, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
+    _, verdicts = redundancy.measure(setup, contexts, ['tests/test_thing.py'], verified=True, announce=lambda _: None)
     assert verdicts.verified is not None
     assert verdicts.verified.holds
     assert verdicts.verified.deleted == len(verdicts.deletable)
@@ -442,14 +459,14 @@ def test_the_verification_pass_replants_the_scope_and_finds_nothing_lost(tmp_pat
 @pytest.mark.replants
 def test_the_verification_pass_reports_the_kill_a_wrong_deletion_would_cost(tmp_path: Path) -> None:
     """Deleting a whole mutual cluster is exactly the mistake the joint answer exists to prevent, so it is measured failing."""
-    plan = toy_tree(tmp_path)
-    contexts, _, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
-    _, verdicts = redundancy.measure(plan, contexts, ['tests/test_thing.py'], announce=lambda _: None)
+    setup = toy_tree(tmp_path)
+    contexts, _, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
+    _, verdicts = redundancy.measure(setup, contexts, ['tests/test_thing.py'], announce=lambda _: None)
     everything = [proof.test for proof in verdicts.redundant]
     run = harness.measure(
-        plan, ['src/toy/thing.py'], redundancy.forced_contexts(['src/toy/thing.py'], verdicts.run_set, plan.repo), announce=lambda _: None
+        setup, ['src/toy/thing.py'], redundancy.forced_contexts(['src/toy/thing.py'], verdicts.run_set, setup.repo), announce=lambda _: None
     )
-    checked = redundancy.verify(plan, ['src/toy/thing.py'], verdicts.run_set, everything, run, lambda _: None)
+    checked = redundancy.verify(setup, ['src/toy/thing.py'], verdicts.run_set, everything, run, lambda _: None)
     assert not checked.holds
     assert checked.killed_after < checked.killed_before
 
@@ -489,32 +506,42 @@ def stub_pytest(tmp_path: Path, body: str) -> Path:
     return stub
 
 
+def stub_recording(tmp_path: Path, recorded: Sequence[str], code: int) -> Path:
+    """A stub pytest that writes what the real plugin would have, then exits.
+
+    The record is the plugin's whole contract, so a stub standing in for pytest has to honour it or it is testing an interface
+    nothing has.
+    """
+    body = f'import json, os, sys\nopen(os.environ[{failures.WHERE!r}], "w").write(json.dumps({list(recorded)!r}))\nsys.exit({code})\n'
+    return stub_pytest(tmp_path, body)
+
+
 @pytest.mark.replants
 def test_a_kill_the_summary_cannot_attribute_is_a_harness_error_rather_than_a_kill(tmp_path: Path) -> None:
     """Exit 1 with nothing named would otherwise be a mutant with no killers, which blocks no proof and licenses a false one."""
-    plan = dataclasses.replace(
+    setup = dataclasses.replace(
         toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, 'import sys\nsys.exit(1)\n')))
     )
-    result = executed(plan, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
+    result = executed(setup, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
     assert result.status == score.HARNESS_ERROR
     assert harness.UNATTRIBUTED in result.detail
     assert result.killers == ()
 
 
-def executed(plan: harness.Plan, tests: tuple[str, ...], scratch: Path) -> score.SiteResult:
-    workers = harness.Workers(plan, scratch)
+def executed(setup: harness.Setup, tests: tuple[str, ...], scratch: Path) -> score.SiteResult:
+    workers = harness.Workers(setup, scratch)
     planned = harness.Planned(
         relative='src/toy/thing.py', site=planter.sites(ast.parse(TOY_SOURCE))[0], verdict=classify.DEFAULT, tests=tests
     )
-    return harness._execute(plan, workers, {'src/toy/thing.py': TOY_SOURCE}, planned, 60.0)
+    return harness._execute(setup, workers, {'src/toy/thing.py': TOY_SOURCE}, planned, 60.0)
 
 
 @pytest.mark.replants
 def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_it(tmp_path: Path) -> None:
     """Exit 4 because the named node ids stopped resolving is the suite noticing in the loudest way it has."""
-    body = 'import sys\nprint("ERROR tests/test_thing.py - CatalogError: not an axis value")\nsys.exit(4)\n'
-    plan = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, body))))
-    result = executed(plan, ('tests/test_thing.py::test_over_high', 'tests/other.py::test_z'), tmp_path / 'scratch')
+    stub = stub_recording(tmp_path, ['tests/test_thing.py'], code=4)
+    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub)))
+    result = executed(setup, ('tests/test_thing.py::test_over_high', 'tests/other.py::test_z'), tmp_path / 'scratch')
     assert result.status == score.KILLED
     assert result.killers == ('tests/test_thing.py::test_over_high',)
     assert harness.UNCOLLECTABLE in result.detail
@@ -524,15 +551,17 @@ def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_
 def test_exit_four_that_names_nothing_stays_a_harness_error(tmp_path: Path) -> None:
     """The guard the harness was built around: a flag that is not installed made the first prototype report a perfect score."""
     body = 'import sys\nprint("ERROR: unrecognized arguments: --timeout")\nsys.exit(4)\n'
-    plan = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, body))))
-    result = executed(plan, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
+    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, body))))
+    result = executed(setup, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
     assert result.status == score.HARNESS_ERROR
     assert result.killers == ()
 
 
 @pytest.mark.replants
-def test_the_summary_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path: Path) -> None:
-    plan = dataclasses.replace(
+def test_the_collection_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path: Path) -> None:
+    """It decides what an uncollectable mutant scores — exit 4 is a harness fault and exit 1 is a kill — so a run that is not
+    recording killers keeps the stricter reading."""
+    setup = dataclasses.replace(
         toy_tree(tmp_path / 'tree'),
         pytest_prefix=(
             sys.executable,
@@ -540,8 +569,10 @@ def test_the_summary_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path
         ),
     )
     for wanted in (False, True):
-        harness.run_pytest(plan, tmp_path, ['tests/test_thing.py'], stop_early=False, timeout=60.0, basetemp=tmp_path, summary=wanted)
-        assert (harness.SUMMARY[0] in (tmp_path / 'argv').read_text().splitlines()) is wanted
+        harness.run_pytest(setup, tmp_path, ['tests/test_thing.py'], stop_early=False, timeout=60.0, basetemp=tmp_path, attributed=wanted)
+        argv = (tmp_path / 'argv').read_text().splitlines()
+        assert (harness.ATTRIBUTED[0] in argv) is wanted
+        assert ('mutation.failures' in argv) is wanted
 
 
 UNSHADOWABLE_TEST = """\
@@ -561,10 +592,10 @@ def test_a_test_anchored_outside_the_package_is_dropped_and_named(tmp_path: Path
 
     Left in the room it would be everybody's subsumer, which is the one failure that turns a proof into its opposite.
     """
-    plan = toy_tree(tmp_path / 'tree')
-    (plan.repo / 'tests' / 'test_anchored.py').write_text(UNSHADOWABLE_TEST)
+    setup = toy_tree(tmp_path / 'tree')
+    (setup.repo / 'tests' / 'test_anchored.py').write_text(UNSHADOWABLE_TEST)
     room = ['tests/test_thing.py::test_over_high', 'tests/test_anchored.py::test_a_marker_beside_the_package']
-    kept, dropped = redundancy.screen(plan, room, tmp_path / 'scratch')
+    kept, dropped = redundancy.screen(setup, room, tmp_path / 'scratch')
     assert kept == ('tests/test_thing.py::test_over_high',)
     assert dropped == ('tests/test_anchored.py::test_a_marker_beside_the_package',)
 
@@ -576,10 +607,10 @@ def test_a_room_screened_down_to_nothing_is_refused_rather_than_run(tmp_path: Pa
     The empty list is the trap worth refusing loudly: pytest handed no arguments runs `testpaths`, so a room screened to nothing
     would quietly become the whole suite.
     """
-    plan = toy_tree(tmp_path / 'tree')
-    (plan.repo / 'tests' / 'test_broken.py').write_text('def test_one():\n    assert False\n\n\ndef test_two():\n    assert False\n')
+    setup = toy_tree(tmp_path / 'tree')
+    (setup.repo / 'tests' / 'test_broken.py').write_text('def test_one():\n    assert False\n\n\ndef test_two():\n    assert False\n')
     with pytest.raises(RuntimeError, match='nothing left to prove'):
-        redundancy.screen(plan, ['tests/test_broken.py::test_one', 'tests/test_broken.py::test_two'], tmp_path / 'scratch')
+        redundancy.screen(setup, ['tests/test_broken.py::test_one', 'tests/test_broken.py::test_two'], tmp_path / 'scratch')
 
 
 def test_forcing_the_contexts_puts_the_whole_room_on_every_line(tmp_path: Path) -> None:
@@ -593,7 +624,7 @@ def test_forcing_the_contexts_puts_the_whole_room_on_every_line(tmp_path: Path) 
 
 def test_an_ordinary_run_records_no_killers_at_all() -> None:
     """The field is empty because nobody asked, never because nobody killed — `-x` stops at the first failure."""
-    assert harness.Plan(repo=Path('/'), source_root=Path('/'), cache_dir=Path('/')).record_killers is False
+    assert harness.Setup(repo=Path('/'), source_root=Path('/'), cache_dir=Path('/')).record_killers is False
 
 
 def test_a_mutant_the_same_length_as_the_last_one_is_still_imported(tmp_path: Path) -> None:
@@ -603,9 +634,9 @@ def test_a_mutant_the_same_length_as_the_last_one_is_still_imported(tmp_path: Pa
     it survived without the interpreter ever compiling it. `'under'` -> `'under-mutant'` is the same length as the `'over'` mutant
     that ran before it in the same worker, so it was reported killed by a test that never reaches the branch it changed.
     """
-    plan = toy_tree(tmp_path)
-    contexts, _, _ = subset.load(plan.repo, plan.source_root, plan.cache_dir, pytest_prefix=plan.pytest_prefix)
-    run = harness.measure(plan, ['src/toy/thing.py'], contexts, announce=lambda _: None)
+    setup = toy_tree(tmp_path)
+    contexts, _, _ = subset.load(setup.repo, setup.source_root, setup.cache_dir, pytest_prefix=setup.pytest_prefix)
+    run = harness.measure(setup, ['src/toy/thing.py'], contexts, announce=lambda _: None)
     verdicts = {result.description: result.status for result in run.results}
     assert verdicts['3 -> 4'] == score.KILLED
     assert verdicts["'under' -> 'under-mutant'"] == score.SURVIVED

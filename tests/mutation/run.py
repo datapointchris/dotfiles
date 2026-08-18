@@ -36,6 +36,7 @@ from pathlib import Path
 
 from dotfiles import paths
 from mutation import classify
+from mutation import failures
 from mutation import planter
 from mutation import score
 from mutation import subset
@@ -80,27 +81,29 @@ the worker's tree. Together there is no bytecode for the shadowed source at any 
 at no cost: the checkout's own `tests/` cache is untouched and still warm, and only the copied `src/` recompiles.
 """
 
-SUMMARY = ('-rfE', '--continue-on-collection-errors')
-"""What makes pytest name the tests that failed, rather than only counting them.
+ATTRIBUTED = ('--continue-on-collection-errors',)
+"""What turns a whole class of mutant from unusable into measured.
 
-`-rfE` is asked for explicitly rather than relied on. pytest's default `reportchars` already covers failures and errors, and a run
-whose attribution silently emptied would read as a mutant nothing killed — the one direction `redundancy.py` cannot survive.
+A mutation to a module constant can break import: `'darwin'` -> `'darwin-mutant'` in `coordinates.py` makes the catalog refuse a
+manifest, and pytest abandons the session at exit 4 with one file named. That reads as a harness fault, which blocks every proof
+over the file. With the flag the session continues, every file that could not be collected is recorded, and the rest of the room
+still runs — so the mutant is attributed to the tests that really failed instead of to nobody.
 
-`--continue-on-collection-errors` is the half that turns a whole class of mutant from unusable into measured. A mutation to a
-module constant can break import: `'darwin'` -> `'darwin-mutant'` in `coordinates.py` makes the catalog refuse a manifest, and
-pytest abandons the session at exit 4 with one file named. That reads as a harness fault, which blocks every proof over the file.
-With the flag the session continues, every file that could not be collected is named, and the rest of the room still runs — so
-the mutant is attributed to the tests that really failed instead of to nobody.
+Gated rather than always on, because it changes what an uncollectable mutant scores: exit 4 is a harness fault and exit 1 is a
+kill. A run not recording killers keeps the stricter reading.
 """
 
-SUMMARY_WIDTH = '200'
-"""`COLUMNS` for a summary run.
+RECORD = 'failed.json'
+"""Where a run's plugin writes the node ids that failed. One file per worker room, rewritten by every mutant that runs there."""
 
-pytest fits the crash message to the terminal width and falls back to 80 columns off a tty. The node id itself is never truncated,
-but a wide terminal keeps the whole line readable in a saved log.
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+"""What makes `-p mutation.failures` resolve in the subprocess.
+
+Named from this file rather than from the setup, because a toy tree under `tmp_path` is a different repo and the plugin still has
+to be the real one.
 """
 
-UNATTRIBUTED = 'pytest exited 1 and its summary named no test the subset was handed'
+UNATTRIBUTED = 'pytest exited 1 and recorded no failure among the tests the subset handed it'
 """Why a kill nobody can be attributed to is reported as a harness fault rather than as a kill.
 
 A kill with an empty killer set is indistinguishable from a mutant every test tolerated, and `redundancy.py` would read it as one
@@ -112,12 +115,12 @@ UNCOLLECTABLE = 'the mutant stopped a test module being collected, so pytest exi
 
 A mutation to a module constant can break import — `'darwin'` -> `'darwin-mutant'` in `coordinates.py` makes the catalog refuse
 every manifest — and a subset naming node ids inside that module then names arguments pytest cannot resolve, which is a usage
-error. The suite noticed the bug in the loudest way available to it, and the summary says which file, so the tests the subset
+error. The suite noticed the bug in the loudest way available to it, and the plugin records which file, so the tests the subset
 holds there are the killers.
 
 **The attribution is what decides it, which is what keeps the original guard intact.** A genuine usage error — the `--timeout`
-flag that is not installed, and made the first prototype report a perfect score — produces no summary at all, so there are no
-killers and the result stays a harness fault. Only exit 4 that names files the subset holds becomes a kill.
+flag that is not installed, and made the first prototype report a perfect score — never reaches a session, so the plugin records
+nothing, there are no killers, and the result stays a harness fault. Only exit 4 that names files the subset holds becomes a kill.
 """
 
 
@@ -138,8 +141,12 @@ def repo_root() -> Path:
 
 
 @dataclasses.dataclass(frozen=True)
-class Plan:
-    """Everything the harness needs that is not a target, so its own tests can drive it against a toy tree."""
+class Setup:
+    """Everything the harness needs that is not a target, so its own tests can drive it against a toy tree.
+
+    Not `Plan`: `dotfiles plan` is a top-level reconcile verb meaning what an apply would change, and this package already spends
+    the word three ways in `Planned`, `plan_target` and `planter.plant`.
+    """
 
     repo: Path
     source_root: Path
@@ -201,19 +208,17 @@ def outcome_for(code: int | None) -> tuple[str, str]:
     return score.HARNESS_ERROR, f'pytest exited {code}'
 
 
-def killers_in(output: str, tests: Sequence[str]) -> tuple[str, ...]:
-    """Which of the tests pytest was handed appear in its short summary as a failure or an error.
+def killers_in(reported: Sequence[str], tests: Sequence[str]) -> tuple[str, ...]:
+    """Which of the tests pytest was handed are among the ones its plugin recorded as failing.
 
-    Matched against the subset rather than parsed out of the line. A node id and the message after it are separated by ` - `, which
-    a parametrised id is free to contain, and `tests/x.py::test_a` is a prefix of `tests/x.py::test_ab` — so the id is recognised by
-    equality against something already known rather than cut out of prose.
+    The plugin records `report.nodeid`, which is the string the harness handed pytest, so this is an intersection.
+
+    A collection failure is recorded under the file's own path with no `::`. That file runs none of its tests, so every test the
+    subset holds in it failed, which is what the mutant did to them.
     """
-    reported = [line[len(word) :] for line in output.splitlines() for word in ('FAILED ', 'ERROR ') if line.startswith(word)]
-    found = {test for test in tests for line in reported if line == test or line.startswith(f'{test} ')}
-    # A collection error names the file rather than a node, and a file that cannot be collected runs none of its tests — so every
-    # test the subset holds in it failed, which is what the mutant did to them.
-    uncollected = {line.split(' ')[0] for line in reported if '::' not in line.split(' ')[0]}
-    return tuple(sorted(found | {test for test in tests if test.split('::')[0] in uncollected}))
+    failed = set(reported)
+    uncollected = {name for name in failed if '::' not in name}
+    return tuple(sorted(test for test in tests if test in failed or test.split('::')[0] in uncollected))
 
 
 def vanished_in(output: str, tests: Sequence[str]) -> tuple[str, ...]:
@@ -239,30 +244,39 @@ carrying its own copy of the number.
 
 
 def run_pytest(
-    plan: Plan, shadow: Path, tests: Sequence[str], *, stop_early: bool, timeout: float, basetemp: Path, summary: bool = False
-) -> tuple[int | None, float, str]:
+    setup: Setup, shadow: Path, tests: Sequence[str], *, stop_early: bool, timeout: float, basetemp: Path, attributed: bool = False
+) -> tuple[int | None, float, str, tuple[str, ...]]:
+    record = basetemp.parent / RECORD
+    # A worker runs mutant after mutant in one room, and a killed pytest writes nothing — so without this a timed-out run would
+    # read the previous mutant's failures as its own.
+    record.unlink(missing_ok=True)
     argv = [
-        *plan.pytest_prefix,
+        *setup.pytest_prefix,
         *QUIET,
         f'--basetemp={basetemp}',
+        *(('-p', 'mutation.failures') if attributed else ()),
         *(('-x',) if stop_early else ()),
-        *(SUMMARY if summary else ()),
+        *(ATTRIBUTED if attributed else ()),
         *tests,
     ]
-    environment = dict(os.environ, PYTHONPATH=subset.pythonpath(shadow, plan.source_root), PYTHONDONTWRITEBYTECODE=NO_BYTECODE)
-    if summary:
-        environment['COLUMNS'] = SUMMARY_WIDTH
+    roots = (shadow, setup.source_root, PLUGIN_ROOT) if attributed else (shadow, setup.source_root)
+    environment = dict(
+        os.environ,
+        PYTHONPATH=subset.pythonpath(*roots),
+        PYTHONDONTWRITEBYTECODE=NO_BYTECODE,
+        **{failures.WHERE: str(record)},
+    )
     began = time.perf_counter()
     with subprocess.Popen(
-        argv, cwd=plan.repo, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True
+        argv, cwd=setup.repo, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True
     ) as process:
         try:
             output, _ = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
             process.communicate()
-            return None, time.perf_counter() - began, ''
-    return process.returncode, time.perf_counter() - began, output or ''
+            return None, time.perf_counter() - began, '', ()
+    return process.returncode, time.perf_counter() - began, output or '', failures.read(record)
 
 
 class Workers:
@@ -272,13 +286,13 @@ class Workers:
     mutant at a time.
     """
 
-    def __init__(self, plan: Plan, scratch: Path) -> None:
+    def __init__(self, setup: Setup, scratch: Path) -> None:
         self.available: queue.Queue[tuple[Path, Path]] = queue.Queue()
-        for index in range(plan.jobs):
+        for index in range(setup.jobs):
             room = scratch / f'worker-{index}'
-            shutil.copytree(plan.source_root, room / plan.source_root.name, ignore=shutil.ignore_patterns('__pycache__'))
+            shutil.copytree(setup.source_root, room / setup.source_root.name, ignore=shutil.ignore_patterns('__pycache__'))
             (room / 'basetemp').mkdir(parents=True, exist_ok=True)
-            self.available.put((room / plan.source_root.name, room / 'basetemp'))
+            self.available.put((room / setup.source_root.name, room / 'basetemp'))
 
     def take(self) -> tuple[Path, Path]:
         return self.available.get()
@@ -291,16 +305,16 @@ def write_into(shadow: Path, source_root: Path, relative: str, text: str) -> Non
     (shadow / Path(relative).relative_to(source_root.name)).write_text(text)
 
 
-def control(plan: Plan, shadow: Path, basetemp: Path, relative: str, source: str, tests: Sequence[str]) -> float:
+def control(setup: Setup, shadow: Path, basetemp: Path, relative: str, source: str, tests: Sequence[str]) -> float:
     """The round trip, unmutated, against the union of every subset. Returns how long it took."""
-    write_into(shadow, plan.source_root, relative, planter.round_trip(source))
-    code, seconds, output = run_pytest(plan, shadow, tests, stop_early=False, timeout=CONTROL_TIMEOUT, basetemp=basetemp)
+    write_into(shadow, setup.source_root, relative, planter.round_trip(source))
+    code, seconds, output, _ = run_pytest(setup, shadow, tests, stop_early=False, timeout=CONTROL_TIMEOUT, basetemp=basetemp)
     if code != 0:
         raise RuntimeError(f'the control run exited {code}, so no mutant can be attributed to its own bug\n{output[-2000:]}')
     return seconds
 
 
-def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Planned, timeout: float) -> score.SiteResult:
+def _execute(setup: Setup, workers: Workers, sources: dict[str, str], planned: Planned, timeout: float) -> score.SiteResult:
     shadow, basetemp = workers.take()
     try:
         text = planter.plant(sources[planned.relative], planned.site.index)
@@ -315,38 +329,38 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
         workers.give_back((shadow, basetemp))
         return _result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
     try:
-        write_into(shadow, plan.source_root, planned.relative, text)
+        write_into(shadow, setup.source_root, planned.relative, text)
         # Attribution needs every failure, and `-x` stops at the first one. A killer-recording run therefore forgoes the saving
         # rather than paying for a second pass, which also makes the survivor confirmation below unnecessary.
-        early = not plan.record_killers
-        code, seconds, output = run_pytest(
-            plan, shadow, planned.tests, stop_early=early, timeout=timeout, basetemp=basetemp, summary=plan.record_killers
+        early = not setup.record_killers
+        code, seconds, output, reported = run_pytest(
+            setup, shadow, planned.tests, stop_early=early, timeout=timeout, basetemp=basetemp, attributed=setup.record_killers
         )
         status, detail = outcome_for(code)
         if status == score.SURVIVED and early:
-            confirmed, _, _ = run_pytest(plan, shadow, planned.tests, stop_early=False, timeout=timeout, basetemp=basetemp)
+            confirmed, _, _, _ = run_pytest(setup, shadow, planned.tests, stop_early=False, timeout=timeout, basetemp=basetemp)
             if confirmed == 1:
                 status, detail = score.KILLED, 'killed only without -x, which means the subset ordering hid it'
         subsetted: tuple[str, ...] = planned.tests
         unmeasured: tuple[str, ...] = ()
-        if plan.record_killers and status == score.HARNESS_ERROR and (gone := vanished_in(output, planned.tests)):
+        if setup.record_killers and status == score.HARNESS_ERROR and (gone := vanished_in(output, planned.tests)):
             subsetted = tuple(name for name in planned.tests if name not in set(gone))
             if subsetted:
                 unmeasured = gone
-                code, seconds, output = run_pytest(
-                    plan, shadow, subsetted, stop_early=False, timeout=timeout, basetemp=basetemp, summary=True
+                code, seconds, output, reported = run_pytest(
+                    setup, shadow, subsetted, stop_early=False, timeout=timeout, basetemp=basetemp, attributed=True
                 )
                 status, detail = outcome_for(code)
-        killers = killers_in(output, subsetted) if plan.record_killers else ()
-        if plan.record_killers and killers and status == score.HARNESS_ERROR:
+        killers = killers_in(reported, subsetted) if setup.record_killers else ()
+        if setup.record_killers and killers and status == score.HARNESS_ERROR:
             status, detail = score.KILLED, UNCOLLECTABLE
-        elif plan.record_killers and status == score.KILLED and not killers:
+        elif setup.record_killers and status == score.KILLED and not killers:
             status, detail = score.HARNESS_ERROR, UNATTRIBUTED
         if status == score.HARNESS_ERROR:
             detail = f'{detail}\n{output[-400:]}'.strip()
         return _result(planned, status, seconds=seconds, detail=detail, killers=killers, unmeasured=unmeasured)
     finally:
-        write_into(shadow, plan.source_root, planned.relative, sources[planned.relative])
+        write_into(shadow, setup.source_root, planned.relative, sources[planned.relative])
         workers.give_back((shadow, basetemp))
 
 
@@ -376,7 +390,7 @@ def _result(
 
 
 def measure(
-    plan: Plan,
+    setup: Setup,
     relatives: Sequence[str],
     contexts: subset.Contexts,
     *,
@@ -386,10 +400,10 @@ def measure(
 ) -> score.Run:
     """The whole run: classify, answer the free question, plant the rest, and record what happened."""
     started = dt.datetime.now(dt.UTC)
-    sources = {relative: (plan.repo / relative).read_text() for relative in relatives}
+    sources = {relative: (setup.repo / relative).read_text() for relative in relatives}
     everything: list[Planned] = []
     for relative in relatives:
-        found = plan_target(relative, sources[relative], plan.repo / relative, contexts)
+        found = plan_target(relative, sources[relative], setup.repo / relative, contexts)
         if lines is not None:
             found = [item for item in found if item.site.lineno in lines.get(relative, set())]
         everything.extend(found)
@@ -410,25 +424,25 @@ def measure(
     per_target: dict[str, float] = {}
     if runnable:
         with tempfile.TemporaryDirectory(prefix='dotfiles-mutation-') as scratch:
-            workers = Workers(plan, Path(scratch))
+            workers = Workers(setup, Path(scratch))
             shadow, basetemp = workers.take()
             for relative in relatives:
                 # An empty subset would hand pytest no arguments at all, which is `testpaths` and therefore the whole suite.
                 chosen = subset.union(item.tests for item in runnable if item.relative == relative)
                 if not chosen:
                     continue
-                taken = control(plan, shadow, basetemp, relative, sources[relative], chosen)
+                taken = control(setup, shadow, basetemp, relative, sources[relative], chosen)
                 per_target[relative] = max(TIMEOUT_FLOOR, taken * TIMEOUT_FACTOR)
                 control_seconds += taken
-                write_into(shadow, plan.source_root, relative, sources[relative])
+                write_into(shadow, setup.source_root, relative, sources[relative])
             workers.give_back((shadow, basetemp))
             longest = max(per_target.values(), default=TIMEOUT_FLOOR)
             announce(f'control passed in {control_seconds:.1f}s; longest per-mutant timeout {longest:.0f}s')
 
             done = 0
-            with concurrent.futures.ThreadPoolExecutor(max_workers=plan.jobs) as pool:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=setup.jobs) as pool:
                 futures = {
-                    pool.submit(_execute, plan, workers, sources, item, per_target.get(item.relative, TIMEOUT_FLOOR)): item
+                    pool.submit(_execute, setup, workers, sources, item, per_target.get(item.relative, TIMEOUT_FLOOR)): item
                     for item in runnable
                 }
                 for future in concurrent.futures.as_completed(futures):
@@ -526,7 +540,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     # The context pass is one whole-suite run and is distributed; the mutant runs are not, because each is already one worker of many.
-    plan = Plan(
+    setup = Setup(
         repo=repo,
         source_root=repo / 'src',
         cache_dir=subset.cache_for(paths.cache_home() / 'mutation', repo),
@@ -545,16 +559,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     say('measuring which tests execute which line')
     contexts, cached, measured = subset.load(
         repo,
-        plan.source_root,
-        plan.cache_dir,
-        pytest_prefix=plan.pytest_prefix,
-        pytest_args=plan.context_args,
-        trees=plan.trees,
+        setup.source_root,
+        setup.cache_dir,
+        pytest_prefix=setup.pytest_prefix,
+        pytest_args=setup.context_args,
+        trees=setup.trees,
         refresh=parsed.refresh_contexts,
     )
     say(f'contexts {"measured" if measured else "cached"}: {cached}')
 
-    run = measure(plan, chosen, contexts, limit=parsed.limit, lines=lines)
+    run = measure(setup, chosen, contexts, limit=parsed.limit, lines=lines)
     directory = parsed.runs_dir if parsed.runs_dir is not None else paths.STATE_HOME / 'mutation-runs'
     machine = parsed.machine or paths.MACHINE_ID
     written = score.record(run, directory, machine)
