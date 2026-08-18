@@ -101,7 +101,9 @@ tasks:
   test:
     desc: Run the test suite (no Docker, no network)
     cmds:
-      - uv run pytest -n auto
+      # xdist reads this for `auto`, so the count is asked of the machine rather
+      # than written down. One core stays free for whatever else is running.
+      - PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) uv run pytest -n auto
 
   test:e2e:
     desc: 'Raw pytest over every e2e level at once — prefer test:matrix, which orders and records them'
@@ -112,6 +114,35 @@ tasks:
     desc: Re-run the suite on file changes (requires entr)
     cmds:
       - fd -e py -e sh -e bash . src tests install configs apps shell | entr -c uv run pytest
+
+  # Coverage says a line ran; these say whether anything asserted on what it did.
+  # `tests/mutation/README.md` is what each bucket means and why a rendering
+  # mutant is planted and then kept out of the score.
+
+  test:mutation:
+    desc: 'Plant one bug at a time and count the ones nothing noticed: task test:mutation -- src/dotfiles/runs.py'
+    cmds:
+      - PYTHONPATH=tests uv run python -m mutation.run {{.CLI_ARGS}}
+
+  test:mutation:diff:
+    desc: 'The same, over only the lines this branch changed against main'
+    cmds:
+      - PYTHONPATH=tests uv run python -m mutation.run --since origin/main {{.CLI_ARGS}}
+
+  test:mutation:selftest:
+    desc: The harness's own suite including the tests that replant, which the default run gates
+    cmds:
+      - PYTHONPATH=tests uv run pytest tests/mutation --replants {{.CLI_ARGS}}
+
+  test:mutation:report:
+    desc: What the last mutation run concluded, and which survivors are new since the one before
+    cmds:
+      - PYTHONPATH=tests uv run python -m mutation.score {{.CLI_ARGS}}
+
+  test:redundancy:
+    desc: 'Prove which tests catch nothing another test also catches: task test:redundancy -- tests/resolver/test_versions.py'
+    cmds:
+      - PYTHONPATH=tests uv run python -m mutation.redundancy {{.CLI_ARGS}}
 
   # The ladder, cheapest rung first. `tests/e2e/levels.py` is what each one costs
   # and what it can answer; these exist so reaching for the right one is typing a
@@ -200,6 +231,11 @@ tasks:
     desc: Rank docs pages by how much of each restates a module docstring
     cmds:
       - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py {{.CLI_ARGS}}"
+
+  docs:duplication:harness:
+    desc: The same, for the mutation harness README against the package it sits beside
+    cmds:
+      - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py --pages tests/mutation --code tests/mutation --max 200 {{.CLI_ARGS}}"
 
   # ================================================================
   # WSL

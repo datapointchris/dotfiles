@@ -9,8 +9,10 @@ test may touch** rather than by how long it takes:
   `--e2e`.
 - **`docker`** — installs a whole machine in a container. Deselected unless
   `--docker`.
+- **`replants`** — the mutation harness's own tests that drive a real pytest
+  against a real toy package. Deselected unless `--replants`.
 
-`task --list-all` names the entry points. `tests/conftest.py` declares the two
+`task --list-all` names the entry points. `tests/conftest.py` declares the three
 opt-in tiers, and carries why the deselection lives there rather than in
 `addopts`.
 
@@ -30,6 +32,49 @@ with nothing in `src/dotfiles/` stubbed. The rule, and the four things that send
 a test to `tests/resources/` instead, are the module docstring in
 `tests/matrix/__init__.py`. `tests/matrix/harness.py` carries why the two
 import-time seams need rebinding rather than an environment variable.
+
+## Tests are flat functions, grouped by a section comment
+
+The great majority of test files already are, so this is the house style rather
+than a new rule — `rg -c '^class Test' tests/` counts the exceptions against
+`fd -e py 'test_' tests/`. A file groups with a `# ────` band carrying the
+section's prose, and `-k` selects on the name, which is why every test name here
+is a declarative sentence rather than a noun.
+
+**A guarantee shared by a whole group is an autouse fixture, not a class-level
+marker.** That is the one thing a class carried that a section comment cannot,
+and `tests/install/test_bundle_build.py` is the worked case: six classes each
+carrying `@pytest.mark.usefixtures('declaration')` became one autouse fixture
+saying the same thing once.
+
+## Coverage says a line ran; the mutation harness says whether anything asserted on it
+
+`dotfiles report upload` shipped selecting run records by the wrong identifier
+while the suite held 3468 tests at 87.77% line coverage. `report._send` had zero
+executed statements and a file named for the verb held four tests, every one of
+them exercising a pure leaf helper. Coverage cannot report that, because a
+module counts covered the moment it is imported.
+
+`tests/mutation/` answers the question coverage cannot. It plants one bug at a
+time, runs only the tests that execute that line, and counts the bugs nobody
+noticed. A line no test executes comes back UNREACHED without a pytest being
+spawned at all, which is what would have answered the defect above in seconds.
+
+```sh
+task test:mutation                       # the modules targets.py names
+task test:mutation:diff                  # only the lines this branch changed
+task test:redundancy -- <test file>      # prove a test catches nothing another does
+```
+
+`tests/mutation/README.md` is the reference — the four buckets, what makes a
+number believable, and how a deletion is proved rather than argued. It is not in
+this nav because it sits beside the code it describes and is read there.
+
+**It is wired into nothing.** Neither pre-commit nor CI runs it, per
+`standards/ci.md` § "Don't wire a slow integration hook into pre-commit" — a full
+run is tens of minutes. `task test:mutation:diff` over one branch's changed lines
+is the shape that could be, and `targets.THRESHOLD` is the floor waiting for
+something to enforce it.
 
 ## Drive real shells from pytest, not from a second framework
 

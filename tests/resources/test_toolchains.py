@@ -202,6 +202,11 @@ def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_d
 
 
 def test_a_toolchain_meeting_its_floor_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:
+    """Silence covers the module env as well as the version, because `stub` writes
+    `GONOSUMDB` by default — so this arrangement is already the converged one on
+    both counts. The repair is `go env -w`, which is idempotent, and a converged
+    machine that spoke would have every apply rewriting a file that was right.
+    """
     stub(bin_dir, 'uv')
     stub(bin_dir, 'go')
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
@@ -228,16 +233,6 @@ def test_an_unset_go_module_env_is_stale_on_a_toolchain_that_is_otherwise_curren
     assert found[0].repair is Repair.AUTOMATIC, 'an apply can write this itself'
     assert 'GONOSUMDB is unset' in found[0].detail
     assert installers.GONOSUMDB in found[0].advice, 'and says the command when a person wants to do it'
-
-
-def test_a_go_module_env_already_holding_the_declared_value_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:
-    """The repair is `go env -w`, which is idempotent — so a converged machine has
-    to be silent or every apply rewrites a file that was already right."""
-    stub(bin_dir, 'uv')
-    stub(bin_dir, 'go')
-    live = session(tmp_path, {**BARE, 'go_tools': ['task']})
-
-    assert changes(live) == ()
 
 
 def test_a_toolchain_below_its_floor_is_stale(tmp_path: Path, bin_dir: Path) -> None:

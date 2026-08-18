@@ -74,6 +74,17 @@ an exception that was false.
 RELEASE_URL_PATTERN = re.compile(r'^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$')
 
 
+class Unreadable(Exception):
+    """The release API could not be read, so what upstream published is unknown.
+
+    Raised only where the alternative is a wrong sentence rather than a missing
+    one. `tag_for_version` answering None makes the caller say a pin names a
+    release that does not exist, which sends whoever reads it to `packages.yml`
+    to correct a version that was right — and 60 anonymous API calls an hour is
+    fewer than one full install spends.
+    """
+
+
 class Verification(enum.IntEnum):
     """Values are the CLI's exit codes, so the shell library can `case` on `$?`."""
 
@@ -91,6 +102,17 @@ class Verification(enum.IntEnum):
     library. It is not UNPUBLISHED either: something *is* published, so a tool in
     this state is one upstream fix away from being verifiable, and collapsing the
     two would hide that fix when it lands.
+    """
+
+    UNREADABLE = 4
+    """The release could not be read, so what it publishes is unknown.
+
+    A release that publishes nothing is a fact about upstream and a declaration
+    can accept it. This is a fact about the attempt, and no declaration can
+    accept it, because it says nothing about the bytes on disk. Collapsing it
+    into UNPUBLISHED is how a rate-limited API turns `checksum: unpublished`
+    into an unverified install: the asset downloads from the CDN, whose limits
+    are separate, and only the verification degrades.
     """
 
 
@@ -265,13 +287,17 @@ def request(url: str, accept: str | None = None) -> bytes:
     return response.content
 
 
-def release_assets(repo: str, tag: str) -> dict[str, int]:
-    """{name: id} for a tag's assets, empty when the release cannot be read."""
+def release_assets(repo: str, tag: str) -> dict[str, int] | None:
+    """{name: id} for a tag's assets, or None when the release could not be read.
+
+    Three answers rather than two, over the distinction `remote.listed` already
+    draws: `{}` is a release that publishes nothing, and None is not knowing.
+    """
     encoded = urllib.parse.quote(tag, safe='')
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
     except (httpx2.HTTPError, json.JSONDecodeError):
-        return {}
+        return None
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
 
@@ -365,11 +391,16 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
 
     None is a refusal, not a fallback. Answering "latest" for a pin nothing
     matches would defeat the only thing a pin does.
+
+    A list that could not be read raises rather than answering None, over the
+    same distinction `release_assets` draws: not knowing what upstream published
+    is not the same finding as upstream having published nothing, and the caller
+    renders the second as "publishes no release for that version".
     """
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
-    except (httpx2.HTTPError, json.JSONDecodeError):
-        return None
+    except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
+        raise Unreadable(f'could not read the releases of {repo}, so its published versions are unknown') from unreachable
 
     wanted = version.removeprefix('v')
     for release in releases:
@@ -440,7 +471,11 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
     first = ''
 
     if github_token() and repo and tag and asset_name:
-        asset_id = release_assets(repo, tag).get(asset_name)
+        # An unreadable release falls through to the public URL, which is the
+        # right answer for a download: the asset may well be fetchable when the
+        # API is not. Only verification treats not knowing as a refusal.
+        published = release_assets(repo, tag) or {}
+        asset_id = published.get(asset_name)
         if asset_id is not None:
             try:
                 destination.write_bytes(
@@ -514,7 +549,12 @@ def verify_release_checksum(
         if not repo or not tag:
             return Verification.UNPUBLISHED
 
-        checksum_asset = select_checksum_asset(sorted(release_assets(repo, tag)), asset_name)
+        published = release_assets(repo, tag)
+        if published is None:
+            log_error(f'Could not read the release {tag} of {repo}, so its checksums are unknown')
+            return Verification.UNREADABLE
+
+        checksum_asset = select_checksum_asset(sorted(published), asset_name)
         if checksum_asset is None:
             return Verification.UNPUBLISHED
         from_sidecar = checksum_asset.endswith(CHECKSUM_SIDECAR_SUFFIXES)

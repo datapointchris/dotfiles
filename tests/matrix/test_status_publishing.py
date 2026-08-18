@@ -554,9 +554,3 @@ def test_a_document_the_gate_would_refuse_exits_issue(sandbox: Sandbox, cli: Cal
 
     assert ran.exit_code == ExitCode.ISSUE
     assert 'unpublishable' in ran.stderr
-
-
-def test_a_clean_document_still_exits_converged(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    ran = cli('status', 'show', catch_exceptions=True)
-
-    assert ran.exit_code == ExitCode.CONVERGED

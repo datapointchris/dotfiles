@@ -152,13 +152,23 @@ def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
     return all_packages
 
 
+ARCH_MARKER = Path('/etc/arch-release')
+"""What splits Linux into Arch and everything else, and then pacman from apt.
+
+Named rather than written inline so a test can answer it. Read off the running
+box, the expectation has to consult the same file the code does, and the
+assertion then holds whatever either of them says — which is no assertion at
+all on the runner that gates the merge.
+"""
+
+
 def get_current_platform() -> Platform:
     """Detect the current operating system platform."""
     system = platform.system()
     if system == 'Darwin':
         return Platform.MACOS
     if system == 'Linux':
-        if Path('/etc/arch-release').exists():
+        if ARCH_MARKER.exists():
             return Platform.ARCH
         return Platform.LINUX
     return Platform.UNKNOWN
@@ -260,6 +270,19 @@ def format_status(status: InstallStatus, path: str | None) -> str | None:
     return colorize('✗ not installed', Color.BRIGHT_BLACK)
 
 
+DESCRIPTION_COLUMN = 35
+
+
+def truncated_description(description: str) -> str:
+    """What the verbose listing's description column holds.
+
+    A name rather than an inline slice, so the width is asserted by asking this
+    rather than by looking for an absence in a printed line — at the wrong
+    terminal width that absence is true for a reason nobody chose.
+    """
+    return description[:DESCRIPTION_COLUMN]
+
+
 def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
     """Calculate optimal column widths for a list of items."""
     max_widths = max_widths or {}
@@ -277,45 +300,68 @@ def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def section_counts(data: dict[str, Any]) -> dict[str, int]:
+    """How many entries each section declares, sections with none left out.
+
+    The value both `sections` and `stats` render, named once so a caller can ask
+    for it instead of counting the words in a printed row.
+    """
+    counted = {section: sum(1 for _ in iter_section_entries(data, section)) for section in PACKAGE_SECTIONS}
+    return {section: count for section, count in counted.items() if count}
+
+
+def tag_counts(data: dict[str, Any]) -> dict[str, int]:
+    """How many packages carry each tag, most-used first."""
+    counted: Counter[str] = Counter()
+    for pkg in get_all_packages(data):
+        counted.update(pkg.get('tags', []))
+    return dict(counted.most_common())
+
+
 def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List all package sections with counts."""
+    counted = section_counts(data)
+    if args.json:
+        print(json.dumps(counted, indent=2))
+        return
+
     print_section('Package Sections')
     print()
-    for section in PACKAGE_SECTIONS:
-        packages = list(iter_section_entries(data, section))
-        if packages:
-            print(f'  {section:<20} {len(packages):3d} packages')
+    for section, count in counted.items():
+        print(f'  {section:<20} {count:3d} packages')
 
 
 def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Show package statistics by section."""
+    counted = section_counts(data)
+    if args.json:
+        print(json.dumps({'sections': counted, 'total': sum(counted.values())}, indent=2))
+        return
+
     print_section('Package Statistics')
     print()
 
     print(f'{"Section":<24} {"Count":>5}')
     print('─' * 32)
 
-    total = 0
-    for section in PACKAGE_SECTIONS:
-        count = sum(1 for _ in iter_section_entries(data, section))
-        if count:
-            print(f'{section:<24} {count:5d}')
-            total += count
+    for section, count in counted.items():
+        print(f'{section:<24} {count:5d}')
 
     print('─' * 32)
-    print(f'{"Total":<24} {total:5d}')
+    print(f'{"Total":<24} {sum(counted.values()):5d}')
 
 
 def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """List all tags with package counts."""
+    counted = tag_counts(data)
+    if args.json:
+        print(json.dumps(counted, indent=2))
+        return
+
     print_section('Available Tags')
     print()
 
-    tag_counts: Counter[str] = Counter()
-    for pkg in get_all_packages(data):
-        tag_counts.update(pkg.get('tags', []))
-
-    if not tag_counts:
+    if not counted:
         print('  No tags defined yet.')
         print()
         print('  Add tags to packages.yml entries:')
@@ -324,7 +370,7 @@ def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print('      tags: [gui, terminal]')
         return
 
-    for tag, count in tag_counts.most_common():
+    for tag, count in counted.items():
         print(f'  {tag:<16} {count:3d} packages')
 
 
@@ -363,6 +409,32 @@ def _listing(named: list[str]) -> str:
     return f'dotfiles packages list --source {named[0]}' if len(named) == 1 else 'dotfiles packages list'
 
 
+PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
+METADATA_FIELDS = (('package', 'Package'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
+
+
+def described(pkg: dict[str, Any]) -> dict[str, Any]:
+    """Everything `show` reports about one package, as values.
+
+    `installed` and `path` are None where the package is not available on this
+    platform, which is the state the rendered form says by printing no status
+    line at all — a distinction a reader of the text cannot make from one whose
+    probe simply found nothing.
+    """
+    status, path = check_installed(pkg) if is_available_on_platform(pkg) else (None, None)
+    return {
+        'name': pkg['name'],
+        'description': pkg.get('description', ''),
+        'section': pkg['_section'],
+        'tags': pkg.get('tags', []),
+        'platforms': {field: pkg[field] for field in PLATFORM_FIELDS if field in pkg},
+        'metadata': {field: pkg[field] for field, _ in METADATA_FIELDS if field in pkg},
+        'available': is_available_on_platform(pkg),
+        'installed': status.value if status is not None else None,
+        'path': str(path) if path else None,
+    }
+
+
 def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     """Show details for a specific package, inside whatever sections were named.
 
@@ -389,6 +461,10 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     # Sort with available-on-this-platform first
     matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)
 
+    if args.json:
+        print(json.dumps([described(pkg) for pkg in matches], indent=2))
+        return
+
     for pkg in matches:
         print()
         print(colorize(f'Package: {pkg["name"]}', Color.CYAN))
@@ -399,16 +475,13 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print(f'Section:     {pkg["_section"]}')
         print(f'Tags:        {", ".join(pkg.get("tags", [])) or "none"}')
 
-        # Platform package names
-        platform_fields = ('apt', 'brew', 'pacman', 'aur')
-        platforms = [(f, pkg[f]) for f in platform_fields if f in pkg]
+        platforms = [(f, pkg[f]) for f in PLATFORM_FIELDS if f in pkg]
         if platforms:
             print('\nPlatform Packages:')
             for field, value in platforms:
                 print(f'  {field}:    {value}')
 
-        # Additional metadata fields
-        for field, label in (('package', 'Package'), ('repo', 'Repository'), ('github_repo', 'GitHub')):
+        for field, label in METADATA_FIELDS:
             if field in pkg:
                 print(f'{label}:     {pkg[field]}')
 
@@ -492,12 +565,12 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     widths = calculate_column_widths(results, ['name', 'section'], max_widths={'name': 30})
 
     if args.verbose:
-        print(f'{"Name":<{widths["name"]}} {"Section":<{widths["section"]}} {"Description":<35} Tags')
+        print(f'{"Name":<{widths["name"]}} {"Section":<{widths["section"]}} {"Description":<{DESCRIPTION_COLUMN}} Tags')
         print('─' * (widths['name'] + widths['section'] + 50))
         for pkg in results:
             tags_str = ', '.join(pkg['tags'])
-            desc = pkg['description'][:35]
-            print(f'{pkg["name"]:<{widths["name"]}} {pkg["section"]:<{widths["section"]}} {desc:<35} {tags_str}')
+            desc = truncated_description(pkg['description'])
+            print(f'{pkg["name"]:<{widths["name"]}} {pkg["section"]:<{widths["section"]}} {desc:<{DESCRIPTION_COLUMN}} {tags_str}')
     else:
         for pkg in results:
             print(f'{pkg["name"]:<{widths["name"]}} {pkg["description"]}')
@@ -561,20 +634,22 @@ def main(argv: list[str] | None = None) -> None:
 
     subparsers = parser.add_subparsers(dest='command')
 
-    # sections command
-    sections_parser = subparsers.add_parser('sections', help='List all sections')
+    def reading(name: str, help: str) -> argparse.ArgumentParser:
+        """A read verb, which speaks `--json` — standards/api-design.md § "`--json` on every read"."""
+        added = subparsers.add_parser(name, help=help)
+        added.add_argument('--json', action='store_true', help='Output as JSON')
+        return added
+
+    sections_parser = reading('sections', 'List all sections')
     sections_parser.set_defaults(func=cmd_sections)
 
-    # stats command
-    stats_parser = subparsers.add_parser('stats', help='Show package counts')
+    stats_parser = reading('stats', 'Show package counts')
     stats_parser.set_defaults(func=cmd_stats)
 
-    # tags command
-    tags_parser = subparsers.add_parser('tags', help='List all tags')
+    tags_parser = reading('tags', 'List all tags')
     tags_parser.set_defaults(func=cmd_tags)
 
-    # show command
-    show_parser = subparsers.add_parser('show', help='Show package details')
+    show_parser = reading('show', 'Show package details')
     show_parser.add_argument('name', help='Package name')
     show_parser.add_argument('--section', action='append', help='Only look in this section (repeatable)')
     show_parser.set_defaults(func=cmd_show)

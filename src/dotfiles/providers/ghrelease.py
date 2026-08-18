@@ -114,7 +114,10 @@ def install(
     if build is None:
         return Result(False, f'nothing in providers.releases names an asset for {entry.name}', kind=Kind.DECLARATION_INVALID)
 
-    tag = tag or resolve_tag(entry, offline=offline)
+    try:
+        tag = tag or resolve_tag(entry, offline=offline)
+    except github_release.Unreadable as unreachable:
+        return Result(False, str(unreachable), kind=Kind.VERSION_UNRESOLVED)
     if tag is None:
         return Result(False, unresolved(entry, offline=offline), kind=Kind.VERSION_UNRESOLVED)
 
@@ -292,6 +295,12 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
         return ''
     if outcome is github_release.Verification.FAILED:
         return f'checksum mismatch for {asset_name}'
+    if outcome is github_release.Verification.UNREADABLE:
+        # No `excused_by`, so no declaration reaches it. `unpublished` is the
+        # author saying upstream publishes nothing, which is a claim about the
+        # release; this is not knowing what the release holds, and the bytes are
+        # unverified either way.
+        return _permitted(entry, f'the release {tag} of {entry.repo} could not be read, so its checksums are unknown')
     if outcome is github_release.Verification.UNPUBLISHED:
         return _permitted(entry, f'{entry.repo} publishes no checksum file for {tag}', catalog.CHECKSUM_UNPUBLISHED)
     return _permitted(entry, f"{entry.repo}'s checksums file for {tag} does not name {asset_name}", catalog.CHECKSUM_UNLISTED)

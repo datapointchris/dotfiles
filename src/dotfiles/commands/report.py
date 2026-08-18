@@ -365,12 +365,16 @@ def _send(identifier: str | None) -> tuple[str, int]:
     already = frozenset(transport.listed(where, directory) or ())
     identities = publishing.identifying(trust)
     sent = 0
-    for record in chosen:
-        for local in (record, record.with_suffix('.jsonl')):
-            if not local.is_file() or local.name in already:
-                continue
-            transport.push(where, _masked_copy(local, identities), directory)
-            sent += 1
+    # One directory for the whole send, removed when it ends. A record and its
+    # log share a stem and differ by suffix, and two runs cannot share a
+    # filename, so nothing staged here collides.
+    with tempfile.TemporaryDirectory(prefix='dotfiles-report-') as staging:
+        for record in chosen:
+            for local in (record, record.with_suffix('.jsonl')):
+                if not local.is_file() or local.name in already:
+                    continue
+                transport.push(where, _masked_copy(local, identities, Path(staging)), directory)
+                sent += 1
     return directory, sent
 
 
@@ -390,18 +394,28 @@ def _screened(payload: object, identities: Mapping[str, str]) -> object:
     return publishing.masked(publishing.rooted(payload, str(Path.home())), identities)
 
 
-def _masked_copy(local: Path, identities: Mapping[str, str]) -> Path:
-    """The same file with every identifying name taken out, written beside itself.
+def _masked_copy(local: Path, identities: Mapping[str, str], into: Path) -> Path:
+    """The same file with every identifying name taken out, written into `into`.
 
-    A temporary copy rather than a rewrite, because the record on this machine is
-    the account of what happened here and screening it in place would take that
-    away from the one box entitled to it.
+    A copy rather than a rewrite, because the record on this machine is the
+    account of what happened here and screening it in place would take that away
+    from the one box entitled to it.
+
+    **The caller owns the directory, and that is what makes it disposable.** A
+    `mkdtemp` here answers to nobody: every file sent leaves a directory that
+    nothing removes, and where `/tmp` is a tmpfs those are resident pages. A
+    scheduled check that uploads twice a day then fills memory on a timer.
 
     `.jsonl` is handled line by line so the file stays line-delimited JSON: the
     whole file is not one document, and a raw-text pass would hold until a name
     contained a character JSON escapes.
     """
-    staged = Path(tempfile.mkdtemp(prefix='dotfiles-report-')) / local.name
+    if into.resolve() == local.parent.resolve():
+        # The copy keeps the record's filename, so staging into its own directory
+        # screens it in place — and the account of what happened on this box is
+        # then gone, which is the one thing the copy exists to prevent.
+        raise ValueError(f'{into} is where the record already lives, so staging there would overwrite it')
+    staged = into / local.name
     if local.suffix == '.jsonl':
         lines = (_screened(json.loads(line), identities) for line in local.read_text().splitlines() if line.strip())
         staged.write_text(''.join(json.dumps(line) + '\n' for line in lines))

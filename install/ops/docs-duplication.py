@@ -11,10 +11,15 @@ in the hundreds. `standards/documentation.md` § "A page never restates a module
 docstring" is the rule, and `docs/development/docs-audit.md` § "Third pass" is
 the measurement this threshold came from.
 
-Two limits, both deliberate. It compares against `src/dotfiles/` only, so it is
-blind to two pages stating one subject. And a high score is a question rather
-than a verdict — shared vocabulary is not duplication, so read the runs before
-cutting. `--runs` prints them.
+`--pages` and `--code` point it at another pair, which is how the mutation
+harness's README is ranked against the package it sits beside. A README beside
+its own code shares more vocabulary than a page in `docs/` does, so `LOUD` is
+calibrated for the default pair and reads high there.
+
+Two limits, both deliberate. It compares one directory of prose against one of
+code, so it is blind to two pages stating one subject. And a high score is a
+question rather than a verdict — shared vocabulary is not duplication, so read
+the runs before cutting. `--runs` prints them.
 """
 
 from __future__ import annotations
@@ -43,10 +48,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runs', metavar='PAGE', help='print the shared runs for one page instead of the ranking')
     parser.add_argument('--max', type=int, default=LOUD, help=f'exit non-zero if any page scores above this (default {LOUD})')
+    parser.add_argument('--pages', default='docs', help='directory of markdown to rank (default docs)')
+    parser.add_argument('--code', default='src/dotfiles', help='directory of Python to compare against (default src/dotfiles)')
     parsed = parser.parse_args()
 
     root = Path(__file__).resolve().parents[2]
-    package = shingles(' '.join(path.read_text() for path in (root / 'src' / 'dotfiles').rglob('*.py')))
+    package = shingles(' '.join(path.read_text() for path in (root / parsed.code).rglob('*.py')))
 
     if parsed.runs:
         page = Path(parsed.runs) if Path(parsed.runs).is_absolute() else root / parsed.runs
@@ -54,7 +61,7 @@ def main() -> int:
             print(run)
         return 0
 
-    scored = sorted(((len(shingles(page.read_text()) & package), page) for page in (root / 'docs').rglob('*.md')), reverse=True)
+    scored = sorted(((len(shingles(page.read_text()) & package), page) for page in (root / parsed.pages).rglob('*.md')), reverse=True)
     for score, page in scored:
         print(f'{score:5d}  {page.relative_to(root)}')
     print(f'\n{sum(score for score, _ in scored)} across {len(scored)} pages')

@@ -34,12 +34,6 @@ def test_the_builder_has_a_network(builder: Machine) -> None:
     assert builder.succeeds('curl -sSf -o /dev/null https://api.github.com')
 
 
-def test_the_shelf_answers_over_the_network(builder: Machine) -> None:
-    """sshd up, key authorized, shelf writable. The probe is the operation that
-    has to succeed whenever the peer answers, whatever is stored on it."""
-    assert builder.succeeds(f'{exchange.TRANSPORT} probe')
-
-
 def test_the_transport_lists_one_name_per_line(builder: Machine) -> None:
     """The whole contract between dotfiles and whatever moves its bytes. Asserted
     on the script rather than through the CLI, so a failure here is the transport

@@ -507,6 +507,26 @@ class TestTagResolution:
         assert result.kind is Kind.VERSION_UNRESOLVED
         assert 'publishes no release for' in result.detail
 
+    def test_a_pin_whose_releases_could_not_be_read_says_so_instead(self, home, bundle, monkeypatch):
+        """Same refusal, opposite cause, and the sentence is the whole difference.
+
+        60 anonymous API calls an hour is fewer than one full install spends, so
+        this is the reachable state — and reporting it as an unpublished version
+        sends whoever reads it to `packages.yml` to correct a pin that was right.
+        """
+
+        def refuse(repo, version, prefix):
+            raise github_release.Unreadable(f'could not read the releases of {repo}, so its published versions are unknown')
+
+        monkeypatch.setattr(github_release, 'tag_for_version', refuse)
+
+        result = ghrelease.install(entry('lazygit', version='0.56.0'), LINUX)
+
+        assert not result.ok
+        assert result.kind is Kind.VERSION_UNRESOLVED
+        assert 'could not read the releases' in result.detail
+        assert 'publishes no release for' not in result.detail, 'the wrong sentence is the defect, not the refusal'
+
 
 class TestPreconditions:
     def test_a_tool_with_no_asset_function_refuses_rather_than_crashing(self, home, bundle):

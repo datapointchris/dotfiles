@@ -105,17 +105,11 @@ def test_a_manifest_flag_overrides_the_declared_default(tmp_path: Path) -> None:
     assert values['BETA_FLAG'] == 'false'
 
 
-def test_generated_lines_are_exported(tmp_path: Path) -> None:
-    """nvim reads these through `vim.env`, so a bare assignment would not reach it."""
-    section = envfile.render(machine(tmp_path))
-
-    assert 'export MACHINE=' in section
-    assert 'export ALPHA_FLAG=' in section
-
-
 def test_generated_lines_let_the_ambient_environment_win(tmp_path: Path) -> None:
     """`ZSHRC_DEBUG=1 zsh` is the documented way to debug startup and `.zshrc`
-    sources this file — a bare assignment would clobber the ambient value."""
+    sources this file — a bare assignment would clobber the ambient value. It has
+    to be `export` rather than a plain assignment for a second reason: nvim reads
+    these through `vim.env`, which a shell-local variable never reaches."""
     section = envfile.render(machine(tmp_path))
 
     assert 'export MACHINE="${MACHINE:-box}"' in section

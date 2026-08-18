@@ -21,6 +21,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from relay import install_spy
+from relay import recorded
 
 from dotfiles import checkout
 from dotfiles import paths
@@ -247,3 +249,136 @@ def test_update_check_reports_the_position_without_pulling(clone: Path, remote: 
     assert result.returncode == ExitCode.DRIFT
     assert '1 commit behind origin/main' in result.stdout
     assert not (clone / 'second.md').exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The two repairs, which is the half of `update` that changes the machine
+#
+# Both shell out, and both were unreached: every pull above touches a file that
+# is neither deployed nor a dependency, precisely so the repairs stay asleep. A
+# spy first on PATH is what lets them run — and `uv tool install --reinstall`
+# deletes and recreates the virtualenv this suite is running from, so the
+# assertion that the spy recorded the call is also the proof the real one did
+# not. `tests/conftest.py`'s `INSTALLING` guard cannot reach here: it patches
+# `subprocess` in this process, and the command under test is a child.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def repairs(fake_bin: Path, tmp_path: Path) -> Path:
+    """`dotfiles` and `uv` shadowed by recording spies, and the file they write to."""
+    record = tmp_path / 'repairs.jsonl'
+    install_spy(fake_bin, record, name='dotfiles')
+    install_spy(fake_bin, record, name='uv')
+    return record
+
+
+def deployed_commit(repo: Path, name: str = 'configs/common/.config/x.conf') -> None:
+    (repo / name).parent.mkdir(parents=True, exist_ok=True)
+    (repo / name).write_text('changed\n')
+    git(repo, 'add', name)
+    git(repo, 'commit', '-m', f'change {name}')
+
+
+def test_a_pull_touching_a_deployed_file_rebuilds_the_symlinks(clone: Path, remote: Path, repairs: Path) -> None:
+    """A moved file under `configs/` leaves the machine linked to a path that no
+    longer exists, and nothing else notices until the program that reads it fails."""
+    deployed_commit(remote)
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert recorded(repairs) == [['symlinks', 'apply']]
+    assert 'rebuilding symlinks' in result.stderr
+
+
+def test_a_pull_touching_nothing_deployed_leaves_the_symlinks_alone(clone: Path, remote: Path, repairs: Path) -> None:
+    """The negative half, because a repair that always runs is indistinguishable
+    from one that runs when it should."""
+    commit(remote, 'notes.md', 'prose\n')
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert recorded(repairs) == []
+
+
+def test_a_pull_changing_the_dependency_set_reinstalls_the_tool_venv(clone: Path, remote: Path, repairs: Path) -> None:
+    """Code changes never stale an editable install — uv points at the working
+    tree. The dependency set is resolved once, so these two files are the whole
+    of what a rebuild can be needed for."""
+    commit(remote, 'pyproject.toml', '[project]\nname = "x"\n')
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert recorded(repairs) == [['tool', 'install', '--reinstall', '--editable', str(clone)]]
+    assert 'rebuilding the tool venv' in result.stderr
+
+
+def test_both_repairs_run_in_the_order_the_venv_rebuild_demands(clone: Path, remote: Path, repairs: Path) -> None:
+    """The reinstall replaces the virtualenv this interpreter is running from, so
+    anything after it never happens. Relinking has to be first."""
+    (remote / 'configs' / 'common' / '.config').mkdir(parents=True)
+    (remote / 'configs' / 'common' / '.config' / 'x.conf').write_text('changed\n')
+    (remote / 'uv.lock').write_text('version = 1\n')
+    git(remote, 'add', 'configs', 'uv.lock')
+    git(remote, 'commit', '-m', 'change both')
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'tool']
+
+
+def test_a_failed_venv_rebuild_exits_issue_rather_than_reporting_success(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """`os._exit` skips every handler, so the code it carries is the only answer a
+    caller gets — and it is chosen from the reinstall rather than from the pull."""
+    record = tmp_path / 'failed.jsonl'
+    install_spy(fake_bin, record, name='uv', code=1)
+    commit(remote, 'uv.lock', 'version = 1\n')
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.ISSUE
+    assert recorded(record) == [['tool', 'install', '--reinstall', '--editable', str(clone)]]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The three refusals
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_update_outside_a_git_repository_refuses_before_pulling(tmp_path: Path, repairs: Path) -> None:
+    """`DOTFILES_DIR` naming a directory that is not a checkout, which is what a
+    half-finished rebuild leaves behind."""
+    bare = tmp_path / 'not-a-repo'
+    bare.mkdir()
+
+    result = run_update(bare)
+
+    assert result.returncode != ExitCode.CONVERGED
+    assert 'is this a git repository' in result.stderr
+    assert recorded(repairs) == [], 'nothing may be repaired on a tree that was never read'
+
+
+def test_check_reports_an_unreachable_remote_rather_than_a_position(clone: Path) -> None:
+    """The fetch is the network call, and a machine that cannot reach the remote
+    knows nothing about where it stands — reporting `converged` would be a guess."""
+    git(clone, 'remote', 'set-url', 'origin', str(clone / 'nowhere'))
+
+    result = run_update(clone, '--check')
+
+    assert result.returncode == ExitCode.ISSUE
+    assert 'could not reach the remote' in result.stderr
+
+
+def test_check_on_a_checkout_tracking_nothing_says_so_and_converges(clone: Path) -> None:
+    """A branch with no upstream is a legitimate state, not a fault: there is
+    nothing to be behind."""
+    git(clone, 'checkout', '--quiet', '-b', 'local-only')
+
+    result = run_update(clone, '--check')
+
+    assert result.returncode == ExitCode.CONVERGED
+    assert 'tracks no upstream branch' in result.stderr

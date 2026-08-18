@@ -34,8 +34,9 @@ skips = ["B113", "B311"]
 skip = '*.css.map'
 # Each of these is a name or literal, not prose: ags and noice are tools
 # (Aylur's GTK Shell, folke/noice.nvim), fpr is gpg's fingerprint record field,
-# te is a `<leader>te` keybinding, afterall is a test-framework hook.
-ignore-words-list = "astroid,aNULL,ANULL,anull,ags,noice,fpr,te,afterall,unparseable"
+# te is a `<leader>te` keybinding, afterall is a test-framework hook, notin is
+# the `ast.NotIn` comparison node.
+ignore-words-list = "astroid,aNULL,ANULL,anull,ags,noice,fpr,te,afterall,unparseable,notin"
 check-filenames = true
 
 
@@ -44,6 +45,19 @@ parallel = true
 branch = true
 source = ["install", "src/dotfiles"]
 omit = []
+# Without these a test that drives the CLI through `python -m dotfiles.main`
+# measures nothing: `commands/manage.py::update` read 0% while
+# `tests/cli/test_update.py` was exercising it against real git repositories.
+# pytest-cov 7 dropped its own subprocess support in favour of them.
+#
+# `subprocess` puts the serialized config in the environment, which the .pth file
+# coverage ships into site-packages reads at interpreter start. `parallel` above
+# is what gives each of those children a data file of its own.
+#
+# `_exit` and `execv` are the two ways this package leaves a process without
+# running the atexit that saves the data — `update` ends `--reinstall` at
+# `os._exit`, and `edit` hands the process to $EDITOR.
+patch = ["subprocess", "_exit", "execv"]
 
 [tool.coverage.paths]
 install = ["install"]
@@ -52,7 +66,18 @@ dotfiles = ["src/dotfiles"]
 [tool.coverage.report]
 fail_under = 70
 show_missing = true
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@abstractmethod"]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "@abstractmethod",
+  # A Protocol body and a bare NotImplementedError stub are unreachable by
+  # construction, so counting them leaves statements no test can ever take and a
+  # percentage that cannot reach itself. Anchored, because a NotImplementedError
+  # carrying an argument is a real refusal a caller turns into a Refusal, and
+  # `registry.py:163` is one that tests/install/test_provider_seams.py drives.
+  "^\\s*\\.\\.\\.$",
+  "raise NotImplementedError$",
+]
 
 
 [tool.docformatter]
@@ -93,10 +118,13 @@ markers = [
     "e2e: reaches the real network or a real HOME; opt in with --e2e",
     "docker: installs a whole machine in a container; opt in with --docker",
     "interpreter(name): drives a shell this machine may not have; --require-interpreters makes its absence fatal",
+    "replants: spawns its own pytest per mutant, so it costs minutes of CPU; opt in with --replants",
 ]
 # So `harness` imports the same way from tests/e2e and from the root conftest,
-# rather than relying on pytest inserting the test file's directory.
-pythonpath = ["tests/e2e"]
+# rather than relying on pytest inserting the test file's directory. `tests` is
+# here for `mutation`, whose modules import each other and are also run as a
+# command — the Taskfile sets PYTHONPATH for that half.
+pythonpath = ["tests/e2e", "tests"]
 verbosity_assertions = 2
 
 
@@ -180,7 +208,11 @@ managed = [
 dev = [
     "mypy>=1.10.0",
     "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
+    # tests/mutation/subset.py imports it directly, and a transitive dependency
+    # of pytest-cov is not a declaration — docs/learnings/undeclared-transitive-dependency.md
+    # is what that costs. The floor is the version carrying `patch`.
+    "coverage>=7.10.6",
+    "pytest-cov>=7.0.0",
     "pytest-xdist>=3.5.0",
     "types-PyYAML>=6.0.12",
 ]

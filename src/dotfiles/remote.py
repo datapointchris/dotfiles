@@ -415,7 +415,7 @@ class Answer:
     attempts: int = 1
 
 
-def answered(remote: Remote, *, attempts: int = PROBE_ATTEMPTS, backoff: float = PROBE_BACKOFF_SECONDS) -> Answer:
+def answered(remote: Remote, *, attempts: int | None = None, backoff: float | None = None) -> Answer:
     """Ask the declared probe whether the server is there, retrying a few times.
 
     The retry is the whole reason this is a separate act. One dropped packet is
@@ -423,9 +423,11 @@ def answered(remote: Remote, *, attempts: int = PROBE_ATTEMPTS, backoff: float =
     opposite decisions — carry on with what the remote holds, or stop and go and
     look at the network.
 
-    `attempts` and `backoff` are parameters so a test exercises the loop without
-    waiting on it. Patching `time.sleep` would leave the loop itself untested,
-    which is the half worth pinning.
+    `attempts` and `backoff` default to the module constants and are read at call
+    time, not bound into the signature. `measure` calls this with neither, so a
+    default bound at import is reachable only by rewriting `__kwdefaults__` — and
+    that patch keeps working silently as a no-op after either name changes,
+    costing a test suite ten seconds of real sleeping instead of failing.
 
     The last failure's own words come back with it. Nothing here parses them —
     that is the transport's business — but a person reading "could not reach the
@@ -439,6 +441,8 @@ def answered(remote: Remote, *, attempts: int = PROBE_ATTEMPTS, backoff: float =
     if shutil.which(remote.transport.program) is None:
         return Answer(False, f'{remote.transport.program} is not on PATH')
 
+    attempts = PROBE_ATTEMPTS if attempts is None else attempts
+    backoff = PROBE_BACKOFF_SECONDS if backoff is None else backoff
     spoken = ''
     for attempt in range(1, attempts + 1):
         ran = _ran(remote, Operation.PROBE, effects.Output.QUIET, {})

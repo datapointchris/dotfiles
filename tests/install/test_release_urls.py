@@ -151,12 +151,18 @@ def repo_is_private() -> Callable[[str], bool]:
 
 @pytest.fixture(scope='session')
 def published_assets() -> Callable[[str, str], dict[str, int]]:
-    """Asset names a release publishes, one API call per (repo, tag)."""
+    """Asset names a release publishes, one API call per (repo, tag).
+
+    A release that could not be read fails the case rather than reading as one that publishes nothing, which would turn a
+    rate-limited API into a green run over an unmeasured corpus.
+    """
     cache: dict[tuple[str, str], dict[str, int]] = {}
 
     def lookup(repo: str, tag: str) -> dict[str, int]:
         if (repo, tag) not in cache:
-            cache[(repo, tag)] = github_release.release_assets(repo, tag)
+            published = github_release.release_assets(repo, tag)
+            assert published is not None, f'could not read the release {tag} of {repo}'
+            cache[(repo, tag)] = published
         return cache[(repo, tag)]
 
     return lookup
