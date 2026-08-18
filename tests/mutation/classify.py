@@ -36,11 +36,19 @@ RULE_EVENT_NAME = 'structlog-event-name'
 RULE_CONTROL_FLOW = 'control-flow'
 RULE_DEFAULT = 'default-logic'
 
-RENDER_MODULES = frozenset({'output.py', 'banner.py', 'logging.py'})
+RENDER_MODULES = frozenset({'banner.py', 'logging.py'})
 """Modules whose every constant is rendering.
 
 Their subject *is* the sentence — a colour name, a column width, a tick mark, a log format. Nothing in them is read by a machine
 except through a caller, and the caller's own constants are classified on their own merits.
+
+**`output.py` is not one of them, and that is the point of the exclusion.** It
+holds the fleet's status vocabulary beside its decoration: `MATCHED` is the same
+string `resources` declares, and the keys of `VERDICT_COLOURS`, `VERDICT_MARKS`
+and `CHANGE_COLOURS` are verdicts a machine reads. Marked whole-module, every one
+of them left the score, and a test that pinned one landed in PROSE-PINNED — which
+the gate turns into a refusal. Its decoration is caught by the render-call and
+style rules on its own merits, which is what the narrow rules are for.
 """
 
 RENDER_PREFIXES = ('dotfiles.output.', 'dotfiles.banner.', 'rich.')

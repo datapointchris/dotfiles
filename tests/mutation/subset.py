@@ -188,8 +188,27 @@ def load(
     return found, cached, True
 
 
+def cache_for(root: Path, repo: Path) -> Path:
+    """This checkout's own corner of the machine-global cache.
+
+    Keyed on the repo path rather than on the fingerprint, because the
+    fingerprint already varies per tree state and what has to be separated is
+    the *checkout*: `git worktree list` reports eight here, and a sweep that
+    cannot tell them apart evicts a peer's map.
+    """
+    return root / hashlib.blake2b(str(repo.resolve()).encode(), digest_size=6).hexdigest()
+
+
 def _prune(cache_dir: Path, keep: Path, limit: int = 3) -> None:
-    """Regenerate rather than repair, so old keys are dropped rather than accumulating a directory of maps nobody can date."""
+    """Regenerate rather than repair, so old keys are dropped rather than accumulating a directory of maps nobody can date.
+
+    **The directory is one checkout's, which is what makes the sweep per
+    checkout.** `cache_for` puts each repo root under its own subdirectory, so
+    three maps are kept *each* rather than three between every worktree — and a
+    worktree is the normal way to work here. Each wrong eviction costs the next
+    run a whole-suite pass under `--cov-context=test`. `data.md` § "A cache
+    holding several subjects is swept per subject".
+    """
     found = sorted(cache_dir.glob('contexts-*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
     for stale in [path for path in found if path != keep][limit:]:
         stale.unlink(missing_ok=True)

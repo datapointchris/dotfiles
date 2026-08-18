@@ -40,19 +40,16 @@ import collections
 import dataclasses
 import json
 import os
-import sys
 import tempfile
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Sequence
 from pathlib import Path
 
-if __package__ in (None, ''):  # `python tests/mutation/redundancy.py` rather than an import
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from mutation import run as harness  # noqa: E402
-from mutation import score  # noqa: E402
-from mutation import subset  # noqa: E402
+from dotfiles import paths
+from mutation import run as harness
+from mutation import score
+from mutation import subset
 
 NO_KILLS = 'kills no mutant the operators can plant'
 """Why a test that killed nothing is unprovable rather than deletable.
@@ -513,12 +510,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--refresh-contexts', action='store_true', help='Re-measure which tests execute which line')
     parsed = parser.parse_args(argv)
 
-    from dotfiles import paths
-
     plan = harness.Plan(
         repo=repo,
         source_root=repo / 'src',
-        cache_dir=paths.cache_home() / 'mutation',
+        cache_dir=subset.cache_for(paths.cache_home() / 'mutation', repo),
         jobs=parsed.jobs,
         context_args=('-n', str(max(2, (os.cpu_count() or 4) - 1))),
         record_killers=True,

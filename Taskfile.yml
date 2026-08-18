@@ -122,22 +122,22 @@ tasks:
   test:mutation:
     desc: 'Plant one bug at a time and count the ones nothing noticed: task test:mutation -- src/dotfiles/runs.py'
     cmds:
-      - uv run python tests/mutation/run.py {{.CLI_ARGS}}
+      - PYTHONPATH=tests uv run python -m mutation.run {{.CLI_ARGS}}
 
   test:mutation:diff:
     desc: 'The same, over only the lines this branch changed against main'
     cmds:
-      - uv run python tests/mutation/run.py --since origin/main {{.CLI_ARGS}}
+      - PYTHONPATH=tests uv run python -m mutation.run --since origin/main {{.CLI_ARGS}}
 
   test:mutation:report:
     desc: What the last mutation run concluded, and which survivors are new since the one before
     cmds:
-      - uv run python tests/mutation/score.py {{.CLI_ARGS}}
+      - PYTHONPATH=tests uv run python -m mutation.score {{.CLI_ARGS}}
 
   test:redundancy:
     desc: 'Prove which tests catch nothing another test also catches: task test:redundancy -- tests/resolver/test_versions.py'
     cmds:
-      - uv run python tests/mutation/redundancy.py {{.CLI_ARGS}}
+      - PYTHONPATH=tests uv run python -m mutation.redundancy {{.CLI_ARGS}}
 
   # The ladder, cheapest rung first. `tests/e2e/levels.py` is what each one costs
   # and what it can answer; these exist so reaching for the right one is typing a

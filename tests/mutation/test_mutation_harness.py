@@ -228,13 +228,23 @@ def test_a_constant_is_bucketed_by_the_position_it_sits_in(name: str, source: st
 
 
 def test_every_constant_in_the_render_modules_is_rendering() -> None:
-    found = verdict_for("WIDTH = 11\nCOLOUR = 'anything'\n", 11, Path('src/dotfiles/output.py'))
+    found = verdict_for("WIDTH = 11\nCOLOUR = 'anything'\n", 11, Path('src/dotfiles/banner.py'))
     assert (found.bucket, found.rule) == (classify.RENDERING, classify.RULE_RENDER_MODULE)
+
+
+def test_the_status_vocabulary_is_logic_where_it_sits_beside_the_decoration() -> None:
+    """`output.py` holds the fleet's verdict words next to its colours. Marked a
+    render module it lost `MATCHED` and every `VERDICT_COLOURS` key from the
+    score, and a test pinning one landed in PROSE-PINNED, which the gate refuses
+    on. Its decoration is still caught, by the rules written for decoration."""
+    found = verdict_for("MATCHED = 'matched'\n", 'matched', Path('src/dotfiles/output.py'))
+
+    assert found.bucket == classify.LOGIC
 
 
 def test_control_flow_is_logic_even_in_a_render_module() -> None:
     tree = parsed('def f(a, b):\n    return a == b\n')
-    verdicts = classify.annotate(tree, Path('src/dotfiles/output.py'))
+    verdicts = classify.annotate(tree, Path('src/dotfiles/banner.py'))
     compares = [verdicts[id(node)] for node in ast.walk(tree) if isinstance(node, ast.Compare)]
     assert [(found.bucket, found.rule) for found in compares] == [(classify.LOGIC, classify.RULE_CONTROL_FLOW)]
 

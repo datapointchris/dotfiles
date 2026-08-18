@@ -47,14 +47,24 @@ def discover(repo: Path, tree: str = 'src/dotfiles') -> Iterator[str]:
 
 
 def resolve(repo: Path, named: list[str], everything: bool = False) -> list[str]:
-    """Repo-relative paths for whatever the caller asked for, refusing anything that is not a file in the source tree."""
+    """Repo-relative paths for whatever the caller asked for, refusing anything that is not a file in the source tree.
+
+    **Under `src/`, not merely inside the repo.** A path anywhere in the tree
+    used to resolve, and the run then spent a whole-suite coverage pass before
+    `_write_into` raised `ValueError: not in the subpath of 'src'`. A typo cost
+    minutes and returned a traceback where it should have cost nothing and
+    returned a refusal.
+    """
     if everything:
         return list(discover(repo))
     wanted = named or list(DEFAULT_TARGETS)
+    source_root = (repo / 'src').resolve()
     resolved: list[str] = []
     for name in wanted:
         path = Path(name) if Path(name).is_absolute() else repo / name
         if not path.is_file():
             raise FileNotFoundError(f'{name} is not a file in {repo}')
+        if not path.resolve().is_relative_to(source_root):
+            raise FileNotFoundError(f'{name} is not a file under {source_root}')
         resolved.append(str(path.resolve().relative_to(repo.resolve())))
     return resolved

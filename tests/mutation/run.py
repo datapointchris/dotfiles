@@ -28,21 +28,18 @@ import re
 import shutil
 import signal
 import subprocess
-import sys
 import tempfile
 import time
 from collections.abc import Callable
 from collections.abc import Sequence
 from pathlib import Path
 
-if __package__ in (None, ''):  # `python tests/mutation/run.py` rather than an import
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from mutation import classify  # noqa: E402
-from mutation import planter  # noqa: E402
-from mutation import score  # noqa: E402
-from mutation import subset  # noqa: E402
-from mutation import targets as target_list  # noqa: E402
+from dotfiles import paths
+from mutation import classify
+from mutation import planter
+from mutation import score
+from mutation import subset
+from mutation import targets as target_list
 
 MARKERS = ('pyproject.toml', 'install/packages.yml')
 """What identifies the checkout.
@@ -388,7 +385,10 @@ def measure(
     announce(f'{len(everything)} sites: {len(runnable)} to plant, {len(unreached)} unreached, {len(skipped)} skipped')
 
     control_seconds = 0.0
-    timeout = TIMEOUT_FLOOR
+    # Per target, because a mutant runs one target's subset. Summed, the budget
+    # is as many times too long as there are targets — with `--all` that is 85,
+    # so a flipped loop condition hangs for half an hour instead of being killed.
+    per_target: dict[str, float] = {}
     if runnable:
         with tempfile.TemporaryDirectory(prefix='dotfiles-mutation-') as scratch:
             workers = Workers(plan, Path(scratch))
@@ -398,15 +398,20 @@ def measure(
                 chosen = subset.union(item.tests for item in runnable if item.relative == relative)
                 if not chosen:
                     continue
-                control_seconds += control(plan, shadow, basetemp, relative, sources[relative], chosen)
+                taken = control(plan, shadow, basetemp, relative, sources[relative], chosen)
+                per_target[relative] = max(TIMEOUT_FLOOR, taken * TIMEOUT_FACTOR)
+                control_seconds += taken
                 _write_into(shadow, plan.source_root, relative, sources[relative])
             workers.give_back((shadow, basetemp))
-            timeout = max(TIMEOUT_FLOOR, control_seconds * TIMEOUT_FACTOR)
-            announce(f'control passed in {control_seconds:.1f}s; per-mutant timeout {timeout:.0f}s')
+            longest = max(per_target.values(), default=TIMEOUT_FLOOR)
+            announce(f'control passed in {control_seconds:.1f}s; longest per-mutant timeout {longest:.0f}s')
 
             done = 0
             with concurrent.futures.ThreadPoolExecutor(max_workers=plan.jobs) as pool:
-                futures = {pool.submit(_execute, plan, workers, sources, item, timeout): item for item in runnable}
+                futures = {
+                    pool.submit(_execute, plan, workers, sources, item, per_target.get(item.relative, TIMEOUT_FLOOR)): item
+                    for item in runnable
+                }
                 for future in concurrent.futures.as_completed(futures):
                     result = future.result()
                     results.append(result)
@@ -421,13 +426,11 @@ def measure(
         targets=tuple(relatives),
         results=tuple(sorted(results, key=lambda item: (item.file, item.line, item.col))),
         control_seconds=round(control_seconds, 2),
-        timeout_seconds=round(timeout, 1),
+        timeout_seconds=round(max(per_target.values(), default=TIMEOUT_FLOOR), 1),
     )
 
 
 def _machine_id() -> str:
-    from dotfiles import paths
-
     return paths.MACHINE_ID
 
 
@@ -503,13 +506,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f'{where}  {item.site.kind:18} {item.verdict.bucket:9} {item.verdict.rule:22} {item.site.description}{reason}')
         return 0
 
-    from dotfiles import paths
-
     # The context pass is one whole-suite run and is distributed; the mutant runs are not, because each is already one worker of many.
     plan = Plan(
         repo=repo,
         source_root=repo / 'src',
-        cache_dir=paths.cache_home() / 'mutation',
+        cache_dir=subset.cache_for(paths.cache_home() / 'mutation', repo),
         jobs=parsed.jobs,
         context_args=('-n', str(max(2, (os.cpu_count() or 4) - 1))),
     )

@@ -11,12 +11,15 @@ gives: state is a Syncthing folder, and four boxes writing `<timestamp>.json` wo
 
 from __future__ import annotations
 
+import argparse
 import dataclasses
 import datetime as dt
 import json
 from collections.abc import Iterable
 from collections.abc import Sequence
 from pathlib import Path
+
+from dotfiles import paths
 
 KILLED = 'killed'
 SURVIVED = 'survived'
@@ -262,10 +265,6 @@ def render(run: Run, comparison: Comparison | None = None) -> list[str]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    import argparse
-
-    from dotfiles import paths
-
     parser = argparse.ArgumentParser(description='What the last mutation run concluded, and what changed since the one before it')
     parser.add_argument('--runs-dir', type=Path, default=paths.STATE_HOME / 'mutation-runs')
     parser.add_argument('--machine', default=None, help='Only runs from this box (default: every box that shares the directory)')
