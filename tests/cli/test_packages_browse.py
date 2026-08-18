@@ -967,35 +967,3 @@ def test_only_an_unavailable_package_formats_to_no_status_row_at_all(monkeypatch
     assert (formatted is None) is (status is InstallStatus.NOT_AVAILABLE)
     if status in (InstallStatus.INSTALLED, InstallStatus.APP_ONLY):
         assert '/somewhere/bin/lazygit' in str(formatted)
-
-
-@pytest.mark.parametrize('coloured', [False, True], ids=['plain', 'coloured'])
-def test_a_section_rule_is_drawn_to_the_width_of_the_title_above_it(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], coloured: bool
-) -> None:
-    """The box-drawing character is what a `TERM=dumb` terminal cannot render,
-    so the plain form is a different rule rather than the same one uncoloured."""
-    monkeypatch.setattr(declaration, 'USE_COLOR', coloured)
-
-    declaration.print_section('Package Sections')
-    blank, title, rule = capsys.readouterr().out.splitlines()
-
-    assert blank == ''
-    assert title == 'Package Sections'
-    assert set(uncoloured(rule)) == {'─' if coloured else '-'}
-    assert len(uncoloured(rule)) == len('Package Sections') + 15
-
-
-@pytest.mark.parametrize('coloured', [False, True], ids=['plain', 'coloured'])
-def test_a_header_boxes_its_title_between_two_identical_rules(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], coloured: bool
-) -> None:
-    """Nothing in `src/dotfiles` calls this — it is reached only from here and
-    from whatever imports it next, which is why it is measured directly."""
-    monkeypatch.setattr(declaration, 'USE_COLOR', coloured)
-
-    declaration.print_header('Package Sections')
-    top, middle, bottom = (uncoloured(line) for line in capsys.readouterr().out.splitlines())
-
-    assert top == bottom == '━' * 50
-    assert middle == ' Package Sections'

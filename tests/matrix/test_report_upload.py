@@ -76,28 +76,14 @@ def a_record(sandbox: Sandbox, host: str, stamp: str = '20260817T120000Z', verb:
 
 
 @pytest.mark.parametrize('named', HOSTNAMES, indirect=True)
-def test_this_box_s_record_and_its_log_both_reach_the_shelf(
-    sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
-) -> None:
-    """Both files, because each answers half of a failure — the record carries a
-    run's scope and the log carries its cause."""
-    a_record(sandbox, named)
-
-    ran = cli('report', 'upload')
-
-    assert ran.exit_code == ExitCode.CONVERGED
-    assert sorted(path.name for path in shelf(server).iterdir()) == [
-        f'20260817T120000Z-{named}-check.json',
-        f'20260817T120000Z-{named}-check.jsonl',
-    ]
-
-
-@pytest.mark.parametrize('named', HOSTNAMES, indirect=True)
 def test_a_peer_s_record_stays_on_the_machine_that_wrote_it(
     sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
 ) -> None:
     """`$XDG_STATE_HOME` is a Syncthing folder on the fleet, so the runs directory
-    holds every box's records and this shelf is one box's."""
+    holds every box's records and this shelf is one box's. Both of this box's
+    files go and neither of the peer's does — the record carries a failure's
+    scope and the log carries its cause, so sending one is the shape that makes
+    somebody ask for the other."""
     a_record(sandbox, named)
     a_record(sandbox, 'a-peer-box', stamp='20260817T130000Z')
 

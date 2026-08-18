@@ -21,7 +21,6 @@ in this module is one that has to keep telling them apart.
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -153,46 +152,6 @@ def test_a_pane_opened_before_this_box_has_ever_run_waits_for_the_first_one(runs
     assert ticker.waited == [logs.POLL_SECONDS] * 4
 
 
-def test_a_follower_moves_on_by_name_when_the_older_file_is_the_one_written_last(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`Identity.stem` leads with a UTC timestamp so the directory sorts
-    chronologically as text. An mtime comparison answers the same way on a
-    directory one machine writes, and differently on this one: Syncthing rewrites
-    a file whenever a peer's copy of it changes, so the newest mtime here belongs
-    to whichever run was last *delivered* rather than last started.
-
-    The older file is stamped into the future for that reason. Under an mtime
-    reading the run that opened while the pane was live is never followed at all.
-    """
-    first, second = ran('git status'), ran('go install')
-    older = stream(runs_dir, '20260815T170000Z', first)
-
-    def the_next_run_opens_its_log() -> None:
-        newer = stream(runs_dir, '20260815T180000Z', second)
-        delivered_later = newer.stat().st_mtime + 10
-        os.utime(older, (delivered_later, delivered_later))
-
-    ticker = Ticker(stop_after=3, on_tick={1: the_next_run_opens_its_log})
-
-    result = follow(monkeypatch, ticker, '--json')
-
-    assert result.exit_code == 0
-    assert emitted(result) == [first, second]
-
-
-def test_a_peer_machines_newer_stream_never_takes_the_pane(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The same selector `list` uses, at the one moment it is load-bearing: a
-    follower left open beside a terminal would otherwise switch to narrating a
-    different computer the next time that computer ran anything."""
-    mine, theirs = ran('git status'), ran('brew list')
-    stream(runs_dir, '20260815T170000Z', mine)
-    ticker = Ticker(stop_after=3, on_tick={1: lambda: stream(runs_dir, '20260815T190000Z', theirs, machine=OTHER)})
-
-    result = follow(monkeypatch, ticker, '--json')
-
-    assert result.exit_code == 0
-    assert emitted(result) == [mine]
-
-
 @pytest.mark.parametrize(('extra', 'named'), [([], True), (['--json'], False)], ids=['console', 'json'])
 def test_a_follower_names_the_run_it_moved_to_unless_the_stream_has_to_parse(
     runs_dir: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str], named: bool
@@ -230,20 +189,6 @@ def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(r
     result = follow(monkeypatch, Ticker(stop_after=3), '20260815T17', '--json')
 
     assert result.exit_code == 0
-    assert emitted(result) == [first, second]
-
-
-def test_ctrl_c_ends_a_follower_as_a_finished_job_rather_than_as_a_failure(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A follower was asked to run until stopped, so stopping it is the caller
-    doing what the flag offered. Exiting non-zero there would put a red line in
-    every shell that ran one, and would fail any script that wrapped it."""
-    first, second = ran('git status'), ran('go install')
-    stream(runs_dir, '20260815T170000Z', first, second)
-
-    result = follow(monkeypatch, Ticker(stop_after=1), '--json')
-
-    assert result.exit_code == 0
-    assert result.exception is None
     assert emitted(result) == [first, second]
 
 

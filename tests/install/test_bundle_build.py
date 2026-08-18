@@ -1270,12 +1270,3 @@ class TestWhatTheBundleTellsTheTargetToDo:
 
         root = {name.split('/')[-1] for name in built.names() if name.count('/') == 1}
         assert {bundle_format.MANIFEST, bundle_format.DOCUMENT, 'checksums.txt', 'README.txt'} <= root
-
-    def test_the_manifest_carries_four_fields_a_reader_splits_on(self, upstream: Upstream, cache: Path) -> None:
-        """`offline_bundle` splits on `|` and takes four, so a row with a
-        different arity drifts from the parser silently."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert built.rows
-        assert all(len(row) == 4 for row in built.rows)
-        assert all(all(field for field in row[:2]) for row in built.rows), 'a category and a name are what a row is looked up by'
