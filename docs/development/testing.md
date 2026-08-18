@@ -35,10 +35,11 @@ import-time seams need rebinding rather than an environment variable.
 
 ## Tests are flat functions, grouped by a section comment
 
-100 of the 126 test files already are, so this is the house style rather than a
-new rule. A file groups with a `# ────` band carrying the section's prose, and
-`-k` selects on the name — which is why every test name here is a declarative
-sentence rather than a noun.
+The great majority of test files already are, so this is the house style rather
+than a new rule — `rg -c '^class Test' tests/` counts the exceptions against
+`fd -e py 'test_' tests/`. A file groups with a `# ────` band carrying the
+section's prose, and `-k` selects on the name, which is why every test name here
+is a declarative sentence rather than a noun.
 
 **A guarantee shared by a whole group is an autouse fixture, not a class-level
 marker.** That is the one thing a class carried that a section comment cannot,
