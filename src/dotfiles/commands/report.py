@@ -413,8 +413,7 @@ def _masked_copy(local: Path, identities: Mapping[str, str], into: Path) -> Path
     if into.resolve() == local.parent.resolve():
         # The copy keeps the record's filename, so staging into its own directory
         # screens it in place — and the account of what happened on this box is
-        # then gone, which is the one thing the copy exists to prevent. Narrowing
-        # the signature made this unreachable; taking a destination gives it back.
+        # then gone, which is the one thing the copy exists to prevent.
         raise ValueError(f'{into} is where the record already lives, so staging there would overwrite it')
     staged = into / local.name
     if local.suffix == '.jsonl':

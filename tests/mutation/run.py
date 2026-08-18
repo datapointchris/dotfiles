@@ -309,9 +309,9 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
         return _result(planned, score.SKIPPED, detail=f'{planter.UNPARSEABLE}: {unparseable}')
     except Exception as broken:
         # A site the planner recognised and the planter cannot perform is a fault
-        # in the harness, not a property of the source. Recorded as a skip it left
-        # the denominator, so a half-added operator raised the score rather than
-        # failing — which `Tally.scored` excluding SKIPPED is what makes silent.
+        # in the harness, not a property of the source. Recorded as a skip it would
+        # leave the denominator, so a half-added operator would raise the score
+        # rather than failing — which `Tally.scored` excluding SKIPPED makes silent.
         workers.give_back((shadow, basetemp))
         return _result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
     try:

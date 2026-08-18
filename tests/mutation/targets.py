@@ -49,11 +49,10 @@ def discover(repo: Path, tree: str = 'src/dotfiles') -> Iterator[str]:
 def resolve(repo: Path, named: list[str], everything: bool = False) -> list[str]:
     """Repo-relative paths for whatever the caller asked for, refusing anything that is not a file in the source tree.
 
-    **Under `src/`, not merely inside the repo.** A path anywhere in the tree
-    used to resolve, and the run then spent a whole-suite coverage pass before
-    `_write_into` raised `ValueError: not in the subpath of 'src'`. A typo cost
-    minutes and returned a traceback where it should have cost nothing and
-    returned a refusal.
+    **Under `src/`, not merely inside the repo.** A path elsewhere in the tree
+    reaches `write_into`, which raises `ValueError: not in the subpath of
+    'src'`. That refusal sits behind a whole-suite coverage pass, so it arrives
+    minutes later as a traceback. A typo should cost nothing.
     """
     if everything:
         return list(discover(repo))
