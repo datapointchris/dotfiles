@@ -740,7 +740,7 @@ def test_every_command_the_readme_prints_is_a_task_that_exists() -> None:
     """The modules import each other by package name, so invoking one by its
     path raises `ModuleNotFoundError` before argparse is reached. The Taskfile
     sets the `PYTHONPATH` that makes them resolve, which makes it the only
-    entry point, and three README lines invoked a path instead."""
+    entry point."""
     defined = set(re.findall(r'^  ([\w:]+):$', harness.repo_root().joinpath('Taskfile.yml').read_text(), re.MULTILINE))
     commands = documented_commands()
 
