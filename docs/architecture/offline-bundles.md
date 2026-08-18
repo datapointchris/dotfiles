@@ -7,7 +7,8 @@ half sits in its module: `src/dotfiles/create_bundle.py` builds one,
 classifies where it lands, and `src/dotfiles/providers/bundle.py` is the manifest
 the two programs agree on.
 
-`docs/reference/support/corporate.md` is the runbook — what to type, in order.
+`docs/reference/support/corporate.md` is the runbook. It carries both ends in
+order: what to type where the network is, and what to type at the blocked box.
 
 ## Two machines and one exchange
 
@@ -80,7 +81,7 @@ pointed it at. Each leg's module records what its own setting gates —
 
 ## Related
 
-- [Restricted Networks](../reference/support/corporate.md) — the runbook, in order
+- [Restricted Networks](../reference/support/corporate.md) — the runbook for both ends, in order
 - [Observability](observability.md) — the interchange document this all rides on
 - [GitHub Releases](github-releases.md) — how the assets a bundle carries are named
 - [Management Interface](management-interface.md) — the verbs and the two front doors

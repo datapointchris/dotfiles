@@ -1,12 +1,12 @@
 """Reading the debug stream a run emits, while it runs or long afterwards.
 
-Separate from `report` because the two artefacts are separate, and the split is
-the one `docs/architecture/observability.md` already draws from the other end:
-the record "survives being uploaded off the machine", the stream "is what stays
-behind and says what the command actually printed". A record is *composed* —
-`sinks.record` walks the events and builds a typed `RunRecord` with a schema and
-a versioned reader. A stream is *emitted* — whatever any module logged, at debug,
-in whatever shape that module chose.
+Separate from `report` because the two artefacts are separate. A record is
+*composed* — `sinks.record` walks the events and builds a typed `RunRecord` with
+a schema and a versioned reader — and what it composes is what survives being
+uploaded off the machine. A stream is *emitted* — whatever any module logged, at
+debug, in whatever shape that module chose — and it stays behind saying what the
+command actually printed. `docs/architecture/observability.md` places both among
+the artefacts a run leaves.
 
 `show` rather than `read`, per `standards/cli-design.md` § "One word per job":
 `read` earns its place only where something is left over for `show` to say, and

@@ -1,11 +1,10 @@
 # Custom Installers
 
 `custom_installers` is not a category of tool. It is the name for *no shared
-mechanism* — a vendor install script, an S3 bucket with a GPG trust root, a
-HashiCorp mirror carrying its own checksums file, and git repos with a build. Each
-is one function in `src/dotfiles/providers/custom.py`, whose module docstring is
-the account of how each one converges and why no engine fits them. This page holds
-the decisions that docstring does not.
+mechanism*: every entry arrives by a route nothing else in the repo uses, so every
+entry is its own function in `src/dotfiles/providers/custom.py`. That module
+docstring lists the routes and what converging means for each. This page holds the
+decisions it does not.
 
 ## Check that it really is custom before writing one
 
@@ -23,20 +22,21 @@ behind, rather than treating presence as the whole verdict.
 
 ## Every host an installer reaches is declared by the installer itself
 
-`sources()` returns each host installing a tool depends on, so the connectivity
-probe asks the installer rather than switching on a declared kind. Read them for
-any tool:
+`custom.sources()` answers where a given tool is fetched from.
+`network._custom_installer_probes` is its only caller, so the connectivity probe
+asks each installer rather than switching on a declared kind. The probe results
+carry the answer per tool:
 
 ```bash
-dotfiles packages show theme
+dotfiles network check --json | jq -r '.probes[] | select(.name == "theme") | .target'
 ```
 
 ## What is deliberately absent
 
 **Rejected: a `--print-url` protocol.** Having the offline bundler ask each script
-for a `name|version|url` line over a pipe puts the staged filename in two places.
-The declaration's `install_url` is the one place, and the pipe is a second place
-for the bundler and the installer to disagree about which file to stage.
+over a pipe which file to fetch puts the staged filename in two places. The
+declaration's `install_url` is the one place. Two answers can drift apart, and the
+bundle then holds a file the install never looks for.
 
 **Rejected: a shared "run a vendor script" abstraction beyond staging it.** Several
 functions run one, and all they share is where the script comes from — the offline

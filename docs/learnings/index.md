@@ -17,3 +17,6 @@ rg -i "no route to host" docs/learnings/
 ```
 
 The site search above covers the same ground from a browser.
+
+General technical notes that name nothing in this repo live on the hub at
+<https://docs.ichrisbirch.com/>, so a symptom search covers both.

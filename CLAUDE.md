@@ -185,7 +185,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild — which is what `dotfiles check` reports. A mechanism that is generic (mounting a Windows share) belongs in the coordinate layer that owns it; the values naming an employer go in the local file, and so does any workaround only their network forces — `update-tldr` reads as a WSL function and is really a blocked-download function, which is why it sat in the layer for months
 - **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a coordinate variant under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
-- **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l 'current' configs/*/.config configs/*/*/.config` finds the pointers, and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
+- **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l --hidden '/current\b' configs/` finds the pointers — `--hidden` is load-bearing, since every one of them is under a `.config` directory — and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
 - **Pre-commit Hooks** - Quality control. The inventory is generated; read `.pre-commit-config.yaml` rather than a list here, per `standards/ci.md` § "Never restate the hook inventory in a repo's `CLAUDE.md`"
 
@@ -277,21 +277,15 @@ is a dated snapshot and the only place here where enumerations are the content.
 `docker.md`, `tmux-sessions.md` and `custom-installers.md` are the models to
 imitate; the shared property is that nothing in them changes when code changes.
 
-**A page never explains a mechanism the module docstring explains** (⚠️ MANDATORY):
+**A page never explains a mechanism the module docstring explains**:
 
-The code is the canonical source for how something works, and a docstring sits
-where the edit happens. A page that walks through the same mechanism has to be
-edited by every change to it, and only one of the two copies is next to the
-code. Keep one sentence and name the module: "the resolution order, and why
-there is no compiled-in default under it, are the module docstring in
-`src/dotfiles/settings.py`."
-
-A constraint an editor must meet belongs in both places, which
-`standards/documentation.md` § "Document a constraint at the edit site"
-requires. A mechanism does not. The tell is measurable — the shingle count in
-`docs/development/docs-audit.md` § "Third pass" ranks the whole corpus by it in
-seconds, and a page scoring in the hundreds is a second copy of the code's own
-words.
+The rule and its reasoning are `standards/documentation.md` § "A page never
+restates a module docstring", which holds in every repo that has docstrings.
+Two things here are local to this repo. The instrument is `task
+docs:duplication`, which ranks every page by six-word runs it shares with any
+docstring under `src/dotfiles/`. And the worked example is
+`docs/development/docs-audit.md` § "Third pass", where four pages scoring
+between 529 and 613 came down to single digits.
 
 `refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
 markdown as well as shell, so a doc citing a moved file now fails the commit.

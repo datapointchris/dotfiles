@@ -26,9 +26,11 @@ caller reasons about. The nudge is one line of human text. Deriving that line
 from the document at prompt time would mean parsing JSON in zsh, which means
 `jq`, which means a subprocess per shell — the exact cost `.zshrc`'s completion
 caching exists to avoid. A file holding exactly the sentence to print is
-`$(<file)`, with no fork at all. When it fires, and when the shell ignores it,
-are `architecture/system-configuration.md` § "`steps` is the name for no shared
-mechanism", where the schedule that writes it is declared.
+`$(<file)`, with no fork at all. What makes it fire, and how old it may be
+before the shell stops reading it, are the module docstring and
+`MAX_AGE_SECONDS` in `src/dotfiles/status.py`. The schedule that writes it is a
+`steps` row, declared in `architecture/system-configuration.md` § "`steps` is
+the name for no shared mechanism".
 
 The record and the stream divide one level down, on the same question. A record
 is composed and travels off the machine. A stream is emitted and stays behind.

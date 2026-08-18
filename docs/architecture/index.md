@@ -8,12 +8,12 @@ How the dotfiles repository is organized and why.
 
 ## A machine is a point on six axes, not a platform string
 
-Three trees deploy out of this repo: `configs/` into `$HOME`, `apps/` into
-`~/.local/bin/`, and `shell/` into `~/.local/shell/`. Each is a common base plus
-one `<axis>/<value>` directory per coordinate axis. Which of those directories a
-machine takes is decided by its coordinates rather than by a platform name. So
-the Wayland tree lives once under `display/wayland/`, whatever Linux runs beneath
-it, and the apt helpers reach the Ubuntu work box as well as the Debian LXC.
+Which coordinate directories a machine deploys is decided by where it sits on the
+axes, never by a platform name. So the Wayland tree lives once under
+`display/wayland/`, whatever Linux runs beneath it, and the apt helpers reach the
+Ubuntu work box as well as the Debian LXC. The trees, their destinations, and
+what a coordinate directory means inside each are
+[Symlinks Manager](../reference/tools/symlinks.md).
 
 A single fused `PLATFORM` string could express neither of those. Why it was split
 into axes, and why a label like `archlinux` survives as a bundle over the tuple,
@@ -28,23 +28,21 @@ fit, because the code was never shareable in the first place.
 
 Deploy with `dotfiles symlinks apply`, which works from any directory. `task` is
 equivalent from inside the repo, and both front doors are
-[Management Interface](management-interface.md). Why two variants may never claim
-one target is [Symlinks Manager](../reference/tools/symlinks.md).
+[Management Interface](management-interface.md).
 
 ## Nothing detects what a machine is
 
 `MACHINE` is the one value chosen by hand. It selects a manifest, and the
 manifest declares where the machine sits on each of the six axes in
-`src/dotfiles/coordinates.py`. Detection is what the declaration replaced: a wsl
-manifest whose `~/.env` was missing fell back to a guess and deployed the linux
-shell layer for a whole install. A guess also cannot answer half the axes.
-Network trust and capacity are intentions, and nothing on a box knows an
-intention.
+`src/dotfiles/coordinates.py`. Detection is what the declaration replaced, after
+a guessed platform put the wrong shell tree on a wsl box for a whole install —
+the docstring in `src/dotfiles/machine.py` carries that account. A guess also
+cannot answer half the axes. Network trust and capacity are intentions, and
+nothing on a box knows an intention.
 
 No coordinate reaches `~/.env` at all. `coordinate_exports` in
-`src/dotfiles/envfile.py` returns nothing, and its docstring holds why: a list
-shipped there is a second copy of a fact the deployed tree already carries, free
-to disagree with it, and it did.
+`src/dotfiles/envfile.py` returns nothing, and its docstring holds why, along
+with the disagreement that settled it.
 
 ## A manifest declares names, never installers
 
@@ -57,21 +55,20 @@ reached by a name or warned about.
 Runtime installation is derived from list presence rather than from an explicit
 boolean. A non-empty `go_tools:` triggers the Go runtime, and `uv_tools:` or
 `git_uv_tools:` triggers uv. A manifest setting one of the retired runtime-gate
-booleans is refused by name rather than reported as merely unknown, because the
-replacement is not guessable from the error — `RETIRED_KEYS` in
-`src/dotfiles/machine.py`.
+booleans is refused by name rather than as merely unknown — `RETIRED_KEYS` in
+`src/dotfiles/machine.py` says why the name has to be spoken.
 
-`dotfiles machines show <name>` prints what a manifest resolves to, for any
-machine including one you are not standing on. `bash install.sh --machine <name>`
-bootstraps the CLI and stops, printing the `dotfiles apply` that converges the
-machine.
+`dotfiles machines show <name>` resolves any manifest by name, not only the one
+this machine runs. `bash install.sh --machine <name>` bootstraps the CLI and
+stops, printing the `dotfiles apply` that converges the machine.
 
 ## The Windows side is a machine, not a bridge
 
-Admin policy on the Windows box refuses to create a symlink, so that machine
-declares `deploy_by_copy` and every declared file is copied to its target
-instead. What copy gives up, and why nothing is ever pruned under it, is the
-module docstring in `src/dotfiles/resources/symlinks.py`.
+Group policy on that box forbids symlink creation, so its manifest declares
+`deploy_by_copy` and every declared file arrives as a regular file. The module
+docstring in `src/dotfiles/resources/symlinks.py` holds what a copy gives up.
+`DEPLOY_BY_COPY` beside it holds why the manifest states the fact rather than the
+OS implying it.
 
 The reasoning is inherited rather than new. Windows Git Bash cannot follow a
 symlink across the WSL boundary either. So for as long as the Windows side was
@@ -89,18 +86,16 @@ run the CLI. Declaring it as one makes its whole deploy an ordinary
 `dotfiles apply`, and nothing reaches across the boundary beside that. Two owners
 of one act is how a machine comes to disagree with itself about what has run.
 
-## Shell layers are additive; configs and apps arrive as one file
+## Nothing tells `.zshrc` which shell code to load
 
 Shell functions and aliases live in `shell/` and deploy as symlinks, with no
-build step. `shell/common/` lands flat in `~/.local/shell/`. A coordinate
-directory keeps its `<axis>/<value>/` path at the destination, so a sourced file
-says which coordinate asked for it. `shell/` is the only tree that keeps it,
-because nothing but `.zshrc` reads there.
+build step. A machine sources every layer its coordinates select. `configs/` and
+`apps/` do the opposite with their coordinate directories, and
+[Symlinks Manager](../reference/tools/symlinks.md) owns that distinction.
 
 `.zshrc` sources `common/` and then globs `~/.local/shell/*/*/*.sh`, sourcing
-every one it finds and `local.sh` last. It reads no list to decide which.
-`dotfiles symlinks apply` deploys only the directories this machine's coordinates
-select and prunes the rest, so the tree is the resolved answer.
+every one it finds and `local.sh` last. It reads no list to decide which. The
+deployed tree is the resolved answer, so nothing has to be told what to load.
 Most of the six axes have no directory at all, because an axis earns one only
 where something actually differs along it.
 
@@ -118,10 +113,10 @@ machine had the Windows half of one laptop declare no need for a file it reads.
 `~/.env` names the path, which is what tells a rebuild where the file goes, and
 `dotfiles check` reports it missing.
 
-safekeep restores it rather than an installer creating it, so it is legitimately
-absent between `dotfiles apply` and the restore step of a rebuild. Both consumers
-guard on the file existing. `dotfiles symlinks apply` removes only links that
-resolve into the repo, so a real file there survives every run untouched.
+safekeep restores it rather than an installer writing it, so a machine part way
+through a rebuild is legitimately without one. Both consumers guard on the file
+existing. `dotfiles symlinks apply` removes only links that resolve into the
+repo, so a real file there survives every run untouched.
 
 The split to hold to is mechanism versus values. Mounting a Windows share is a
 WSL capability, so `mount-cifs` lives in `shell/host/wsl/wsl.sh` and takes the
@@ -145,43 +140,32 @@ credential comes from Vaultwarden rather than from a backup of the machine that
 lost it.
 
 `--safekeep` emits the files as the `[[back_up_paths]]` blocks safekeep's config
-wants. Blocks to paste rather than a generated config, and that boundary is
-load-bearing: required-to-operate is a strict subset of worth-backing-up, so
-generating the whole file from the register would silently drop `~/.ssh` and
-everything else the repo has no opinion about.
+wants. Blocks to paste rather than a generated config, and `_safekeep_block` in
+`src/dotfiles/commands/machines.py` holds why that boundary is load-bearing.
 
 ## Git builds its own layering on top of what arrived
 
-`configs/` deploys variants, never a merge. Exactly one file arrives at each
-destination, and the rest are versions this machine did not select. Git is the
-exception, and it chains the deployed files itself through `include.path`,
-last-wins.
+One file arrives at each destination under `configs/`, and nothing merges it with
+the variants a machine did not select. Git is the exception. It chains the
+deployed files itself through `include.path`, last-wins.
 
-`~/.config/git/config` is the entry point, and the only file in that directory
-the repo does not own. It is a real file holding a single include of
-`common.gitconfig`, written by the deploy epilogue. It has to be real rather than
-a symlink for two reasons. Git writes there when `~/.gitconfig` is absent, and it
-follows a symlink when writing. An entry point linked into the checkout would
-commit an identity into the repo the first time anyone followed git's own "Please
-tell me who you are" hint.
+`~/.config/git/config` is the entry point. It is a real file holding a single
+include of `common.gitconfig`, written by the deploy epilogue. Both of its jobs
+rule out a link, and `src/dotfiles/deploy.py` holds them beside what one there
+would cost.
 
 Everything shared ships from `configs/common/.config/git/common.gitconfig`. Below
-it sits one include per variant, each named for the coordinate **value** that
-supplies it rather than the axis. `wsl.gitconfig` carries `core.autocrlf`,
-because a checkout on the Linux side is edited from Windows tools too, and
-`fleet.gitconfig` or `nonfleet.gitconfig` carries identity. All are ignored while
-absent, so a machine needing none ships nothing. Trust comes last, because its
-nonfleet form overrides a default with an `includeIf` and git resolves last-wins.
+it sits one include per variant, each named for the coordinate **value** rather
+than for the axis. `wsl.gitconfig` carries `core.autocrlf`, because a checkout on
+the Linux side is edited from Windows tools too, and `fleet.gitconfig` or
+`nonfleet.gitconfig` carries identity. All are ignored while absent, so a machine
+needing none ships nothing. Trust comes last, because its nonfleet form overrides
+a default with an `includeIf` and git resolves last-wins.
 
-Naming the value is what makes `eza ~/.config/git/` answer what the machine is.
-`trust.gitconfig` would say only that the trust axis had been resolved;
-`nonfleet.gitconfig` says which way. The cost is that `common.gitconfig` has to
-spell every value out, because git expands nothing but `~` in an `include.path`.
-`.zshrc` reaches its own layers by globbing the deployed tree and needs no list.
-That asymmetry is what lets `shell/` keep `<axis>/<value>/` in its deployed path
-while `configs/` flattens. `dotfiles machines check` fails on a variant gitconfig
-no include names, since git would otherwise ignore the missing line without a
-word.
+Two rules hold that scheme together. Git enforces neither, so
+`dotfiles machines check` does. `_git_variants` in `src/dotfiles/validate.py` is
+the pair, and its docstring carries why a broken one is invisible on the machine
+it breaks.
 
 The `gh` credential helper is common rather than a variant, which is what
 collapsed three near-identical files into one. It was per-platform only because
@@ -212,17 +196,16 @@ Four levels of include is more than prose can keep anyone oriented in, so
 file contributed what, which variant is legitimately absent, and which
 conditional include did not fire here. `dotfiles check` reports the two ways the
 arrangement fails silently: a `~/.gitconfig`, which git prefers over the entry
-point for reads and writes both, and one key given different values by two files,
-where nothing on screen says which one won.
+point for reads and writes both, and two files setting one key to different
+values.
 
-`local.gitconfig` is the one identity the repo does not ship, so
+`local.gitconfig` is the one identity this repo never ships, so
 `install/flags.yml` declares it and `dotfiles check` fails while it is missing.
 That declaration is load-bearing. Git ignores an absent include silently, and
 `user.useConfigOnly = true` would then refuse every commit while naming nothing.
-For the same reason the check runs `git config --global --includes --get`.
-`--global` alone implies `--no-includes` and would report every machine unset.
-The pair deliberately ignores the `includeIf`, so it reports the machine's
-default rather than whatever the current directory resolves to.
+The module docstring in `src/dotfiles/resources/identity.py` holds the read that
+check has to make to see an identity at all, and why a plainer one calls every
+machine unset.
 
 ## The cost of the split
 

@@ -18,7 +18,9 @@ reads a stable `current` file that the tool rewrites in place, and the same hold
 for fonts through `fonts/current`. Changing either therefore touches no file
 here, which is why switching theme is not a commit.
 
-`rg -l 'current' configs/*/.config configs/*/*/.config` finds the pointers.
+List the configs holding a pointer with `rg -l --hidden '/current\b' configs/`.
+The `--hidden` is load-bearing, since every one of them sits under a `.config`
+directory that `rg` skips by default.
 
 ## Neovim is the one config that reads the tool's own state
 

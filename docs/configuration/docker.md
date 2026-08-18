@@ -19,9 +19,9 @@ OrbStack installs its binaries at `/Applications/OrbStack.app/Contents/MacOS/xbi
 compose` and `docker buildx` resolve as CLI plugins only once the Docker config names that
 directory in `cliPluginsExtraDirs`. That is the `orbstack-docker-plugins` row of
 `install/system.yml`, so `dotfiles plan` reports it when it is missing and `dotfiles apply` merges
-it into whatever else the config holds. The convergence order in `src/dotfiles/vocabulary.py` puts
-system configuration after packages, and so puts the row after the OrbStack cask. A plugin
-directory that does not exist yet is nothing to point at.
+it into whatever else the config holds. `resolve.Stage` orders the work, and it puts
+`SYSTEM_CONFIG` after `SYSTEM_APPS`, so the row converges after the OrbStack cask installs. A
+plugin directory that does not exist yet is nothing to point at.
 
 ## Arch talks to the daemon directly
 

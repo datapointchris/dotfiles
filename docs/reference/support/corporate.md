@@ -7,139 +7,126 @@ or registry-mirror configuration.
 ## Find out what is actually blocked
 
 `dotfiles network check` walks every URL the install touches and reports a
-pass/fail line per host. Run it on the restricted machine first: the answer is
+pass/fail line per host. Run it on the restricted machine first. The answer is
 rarely "the internet is blocked" and usually "GitHub release assets are blocked
-but the API is not", which changes what you need to carry in.
+but the API is not", which changes what you have to carry in.
 
-Pass `--output <path>` to record the run somewhere outside the repo. `--output`
-has no default on purpose, and the results never belong in version control: a
-recorded verdict is one machine's answer on one day, and it can only be re-taken
-from that same network, so it goes stale where nothing can refresh it. Keep it
-under `$XDG_STATE_HOME` if you want to diff two runs after the rules change.
-`tests/install/test_network.py` fails the suite if a measurement is ever tracked.
+Pass `--output <path>` to render the run somewhere outside the repo. Keep it
+under `$XDG_STATE_HOME` to diff two runs after the firewall rules change.
+`src/dotfiles/commands/network.py` holds why that flag has no default, and
+`tests/install/test_network.py` fails the suite if a rendered run is ever
+tracked.
 
-Note what the run itself looks like from the other side. It is a burst of
-requests to distinct external hosts, and it classifies TLS interception, so it
-reads as egress mapping to anything watching. Run it once when you need the
-answer, not on a schedule.
+Note what the check looks like from the other side. It is a burst of requests to
+distinct external hosts and it classifies TLS interception, so it reads as egress
+mapping to anything watching. Run it when you need the answer, not on a schedule.
 
-## Install without the network
+## Build the bundle where the network is
 
-`dotfiles bundle create` downloads every GitHub release binary, cargo binary and
-install script into a single tarball, on a machine that *has* the network. It
-builds for a machine that is deliberately not the one running it.
-`dotfiles bundle create --help` says what that means for each flag.
+`dotfiles bundle create` writes one tarball for a machine that is not the one
+running it. `src/dotfiles/create_bundle.py` says what goes into it, and
+`dotfiles bundle create --help` says why neither `--machine` nor `--arch` has a
+default.
 
-It also carries what the bootstrap itself needs before any of that can run: the
-`uv` binary for the target platform, and a wheelhouse holding the CLI's whole
-dependency closure. Without those the restricted machine can unpack a bundle it
-has no way to install from, which is the one failure the bundle exists to
-prevent. The wheels cover every CPython at or above this package's
-`requires-python`, because which interpreter the target has is a fact only the
-target knows.
+The bundle carries the bootstrap as well as the tools: `uv` for the target
+platform, and a wheelhouse holding the CLI's own dependency closure. Without
+those the blocked machine unpacks an archive it has no way to install from, which
+is the one failure the whole arrangement exists to prevent.
+`create_bundle.add_wheels` says why every wheel for every supported interpreter
+goes in rather than one chosen here.
 
-The tarball is named after a UTC stamp, the manifest and the target platform, so
-handing it to something else means retyping a name that changes every build.
-`dotfiles bundle upload` finds the newest one itself, which is why the handoff is
-two commands rather than a substitution:
+An archive's name carries a UTC stamp, so handing it on means retyping something
+that changes every build. `dotfiles bundle upload` finds the newest itself, which
+is why the handoff is two commands rather than a substitution:
 
 ```bash
 dotfiles bundle create --machine wsl-work-workstation --arch x86_64
 dotfiles bundle upload
 ```
 
-`--print-path` still writes the finished path to stdout for anything else that
-wants it. The build log is unaffected — it goes to stderr either way — and the
-path is printed only after the cache prune finishes, so nothing downstream sees a
-bundle that is still being written.
+`--print-path` puts the finished path on stdout for a pipeline, after the cache
+prune, so nothing downstream reads an archive still being written.
 
-`dotfiles remote check` answers whether the upload has anywhere to go. It
-measures the listing rather than inferring it from `command -v`, because a box
-with the binary and no credential answers that perfectly and fails at the first
-upload. `docs/architecture/offline-bundles.md` holds the transport config shape
-and why it is that shape.
+The builder is Python rather than shell because of that name. A bash function has
+no return value, so "produce a tarball and tell the caller what it is called" has
+no direct expression there. `tests/install/test_create_bundle.py` covers the
+logic and needs neither a network nor a container.
+
+## Install it on the work box
+
+`dotfiles remote check` says whether this machine can exchange anything at all.
+Run it before the first transfer rather than after a failed one.
+`src/dotfiles/commands/remote.py` says why a declared transport and a usable one
+are two separate questions.
+
+Then, from the work box:
+
+```bash
+dotfiles bundle download
+dotfiles bundle stage
+dotfiles apply --machine wsl-work-workstation --offline
+dotfiles status upload
+```
+
+`bundle download` takes the newest archive built for this machine. It describes
+what it found and asks before the transfer. `bundle stage` unpacks the newest
+archive it finds. The apply does that step unasked when it reaches a box with
+nothing staged, so the second line is only needed to stage something specific.
+`--offline` on the apply sends every provider to the staged bundle instead of the
+network. `status upload` publishes what the box now has, so the next bundle can
+be built against it.
+
+On a machine with no CLI yet the bootstrap comes first.
+`./install.sh --machine NAME --offline` finds the newest archive in the download
+cache, beside the checkout or in `$HOME`, unpacks it under
+`$XDG_CACHE_HOME/dotfiles/staged/`, installs uv and the CLI from it with no index
+at all, and prints the apply line above. The flag is needed on both and means a
+different thing on each: where the bootstrap gets uv and the wheels, and where
+the apply gets everything else.
 
 ## Carry only what changed
 
-`dotfiles status upload` publishes what this machine already has, scoped to
-packages and toolchains and to nothing else. Then, where the network is:
+Each round is planned against the last. `dotfiles status upload` publishes what
+the work box already has, scoped to packages and toolchains and to nothing else.
+Then, where the network is:
 
 ```bash
 dotfiles bundle create --machine wsl-work-workstation --arch x86_64 --against latest
 dotfiles bundle upload
 ```
 
-Every tool the status reports at the version upstream currently publishes is left
-out, and recorded in the bundle as measured rather than missing. The work box
-reads that as up to date instead of unmeasurable, and a tool in neither place is
-still reported as one nothing has ever measured.
+`dotfiles bundle create --help` says how `--against` decides what to leave out
+and why an omission is recorded rather than silent. Each bundle keeps its own
+directory instead of merging into one, which is what lets a sparse build carry a
+difference alone. `dotfiles bundle prune --help` says which archives that pins
+against the retention limit.
 
-Two config keys close the loop without a command: `fetch_bundle_when_none_is_staged`
-and `publish_status_after_offline_apply`. Both default off, deliberately — the
-concern on that network is monitoring rather than capability, so a converge that
-reaches a server unasked is a change in posture rather than a convenience.
+Two `[remote]` keys close the loop with nothing typed:
+`fetch_bundle_when_none_is_staged` and `publish_status_after_offline_apply`. Both
+default off. `docs/architecture/offline-bundles.md` says why the defaults are one
+decision rather than several.
 
-**Nothing but packages and versions leaves that machine.** The document is
-composed over an allowlist of resources, and the bytes are read for this machine's
-hostname and account before any of them move. A row carrying one of those names is
-withheld and named on screen rather than refusing the whole document — a tool's own
-version banner can relay a hostname it got from somewhere else, and refusing for
-one row took the return leg off a working machine. Both guards, why there are two,
-and why the row is the unit are in `docs/architecture/offline-bundles.md`.
+**Nothing but packages and versions leaves that machine.**
+`src/dotfiles/publishing.py` is the account of both guards standing in front of
+the status document — why an allowlist, why a second gate behind it, and why one
+row is withheld rather than the whole document refused.
 
-The builder is `src/dotfiles/create_bundle.py`. It was shell until the naming
-above proved the problem — a bash function has no return value, so "produce a
-tarball and tell the caller its name" has no direct expression there. Its logic
-— checksum parsing, cache keys, wheel tag matching, archive repackaging — is
-covered by `tests/install/test_create_bundle.py`, which needs neither a network
-nor a container and runs in well under a second.
-
-On a machine with no CLI yet, `./install.sh --machine NAME --offline` finds the
-newest archive in the download cache, beside the checkout or in `$HOME`, unpacks
-it into `$XDG_CACHE_HOME/dotfiles/staged/<archive name>/`, installs uv and the CLI
-from it with no index at all, and prints the `dotfiles apply --machine NAME
---offline` that installs the machine from it. The flag is needed on both, and for
-different reasons: it says where the bootstrap gets uv and the wheels, and it
-says the apply installs from a staged bundle rather than from the network.
-
-On a machine that already has the CLI, the bootstrap is not the way to unpack a
-newer bundle — `dotfiles bundle stage` does that alone, and the apply does it
-unasked when it finds nothing staged.
-
-Each bundle keeps its own directory rather than merging into one. The newest
-carrying a file answers for it and an older one still answers for the rest, which
-is what lets a sparse bundle carry only what changed. `dotfiles bundle prune`
-sweeps what is past the retention limit, and its help says which bundles are
-pinned against that limit and what sweeping one would cost.
-
-This path is tested end to end by `uv run pytest tests/e2e --docker -k offline`:
-it builds a bundle, starts a container blackholed to a declared set of hosts, and
-asserts the install completes from cache. If you change the bundle format, that is
-what catches it.
-
-The blocklist is declared in `tests/e2e/harness.py` as `BLOCKED_HOSTS` and
-everything else the plan reaches stays resolvable, so the rig needs no record of
-any real network. It asserts both halves — that the blocked hosts really are
-unreachable, and that the reachable ones really are. Asserting only the blocked
-half let the rig drift stricter than intended: it blackholed `github.com`
-outright, so theme, font and bashselfupdate failed to clone in a rehearsal of a
-network where they clone fine, and the log read as though the bundle had a gap it
-does not have.
+The offline install is rehearsed end to end by
+`uv run pytest tests/e2e --docker -k offline`, which builds a bundle, blackholes
+a set of hosts in a container, and asserts the install completes from cache.
+`tests/e2e/harness.py` declares which hosts and why each one was picked. Change
+the bundle format and that is what catches it.
 
 ## Windows tools when winget is blocked
 
 The bundle carries them, the same way it carries every other category.
 
 Each `winget_packages` row in `install/packages.yml` names a GitHub repo and
-asset alongside the Store id, so a row is installable two ways from one
-declaration. `bundle create --machine windows-work-workstation` stages the `.exe`
-from the release and verifies it against the published checksum, and the provider
-reads the staged binary rather than reaching the Store.
-
-It falls back to the bundle when a bundle is present, rather than only under
-`--offline`. Reaching a network is not the same as reaching the Store on that
-box — winget is blocked there while `github.com` is not — so a run that has bytes
-staged uses them whichever way it was invoked.
+asset alongside the Store id, so one declaration is installable two ways.
+`bundle create --machine windows-work-workstation` stages the `.exe` from the
+release and verifies it against the published checksum.
+`src/dotfiles/providers/winget.py` says which source a run prefers and why that
+is decided by what arrived rather than by a mode.
 
 Several of those projects publish no Windows checksum at all. That is stated per
 tool rather than passed over, so what was and was not verified stays visible in

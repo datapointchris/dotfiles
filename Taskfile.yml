@@ -196,6 +196,11 @@ tasks:
     cmds:
       - bash "{{.DOTFILES_DIR}}/install/ops/docs.sh" deploy
 
+  docs:duplication:
+    desc: Rank docs pages by how much of each restates a module docstring
+    cmds:
+      - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py {{.CLI_ARGS}}"
+
   # ================================================================
   # WSL
   # ================================================================

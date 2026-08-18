@@ -46,3 +46,5 @@ theme list
 If something is broken, [Troubleshooting](reference/support/troubleshooting.md)
 opens with the three commands that diagnose most of it, and
 `rg -i "<the error>" docs/learnings/` searches the debugging record by symptom.
+General technical notes that name nothing in this repo live on the hub at
+<https://docs.ichrisbirch.com/>, so a symptom search covers both.
