@@ -93,6 +93,17 @@ class Verification(enum.IntEnum):
     two would hide that fix when it lands.
     """
 
+    UNREADABLE = 4
+    """The release could not be read, so what it publishes is unknown.
+
+    A release that publishes nothing is a fact about upstream and a declaration
+    can accept it. This is a fact about the attempt, and no declaration can
+    accept it, because it says nothing about the bytes on disk. Collapsing it
+    into UNPUBLISHED is how a rate-limited API turns `checksum: unpublished`
+    into an unverified install: the asset downloads from the CDN, whose limits
+    are separate, and only the verification degrades.
+    """
+
 
 # The [LEVEL] prefixes are what logsift and the log aggregators match on, so
 # these lines carry the same ones logging.sh emits rather than bare text.
@@ -265,13 +276,17 @@ def request(url: str, accept: str | None = None) -> bytes:
     return response.content
 
 
-def release_assets(repo: str, tag: str) -> dict[str, int]:
-    """{name: id} for a tag's assets, empty when the release cannot be read."""
+def release_assets(repo: str, tag: str) -> dict[str, int] | None:
+    """{name: id} for a tag's assets, or None when the release could not be read.
+
+    Three answers rather than two, over the distinction `remote.listed` already
+    draws: `{}` is a release that publishes nothing, and None is not knowing.
+    """
     encoded = urllib.parse.quote(tag, safe='')
     try:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
     except (httpx2.HTTPError, json.JSONDecodeError):
-        return {}
+        return None
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
 
@@ -440,7 +455,11 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
     first = ''
 
     if github_token() and repo and tag and asset_name:
-        asset_id = release_assets(repo, tag).get(asset_name)
+        # An unreadable release falls through to the public URL, which is the
+        # right answer for a download: the asset may well be fetchable when the
+        # API is not. Only verification treats not knowing as a refusal.
+        published = release_assets(repo, tag) or {}
+        asset_id = published.get(asset_name)
         if asset_id is not None:
             try:
                 destination.write_bytes(
@@ -514,7 +533,12 @@ def verify_release_checksum(
         if not repo or not tag:
             return Verification.UNPUBLISHED
 
-        checksum_asset = select_checksum_asset(sorted(release_assets(repo, tag)), asset_name)
+        published = release_assets(repo, tag)
+        if published is None:
+            log_error(f'Could not read the release {tag} of {repo}, so its checksums are unknown')
+            return Verification.UNREADABLE
+
+        checksum_asset = select_checksum_asset(sorted(published), asset_name)
         if checksum_asset is None:
             return Verification.UNPUBLISHED
         from_sidecar = checksum_asset.endswith(CHECKSUM_SIDECAR_SUFFIXES)

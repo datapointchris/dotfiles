@@ -590,7 +590,14 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     if status == 'unpublished':
         return
 
-    checksum_asset = github_release.select_checksum_asset(sorted(github_release.release_assets(repo, tag)), asset_name)
+    published = github_release.release_assets(repo, tag)
+    if published is None:
+        # Never cached: the cache records what upstream publishes, and this says
+        # only that the attempt failed. Recording it as `unpublished` would make
+        # one rate-limited build the permanent answer for every build after it.
+        raise BundleError(f'Could not read the release {tag} of {repo}, so its checksums are unknown')
+
+    checksum_asset = github_release.select_checksum_asset(sorted(published), asset_name)
     if checksum_asset is None:
         log.warning(f'    {repo} publishes no checksums, none recorded')
         cache.remember_status(asset, 'unpublished')

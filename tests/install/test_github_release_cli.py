@@ -13,9 +13,9 @@ reach it replace the whole function, so what a pin resolved to was asserted
 against a lambda. The three spellings in the table below are the three a real
 entry uses.
 
-`release_assets` answers `{}` for a release it could not read, which is the same
-answer it gives for a release that published nothing. The last test in
-`TestReleaseAssets` holds that shape rather than describing it.
+`release_assets` answers three ways, and `TestReleaseAssets` covers all three:
+a mapping for what a release publishes, `{}` for one that publishes nothing, and
+None for one that could not be read. Only the third is unverifiable.
 
 Only the transport is faked. `request` is this module's one call to the network,
 and everything above it — the URLs, the tag encoding, the asset selection, the
@@ -245,28 +245,27 @@ class TestReleaseAssets:
         assert github_release.release_assets('owner/repo', 'v1.0.0') == {}
 
     @unreadable
-    def test_an_unreadable_release_answers_an_empty_mapping_rather_than_raising(self, monkeypatch, transport):
+    def test_an_unreadable_release_answers_nothing_rather_than_raising(self, monkeypatch, transport):
         monkeypatch.setattr(github_release, 'request', transport)
 
-        assert github_release.release_assets('owner/repo', 'v1.0.0') == {}
+        assert github_release.release_assets('owner/repo', 'v1.0.0') is None
 
     @unreadable
-    def test_an_unreadable_release_reads_as_a_release_that_publishes_no_checksums(self, tmp_path, monkeypatch, transport):
-        """`{}` is the answer for both, so the verdict is UNPUBLISHED either way.
+    def test_an_unreadable_release_is_told_apart_from_one_that_publishes_no_checksums(self, tmp_path, monkeypatch, transport):
+        """UNPUBLISHED is a claim about upstream and a declaration can accept it.
 
-        That verdict is a claim about upstream, and here it is a fact about the
-        network. An entry declaring `checksum: unpublished` — the declaration that
-        says "this release genuinely has none" — installs on that verdict, so an
-        API that will not answer installs it unverified. Held here rather than
-        argued: the file is untouched and the exit code is 2, not 1.
+        This is a fact about the attempt, so nothing about the bytes is known and
+        no declaration reaches it. The asset itself downloads from the CDN, whose
+        rate limits are separate from the API's, so this is the state where every
+        other part of an install succeeds and only the verification degrades.
         """
         monkeypatch.setattr(github_release, 'request', transport)
         payload = downloaded(tmp_path)
 
         outcome = github_release.verify_release_checksum(payload, ASSET, 'owner/repo', 'v1.0.0')
 
-        assert outcome is github_release.Verification.UNPUBLISHED
-        assert payload.read_bytes() == PAYLOAD
+        assert outcome is github_release.Verification.UNREADABLE
+        assert payload.read_bytes() == PAYLOAD, 'nothing was compared, so nothing is proven wrong and the file stays'
 
 
 class TestVerifyByHand:
