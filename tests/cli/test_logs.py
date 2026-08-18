@@ -19,6 +19,10 @@ from pathlib import Path
 
 import pytest
 import structlog
+from runlogs import MACHINE
+from runlogs import OTHER
+from runlogs import ran
+from runlogs import stream
 from typer.testing import CliRunner
 
 from dotfiles import logging as dotfiles_logging
@@ -27,35 +31,6 @@ from dotfiles.commands import logs
 from dotfiles.main import app
 
 runner = CliRunner()
-
-MACHINE = 'archlinux'
-OTHER = 'macmini'
-
-
-@pytest.fixture
-def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    directory = tmp_path / 'runs'
-    directory.mkdir(parents=True)
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', directory)
-    monkeypatch.setattr('dotfiles.paths.MACHINE_ID', MACHINE)
-    return directory
-
-
-def stream(runs_dir: Path, stamp: str, *entries: dict, machine: str = MACHINE, verb: str = 'check') -> Path:
-    path = runs_dir / f'{stamp}-{machine}-{verb}.jsonl'
-    path.write_text(''.join(json.dumps(entry) + '\n' for entry in entries))
-    return path
-
-
-def ran(command: str, run_id: str = 'aaaabbbbcccc', **fields: object) -> dict:
-    return {
-        'argv': command.split(),
-        'event': 'ran',
-        'logger': 'effects',
-        'run_id': run_id,
-        'timestamp': '2026-08-15T19:14:29.550416Z',
-        **fields,
-    }
 
 
 def test_a_run_in_progress_is_found_before_it_has_a_record(runs_dir: Path) -> None:

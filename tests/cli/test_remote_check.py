@@ -5,16 +5,18 @@ The verb had never executed a statement. `tests/install/test_remote.py` covers
 `Reach` tuple is only half of what this command promises — the other half is the
 number a caller branches on, which is computed here and nowhere else.
 
-**Where this belongs.** `tests/matrix/__init__.py` holds the membership rule, and
-it points at `tests/matrix/`: every claim below is visible through the verb. The
-one thing sending it lower is `a_probe_that_does_not_wait`, which patches a
-module default rather than passing a value — the fourth of the four exceptions
-that docstring names. Nothing about the altitude is
-given up by that — the real `dotfiles` app is invoked in process, with nothing in
-`src/dotfiles/` stubbed, exactly as `matrix.harness.invoke` does it. What is given
-up is the synthetic *machine*: no manifest, no repo, no `$MACHINE`. This verb
-reads two things — `config.toml` and `PATH` — so a whole sandbox would be scenery.
-The day it starts reading a third, this file should move.
+**Where this belongs.** `tests/matrix/__init__.py` names four things that send a
+test out of `tests/matrix/`, and this file needs two of them. `PROBE_BACKOFF_SECONDS`
+is a patched module constant, and it is the whole reason this file runs in one
+second rather than ten. `test_the_probe_is_retried_before_the_remote_is_called_unreachable`
+asserts a real subprocess argv, which is the only place the attempt count is a
+value rather than English inside `detail`.
+
+No altitude is given up. The real `dotfiles` app is invoked in process with
+nothing in `src/dotfiles/` stubbed, exactly as `matrix.harness.invoke` does it.
+What is given up is the synthetic *machine*: no manifest, no repo, no `$MACHINE`.
+This verb reads two things — `config.toml` and `PATH` — so a whole sandbox would
+be scenery. The day it starts reading a third, this file should move.
 
 **What this verb alone decides**, and each is silent when it is wrong:
 
@@ -98,17 +100,14 @@ def server(tmp_path: Path) -> Path:
 def a_probe_that_does_not_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     """Zero the retry sleep. The clock, and nothing else.
 
-    `measure` calls `answered(remote)` with no arguments, so the only reachable
-    seam is the parameter's default — and that default is *not*
-    `remote.PROBE_BACKOFF_SECONDS`. It is the value that constant had when the
-    `def` ran, stored in `answered.__kwdefaults__`, so setting the module constant
-    afterwards changes nothing and the test still waits three seconds.
+    `answered` reads this constant at call time, so patching it is enough and a
+    rename fails here rather than degrading into ten seconds of real sleeping.
 
     Three real probes still run against a real program; only the seconds between
     them go. `test_the_probe_is_retried_before_the_remote_is_called_unreachable`
     is what proves the loop was not cut along with the wait.
     """
-    monkeypatch.setattr(transport.answered, '__kwdefaults__', {**(transport.answered.__kwdefaults__ or {}), 'backoff': 0})
+    monkeypatch.setattr(transport, 'PROBE_BACKOFF_SECONDS', 0)
 
 
 @dc.dataclass(frozen=True)
@@ -158,6 +157,7 @@ def a_program_that_is_not_on_path(bench: Bench) -> None:
     install_relay(bench.bin, bench.server)
     declare(bench.config)
     bench.monkeypatch.setenv('PATH', f'/usr/bin{os.pathsep}/bin')
+    assert (bench.bin / 'relay').is_file(), 'the binary is on disk; only PATH stops it being named'
 
 
 def installed_and_not_answering(bench: Bench) -> None:
@@ -209,11 +209,24 @@ class State:
     identity: tuple[bool, str, str]
     """`(declared, root, program)` — what the document says the machine configured."""
 
+    problem: tuple[str, ...] = ()
+    """Substrings the `problem` field must carry, and `()` asserts it is empty.
+
+    A column rather than a set of functions beside the table, so a new state is a
+    row and cannot be added in a shape three screens down that still asserts the
+    old one. Substrings because the field is a sentence a person reads; what a
+    caller branches on is `exit_code` and `faults`.
+    """
+
 
 STATES: dict[str, State] = {
     'nothing-is-declared': State(nothing_declared, (('config', False, True),), ExitCode.ISSUE, (False, '', '')),
     'the-table-will-not-load': State(
-        a_table_that_will_not_load, (('config', False, True), ('config', False, True)), ExitCode.ISSUE, (True, '', '')
+        a_table_that_will_not_load,
+        (('config', False, True), ('config', False, True)),
+        ExitCode.ISSUE,
+        (True, '', ''),
+        problem=('remote.root', 'remote.transport'),
     ),
     'the-program-is-not-on-path': State(
         a_program_that_is_not_on_path,
@@ -340,6 +353,10 @@ def test_the_document_names_every_condition_and_the_exit_code_follows_the_faults
     assert [(found['subject'], found['ok'], found['required']) for found in answered['measured']] == list(row.measured)
     assert answered['faults'] == faults(row)
     assert (answered['declared'], answered['root'], answered['program']) == row.identity
+    for named in row.problem:
+        assert named in answered['problem']
+    if not row.problem:
+        assert answered['problem'] == '', 'a state with nothing to say about the config says nothing'
 
 
 @pytest.mark.parametrize('state', list(STATES), ids=list(STATES))
@@ -361,42 +378,6 @@ def test_the_rendered_answer_reaches_the_same_verdict_and_leaves_stdout_free_of_
     assert not ran.stdout.lstrip().startswith(('{', '[')), 'only --json emits a document'
 
 
-def test_a_machine_that_declared_no_remote_is_a_fault_here_although_its_config_is_not_wrong(bench: Bench) -> None:
-    """The one place in the tool where an absent `[remote]` is a finding.
-
-    `problem` is the pairing that makes the claim readable: the document says
-    nothing is wrong with the config *and* the verb exits 3, which is the whole
-    distinction between "this machine has no remote" and "this verb was asked
-    whether it has one". `config show` answers the first and exits 0 —
-    `tests/matrix/test_machines_config_repo.py` pins that half.
-    """
-    nothing_declared(bench)
-
-    ran = check('--json')
-    answered = document(ran)
-
-    assert ran.exit_code == ExitCode.ISSUE
-    assert answered['declared'] is False
-    assert answered['problem'] == ''
-    assert answered['faults'] == 1
-
-
-def test_a_table_that_will_not_load_reports_every_fault_at_once_rather_than_the_first(bench: Bench) -> None:
-    """Two mistakes otherwise cost two runs, and each run's one line reads as the
-    only thing wrong. `declared` separates this from the state above: a machine
-    with a broken table has a remote, and gets the opposite advice."""
-    a_table_that_will_not_load(bench)
-
-    ran = check('--json')
-    answered = document(ran)
-
-    assert ran.exit_code == ExitCode.ISSUE
-    assert answered['declared'] is True
-    assert 'remote.root' in answered['problem']
-    assert 'remote.transport' in answered['problem']
-    assert answered['faults'] == 2, 'one row per line, so a caller counting faults counts mistakes'
-
-
 def test_the_probe_is_retried_before_the_remote_is_called_unreachable(bench: Bench) -> None:
     """One dropped packet is indistinguishable from an outage in a single call.
 
@@ -413,22 +394,3 @@ def test_the_probe_is_retried_before_the_remote_is_called_unreachable(bench: Ben
     assert ran.exit_code == ExitCode.ISSUE
     assert recorded(bench.record) == [['probe'], ['probe'], ['probe']]
     assert document(ran)['measured'][-1]['subject'] == 'reachable'
-
-
-def test_a_binary_that_exists_and_is_not_on_path_is_reported_as_the_transport_fault(bench: Bench) -> None:
-    """`PATH` is what decides, and the file being on disk is what makes that a claim.
-
-    Paired with the positive fact per standards/testing.md § "An assertion that
-    nothing happened is satisfied by a crash": the relay is still there and still
-    executable, and the measurement stopped at two rows rather than probing a
-    program it could not run.
-    """
-    a_program_that_is_not_on_path(bench)
-
-    ran = check('--json')
-    answered = document(ran)
-
-    assert ran.exit_code == ExitCode.ISSUE
-    assert (bench.bin / 'relay').is_file(), 'the binary is on disk; only PATH stopped naming it'
-    assert [found['subject'] for found in answered['measured']] == ['transport', 'configured']
-    assert answered['measured'][0]['ok'] is False
