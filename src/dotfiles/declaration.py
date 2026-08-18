@@ -152,13 +152,23 @@ def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
     return all_packages
 
 
+ARCH_MARKER = Path('/etc/arch-release')
+"""What splits Linux into Arch and everything else, and then pacman from apt.
+
+Named rather than written inline so a test can answer it. Read off the running
+box, the expectation has to consult the same file the code does, and the
+assertion then holds whatever either of them says — which is no assertion at
+all on the runner that gates the merge.
+"""
+
+
 def get_current_platform() -> Platform:
     """Detect the current operating system platform."""
     system = platform.system()
     if system == 'Darwin':
         return Platform.MACOS
     if system == 'Linux':
-        if Path('/etc/arch-release').exists():
+        if ARCH_MARKER.exists():
             return Platform.ARCH
         return Platform.LINUX
     return Platform.UNKNOWN

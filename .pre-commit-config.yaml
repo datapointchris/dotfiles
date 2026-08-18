@@ -242,7 +242,7 @@ repos:
       # from tests/cli, tests/resources and tests/shell.
       - id: pytest
         name: pytest
-        entry: uv run pytest tests/ -n auto
+        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/ -n auto'
         language: system
         pass_filenames: false
         files: '^(src/|tests/|install/|apps/|pyproject\.toml$|uv\.lock$|configs/common/\.config/zsh/|configs/common/\.local/shell/)'
@@ -258,7 +258,7 @@ repos:
       # between them they are also the whole of `shell/`'s coverage.
       - id: pytest-trees
         name: pytest (deployed trees)
-        entry: uv run pytest tests/symlinks tests/shell tests/configs -n auto
+        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/symlinks tests/shell tests/configs -n auto'
         language: system
         pass_filenames: false
         files: ^(configs/|shell/)

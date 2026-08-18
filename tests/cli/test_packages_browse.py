@@ -843,16 +843,19 @@ LINUX_MANAGERS = (('pacman', True), ('aur', True), ('apt', False))
 
 
 @pytest.mark.parametrize(('key', 'wanted_on_arch'), LINUX_MANAGERS, ids=[key for key, _ in LINUX_MANAGERS])
+@pytest.mark.parametrize('on_arch', [True, False], ids=['on-arch', 'not-on-arch'])
 def test_a_system_package_is_available_only_where_its_own_manager_is(
-    monkeypatch: pytest.MonkeyPatch, key: str, wanted_on_arch: bool
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, key: str, wanted_on_arch: bool, on_arch: bool
 ) -> None:
-    """Which linux this is comes from `/etc/arch-release`, a real file no test
-    can fake — so the expectation reads the same evidence the code does. Both
-    branches are exercised across the fleet: the Arch desk takes one and the
-    Ubuntu runner takes the other.
-    """
+    """Which linux this is comes from `declaration.ARCH_MARKER`, and the test
+    names both answers rather than reading the box it runs on. Consulting the
+    same file the code consults makes the assertion hold whatever either says,
+    which is no assertion at all — and the runner that gates the merge is the
+    machine where it could never fail."""
     monkeypatch.setattr(platform, 'system', lambda: 'Linux')
-    on_arch = Path('/etc/arch-release').exists()
+    monkeypatch.setattr(declaration, 'ARCH_MARKER', tmp_path / ('arch-release' if on_arch else 'nothing-here'))
+    if on_arch:
+        (tmp_path / 'arch-release').touch()
 
     available = declaration.is_available_on_platform({'_section': 'system_packages', 'name': 'ripgrep', key: 'ripgrep'})
 
@@ -882,11 +885,17 @@ def test_an_unrecognised_system_is_unknown_rather_than_assumed_to_be_linux(
     assert declaration.get_current_platform() is expected
 
 
-def test_linux_is_split_into_arch_and_everything_else_by_one_file(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`/etc/arch-release` is what decides, and it is what selects pacman over
-    apt one function later."""
+@pytest.mark.parametrize(('present', 'expected'), [(True, Platform.ARCH), (False, Platform.LINUX)], ids=['arch', 'other-linux'])
+def test_linux_is_split_into_arch_and_everything_else_by_one_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, present: bool, expected: Platform
+) -> None:
+    """`ARCH_MARKER` is what decides, and it is what selects pacman over apt one
+    function later. Both answers are named here, so neither depends on the desk."""
     monkeypatch.setattr(platform, 'system', lambda: 'Linux')
-    expected = Platform.ARCH if Path('/etc/arch-release').exists() else Platform.LINUX
+    marker = tmp_path / 'arch-release'
+    if present:
+        marker.touch()
+    monkeypatch.setattr(declaration, 'ARCH_MARKER', marker)
 
     assert declaration.get_current_platform() is expected
 

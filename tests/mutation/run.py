@@ -453,6 +453,33 @@ def changed_lines(repo: Path, since: str) -> dict[str, set[int]]:
     return {path: lines for path, lines in found.items() if lines}
 
 
+def gate_lines(run: score.Run, comparison: score.Comparison | None, *, floored: bool) -> list[str]:
+    """What the gate refuses, in the words it refuses with."""
+    said: list[str] = []
+    counts = run.tally()
+    if floored and counts.score < target_list.THRESHOLD:
+        said.append(f'score {counts.score:.0%} is below the committed floor of {target_list.THRESHOLD:.0%}')
+    if comparison is not None and comparison.new_prose_pinned:
+        said.append(f'{len(comparison.new_prose_pinned)} rendering mutants died that did not before: a test is newly asserting on prose')
+    return said
+
+
+def gate(run: score.Run, comparison: score.Comparison | None, *, floored: bool) -> int:
+    """The exit code, decided apart from the run that produced the numbers.
+
+    Its own function because the composition around it — record, select this
+    box's own history, compare, refuse — is the half `main` could not be tested
+    through, and a whole mutation pass is too expensive to make a test of.
+
+    **The floor applies only to the declared targets.** A module is added to
+    `DEFAULT_TARGETS` after somebody has run it and looked at the survivors, so
+    that first exploratory run is against a module nobody has aimed a test at
+    and is below the floor by construction. Refusing there reports the command
+    as failed for doing exactly what it is for.
+    """
+    return 1 if gate_lines(run, comparison, floored=floored) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     repo = repo_root()
     parser = argparse.ArgumentParser(description='Plant one bug at a time and count the ones nothing noticed')
@@ -465,6 +492,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--jobs', type=int, default=max(2, (os.cpu_count() or 4) - 1))
     parser.add_argument('--limit', type=int, default=None, help='Plant at most this many mutants, for a smoke run')
     parser.add_argument('--refresh-contexts', action='store_true', help='Re-measure which tests execute which line')
+    parser.add_argument('--runs-dir', type=Path, default=None, help='Where to record this run (default: the XDG state directory)')
+    parser.add_argument('--machine', default=None, help='Record and compare under this box name (default: this machine)')
     parsed = parser.parse_args(argv)
 
     if parsed.explain is not None:
@@ -502,22 +531,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     say(f'contexts {"measured" if measured else "cached"}: {cached}')
 
     run = measure(plan, chosen, contexts, limit=parsed.limit, lines=lines)
-    directory = paths.STATE_HOME / 'mutation-runs'
-    written = score.record(run, directory, paths.MACHINE_ID)
-    earlier = [path for path in score.recorded(directory) if path != written]
+    directory = parsed.runs_dir if parsed.runs_dir is not None else paths.STATE_HOME / 'mutation-runs'
+    machine = parsed.machine or paths.MACHINE_ID
+    written = score.record(run, directory, machine)
+    # This box's own history and nobody else's. The state directory is a
+    # Syncthing folder, so the newest file in it is usually another machine's
+    # measurement of another commit, and the gate below follows the comparison.
+    earlier = [path for path in score.recorded(directory, machine) if path != written]
     comparison = score.compare(run, score.read(earlier[0])) if earlier else None
     for line in score.render(run, comparison):
         say(line)
     say(f'recorded {written}')
 
-    counts = run.tally()
-    if counts.score < target_list.THRESHOLD:
-        say(f'score {counts.score:.0%} is below the committed floor of {target_list.THRESHOLD:.0%}')
-        return 1
-    if comparison is not None and comparison.new_prose_pinned:
-        say(f'{len(comparison.new_prose_pinned)} rendering mutants died that did not before: a test is newly asserting on prose')
-        return 1
-    return 0
+    for line in gate_lines(run, comparison, floored=chosen == target_list.DEFAULT_TARGETS):
+        say(line)
+    return gate(run, comparison, floored=chosen == target_list.DEFAULT_TARGETS)
 
 
 if __name__ == '__main__':

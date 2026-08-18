@@ -42,8 +42,8 @@ RELEASE_FAMILIES = (OSFamily.DARWIN, OSFamily.LINUX)
 
 `OSFamily` has a third member and not one function here branches on it, which the
 windows manifest already records as the reason it declares no releases —
-`test_a_windows_target_is_a_linux_target_to_every_one_of_these` is what holds that
-line rather than a comment.
+`test_a_windows_machine_asks_for_none_of_these_because_windows_is_linux_here` is
+what holds that line rather than a comment.
 """
 
 TARGETS = tuple(Target(family, arch) for family in RELEASE_FAMILIES for arch in Arch)

@@ -101,9 +101,9 @@ tasks:
   test:
     desc: Run the test suite (no Docker, no network)
     cmds:
-      # One core is left for the rest of the machine. `auto` took all sixteen,
-      # and a mutation run spawning its own pytest per worker multiplied it.
-      - uv run pytest -n 15
+      # xdist reads this for `auto`, so the count is asked of the machine rather
+      # than written down. One core stays free for whatever else is running.
+      - PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) uv run pytest -n auto
 
   test:e2e:
     desc: 'Raw pytest over every e2e level at once — prefer test:matrix, which orders and records them'

@@ -50,6 +50,7 @@ def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path, staging: 
     staged = report._masked_copy(local, NAMES, staging)
     written = json.loads(staged.read_text())
 
+    assert staged.parent == staging, 'the caller chooses where a copy lands, and this asserts it rather than assuming it'
     assert staged.name == local.name, 'the stamp is how a record is addressed on the shelf'
     assert written['outcomes'][0]['address'] == 'system/step/windows-fonts', 'the address says which step failed'
     assert written['outcomes'][0]['message'] == '/mnt/c/Users/<windows-account>/AppData'
@@ -93,7 +94,12 @@ def test_a_path_under_this_home_reads_as_a_person_writes_it(tmp_path: Path, stag
 def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path, staging: Path) -> None:
     """The local copy is the account of what happened here, and this box is the one
     entitled to it. Masking in place would take that away to protect it from
-    itself."""
+    itself, and it is unrecoverable because the original is gone.
+
+    Asked of the function rather than of the fixture. A staging directory that
+    happens to differ proves only that today's caller behaves, so the second half
+    names the record's own directory and requires the refusal.
+    """
     local = tmp_path / '20260817T131536Z-wkstn01x-apply.json'
     original = json.dumps({'outcomes': [{'message': '/mnt/c/Users/ab12345'}]})
     local.write_text(original)
@@ -102,3 +108,7 @@ def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path, staging: Pa
 
     assert local.read_text() == original
     assert staged != local
+
+    with pytest.raises(ValueError, match='already lives'):
+        report._masked_copy(local, NAMES, local.parent)
+    assert local.read_text() == original, 'and the refusal left the record alone'

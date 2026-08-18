@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import dataclasses
+import datetime as dt
 import json
 import subprocess
 import sys
@@ -649,3 +650,70 @@ def test_the_context_map_is_reused_when_nothing_moved_and_dropped_when_something
     assert measured_after
     assert json.loads(cached.read_text())['tests'] != json.loads(moved.read_text())['tests']
     assert first.for_line('src/toy/thing.py', 7)
+
+
+# ── The gate, which is the composition `main` could not be tested through ──────
+
+
+def a_run(*, score_of: float, prose_pinned: int = 0, target: str = 'src/toy/thing.py', stamped: str = '20260817T000000Z') -> score.Run:
+    """A run with a chosen score, built rather than measured."""
+    killed = int(round(score_of * 10))
+    results = [result(score.KILLED, line=index, file=target) for index in range(killed)]
+    results += [result(score.SURVIVED, line=100 + index, file=target) for index in range(10 - killed)]
+    results += [result(score.KILLED, bucket=classify.RENDERING, line=200 + index, file=target) for index in range(prose_pinned)]
+    return score.Run(
+        started_at=stamped,
+        finished_at=stamped,
+        machine='thisbox',
+        targets=(target,),
+        results=tuple(results),
+    )
+
+
+def test_a_gate_over_a_module_nobody_has_aimed_a_test_at_does_not_report_a_failure() -> None:
+    """`DEFAULT_TARGETS` earns a module only after somebody has run it and read
+    the survivors, so the first run is below the floor by construction. Refusing
+    there reports the command as failed for doing what it is for."""
+    poor = a_run(score_of=0.1)
+
+    assert harness.gate(poor, None, floored=False) == 0
+    assert harness.gate(poor, None, floored=True) == 1
+
+
+def test_the_gate_refuses_a_test_that_newly_asserts_on_prose(tmp_path: Path) -> None:
+    before = a_run(score_of=1.0)
+    after = a_run(score_of=1.0, prose_pinned=1)
+
+    comparison = score.compare(after, before)
+
+    assert comparison.new_prose_pinned
+    assert harness.gate(after, comparison, floored=False) == 1
+    assert harness.gate(after, None, floored=False) == 0, 'with nothing to compare against there is no new prose'
+
+
+def test_the_comparison_reads_this_boxs_own_history_and_not_a_peers(tmp_path: Path) -> None:
+    """`$XDG_STATE_HOME` is a Syncthing folder, so the newest file in the runs
+    directory is usually another machine measuring another commit. Selecting
+    without the machine made the gate follow a peer."""
+    score.record(a_run(score_of=0.2, stamped='20260817T000000Z'), tmp_path, 'a-peer-box')
+    mine = score.record(a_run(score_of=1.0, stamped='20260817T010000Z'), tmp_path, 'thisbox')
+    newest_peer = score.record(a_run(score_of=0.2, stamped='20260817T020000Z'), tmp_path, 'a-peer-box')
+
+    assert score.recorded(tmp_path)[0] == newest_peer, 'the peer did write last'
+    assert score.recorded(tmp_path, 'thisbox') == [mine]
+
+
+def test_a_box_named_by_the_tail_of_another_does_not_claim_its_runs(tmp_path: Path) -> None:
+    """`scheduler-lxc` is a real hostname here, and a suffix match handed every
+    one of its runs to a box called `lxc`."""
+    theirs = score.record(a_run(score_of=1.0), tmp_path, 'scheduler-lxc')
+
+    assert score.recorded(tmp_path, 'lxc') == []
+    assert score.recorded(tmp_path, 'scheduler-lxc') == [theirs]
+
+
+def test_a_stamp_carries_no_hyphen_because_the_filename_splits_on_the_first_one() -> None:
+    """`record` composes `<stamp>-<machine>` and `recorded` splits it back. A
+    machine name carries hyphens of its own, so the stamp is the half that
+    cannot, and basic-format ISO 8601 is what makes that true."""
+    assert '-' not in score.stamp(dt.datetime(2026, 8, 17, 22, 42, 5, tzinfo=dt.UTC))

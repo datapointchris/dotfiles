@@ -6,7 +6,7 @@ an argument to, what keyword it is bound to, whether it is a docstring, which mo
 
 **A rendering mutant is planted and then excluded from the score.** Excluding it from the *run* would lose the one thing that
 catches a suite gaming the score: a rendering mutant that dies means some test asserted on prose, which
-`docs/development/testing.md` forbids. `score.PROSE_PINNED` is that fourth bucket.
+`docs/development/testing.md` forbids. `score.pinned` is what reads that fourth bucket out of a run.
 
 **The default direction is deliberate.** A logic string wrongly marked rendering vanishes from the score with nothing to notice it.
 A rendering string wrongly marked logic surfaces as a survivor, which a person reads and corrects. So every rule here is narrow,

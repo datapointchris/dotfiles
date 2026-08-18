@@ -255,10 +255,6 @@ class Proof:
     each such cluster is held back, and everything left is deletable in one go.
     """
 
-    @property
-    def redundant(self) -> bool:
-        return self.sole_owner is None and self.killed > 0
-
 
 @dataclasses.dataclass(frozen=True)
 class Verification:

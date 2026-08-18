@@ -164,13 +164,19 @@ def record(run: Run, directory: Path, machine_id: str) -> Path:
 
 
 def recorded(directory: Path, machine_id: str | None = None) -> list[Path]:
-    """Newest first. Filenames sort chronologically, so this reads nothing."""
+    """Newest first. Filenames sort chronologically, so this reads nothing.
+
+    The machine is the whole second half of the stem, never a suffix of it. A
+    stem is `<timestamp>-<machine>` and the timestamp carries no hyphen, so the
+    split is exact — where `endswith` let `lxc` claim every run `scheduler-lxc`
+    wrote, which is a real hostname on this fleet.
+    """
     if not directory.exists():
         return []
     found = sorted(directory.glob('*.json'), reverse=True)
     if machine_id is None:
         return found
-    return [path for path in found if path.stem.endswith(f'-{machine_id}')]
+    return [path for path in found if path.stem.split('-', 1)[-1] == machine_id]
 
 
 def read(path: Path) -> Run:

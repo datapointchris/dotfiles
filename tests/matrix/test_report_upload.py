@@ -15,6 +15,7 @@ both shapes and neither is the machine this runs on.
 
 from __future__ import annotations
 
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -49,6 +50,21 @@ def server(sandbox: Sandbox) -> Path:
 
 def shelf(server: Path) -> Path:
     return server / 'artefacts' / 'reports' / MACHINE
+
+
+@pytest.fixture
+def scratch(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The directory a send stages into, pointed inside this test's own sandbox.
+
+    `tempfile.tempdir` and not `TMPDIR`. The environment variable is read once
+    per process and cached, so by the time a test sets it something else has
+    already resolved the answer and the assertion below counts an empty
+    directory whatever the code does.
+    """
+    made = sandbox.root / 'scratch'
+    made.mkdir()
+    monkeypatch.setattr(tempfile, 'tempdir', str(made))
+    return made
 
 
 @pytest.fixture
@@ -169,6 +185,7 @@ def test_an_apply_publishes_nothing_unless_the_machine_asked(
     ran = cli('apply')
 
     assert ran.exit_code in {ExitCode.CONVERGED, ExitCode.DRIFT}
+    assert sandbox.filed_records, 'the apply did file a record, so there was something to publish'
     assert not shelf(server).exists() or list(shelf(server).iterdir()) == []
 
 
@@ -194,4 +211,25 @@ def test_a_refused_listing_is_reported_rather_than_read_as_an_empty_shelf(
 
     ran = cli('report', 'upload', catch_exceptions=True)
 
-    assert ran.exit_code != ExitCode.CONVERGED
+    assert ran.exit_code == ExitCode.ISSUE, 'the refusal `remote.listed` raises, not whatever a traceback exits with'
+    assert not shelf(server).exists() or list(shelf(server).iterdir()) == []
+
+
+def test_a_send_leaves_nothing_behind_in_the_temporary_directory(
+    sandbox: Sandbox, server: Path, scratch: Path, named: str, cli: Callable[..., Invocation]
+) -> None:
+    """The masked copy is a copy, so a send makes files that are nobody's account
+    of anything once it ends. Left behind they are unbounded: `/tmp` is a tmpfs on
+    a workstation, so a scheduled check uploading twice a day fills memory on a
+    timer, and 8044 of them is what took this desk down.
+
+    Counted rather than reasoned about. The whole point is that a reverted fix
+    stays green under every other assertion in this file.
+    """
+    a_record(sandbox, named)
+
+    ran = cli('report', 'upload')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert sorted(path.name for path in shelf(server).iterdir()), 'the send did happen'
+    assert list(scratch.iterdir()) == [], 'and staged nothing that outlived it'

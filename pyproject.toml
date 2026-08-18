@@ -70,11 +70,13 @@ exclude_lines = [
   "pragma: no cover",
   "if TYPE_CHECKING:",
   "@abstractmethod",
-  # A Protocol body and a NotImplementedError stub are unreachable by
+  # A Protocol body and a bare NotImplementedError stub are unreachable by
   # construction, so counting them leaves statements no test can ever take and a
-  # percentage that cannot reach itself.
+  # percentage that cannot reach itself. Anchored, because a NotImplementedError
+  # carrying an argument is a real refusal a caller turns into a Refusal, and
+  # `registry.py:163` is one that tests/install/test_provider_seams.py drives.
   "^\\s*\\.\\.\\.$",
-  "raise NotImplementedError",
+  "raise NotImplementedError$",
 ]
 
 
@@ -203,7 +205,11 @@ managed = [
 dev = [
     "mypy>=1.10.0",
     "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
+    # tests/mutation/subset.py imports it directly, and a transitive dependency
+    # of pytest-cov is not a declaration — docs/learnings/undeclared-transitive-dependency.md
+    # is what that costs. The floor is the version carrying `patch`.
+    "coverage>=7.10.6",
+    "pytest-cov>=7.0.0",
     "pytest-xdist>=3.5.0",
     "types-PyYAML>=6.0.12",
 ]

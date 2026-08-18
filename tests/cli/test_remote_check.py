@@ -5,10 +5,11 @@ The verb had never executed a statement. `tests/install/test_remote.py` covers
 `Reach` tuple is only half of what this command promises — the other half is the
 number a caller branches on, which is computed here and nowhere else.
 
-**Where this belongs.** `docs/development/testing.md` § "`tests/matrix/` is where a
-property visible through a verb belongs" points at `tests/matrix/`, and that is
-the right reading of the rule: every claim below is visible through the verb. It
-is here because the file assignment says here, and nothing about the altitude is
+**Where this belongs.** `tests/matrix/__init__.py` holds the membership rule, and
+it points at `tests/matrix/`: every claim below is visible through the verb. The
+one thing sending it lower is `a_probe_that_does_not_wait`, which patches a
+module default rather than passing a value — the fourth of the four exceptions
+that docstring names. Nothing about the altitude is
 given up by that — the real `dotfiles` app is invoked in process, with nothing in
 `src/dotfiles/` stubbed, exactly as `matrix.harness.invoke` does it. What is given
 up is the synthetic *machine*: no manifest, no repo, no `$MACHINE`. This verb

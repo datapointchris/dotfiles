@@ -63,7 +63,7 @@ machine contract the render-call rule had swallowed, found because a rendering
 mutant is not supposed to die. `classify._children` now takes what a
 comprehension *reads* as logic wherever it sits.
 
-## The three properties that make a number believable
+## What makes a number believable
 
 **The working tree is never mutated.** `configs/`, `shell/` and `apps/` are
 symlinked live into `$HOME` here and the CLI is installed editable against
@@ -169,7 +169,7 @@ subprocess argv, a resource being released, a timing bound and a file that must
 *not* be written are all outside that set. Silence from the prover is silence,
 and those come back in their own bucket with the reason attached.
 
-### Four things it does that a naive version would not
+### What a naive version would get wrong
 
 **The scope is the union of the candidates' own footprints, and a test reaching
 outside it is unprovable.** A mutant nobody planted is a bug nobody looked for.
