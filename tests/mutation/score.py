@@ -43,6 +43,20 @@ class SiteResult:
     tests: int = 0
     seconds: float = 0.0
     detail: str = ''
+    killers: tuple[str, ...] = ()
+    """The tests that failed against this mutant, populated only by a `Plan(record_killers=True)` run.
+
+    Empty on an ordinary run, where `-x` stops at the first failure and the rest is unmeasured. `redundancy.py` is what asks for it
+    and the only thing that reads it, so an empty tuple here means nobody asked rather than nobody killed.
+    """
+
+    unmeasured: tuple[str, ...] = ()
+    """Tests this mutant made unaddressable, so it says nothing about them either way.
+
+    A mutation to a value a test is parametrised over renames the case, and the node id the subset holds stops existing. The mutant
+    is re-run against everyone still addressable and these are named, because a killer set that is silently short is the one thing
+    a redundancy proof cannot survive. `run.vanished_in` is the mechanism.
+    """
 
     @property
     def address(self) -> str:
@@ -127,7 +141,10 @@ def from_payload(payload: dict) -> Run:
         finished_at=payload['finished_at'],
         machine=payload['machine'],
         targets=tuple(payload['targets']),
-        results=tuple(SiteResult(**result) for result in payload['results']),
+        results=tuple(
+            SiteResult(**{**result, 'killers': tuple(result.get('killers', ())), 'unmeasured': tuple(result.get('unmeasured', ()))})
+            for result in payload['results']
+        ),
         control_seconds=payload.get('control_seconds', 0.0),
         timeout_seconds=payload.get('timeout_seconds', 0.0),
         schema=payload.get('schema', SCHEMA),

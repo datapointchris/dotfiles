@@ -83,6 +83,19 @@ every mutant and reported a perfect score that was pure artifact.
 that kills. 2, 3, 4 and 5 are interrupted, internal error, usage error and
 nothing collected — harness faults, reported separately and never scored.
 
+**The shadowed source never has bytecode.** A `.pyc` is revalidated against the
+source's size and its mtime *in whole seconds*, and mutants land on the same
+path in rapid succession — so two of equal length inside one second are
+indistinguishable to that check and the second imports the first one's
+bytecode. Both directions were measured on the toy in `test_redundancy.py`:
+`LIMIT = 3` -> `4` is the same length as the original and survived without ever
+being compiled, and `'under'` -> `'under-mutant'` is the same length as the
+`'over'` mutant that ran before it in the same worker, so it was reported killed
+by a test that never reaches the branch it changed. `PYTHONDONTWRITEBYTECODE`
+alone is half a fix, because an existing `.pyc` is still read, so the worker's
+copy also declines to bring `__pycache__` with it. Measured at no cost: only the
+copied `src/` recompiles and the checkout's `tests/` cache is untouched.
+
 Three smaller things follow from the same instinct. A mutant that produces no
 result inside three times the measured control duration is reported as a timeout
 rather than as a survivor, because a flipped loop condition hangs rather than
@@ -121,6 +134,89 @@ edited to match whatever the suite currently does, so it drifts upward on a good
 day and downward on a bad one and never fails. Where the score has *gone* is
 `score.compare`'s question, answered against the previous recorded run and
 naming each survivor that was not there before.
+
+## Proving a test redundant
+
+The score answers whether the suite catches a bug. `redundancy.py` answers the
+opposite question — whether anything would stop being caught if a given test
+were deleted — and it answers it with a measurement rather than a judgement.
+
+```sh
+task test:redundancy -- tests/resolver/test_versions.py
+task test:redundancy -- tests/install/test_release_assets.py --exclude tests/shell
+uv run python tests/mutation/redundancy.py <test file> --json /tmp/verdicts.json
+```
+
+Two conditions decide it, and the second is the proof.
+
+**A test that uniquely executes a line cannot be redundant.** Inverting the
+context map gives, for every line, the tests that ran it; a test holding one
+alone is proven necessary for the cost of reading a JSON file. It is a
+necessary condition and never a sufficient one, because executing a line is not
+constraining it — which is why the harness above exists at all.
+
+**Everything else has to have every one of its kills shared.** Each mutant is
+planted with the whole candidate set in the room and `-rfE` names the tests that
+failed, so a mutant carries its killer set. A candidate whose every kill is also
+somebody else's is subsumed, and the tests that subsume it are named. One
+holding a single kill alone is load-bearing, and the mutant proving it is
+printed.
+
+**A test that kills nothing is unprovable, not deletable.** The operators are
+comparison swaps, boolean swaps, dropped negations and one-step tweaks to ints,
+floats, bools and strings. An exception *type*, the order of two effects, a
+subprocess argv, a resource being released, a timing bound and a file that must
+*not* be written are all outside that set. Silence from the prover is silence,
+and those come back in their own bucket with the reason attached.
+
+### Four things it does that a naive version would not
+
+**The scope is the union of the candidates' own footprints, and a test reaching
+outside it is unprovable.** A mutant nobody planted is a bug nobody looked for.
+This is what keeps a run honest and what makes it small enough to finish.
+
+**Every site in scope is planted, not only the ones coverage attributes.**
+`planter` addresses a site by the line of its node and coverage records the line
+a statement starts on, so a constant on the third line of a call is executed and
+unattributed. Selecting by the measured map would leave those unplanted.
+
+**A mutant that breaks import is attributed rather than discarded.** Changing
+`'darwin'` in `coordinates.py` makes the catalog refuse every manifest, so a
+test module importing it cannot be collected and the node ids named on the
+command line stop resolving — pytest exits 4, which the scoring run reads as a
+harness fault. That reading blocked 715 of 718 proofs on the first real run.
+A killer-recording run passes `--continue-on-collection-errors`, reads the file
+named in the summary, and attributes the kill to the tests the subset holds
+there. The original guard survives intact because attribution is what decides
+it: a genuine usage error prints no summary, so there are no killers and the
+result stays a harness fault.
+
+**A mutant that renames a parametrised case blocks only the tests it renamed.**
+`'apt'` -> `'apt-mutant'` in `coordinates.py` turns
+`test_every_package_manager_names_an_installer_family[apt]` into a node id
+nothing answers to, and pytest exits 4 having run none of the subset. Reading
+that as a blocked module cost 715 of 718 proofs for six mutants. The harness
+names the ids that vanished, re-runs the mutant against everyone still
+addressable, and records the rest as unmeasured — so those tests come back
+unprovable and nobody else is affected.
+
+**The room is screened against an unmutated copy first.** A test anchored on
+something beside the package — `pyproject.toml`, the checkout's layout — does
+not find it on the shadowed `PYTHONPATH`, so it fails against every mutant and
+against none, which would make it everybody's subsumer. Screening drops it and
+names it. `tests/test_dependencies.py` is the real case.
+
+**The per-test list is not a list of deletions.** Condition (b) is stated
+against the suite as it stands, so two tests that duplicate each other are
+*both* redundant and neither is once the other has gone. The report marks the
+subset that survives being deleted in one act, holding one representative of
+each such cluster back. `test_redundancy.py` measures both readings against the
+toy: dropping the joint set leaves the kill count unchanged and dropping every
+redundant test does not.
+
+Omitting a test with `--exclude` costs proofs and cannot manufacture one — a
+test absent from the room can only fail to be somebody's subsumer. That is what
+makes it safe to keep the slow tiers out of a run.
 
 ## Adding to it
 
