@@ -1,11 +1,12 @@
-"""Tests for the read commands — `packages list` and `packages stats`.
+"""The `python -m dotfiles.declaration` door, and nothing else.
 
-The one thing worth asserting here is that every *structure* packages.yml uses is
-reachable. Section-by-section tests would not have caught what these do: `list`,
-`search` and `stats` shared a helper that inferred structure from the runtime
-type rather than reading the declared one, so a dict-of-dicts section returned
-nothing and was silently absent from every read. `tmux_plugins` was invisible in
-all three, and `stats` reported a total that was simply wrong.
+Every assertion about what the read commands *answer* — the payload of a listing,
+the per-section counts, the total — lives in `tests/cli/test_packages_browse.py`,
+which drives the same code in process and asserts it strictly. What is left here
+is the door: the module runs as a script, and a fresh process locates the
+declaration from `DOTFILES_DIR` alone. In process that resolution cannot be
+measured, because `paths` derives the packages file from the variable once at
+import and the in-process tests re-run that derivation themselves.
 """
 
 from __future__ import annotations
@@ -22,12 +23,10 @@ import yaml
 
 PACKAGES = [sys.executable, '-m', 'dotfiles.declaration']
 
-# One real section per declared structure, so the fixture exercises the same
-# specs the real file does rather than inventing section names.
-ONE_OF_EACH_STRUCTURE: dict[str, Any] = {
+# A real section name, because `iter_section_entries` branches on the structure
+# the catalog declares for it and an invented name yields nothing.
+DECLARED: dict[str, Any] = {
     'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'description': 'fuzzy finder'}],
-    'npm_globals': {'language-servers': [{'name': 'pyright', 'description': 'python lsp'}]},
-    'tmux_plugins': {'tpm': {'repo': 'https://github.com/tmux-plugins/tpm', 'install_dir': '~/x', 'description': 'plugin manager'}},
 }
 
 
@@ -35,7 +34,7 @@ ONE_OF_EACH_STRUCTURE: dict[str, Any] = {
 def tree(tmp_path: Path) -> Path:
     install_dir = tmp_path / 'install'
     install_dir.mkdir(parents=True)
-    (install_dir / 'packages.yml').write_text(yaml.safe_dump(ONE_OF_EACH_STRUCTURE, sort_keys=False))
+    (install_dir / 'packages.yml').write_text(yaml.safe_dump(DECLARED, sort_keys=False))
     return tmp_path
 
 
@@ -56,29 +55,17 @@ def run_packages(root: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_list_reaches_every_declared_structure(tree: Path) -> None:
+def test_the_module_run_as_a_script_reads_the_declaration_dotfiles_dir_names(tree: Path) -> None:
+    """What the read commands answer is asserted in
+    `tests/cli/test_packages_browse.py`, in process and strictly. This is the
+    subprocess door alone: `python -m dotfiles.declaration` reaches `cli()`.
+
+    The one name is what makes the run say which file it read. A door that
+    ignored `DOTFILES_DIR` would resolve this checkout's own packages.yml and
+    exit zero over a listing of everything, so neither the exit code nor a
+    non-empty payload can tell the two apart.
+    """
     result = run_packages(tree, 'list', '--json')
+
     assert result.returncode == 0, result.stderr
-
-    listed = {entry['name']: entry['section'] for entry in json.loads(result.stdout)}
-    assert listed == {'fzf': 'github_releases', 'pyright': 'npm_globals', 'tpm': 'tmux_plugins'}
-
-
-def test_a_dict_of_dicts_entry_takes_its_name_from_the_key(tree: Path) -> None:
-    """The outer key is the name; there is no `name:` field inside the entry."""
-    result = run_packages(tree, 'list', '--section', 'tmux_plugins', '--json')
-    assert result.returncode == 0, result.stderr
-
-    entries = json.loads(result.stdout)
-    assert [entry['name'] for entry in entries] == ['tpm']
-    assert entries[0]['description'] == 'plugin manager'
-
-
-def test_stats_counts_every_structure(tree: Path) -> None:
-    """The count was wrong, not merely incomplete: whole sections were missing."""
-    result = run_packages(tree, 'stats')
-    assert result.returncode == 0, result.stderr
-    assert 'Total' in result.stdout
-
-    total_line = next(line for line in result.stdout.splitlines() if line.startswith('Total'))
-    assert total_line.split()[-1] == '3'
+    assert [entry['name'] for entry in json.loads(result.stdout)] == ['fzf'], result.stdout
