@@ -232,6 +232,11 @@ tasks:
     cmds:
       - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py {{.CLI_ARGS}}"
 
+  docs:duplication:harness:
+    desc: The same, for the mutation harness README against the package it sits beside
+    cmds:
+      - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py --pages tests/mutation --code tests/mutation --max 200 {{.CLI_ARGS}}"
+
   # ================================================================
   # WSL
   # ================================================================

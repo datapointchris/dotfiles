@@ -440,9 +440,13 @@ def upstream(monkeypatch: pytest.MonkeyPatch) -> Upstream:
     return fake
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def declaration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A synthetic `install/` tree, and the three constants that resolve one.
+
+    Autouse because every test in this file builds a bundle and a bundle needs a
+    declaration to build from. Without it a run reads this checkout's real
+    manifests and refuses on the synthetic machine name.
 
     Three, because they are three separate module constants and the build reads
     all of them: `catalog.load` opens `PACKAGES_FILE`, `machines.load` walks from
@@ -651,622 +655,660 @@ What varies is only the arrangement and the word.
 """
 
 
-@pytest.mark.usefixtures('declaration')
-class TestAFullBuild:
-    """One archive, every declared section in it, and every asset verified.
+# ─────────────────────────────────────────────────────────────────────────────
+# A full build
+#
+# One archive, every declared section in it, and every asset verified.
+#
+# Nothing below stubs an adder. A row in `manifest.txt` is evidence that the
+# real `add_*` staged a real file, and a digest in `checksums.txt` is evidence
+# that `verify_against_upstream` hashed it and compared it to what the fake
+# published.
+# ─────────────────────────────────────────────────────────────────────────────
 
-    Nothing below stubs an adder. A row in `manifest.txt` is evidence that the
-    real `add_*` staged a real file, and a digest in `checksums.txt` is evidence
-    that `verify_against_upstream` hashed it and compared it to what the fake
-    published.
+
+def test_every_declared_section_is_staged_into_one_archive(upstream: Upstream, cache: Path) -> None:
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert built.archive is not None and built.archive.is_file()
+    staged = {(category, name): (version, filename) for category, name, version, filename in built.rows}
+    assert staged['uv', 'uv'] == (UV_TAG, 'uv')
+    assert staged['binary', 'lazygit'] == (LAZYGIT_TAG, asset_named('lazygit'))
+    assert staged['go-binary', 'go-task'] == (TASK_TAG, 'task')
+    assert staged['cargo', 'ripgrep'] == (RIPGREP_TAG, 'ripgrep.tar.gz')
+    assert staged['script', 'theme'] == (THEME_TAG, 'theme-install.sh')
+    assert staged['script', 'uv'] == (UV_TAG, 'uv-install.sh')
+    assert [name for category, name, *_ in built.rows if category == 'wheel'], 'the wheelhouse is what the bootstrap installs from'
+
+
+def test_a_crate_shipping_a_zip_is_recorded_under_the_tarball_it_was_repacked_as(upstream: Upstream, cache: Path) -> None:
+    """So `install_from_cache` on the target needs no zip handling at all. The
+    row has to name the file that is really there, or the offline install goes
+    looking for the zip this consumed."""
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    staged = {name: filename for category, name, _version, filename in built.rows if category == 'cargo'}
+    assert staged['fnm'] == f'fnm_{FNM_TAG.lstrip("v")}_{cargo.triple(LINUX)}.tar.gz'
+    assert f'{create_bundle.ARCHIVE_MEMBER}/binaries/{staged["fnm"]}' in built.names()
+    assert f'{create_bundle.ARCHIVE_MEMBER}/binaries/fnm.zip' not in built.names()
+
+
+def test_a_script_whose_repo_nothing_names_records_no_version_rather_than_a_word(upstream: Upstream, cache: Path) -> None:
+    """`latest` stood here, and `ghrelease.bundle_version` hands whatever it
+    finds to a tag comparison — so offline the row read as a release nobody
+    published. Absent is the honest answer, and it reads back as None."""
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    scripts = {name: version for category, name, version, _filename in built.rows if category == 'script'}
+    assert scripts['vendor-cli'] == ''
+    assert 'latest' not in scripts.values()
+
+
+def test_an_installer_that_never_opted_in_is_neither_staged_nor_asked_for_a_version(upstream: Upstream, cache: Path) -> None:
+    """`bundle_install_script` is the opt-in, and an entry without it must not
+    be asked for a version either — a declared repo publishing no release
+    would fail a build over a script nobody staged."""
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert 'awscli' not in [name for category, name, *_ in built.rows if category == 'script']
+
+
+def test_the_go_binary_is_extracted_from_its_release_archive_rather_than_staged_packed(upstream: Upstream, cache: Path) -> None:
+    """The row records `task` and the release ships `task.tar.gz`, so a build
+    that staged the tarball under the binary's name would satisfy every count
+    and install nothing that runs — on the one machine with no way to find out
+    why."""
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.staged('go-binaries/task') == b'TASK'
+    assert built.staged('go-binaries/cheat') == b'CHEAT', 'the other shape a Go release ships is a lone gzipped binary'
+    packed = [name for name in built.names() if name.startswith(f'{create_bundle.ARCHIVE_MEMBER}/go-binaries/') and '.' in name]
+    assert packed == [], 'the archive it came out of is consumed, or the offline install has two files to choose between'
+
+
+def test_the_uv_binary_is_unpacked_because_the_bootstrap_copies_it_onto_path(upstream: Upstream, cache: Path) -> None:
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.staged('bin/uv') == b'UV'
+
+
+def test_a_wheel_for_another_platform_is_left_behind_and_the_portable_one_is_not(upstream: Upstream, cache: Path) -> None:
+    """An over-broad match ships a wheel that cannot install and a narrow one
+    ships nothing for the interpreter the machine has, and both are silent
+    here and fatal on the target. Every version of a platform wheel is taken
+    rather than one chosen against a guessed interpreter — the machine's
+    python is a fact only the target knows."""
+    name, version = create_bundle.declared_closure()[0]
+    upstream.platform_wheels.add(name)
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    carried = {filename for category, staged, _version, filename in built.rows if category == 'wheel' and staged == name}
+    assert carried == {f'{name}-{version}-py3-none-any.whl', f'{name}-{version}-py3-none-manylinux_2_17_x86_64.whl'}
+
+
+def test_every_release_asset_carries_the_digest_upstream_published_for_it(upstream: Upstream, cache: Path) -> None:
+    """The install machine cannot resolve which asset holds the checksum
+    without the release API, so verification happens on this side or it does
+    not happen. Recomputed here from the bytes in the archive, which is the
+    same comparison the offline installer makes.
+
+    Every digest `checksums.txt` carries has to be right, which is what this
+    asserts. It deliberately does not assert *which* assets get a row: the go
+    and cargo staging loops write none, and whether that is intended is a
+    question for the module rather than something to pin here either way.
     """
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-    def test_every_declared_section_is_staged_into_one_archive(self, upstream: Upstream, cache: Path) -> None:
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+    recorded = built.checksums
+    assert recorded, 'an empty checksums.txt makes every GitHub release install fail on a missing checksum'
+    lazygit = asset_named('lazygit')
+    assert recorded[lazygit] == digest(built.staged(f'binaries/{lazygit}'))
+    for name, expected in recorded.items():
+        for folder in ('binaries', 'wheels', 'bin'):
+            if f'{create_bundle.ARCHIVE_MEMBER}/{folder}/{name}' in built.names():
+                assert expected == digest(built.staged(f'{folder}/{name}'))
 
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert built.archive is not None and built.archive.is_file()
-        staged = {(category, name): (version, filename) for category, name, version, filename in built.rows}
-        assert staged['uv', 'uv'] == (UV_TAG, 'uv')
-        assert staged['binary', 'lazygit'] == (LAZYGIT_TAG, asset_named('lazygit'))
-        assert staged['go-binary', 'go-task'] == (TASK_TAG, 'task')
-        assert staged['cargo', 'ripgrep'] == (RIPGREP_TAG, 'ripgrep.tar.gz')
-        assert staged['script', 'theme'] == (THEME_TAG, 'theme-install.sh')
-        assert staged['script', 'uv'] == (UV_TAG, 'uv-install.sh')
-        assert [name for category, name, *_ in built.rows if category == 'wheel'], 'the wheelhouse is what the bootstrap installs from'
 
-    def test_a_crate_shipping_a_zip_is_recorded_under_the_tarball_it_was_repacked_as(self, upstream: Upstream, cache: Path) -> None:
-        """So `install_from_cache` on the target needs no zip handling at all. The
-        row has to name the file that is really there, or the offline install goes
-        looking for the zip this consumed."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+@pytest.mark.parametrize(
+    ('publishing', 'recorded'),
+    [
+        ({}, True),
+        ({'checksums': False}, False),
+        ({'covering': {'source.tar.gz': b'ANOTHER ASSET'}}, False),
+    ],
+    ids=['a digest for this asset', 'no checksums file at all', 'a checksums file that omits it'],
+)
+def test_only_a_digest_actually_checked_against_upstream_is_recorded(
+    upstream: Upstream, cache: Path, publishing: dict[str, Any], recorded: bool
+) -> None:
+    """Writing one for an asset whose release publishes nothing usable would
+    make the installer log `verified` for bytes nobody verified.
 
-        staged = {name: filename for category, name, _version, filename in built.rows if category == 'cargo'}
-        assert staged['fnm'] == f'fnm_{FNM_TAG.lstrip("v")}_{cargo.triple(LINUX)}.tar.gz'
-        assert f'{create_bundle.ARCHIVE_MEMBER}/binaries/{staged["fnm"]}' in built.names()
-        assert f'{create_bundle.ARCHIVE_MEMBER}/binaries/fnm.zip' not in built.names()
+    The two unpublished states stay apart upstream — one release publishes no
+    checksums and another publishes a file this asset is not named in, which
+    is one upstream fix away from being verifiable — and the bundle records
+    nothing either way, because nothing was compared. The tool is staged in
+    all three, which is what makes this a question about the digest rather
+    than about whether the build survived."""
+    lazygit = asset_named('lazygit')
+    upstream.publish(LAZYGIT_REPO, LAZYGIT_TAG, {lazygit: tarball('lazygit', b'LAZYGIT')}, **publishing)
 
-    def test_a_script_whose_repo_nothing_names_records_no_version_rather_than_a_word(self, upstream: Upstream, cache: Path) -> None:
-        """`latest` stood here, and `ghrelease.bundle_version` hands whatever it
-        finds to a tag comparison — so offline the row read as a release nobody
-        published. Absent is the honest answer, and it reads back as None."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        scripts = {name: version for category, name, version, _filename in built.rows if category == 'script'}
-        assert scripts['vendor-cli'] == ''
-        assert 'latest' not in scripts.values()
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert (lazygit in built.checksums) is recorded
+    assert ('binary', 'lazygit') in {(category, name) for category, name, *_ in built.rows}
 
-    def test_an_installer_that_never_opted_in_is_neither_staged_nor_asked_for_a_version(self, upstream: Upstream, cache: Path) -> None:
-        """`bundle_install_script` is the opt-in, and an entry without it must not
-        be asked for a version either — a declared repo publishing no release
-        would fail a build over a script nobody staged."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        assert 'awscli' not in [name for category, name, *_ in built.rows if category == 'script']
+def test_the_archive_lands_in_the_bundle_cache_and_not_beside_the_checkout(
+    upstream: Upstream, cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`newest` searches `archive_dir`, the cwd and `$HOME`, and `prune`
+    sweeps `archive_dir` alone — so an archive written to the checkout root
+    was found by a bare `bundle upload` only from inside the checkout, and was
+    never swept while `prune` printed a count."""
+    monkeypatch.chdir(tmp_path)
 
-    def test_the_go_binary_is_extracted_from_its_release_archive_rather_than_staged_packed(self, upstream: Upstream, cache: Path) -> None:
-        """The row records `task` and the release ships `task.tar.gz`, so a build
-        that staged the tarball under the binary's name would satisfy every count
-        and install nothing that runs — on the one machine with no way to find out
-        why."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        assert built.staged('go-binaries/task') == b'TASK'
-        assert built.staged('go-binaries/cheat') == b'CHEAT', 'the other shape a Go release ships is a lone gzipped binary'
-        packed = [name for name in built.names() if name.startswith(f'{create_bundle.ARCHIVE_MEMBER}/go-binaries/') and '.' in name]
-        assert packed == [], 'the archive it came out of is consumed, or the offline install has two files to choose between'
+    assert built.archive is not None
+    assert built.archive.parent == paths.archive_dir()
+    assert list(paths.archive_dir().glob('*.tar.gz')) == [built.archive]
+    assert not list(tmp_path.glob('*.tar.gz')), 'the working directory is not where a bundle lives'
+    assert not list(paths.REPO_ROOT.glob('dotfiles-offline-*.tar.gz')), 'nor is the checkout'
 
-    def test_the_uv_binary_is_unpacked_because_the_bootstrap_copies_it_onto_path(self, upstream: Upstream, cache: Path) -> None:
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        assert built.staged('bin/uv') == b'UV'
+def test_the_archive_holds_one_top_level_directory(upstream: Upstream, cache: Path) -> None:
+    """Both stagers find the member by its `manifest.txt`, so what matters is
+    that there is exactly one thing to find."""
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-    def test_a_wheel_for_another_platform_is_left_behind_and_the_portable_one_is_not(self, upstream: Upstream, cache: Path) -> None:
-        """An over-broad match ships a wheel that cannot install and a narrow one
-        ships nothing for the interpreter the machine has, and both are silent
-        here and fatal on the target. Every version of a platform wheel is taken
-        rather than one chosen against a guessed interpreter — the machine's
-        python is a fact only the target knows."""
-        name, version = create_bundle.declared_closure()[0]
-        upstream.platform_wheels.add(name)
+    assert {name.split('/')[0] for name in built.names()} == {create_bundle.ARCHIVE_MEMBER}
 
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        carried = {filename for category, staged, _version, filename in built.rows if category == 'wheel' and staged == name}
-        assert carried == {f'{name}-{version}-py3-none-any.whl', f'{name}-{version}-py3-none-manylinux_2_17_x86_64.whl'}
+def test_a_windows_machine_gets_the_zip_archive_and_the_exe_suffix(upstream: Upstream, cache: Path) -> None:
+    """astral publishes `uv-{triple}.zip` on Windows and no tarball, and a PE
+    without its suffix is a file Windows declines to execute — so both are
+    facts about the asset rather than decoration. `install.sh` derives the same
+    name from `uname -s` and copies `bin/uv.exe` onto PATH."""
+    built = run('--machine', WINDOWS_MACHINE, '--arch', 'x86_64')
 
-    def test_every_release_asset_carries_the_digest_upstream_published_for_it(self, upstream: Upstream, cache: Path) -> None:
-        """The install machine cannot resolve which asset holds the checksum
-        without the release API, so verification happens on this side or it does
-        not happen. Recomputed here from the bytes in the archive, which is the
-        same comparison the offline installer makes.
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    staged = {(category, name): (version, filename) for category, name, version, filename in built.rows}
+    assert staged['uv', 'uv'] == (UV_TAG, 'uv.exe')
+    assert staged['winget', 'jq'] == (JQ_TAG, 'jq.exe')
+    assert built.staged('bin/uv.exe') == b'UV.EXE'
+    assert built.staged(f'{winget.BUNDLE_BINARIES}/jq.exe') == b'JQ.EXE'
 
-        Every digest `checksums.txt` carries has to be right, which is what this
-        asserts. It deliberately does not assert *which* assets get a row: the go
-        and cargo staging loops write none, and whether that is intended is a
-        question for the module rather than something to pin here either way.
-        """
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        recorded = built.checksums
-        assert recorded, 'an empty checksums.txt makes every GitHub release install fail on a missing checksum'
-        lazygit = asset_named('lazygit')
-        assert recorded[lazygit] == digest(built.staged(f'binaries/{lazygit}'))
-        for name, expected in recorded.items():
-            for folder in ('binaries', 'wheels', 'bin'):
-                if f'{create_bundle.ARCHIVE_MEMBER}/{folder}/{name}' in built.names():
-                    assert expected == digest(built.staged(f'{folder}/{name}'))
+def test_the_name_carries_the_manifest_and_the_platform_the_build_was_asked_for(upstream: Upstream, cache: Path) -> None:
+    """The OS is read off the manifest and only the CPU is passed in. Taking
+    both from the caller let a linux manifest asked for with a darwin target
+    build a tarball of the wrong binaries without saying so."""
+    built = run('--machine', MACHINE, '--arch', 'arm64')
 
-    @pytest.mark.parametrize(
-        ('publishing', 'recorded'),
-        [
-            ({}, True),
-            ({'checksums': False}, False),
-            ({'covering': {'source.tar.gz': b'ANOTHER ASSET'}}, False),
-        ],
-        ids=['a digest for this asset', 'no checksums file at all', 'a checksums file that omits it'],
+    assert built.archive is not None
+    assert re.fullmatch(rf'dotfiles-offline-v\d{{8}}T\d{{6}}Z-{MACHINE}-linux-arm64\.tar\.gz', built.archive.name)
+    assert built.described['platform'] == 'linux/arm64'
+    assert built.described['machine'] == MACHINE
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# What the build refuses
+#
+# Each refusal is paired with the archive not existing.
+#
+# An assertion that nothing was built is satisfied by a crash, so every case
+# below names the reason it expects *and* checks that `archive_dir` is empty —
+# a half-written bundle is worse than none, because the machine reading it
+# cannot fetch what is missing and nothing in the archive says which tool was
+# lost.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_an_arch_the_tool_does_not_support_is_a_usage_error_before_anything_is_fetched(upstream: Upstream, cache: Path) -> None:
+    """Refused by the `Arch` annotation at the boundary rather than inside the
+    build, which is why the check inside `build` needs its own case below."""
+    from dotfiles.main import app
+
+    result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'sparc64'])
+
+    assert result.exit_code == ExitCode.USAGE
+    assert upstream.fetched == []
+    assert not paths.archive_dir().exists()
+
+
+def test_the_builder_refuses_an_unsupported_arch_of_its_own_accord(upstream: Upstream, cache: Path) -> None:
+    """`build` is called directly by the command and is importable by anything
+    else, so the guard is the builder's rather than the annotation's alone."""
+    with pytest.raises(create_bundle.BundleError, match='sparc64'):
+        build(arch='sparc64')
+
+    assert upstream.fetched == []
+
+
+def test_a_refused_build_exits_issue_and_prints_no_path(upstream: Upstream, cache: Path) -> None:
+    """The one test of the translation, so the cases below can assert the
+    reason rather than restating the exit code. `--print-path` is what a
+    pipeline reads, and a refused build must leave it empty rather than
+    naming an archive that was never written."""
+    upstream.releases.pop(TASK_REPO)
+
+    ran = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert ran.stdout.strip() == ''
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_a_machine_with_no_manifest_is_named_rather_than_built_for(upstream: Upstream, cache: Path) -> None:
+    from dotfiles.main import app
+
+    result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', 'nowhere', '--arch', 'x86_64'])
+
+    assert result.exit_code == ExitCode.USAGE
+    assert upstream.fetched == []
+
+
+def test_a_repo_that_publishes_no_release_ends_the_build_naming_it(upstream: Upstream, cache: Path) -> None:
+    """`latest_version` answers None for a release it cannot read, which is
+    right for an installer deciding whether to update. A build cannot name the
+    asset without the version, so the miss is fatal here."""
+    upstream.releases.pop(TASK_REPO)
+
+    with pytest.raises(create_bundle.BundleError, match=TASK_REPO):
+        build()
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_bytes_that_fail_against_the_published_checksum_end_the_build_and_leave_no_cache_entry(upstream: Upstream, cache: Path) -> None:
+    """Bytes that failed against upstream must not be served to the next
+    build, which is the whole reason the mismatch evicts rather than only
+    raising."""
+    lazygit = asset_named('lazygit')
+    upstream.tampered.add(lazygit)
+    stock(upstream)
+
+    with pytest.raises(create_bundle.BundleError, match='Checksum mismatch'):
+        build(use_cache=True)
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+    assert not list(create_bundle.cache_root().rglob(lazygit))
+
+
+def test_a_wheel_whose_digest_does_not_match_pypi_ends_the_build(upstream: Upstream, cache: Path) -> None:
+    """PyPI publishes the digest alongside the file, so an unverified wheel
+    would be a hole the release assets beside it do not have — and the machine
+    installing from this bundle is the one that cannot check for itself."""
+    name, version = create_bundle.declared_closure()[0]
+    upstream.tampered.add(f'{name}-{version}-py3-none-any.whl')
+
+    with pytest.raises(create_bundle.BundleError, match='checksum mismatch'):
+        build()
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_a_dependency_with_no_wheel_for_the_target_ends_the_build(upstream: Upstream, cache: Path) -> None:
+    """An sdist cannot install with no index, so carrying one and calling the
+    bundle complete strands the bootstrap on the machine it exists for."""
+    name, _ = create_bundle.declared_closure()[0]
+    upstream.sdist_only.add(name)
+
+    with pytest.raises(create_bundle.BundleError, match=re.escape(name)):
+        build()
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_a_download_that_never_answers_ends_the_build_after_the_declared_attempts(upstream: Upstream, cache: Path) -> None:
+    url = f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'
+    upstream.flaky[url] = create_bundle.DOWNLOAD_ATTEMPTS + 1
+
+    with pytest.raises(create_bundle.BundleError, match='Failed to download'):
+        build()
+
+    assert upstream.fetched.count(url) == create_bundle.DOWNLOAD_ATTEMPTS
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_a_checksums_file_the_release_lists_and_will_not_serve_ends_the_build(upstream: Upstream, cache: Path) -> None:
+    """Different from a release publishing none, and it has to be: the API
+    said the file is there, so failing to read it is a fault rather than a
+    state — and staging the asset anyway would record it unverified while
+    upstream had a digest for it all along."""
+    upstream.flaky[downloads_from(LAZYGIT_REPO, LAZYGIT_TAG) + 'checksums.txt'] = 1
+
+    with pytest.raises(create_bundle.BundleError, match='checksums.txt'):
+        build()
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+@pytest.mark.parametrize('broken', BROKEN, ids=lambda one: one.id)
+def test_a_declaration_or_a_release_the_bundler_cannot_stage_is_named(
+    upstream: Upstream, cache: Path, declaration: Path, broken: Broken
+) -> None:
+    """Every way `BROKEN` names, each ending the build with a sentence rather
+    than a traceback, and none of them leaving an archive.
+
+    A declaration fault and a release fault are one test because the answer is
+    one answer: the build stops, the refusal names the thing that is wrong,
+    and nothing half-written survives for a machine to install from.
+    """
+    broken.arrange(upstream, declaration)
+
+    with pytest.raises(create_bundle.BundleError, match=broken.says):
+        build(machine=broken.machine)
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+def test_a_transient_failure_is_retried_rather_than_ending_the_build(upstream: Upstream, cache: Path) -> None:
+    """Paired with the case above, which a bundler that never retried would
+    also satisfy."""
+    url = f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'
+    upstream.flaky[url] = create_bundle.DOWNLOAD_ATTEMPTS - 1
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert upstream.fetched.count(url) == create_bundle.DOWNLOAD_ATTEMPTS
+    assert built.staged('go-binaries/task') == b'TASK'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A sparse build
+#
+# `--against` parameterises the build; it never adds an effect to it.
+#
+# What changes is which installers are staged, and the omission has to stay
+# legible on the other end — without `current`, a bundle carrying less is
+# indistinguishable from one that failed to carry more.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_status_from_another_machine_is_refused_rather_than_diffed(upstream: Upstream, cache: Path, tmp_path: Path) -> None:
+    """A bundle is built for one manifest and its contents are that
+    manifest's plan, so diffing it against another machine's report omits
+    whatever the two happen to share and reports the result as measured.
+    Nothing downstream can detect that: the archive is well-formed, its
+    `bundle.json` reads sparse, and the omissions are simply wrong."""
+    peer = status_reporting(tmp_path / 'peer.json', machine='someone-elses-box', **{'ghrelease/lazygit': '0.45.0'})
+
+    with pytest.raises(create_bundle.BundleError, match='someone-elses-box'):
+        build(against=peer)
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+    assert upstream.fetched == [], 'refused before a single asset is downloaded'
+
+
+@pytest.mark.parametrize(
+    ('machine', 'address', 'reported', 'measured', 'downloads'),
+    [
+        (MACHINE, 'ghrelease/lazygit', '0.45.0', ('binary/lazygit', LAZYGIT_TAG), downloads_from(LAZYGIT_REPO, LAZYGIT_TAG)),
+        (MACHINE, 'go/go-task', '3.44.0', ('go-binary/go-task', TASK_TAG), downloads_from(TASK_REPO, TASK_TAG)),
+        (MACHINE, 'cargo/ripgrep', '14.1.1', ('cargo/ripgrep', RIPGREP_TAG), downloads_from(RIPGREP_REPO, RIPGREP_TAG)),
+        (WINDOWS_MACHINE, 'winget/jq', '1.7.1', ('winget/jq', JQ_TAG), downloads_from(JQ_REPO, JQ_TAG)),
+    ],
+    ids=['ghrelease', 'go', 'cargo', 'winget'],
+)
+def test_a_tool_the_target_already_has_is_neither_downloaded_nor_recorded_as_carried(
+    upstream: Upstream,
+    cache: Path,
+    tmp_path: Path,
+    machine: str,
+    address: str,
+    reported: str,
+    measured: tuple[str, str],
+    downloads: str,
+) -> None:
+    """Every staging loop has to consult the decision, and nothing else says
+    when one does not: the bundle would carry the tool anyway, the build would
+    still report itself sparse, and every test of `already_current` on its own
+    would still pass.
+
+    The two keys differ on purpose. `installed` is keyed on the plan address
+    the target reported and `current` on the category a bundle row uses — `go`
+    against `go-binary`, `ghrelease` against `binary` — so collapsing either
+    to a bare name lets two providers naming one tool answer for each other.
+    """
+    report = status_reporting(tmp_path / 'box.json', machine=machine, **{address: reported})
+
+    built = run('--machine', machine, '--arch', 'x86_64', '--against', str(report))
+
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert built.described['current'] == dict([measured])
+    assert built.described['built_from'] == 'box.json'
+    category, name = measured[0].split('/')
+    assert name not in [row[1] for row in built.rows if row[0] == category]
+    # The download refused outright rather than merely unasserted: a loop
+    # that skipped the record and fetched anyway would satisfy a row count.
+    assert [url for url in upstream.fetched if url.startswith(downloads)] == []
+
+
+def test_a_tool_that_owes_a_companion_is_carried_even_where_the_target_has_it(upstream: Upstream, cache: Path, tmp_path: Path) -> None:
+    """`already_current` records the binary alone and the skip takes the
+    companion loop with it, so a sparse bundle would drop both and say nothing
+    about either. `missing_companions` runs on the target after the status was
+    taken, and on the machine that cannot fetch anything there is no recovery
+    — the binary is not in the bundle either."""
+    report = status_reporting(tmp_path / 'box.json', **{'ghrelease/fzf': '0.55.0'})
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
+
+    assert [name for category, name, *_ in built.rows if category in ('binary', 'extra')] == ['fzf', 'fzf-tmux', 'lazygit']
+    assert built.described['current'] == {}, 'a carried tool is never also recorded as measured'
+
+
+def test_the_archive_says_sparse_in_its_own_name_before_anything_is_unpacked(upstream: Upstream, cache: Path, tmp_path: Path) -> None:
+    report = status_reporting(tmp_path / 'box.json', **{'ghrelease/lazygit': '0.45.0'})
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
+
+    assert built.archive is not None
+    assert built.archive.name.endswith('-linux-x86_64-sparse.tar.gz')
+
+
+def test_a_sparse_build_that_left_nothing_out_still_says_it_was_planned_against_a_report(
+    upstream: Upstream, cache: Path, tmp_path: Path
+) -> None:
+    """Completeness follows `built_from` and never `bool(current)`, because
+    `bundle_name` fixes the `-sparse` suffix before a tool has been measured.
+    Keyed on the other one, a build planned against a report that omitted
+    nothing would be named `-sparse` while its document read `full` — the
+    disagreement between an archive and its own description that `bundle
+    check` exists to make impossible."""
+    report = status_reporting(tmp_path / 'box.json', **{'ghrelease/lazygit': '0.1.0'})
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
+
+    assert built.described['current'] == {}
+    assert built.described['completeness'] == str(bundle_format.Completeness.SPARSE)
+    assert 'lazygit' in [name for category, name, *_ in built.rows if category == 'binary']
+
+
+def test_a_full_build_records_no_measurement_it_did_not_make(upstream: Upstream, cache: Path) -> None:
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.described['completeness'] == str(bundle_format.Completeness.FULL)
+    assert built.described['current'] == {}
+    assert built.described['built_from'] == ''
+
+
+def test_a_path_that_is_not_a_file_is_a_usage_error(upstream: Upstream, cache: Path, tmp_path: Path) -> None:
+    from dotfiles.main import app
+
+    argv = ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'x86_64', '--against', str(tmp_path / 'absent.json')]
+    result = CliRunner().invoke(app, argv)
+
+    assert result.exit_code == ExitCode.USAGE
+    assert upstream.fetched == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The download cache
+#
+# Kept between builds, and swept only after the archive is written.
+#
+# Everything here is observed through what the second build fetched, because
+# that is the value the cache exists to change — a build that reads identically
+# warm and cold makes a working cache look broken, which is how it was first
+# reported.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_second_build_serves_the_release_assets_from_disk(upstream: Upstream, cache: Path) -> None:
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' not in upstream.fetched
+    assert built.staged('go-binaries/task') == b'TASK', 'a cache hit has to produce the same file a download does'
+
+
+def test_a_checksum_already_confirmed_is_not_confirmed_again(upstream: Upstream, cache: Path) -> None:
+    """What upstream publishes for a released tag does not change, and it is
+    the expensive half — one API call to find the checksums asset plus one
+    download to read it."""
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert f'https://api.github.com/repos/{LAZYGIT_REPO}/releases/tags/{LAZYGIT_TAG}' not in upstream.fetched
+    lazygit = asset_named('lazygit')
+    assert built.checksums[lazygit] == digest(built.staged(f'binaries/{lazygit}'))
+
+
+def test_a_release_that_publishes_no_checksums_is_not_asked_about_twice(upstream: Upstream, cache: Path) -> None:
+    """The answer is about one immutable asset, so caching it is as safe as
+    caching the asset — and it is the expensive half, one API call plus one
+    download, spent to learn there is nothing to compare against."""
+    upstream.publish(LAZYGIT_REPO, LAZYGIT_TAG, {asset_named('lazygit'): tarball('lazygit', b'LAZYGIT')}, checksums=False)
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert f'https://api.github.com/repos/{LAZYGIT_REPO}/releases/tags/{LAZYGIT_TAG}' not in upstream.fetched
+    assert asset_named('lazygit') not in built.checksums, 'a cached answer must not become a digest nobody checked'
+
+
+def test_no_cache_asks_upstream_for_every_asset_again(upstream: Upstream, cache: Path) -> None:
+    """The one thing no other flag reaches is a cached file that is wrong —
+    truncated, or a release republished under a tag it already used."""
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64', '--no-cache')
+
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' in upstream.fetched
+
+
+def test_a_corrupt_cached_copy_is_re_downloaded_rather_than_staged(upstream: Upstream, cache: Path) -> None:
+    """The digest beside an entry is what makes a truncated file a miss
+    instead of a bundle full of unusable bytes."""
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    cached = create_bundle.cache_path_for(create_bundle.github_asset(TASK_REPO, TASK_TAG, 'task.tar.gz').key)
+    cached.write_bytes(b'TRUNCATED')
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' in upstream.fetched
+    assert built.staged('go-binaries/task') == b'TASK'
+
+
+def test_the_retention_sweep_runs_after_the_archive_rather_than_before_it(upstream: Upstream, cache: Path) -> None:
+    """Ordering, observed rather than asserted about: a sweep that ran first
+    would delete the aged entry the build is about to want, and the asset
+    would be downloaded again. It runs last, so the entry is a *hit*, the hit
+    touches it, and it survives its own sweep — while an aged entry nothing
+    asked for is gone by the time the build returns.
+
+    A build must never be delayed or failed by housekeeping, which is the
+    whole reason the order is this way round.
+    """
+    run('--machine', MACHINE, '--arch', 'x86_64')
+    orphan = create_bundle.cache_path_for(('github', 'go-task/task', 'v3.0.0', 'task.tar.gz'))
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_bytes(b'SUPERSEDED')
+    age(create_bundle.cache_root(), create_bundle.CACHE_RETENTION_DAYS + 1)
+    upstream.fetched.clear()
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    wanted = create_bundle.cache_path_for(create_bundle.github_asset(TASK_REPO, TASK_TAG, 'task.tar.gz').key)
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' not in upstream.fetched
+    assert wanted.is_file(), 'a hit counts as use, or a tool that never changes ages out because the cache kept working'
+    assert not orphan.exists(), 'a superseded version nothing asked for is what the sweep is for'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# An entry the bundler cannot stage
+#
+# Said out loud, and the rest of the build continues.
+#
+# Dropping one silently carries the same information as a log line and none of
+# the evidence — and the machine that installs from the bundle then has no
+# source for that tool at all.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_cargo_entry_with_no_release_repo_is_left_out_without_ending_the_build(
+    upstream: Upstream, cache: Path, declaration: Path
+) -> None:
+    """An entry with no repo and no `binary_pattern` has no asset to name, so
+    there is nothing to stage — and the two sections are read by name rather
+    than through a `getattr` default, which would answer *unbundleable* for an
+    entry whose field was merely renamed."""
+    redeclare(
+        declaration,
+        packages={**PACKAGES, 'cargo_packages': [*PACKAGES['cargo_packages'], {'name': 'zoxide', 'description': 'Smarter cd'}]},
+        manifest={**MANIFESTS[MACHINE], 'cargo_packages': ['ripgrep', 'zoxide']},
     )
-    def test_only_a_digest_actually_checked_against_upstream_is_recorded(
-        self, upstream: Upstream, cache: Path, publishing: dict[str, Any], recorded: bool
-    ) -> None:
-        """Writing one for an asset whose release publishes nothing usable would
-        make the installer log `verified` for bytes nobody verified.
 
-        The two unpublished states stay apart upstream — one release publishes no
-        checksums and another publishes a file this asset is not named in, which
-        is one upstream fix away from being verifiable — and the bundle records
-        nothing either way, because nothing was compared. The tool is staged in
-        all three, which is what makes this a question about the digest rather
-        than about whether the build survived."""
-        lazygit = asset_named('lazygit')
-        upstream.publish(LAZYGIT_REPO, LAZYGIT_TAG, {lazygit: tarball('lazygit', b'LAZYGIT')}, **publishing)
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+    assert built.exit_code == ExitCode.CONVERGED, built.stderr
+    assert [name for category, name, *_ in built.rows if category == 'cargo'] == ['ripgrep']
 
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert (lazygit in built.checksums) is recorded
-        assert ('binary', 'lazygit') in {(category, name) for category, name, *_ in built.rows}
 
-    def test_the_archive_lands_in_the_bundle_cache_and_not_beside_the_checkout(
-        self, upstream: Upstream, cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """`newest` searches `archive_dir`, the cwd and `$HOME`, and `prune`
-        sweeps `archive_dir` alone — so an archive written to the checkout root
-        was found by a bare `bundle upload` only from inside the checkout, and was
-        never swept while `prune` printed a count."""
-        monkeypatch.chdir(tmp_path)
+def test_an_installer_that_opts_into_bundling_without_a_url_ends_the_build(upstream: Upstream, cache: Path, declaration: Path) -> None:
+    """The opt-in is a claim that a script can be staged, and an entry making
+    it with nothing to fetch would leave a `script` row naming a file the
+    archive does not hold."""
+    opting_in = [{'name': 'theme', 'repo': THEME_REPO, 'bundle_install_script': True, 'description': 'Theming'}]
+    redeclare(declaration, packages={**PACKAGES, 'custom_installers': opting_in})
 
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
+    with pytest.raises(create_bundle.BundleError, match='install_url'):
+        build()
 
-        assert built.archive is not None
-        assert built.archive.parent == paths.archive_dir()
-        assert list(paths.archive_dir().glob('*.tar.gz')) == [built.archive]
-        assert not list(tmp_path.glob('*.tar.gz')), 'the working directory is not where a bundle lives'
-        assert not list(paths.REPO_ROOT.glob('dotfiles-offline-*.tar.gz')), 'nor is the checkout'
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
 
-    def test_the_archive_holds_one_top_level_directory(self, upstream: Upstream, cache: Path) -> None:
-        """Both stagers find the member by its `manifest.txt`, so what matters is
-        that there is exactly one thing to find."""
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-        assert {name.split('/')[0] for name in built.names()} == {create_bundle.ARCHIVE_MEMBER}
+# ─────────────────────────────────────────────────────────────────────────────
+# What the bundle tells the target to do
+#
+# The four files at the root, each answering one question.
+#
+# Asserted as values rather than as prose: the README is the one file whose
+# content is a sentence, and what is checked about it is that it is there at
+# all, because `install.sh` and `bundle stage` both read the directory it
+# describes.
+# ─────────────────────────────────────────────────────────────────────────────
 
-    def test_a_windows_machine_gets_the_zip_archive_and_the_exe_suffix(self, upstream: Upstream, cache: Path) -> None:
-        """astral publishes `uv-{triple}.zip` on Windows and no tarball, and a PE
-        without its suffix is a file Windows declines to execute — so both are
-        facts about the asset rather than decoration. `install.sh` derives the same
-        name from `uname -s` and copies `bin/uv.exe` onto PATH."""
-        built = run('--machine', WINDOWS_MACHINE, '--arch', 'x86_64')
 
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        staged = {(category, name): (version, filename) for category, name, version, filename in built.rows}
-        assert staged['uv', 'uv'] == (UV_TAG, 'uv.exe')
-        assert staged['winget', 'jq'] == (JQ_TAG, 'jq.exe')
-        assert built.staged('bin/uv.exe') == b'UV.EXE'
-        assert built.staged(f'{winget.BUNDLE_BINARIES}/jq.exe') == b'JQ.EXE'
+def test_the_four_root_files_are_all_written(upstream: Upstream, cache: Path) -> None:
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
 
-    def test_the_name_carries_the_manifest_and_the_platform_the_build_was_asked_for(self, upstream: Upstream, cache: Path) -> None:
-        """The OS is read off the manifest and only the CPU is passed in. Taking
-        both from the caller let a linux manifest asked for with a darwin target
-        build a tarball of the wrong binaries without saying so."""
-        built = run('--machine', MACHINE, '--arch', 'arm64')
-
-        assert built.archive is not None
-        assert re.fullmatch(rf'dotfiles-offline-v\d{{8}}T\d{{6}}Z-{MACHINE}-linux-arm64\.tar\.gz', built.archive.name)
-        assert built.described['platform'] == 'linux/arm64'
-        assert built.described['machine'] == MACHINE
-
-
-@pytest.mark.usefixtures('declaration')
-class TestWhatTheBuildRefuses:
-    """Each refusal is paired with the archive not existing.
-
-    An assertion that nothing was built is satisfied by a crash, so every case
-    below names the reason it expects *and* checks that `archive_dir` is empty —
-    a half-written bundle is worse than none, because the machine reading it
-    cannot fetch what is missing and nothing in the archive says which tool was
-    lost.
-    """
-
-    def test_an_arch_the_tool_does_not_support_is_a_usage_error_before_anything_is_fetched(self, upstream: Upstream, cache: Path) -> None:
-        """Refused by the `Arch` annotation at the boundary rather than inside the
-        build, which is why the check inside `build` needs its own case below."""
-        from dotfiles.main import app
-
-        result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'sparc64'])
-
-        assert result.exit_code == ExitCode.USAGE
-        assert upstream.fetched == []
-        assert not paths.archive_dir().exists()
-
-    def test_the_builder_refuses_an_unsupported_arch_of_its_own_accord(self, upstream: Upstream, cache: Path) -> None:
-        """`build` is called directly by the command and is importable by anything
-        else, so the guard is the builder's rather than the annotation's alone."""
-        with pytest.raises(create_bundle.BundleError, match='sparc64'):
-            build(arch='sparc64')
-
-        assert upstream.fetched == []
-
-    def test_a_refused_build_exits_issue_and_prints_no_path(self, upstream: Upstream, cache: Path) -> None:
-        """The one test of the translation, so the cases below can assert the
-        reason rather than restating the exit code. `--print-path` is what a
-        pipeline reads, and a refused build must leave it empty rather than
-        naming an archive that was never written."""
-        upstream.releases.pop(TASK_REPO)
-
-        ran = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert ran.exit_code == ExitCode.ISSUE
-        assert ran.stdout.strip() == ''
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_a_machine_with_no_manifest_is_named_rather_than_built_for(self, upstream: Upstream, cache: Path) -> None:
-        from dotfiles.main import app
-
-        result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', 'nowhere', '--arch', 'x86_64'])
-
-        assert result.exit_code == ExitCode.USAGE
-        assert upstream.fetched == []
-
-    def test_a_repo_that_publishes_no_release_ends_the_build_naming_it(self, upstream: Upstream, cache: Path) -> None:
-        """`latest_version` answers None for a release it cannot read, which is
-        right for an installer deciding whether to update. A build cannot name the
-        asset without the version, so the miss is fatal here."""
-        upstream.releases.pop(TASK_REPO)
-
-        with pytest.raises(create_bundle.BundleError, match=TASK_REPO):
-            build()
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_bytes_that_fail_against_the_published_checksum_end_the_build_and_leave_no_cache_entry(
-        self, upstream: Upstream, cache: Path
-    ) -> None:
-        """Bytes that failed against upstream must not be served to the next
-        build, which is the whole reason the mismatch evicts rather than only
-        raising."""
-        lazygit = asset_named('lazygit')
-        upstream.tampered.add(lazygit)
-        stock(upstream)
-
-        with pytest.raises(create_bundle.BundleError, match='Checksum mismatch'):
-            build(use_cache=True)
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-        assert not list(create_bundle.cache_root().rglob(lazygit))
-
-    def test_a_wheel_whose_digest_does_not_match_pypi_ends_the_build(self, upstream: Upstream, cache: Path) -> None:
-        """PyPI publishes the digest alongside the file, so an unverified wheel
-        would be a hole the release assets beside it do not have — and the machine
-        installing from this bundle is the one that cannot check for itself."""
-        name, version = create_bundle.declared_closure()[0]
-        upstream.tampered.add(f'{name}-{version}-py3-none-any.whl')
-
-        with pytest.raises(create_bundle.BundleError, match='checksum mismatch'):
-            build()
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_a_dependency_with_no_wheel_for_the_target_ends_the_build(self, upstream: Upstream, cache: Path) -> None:
-        """An sdist cannot install with no index, so carrying one and calling the
-        bundle complete strands the bootstrap on the machine it exists for."""
-        name, _ = create_bundle.declared_closure()[0]
-        upstream.sdist_only.add(name)
-
-        with pytest.raises(create_bundle.BundleError, match=re.escape(name)):
-            build()
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_a_download_that_never_answers_ends_the_build_after_the_declared_attempts(self, upstream: Upstream, cache: Path) -> None:
-        url = f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'
-        upstream.flaky[url] = create_bundle.DOWNLOAD_ATTEMPTS + 1
-
-        with pytest.raises(create_bundle.BundleError, match='Failed to download'):
-            build()
-
-        assert upstream.fetched.count(url) == create_bundle.DOWNLOAD_ATTEMPTS
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_a_checksums_file_the_release_lists_and_will_not_serve_ends_the_build(self, upstream: Upstream, cache: Path) -> None:
-        """Different from a release publishing none, and it has to be: the API
-        said the file is there, so failing to read it is a fault rather than a
-        state — and staging the asset anyway would record it unverified while
-        upstream had a digest for it all along."""
-        upstream.flaky[downloads_from(LAZYGIT_REPO, LAZYGIT_TAG) + 'checksums.txt'] = 1
-
-        with pytest.raises(create_bundle.BundleError, match='checksums.txt'):
-            build()
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    @pytest.mark.parametrize('broken', BROKEN, ids=lambda one: one.id)
-    def test_a_declaration_or_a_release_the_bundler_cannot_stage_is_named(
-        self, upstream: Upstream, cache: Path, declaration: Path, broken: Broken
-    ) -> None:
-        """Every way `BROKEN` names, each ending the build with a sentence rather
-        than a traceback, and none of them leaving an archive.
-
-        A declaration fault and a release fault are one test because the answer is
-        one answer: the build stops, the refusal names the thing that is wrong,
-        and nothing half-written survives for a machine to install from.
-        """
-        broken.arrange(upstream, declaration)
-
-        with pytest.raises(create_bundle.BundleError, match=broken.says):
-            build(machine=broken.machine)
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-    def test_a_transient_failure_is_retried_rather_than_ending_the_build(self, upstream: Upstream, cache: Path) -> None:
-        """Paired with the case above, which a bundler that never retried would
-        also satisfy."""
-        url = f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'
-        upstream.flaky[url] = create_bundle.DOWNLOAD_ATTEMPTS - 1
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert upstream.fetched.count(url) == create_bundle.DOWNLOAD_ATTEMPTS
-        assert built.staged('go-binaries/task') == b'TASK'
-
-
-@pytest.mark.usefixtures('declaration')
-class TestASparseBuild:
-    """`--against` parameterises the build; it never adds an effect to it.
-
-    What changes is which installers are staged, and the omission has to stay
-    legible on the other end — without `current`, a bundle carrying less is
-    indistinguishable from one that failed to carry more.
-    """
-
-    def test_a_status_from_another_machine_is_refused_rather_than_diffed(self, upstream: Upstream, cache: Path, tmp_path: Path) -> None:
-        """A bundle is built for one manifest and its contents are that
-        manifest's plan, so diffing it against another machine's report omits
-        whatever the two happen to share and reports the result as measured.
-        Nothing downstream can detect that: the archive is well-formed, its
-        `bundle.json` reads sparse, and the omissions are simply wrong."""
-        peer = status_reporting(tmp_path / 'peer.json', machine='someone-elses-box', **{'ghrelease/lazygit': '0.45.0'})
-
-        with pytest.raises(create_bundle.BundleError, match='someone-elses-box'):
-            build(against=peer)
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-        assert upstream.fetched == [], 'refused before a single asset is downloaded'
-
-    @pytest.mark.parametrize(
-        ('machine', 'address', 'reported', 'measured', 'downloads'),
-        [
-            (MACHINE, 'ghrelease/lazygit', '0.45.0', ('binary/lazygit', LAZYGIT_TAG), downloads_from(LAZYGIT_REPO, LAZYGIT_TAG)),
-            (MACHINE, 'go/go-task', '3.44.0', ('go-binary/go-task', TASK_TAG), downloads_from(TASK_REPO, TASK_TAG)),
-            (MACHINE, 'cargo/ripgrep', '14.1.1', ('cargo/ripgrep', RIPGREP_TAG), downloads_from(RIPGREP_REPO, RIPGREP_TAG)),
-            (WINDOWS_MACHINE, 'winget/jq', '1.7.1', ('winget/jq', JQ_TAG), downloads_from(JQ_REPO, JQ_TAG)),
-        ],
-        ids=['ghrelease', 'go', 'cargo', 'winget'],
-    )
-    def test_a_tool_the_target_already_has_is_neither_downloaded_nor_recorded_as_carried(
-        self,
-        upstream: Upstream,
-        cache: Path,
-        tmp_path: Path,
-        machine: str,
-        address: str,
-        reported: str,
-        measured: tuple[str, str],
-        downloads: str,
-    ) -> None:
-        """Every staging loop has to consult the decision, and nothing else says
-        when one does not: the bundle would carry the tool anyway, the build would
-        still report itself sparse, and every test of `already_current` on its own
-        would still pass.
-
-        The two keys differ on purpose. `installed` is keyed on the plan address
-        the target reported and `current` on the category a bundle row uses — `go`
-        against `go-binary`, `ghrelease` against `binary` — so collapsing either
-        to a bare name lets two providers naming one tool answer for each other.
-        """
-        report = status_reporting(tmp_path / 'box.json', machine=machine, **{address: reported})
-
-        built = run('--machine', machine, '--arch', 'x86_64', '--against', str(report))
-
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert built.described['current'] == dict([measured])
-        assert built.described['built_from'] == 'box.json'
-        category, name = measured[0].split('/')
-        assert name not in [row[1] for row in built.rows if row[0] == category]
-        # The download refused outright rather than merely unasserted: a loop
-        # that skipped the record and fetched anyway would satisfy a row count.
-        assert [url for url in upstream.fetched if url.startswith(downloads)] == []
-
-    def test_a_tool_that_owes_a_companion_is_carried_even_where_the_target_has_it(
-        self, upstream: Upstream, cache: Path, tmp_path: Path
-    ) -> None:
-        """`already_current` records the binary alone and the skip takes the
-        companion loop with it, so a sparse bundle would drop both and say nothing
-        about either. `missing_companions` runs on the target after the status was
-        taken, and on the machine that cannot fetch anything there is no recovery
-        — the binary is not in the bundle either."""
-        report = status_reporting(tmp_path / 'box.json', **{'ghrelease/fzf': '0.55.0'})
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
-
-        assert [name for category, name, *_ in built.rows if category in ('binary', 'extra')] == ['fzf', 'fzf-tmux', 'lazygit']
-        assert built.described['current'] == {}, 'a carried tool is never also recorded as measured'
-
-    def test_the_archive_says_sparse_in_its_own_name_before_anything_is_unpacked(
-        self, upstream: Upstream, cache: Path, tmp_path: Path
-    ) -> None:
-        report = status_reporting(tmp_path / 'box.json', **{'ghrelease/lazygit': '0.45.0'})
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
-
-        assert built.archive is not None
-        assert built.archive.name.endswith('-linux-x86_64-sparse.tar.gz')
-
-    def test_a_sparse_build_that_left_nothing_out_still_says_it_was_planned_against_a_report(
-        self, upstream: Upstream, cache: Path, tmp_path: Path
-    ) -> None:
-        """Completeness follows `built_from` and never `bool(current)`, because
-        `bundle_name` fixes the `-sparse` suffix before a tool has been measured.
-        Keyed on the other one, a build planned against a report that omitted
-        nothing would be named `-sparse` while its document read `full` — the
-        disagreement between an archive and its own description that `bundle
-        check` exists to make impossible."""
-        report = status_reporting(tmp_path / 'box.json', **{'ghrelease/lazygit': '0.1.0'})
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64', '--against', str(report))
-
-        assert built.described['current'] == {}
-        assert built.described['completeness'] == str(bundle_format.Completeness.SPARSE)
-        assert 'lazygit' in [name for category, name, *_ in built.rows if category == 'binary']
-
-    def test_a_full_build_records_no_measurement_it_did_not_make(self, upstream: Upstream, cache: Path) -> None:
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert built.described['completeness'] == str(bundle_format.Completeness.FULL)
-        assert built.described['current'] == {}
-        assert built.described['built_from'] == ''
-
-    def test_a_path_that_is_not_a_file_is_a_usage_error(self, upstream: Upstream, cache: Path, tmp_path: Path) -> None:
-        from dotfiles.main import app
-
-        argv = ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'x86_64', '--against', str(tmp_path / 'absent.json')]
-        result = CliRunner().invoke(app, argv)
-
-        assert result.exit_code == ExitCode.USAGE
-        assert upstream.fetched == []
-
-
-@pytest.mark.usefixtures('declaration')
-class TestTheDownloadCache:
-    """Kept between builds, and swept only after the archive is written.
-
-    Everything here is observed through what the second build fetched, because
-    that is the value the cache exists to change — a build that reads identically
-    warm and cold makes a working cache look broken, which is how it was first
-    reported.
-    """
-
-    def test_a_second_build_serves_the_release_assets_from_disk(self, upstream: Upstream, cache: Path) -> None:
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' not in upstream.fetched
-        assert built.staged('go-binaries/task') == b'TASK', 'a cache hit has to produce the same file a download does'
-
-    def test_a_checksum_already_confirmed_is_not_confirmed_again(self, upstream: Upstream, cache: Path) -> None:
-        """What upstream publishes for a released tag does not change, and it is
-        the expensive half — one API call to find the checksums asset plus one
-        download to read it."""
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert f'https://api.github.com/repos/{LAZYGIT_REPO}/releases/tags/{LAZYGIT_TAG}' not in upstream.fetched
-        lazygit = asset_named('lazygit')
-        assert built.checksums[lazygit] == digest(built.staged(f'binaries/{lazygit}'))
-
-    def test_a_release_that_publishes_no_checksums_is_not_asked_about_twice(self, upstream: Upstream, cache: Path) -> None:
-        """The answer is about one immutable asset, so caching it is as safe as
-        caching the asset — and it is the expensive half, one API call plus one
-        download, spent to learn there is nothing to compare against."""
-        upstream.publish(LAZYGIT_REPO, LAZYGIT_TAG, {asset_named('lazygit'): tarball('lazygit', b'LAZYGIT')}, checksums=False)
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert f'https://api.github.com/repos/{LAZYGIT_REPO}/releases/tags/{LAZYGIT_TAG}' not in upstream.fetched
-        assert asset_named('lazygit') not in built.checksums, 'a cached answer must not become a digest nobody checked'
-
-    def test_no_cache_asks_upstream_for_every_asset_again(self, upstream: Upstream, cache: Path) -> None:
-        """The one thing no other flag reaches is a cached file that is wrong —
-        truncated, or a release republished under a tag it already used."""
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64', '--no-cache')
-
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' in upstream.fetched
-
-    def test_a_corrupt_cached_copy_is_re_downloaded_rather_than_staged(self, upstream: Upstream, cache: Path) -> None:
-        """The digest beside an entry is what makes a truncated file a miss
-        instead of a bundle full of unusable bytes."""
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        cached = create_bundle.cache_path_for(create_bundle.github_asset(TASK_REPO, TASK_TAG, 'task.tar.gz').key)
-        cached.write_bytes(b'TRUNCATED')
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' in upstream.fetched
-        assert built.staged('go-binaries/task') == b'TASK'
-
-    def test_the_retention_sweep_runs_after_the_archive_rather_than_before_it(self, upstream: Upstream, cache: Path) -> None:
-        """Ordering, observed rather than asserted about: a sweep that ran first
-        would delete the aged entry the build is about to want, and the asset
-        would be downloaded again. It runs last, so the entry is a *hit*, the hit
-        touches it, and it survives its own sweep — while an aged entry nothing
-        asked for is gone by the time the build returns.
-
-        A build must never be delayed or failed by housekeeping, which is the
-        whole reason the order is this way round.
-        """
-        run('--machine', MACHINE, '--arch', 'x86_64')
-        orphan = create_bundle.cache_path_for(('github', 'go-task/task', 'v3.0.0', 'task.tar.gz'))
-        orphan.parent.mkdir(parents=True, exist_ok=True)
-        orphan.write_bytes(b'SUPERSEDED')
-        age(create_bundle.cache_root(), create_bundle.CACHE_RETENTION_DAYS + 1)
-        upstream.fetched.clear()
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        wanted = create_bundle.cache_path_for(create_bundle.github_asset(TASK_REPO, TASK_TAG, 'task.tar.gz').key)
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz' not in upstream.fetched
-        assert wanted.is_file(), 'a hit counts as use, or a tool that never changes ages out because the cache kept working'
-        assert not orphan.exists(), 'a superseded version nothing asked for is what the sweep is for'
-
-
-@pytest.mark.usefixtures('declaration')
-class TestAnEntryTheBundlerCannotStage:
-    """Said out loud, and the rest of the build continues.
-
-    Dropping one silently carries the same information as a log line and none of
-    the evidence — and the machine that installs from the bundle then has no
-    source for that tool at all.
-    """
-
-    def test_a_cargo_entry_with_no_release_repo_is_left_out_without_ending_the_build(
-        self, upstream: Upstream, cache: Path, declaration: Path
-    ) -> None:
-        """An entry with no repo and no `binary_pattern` has no asset to name, so
-        there is nothing to stage — and the two sections are read by name rather
-        than through a `getattr` default, which would answer *unbundleable* for an
-        entry whose field was merely renamed."""
-        redeclare(
-            declaration,
-            packages={**PACKAGES, 'cargo_packages': [*PACKAGES['cargo_packages'], {'name': 'zoxide', 'description': 'Smarter cd'}]},
-            manifest={**MANIFESTS[MACHINE], 'cargo_packages': ['ripgrep', 'zoxide']},
-        )
-
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        assert built.exit_code == ExitCode.CONVERGED, built.stderr
-        assert [name for category, name, *_ in built.rows if category == 'cargo'] == ['ripgrep']
-
-    def test_an_installer_that_opts_into_bundling_without_a_url_ends_the_build(
-        self, upstream: Upstream, cache: Path, declaration: Path
-    ) -> None:
-        """The opt-in is a claim that a script can be staged, and an entry making
-        it with nothing to fetch would leave a `script` row naming a file the
-        archive does not hold."""
-        opting_in = [{'name': 'theme', 'repo': THEME_REPO, 'bundle_install_script': True, 'description': 'Theming'}]
-        redeclare(declaration, packages={**PACKAGES, 'custom_installers': opting_in})
-
-        with pytest.raises(create_bundle.BundleError, match='install_url'):
-            build()
-
-        assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-
-@pytest.mark.usefixtures('declaration')
-class TestWhatTheBundleTellsTheTargetToDo:
-    """The four files at the root, each answering one question.
-
-    Asserted as values rather than as prose: the README is the one file whose
-    content is a sentence, and what is checked about it is that it is there at
-    all, because `install.sh` and `bundle stage` both read the directory it
-    describes.
-    """
-
-    def test_the_four_root_files_are_all_written(self, upstream: Upstream, cache: Path) -> None:
-        built = run('--machine', MACHINE, '--arch', 'x86_64')
-
-        root = {name.split('/')[-1] for name in built.names() if name.count('/') == 1}
-        assert {bundle_format.MANIFEST, bundle_format.DOCUMENT, 'checksums.txt', 'README.txt'} <= root
+    root = {name.split('/')[-1] for name in built.names() if name.count('/') == 1}
+    assert {bundle_format.MANIFEST, bundle_format.DOCUMENT, 'checksums.txt', 'README.txt'} <= root

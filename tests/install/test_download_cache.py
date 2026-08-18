@@ -221,166 +221,180 @@ separates "the entry was rejected" from "the entry was never consulted".
 """
 
 
-class TestTheCacheAnswersOnlyForAnEntryItCanStandBehind:
-    @pytest.mark.parametrize('named', list(CACHE_STATES), ids=list(CACHE_STATES))
-    def test_a_fetch_serves_the_cache_or_the_network_and_says_which(self, cache_home, wire, tmp_path, named):
-        state = CACHE_STATES[named]
-        recorder = wire()
-        cache = DownloadCache(enabled=state.enabled)
-        state.seed(cache, ASSET)
-        destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
+# ─────────────────────────────────────────────────────────────────────────────
+# The cache answers only for an entry it can stand behind
+# ─────────────────────────────────────────────────────────────────────────────
 
-        cache.fetch(ASSET, destination, f'  fd ({named})')
 
-        assert destination.read_bytes() == state.served
-        assert (cache.hits, cache.downloads) == (state.hits, state.downloads)
-        assert len(recorder.calls) == state.downloads, 'the counter and the wire have to agree about who answered'
-        assert state.after(cache, ASSET), 'the entry the next build will find'
+@pytest.mark.parametrize('named', list(CACHE_STATES), ids=list(CACHE_STATES))
+def test_a_fetch_serves_the_cache_or_the_network_and_says_which(cache_home, wire, tmp_path, named):
+    state = CACHE_STATES[named]
+    recorder = wire()
+    cache = DownloadCache(enabled=state.enabled)
+    state.seed(cache, ASSET)
+    destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
 
-    def test_a_corrupt_entry_takes_its_verdict_with_it(self, cache_home, wire, tmp_path):
-        """The status file records what upstream published about *these* bytes.
+    cache.fetch(ASSET, destination, f'  fd ({named})')
 
-        Left behind when the bytes are replaced, `verify_against_upstream` reads
-        `verified` for a copy nothing verified and records its digest into
-        checksums.txt — so the installer on the far side logs a check it did not
-        perform.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
-        a_corrupt_entry(cache, ASSET)
-        assert cache.status(ASSET) == 'verified', 'the seed has to be the state being cleared'
+    assert destination.read_bytes() == state.served
+    assert (cache.hits, cache.downloads) == (state.hits, state.downloads)
+    assert len(recorder.calls) == state.downloads, 'the counter and the wire have to agree about who answered'
+    assert state.after(cache, ASSET), 'the entry the next build will find'
 
-        cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
 
-        assert cache.status(ASSET) is None
-        assert cache.downloads == 1
+def test_a_corrupt_entry_takes_its_verdict_with_it(cache_home, wire, tmp_path):
+    """The status file records what upstream published about *these* bytes.
 
-    def test_the_staged_copy_is_the_builds_to_consume(self, cache_home, wire, tmp_path):
-        """`extract_go_binary` unlinks the archive it was handed, and
-        `extract_windows_exe` and `repackage_zip_as_tarball` both do the same.
+    Left behind when the bytes are replaced, `verify_against_upstream` reads
+    `verified` for a copy nothing verified and records its digest into
+    checksums.txt — so the installer on the far side logs a check it did not
+    perform.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    a_corrupt_entry(cache, ASSET)
+    assert cache.status(ASSET) == 'verified', 'the seed has to be the state being cleared'
 
-        A hit that hardlinked or moved instead of copying would therefore destroy
-        the entry it just served, and the symptom is a cache that misses forever
-        while reporting itself enabled.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
-        an_entry_and_its_digest(cache, ASSET)
-        destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
 
+    assert cache.status(ASSET) is None
+    assert cache.downloads == 1
+
+
+def test_the_staged_copy_is_the_builds_to_consume(cache_home, wire, tmp_path):
+    """`extract_go_binary` unlinks the archive it was handed, and
+    `extract_windows_exe` and `repackage_zip_as_tarball` both do the same.
+
+    A hit that hardlinked or moved instead of copying would therefore destroy
+    the entry it just served, and the symptom is a cache that misses forever
+    while reporting itself enabled.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    an_entry_and_its_digest(cache, ASSET)
+    destination = tmp_path / 'out' / ASSET.filename
+
+    cache.fetch(ASSET, destination, '  fd')
+    destination.unlink()
+    cache.fetch(ASSET, destination, '  fd')
+
+    assert destination.read_bytes() == STALE
+    assert (cache.hits, cache.downloads) == (2, 0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Publishing into the cache
+#
+# How bytes get *into* the cache, which is where a later build's answer comes from.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_an_entry_appears_whole_or_not_at_all(cache_home, wire, tmp_path, monkeypatch):
+    """Published through a temp name and renamed, so a build killed mid-copy
+    leaves nothing at the entry's own name.
+
+    Copied straight to `cached`, the truncated remains are a file that
+    `cached.is_file()` accepts. The digest sidecar would be absent and today
+    that is what saves it — but the two are written a line apart, and the
+    cache's whole safety then rests on losing a race it never meant to run.
+
+    The copy is watched rather than faked: `copyfile` still runs, and what is
+    recorded is where it was pointed and what was at the entry's name at that
+    instant.
+    """
+    watched: list[tuple[str, bool]] = []
+    real_copyfile = shutil.copyfile
+    cached = entry_of(ASSET)
+
+    def watch(source, target, **kwargs):
+        watched.append((Path(target).name, cached.exists()))
+        return real_copyfile(source, target, **kwargs)
+
+    monkeypatch.setattr(shutil, 'copyfile', watch)
+    wire()
+    cache = DownloadCache(enabled=True)
+
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+
+    assert watched == [(f'{cached.name}.partial.{os.getpid()}', False)]
+    assert cached.read_bytes() == PAYLOAD
+    assert list(cached.parent.glob('*.partial*')) == [], 'the temp name is consumed by the rename'
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
+def test_a_cache_that_cannot_be_written_is_a_slow_build_rather_than_a_failed_one(cache_home, wire, tmp_path):
+    """A build must not fail over housekeeping it does not need to finish.
+
+    The asset is still downloaded and still staged; only the copy into the
+    cache is lost, and the next build pays for it in time rather than in a
+    traceback.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    entry_of(ASSET).parent.mkdir(parents=True, exist_ok=True)
+    entry_of(ASSET).parent.chmod(0o555)
+    destination = tmp_path / 'out' / ASSET.filename
+
+    try:
         cache.fetch(ASSET, destination, '  fd')
-        destination.unlink()
-        cache.fetch(ASSET, destination, '  fd')
+    finally:
+        entry_of(ASSET).parent.chmod(0o755)
 
-        assert destination.read_bytes() == STALE
-        assert (cache.hits, cache.downloads) == (2, 0)
+    assert destination.read_bytes() == PAYLOAD
+    assert cache.downloads == 1
+    assert not entry_of(ASSET).exists()
 
 
-class TestPublishingIntoTheCache:
-    """How bytes get *into* the cache, which is where a later build's answer comes from."""
+@pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
+def test_the_write_guard_covers_the_copy_and_not_the_directory_the_copy_needs(cache_home, wire, tmp_path):
+    """Measured rather than endorsed, and the sibling above is why.
 
-    def test_an_entry_appears_whole_or_not_at_all(self, cache_home, wire, tmp_path, monkeypatch):
-        """Published through a temp name and renamed, so a build killed mid-copy
-        leaves nothing at the entry's own name.
+    The two are the same machine — a cache root nobody can write into — and
+    differ only in whether this asset's directory happens to exist from an
+    earlier build. `cached.parent.mkdir` sits outside the try that catches
+    OSError, so on the first asset of a fresh cache the build dies with an
+    uncaught PermissionError instead of the warning the second one gets.
 
-        Copied straight to `cached`, the truncated remains are a file that
-        `cached.is_file()` accepts. The digest sidecar would be absent and today
-        that is what saves it — but the two are written a line apart, and the
-        cache's whole safety then rests on losing a race it never meant to run.
+    The download itself already succeeded, which is what makes it worth
+    pinning: the bytes are in hand and the build ends anyway.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache_home.chmod(0o555)
+    destination = tmp_path / 'out' / ASSET.filename
 
-        The copy is watched rather than faked: `copyfile` still runs, and what is
-        recorded is where it was pointed and what was at the entry's name at that
-        instant.
-        """
-        watched: list[tuple[str, bool]] = []
-        real_copyfile = shutil.copyfile
-        cached = entry_of(ASSET)
-
-        def watch(source, target, **kwargs):
-            watched.append((Path(target).name, cached.exists()))
-            return real_copyfile(source, target, **kwargs)
-
-        monkeypatch.setattr(shutil, 'copyfile', watch)
-        wire()
-        cache = DownloadCache(enabled=True)
-
-        cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
-
-        assert watched == [(f'{cached.name}.partial.{os.getpid()}', False)]
-        assert cached.read_bytes() == PAYLOAD
-        assert list(cached.parent.glob('*.partial*')) == [], 'the temp name is consumed by the rename'
-
-    @pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
-    def test_a_cache_that_cannot_be_written_is_a_slow_build_rather_than_a_failed_one(self, cache_home, wire, tmp_path):
-        """A build must not fail over housekeeping it does not need to finish.
-
-        The asset is still downloaded and still staged; only the copy into the
-        cache is lost, and the next build pays for it in time rather than in a
-        traceback.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
-        entry_of(ASSET).parent.mkdir(parents=True, exist_ok=True)
-        entry_of(ASSET).parent.chmod(0o555)
-        destination = tmp_path / 'out' / ASSET.filename
-
-        try:
+    try:
+        with pytest.raises(PermissionError):
             cache.fetch(ASSET, destination, '  fd')
-        finally:
-            entry_of(ASSET).parent.chmod(0o755)
+    finally:
+        cache_home.chmod(0o755)
 
-        assert destination.read_bytes() == PAYLOAD
-        assert cache.downloads == 1
-        assert not entry_of(ASSET).exists()
+    assert destination.read_bytes() == PAYLOAD
+    assert cache.downloads == 1
 
-    @pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
-    def test_the_write_guard_covers_the_copy_and_not_the_directory_the_copy_needs(self, cache_home, wire, tmp_path):
-        """Measured rather than endorsed, and the sibling above is why.
 
-        The two are the same machine — a cache root nobody can write into — and
-        differ only in whether this asset's directory happens to exist from an
-        earlier build. `cached.parent.mkdir` sits outside the try that catches
-        OSError, so on the first asset of a fresh cache the build dies with an
-        uncaught PermissionError instead of the warning the second one gets.
+def test_the_recorded_digest_is_the_value_a_checksums_file_carries(cache_home, wire, tmp_path):
+    """`verify_against_upstream` writes this straight into `checksums.txt` as
+    `{digest}  {filename}`, so a trailing newline read back off the sidecar
+    would put a blank line through the middle of the file the installer
+    parses.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
 
-        The download itself already succeeded, which is what makes it worth
-        pinning: the bytes are in hand and the build ends anyway.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
-        cache_home.chmod(0o555)
-        destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
 
-        try:
-            with pytest.raises(PermissionError):
-                cache.fetch(ASSET, destination, '  fd')
-        finally:
-            cache_home.chmod(0o755)
+    assert cache.recorded_digest(ASSET) == github_release.sha256_of(destination)
+    assert cache.recorded_digest(ASSET).strip() == cache.recorded_digest(ASSET)
 
-        assert destination.read_bytes() == PAYLOAD
-        assert cache.downloads == 1
 
-    def test_the_recorded_digest_is_the_value_a_checksums_file_carries(self, cache_home, wire, tmp_path):
-        """`verify_against_upstream` writes this straight into `checksums.txt` as
-        `{digest}  {filename}`, so a trailing newline read back off the sidecar
-        would put a blank line through the middle of the file the installer
-        parses.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
-        destination = tmp_path / 'out' / ASSET.filename
+def test_an_enabled_cache_makes_its_root_and_a_disabled_one_makes_nothing(cache_home):
+    DownloadCache(enabled=False)
+    assert not cache_home.exists()
 
-        cache.fetch(ASSET, destination, '  fd')
-
-        assert cache.recorded_digest(ASSET) == github_release.sha256_of(destination)
-        assert cache.recorded_digest(ASSET).strip() == cache.recorded_digest(ASSET)
-
-    def test_an_enabled_cache_makes_its_root_and_a_disabled_one_makes_nothing(self, cache_home):
-        DownloadCache(enabled=False)
-        assert not cache_home.exists()
-
-        DownloadCache(enabled=True)
-        assert cache_home.is_dir()
+    DownloadCache(enabled=True)
+    assert cache_home.is_dir()
 
 
 @dc.dataclass(frozen=True)
@@ -406,197 +420,217 @@ assertions about a value nothing uses any more.
 """
 
 
-class TestRetention:
-    """Ageing on last use, which is what lets a tool that never changes stay cached."""
-
-    @pytest.mark.parametrize('named', list(AGES), ids=list(AGES))
-    def test_the_sweep_drops_an_entry_by_when_it_was_last_used(self, cache_home, wire, tmp_path, named):
-        aged = AGES[named]
-        wire()
-        cache = DownloadCache(enabled=True)
-        cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
-        cache.remember_status(ASSET, 'verified')
-        sidecars = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
-        for path in sidecars:
-            age(path, aged.days)
-
-        cache.prune()
-
-        assert [path.exists() for path in sidecars] == [aged.survives] * 3, 'an entry ages as one thing, sidecars included'
-        assert cache_home.is_dir(), 'the sweep empties the cache, never removes it'
-        assert entry_of(ASSET).parent.exists() is aged.survives, 'a directory with nothing left in it goes too'
-
-    def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_working(self, cache_home, wire, tmp_path):
-        """mtime is the clock the sweep reads, so a hit has to count as use.
-
-        Both entries below are already past retention when the build starts and
-        one of them is what this build asks for. Without the touch it is swept
-        anyway — the entry is dropped for having been useful, and the next build
-        re-downloads a tool whose release has not moved in a year. Which is a
-        cache that gets slower the better it works.
-        """
-        wanted = ASSET
-        superseded = create_bundle.github_asset('sharkdp/fd', 'v9.0.0', 'fd-v9.0.0-x86_64-unknown-linux-gnu.tar.gz')
-        wire()
-        cache = DownloadCache(enabled=True)
-        for asset in (wanted, superseded):
-            an_entry_and_its_digest(cache, asset)
-            cache.remember_status(asset, 'verified')
-            for path in (entry_of(asset), cache.digest_file(asset), cache.status_file(asset)):
-                age(path, RETENTION + 30)
-
-        cache.fetch(wanted, tmp_path / 'out' / wanted.filename, '  fd')
-        cache.prune()
-
-        assert cache.hits == 1
-        assert entry_of(wanted).read_bytes() == STALE
-        assert cache.recorded_digest(wanted) == github_release.sha256_of(entry_of(wanted))
-        assert cache.status(wanted) == 'verified', 'the verdict is refreshed with the bytes it describes'
-        assert not entry_of(superseded).exists(), 'the version nothing asked for is what retention is for'
-        assert not entry_of(superseded).parent.exists()
-        assert entry_of(wanted).parent.parent.is_dir(), 'a directory something still lives under is left alone'
-
-    def test_a_cache_that_was_never_created_is_swept_without_complaint(self, cache_home):
-        """`build` prunes unconditionally at the end, including a run with
-        `--no-cache`, where the directory does not exist at all."""
-        DownloadCache(enabled=False).prune()
-
-        assert not cache_home.exists()
+# ─────────────────────────────────────────────────────────────────────────────
+# Retention
+#
+# Ageing on last use, which is what lets a tool that never changes stay cached.
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-class TestAVerdictCannotOutliveTheDigestItDescribes:
-    """`status` answers for one immutable asset, and only while that asset is here.
+@pytest.mark.parametrize('named', list(AGES), ids=list(AGES))
+def test_the_sweep_drops_an_entry_by_when_it_was_last_used(cache_home, wire, tmp_path, named):
+    aged = AGES[named]
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+    sidecars = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+    for path in sidecars:
+        age(path, aged.days)
 
-    What upstream published for a released tag does not change, so caching the
-    answer saves the expensive half of verification — an API call to find the
-    checksums asset and a download to read it. It is also the one cached value
-    that is *about* other bytes, so it is only as good as those bytes still being
-    the ones on disk.
+    cache.prune()
+
+    assert [path.exists() for path in sidecars] == [aged.survives] * 3, 'an entry ages as one thing, sidecars included'
+    assert cache_home.is_dir(), 'the sweep empties the cache, never removes it'
+    assert entry_of(ASSET).parent.exists() is aged.survives, 'a directory with nothing left in it goes too'
+
+
+def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_working(cache_home, wire, tmp_path):
+    """mtime is the clock the sweep reads, so a hit has to count as use.
+
+    Both entries below are already past retention when the build starts and
+    one of them is what this build asks for. Without the touch it is swept
+    anyway — the entry is dropped for having been useful, and the next build
+    re-downloads a tool whose release has not moved in a year. Which is a
+    cache that gets slower the better it works.
     """
+    wanted = ASSET
+    superseded = create_bundle.github_asset('sharkdp/fd', 'v9.0.0', 'fd-v9.0.0-x86_64-unknown-linux-gnu.tar.gz')
+    wire()
+    cache = DownloadCache(enabled=True)
+    for asset in (wanted, superseded):
+        an_entry_and_its_digest(cache, asset)
+        cache.remember_status(asset, 'verified')
+        for path in (entry_of(asset), cache.digest_file(asset), cache.status_file(asset)):
+            age(path, RETENTION + 30)
 
-    def test_a_verdict_is_refused_until_there_are_bytes_for_it_to_describe(self, cache_home, wire, tmp_path):
-        """Written first, it survives a fetch that then failed to cache anything —
-        and `verify_against_upstream` reads `verified` and asks for the digest of
-        an entry that was never written.
-        """
-        wire()
-        cache = DownloadCache(enabled=True)
+    cache.fetch(wanted, tmp_path / 'out' / wanted.filename, '  fd')
+    cache.prune()
 
-        cache.remember_status(ASSET, 'verified')
-
-        assert cache.status(ASSET) is None
-        assert not cache.status_file(ASSET).exists()
-
-        cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
-        cache.remember_status(ASSET, 'verified')
-
-        assert cache.status(ASSET) == 'verified'
-
-    def test_a_disabled_cache_neither_records_a_verdict_nor_reads_one(self, cache_home, wire, tmp_path):
-        """`--no-cache` is asked for by somebody who does not trust what is on
-        disk, so a verdict read out of it would be the one thing that survived
-        the flag."""
-        wire()
-        warm = DownloadCache(enabled=True)
-        warm.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
-        warm.remember_status(ASSET, 'verified')
-
-        cold = DownloadCache(enabled=False)
-        cold.remember_status(ASSET, 'unpublished')
-
-        assert cold.status(ASSET) is None
-        assert warm.status(ASSET) == 'verified', 'the file is there; the disabled cache declines to read it'
-
-    def test_eviction_takes_the_bytes_the_digest_and_the_verdict_together(self, cache_home, wire, tmp_path):
-        """`verify_against_upstream` evicts on a checksum mismatch, which is the
-        one case where the bytes are known to be wrong. Leaving either sidecar
-        behind hands the next build a verdict about bytes it no longer has.
-        """
-        recorder = wire()
-        cache = DownloadCache(enabled=True)
-        destination = tmp_path / 'out' / ASSET.filename
-        cache.fetch(ASSET, destination, '  fd')
-        cache.remember_status(ASSET, 'verified')
-
-        cache.evict(ASSET)
-
-        assert [path.exists() for path in (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))] == [False] * 3
-        cache.fetch(ASSET, destination, '  fd')
-        assert (cache.hits, cache.downloads) == (0, 2)
-        assert len(recorder.calls) == 2
-
-    def test_evicting_something_that_was_never_cached_is_not_an_error(self, cache_home):
-        """`add_wheels` evicts on a digest mismatch without knowing whether the
-        cache was enabled, so the no-op has to be the ordinary case."""
-        cache = DownloadCache(enabled=True)
-
-        cache.evict(ASSET)
-
-        assert cache_home.is_dir()
-
-    def test_an_entry_and_both_its_sidecars_share_one_directory(self, cache_home):
-        """Which is what makes retention able to drop them as a unit, and what
-        `cache_path_for`'s one-level-per-key-part layout is for."""
-        cache = DownloadCache(enabled=False)
-        paths = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
-
-        assert len({path.parent for path in paths}) == 1
-        assert len(set(paths)) == 3
+    assert cache.hits == 1
+    assert entry_of(wanted).read_bytes() == STALE
+    assert cache.recorded_digest(wanted) == github_release.sha256_of(entry_of(wanted))
+    assert cache.status(wanted) == 'verified', 'the verdict is refreshed with the bytes it describes'
+    assert not entry_of(superseded).exists(), 'the version nothing asked for is what retention is for'
+    assert not entry_of(superseded).parent.exists()
+    assert entry_of(wanted).parent.parent.is_dir(), 'a directory something still lives under is left alone'
 
 
-class TestDownloading:
-    """The one loop between the declaration and the bytes."""
+def test_a_cache_that_was_never_created_is_swept_without_complaint(cache_home):
+    """`build` prunes unconditionally at the end, including a run with
+    `--no-cache`, where the directory does not exist at all."""
+    DownloadCache(enabled=False).prune()
 
-    def test_a_transfer_that_flaps_is_retried_rather_than_failing_the_build(self, cache_home, wire, tmp_path):
-        """A bundle asks for every declared tool in one run, so a single refused
-        connection anywhere in that list would otherwise end the build for the
-        machine that has no other way to get any of them."""
-        recorder = wire(flaky=create_bundle.DOWNLOAD_ATTEMPTS - 1)
-        destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
+    assert not cache_home.exists()
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A verdict cannot outlive the digest it describes
+#
+# `status` answers for one immutable asset, and only while that asset is here.
+#
+# What upstream published for a released tag does not change, so caching the
+# answer saves the expensive half of verification — an API call to find the
+# checksums asset and a download to read it. It is also the one cached value
+# that is *about* other bytes, so it is only as good as those bytes still being
+# the ones on disk.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_verdict_is_refused_until_there_are_bytes_for_it_to_describe(cache_home, wire, tmp_path):
+    """Written first, it survives a fetch that then failed to cache anything —
+    and `verify_against_upstream` reads `verified` and asks for the digest of
+    an entry that was never written.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+
+    cache.remember_status(ASSET, 'verified')
+
+    assert cache.status(ASSET) is None
+    assert not cache.status_file(ASSET).exists()
+
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    assert cache.status(ASSET) == 'verified'
+
+
+def test_a_disabled_cache_neither_records_a_verdict_nor_reads_one(cache_home, wire, tmp_path):
+    """`--no-cache` is asked for by somebody who does not trust what is on
+    disk, so a verdict read out of it would be the one thing that survived
+    the flag."""
+    wire()
+    warm = DownloadCache(enabled=True)
+    warm.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    warm.remember_status(ASSET, 'verified')
+
+    cold = DownloadCache(enabled=False)
+    cold.remember_status(ASSET, 'unpublished')
+
+    assert cold.status(ASSET) is None
+    assert warm.status(ASSET) == 'verified', 'the file is there; the disabled cache declines to read it'
+
+
+def test_eviction_takes_the_bytes_the_digest_and_the_verdict_together(cache_home, wire, tmp_path):
+    """`verify_against_upstream` evicts on a checksum mismatch, which is the
+    one case where the bytes are known to be wrong. Leaving either sidecar
+    behind hands the next build a verdict about bytes it no longer has.
+    """
+    recorder = wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    cache.evict(ASSET)
+
+    assert [path.exists() for path in (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))] == [False] * 3
+    cache.fetch(ASSET, destination, '  fd')
+    assert (cache.hits, cache.downloads) == (0, 2)
+    assert len(recorder.calls) == 2
+
+
+def test_evicting_something_that_was_never_cached_is_not_an_error(cache_home):
+    """`add_wheels` evicts on a digest mismatch without knowing whether the
+    cache was enabled, so the no-op has to be the ordinary case."""
+    cache = DownloadCache(enabled=True)
+
+    cache.evict(ASSET)
+
+    assert cache_home.is_dir()
+
+
+def test_an_entry_and_both_its_sidecars_share_one_directory(cache_home):
+    """Which is what makes retention able to drop them as a unit, and what
+    `cache_path_for`'s one-level-per-key-part layout is for."""
+    cache = DownloadCache(enabled=False)
+    paths = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+
+    assert len({path.parent for path in paths}) == 1
+    assert len(set(paths)) == 3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Downloading
+#
+# The one loop between the declaration and the bytes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_transfer_that_flaps_is_retried_rather_than_failing_the_build(cache_home, wire, tmp_path):
+    """A bundle asks for every declared tool in one run, so a single refused
+    connection anywhere in that list would otherwise end the build for the
+    machine that has no other way to get any of them."""
+    recorder = wire(flaky=create_bundle.DOWNLOAD_ATTEMPTS - 1)
+    destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
+
+    create_bundle.download(ASSET.url, destination)
+
+    assert destination.read_bytes() == PAYLOAD
+    assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
+
+
+def test_a_transfer_that_never_answers_is_refused_and_writes_nothing(cache_home, wire, tmp_path):
+    """Paired with the retry above, which a loop that swallowed the last
+    failure would also satisfy. The absent file is the half that matters:
+    a truncated one is staged, recorded in the manifest, and unpacked on the
+    machine that cannot fetch a replacement.
+    """
+    recorder = wire(flaky=create_bundle.DOWNLOAD_ATTEMPTS)
+    destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
+
+    with pytest.raises(create_bundle.BundleError, match=ASSET.url):
         create_bundle.download(ASSET.url, destination)
 
-        assert destination.read_bytes() == PAYLOAD
-        assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
+    assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
+    assert not destination.exists()
 
-    def test_a_transfer_that_never_answers_is_refused_and_writes_nothing(self, cache_home, wire, tmp_path):
-        """Paired with the retry above, which a loop that swallowed the last
-        failure would also satisfy. The absent file is the half that matters:
-        a truncated one is staged, recorded in the manifest, and unpacked on the
-        machine that cannot fetch a replacement.
-        """
-        recorder = wire(flaky=create_bundle.DOWNLOAD_ATTEMPTS)
-        destination = tmp_path / 'staging' / 'binaries' / ASSET.filename
 
-        with pytest.raises(create_bundle.BundleError, match=ASSET.url):
-            create_bundle.download(ASSET.url, destination)
+def test_a_failure_to_write_is_retried_on_the_same_terms_as_a_failure_to_reach(cache_home, wire, tmp_path):
+    """`except (httpx2.HTTPError, OSError)`, because half of what can go wrong
+    here is local. The destination below is a directory, which is the one
+    local failure a test can produce without pretending the filesystem is
+    something it is not.
+    """
+    recorder = wire()
+    destination = tmp_path / 'staging' / ASSET.filename
+    destination.mkdir(parents=True)
 
-        assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
-        assert not destination.exists()
-
-    def test_a_failure_to_write_is_retried_on_the_same_terms_as_a_failure_to_reach(self, cache_home, wire, tmp_path):
-        """`except (httpx2.HTTPError, OSError)`, because half of what can go wrong
-        here is local. The destination below is a directory, which is the one
-        local failure a test can produce without pretending the filesystem is
-        something it is not.
-        """
-        recorder = wire()
-        destination = tmp_path / 'staging' / ASSET.filename
-        destination.mkdir(parents=True)
-
-        with pytest.raises(create_bundle.BundleError, match=ASSET.url):
-            create_bundle.download(ASSET.url, destination)
-
-        assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
-        assert destination.is_dir(), 'nothing replaced what was in the way'
-
-    def test_the_staging_directory_is_made_by_whoever_writes_into_it(self, cache_home, wire, tmp_path):
-        wire()
-        destination = tmp_path / 'made' / 'by' / 'the' / 'download' / ASSET.filename
-
+    with pytest.raises(create_bundle.BundleError, match=ASSET.url):
         create_bundle.download(ASSET.url, destination)
 
-        assert destination.read_bytes() == PAYLOAD
+    assert len(recorder.calls) == create_bundle.DOWNLOAD_ATTEMPTS
+    assert destination.is_dir(), 'nothing replaced what was in the way'
+
+
+def test_the_staging_directory_is_made_by_whoever_writes_into_it(cache_home, wire, tmp_path):
+    wire()
+    destination = tmp_path / 'made' / 'by' / 'the' / 'download' / ASSET.filename
+
+    create_bundle.download(ASSET.url, destination)
+
+    assert destination.read_bytes() == PAYLOAD
 
 
 LATEST = 'https://api.github.com/repos/sharkdp/fd/releases/latest'
@@ -626,14 +660,18 @@ version, so the same None has to become a refusal here or the build stages
 """
 
 
-class TestResolvingAVersion:
-    @pytest.mark.parametrize('named', list(ANSWERS), ids=list(ANSWERS))
-    def test_a_version_the_build_cannot_read_ends_the_build(self, cache_home, wire, named):
-        answer = ANSWERS[named]
-        wire({LATEST: answer.body} if answer.body is not None else {})
+# ─────────────────────────────────────────────────────────────────────────────
+# Resolving a version
+# ─────────────────────────────────────────────────────────────────────────────
 
-        if answer.tag is None:
-            with pytest.raises(create_bundle.BundleError, match='sharkdp/fd'):
-                create_bundle.fetch_latest_version('sharkdp/fd')
-        else:
-            assert create_bundle.fetch_latest_version('sharkdp/fd') == answer.tag
+
+@pytest.mark.parametrize('named', list(ANSWERS), ids=list(ANSWERS))
+def test_a_version_the_build_cannot_read_ends_the_build(cache_home, wire, named):
+    answer = ANSWERS[named]
+    wire({LATEST: answer.body} if answer.body is not None else {})
+
+    if answer.tag is None:
+        with pytest.raises(create_bundle.BundleError, match='sharkdp/fd'):
+            create_bundle.fetch_latest_version('sharkdp/fd')
+    else:
+        assert create_bundle.fetch_latest_version('sharkdp/fd') == answer.tag
