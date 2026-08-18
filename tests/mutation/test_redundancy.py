@@ -539,7 +539,7 @@ def test_the_summary_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path
         ),
     )
     for wanted in (False, True):
-        harness._pytest(plan, tmp_path, ['tests/test_thing.py'], stop_early=False, timeout=60.0, basetemp=tmp_path, summary=wanted)
+        harness.run_pytest(plan, tmp_path, ['tests/test_thing.py'], stop_early=False, timeout=60.0, basetemp=tmp_path, summary=wanted)
         assert (harness.SUMMARY[0] in (tmp_path / 'argv').read_text().splitlines()) is wanted
 
 

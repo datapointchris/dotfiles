@@ -9,7 +9,7 @@ and no test constrains.
 
 It exists because `dotfiles report upload` shipped broken while the suite held
 3468 tests at 87.77% coverage. `report._send` had zero executed statements and a
-file named `test_report_upload.py` held four tests, all of them exercising one
+file named for the verb held four tests, all of them exercising one
 pure leaf helper. Coverage cannot see that, and a mutation run would have
 answered it in seconds without planting anything: with no test executing a line
 of that function, every site in it comes back UNREACHED.

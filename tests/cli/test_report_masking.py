@@ -1,5 +1,10 @@
 """What is taken out of a run record on the way to the remote.
 
+Named for the masking rather than for the verb. A file called
+`test_report_upload.py` holding only tests of a pure helper is how the upload
+defect survived a first reading — somebody looking for `report upload` coverage
+opened the file named for it and found four tests of something else.
+
 A record is read by a person diagnosing a failure, which is what makes masking the
 right screen for it rather than the row-withholding a status document gets. These
 assert the property that follows: the line survives, the name does not.

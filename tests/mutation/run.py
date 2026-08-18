@@ -228,7 +228,17 @@ def vanished_in(output: str, tests: Sequence[str]) -> tuple[str, ...]:
     return tuple(sorted({test for test in tests for absolute in named if absolute.endswith(test)}))
 
 
-def _pytest(
+CONTROL_TIMEOUT = 1800.0
+"""How long an unmutated run may take before the harness calls it hung.
+
+Half an hour is not a budget so much as a refusal to wait forever: a control run
+is the whole subset once, and anything past this is a suite problem rather than
+a mutant. Named here because `redundancy.screen` runs the same shape and was
+carrying its own copy of the number.
+"""
+
+
+def run_pytest(
     plan: Plan, shadow: Path, tests: Sequence[str], *, stop_early: bool, timeout: float, basetemp: Path, summary: bool = False
 ) -> tuple[int | None, float, str]:
     argv = [
@@ -277,14 +287,14 @@ class Workers:
         self.available.put(room)
 
 
-def _write_into(shadow: Path, source_root: Path, relative: str, text: str) -> None:
+def write_into(shadow: Path, source_root: Path, relative: str, text: str) -> None:
     (shadow / Path(relative).relative_to(source_root.name)).write_text(text)
 
 
 def control(plan: Plan, shadow: Path, basetemp: Path, relative: str, source: str, tests: Sequence[str]) -> float:
     """The round trip, unmutated, against the union of every subset. Returns how long it took."""
-    _write_into(shadow, plan.source_root, relative, planter.round_trip(source))
-    code, seconds, output = _pytest(plan, shadow, tests, stop_early=False, timeout=1800.0, basetemp=basetemp)
+    write_into(shadow, plan.source_root, relative, planter.round_trip(source))
+    code, seconds, output = run_pytest(plan, shadow, tests, stop_early=False, timeout=CONTROL_TIMEOUT, basetemp=basetemp)
     if code != 0:
         raise RuntimeError(f'the control run exited {code}, so no mutant can be attributed to its own bug\n{output[-2000:]}')
     return seconds
@@ -305,16 +315,16 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
         workers.give_back((shadow, basetemp))
         return _result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
     try:
-        _write_into(shadow, plan.source_root, planned.relative, text)
+        write_into(shadow, plan.source_root, planned.relative, text)
         # Attribution needs every failure, and `-x` stops at the first one. A killer-recording run therefore forgoes the saving
         # rather than paying for a second pass, which also makes the survivor confirmation below unnecessary.
         early = not plan.record_killers
-        code, seconds, output = _pytest(
+        code, seconds, output = run_pytest(
             plan, shadow, planned.tests, stop_early=early, timeout=timeout, basetemp=basetemp, summary=plan.record_killers
         )
         status, detail = outcome_for(code)
         if status == score.SURVIVED and early:
-            confirmed, _, _ = _pytest(plan, shadow, planned.tests, stop_early=False, timeout=timeout, basetemp=basetemp)
+            confirmed, _, _ = run_pytest(plan, shadow, planned.tests, stop_early=False, timeout=timeout, basetemp=basetemp)
             if confirmed == 1:
                 status, detail = score.KILLED, 'killed only without -x, which means the subset ordering hid it'
         subsetted: tuple[str, ...] = planned.tests
@@ -323,7 +333,9 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
             subsetted = tuple(name for name in planned.tests if name not in set(gone))
             if subsetted:
                 unmeasured = gone
-                code, seconds, output = _pytest(plan, shadow, subsetted, stop_early=False, timeout=timeout, basetemp=basetemp, summary=True)
+                code, seconds, output = run_pytest(
+                    plan, shadow, subsetted, stop_early=False, timeout=timeout, basetemp=basetemp, summary=True
+                )
                 status, detail = outcome_for(code)
         killers = killers_in(output, subsetted) if plan.record_killers else ()
         if plan.record_killers and killers and status == score.HARNESS_ERROR:
@@ -334,7 +346,7 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
             detail = f'{detail}\n{output[-400:]}'.strip()
         return _result(planned, status, seconds=seconds, detail=detail, killers=killers, unmeasured=unmeasured)
     finally:
-        _write_into(shadow, plan.source_root, planned.relative, sources[planned.relative])
+        write_into(shadow, plan.source_root, planned.relative, sources[planned.relative])
         workers.give_back((shadow, basetemp))
 
 
@@ -408,7 +420,7 @@ def measure(
                 taken = control(plan, shadow, basetemp, relative, sources[relative], chosen)
                 per_target[relative] = max(TIMEOUT_FLOOR, taken * TIMEOUT_FACTOR)
                 control_seconds += taken
-                _write_into(shadow, plan.source_root, relative, sources[relative])
+                write_into(shadow, plan.source_root, relative, sources[relative])
             workers.give_back((shadow, basetemp))
             longest = max(per_target.values(), default=TIMEOUT_FLOOR)
             announce(f'control passed in {control_seconds:.1f}s; longest per-mutant timeout {longest:.0f}s')
@@ -527,6 +539,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         say(f'nothing changed under src/dotfiles since {parsed.since}')
         return 0
 
+    # Before the call, not after. `subset.load` is one whole-suite run under
+    # coverage with its output captured, so a first run sits silent for over a
+    # minute — which is the condition `say` exists to prevent.
+    say('measuring which tests execute which line')
     contexts, cached, measured = subset.load(
         repo,
         plan.source_root,
