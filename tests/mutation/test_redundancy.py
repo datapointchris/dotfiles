@@ -257,9 +257,10 @@ def test_the_report_carries_the_counts_rather_than_a_verdict_sentence() -> None:
     run = toy_run([site(score.KILLED, line=1, killers=('t::one', 't::two'))])
     found = redundancy.survey(contexts_from({'src/dotfiles/x.py': {1: (0, 1)}}, ('t::one', 't::two')))
     verdicts = redundancy.prove(run, ['t::two'], one_file(['t::one', 't::two']), ['src/dotfiles/x.py'], run_set=['t::one', 't::two'])
-    lines = redundancy.render(found, verdicts)
-    assert any(line.startswith('REDUNDANT        : 1') for line in lines)
-    assert any('t::one' in line and 'REDUNDANT t::two' in line for line in lines)
+    payload = redundancy.as_payload(found, verdicts)
+
+    assert len(payload['redundant']) == 1
+    assert payload['deletable'] == ['t::two']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

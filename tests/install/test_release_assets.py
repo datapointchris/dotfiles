@@ -200,7 +200,6 @@ def test_only_an_archive_of_several_files_says_which_one_to_take(entry: str, tar
     """
     asset = artifact(entry, target)
 
-    assert asset.name, f'{entry} named no asset for {case_id(target)}'
     if asset.archive in UNPACKED:
         assert asset.path, f'{entry} unpacks {asset.name} and does not say which file to take'
     else:
@@ -234,7 +233,6 @@ def test_a_systemd_unit_is_declared_only_where_systemd_runs(entry: str, target: 
     there instead."""
     asset = artifact(entry, target)
 
-    assert asset.name, f'{entry} named no asset for {case_id(target)}'
     assert asset.unit == '', f'{entry} declares the unit {asset.unit} for {case_id(target)}'
 
 

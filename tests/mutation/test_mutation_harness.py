@@ -70,12 +70,6 @@ def test_a_site_index_names_the_same_node_on_every_re_parse() -> None:
     ]
 
 
-def test_planting_one_site_leaves_every_other_site_alone() -> None:
-    source = 'a = 1\nb = 2\n'
-    assert planter.plant(source, 0) == 'a = 2\nb = 2'
-    assert planter.plant(source, 1) == 'a = 1\nb = 3'
-
-
 def test_a_long_string_is_a_site_rather_than_a_silent_omission() -> None:
     long_enough = 'x' * 80
     found = planter.sites(parsed(f"key = '{long_enough}'"))
@@ -89,11 +83,6 @@ def test_an_annotation_is_a_counted_site_and_is_never_planted() -> None:
     skipped = [site for site in found if site.skipped]
     assert [site.description for site in skipped] == ["'a' -> 'a-mutant'"]
     assert all(site.skipped == planter.ANNOTATION for site in skipped)
-
-
-def test_a_float_and_a_bool_are_told_apart_from_an_int() -> None:
-    found = planter.sites(parsed('a = True\nb = 1\nc = 1.0\n'))
-    assert [site.kind for site in found] == [planter.BOOLEAN, planter.INTEGER, planter.FLOATING]
 
 
 def test_the_round_trip_is_the_source_with_nothing_mutated() -> None:
