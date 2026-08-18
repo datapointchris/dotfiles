@@ -4,33 +4,20 @@ icon: material/apps
 
 # Apps
 
-Personal CLI tools. Every one has `--help`, which is the reference for its flags
-and verbs; the pages here cover the parts `--help` cannot — why a tool exists,
-what it deliberately does not do, and how it fits the rest.
+Personal CLI tools, each carrying its own `--help`. That help is the reference
+for flags and verbs. A page here exists only where there is something `--help`
+cannot say — why the tool exists, what it deliberately does not do, and how it
+couples to the rest of this repo.
 
-Only tools with something to explain have a page. `eza ~/.local/bin` is the list
-of what is actually installed, and `doit kit list` is the searchable version.
+The sidebar lists those pages. For the tools themselves, `eza ~/.local/bin`
+is what this machine actually has installed, and `doit kit list` is the
+searchable roster across the fleet.
 
-## Finding and choosing
-
-- **[Doit](doit.md)** — moved to its own repo; the page records why, and what stayed behind here
-
-## Backup and integrity
-
-- **[Backup](backup.md)** — `packup` archives versus `safekeep` snapshots
-- **[Safekeep](safekeep.md)** — moved to its own repo; the page records why, and the manifest consequence
-- **[Refcheck](refcheck.md)** — broken-reference validation, and why it runs here
-
-## Appearance
-
-- **[Theme](theme.md)** — which dotfiles-managed configs `theme apply` rewrites
-- **[Font](font.md)** — the same, for fonts
-- **[Work Monitor](work-monitor.md)** — Arch-only; the Dell hotplug behaviour behind it
-
-## Documented elsewhere
+## Three tools are documented as system components instead
 
 `dotfiles` is in [Management Interface](../architecture/management-interface.md),
 `packages` in [Package Management](../architecture/package-management.md), and
-`tmux-sessions` in [tmux Sessions](../architecture/tmux-sessions.md), because
-each is a component of the system that page describes rather than a standalone
-tool.
+`tmux-sessions` in [tmux Sessions](../architecture/tmux-sessions.md). Each is a
+part of the system its page describes rather than a tool standing on its own.
+Explaining the system is what explains the tool, so splitting one off into an
+apps page would leave both halves incomplete.

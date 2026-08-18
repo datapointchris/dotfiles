@@ -1,116 +1,60 @@
 # Resilient Installation Patterns
 
-**Context**: First failure in `install.sh` crashed the entire installation, leaving a broken partial system instead of a mostly-working one with a few missing packages.
-**Date**: December 2025
+**Context**: A failure during a machine build should cost one tool, not the rest of the
+run.
 
-## The Problem
+## One bad name in a batch installs nothing at all
 
-Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (correct behavior for standalone scripts). But when `install.sh` called these scripts directly, a single download failure (e.g., corporate firewall blocking GitHub) would crash the entire installation at step 3 of 30.
+`brew install pkg1 pkg2 ... pkgN` validates every formula up front. It aborts the whole
+command if even one name is unresolvable — a formula in a tap that was never added, for
+instance. A missing `borders` tap once silently took out tmux, neovim and every other
+system package in the same invocation. It surfaced phases later as `tmux: command not
+found`, when tpm ran.
 
-## The Solution
+The fix is a batch fast-path with a per-package fallback. Attempt the batch, and on
+failure retry each package on its own, so the culprits are named — `Failed to install:
+borders` — instead of reported as "some packages may have failed". The slow per-package
+cost is paid only once the batch has already failed.
 
-"Fail-fast children, resilient wrapper" pattern:
+Nothing about this is a brew problem. `apt-get install a b c` exiting 1 says just as
+little about which of the three broke, which is why the isolation belongs to every
+manager rather than to the one script that first needed it. `_transact` in
+`src/dotfiles/registry.py` is where it lives, and registering taps runs before the batch
+for the same reason an unresolvable formula aborts one.
 
-- **Children** fail loudly and locally — simple, testable, predictable
-- **The parent** catches the failure and continues to the next tool
-- Failures were logged to one centralized `FAILURES_LOG` rather than one file per installer
-- A summary is displayed at the end with manual remediation steps for each failure
+## An is-it-installed check freezes everything it guards
 
-Every installer this was written against is Python now (`src/dotfiles/providers/`),
-and the pattern survived the move unchanged — it just stopped needing a wrapper.
-A provider returns a `Result` rather than raising, the engine walks the whole plan
-and turns any provider that *does* raise into a `Refusal`, and the run reports at
-the end. The isolation is in `engine._act` and `engine._measure`, one place rather
-than one call site per script.
+An install can also succeed and then never change again. Yazi's install step was guarded
+on `command -v yazi`, and yazi was more than its binary — the same step installed flavors
+and plugins. Once the binary was on disk the step never ran again, so a plugin added
+afterwards reached no machine that already had yazi. Nothing reported a problem, because
+the step was up to date.
 
-The centralized log went the same way as of 2026-08-10. It existed because the
-wrapper had booleans and console text and nothing else to keep; `apply` writes a
-run record like every other verb now, and `dotfiles report latest` is where a
-failed install is read.
+Any "is it installed" check that guards more than the thing it names has this bug, and
+the shape outlives whatever runs it. `fzf-tmux` is a separate file beside `fzf`, and the
+binary being current says nothing about whether it is still there. So a binary at the
+resolved tag is not enough to call a release converged. The release provider's `evidence`
+in `src/dotfiles/registry.py` asks `ghrelease.missing_companions` as well, and reports a
+present binary with an absent companion as missing.
 
-## Key Learnings
+Splitting the kinds apart is the stronger version of the lesson. Yazi's plugins are
+declared in `packages.yml` under `yazi_plugins` and cloned by the plugins resource, so a
+step that installs one kind of thing cannot freeze another.
 
-- Separation of concerns: child scripts don't know about resilience, wrapper handles it
-- All scripts work standalone without the failure registry (backwards compatible)
-- Keep structured failure data off both streams. It went to a file named by `$FAILURE_RECORDS`,
-  which left stdout and stderr free to be merged and teed, live and whole; it is a returned value
-  now, which is the same rule with nothing left to parse. Capturing one stream for records and
-  letting the other through loses causes at random, because which stream an error lands on is the
-  failing tool's choice, not the installer's
-- Capturing all output (`2>&1`) hides installation progress from the user (a critical bug found during testing)
+Never paper over the difference with `|| echo "Failed (continuing)"`. That turns a real
+error into a line of output nobody reads.
 
-## Batch Commands: One Bad Item Must Not Sink the Batch
+## Keep structured failure data off both streams
 
-The wrapper pattern above isolates failures *between* installer scripts. A second
-failure mode lives *inside* a script: a single batched package-manager command.
-`brew install pkg1 pkg2 ... pkgN` validates every formula up front and aborts the
-whole command — installing nothing — if even one name is unresolvable (e.g. a
-formula in a tap that wasn't added). A missing `borders` tap once silently took
-out tmux, neovim, and every other system package in the same invocation, which
-only surfaced phases later as "tmux: command not found" when tpm ran.
-
-The fix is a batch fast-path with a per-package fallback: attempt the batch (fast
-in the common case), and on failure retry each package individually so failures
-are isolated and the culprits are named explicitly, rather than reporting a vague
-"some packages may have failed."
-
-- Pay the slow per-package cost only when the batch actually fails
-- Report exactly which packages failed (`Failed to install: borders`), not a guess
-- Applies to any batched installer where one bad argument aborts the whole command
-
-It lived in the macOS package script, which is why it protected brew and nothing
-else — the reason has nothing to do with brew, and `apt-get install a b c`
-exiting 1 says just as little about which of the three broke. Every manager gets
-it now: `registry._transact` batches, then isolates on failure, for whichever
-manager a group belongs to. Registering the taps moved *before* the batch for the
-same reason, since an unresolvable formula is what aborts it.
-
-## Re-runnability: a `status:` Check Can Freeze Sub-Components
-
-A third failure mode is an install that succeeds and then never changes again.
-Task's `status:` field skips a task when the condition holds, and the obvious
-condition is "the binary exists":
-
-```yaml
-install-yazi:
-  cmds:
-    - dotfiles packages apply --source github_releases
-  status:
-    - command -v yazi >/dev/null 2>&1   # wrong: yazi is more than its binary
-```
-
-Yazi's installer also installed flavors and plugins. Once the binary was on disk
-the task never ran again, so a plugin added afterwards reached no machine that
-already had yazi — and nothing reported a problem, because the task was "up to
-date". The same freeze happens from inside a script that opens with
-`command -v x && exit 0`.
-
-The shape outlived the script. `providers/ghrelease.py` skips a release whose
-binary is already at the resolved tag, and `fzf-tmux` is a separate file beside
-`fzf` that the binary being current says nothing about — so the skip path calls
-`ensure_companions` rather than returning. Any "is it installed" check that
-guards more than the thing it names has this bug.
-
-The distinction is whether the script installs one thing or several:
-
-- **Binary only** (lazygit, yq, uv) — keep `status:`, and drop any redundant
-  `command -v ... && exit 0` from the script. One layer should own the skip.
-- **Binary plus sub-components** (npm globals, cargo tools) — no `status:`.
-  Let the script run every time, guard the binary download with its own check,
-  and always run the component step. `npm install -g` is idempotent, so
-  re-running is cheap and adding a component just works.
-
-Yazi was the example here and is no longer one: its plugins are declared in
-`packages.yml` under `yazi_plugins` and cloned by the plugins resource, so the
-release install is binary-only and the sub-component question does not arise.
-Splitting them out is the stronger version of this lesson — a step that installs
-one kind of thing cannot freeze another.
-
-Never paper over the difference with `|| echo "Failed (continuing)"`. That turns
-a real error into a line of output nobody reads.
+Which stream an error lands on is the failing tool's choice, not the installer's.
+Capturing one stream for the record and letting the other through therefore loses causes
+at random. A failure is a returned value here rather than parsed text, so stdout and
+stderr stay free to be merged and teed, live and whole. The isolation that makes this
+work sits in `_act` and `_measure` in `src/dotfiles/engine.py` — one place, rather than
+one call site per installer — and `dotfiles report latest` is where a failed install is
+read.
 
 ## Related
 
-- [Centralized Failure Registry](centralized-failure-registry.md)
 - [A packages.yml Entry Is Not an Install](packages-yml-entry-is-not-an-install.md)
 - [Shell Libraries](../architecture/shell-libraries.md)

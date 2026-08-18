@@ -185,7 +185,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild — which is what `dotfiles check` reports. A mechanism that is generic (mounting a Windows share) belongs in the coordinate layer that owns it; the values naming an employer go in the local file, and so does any workaround only their network forces — `update-tldr` reads as a WSL function and is really a blocked-download function, which is why it sat in the layer for months
 - **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a coordinate variant under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
-- **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l 'current' configs/*/.config configs/*/*/.config` finds the pointers, and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
+- **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l --hidden '/current\b' configs/` finds the pointers — `--hidden` is load-bearing, since every one of them is under a `.config` directory — and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
 - **Pre-commit Hooks** - Quality control. The inventory is generated; read `.pre-commit-config.yaml` rather than a list here, per `standards/ci.md` § "Never restate the hook inventory in a repo's `CLAUDE.md`"
 
@@ -276,8 +276,18 @@ was measured. `docs/development/docs-audit.md` is the record: what was found
 wrong, the baseline to compare against, and the re-measure commands. Read it
 before running another docs review, and add to it rather than editing it — it
 is a dated snapshot and the only place here where enumerations are the content.
-`docker.md`, `tmux-sessions.md` and `management-interface.md` are the models to
+`docker.md`, `tmux-sessions.md` and `custom-installers.md` are the models to
 imitate; the shared property is that nothing in them changes when code changes.
+
+**A page never explains a mechanism the module docstring explains**:
+
+The rule and its reasoning are `standards/documentation.md` § "A page never
+restates a module docstring", which holds in every repo that has docstrings.
+Two things here are local to this repo. The instrument is `task
+docs:duplication`, which ranks every page by six-word runs it shares with any
+docstring under `src/dotfiles/`. And the worked example is
+`docs/development/docs-audit.md` § "Third pass", where four pages scoring
+between 529 and 613 came down to single digits.
 
 `refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
 markdown as well as shell, so a doc citing a moved file now fails the commit.

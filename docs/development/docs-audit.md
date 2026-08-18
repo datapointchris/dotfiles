@@ -281,3 +281,154 @@ mechanical finds a page still describing the design you just replaced. The
 practical version: after landing a change that alters a *shape* — a layout, a
 lookup, a dispatch — grep `docs/` for the old vocabulary before the commit, not
 at the next audit. `PLATFORM` was one grep away for two days.
+
+---
+
+## Third pass: 2026-08-17
+
+A full audit, and the trigger was cost rather than staleness.
+`architecture/management-interface.md` took 57 commits in 31 days and 1333 lines
+of churn against a 565-line file. Chris named the standard it was failing: a doc
+is no good if it has to change on every commit.
+
+### Baseline
+
+| Measure | 2026-08-08 | 2026-08-17 (before) | After |
+| --- | --- | --- | --- |
+| Lines in `docs/` | 5,617 | 8,015 | 4,542 |
+| Files | 56 | 64 | 53 |
+| `docs/learnings/` files | 22 | 29 | 21 |
+| Shingle score, whole corpus | — | 3,445 across 64 files | 326 across all 53 |
+| Shingle score, the nine highest pages | — | 3,174 | 168 |
+
+**The two shingle rows measure different populations, and the row label is what
+says which.** A nine-page subtotal read as a corpus figure understates the next
+audit's delta by 271, which is exactly the error this table was caught making.
+
+The corpus grew 43% in nine days. Every page added in that window described a
+subsystem that had just been written, which is the condition this pass is about.
+
+### The sixth failure mode, and the measurement that finds it
+
+**A page that restates a module docstring.** The first audit's rule catches an
+enumeration. The second's catches a mechanism whose shape changed. Neither
+catches prose that is *correct*, is *about a mechanism*, and already exists
+fifteen lines into the module it describes. Both copies then have to be edited,
+and only one of them is next to the code.
+
+It is measurable. Count six-word runs a page shares with any docstring under
+`src/dotfiles/`:
+
+```python
+import re, pathlib
+def shingles(text, n=6):
+    words = re.findall(r"[a-z_`.\-/]+", text.lower())
+    return {' '.join(words[i:i+n]) for i in range(max(0, len(words)-n))}
+src = shingles(' '.join(p.read_text() for p in pathlib.Path('src/dotfiles').rglob('*.py')))
+for f in sorted(pathlib.Path('docs').rglob('*.md')):
+    print(len(shingles(f.read_text()) & src), f)
+```
+
+The scale separates cleanly, and the ends of it were known before the number was
+computed. `configuration/docker.md` scored 1, `architecture/tmux-sessions.md` 1,
+`reference/tools/tasks.md` 0 — the three pages the earlier audits named as
+surviving because nothing in them changes when code changes.
+`architecture/github-releases.md` scored 613 over 390 lines,
+`offline-bundles.md` 557, `observability.md` 549, `management-interface.md` 529.
+A score in the hundreds means the page is a second copy of the code's own words.
+
+It took four passes to clear, and every pass after the first is the finding. A
+page handed a cut list came back half its length with its score barely moved —
+`system-configuration.md` went 300 lines to 296 and 301 to 293. Re-measuring is
+what caught it; reading the diff would not have. **A page is not done because it
+is shorter.** Run the count again and cut until it drops: those two finished at
+0 and 8, and `offline-bundles.md` and `github-releases.md` at 1 and 2 after a
+third pass.
+
+The fourth pass came from the review, which found the same pattern in two pages
+nobody had re-measured: `corporate.md` at 66 and `architecture/index.md` at 65,
+second and third in the corpus behind a page nothing was wrong with. Both had
+been trimmed by tens of lines in the first pass. Neither had been counted after.
+
+**The fix is not deletion.** A decision belongs in both places when the constraint
+is one an editor must meet, which `standards/documentation.md` § "Document a
+constraint at the edit site" requires. What comes out is the *mechanism* — the
+walkthrough, the per-field account, the measurements — replaced by one sentence
+naming the module. `architecture/custom-installers.md` is the model: 162 lines to
+48, holding the routing test and three rejected protocols, with
+`src/dotfiles/providers/custom.py` named for the rest.
+
+### What the second pass's test said
+
+`architecture/index.md` was named the page to watch. It was stale again, and
+three of its claims were false: a manifest example declaring `function_groups:`
+and `alias_groups:`, which `rg -uu` finds nowhere in the repo; a `npm_globals:`
+list triggering nvm, retired in favour of fnm; and an optional per-platform
+Neovim config layer that has never existed. That is failure twice, and the test
+says delete.
+
+It was rewritten instead, and the reason is the one the test does not cover: the
+page carries reasoning that exists nowhere else — the WSL-to-Windows bridge and
+why it refused to delete, the `MACHINE_ROLE` axis tried and removed, the
+mechanism-versus-values test with the `update-tldr` case that sat on the wrong
+side of it for months, and the four-level git identity chain. The stale half was
+enumeration; the durable half was decisions. **A page that is both gets cut in
+half, not deleted** — and if the enumerations grow back by the next audit, the
+test applies without an exemption.
+
+### What left the repo
+
+Eleven pages left the repo, which is the half of this pass that reduces future
+churn rather than current lines. `git diff --diff-filter=D --name-only` against
+the branch point is the list; this is where each went.
+
+- **Five to the hub** (`~/docs`): the libpcre2 symbol warning, stdin consumption
+  in `while read` loops, TTY detection inside command substitution, man page
+  overstrike, and font/terminal metadata. None named anything in this repo.
+- **One split**: the USB DAC note. The diagnosis is general and went to the hub;
+  the WirePlumber drop-in this repo deploys stayed. That makes six pages on the
+  hub against five deletions here.
+- **Three folded into a page that already owned the subject**:
+  `learnings/library-flag-pollution.md` into `architecture/shell-libraries.md`
+  § "A sourced library never touches shell options",
+  `reference/platforms/differences.md` into `reference/platforms/tools.md`, and
+  `apps/font.md` into `apps/theme.md`. Each was the third failure mode the first
+  audit named — one subject in two places, disagreeing.
+- **Two to the fleet standards**: the failure-registry lesson became
+  `cli-design.md` § "A value the caller needs back is returned, never parsed back
+  out of a stream", and the bootstrap-dependency lesson became `testing.md` §
+  "An end-to-end environment is the production image, not an approximation of
+  it". Both are rules every repo can break; neither was about dotfiles.
+- **`architecture/tool-composition.md` was deleted rather than moved.** Its
+  central claim — never build the picker in, compose at the shell — is a
+  position the fleet has since reversed. `cli-design.md` § "The interactive
+  picker is `choose`, and it is never `apply`" names `theme choose` and
+  `doit labs choose` as the shape. A page can go stale by being overtaken rather
+  than by being wrong about its own repo, and nothing mechanical finds that
+  either.
+
+### The test for next time
+
+Everything the first two passes said, plus: **run `task docs:duplication`
+before reading anything.** It ranks the corpus by the failure mode that costs
+the most and it takes a second. A page scoring in the hundreds is a rewrite
+candidate before anyone has read a line of it, and `--runs <page>` prints the
+shared runs so the score can be checked rather than believed.
+
+**It is blind to two pages stating one subject**, because it compares each page
+against `src/dotfiles/` and never against another page. The same script run
+pairwise across this corpus finds 120 shared runs, the largest pair being
+`architecture/index.md` against `reference/tools/symlinks.md`. A subject with
+two owners costs the same double edit and scores zero here.
+
+**A pointer is the other thing it cannot see.** Every page that gave up a
+mechanism gained a sentence naming the module that holds it, and the score does
+not move when that sentence is wrong. Six of those were wrong in this pass, and
+the rule they broke is `standards/documentation.md` § "A pointer is verified
+against its target, not against the target existing".
+
+And run it on this page. Three blind reviewers of the change that produced this
+record found four wrong figures in the table above — a line count, a shingle
+subtotal labelled as a corpus, a deletion enumeration, and a commit message.
+No two reviewers found the same one. The instrument was applied to the whole of
+`docs/` and never to the page prescribing it.

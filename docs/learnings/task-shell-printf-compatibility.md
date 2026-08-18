@@ -1,144 +1,41 @@
 # Task Shell Printf Compatibility
 
-**Context**: Task (go-task) uses its own minimal shell interpreter, not bash or sh
+## Problem
 
-## The Problem
-
-Using printf with dynamic width specifiers (`%*s`) in Task commands fails with "invalid format char: *" error.
-
-```yaml
-# This fails in Task:
-tasks:
-  test:
-    cmds:
-      - |
-        padding=10
-        printf "%*s%s%*s
-" "$padding" "" "text" "$padding" ""
-```
-
-**Error output:**
+A `printf` with a dynamic width specifier (`%*s`) fails inside a Task command:
 
 ```text
 invalid format char: *
 ```
 
-The formatting.sh library's `_center_text` function used this pattern:
+The same line runs fine from a bash script. It fails from a task because go-task never
+executes commands through bash. It uses its own POSIX interpreter for cross-platform
+portability, and `%*` is a bash extension that interpreter does not carry.
 
-```bash
-printf "%*s%s%*s
-" "$padding" "" "$text" "$padding" ""
-```
-
-This worked fine when called from bash scripts but failed when called from Task commands.
-
-## Root Cause
-
-Task does NOT execute commands using bash or sh. It uses its own built-in minimal shell interpreter for cross-platform portability.
-
-This can be verified:
+Reproduce the error, and prove which interpreter ran, in one Taskfile:
 
 ```yaml
 tasks:
-  debug:
+  probe:
     cmds:
-      - |
-        echo "SHELL: $SHELL"
-        echo "BASH_VERSION: $BASH_VERSION"
-        if [ -n "$BASH_VERSION" ]; then
-          echo "Running in: bash"
-        else
-          echo "Running in: task"
-        fi
-```
-
-**Output:**
-
-```text
-SHELL: /bin/zsh
-BASH_VERSION:
-Running in: task
-```
-
-Task's shell interpreter supports basic POSIX features but NOT bash-specific features like `%*` printf format specifier.
-
-## Initial Attempted Fixes (Didn't Work)
-
-Added quotes to variables:
-
-```bash
-printf "%*s%s%*s
-" "$padding" "" "$text" "$padding" ""
-```
-
-Added tput fallbacks:
-
-```bash
-local term_width=$(tput cols 2>/dev/null || echo 80)
-```
-
-These were good defensive practices but didn't solve the core problem since Task's shell doesn't support `%*`.
-
-## The Solution
-
-Abstract complex bash operations to dedicated scripts instead of inline Task commands.
-
-**Before (heredoc workaround):**
-
-```yaml
-tasks:
-  run-updates:
+      - printf "%*s\n" 10 ""                 # invalid format char: *
+  shellid:
     cmds:
-      - |
-        bash <<'EOF'
-        source "$HOME/dotfiles/configs/common/.local/shell/formatting.sh"
-        print_title "Update All" "cyan"
-        task apt:update
-        # ... more commands
-        EOF
+      - echo "BASH_VERSION=[$BASH_VERSION]"  # prints BASH_VERSION=[]
 ```
 
-**After (clean script):**
+## Solution
 
-```bash
-# update.sh
-#!/usr/bin/env bash
-set -euo pipefail
+Keep bash-specific features out of task commands. A task orchestrates a workflow; a
+script holds the bash.
 
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-
-print_title "WSL Ubuntu Update All" "cyan"
-print_banner "Step 1/6 - System Packages" "cyan"
-task wsl:apt:update
-# ... more steps
-```
-
-```yaml
-# Taskfile.yml
-tasks:
-  run-updates:
-    cmds:
-      - bash {{.DOTFILES_DIR}}/update.sh
-```
-
-## Key Learnings
-
-Use dedicated bash scripts when commands require bash-specific features like printf format specifiers, arrays, associative arrays, or advanced string manipulation.
-
-Task commands should orchestrate workflows, not contain complex bash logic.
-
-Task's built-in shell is minimal by design for cross-platform compatibility - it's not bash or sh.
-
-The `%*` printf format specifier is a GNU/bash extension not available in POSIX sh or Task's interpreter.
-
-When sourcing bash libraries with advanced features from Task, wrap in `bash <<'EOF'` or use dedicated scripts.
+The hazard is live for anything sourcing this repo's shell libraries from a task.
+`_center_text` in `configs/common/.local/shell/formatting.sh` uses `%*s`, so a task
+calling `print_title`, `print_banner`, or any other formatter built on it gets this
+error rather than something naming the library. Call a script that sources the library
+instead.
 
 ## Related
 
-- [Shell Libraries](../architecture/shell-libraries.md) - The formatting and help-screen grammar
-- [Task Reference](../reference/tools/tasks.md) - Task automation system
-
-## References
-
-- [go-task Shell Execution](https://taskfile.dev/usage/#shell)
-- [Printf Format Specifiers](https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html#index-printf)
+- [Shell Libraries](../architecture/shell-libraries.md) — the formatting and help-screen grammar
+- [Task Reference](../reference/tools/tasks.md) — Task automation system

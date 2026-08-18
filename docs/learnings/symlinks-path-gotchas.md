@@ -14,25 +14,17 @@ if pattern.endswith('/') and pattern.rstrip('/') in path_str:
     return True  # ".git" is a substring of ".gitconfig"
 ```
 
-A directory pattern has to match complete path components. `src/dotfiles/symlinks/core.py`
-now does:
+A directory pattern has to match complete path components. That is what
+`should_exclude` in `src/dotfiles/symlinks/core.py` matches on.
 
-```python
-dir_name = pattern.rstrip('/')
-if f'/{dir_name}/' in path_str or path_str.startswith(f'{dir_name}/'):
-    return True
-```
-
-The pairs that make this fail are the ones where a directory name is a prefix of
-a real filename — `.git/` against `.gitconfig`, `.gitignore`, `.gitattributes`
-and `.github/`; `node_modules/` against `node_modules.txt`; `tmux/plugins/`
-against `tmux/tmux.conf`. Every one of those is a file that must survive, so the
-regression test asserts both directions:
-
-```python
-assert should_exclude(Path('.git/config'))
-assert not should_exclude(Path('.gitconfig'))
-```
+The pairs that make a substring matcher fail are the ones where a directory name is
+a prefix of a real filename — `.git/` against `.gitconfig`, `.gitignore`,
+`.gitattributes` and `.github/`; `node_modules/` against `node_modules.txt`;
+`tmux/plugins/` against `tmux/tmux.conf`. Every one of those is a file that must
+survive. Both directions are pinned by
+`test_a_pattern_matches_a_whole_component_and_never_a_prefix` in
+`tests/symlinks/test_core.py`, and again at the deploy level in
+`tests/resources/test_symlinks.py`.
 
 ## Hand-rolled relative paths broke 122 symlinks
 
@@ -45,11 +37,9 @@ levels_up = len([p for p in target_parent.parts if p not in common.parts])
 
 It produced `dotfiles/common/init.lua` where the answer was
 `../../dotfiles/common/.config/nvim/init.lua`, and every link it wrote was
-broken. The stdlib already handles this:
-
-```python
-return source.relative_to(target.parent, walk_up=True)
-```
+broken. `make_relative_symlink` in `src/dotfiles/symlinks/core.py` hands the
+arithmetic to `Path.relative_to(..., walk_up=True)`, which has the edge cases
+already.
 
 The unit tests passed throughout, because they asserted on the computed string
 rather than on a link that resolves. A symlink test has to create the link and
