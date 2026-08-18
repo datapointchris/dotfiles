@@ -64,7 +64,7 @@ GITHUB_SEARCH = """
         deletions
         changedFiles
         reviewDecision
-        comments(last: 100) { nodes { body } }
+        reviews { totalCount }
         commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
         repository { name nameWithOwner }
       }
@@ -144,29 +144,6 @@ def registry_paths(registry: Path) -> dict[str, Path]:
     return {entry['name']: expand(entry['path']) for entry in document['repos'] if entry['status'] == 'active'}
 
 
-# The fleet's review is an ordinary comment. `standards/pull-requests.md` posts it
-# with `gh pr comment` and rules out `gh pr review` in any form, so `reviewDecision`
-# stays null on a PR carrying four of them. The marker is the discriminator that
-# same standard put in the comment to make one findable later.
-REVIEW_MARKER = '<!-- pr-review'
-
-# Several reviewers run blind to each other and a further comment unions them, so
-# counting every marked comment reports one more review than ran. The union names
-# itself in its heading; nothing else about the format is depended on here.
-MERGED_WORD = 'merged'
-
-
-def count_reviews(comments: list[dict[str, Any]]) -> int:
-    """Marked comments, less the one that unions the others."""
-    bodies = [(comment['body'] or '').lstrip() for comment in comments]
-    return sum(1 for body in bodies if body.startswith(REVIEW_MARKER) and MERGED_WORD not in heading(body).lower())
-
-
-def heading(body: str) -> str:
-    """The comment's first markdown heading, or empty when it carries none."""
-    return next((line for line in body.splitlines() if line.startswith('#')), '')
-
-
 def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
     """One search for everything you authored, then keep what the registry names.
 
@@ -230,7 +207,7 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
                 # shape rather than two. GitHub reports no decision at all until a
                 # review is requested, and no rollup until a workflow runs.
                 'review': node['reviewDecision'] or '',
-                'reviews': count_reviews(node['comments']['nodes']),
+                'reviews': node['reviews']['totalCount'],
                 'checks': (rollup[0]['commit']['statusCheckRollup'] or {}).get('state', '') if rollup else '',
             }
         )
@@ -289,8 +266,6 @@ def bitbucket_rows(repo: str, payload: Any) -> list[dict[str, Any]]:
             'deletions': None,
             'changed_files': None,
             'review': '',
-            # bbkt's listing carries no comments, and the fleet review is posted
-            # on GitHub. Zero is the count, not an absence to tell apart.
             'reviews': 0,
             'checks': '',
         }
@@ -396,9 +371,8 @@ NOTES = (
     'provider whose listing does not count them. `review` and `checks` are empty',
     'until a review is requested and a workflow has run.',
     '',
-    '`review` is the forge decision and gates the merge. `reviews` counts the',
-    'reviews posted as comments, which do not gate it — so a reviewed PR reads',
-    '`"review": "", "reviews": 3`, and the two are not two spellings of one fact.',
+    '`review` is the forge decision. `reviews` is how many were submitted, which',
+    'is a different fact — a review setting no decision leaves the first empty.',
 )
 
 

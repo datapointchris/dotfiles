@@ -137,9 +137,8 @@ class PullRequest:
     The three diff counts are None, never 0, from a provider that does not report
     them. A PR nobody counted is not a PR that changed nothing.
 
-    `review` is the forge's decision and `reviews` counts the reviews posted as
-    comments. The fleet's review is a comment and never a forge review, so a PR
-    three reviewers have read carries an empty decision and a count of three.
+    `review` is the forge's decision and `reviews` is how many were submitted.
+    A review can set no decision, so the two disagree routinely.
     """
 
     repo: str
@@ -282,12 +281,10 @@ def checks_cell(pr: PullRequest) -> Text:
 
 
 def review_cell(pr: PullRequest) -> Text:
-    """The forge decision where there is one, and otherwise how many reviews were posted.
+    """The forge decision where there is one, and otherwise how many reviews were submitted.
 
-    The decision leads because it is the one that gates the merge. A posted review
-    does not, so it cannot overrule an `APPROVED` or a `CHANGES_REQUESTED` sitting
-    beside it — and where the forge has decided nothing, `no review` on a PR three
-    reviewers have read is the row saying the opposite of what happened.
+    The decision leads because it is the one that gates the merge, and a count
+    cannot displace it.
     """
     if not pr.review and pr.reviews:
         style = REVIEW_STYLES['REVIEW_REQUIRED']

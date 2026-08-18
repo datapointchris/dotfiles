@@ -17,7 +17,7 @@ cat <<'JSON'
   "createdAt":"2026-08-13T08:00:00Z",
   "additions":8,"deletions":3,"changedFiles":2,
   "reviewDecision":"REVIEW_REQUIRED",
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":null}}]},
   "repository":{"name":"forge","nameWithOwner":"datapointchris/forge"}},
 
@@ -27,7 +27,7 @@ cat <<'JSON'
   "createdAt":"2026-08-09T10:00:00Z",
   "additions":319,"deletions":14,"changedFiles":7,
   "reviewDecision":"APPROVED",
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
   "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
 
@@ -37,7 +37,7 @@ cat <<'JSON'
   "createdAt":"2026-08-12T10:00:00Z",
   "additions":1204,"deletions":386,"changedFiles":23,
   "reviewDecision":null,
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"PENDING"}}}]},
   "repository":{"name":"doit","nameWithOwner":"datapointchris/doit"}},
 
@@ -47,7 +47,7 @@ cat <<'JSON'
   "createdAt":"2026-08-01T10:00:00Z",
   "additions":25,"deletions":2,"changedFiles":1,
   "reviewDecision":"CHANGES_REQUESTED",
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"FAILURE"}}}]},
   "repository":{"name":"dotfiles","nameWithOwner":"datapointchris/dotfiles"}},
 
@@ -57,22 +57,17 @@ cat <<'JSON'
   "createdAt":"2026-07-14T09:00:00Z",
   "additions":76,"deletions":941,"changedFiles":12,
   "reviewDecision":"APPROVED",
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
   "repository":{"name":"safekeep","nameWithOwner":"datapointchris/safekeep"}},
 
- {"number":24,"body":"Reads the fleet review off the comments, so a reviewed PR stops reading as\nunreviewed.\n\nThe review is posted with `gh pr comment` and never `gh pr review`, so the\nforge decision stays empty however many have been posted.","title":"Count the reviews posted as comments",
+ {"number":24,"body":"Reads the review count off the forge, so a reviewed PR stops reading as\nunreviewed.\n\nEvery fleet review is submitted with the `--comment` event, which sets no\ndecision, so the decision stays empty however many have been posted.","title":"Count the reviews the forge reports",
   "url":"https://github.com/datapointchris/dotfiles/pull/24",
   "headRefName":"prs-review-count","baseRefName":"main","isDraft":false,
   "createdAt":"2026-08-15T09:00:00Z",
   "additions":94,"deletions":11,"changedFiles":5,
   "reviewDecision":null,
-  "comments":{"nodes":[
-    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: 1 correctness"},
-    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: 2 break a rule"},
-    {"body":"<!-- pr-review v2 -->\n## PR review\n\n**Findings**: none"},
-    {"body":"<!-- pr-review v2 -->\n## PR review — merged\n\n**Reviewers**: 3"},
-    {"body":"Not a review. An ordinary comment, which the count leaves alone."}]},
+  "reviews":{"totalCount":3},
   "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]},
   "repository":{"name":"dotfiles","nameWithOwner":"datapointchris/dotfiles"}},
 
@@ -82,7 +77,7 @@ cat <<'JSON'
   "createdAt":"2026-06-01T09:00:00Z",
   "additions":3,"deletions":1,"changedFiles":1,
   "reviewDecision":null,
-  "comments":{"nodes":[]},
+  "reviews":{"totalCount":0},
   "commits":{"nodes":[]},
   "repository":{"name":"typos","nameWithOwner":"crate-ci/typos"}}
 ]}}}
