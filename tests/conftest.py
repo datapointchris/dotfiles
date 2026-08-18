@@ -97,6 +97,11 @@ TIERS = {
         'run the container installs (tens of minutes each)',
         'installs a whole machine in a container; pass --docker to run',
     ),
+    '--replants': (
+        'replants',
+        'run the mutation tests that spawn a pytest per mutant',
+        'spawns its own pytest per mutant; pass --replants to run',
+    ),
 }
 
 

@@ -118,6 +118,7 @@ markers = [
     "e2e: reaches the real network or a real HOME; opt in with --e2e",
     "docker: installs a whole machine in a container; opt in with --docker",
     "interpreter(name): drives a shell this machine may not have; --require-interpreters makes its absence fatal",
+    "replants: spawns its own pytest per mutant, so it costs minutes of CPU; opt in with --replants",
 ]
 # So `harness` imports the same way from tests/e2e and from the root conftest,
 # rather than relying on pytest inserting the test file's directory. `tests` is

@@ -294,9 +294,16 @@ def _execute(plan: Plan, workers: Workers, sources: dict[str, str], planned: Pla
     shadow, basetemp = workers.take()
     try:
         text = planter.plant(sources[planned.relative], planned.site.index)
-    except Exception as unparseable:
+    except SyntaxError as unparseable:
         workers.give_back((shadow, basetemp))
         return _result(planned, score.SKIPPED, detail=f'{planter.UNPARSEABLE}: {unparseable}')
+    except Exception as broken:
+        # A site the planner recognised and the planter cannot perform is a fault
+        # in the harness, not a property of the source. Recorded as a skip it left
+        # the denominator, so a half-added operator raised the score rather than
+        # failing — which `Tally.scored` excluding SKIPPED is what makes silent.
+        workers.give_back((shadow, basetemp))
+        return _result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
     try:
         _write_into(shadow, plan.source_root, planned.relative, text)
         # Attribution needs every failure, and `-x` stops at the first one. A killer-recording run therefore forgoes the saving

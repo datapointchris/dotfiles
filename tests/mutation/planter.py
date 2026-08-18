@@ -115,16 +115,32 @@ def _mutation(node: ast.AST) -> tuple[str, str] | None:
     return None
 
 
-def _constant_mutation(value: object) -> tuple[str, str] | None:
-    if isinstance(value, bool):
-        return BOOLEAN, f'{value} -> {not value}'
-    if isinstance(value, int):
-        return INTEGER, f'{value} -> {value + 1}'
-    if isinstance(value, float):
-        return FLOATING, f'{value} -> {value + 1.0}'
-    if isinstance(value, str):
-        return STRING, f'{_short(value)} -> {_short(value + MARKER)}'
+CONSTANT_KINDS: tuple[tuple[type, str], ...] = ((bool, BOOLEAN), (int, INTEGER), (float, FLOATING), (str, STRING))
+"""Which kind a constant is, in the order `isinstance` has to ask.
+
+`bool` before `int` because it is one. The table is here so `_constant_mutation`
+and `mutated` cannot disagree about what a site is — the description is keyed
+into `score.compare`, so a description drifting from what `mutated` performs
+makes every survivor in the file read as new with nothing able to say why.
+"""
+
+
+def _kind_of(value: object) -> str | None:
+    for kind_type, kind in CONSTANT_KINDS:
+        if isinstance(value, kind_type):
+            return kind
     return None
+
+
+def _constant_mutation(value: object) -> tuple[str, str] | None:
+    """The kind and a description of what `mutated` will actually do to it."""
+    kind = _kind_of(value)
+    if kind is None:
+        return None
+    after = mutated(value)
+    if kind is STRING:
+        return kind, f'{_short(str(value))} -> {_short(str(after))}'
+    return kind, f'{value} -> {after}'
 
 
 def _short(value: str) -> str:
@@ -133,6 +149,7 @@ def _short(value: str) -> str:
 
 
 def mutated(value: object) -> str | bool | int | float:
+    """The one place a constant is actually changed. `_constant_mutation` describes this."""
     if isinstance(value, bool):
         return not value
     if isinstance(value, int):

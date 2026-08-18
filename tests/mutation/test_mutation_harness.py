@@ -602,16 +602,19 @@ def toy_result(tmp_path_factory: pytest.TempPathFactory) -> tuple[harness.Plan, 
     return plan, harness.measure(plan, ['src/toy/thing.py'], contexts, announce=lambda _: None)
 
 
+@pytest.mark.replants
 def test_the_end_to_end_kills_the_comparison_the_toy_asserts_on(toy_result: tuple[harness.Plan, score.Run]) -> None:
     killed = [item for item in toy_result[1].results if item.status == score.KILLED]
     assert ('comparison', 'Gt -> LtE') in {(item.kind, item.description) for item in killed}
 
 
+@pytest.mark.replants
 def test_the_end_to_end_reports_a_function_no_test_calls_as_unreached(toy_result: tuple[harness.Plan, score.Run]) -> None:
     unreached = [item for item in toy_result[1].results if item.status == score.UNREACHED]
     assert [item.description for item in unreached] == ['2 -> 3']
 
 
+@pytest.mark.replants
 def test_a_mutant_ran_from_the_copy_and_the_source_tree_was_never_written(toy_result: tuple[harness.Plan, score.Run]) -> None:
     """The property that matters most, and it takes both halves.
 
@@ -624,6 +627,7 @@ def test_a_mutant_ran_from_the_copy_and_the_source_tree_was_never_written(toy_re
     assert (plan.repo / 'src' / 'toy' / 'thing.py').read_text() == TOY_SOURCE
 
 
+@pytest.mark.replants
 def test_the_end_to_end_planted_every_site_it_did_not_skip(toy_result: tuple[harness.Plan, score.Run]) -> None:
     run = toy_result[1]
     statuses = {item.status for item in run.results}

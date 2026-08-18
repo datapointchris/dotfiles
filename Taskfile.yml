@@ -129,6 +129,11 @@ tasks:
     cmds:
       - PYTHONPATH=tests uv run python -m mutation.run --since origin/main {{.CLI_ARGS}}
 
+  test:mutation:selftest:
+    desc: The harness's own suite including the tests that replant, which the default run gates
+    cmds:
+      - PYTHONPATH=tests uv run pytest tests/mutation --replants {{.CLI_ARGS}}
+
   test:mutation:report:
     desc: What the last mutation run concluded, and which survivors are new since the one before
     cmds:

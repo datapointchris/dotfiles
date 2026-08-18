@@ -427,6 +427,7 @@ def test_deleting_any_test_it_proved_redundant_leaves_the_kills_unchanged(
         assert kills(tmp_path / named(proof.test), dropped=[named(proof.test)]) == baseline, proof.test
 
 
+@pytest.mark.replants
 def test_the_verification_pass_replants_the_scope_and_finds_nothing_lost(tmp_path: Path) -> None:
     """The prover checking its own answer, end to end and against the real thing rather than against its bookkeeping."""
     plan = toy_tree(tmp_path)
@@ -437,6 +438,7 @@ def test_the_verification_pass_replants_the_scope_and_finds_nothing_lost(tmp_pat
     assert verdicts.verified.deleted == len(verdicts.deletable)
 
 
+@pytest.mark.replants
 def test_the_verification_pass_reports_the_kill_a_wrong_deletion_would_cost(tmp_path: Path) -> None:
     """Deleting a whole mutual cluster is exactly the mistake the joint answer exists to prevent, so it is measured failing."""
     plan = toy_tree(tmp_path)
@@ -486,6 +488,7 @@ def stub_pytest(tmp_path: Path, body: str) -> Path:
     return stub
 
 
+@pytest.mark.replants
 def test_a_kill_the_summary_cannot_attribute_is_a_harness_error_rather_than_a_kill(tmp_path: Path) -> None:
     """Exit 1 with nothing named would otherwise be a mutant with no killers, which blocks no proof and licenses a false one."""
     plan = dataclasses.replace(
@@ -505,6 +508,7 @@ def executed(plan: harness.Plan, tests: tuple[str, ...], scratch: Path) -> score
     return harness._execute(plan, workers, {'src/toy/thing.py': TOY_SOURCE}, planned, 60.0)
 
 
+@pytest.mark.replants
 def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_it(tmp_path: Path) -> None:
     """Exit 4 because the named node ids stopped resolving is the suite noticing in the loudest way it has."""
     body = 'import sys\nprint("ERROR tests/test_thing.py - CatalogError: not an axis value")\nsys.exit(4)\n'
@@ -515,6 +519,7 @@ def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_
     assert harness.UNCOLLECTABLE in result.detail
 
 
+@pytest.mark.replants
 def test_exit_four_that_names_nothing_stays_a_harness_error(tmp_path: Path) -> None:
     """The guard the harness was built around: a flag that is not installed made the first prototype report a perfect score."""
     body = 'import sys\nprint("ERROR: unrecognized arguments: --timeout")\nsys.exit(4)\n'
@@ -524,6 +529,7 @@ def test_exit_four_that_names_nothing_stays_a_harness_error(tmp_path: Path) -> N
     assert result.killers == ()
 
 
+@pytest.mark.replants
 def test_the_summary_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path: Path) -> None:
     plan = dataclasses.replace(
         toy_tree(tmp_path / 'tree'),
@@ -548,6 +554,7 @@ def test_a_marker_beside_the_package():
 """
 
 
+@pytest.mark.replants
 def test_a_test_anchored_outside_the_package_is_dropped_and_named(tmp_path: Path) -> None:
     """The real shape, reproduced: the worker's copy holds `src/` and nothing beside it, so such a test fails against every mutant.
 
@@ -561,6 +568,7 @@ def test_a_test_anchored_outside_the_package_is_dropped_and_named(tmp_path: Path
     assert dropped == ('tests/test_anchored.py::test_a_marker_beside_the_package',)
 
 
+@pytest.mark.replants
 def test_a_room_screened_down_to_nothing_is_refused_rather_than_run(tmp_path: Path) -> None:
     """Dropping is for a test the harness cannot host, never a way to reach a green room by attrition.
 
