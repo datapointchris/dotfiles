@@ -15,6 +15,7 @@ import ast
 import dataclasses
 import datetime as dt
 import json
+import re
 import subprocess
 import sys
 import textwrap
@@ -720,3 +721,30 @@ def test_a_stamp_carries_no_hyphen_because_the_filename_splits_on_the_first_one(
     machine name carries hyphens of its own, so the stamp is the half that
     cannot, and basic-format ISO 8601 is what makes that true."""
     assert '-' not in score.stamp(dt.datetime(2026, 8, 17, 22, 42, 5, tzinfo=dt.UTC))
+
+
+def documented_commands() -> list[str]:
+    readme = (Path(__file__).parent / 'README.md').read_text().splitlines()
+    inside = False
+    found = []
+    for line in readme:
+        if line.startswith('```'):
+            inside = line.startswith('```sh')
+            continue
+        if inside and line.strip():
+            found.append(line.split('#')[0].strip())
+    return found
+
+
+def test_every_command_the_readme_prints_is_a_task_that_exists() -> None:
+    """The modules import each other by package name, so invoking one by its
+    path raises `ModuleNotFoundError` before argparse is reached. The Taskfile
+    sets the `PYTHONPATH` that makes them resolve, which makes it the only
+    entry point, and three README lines invoked a path instead."""
+    defined = set(re.findall(r'^  ([\w:]+):$', harness.repo_root().joinpath('Taskfile.yml').read_text(), re.MULTILINE))
+    commands = documented_commands()
+
+    assert commands, 'the README documents how to run this and the parse found nothing'
+    for command in commands:
+        assert command.startswith('task '), f'{command!r} does not go through the Taskfile'
+        assert command.split()[1] in defined, f'{command!r} names a task the Taskfile does not define'

@@ -10,7 +10,7 @@ catches a suite gaming the score: a rendering mutant that dies means some test a
 
 **The default direction is deliberate.** A logic string wrongly marked rendering vanishes from the score with nothing to notice it.
 A rendering string wrongly marked logic surfaces as a survivor, which a person reads and corrects. So every rule here is narrow,
-everything unmatched is LOGIC, and `run.py --explain` prints the rule that decided each site so the classifier is audited rather
+everything unmatched is LOGIC, and `--explain` prints the rule that decided each site so the classifier is audited rather
 than trusted.
 """
 

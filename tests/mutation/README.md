@@ -21,7 +21,7 @@ task test:mutation                      # the modules targets.py names
 task test:mutation -- src/dotfiles/x.py # one module
 task test:mutation:diff                 # only the lines this branch changed
 task test:mutation:report               # the newest run against the one before
-uv run python tests/mutation/run.py --explain src/dotfiles/commands/report.py
+task test:mutation -- --explain src/dotfiles/commands/report.py
 ```
 
 The first run of a session measures which tests execute which line, which is one
@@ -42,7 +42,7 @@ worth writing a test for, and `score.py` names each one by file and line.
 rendering when only a person reads it and logic when a machine does, and
 `classify.py` decides that by AST position rather than by content — what call it
 is an argument to, what keyword it is bound to, whether it is a docstring, which
-module it is in. `run.py --explain <file>` prints every site with its bucket and
+module it is in. `--explain <file>` prints every site with its bucket and
 the rule that assigned it, so the classifier is audited rather than trusted.
 
 **PROSE-PINNED is the fourth bucket and it is reported as loudly as the score.**
@@ -60,8 +60,8 @@ one did not die before.
 The counter earns its place immediately. On the first `report.py` run it named
 four dict keys inside `table.add_row(*(str(row[key]) for key in (...)))` — a
 machine contract the render-call rule had swallowed, found because a rendering
-mutant is not supposed to die. `classify._children` now takes what a
-comprehension *reads* as logic wherever it sits.
+mutant is not supposed to die. `classify._children` takes what a comprehension
+*reads* as logic wherever it sits.
 
 ## What makes a number believable
 
@@ -144,7 +144,7 @@ were deleted — and it answers it with a measurement rather than a judgement.
 ```sh
 task test:redundancy -- tests/resolver/test_versions.py
 task test:redundancy -- tests/install/test_release_assets.py --exclude tests/shell
-uv run python tests/mutation/redundancy.py <test file> --json /tmp/verdicts.json
+task test:redundancy -- <test file> --json /tmp/verdicts.json
 ```
 
 Two conditions decide it, and the second is the proof.
