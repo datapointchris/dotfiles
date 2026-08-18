@@ -13,6 +13,8 @@ require('core.lazy') -- Load lazy.nvim in both VSCode and Neovim
 require('core.keymaps')
 
 if not profiles.is_vscode then
+  -- Native ui2 message/cmdline UI. VSCode owns its own UI.
+  require('core.ui2')
   require('core.autocmds')
   -- Custom floating terminal (Space t t). VSCode has its own terminal.
   require('core.floaterminal')

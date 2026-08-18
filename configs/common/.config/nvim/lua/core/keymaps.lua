@@ -28,12 +28,12 @@ end, { desc = 'Undo-tree: toggle' })
 ----------------------------------------
 --- NOTIFICATIONS / MESSAGES -----------
 ----------------------------------------
--- fidget owns notifications (vim.notify); noice owns messages and the cmdline,
+-- fidget owns notifications (vim.notify); ui2 owns messages and the cmdline,
 -- so the history each one keeps is a different list.
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>nh', '<cmd>Fidget history<cr>', { desc = 'Notifications: history' })
   vim.keymap.set('n', '<leader>nd', '<cmd>Fidget clear<cr>', { desc = 'Notifications: dismiss' })
-  vim.keymap.set('n', '<leader>nm', '<cmd>Noice history<cr>', { desc = 'Messages: log' })
+  vim.keymap.set('n', '<leader>nm', '<cmd>messages<cr>', { desc = 'Messages: log' })
 end
 
 -- Move selected line / block of text in visual mode down / up
