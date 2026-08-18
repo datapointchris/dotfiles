@@ -21,9 +21,10 @@ over it, because `paths` reads that variable once at import. Same two-step, and
 the same reasoning, as `tests/matrix/harness.rebind`.
 
 **Three values exist only inside a rendered sentence**, so they are parsed back
-out of one: the per-section counts `sections` and `stats` print, the labelled
-fields `show` prints, and the install status. None of the three has a `--json`
-door, and `tallied` and `labelled` are what stands in for one.
+**Every read verb here speaks `--json`**, so a count or a field is asked for
+rather than recovered from the table it was printed in. `answered` is that one
+call. The rendered form is asserted only where the rendering *is* the claim — a
+truncated column, or the guidance an empty tally prints instead of a table.
 """
 
 from __future__ import annotations
@@ -122,33 +123,15 @@ def declared(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return point_at(tmp_path / 'repo', DECLARED, monkeypatch)
 
 
-def tallied(text: str) -> dict[str, int]:
-    """Every `<label> <count>` row `sections`, `stats` and `tags` print.
+def answered(capsys: pytest.CaptureFixture[str], *argv: str) -> Any:
+    """One read verb's `--json` document.
 
-    One parser for the three because it is one value — a count per label — and
-    only the column widths differ between them. It stands in for the `--json`
-    door none of the three has.
+    The counts and the `show` fields are values the command computed, so they are
+    asked for rather than recovered from the table it printed — standards/testing.md
+    § "Never assert on rendered output".
     """
-    rows: dict[str, int] = {}
-    for line in text.splitlines():
-        parts = line.split()
-        if len(parts) >= 2 and parts[1].isdigit():
-            rows[parts[0]] = int(parts[1])
-    return rows
-
-
-def labelled(text: str) -> dict[str, str]:
-    """Every `Label: value` line `show` prints, as a mapping.
-
-    Partitioned on the first colon, so a value that is itself a URL survives
-    whole. The same stand-in as `tallied`: `show` has no machine-readable form.
-    """
-    found: dict[str, str] = {}
-    for line in text.splitlines():
-        label, colon, value = line.partition(':')
-        if colon and label.strip():
-            found[label.strip()] = value.strip()
-    return found
+    declaration.main([*argv, '--json'])
+    return json.loads(capsys.readouterr().out)
 
 
 def executable(directory: Path, name: str) -> Path:
@@ -235,8 +218,7 @@ def test_a_bare_string_entry_is_skipped_by_every_reader_that_needs_a_name(
     entries = ['lazygit', {'name': 'lazydocker', 'description': LONG_DESCRIPTION, 'tags': ['tui']}]
     point_at(tmp_path / 'repo', {'github_releases': entries}, monkeypatch)
 
-    declaration.main(['tags'])
-    tags = tallied(capsys.readouterr().out)
+    tags = answered(capsys, 'tags')
     declaration.main(['search', 'lazy'])
     found = capsys.readouterr().out
 
@@ -284,15 +266,21 @@ def test_a_list_filter_narrows_the_payload_to_exactly_what_it_names(
 
 def test_a_verbose_listing_truncates_the_description_a_plain_one_prints_whole(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Verbose puts four columns on one line and a long description would push
-    the tags off the end of it."""
+    the tags off the end of it.
+
+    The truncation is asserted by asking `truncated_description`, not by looking
+    for the whole string's absence: at the wrong column width that absence holds
+    for a reason nobody chose, and the assertion passes anyway.
+    """
     declaration.main(['list'])
     plain = capsys.readouterr().out
     declaration.main(['list', '--verbose'])
     verbose = capsys.readouterr().out
 
+    assert declaration.truncated_description(LONG_DESCRIPTION) == LONG_DESCRIPTION[: declaration.DESCRIPTION_COLUMN]
+    assert len(declaration.truncated_description(LONG_DESCRIPTION)) < len(LONG_DESCRIPTION), 'the fixture has to be long enough to cut'
     assert LONG_DESCRIPTION in plain
-    assert LONG_DESCRIPTION not in verbose
-    assert LONG_DESCRIPTION[:35] in verbose
+    assert declaration.truncated_description(LONG_DESCRIPTION) in verbose
     assert {name for name in NAMES if name in verbose} == NAMES
 
 
@@ -319,13 +307,11 @@ def test_sections_and_stats_agree_with_each_other_and_with_the_declaration(decla
     absent from the listing and the total was simply wrong. Either reader
     disagreeing with `COUNTS` catches that class again.
     """
-    declaration.main(['sections'])
-    sections = tallied(capsys.readouterr().out)
-    declaration.main(['stats'])
-    stats = tallied(capsys.readouterr().out)
+    sections = answered(capsys, 'sections')
+    stats = answered(capsys, 'stats')
 
     assert sections == COUNTS
-    assert stats == {**COUNTS, 'Total': sum(COUNTS.values())}
+    assert stats == {'sections': COUNTS, 'total': sum(COUNTS.values())}
 
 
 def test_a_section_declaring_nothing_is_left_out_of_both_counts(
@@ -335,17 +321,13 @@ def test_a_section_declaring_nothing_is_left_out_of_both_counts(
     printed. A zero row per unused section is most of the file."""
     point_at(tmp_path / 'repo', {'go_tools': [{'name': 'task'}]}, monkeypatch)
 
-    declaration.main(['sections'])
-
-    assert tallied(capsys.readouterr().out) == {'go_tools': 1}
+    assert answered(capsys, 'sections') == {'go_tools': 1}
 
 
 def test_tags_are_counted_across_every_section_rather_than_within_one(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """`tui` is carried by two entries in one section and `lsp` by one in
     another, so a per-section tally and a whole-file tally differ here."""
-    declaration.main(['tags'])
-
-    assert tallied(capsys.readouterr().out) == TAGS
+    assert answered(capsys, 'tags') == TAGS
 
 
 def test_a_declaration_with_no_tags_at_all_tallies_nothing_and_still_answers(
@@ -356,11 +338,10 @@ def test_a_declaration_with_no_tags_at_all_tallies_nothing_and_still_answers(
     crash before the first row would leave."""
     point_at(tmp_path / 'repo', {'go_tools': [{'name': 'task', 'description': 'a task runner'}]}, monkeypatch)
 
-    declaration.main(['tags'])
-    printed = capsys.readouterr().out
+    assert answered(capsys, 'tags') == {}
 
-    assert tallied(printed) == {}
-    assert printed.strip()
+    declaration.main(['tags'])
+    assert capsys.readouterr().out.strip(), 'the rendered form says what to do instead of printing nothing'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -392,33 +373,29 @@ def test_show_prints_every_field_the_entry_declares(
     entry, each printing only the keys that are there — so an entry carrying all
     of them is the only one that reaches both walks in full.
 
-    A URL survives the parser whole, which is the reason `labelled` partitions on
-    the first colon rather than splitting on every one.
-
-    `machine` narrows `PATH`, so the Status row is this test's answer rather than
-    whatever the desk running it happens to have installed.
+    `machine` narrows `PATH`, so the install status is this test's answer rather
+    than whatever the desk running it happens to have installed.
     """
     monkeypatch.setattr(platform, 'system', lambda: 'Darwin')
     point_at(tmp_path / 'repo', FULLY_DESCRIBED, monkeypatch)
 
-    declaration.main(['show', 'ripgrep'])
-    printed = labelled(capsys.readouterr().out)
+    described = answered(capsys, 'show', 'ripgrep')[0]
 
-    assert printed['Description'] == 'a fast grep'
-    assert printed['Section'] == 'system_packages'
-    assert printed['Tags'] == 'search, cli'
-    assert printed['apt'] == 'ripgrep'
-    assert printed['brew'] == 'ripgrep'
-    assert printed['aur'] == 'ripgrep-bin'
-    assert printed['Repository'] == 'https://github.com/BurntSushi/ripgrep'
-    assert printed['GitHub'] == 'BurntSushi/ripgrep'
-    assert printed['Status'] == declaration.format_status(InstallStatus.NOT_INSTALLED, None)
+    assert described['description'] == 'a fast grep'
+    assert described['section'] == 'system_packages'
+    assert described['tags'] == ['search', 'cli']
+    assert described['platforms'] == {'apt': 'ripgrep', 'brew': 'ripgrep', 'aur': 'ripgrep-bin'}
+    assert described['metadata'] == {'repo': 'https://github.com/BurntSushi/ripgrep', 'github_repo': 'BurntSushi/ripgrep'}
+    assert described['installed'] == InstallStatus.NOT_INSTALLED.value
 
 
 def test_an_entry_declaring_no_tags_says_none_rather_than_leaving_the_row_empty(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    declaration.main(['show', 'tpm'])
+    """The document carries the empty list and the table carries the word, which is
+    the split `--json` exists for: one is the value and one is for a person."""
+    assert answered(capsys, 'show', 'tpm')[0]['tags'] == []
 
-    assert labelled(capsys.readouterr().out)['Tags'] == 'none'
+    declaration.main(['show', 'tpm'])
+    assert 'Tags:        none' in capsys.readouterr().out
 
 
 TWO_WAYS_TO_INSTALL_ONE_APP: dict[str, Any] = {
