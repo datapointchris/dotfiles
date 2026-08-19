@@ -558,6 +558,47 @@ def prune_repo_dir(path: Path) -> None:
         parent.rmdir()
 
 
+def declares_setup(path: Path) -> bool:
+    """Whether the repo declares a `setup` target to make a checkout runnable.
+
+    Asked of the tree rather than of a registry, because the target is the
+    declaration — a repo opts in by having one and there is nothing else to keep
+    in step. Every way of not having one answers False: no `task` installed, no
+    Taskfile, a Taskfile that does not declare it.
+    """
+    if shutil.which('task') is None:
+        return False
+    listed = run(['task', '--list-all', '--json'], cwd=path)
+    if listed.returncode != 0:
+        return False
+    try:
+        tasks = json.loads(listed.stdout).get('tasks', [])
+    except json.JSONDecodeError:
+        return False
+    return any(task.get('name') == 'setup' for task in tasks)
+
+
+def provision(path: Path) -> None:
+    """Run the repo's own `task setup` in a new worktree.
+
+    A worktree is a clean checkout, so everything gitignored is absent — the
+    virtualenv, node_modules, and whatever else has no manifest. What that means
+    is the repo's to say; this only decides when to ask.
+
+    It blocks, and on a large front end it blocks for a minute. That is the
+    right trade: the alternative is handing back a path that looks ready and
+    fails at the first command the session runs in it.
+
+    A failure is reported rather than raised. The worktree exists either way,
+    and destroying it would lose the isolation that was the point.
+    """
+    if not declares_setup(path):
+        return
+    say_info('Provisioning — running `task setup`')
+    if run(['task', 'setup'], cwd=path).returncode != 0:
+        say_warning('task setup failed; the worktree exists but is not provisioned')
+
+
 def cmd_new(slug: str) -> int:
     cwd = Path.cwd()
     checkout = require_checkout(cwd)
@@ -571,6 +612,8 @@ def cmd_new(slug: str) -> int:
     created = git_effect(cwd, 'worktree', 'add', '--quiet', str(path), '-b', slug, f'origin/{base}')
     if created.returncode != 0:
         raise Refused(created.stderr.strip() or f'git could not create {path}')
+
+    provision(path)
 
     say_ok(f'Isolated at {path}')
     OUT.print(str(path), markup=False, highlight=False)
@@ -684,7 +727,11 @@ def build_parser() -> argparse.ArgumentParser:
     quiet = argparse.ArgumentParser(add_help=False)
     quiet.add_argument('-q', '--quiet', action='store_true', help='hide the commands this runs')
 
-    new = commands.add_parser('new', parents=[quiet], help="isolate a session, off origin's default branch; prints the path")
+    new = commands.add_parser(
+        'new',
+        parents=[quiet],
+        help="isolate a session off origin's default branch, run the repo's `task setup`, print the path",
+    )
     new.add_argument('slug', help='names both the directory and the branch')
 
     commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')

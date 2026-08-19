@@ -364,6 +364,72 @@ class TestUsage:
         assert result.stdout == ''
 
 
+class TestProvisioning:
+    """A new worktree runs the repo's own `task setup`, when the repo declares one.
+
+    The target is the declaration, so there is no registry to keep in step and
+    every way of not having one is silent: no `task` on PATH, no Taskfile, or a
+    Taskfile that declares something else.
+    """
+
+    def stub_task(self, bin_dir: Path, marker: Path, *, declares: bool = True, fails: bool = False) -> None:
+        tasks = '{"tasks":[{"name":"setup"}]}' if declares else '{"tasks":[{"name":"test"}]}'
+        write_stub(
+            bin_dir,
+            'task',
+            f"""case "$1" in
+  --list-all) echo '{tasks}' ;;
+  setup) echo ran > '{marker}'; exit {1 if fails else 0} ;;
+esac""",
+        )
+
+    def test_a_declared_setup_runs_in_the_new_worktree(self, tmp_path, fleet, bin_dir, run):
+        marker = tmp_path / 'setup-ran'
+        self.stub_task(bin_dir, marker)
+
+        result = run(fleet['primary'], 'new', 'alpha')
+
+        assert result.returncode == 0
+        assert marker.exists(), 'a repo declaring setup must have it run'
+
+    def test_a_repo_declaring_no_setup_is_left_alone(self, tmp_path, fleet, bin_dir, run):
+        marker = tmp_path / 'setup-ran'
+        self.stub_task(bin_dir, marker, declares=False)
+
+        result = run(fleet['primary'], 'new', 'alpha')
+
+        assert result.returncode == 0
+        assert not marker.exists(), 'setup must not run where the repo never declared it'
+
+    def test_no_task_on_path_is_not_a_failure(self, fleet, bin_dir, run):
+        """The work box has repos and may not have `task`. Absence is ordinary."""
+        write_stub(bin_dir, 'task', 'exit 127')
+
+        result = run(fleet['primary'], 'new', 'alpha')
+
+        assert result.returncode == 0
+        assert (fleet['roots'] / 'primary' / 'alpha').is_dir()
+
+    def test_a_failing_setup_warns_and_keeps_the_worktree(self, tmp_path, fleet, bin_dir, run):
+        """Destroying it would lose the isolation that was the whole point."""
+        marker = tmp_path / 'setup-ran'
+        self.stub_task(bin_dir, marker, fails=True)
+
+        result = run(fleet['primary'], 'new', 'alpha')
+
+        assert result.returncode == 0
+        assert (fleet['roots'] / 'primary' / 'alpha').is_dir()
+        assert 'setup' in result.stderr, 'a failed provision has to say so'
+
+    def test_the_path_still_reaches_stdout_alone(self, tmp_path, fleet, bin_dir, run):
+        """`cd "$(worktree new x)"` breaks if provisioning narrates onto stdout."""
+        self.stub_task(bin_dir, tmp_path / 'setup-ran')
+
+        result = run(fleet['primary'], 'new', 'alpha')
+
+        assert result.stdout.strip() == str(fleet['roots'] / 'primary' / 'alpha')
+
+
 class TestEcho:
     """Every subprocess is announced before it runs.
 
