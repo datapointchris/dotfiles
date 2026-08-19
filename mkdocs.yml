@@ -105,7 +105,7 @@ extra:
   generator: false
 
 nav:
-  - ← Docs Hub: https://docs.ichrisbirch.com/
+  - ← Code Kingdom: https://docs.ichrisbirch.com/
   - Home: index.md
   - Apps:
       - apps/index.md
