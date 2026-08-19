@@ -2,23 +2,6 @@
 # shellcheck disable=SC2154
 # SC2154 = Variables referenced but not assigned (from sourced files)
 
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/colors.sh"
-
-#@reload-dev-forever
-#--> Reload nginx and supervisor in a loop forever
-function reload-dev-forever() {
-  local char=":"
-  local loops=1
-  while true; do
-    chars=$(printf "$char%.0s" $(seq 1 $loops))
-    echo "Restarting $(color_blue "DEV") $(color_green "NGINX") and $(color_green "Supervisor") $(color_blue ": $loops ${chars}")"
-    sudo nginx -s reload && sudo supervisorctl reload >>/dev/null
-    loops=$((loops + 1))
-    sleep 15
-  done
-}
-
 # ------------ Terminal ------------ #
 
 # Copy the last command to the OS clipboard
