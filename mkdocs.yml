@@ -44,6 +44,9 @@ theme:
     - content.code.annotate
     - content.tabs.link
 
+hooks:
+  - hooks/cachebust.py
+
 plugins:
   - search
   - mkdocstrings:
