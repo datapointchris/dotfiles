@@ -21,6 +21,7 @@ import dataclasses as dc
 import json
 import shutil
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -161,6 +162,39 @@ def test_the_isolation_holds_even_when_run_from_inside_a_session(tmux: Tmux, mon
     reported = capsys.readouterr().err
     assert 'TMUX=[unset]' in reported
     assert pluginsync.SESSION in reported
+
+
+@needs_tmux
+def test_a_server_that_never_answers_kill_server_is_still_reaped(tmux: Tmux, monkeypatch) -> None:
+    """A blocking `run-shell` occupies the command queue `kill-server` arrives on,
+    so the request is never processed and the client still exits 0.
+
+    What the survivor costs is paid elsewhere: `tmux-continuum` counts processes
+    named `tmux` to decide whether it is the only server, and declines to arm its
+    autosave when the count is above one. One leak stops the user's real sessions
+    being snapshotted at all.
+    """
+    monkeypatch.setattr(pluginsync, 'REAP_TIMEOUT', 2.0)
+    recorded = tmux.home / 'wedged-socket'
+    blocker = tmux.home / 'block-the-queue.sh'
+    blocker.write_text('#!/usr/bin/env bash\nwhile true; do sleep 1; done\n')
+    blocker.chmod(blocker.stat().st_mode | stat.S_IEXEC)
+    tmux.stub_tpm(
+        f'socket="$TMUX_TMPDIR/tmux-$(id -u)/default"\n'
+        f'printf %s "$socket" > {recorded}\n'
+        f'tmux -S "$socket" run-shell {blocker} >/dev/null 2>&1 &\n'
+        f'sleep 1\n'
+        f'exit 0\n'
+    )
+
+    try:
+        assert tmux.sync().ok
+        socket = recorded.read_text()
+        survivors = subprocess.run(['pgrep', '-f', socket], capture_output=True, text=True, check=False)
+        assert survivors.stdout.split() == [], f'{socket} still has processes: {survivors.stdout!r}'
+    finally:
+        for pattern in (recorded.read_text(), str(blocker)):
+            subprocess.run(['pkill', '-9', '-f', pattern], check=False)
 
 
 @needs_tmux

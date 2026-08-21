@@ -21,10 +21,12 @@ and lazy's costs the same startup as everything else here.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
 import shutil
+import signal
 import tempfile
 from pathlib import Path
 
@@ -49,6 +51,14 @@ LAZY_STATE = Path('.local/share/nvim/lazy')
 """lazy's own two paths: what it recorded installing, and where it put it."""
 
 SESSION = 'dotfiles-tpm-install'
+
+REAP_TIMEOUT = 10.0
+"""How long `kill-server` gets before the throwaway is taken by signal instead.
+
+Asking is not installing, so the deadline `effects.run` refuses to a stream is
+the right shape here: a server that has not acknowledged in ten seconds is not
+going to.
+"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -143,6 +153,28 @@ def blocked(home: Path, plugins_dir: Path) -> str:
     )
 
 
+def _reap(socket: Path, environment: dict[str, str], detached: tuple[str, ...]) -> None:
+    """Take the throwaway by signal where `kill-server` did not take it at all.
+
+    `kill-server` is processed on the same command queue a blocking `run-shell`
+    occupies, so a server whose config load has wedged never sees the request —
+    and the client still exits 0, which is why the leak reads as clean cleanup.
+
+    What the survivor costs is paid by a different tool. `tmux-continuum` arms
+    its autosave only while it believes it is the only server, counting
+    *processes* named `tmux`, so one leaked throwaway silently stops the user's
+    real sessions being snapshotted from the next config reload onward. Measured
+    2026-08-19: a survivor from 2026-08-13 cost four days of them.
+
+    The socket is in a directory `mkdtemp` made for this call alone, so it names
+    these processes and no others.
+    """
+    found = run(['pgrep', '-f', str(socket)], env=environment, unset=detached, output=Output.QUIET, timeout=REAP_TIMEOUT)
+    for line in found.transcript.split():
+        with contextlib.suppress(ValueError, OSError, PermissionError):
+            os.kill(int(line), signal.SIGKILL)
+
+
 def sync_tmux(home: Path, plugins_dir: Path) -> Result:
     """Hand TPM its list, on a tmux server that is not the user's.
 
@@ -192,7 +224,14 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
             )
             installed = run([str(installer)], env=environment, unset=detached, show=_tpm_line)
         finally:
-            run(['tmux', '-S', str(socket), 'kill-server'], env=environment, unset=detached, output=Output.QUIET)
+            run(
+                ['tmux', '-S', str(socket), 'kill-server'],
+                env=environment,
+                unset=detached,
+                output=Output.QUIET,
+                timeout=REAP_TIMEOUT,
+            )
+            _reap(socket, environment, detached)
 
     if not installed.ok:
         said = installed.transcript.strip() or f'TPM exited {installed.returncode}'
