@@ -366,17 +366,24 @@ def packages_check(
 @packages_app.command('apply')
 def packages_apply(
     machine: str = MachineOption,
+    # The three scopes are adjacent because typer renders options in
+    # declaration order, and a reader scanning for "how do I narrow this" has
+    # only that order to go on. --offline sat between them and broke the run.
     source: str = SourceOption,
-    offline: bool = OfflineOption,
     owner: str = OwnerOption,
     package: list[str] = PackageOption,
     reinstall: bool = ReinstallOption,
     force: bool = typer.Option(False, '--force', help='Remove a package that a declared release supersedes'),
+    offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
     """Install every declared package that is missing.
+
+    Three flags narrow what a run covers, and they compose: `--source` to one
+    `packages.yml` section (`--source uv_tools`), `--owner` to the entries
+    traceable to one GitHub owner, `--package` to one declared entry, repeatably.
 
     `--force` is the deliberate answer to one refusal, and the same word `symlinks
     apply` uses for the same thing: authorisation to replace what this repo did not
