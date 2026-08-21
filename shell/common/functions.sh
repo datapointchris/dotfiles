@@ -774,16 +774,25 @@ function yt-transcript() {
 # installed tools because otherwise it reaches for find/grep and the suggestion
 # comes back as something the prefer-fast-tools hook refuses to run.
 doshell_suggest_command() {
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "doshell: claude is not installed; nothing can suggest a command" >&2
+    return 1
+  fi
   # Strip any stray ``` fence lines defensively so the result lands clean on the
   # prompt line even when the model ignores the no-fences instruction.
-  claude -p "You are a shell expert on $(uname -s) with GNU coreutils, fd, rg, eza, jq and yq installed. Prefer fd over find, rg over grep and eza over ls. Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d'
+  # 60s because this blocks the prompt line, and the answer is one short command.
+  timeout 60 claude -p "You are a shell expert on $(uname -s) with GNU coreutils, fd, rg, eza, jq and yq installed. Prefer fd over find, rg over grep and eza over ls. Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d'
 }
 
 # Backs the doshell-explain widget. Kept terse on purpose: the answer is painted
 # below the prompt by `zle -M`, so anything longer than a few lines shoves the
 # prompt off the screen.
 doshell_explain_command() {
-  claude -p "Explain concisely what this shell command does, on $(uname -s): $*. Answer in at most four short lines of plain text — no markdown, no fences, no preamble. Name what each flag or stage contributes. If the command is destructive or would lose data, say so first."
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "doshell: claude is not installed; nothing can explain a command" >&2
+    return 1
+  fi
+  timeout 60 claude -p "Explain concisely what this shell command does, on $(uname -s): $*. Answer in at most four short lines of plain text — no markdown, no fences, no preamble. Name what each flag or stage contributes. If the command is destructive or would lose data, say so first."
 }
 
 #@doshell

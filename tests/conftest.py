@@ -437,6 +437,11 @@ def worktree_app():
     return load_app('worktree')
 
 
+@pytest.fixture(scope='session')
+def tmux_rearrange():
+    return load_app('tmux-rearrange')
+
+
 @pytest.fixture
 def unprivileged() -> Privilege:
     """A `Privilege` that will not offer a prompt, which is what refuses.
