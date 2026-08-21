@@ -1,7 +1,16 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.13"
-# dependencies = []
+# dependencies = ["pytermstyle"]
+#
+# [tool.uv.sources]
+# # A commit, where every other consumer pins a tag. A tag is mutable, so uv
+# # re-resolves it against the remote on every run: 1.3 seconds each, and an
+# # outright failure with the network down. A commit is already resolved, so uv
+# # reads its cache and never opens a socket — the whole screen costs about
+# # 20ms more than it did with no dependency at all, and it answers on a plane.
+# # That commit is v0.1.1; move both together.
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }
 # ///
 """Every open PR you have, across the repos the registry names, as JSON.
 
@@ -34,13 +43,24 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from pytermstyle import COMMAND
+from pytermstyle import GREEN
+from pytermstyle import MAGENTA
+from pytermstyle import RESET
+from pytermstyle import YELLOW
+from pytermstyle import help_end
+from pytermstyle import help_header
+from pytermstyle import help_row
+from pytermstyle import help_section
+from pytermstyle import help_text
+from pytermstyle import help_usage
 
 # GraphQL rather than `gh search prs`, whose field set has no headRefName or
 # baseRefName — the branch is simply unreachable through it, and appending the
@@ -304,11 +324,13 @@ def finalise(prs: list[dict[str, Any]], paths: dict[str, Path], *, now: dt.datet
     return sorted(prs, key=lambda pr: pr['created_at'])
 
 
-BOLD = '1'
-KEY = '36'
-STRING = '32'
-NUMBER = '33'
-LITERAL = '35'
+# JSON's own types, each its own colour, so the screen can show that a missing
+# count is `null` and a missing review is `""`. pytermstyle carries the palette
+# and not this mapping, because no other tool here prints a JSON document.
+#
+# `bool` leads because a bool is an int, and `true` reading as a number would be
+# a lie about the type a consumer meets.
+TYPE_COLOURS = {bool: MAGENTA, int: YELLOW, str: GREEN}
 
 # One row of the array, with the fields in the order they are emitted. Shown
 # rather than listed, because the listing it replaced could not say that a count
@@ -376,86 +398,73 @@ NOTES = (
 )
 
 
-class Ink:
-    """Styling resolved once, at the point the screen is rendered.
+def prose(line: str) -> str:
+    """A sentence with its backticked spans coloured, so a field name stays
+    findable inside one. Odd-numbered splits are what was between the ticks."""
+    return ''.join(f'{COMMAND}{part}{RESET}' if index % 2 else part for index, part in enumerate(line.split('`')))
 
-    `NO_COLOR` is the reader stating a preference, so it wins outright.
-    `FORCE_COLOR` overrides only the terminal detection, which is a guess.
+
+def literal(value: Any) -> str:
+    """One JSON scalar, coloured by the type it will arrive as."""
+    colour = next(paint for kind, paint in TYPE_COLOURS.items() if isinstance(value, kind))
+    return f'{colour}{json.dumps(value, ensure_ascii=False)}{RESET}'
+
+
+def example_document() -> list[str]:
+    """The example row as a one-element array, valid enough to paste into `jq`.
+
+    Indented two, because `help_text` prints a line as given and this is the body
+    of a section rather than prose at the margin.
     """
-
-    def __init__(self) -> None:
-        if os.environ.get('NO_COLOR'):
-            self.colour = False
-        elif os.environ.get('FORCE_COLOR'):
-            self.colour = True
-        else:
-            self.colour = sys.stdout.isatty()
-
-    def __call__(self, text: str, code: str = '') -> str:
-        return f'\x1b[{code}m{text}\x1b[0m' if self.colour and code else text
-
-    def prose(self, line: str) -> str:
-        """A sentence with its backticked spans coloured, so a field name stays
-        findable inside one."""
-        return ''.join(self(part, KEY if index % 2 else '') for index, part in enumerate(line.split('`')))
-
-    def literal(self, value: Any) -> str:
-        """JSON's own types, each its own colour, so the screen can show that a
-        missing count is `null` and a missing review is `""`."""
-        code = NUMBER if isinstance(value, int) and not isinstance(value, bool) else STRING if isinstance(value, str) else LITERAL
-        return self(json.dumps(value, ensure_ascii=False), code)
-
-
-def example_document(ink: Ink) -> list[str]:
-    """The example row as a one-element array, valid enough to paste into `jq`."""
     lines = ['  [', '    {']
     for index, (field, value) in enumerate(EXAMPLE.items()):
         comma = '' if index == len(EXAMPLE) - 1 else ','
-        lines.append(f'      {ink(json.dumps(field), KEY)}: {ink.literal(value)}{comma}')
+        lines.append(f'      {COMMAND}{json.dumps(field)}{RESET}: {literal(value)}{comma}')
     return [*lines, '    }', '  ]']
 
 
-def help_screen(ink: Ink) -> str:
-    """The whole screen, written here rather than assembled by argparse.
+def help_screen() -> None:
+    """The whole screen, in pytermstyle's grammar rather than argparse's.
 
     argparse names its own sections — `options:`, `positional arguments:` — which
     is the framework talking about itself on a screen with three or four lines to
     spend on the domain. It also re-wraps an epilog to the terminal width, which
     is what turned the field list into a paragraph and rules out showing a JSON
     document at all.
+
+    The grammar sizes its own columns from the longest row in each section, so
+    nothing here computes a width. It is the same grammar `formatting.sh` gives
+    the bash tools and `gotermstyle` gives the Go ones, which is what makes this
+    screen indistinguishable from theirs on one PATH.
     """
-    stop = max(len(flag) for flag, _ in OPTIONS) + 3
-    example_stop = max(len(command) for command, _ in EXAMPLES) + 3
+    help_header('pull-requests')
+    help_text(*(prose(line) for line in BLURB))
+    help_usage('pull-requests [--registry FILE]')
 
-    lines = ['', ink('pull-requests', BOLD), '']
-    lines += [f'  {ink.prose(line)}' if line else '' for line in BLURB]
-    lines += ['', ink('USAGE', BOLD), '  pull-requests [--registry FILE]']
-
-    # Padded outside the escape codes, never by colouring a padded string. A
-    # trailing run of spaces inside a span is styled background on a terminal
-    # that draws one, so the column reads as a block rather than as a gap.
-    def row(token: str, width: int, text: str) -> str:
-        return f'  {ink(token, KEY)}{" " * (width - len(token))}{text}'
-
-    lines += ['', ink('OPTIONS', BOLD)]
+    help_section('Options')
     for flag, description in OPTIONS:
         head, *rest = description
-        lines.append(row(flag, stop, ink.prose(head)))
-        lines += [f'  {" " * stop}{ink.prose(line)}' for line in rest]
+        help_row(flag, '', prose(head))
+        for line in rest:
+            help_row('', '', prose(line))
 
-    lines += ['', ink('EXAMPLES', BOLD)]
-    lines += [row(command, example_stop, annotation) for command, annotation in EXAMPLES]
+    help_section('Examples')
+    for command, annotation in EXAMPLES:
+        help_row(command, '', annotation)
 
-    lines += ['', ink('OUTPUT', BOLD), '  A JSON array, one object per pull request.', '']
-    lines += example_document(ink)
-    lines += ['']
-    lines += [f'  {ink.prose(line)}' if line else '' for line in NOTES]
-    return '\n'.join([*lines, ''])
+    help_section('Output')
+    help_text('A JSON array, one object per pull request.', '', *example_document(), '')
+    help_text(*(prose(line) for line in NOTES))
+    help_end()
 
 
 class Parser(argparse.ArgumentParser):
-    def format_help(self) -> str:
-        return help_screen(Ink())
+    """The grammar prints as it goes, so the screen is printed rather than
+    returned. argparse's `-h` calls `print_help` and exits, which is the whole
+    path that has to be intercepted."""
+
+    def print_help(self, file: Any = None) -> None:
+        help_screen()
 
 
 def main() -> int:
