@@ -13,11 +13,13 @@ means nothing here escalates.
 **Off unless a machine declares `schedule.enabled`, and that is the whole of how
 this row decides who runs one.** A timer is periodic by construction, so what it
 sends becomes a beacon: this one runs `check --refresh`, which is a call per
-declared release through a thread pool, every six hundred seconds, to one host.
-On a machine behind an employer's egress that is a workstation calling out on an
-exact interval, which is the pattern network monitoring exists to surface — so
-the schedule is opted into per machine rather than installed everywhere and
-tuned. What it buys where it is on: the run keeps `releases.json` warm, so an
+declared release through a thread pool, once a day, to one host. On a machine
+behind an employer's egress that is a workstation calling out on an exact
+interval, which is the pattern network monitoring exists to surface — so the
+schedule is opted into per machine rather than installed everywhere and tuned.
+The other cost is the host's: those calls are charged against a quota shared by
+every machine on the egress, which `INTERVAL_SECONDS` states with the figures.
+What it buys where it is on: the run keeps `releases.json` warm, so an
 interactive check spends no API calls.
 """
 
@@ -54,7 +56,7 @@ def enabled(config: settings.Config | None = None) -> bool:
     `remote.publish_reports_after_apply` already fails in and for the same reason.
     A timer is a standing background process that outlives the session installing
     it, and this one runs `check --refresh` — one request per declared release,
-    every ten minutes, forever. Behind an employer's egress that is a workstation
+    once a day, forever. Behind an employer's egress that is a workstation
     calling out on an exact interval, which is the pattern network monitoring
     exists to surface. Something with that reach is opted into, never defaulted
     into.
@@ -69,14 +71,20 @@ def enabled(config: settings.Config | None = None) -> bool:
     return bool(table.get('enabled', False)) if isinstance(table, dict) else False
 
 
-INTERVAL_SECONDS = 60 * 10
-"""Every ten minutes. The record each run writes is the fleet's drift series, so
-this cadence is what sets its resolution — how far a machine has moved, and how
-far behind another one it sits, are only answerable as often as someone measured.
+INTERVAL_SECONDS = 60 * 60 * 24
+"""Every twenty-four hours. The record each run writes is the fleet's drift
+series, so this cadence is what sets its resolution — how far a machine has
+moved, and how far behind another one it sits, are only answerable as often as
+someone measured.
 
-Affordable at this cadence because the run is local: filesystem reads and version
-banners off binaries already on the box. A schedule this tight would not be
-defensible for anything that left the machine."""
+Ten minutes was the figure while the run was read as local: filesystem reads and
+version banners off binaries already on the box. `--refresh` is what makes it
+leave the machine, and the docstring above says so — one request per declared
+release, to one host, on an exact interval. Measured 2026-08-21: a single run
+spends 66 GitHub API calls, so three machines at the old cadence spent about
+1,200 an hour. Against the 60-per-hour anonymous ceiling, which is charged per IP
+and shared by every host behind one egress, two machines were enough to keep that
+pool at zero for the whole hour."""
 
 
 def cadence() -> str:
