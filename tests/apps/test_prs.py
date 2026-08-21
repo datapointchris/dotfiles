@@ -554,3 +554,41 @@ def test_the_list_names_its_keys_in_a_footer(session) -> None:
 
     assert 'm merge' in plain(footer)
     assert 'd view diff' in plain(footer)
+
+
+def help_screen(**extra: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(PRS), '--help'],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'NO_COLOR': '1', 'UV_CACHE_DIR': UV_CACHE, **extra},
+    )
+
+
+def test_the_help_screen_names_every_key_the_picker_binds() -> None:
+    """The rows come off the same tuple the menu and the footer are built from,
+    so an action cannot arrive with a binding the screen does not mention."""
+    shown = help_screen()
+    assert shown.returncode == 0, shown.stderr
+
+    for key, label in (('d', 'view diff'), ('o', 'open in browser'), ('b', 'copy branch'), ('c', 'comment'), ('m', 'merge')):
+        assert f'{key} {label}' in shown.stdout
+    assert 'enter' in shown.stdout
+
+
+def test_it_runs_with_the_network_down() -> None:
+    """pytermstyle is pinned to a commit rather than a tag, and a tag would take
+    this offline without failing any other test here.
+
+    uv re-resolves a mutable ref against the remote on every run — over a second
+    each, and an outright failure on a plane or behind the work firewall. Nothing
+    about the screen looks different either way, which is what makes it worth
+    asserting rather than noticing. Warmed first, because an empty cache is a
+    fair reason to need the network and is not the failure being guarded against.
+    """
+    warm = help_screen()
+    assert warm.returncode == 0, warm.stderr
+
+    offline = help_screen(UV_OFFLINE='1')
+    assert offline.returncode == 0, offline.stderr
+    assert offline.stdout == warm.stdout

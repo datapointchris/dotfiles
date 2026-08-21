@@ -1,7 +1,13 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["rich>=13.0.0"]
+# dependencies = ["rich>=13.0.0", "pytermstyle"]
+#
+# [tool.uv.sources]
+# # A commit rather than a tag, for the reason `pull-requests` gives at length:
+# # uv re-resolves a mutable ref against the remote on every run, which costs
+# # over a second and fails outright with no network. That commit is v0.1.1.
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }
 # ///
 """Pick one of your open PRs, from anywhere, and open its diff to read.
 
@@ -44,6 +50,12 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from pytermstyle import help_end
+from pytermstyle import help_header
+from pytermstyle import help_row
+from pytermstyle import help_section
+from pytermstyle import help_text
+from pytermstyle import help_usage
 from rich.console import Console
 from rich.text import Text
 
@@ -383,9 +395,6 @@ ACTIONS = (
 # pressed. Enter leaves that line empty, which is how "open the action menu" and
 # "do this one thing" are told apart.
 EXPECT = ','.join(action.key for action in ACTIONS)
-
-# The same set spelled for a person, so `--help` cannot drift from the bindings.
-ACTION_KEYS = ', '.join(f'{action.key} for {action.label}' for action in ACTIONS)
 
 
 def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text]]]:
@@ -847,20 +856,50 @@ def fail(message: str) -> int:
     return 1
 
 
+def help_screen() -> None:
+    """The screen, in the grammar every other tool on this PATH draws.
+
+    The key rows come off `ACTIONS` rather than being written out, so a sixth
+    action cannot arrive with a binding the screen does not mention. That is the
+    same tuple the menu and the footer are built from.
+    """
+    help_header('prs')
+    help_text('Pick an open PR and open its diff in a tmux window.')
+    help_usage('prs', 'prs list')
+
+    help_section('Commands')
+    help_row('prs', '', 'pick a PR, then act on it')
+    help_row('prs list', '', 'print every open PR as a table instead of picking one')
+
+    help_section('Keys')
+    help_text('On the list, and again in the action menu.')
+    for action in ACTIONS:
+        help_row(action.key, action.label, action.detail)
+    help_row('enter', '', 'open the action menu for the row under the cursor')
+
+    help_section('Options')
+    help_row('-h, --help', '', 'show this screen')
+    help_text('', 'Needs tmux, which is where the review window goes.')
+    help_end()
+
+
+class Parser(argparse.ArgumentParser):
+    """The grammar prints as it goes, so the screen is printed rather than
+    returned. argparse's `-h` calls `print_help` and exits, which is the whole
+    path that has to be intercepted."""
+
+    def print_help(self, file: object = None) -> None:
+        help_screen()
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        prog='prs',
-        description='Pick an open PR and open its diff in a tmux window.',
-        epilog=(
-            'With no arguments, opens the picker. Enter opens the action menu for a PR. '
-            f'A letter takes an action straight from the list: {ACTION_KEYS}. '
-            'Needs tmux, which is where the review window goes.'
-        ),
-    )
+    parser = Parser(prog='prs')
     # A verb rather than a flag, because `list` is the fleet's word for the set
     # and a flag that switches the whole act is a subcommand wearing a disguise.
-    subcommands = parser.add_subparsers(dest='command', metavar='[list]')
-    subcommands.add_parser('list', help='print every open PR as a table instead of picking one')
+    # `parser_class` so `prs list --help` draws the same screen rather than
+    # argparse's, which names `positional arguments` on a verb that takes none.
+    subcommands = parser.add_subparsers(dest='command', metavar='[list]', parser_class=Parser)
+    subcommands.add_parser('list')
     arguments = parser.parse_args()
 
     if not shutil.which('pull-requests'):
