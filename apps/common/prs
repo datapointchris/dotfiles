@@ -8,6 +8,10 @@
     prs              pick one and open it in a tmux window
     prs list         print them instead, one row each
 
+Enter on a row opens the action menu. A letter takes that action there and then,
+without the menu, and the footer names them — `m` is merge, which is the one
+worth pressing from the list, since the confirm it prints is the whole flow.
+
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pull-requests`, the one place that knows how to
 ask a provider for PRs; this is the renderer, the picker and the window.
@@ -343,9 +347,14 @@ class Action:
 
     `providers` empty means every forge — the diff and the branch name are local
     git and the browser is a URL, so none of the three asks a forge anything.
+
+    `key` is the letter that reaches it from either menu. It is a property of the
+    action rather than of a menu so both bind the same letter, and a letter
+    learned on the list still works one screen deeper.
     """
 
     name: str
+    key: str
     icon: str
     label: str
     detail: str
@@ -355,16 +364,28 @@ class Action:
         return not self.providers or provider in self.providers
 
 
-# Ordered by how often each is wanted, and merge is last on purpose: it is the
-# one that cannot be undone, and having to scroll past everything else to reach
-# it is the difference between choosing it and landing on it.
+# Ordered by how often each is wanted. Merge is last because it is the one that
+# cannot be undone, so the arrow keys reach it slowest; `m` reaches it at once
+# from anywhere, and the confirm it prints is what guards it.
+#
+# Letters are the first letter of the thing, not of the label — `b` is the
+# branch and `o` is open-in-browser, because two actions starting with `b` would
+# make one of them arbitrary.
 ACTIONS = (
-    Action('diff', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window'),
-    Action('browser', BROWSER_ICON, 'open in browser', 'the pull request page on its forge'),
-    Action('branch', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard'),
-    Action('comment', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', frozenset({'github'})),
-    Action('merge', MERGE_ICON, 'merge', 'merge it — asks before it does'),
+    Action('diff', 'd', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window'),
+    Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the pull request page on its forge'),
+    Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard'),
+    Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', frozenset({'github'})),
+    Action('merge', 'm', MERGE_ICON, 'merge', 'merge it — asks once, and enter is yes'),
 )
+
+# What fzf hands back on the first line of its output when one of these is
+# pressed. Enter leaves that line empty, which is how "open the action menu" and
+# "do this one thing" are told apart.
+EXPECT = ','.join(action.key for action in ACTIONS)
+
+# The same set spelled for a person, so `--help` cannot drift from the bindings.
+ACTION_KEYS = ', '.join(f'{action.key} for {action.label}' for action in ACTIONS)
 
 
 def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text]]]:
@@ -463,8 +484,40 @@ def cmd_list(prs: list[PullRequest], *, color: bool) -> int:
     return 0
 
 
-def pick(prs: list[PullRequest]) -> PullRequest | None:
-    """Run fzf over the rendered rows and return the chosen PR.
+def expected(stdout: str) -> tuple[Action | None, str]:
+    """Split fzf's `--expect` output into the key pressed and the row chosen.
+
+    The key is its own first line, empty when the choice was made with enter. The
+    row follows and is two lines here, so this splits once and strips only the
+    remainder — stripping the whole thing first would eat the empty key line and
+    leave the row where the key belongs.
+    """
+    key, _, rest = stdout.partition('\n')
+    return next((action for action in ACTIONS if action.key == key.strip()), None), rest.strip()
+
+
+def shortcut_legend() -> Text:
+    """The keys, as a footer line under the list.
+
+    Every action is named, including the ones a forge cannot do. Which of them is
+    live depends on the row under the cursor, and a legend that changed as you
+    moved would be read as flicker rather than as information.
+    """
+    line = Text()
+    for index, action in enumerate(ACTIONS):
+        if index:
+            line.append('   ')
+        line.append(action.key, style='bold cyan')
+        line.append(f' {action.label}', style='dim')
+    return line
+
+
+def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
+    """Run fzf over the rendered rows, and return the PR with any key pressed on it.
+
+    An action key returns that action and skips the menu entirely: `m` on a row
+    goes straight to the merge confirm. Enter returns no action, which is what
+    opens the menu.
 
     The index leads in a hidden field, so the choice survives a title containing
     a tab or a leading number, and nothing has to be matched back by name.
@@ -473,9 +526,9 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
     it runs from a keybinding and the terminal when it does not. Size belongs to
     the caller, in one place.
 
-    Column titles go in the header and the legend goes in the footer. They are
-    two different kinds of thing and putting both at the top made the legend read
-    as a second header row, whatever the spacing.
+    Column titles go in the header and the key legend in the footer. They are two
+    different kinds of thing and putting both at the top made the legend read as
+    a second header row, whatever the spacing.
 
     The titles are composed with the rows rather than written separately, which
     is the only thing that keeps a label over its own column.
@@ -512,6 +565,7 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
             '--gap=2',
             '--border=none',
             '--header-border=bottom',
+            '--footer-border=top',
             # Setting any section border makes fzf draw one round the list and
             # the input too, which is the rule down the left edge. Only the two
             # horizontal ones above and below are wanted.
@@ -519,10 +573,14 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
             '--input-border=none',
             '--no-scrollbar',
             # No search line. An open backlog is a handful of rows — if it ever
-            # got long enough to need filtering, the backlog is the problem.
+            # got long enough to need filtering, the backlog is the problem. It
+            # is also what frees the letters: with nothing to type into, a bare
+            # `m` is a binding rather than a query.
             '--no-input',
+            f'--expect={EXPECT}',
             f'--padding=1,{SIDE_PAD}',
             f'--header={to_lines([header], color=True)[0]}',
+            f'--footer={to_lines([shortcut_legend()], color=True)[0]}',
             # Both blanked. fzf reserves a column at the left for the pointer
             # and, once items are multi-line, draws `╻┃╹` down the side of each
             # one — a white rule against the rows that reads as a border the
@@ -541,10 +599,10 @@ def pick(prs: list[PullRequest]) -> PullRequest | None:
         text=True,
         check=False,
     )
-    chosen = result.stdout.strip()
+    action, chosen = expected(result.stdout)
     if not chosen:
         return None
-    return prs[int(chosen.split('\t')[0])]
+    return prs[int(chosen.split('\t')[0])], action
 
 
 def describe(pr: PullRequest) -> Text:
@@ -568,15 +626,20 @@ def describe(pr: PullRequest) -> Text:
     return page
 
 
-def action_line(action: Action, pr: PullRequest, width: int) -> Text:
+def action_line(action: Action, pr: PullRequest) -> Text:
     """One menu row. Unsupported ones stay, dimmed, and say why.
 
     Hiding an action a forge cannot do would make the menu a different shape per
     provider, so you would learn where `merge` sits and then find it somewhere
     else. Dimmed, the list is the same list everywhere.
+
+    The key leads its own column rather than sitting inside the label. A row is
+    read to find the action and pressed to take it, and a column of single
+    letters down the left is what makes the second reading possible at a glance.
     """
     live = action.supported(pr.provider)
     line = Text()
+    line.append(f'{action.key}  ', style='bold cyan' if live else 'dim')
     line.append(f'{action.icon}  ', style='' if live else 'dim')
     line.append(action.label.ljust(18), style='bold' if live else 'dim')
     line.append(action.detail if live else f'not available on {pr.provider}', style='dim')
@@ -584,13 +647,17 @@ def action_line(action: Action, pr: PullRequest, width: int) -> Text:
 
 
 def choose_action(pr: PullRequest) -> Action | None:
-    """The action menu for one PR, with its description in the pane above."""
+    """The action menu for one PR, with its description in the pane above.
+
+    The same letters work here as on the list, so arriving by enter and then
+    pressing `m` does what pressing `m` a screen earlier would have done.
+    """
     page = to_lines([describe(pr)], color=True)
     with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False) as handle:
         handle.write('\n'.join(page))
         preview = handle.name
 
-    rows = [f'{index}\t{line}' for index, line in enumerate(to_lines([action_line(a, pr, TABLE_WIDTH) for a in ACTIONS], color=True))]
+    rows = [f'{index}\t{line}' for index, line in enumerate(to_lines([action_line(a, pr) for a in ACTIONS], color=True))]
     try:
         result = subprocess.run(
             [
@@ -609,6 +676,7 @@ def choose_action(pr: PullRequest) -> Action | None:
                 # not something you filter, and a prompt invites typing that then
                 # does nothing useful.
                 '--no-input',
+                f'--expect={EXPECT}',
                 '--color=bg:-1,gutter:-1,preview-bg:-1',
                 '--pointer=',
                 '--marker=',
@@ -625,7 +693,9 @@ def choose_action(pr: PullRequest) -> Action | None:
     finally:
         Path(preview).unlink(missing_ok=True)
 
-    chosen = result.stdout.strip()
+    pressed, chosen = expected(result.stdout)
+    if pressed:
+        return pressed
     if not chosen:
         return None
     return ACTIONS[int(chosen.split('\t')[0])]
@@ -707,19 +777,28 @@ def comment(pr: PullRequest) -> int:
 
 
 def merge(pr: PullRequest, *, interactive: bool) -> int:
-    """Merging is the one action here that cannot be taken back, so it asks.
+    """Merging is the one action here that cannot be taken back, so it asks once.
 
-    Being last in the menu is most of the guard — you have to scroll past four
-    other things to land on it. The prompt is the rest, and it names the PR so a
-    mistimed keypress is visibly wrong before it is confirmed.
+    Enter is yes. The prompt exists to show which PR is about to land, not to
+    make landing one a chore, and a default of no meant typing a letter to
+    confirm every merge that was never in doubt. Anything that is not yes aborts,
+    so a stray key still stops it — the safety is in the unrecognised answer
+    rather than in the default.
+
+    `--merge` is what makes this one prompt instead of four. Without a method gh
+    runs its own wizard: which method, whether to delete the branch, then a
+    submit step. Every answer is already settled — the merge commit is
+    `standards/git-workflow.md` § "A PR lands as a merge commit, not a squash or
+    a rebase", and forge sets `delete_branch_on_merge` on the repo, so the forge
+    deletes the remote branch and nothing here touches the local one.
     """
     if interactive:
-        answer = input(f'merge {pr.slug} #{pr.number} — {pr.title}?  [y/N] ')
-        if answer.strip().lower() not in {'y', 'yes'}:
+        answer = input(f'merge {pr.slug} #{pr.number} — {pr.title}?  [Y/n] ')
+        if answer.strip().lower() not in {'', 'y', 'yes'}:
             print('left alone')
             return 0
     if pr.provider == 'github':
-        return run(['gh', 'pr', 'merge', str(pr.number), '--repo', pr.slug])
+        return run(['gh', 'pr', 'merge', str(pr.number), '--repo', pr.slug, '--merge'])
     checkout = in_repo(pr)
     if not checkout:
         return fail(f'{pr.repo} is not checked out here, and bbkt resolves the repo from the directory')
@@ -772,7 +851,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog='prs',
         description='Pick an open PR and open its diff in a tmux window.',
-        epilog='With no arguments, opens the picker. Needs tmux, which is where the review window goes.',
+        epilog=(
+            'With no arguments, opens the picker. Enter opens the action menu for a PR. '
+            f'A letter takes an action straight from the list: {ACTION_KEYS}. '
+            'Needs tmux, which is where the review window goes.'
+        ),
     )
     # A verb rather than a flag, because `list` is the fleet's word for the set
     # and a flag that switches the whole act is a subcommand wearing a disguise.
@@ -806,10 +889,12 @@ def main() -> int:
         if not shutil.which(tool):
             return fail(f'{tool} is required')
 
-    chosen = pick(prs)
-    if chosen is None:
+    picked = pick(prs)
+    if picked is None:
         return 0
-    action = choose_action(chosen)
+    chosen, action = picked
+    if action is None:
+        action = choose_action(chosen)
     if action is None:
         return 0
     return perform(action, chosen, interactive=sys.stdin.isatty())

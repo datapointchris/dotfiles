@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import pty
 import re
 import stat
 import subprocess
@@ -147,6 +148,98 @@ def picker(tmp_path: Path, bin_dir: Path):
         return fed.read_text(encoding='utf-8')
 
     return _picker
+
+
+# An fzf that answers a scripted reply per call, and records what each call was
+# given. Two calls happen when a PR is chosen with enter — the list, then the
+# action menu — and they need different answers, so a stub that replies the same
+# thing every time cannot tell the two paths apart.
+#
+# A call with no reply file exits 130, the code for a dismissed picker, which is
+# how a scripted session stops without the caller having to script an ending.
+FZF_STUB = """\
+room={room}
+call=$(cat "$room/count" 2>/dev/null || echo 0)
+call=$((call + 1))
+printf '%s' "$call" >"$room/count"
+printf '%s\\n' "$@" >"$room/argv.$call"
+cat >"$room/fed.$call"
+if [ -s "$room/reply.$call" ]; then
+  cat "$room/reply.$call"
+  exit 0
+fi
+exit 130
+"""
+
+
+class Session:
+    """One run of the picker, and everything the stubs recorded during it."""
+
+    def __init__(self, stdout: str, stderr: str, room: Path) -> None:
+        self.stdout = stdout
+        self.stderr = stderr
+        self.room = room
+
+    @property
+    def calls(self) -> int:
+        """How many times fzf ran. One means the action menu never opened."""
+        counted = self.room / 'count'
+        return int(counted.read_text()) if counted.exists() else 0
+
+    def fed(self, call: int) -> str:
+        return (self.room / f'fed.{call}').read_text(encoding='utf-8')
+
+    def argv(self, call: int) -> list[str]:
+        return (self.room / f'argv.{call}').read_text(encoding='utf-8').splitlines()
+
+
+@pytest.fixture
+def session(tmp_path: Path, bin_dir: Path):
+    """Run the picker with scripted fzf replies and a terminal for a stdin.
+
+    stdin is a pty rather than a pipe because the merge confirm is only printed
+    when `prs` believes a person is there, and `isatty` on a pipe says nobody is.
+    The answer is written before the run, which a pty buffers until it is read.
+
+    `gh` echoes its own arguments to stdout, which is where a merge is observed:
+    everything past `run` hands the terminal to another tool, so what it was
+    asked for is the only thing left to assert on.
+    """
+    room = tmp_path / 'fzf'
+    room.mkdir()
+
+    def _session(*rows: dict[str, Any], replies: tuple[str, ...] = (), answer: str = '\n') -> Session:
+        stub_pr_list(bin_dir, rows)
+        write_stub(bin_dir, 'fzf', FZF_STUB.format(room=room))
+        write_stub(bin_dir, 'nvim', 'exit 0')
+        write_stub(bin_dir, 'tmux', 'exit 0')
+        write_stub(bin_dir, 'gh', 'printf \'gh %s\\n\' "$*"')
+        for index, reply in enumerate(replies, start=1):
+            (room / f'reply.{index}').write_text(reply)
+
+        controller, terminal = pty.openpty()
+        try:
+            os.write(controller, answer.encode())
+            result = subprocess.run(
+                [str(PRS)],
+                stdin=terminal,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=script_env(tmp_path, bin_dir, TMUX='/tmp/tmux-fixture,1,0'),
+            )
+        finally:
+            os.close(terminal)
+            os.close(controller)
+        assert result.returncode == 0, result.stderr
+        return Session(result.stdout, result.stderr, room)
+
+    return _session
+
+
+def chose(index: int, key: str = '') -> str:
+    """An fzf reply: the key pressed on its own line, then the row it was on."""
+    return f'{key}\n{index}\tthe rendered row\n'
 
 
 def plain(line: str) -> str:
@@ -376,3 +469,88 @@ def test_an_empty_backlog_says_so_rather_than_printing_a_bare_header(listing) ->
     """An empty backlog is a real and good answer, and a lone header row reads as
     output that got cut off."""
     assert listing() == ['No open PRs across the registry.']
+
+
+def test_a_letter_on_the_list_takes_its_action_without_opening_the_menu(session) -> None:
+    """The menu is one screen and the merge confirm is another, and pressing `m`
+    on a row is a decision already made about which of the five it is."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),))
+
+    assert run.calls == 1
+    assert 'gh pr merge 7' in run.stdout
+
+
+def test_a_merge_tells_gh_the_method_so_its_own_wizard_never_runs(session) -> None:
+    """Without a method gh asks which one, whether to delete the branch, and then
+    to submit. All three are settled — a merge commit, and the forge deletes the
+    remote branch — so every prompt is a keypress that could only be answered one
+    way."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),))
+
+    assert '--merge' in run.stdout
+    assert '--repo datapointchris/dotfiles' in run.stdout
+
+
+def test_enter_answers_the_merge_confirm(session) -> None:
+    """The prompt is there to show which PR is about to land, not to make landing
+    one cost a keystroke it never varies."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='\n')
+
+    assert '[Y/n]' in run.stdout
+    assert 'gh pr merge 7' in run.stdout
+
+
+def test_an_answer_that_is_not_yes_leaves_the_pr_alone(session) -> None:
+    """Enter being yes only works if a stray key is still no. Treating anything
+    unrecognised as agreement would make a mistimed keypress a merge."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='x\n')
+
+    assert 'left alone' in run.stdout
+    assert 'gh pr merge' not in run.stdout
+
+
+def test_enter_on_a_row_still_opens_the_action_menu(session) -> None:
+    """The letters are an accelerator, not a replacement. Arriving with no idea
+    which action you want is what the menu is for, and it is still the default."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+
+    assert run.calls == 2
+    assert 'view diff' in plain(run.fed(2))
+
+
+def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
+    """A shortcut nothing shows is a shortcut nobody presses. The menu is where
+    the letters are learned, so each row carries its own."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    rows = [plain(row.split('\t', 1)[1]) for row in run.fed(2).splitlines()]
+
+    assert [row.split()[0] for row in rows] == ['d', 'o', 'b', 'c', 'm']
+    labels = ['view diff', 'open in browser', 'copy branch', 'comment', 'merge']
+    assert all(label in row for label, row in zip(labels, rows, strict=True))
+
+
+def test_a_letter_in_the_action_menu_takes_that_action(session) -> None:
+    """The same letter has to mean the same thing one screen deeper, or arriving
+    by enter would punish having learned it."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0), chose(4, 'm')))
+
+    assert run.calls == 2
+    assert 'gh pr merge 7' in run.stdout
+
+
+def test_the_list_binds_a_letter_for_every_action(session) -> None:
+    """The bindings come off the same list the menu is drawn from, so a new
+    action cannot arrive with a row and no key."""
+    run = session(pr('dotfiles', 7, 'a-branch'))
+
+    assert '--expect=d,o,b,c,m' in run.argv(1)
+
+
+def test_the_list_names_its_keys_in_a_footer(session) -> None:
+    """Under the rows, not above them: the column labels are already at the top
+    and a second line up there reads as a second header row."""
+    run = session(pr('dotfiles', 7, 'a-branch'))
+    footer = next(arg for arg in run.argv(1) if arg.startswith('--footer='))
+
+    assert 'm merge' in plain(footer)
+    assert 'd view diff' in plain(footer)
