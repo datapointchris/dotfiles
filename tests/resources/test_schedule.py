@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import plistlib
 import stat
 from pathlib import Path
 
@@ -434,3 +435,25 @@ def test_the_unit_path_is_declared_rather_than_inherited(monkeypatch: pytest.Mon
     monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
 
     assert '/tmp/some-venv/bin' not in schedule._service_content()
+
+
+def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
+    """launchd hands an agent `/usr/bin:/bin:/usr/sbin:/sbin`, so `/usr/local/bin`
+    is absent and `gh` resolves to nothing. Measured 2026-08-21 on macmini: one
+    scheduled run spent 26 requests of the 60-per-hour anonymous GitHub quota and
+    zero authenticated ones, because `github_token` gates on `shutil.which('gh')`
+    and degrades to an unauthenticated request instead of failing."""
+    job = plistlib.loads(schedule._agent_content())
+
+    entries = job['EnvironmentVariables']['PATH'].split(':')
+    assert str(providers.bin_dir()) in entries
+    assert str(gotool.gobin()) in entries
+    assert '/usr/local/bin' in entries
+
+
+def test_the_agent_path_is_declared_rather_than_inherited(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The same trap as the unit: a plist built from the installing shell's PATH
+    pins the schedule to a venv that outlives nothing."""
+    monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
+
+    assert '/tmp/some-venv/bin' not in plistlib.loads(schedule._agent_content())['EnvironmentVariables']['PATH']

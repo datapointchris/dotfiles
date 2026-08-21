@@ -244,6 +244,15 @@ def _agent_content() -> bytes:
             # a freshly measured `latest` are invisible on every other run, and
             # this is the one nobody is waiting on.
             'ProgramArguments': [_executable(), 'check', '--refresh'],
+            # The same pinning `_service_content` gives the systemd unit. launchd
+            # hands an agent `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so
+            # `/usr/local/bin` is absent and every tool the run shells out to
+            # resolves to nothing. `github_release.github_token` is the sharp
+            # case: it gates on `shutil.which('gh')`, so a missing `gh` degrades
+            # to an unauthenticated request rather than an error, and the whole
+            # refresh spends the 60-per-hour anonymous quota that every host
+            # behind this egress IP shares.
+            'EnvironmentVariables': {'PATH': _unit_path()},
             'StartInterval': INTERVAL_SECONDS,
             'RunAtLoad': True,
             # launchd has no notion of "log somewhere sensible"; without these the
