@@ -147,6 +147,62 @@ def test_an_empty_store_still_puts_a_document_on_stdout(cli: Callable[..., Invoc
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# report list: what a row identifies the run by
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_two_boxes_sharing_a_manifest_are_two_rows_by_host(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The listing carries the box as well as the manifest, so a consumer counting
+    machines counts boxes.
+
+    macmini and mbp both declare `macos-personal-workstation`, so `machine` is the
+    same string on both and a fold over it reports one machine where two wrote
+    runs. The filenames were keyed on the host to make that collision unreachable,
+    and a key that reaches only the filename is half a mechanism — the reader has
+    to have something to match on.
+    """
+    record(sandbox, identifier='aaaaaaaaaaaa', host='macmini', when='20260101T000000Z')
+    record(sandbox, identifier='bbbbbbbbbbbb', host='mbp', when='20260102T000000Z')
+
+    ran = cli('report', 'list', '--json')
+
+    assert {row['machine'] for row in ran.document} == {sandbox.machine}
+    assert [row['host'] for row in ran.document] == ['mbp', 'macmini']
+
+
+def test_a_record_written_before_the_host_field_is_listed_under_its_manifest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Pre-schema-3 records carry no host, and the manifest answers for them.
+
+    An empty string would pool every box's whole early history into one nameless
+    bucket, which is a worse answer than the manifest — that one is right for the
+    boxes that do not share it and no more wrong than it ever was for the two Macs.
+    """
+    written = record(sandbox, identifier='aaaaaaaaaaaa', host='macmini', when='20260101T000000Z')
+    payload = json.loads(written.read_text())
+    payload['host'] = ''
+    written.write_text(json.dumps(payload))
+
+    ran = cli('report', 'list', '--json')
+
+    assert [row['host'] for row in ran.document] == [sandbox.machine]
+
+
+def test_a_record_that_will_not_parse_names_no_host_rather_than_guessing_one(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The row survives and its unknown fields stay empty, `host` among them.
+
+    The filename's middle is the host from schema 3 on and the manifest before it,
+    and nothing in a file that will not open says which — so reading it back out of
+    the name would put a manifest in a column a consumer folds boxes on.
+    """
+    corrupt_store(sandbox)
+
+    ran = cli('report', 'list', '--json')
+
+    assert [row['outcome'] for row in ran.document] == ['unreadable', 'ok']
+    assert [row['host'] for row in ran.document] == ['', 'box']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # report list: the filters
 # ─────────────────────────────────────────────────────────────────────────────
 

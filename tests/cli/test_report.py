@@ -207,7 +207,7 @@ def test_the_json_list_carries_the_same_outcome_the_table_prints(runs_dir: Path)
     assert result.exit_code == 0
     rows = json.loads(result.stdout)
     assert rows, result.stdout
-    assert set(rows[0]) == {'run', 'machine', 'verb', 'outcome'}
+    assert set(rows[0]) == {'run', 'machine', 'host', 'verb', 'outcome'}
     assert 'unconverged' in rows[0]['outcome']
 
 

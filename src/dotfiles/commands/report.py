@@ -99,12 +99,32 @@ def _listed(path: Path) -> dict[str, str]:
     A record that will not parse still gets its row. The alternative drops a run
     out of a listing over a truncated file, which is the answer least useful to
     whoever is looking for the run that went wrong.
+
+    **`machine` is the manifest and `host` is the box, and a consumer folding this
+    stream needs the second one.** Two machines legitimately share one manifest —
+    macmini and mbp are both `macos-personal-workstation` — so a count grouped on
+    `machine` reports three boxes where four wrote runs, and either Mac's history
+    stands in for the other's. `standards/data.md` § "A reader of a shared
+    directory selects by the key that made the writes unique" is the rule: the
+    filenames were keyed on the host precisely so the two could be told apart, and
+    a discriminator that reaches only the filename is half a mechanism.
+
+    `RunRecord.box` rather than `RunRecord.host`, because a record written before
+    schema 3 carries no host at all and a bare field would pool the whole of that
+    history into one nameless bucket. The manifest is the fallback there and not
+    an equivalent — it answers correctly for the boxes that do not share one.
     """
     try:
         record = runs.read(path)
     except runs.Unreadable:
-        return {'run': path.stem, 'machine': '', 'verb': '', 'outcome': 'unreadable'}
-    return {'run': path.stem, 'machine': record.machine, 'verb': record.verb, 'outcome': _unsuccessful(record) or 'ok'}
+        return {'run': path.stem, 'machine': '', 'host': '', 'verb': '', 'outcome': 'unreadable'}
+    return {
+        'run': path.stem,
+        'machine': record.machine,
+        'host': record.box,
+        'verb': record.verb,
+        'outcome': _unsuccessful(record) or 'ok',
+    }
 
 
 def _find(identifier: str | None) -> Path:
