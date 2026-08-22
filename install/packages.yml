@@ -1649,6 +1649,12 @@ go_tools:
     binary_pattern: "fleet_{version_num}_{os}_{go_arch}.tar.gz"
     description: Reports across the whole repo portfolio, including every open PR
 
+  - name: helpnav
+    package: github.com/datapointchris/helpnav
+    github_repo: datapointchris/helpnav
+    binary_pattern: "helpnav_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Browse any CLI's help as a tree and leave with the command typed
+
   - name: bbkt
     package: github.com/datapointchris/bbkt
     github_repo: datapointchris/bbkt
