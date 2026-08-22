@@ -204,12 +204,18 @@ installed **editable** against `src/` (`~/.local/share/uv/tools/dotfiles/.../dot
 at `~/dotfiles/src`). Switching branches therefore changes both the config this machine runs and
 the tool that deploys it — a coupling almost no other repo has, and one nothing announces.
 
-- **`~/dotfiles` stays on `main`.** Most work commits straight to `main` here and never needs a
-  branch at all (`standards/git-workflow.md` § "The default is a commit to main"). Work that
-  does earn one goes in a git worktree — `worktree new <slug>` — so the branch cannot reach the
-  machine until it lands. That is the same command a second concurrent session runs here for the
-  unrelated reason that a checkout's index is shared, and `worktree land` catches this checkout back
-  up afterwards, which in this repo is a redeploy rather than a formality.
+- **Every change here starts in a worktree, without checking for peers first.** `worktree new
+  <slug>` is the first tool call, before reading files. This is the one repo where the size rule
+  in `standards/git-workflow.md` § "The default is a commit to main" does not decide it, because
+  the cost of being on the wrong branch is not a lost commit but a machine running that branch —
+  the coupling above. The check for a peer session costs a `ListAgents` call and gets skipped;
+  the worktree costs seconds and never does. `worktree land` catches this checkout back up
+  afterwards, which here is a redeploy rather than a formality.
+- **`~/dotfiles` itself stays on `main`.** The primary checkout is deployed state, so a branch
+  belongs in a worktree rather than checked out over the machine.
+- **`EnterWorktree(path=…)` is what moves a session in**, and it refuses when the session's
+  directory is not inside the owning repo — a session launched from `~/dev` cannot enter one at
+  all. Drive it by absolute path from there; the isolated index is the part that matters.
 - **One worktree per stack, at its top.** A stacked branch checked out in a second worktree is
   skipped silently by `rebase.updateRefs`, leaving that ref on pre-rebase commits.
 - **Always run `dotfiles` from `~/dotfiles`, never from inside a worktree.** `DOTFILES_DIR` is
@@ -218,6 +224,15 @@ the tool that deploys it — a coupling almost no other repo has, and one nothin
   worktree's config over the machine's. A session that entered its worktree with `EnterWorktree`
   is inside one for every command it runs, so `cd ~/dotfiles &&` is the prefix that keeps an apply
   pointed at the machine rather than at the branch.
+- **To exercise the worktree's own code against the real machine**, run it from inside the
+  worktree with the machine's root passed in: `DOTFILES_DIR=/home/chris/dotfiles uv run --quiet
+  dotfiles <cmd>`. That measures the machine while running the branch's logic, which is the
+  combination the bullet above otherwise rules out.
+- **A `uv run` inside a worktree leaves a `.venv` there**, which the packages resource then
+  reports as undeclared binaries. That is the harness, not a finding — do not chase it.
+- What to run to verify a change is `tests/README.md`. The levels and their costs are declared in
+  `tests/e2e/levels.py` and the roster is `task --list-all | rg test:`; neither is restated here
+  or anywhere else, because a copy is the thing that goes stale.
 - `dotfiles check` and both apply paths warn when the checkout is off `main`
   (`checkout.stray_branch`). It is a warning, not a refusal — being on a branch here is a
   legitimate deliberate act, and the failure being guarded against is not knowing.
