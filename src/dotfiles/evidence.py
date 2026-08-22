@@ -385,15 +385,24 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     machine is behind and nothing about whether that matters; the first few names
     are usually enough to tell a routine sync from a kernel bump.
 
-    UNKNOWN names the flag rather than a verb. Every read verb measures, so a row
-    reaching here was declined by the caller — `--cached`, or the `--offline` that
-    implies it. A manager that answered nothing because it failed lands here too,
-    and the sentence covers it: `None` is one value and the two causes are not
-    separable through `Inventory`, whose whole value is that a test can hand in a
-    plain dict.
+    UNKNOWN has two causes and the absent manager is separated out, because that
+    one is answerable here: the command is on PATH or it is not, and `Inventory`
+    never has to carry it. A row saying a flag declined the call is wrong on a
+    machine that has no such manager to call.
+
+    Measured 2026-08-22 on the Arch e2e container, which declares flatpak apps and
+    has no flatpak: an `apply` — a run that measures — printed `nothing asked
+    flatpak what is behind` beside two rows correctly reading `no package manager
+    on this machine could be asked`. The manager row blamed a flag nobody typed.
+
+    What is left is genuinely one value: a caller who declined and a manager that
+    failed both arrive as `None`, and separating them would mean a second method on
+    a protocol whose whole value is that a test can hand in a plain dict.
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
+        if not shutil.which(syspkg.OUTDATED[item.name][0]):
+            return Evidence(Verdict.UNKNOWN, f'no {item.name} on this machine to ask what is behind')
         return Evidence(
             Verdict.UNKNOWN,
             f'nothing asked {item.name} what is behind — a network call, and `--cached` declines it',

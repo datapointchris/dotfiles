@@ -10,6 +10,7 @@ each manager.
 from __future__ import annotations
 
 import dataclasses as dc
+import shutil
 import stat
 from pathlib import Path
 from typing import Any
@@ -758,8 +759,12 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
     The detail names `--cached` because that is what produces the row. Every read
     verb measures, so an advice line naming `--refresh` would send a reader to type
     the state they are already in.
+
+    `apt` is shadowed so that it is *present*. The row below distinguishes a manager
+    nothing asked from one the machine does not have, and this Arch box has no apt —
+    without the shadow this asserts one sentence at a desk and the other in CI.
     """
-    answers_empty(fake_bin, 'dpkg-query')
+    answers_empty(fake_bin, 'dpkg-query', 'apt')
     behind(monkeypatch, {'apt': None})
     live = session(tmp_path, DECLARED, WORKSTATION)
 
@@ -768,6 +773,32 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
     assert '`--cached` declines it' in change.detail
+
+
+def test_a_manager_the_machine_does_not_have_says_so_rather_than_blaming_a_flag(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A row saying `--cached` declined the call is wrong where there was no call to
+    decline.
+
+    Measured 2026-08-22 on the Arch e2e container, which declares flatpak apps and
+    has no flatpak. An `apply` — a run that measures — printed `nothing asked
+    flatpak what is behind` beside two rows correctly reading `no package manager on
+    this machine could be asked`. The manager row blamed a flag nobody typed.
+
+    Answerable here and nowhere else in the chain: `Inventory` hands back one `None`
+    for every reason, and whether the command is on PATH is a question this can ask
+    directly.
+    """
+    answers_empty(fake_bin, 'dpkg-query')
+    monkeypatch.setattr(shutil, 'which', lambda name, *rest, **named: None if name == 'apt' else '/usr/bin/' + name)
+    behind(monkeypatch, {'apt': None})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.UNKNOWN
+    assert change.detail == 'no apt on this machine to ask what is behind'
 
 
 def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
