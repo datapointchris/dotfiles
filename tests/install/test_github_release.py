@@ -7,6 +7,8 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
+import subprocess
+
 import httpx2
 import pytest
 
@@ -529,6 +531,48 @@ class TestNewestVersion:
 
         assert github_release.newest_tag('aws/aws-cli', '', 'W/"held"') == github_release.Newest(version='2.36.19', etag='W/"t"')
         assert asked[0][1] == 'W/"held"'
+
+
+class TestTokenLookup:
+    """Asked on every request, so it has to cost once per run and not once per repo.
+
+    `_headers` calls it for each request and a refresh makes one per declared
+    release, which had `gh auth token` spawning dozens of subprocesses in a single
+    `plan` to answer a question whose answer cannot change while that plan runs.
+    """
+
+    def test_the_gh_subprocess_runs_once_however_often_it_is_asked(self, monkeypatch):
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        runs = []
+
+        def fake(command, **_kwargs):
+            runs.append(command)
+            return subprocess.CompletedProcess(command, 0, stdout='ghp_from_gh\n', stderr='')
+
+        monkeypatch.setattr(github_release.shutil, 'which', lambda name: '/usr/bin/gh')
+        monkeypatch.setattr(github_release.subprocess, 'run', fake)
+
+        assert [github_release.github_token() for _ in range(5)] == ['ghp_from_gh'] * 5
+        assert runs == [['gh', 'auth', 'token']]
+
+    def test_the_environment_still_wins_and_spawns_nothing(self, monkeypatch):
+        """The variable outranks `gh` and always did. Worth pinning beside the cache
+        because memoising an answer that came from the wrong rung would keep it for
+        the rest of the run."""
+        monkeypatch.setenv('GITHUB_TOKEN', 'ghp_from_the_environment')
+
+        def refuse(command, **_kwargs):
+            raise AssertionError(f'asked gh for a token the environment already carried: {command}')
+
+        monkeypatch.setattr(github_release.subprocess, 'run', refuse)
+
+        assert github_release.github_token() == 'ghp_from_the_environment'
+
+    def test_a_box_with_no_gh_and_no_variable_has_no_token(self, monkeypatch):
+        monkeypatch.delenv('GITHUB_TOKEN', raising=False)
+        monkeypatch.setattr(github_release.shutil, 'which', lambda name: None)
+
+        assert github_release.github_token() is None
 
 
 class TestCredentialScope:

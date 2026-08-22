@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import enum
+import functools
 import hashlib
 import json
 import os
@@ -224,8 +225,21 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
+@functools.cache
 def github_token() -> str | None:
-    """Private repos need one for both the API and the download; public ones do not."""
+    """Private repos need one for both the API and the download; public ones do not.
+
+    **Memoised because `_headers` asks on every request.** A refresh makes one
+    request per declared release, so this ran `gh auth token` once per repo — a
+    subprocess at roughly 35ms, spawned dozens of times in a run, to answer a
+    question whose answer cannot change while that run is going.
+
+    Cached for the life of the process, which is the life of one invocation.
+    Nothing rewrites `$GITHUB_TOKEN` after start and `gh` does not rotate a token
+    out from under a command. A test that changes either between cases is the one
+    caller that needs the old behaviour, and `tests/conftest.py` clears this
+    between every test rather than each test remembering to.
+    """
     token = os.environ.get('GITHUB_TOKEN')
     if token:
         return token

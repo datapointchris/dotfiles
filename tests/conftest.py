@@ -215,6 +215,26 @@ def logging_is_configured():
 
 
 @pytest.fixture(autouse=True)
+def a_token_lookup_that_forgot_the_last_test():
+    """Clear the memoised `github_token`, which is per-process and a suite is one.
+
+    `github_release.github_token` caches so a refresh does not spawn `gh auth token`
+    once per declared release. That is right for an invocation and wrong for a
+    suite: a test setting `$GITHUB_TOKEN` would otherwise be answered with whatever
+    the first test to ask happened to find, and the one it poisons is not the one
+    that set it — which is a failure that moves when tests are reordered.
+
+    Autouse rather than named by the tests that need it, because needing it is not
+    visible from the test that breaks.
+    """
+    from dotfiles import github_release
+
+    github_release.github_token.cache_clear()
+    yield
+    github_release.github_token.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def no_installing_on_this_machine(request, monkeypatch):
     """Refuse a command that would change the box the tests run on.
 
