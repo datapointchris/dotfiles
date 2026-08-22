@@ -330,6 +330,93 @@ def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, dir
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
 
 
+# ─── What the walk decides ────────────────────────────────────────────────────
+
+
+KEPT = {
+    'to-a-file': 'plain.txt',
+    'broken': 'gone.txt',
+    'to-a-directory': 'a',
+    'pointing-at-the-cache': '.cache',
+    'a/b/c/d/at-the-depth-limit': 'plain.txt',
+    'a-loop-back-to-the-root': '.',
+    '.local/share/keep/under-a-name-containing-an-excluded-one': 'plain.txt',
+    'Downloads.txt': 'plain.txt',
+}
+"""Every link the walk has to come back with, and what each points at.
+
+`pointing-at-the-cache` is the one worth stating: exclusion is about where the walk
+*is*, never about where a link goes. The link's own path carries no excluded
+component, so it is an ordinary result and its target is not followed.
+"""
+
+REFUSED = {
+    'Downloads': 'a',
+    'a/b/c/d/e/past-the-depth-limit': 'plain.txt',
+    '.cache/inside-an-excluded-directory': 'plain.txt',
+}
+"""The three it must not come back with.
+
+A link *named* like an excluded directory and pointing at one is indistinguishable
+from the directory itself to everything downstream, which is what the following
+`is_dir()` is for — and why `Downloads.txt` beside it, pointing at a file, is kept.
+"""
+
+
+def a_tree_of_every_shape(root: Path) -> dict[str, Path]:
+    """One directory holding each thing the walk decides about.
+
+    In one tree rather than one per case, because the decisions are not
+    independent: the depth cases mean nothing without a link shallow enough to
+    keep beside them, and the exclusion cases nothing without one the same walk
+    admits.
+    """
+    for directory in ('a/b/c/d/e', '.cache', '.local/share/keep'):
+        (root / directory).mkdir(parents=True)
+    (root / 'plain.txt').write_text('anything')
+
+    made = {}
+    for name, target in {**KEPT, **REFUSED}.items():
+        link = root / name
+        link.symlink_to(root / target)
+        made[name] = link
+    return made
+
+
+def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should_not(tmp_path: Path) -> None:
+    """Eleven shapes, and which of them come back.
+
+    A symlink is a result rather than a place to descend, whatever it points at —
+    which is what makes the loop safe and what keeps `to-a-directory` from being
+    walked twice.
+
+    Pinned because the traversal was rewritten from a recursive `iterdir` onto
+    `os.scandir`, and every answer here was previously decided by which of four
+    `is_dir()`/`is_symlink()` calls fired in which order. `KEPT` and `REFUSED` carry
+    what each case is for.
+    """
+    made = a_tree_of_every_shape(tmp_path)
+
+    found = set(core._find_symlinks(tmp_path))
+
+    assert found == {made[name] for name in KEPT}
+
+
+def test_a_directory_admitted_by_its_parent_is_judged_on_the_name_just_added(tmp_path: Path) -> None:
+    """The walk's exclusion check tests only the tail, on the strength of the
+    parent having passed the general one.
+
+    Equivalent because a run present here and absent from the parent has to end at
+    the component just appended. Held to the general predicate directly, since the
+    walk cannot show a difference that does not exist.
+    """
+    admitted = Path('/home/someone/.config/environment.d')
+    refused = Path('/home/someone/.local/share/Trash')
+
+    assert core._excluded_by_the_component_just_added(admitted.parts) is core.is_excluded_search_dir(admitted) is False
+    assert core._excluded_by_the_component_just_added(refused.parts) is core.is_excluded_search_dir(refused) is True
+
+
 # ─── Stream Contract ──────────────────────────────────────────────────────────
 
 
