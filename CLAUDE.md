@@ -1,8 +1,9 @@
 # Claude Code - Dotfiles Development Context
 
-Universal rules — git safety and commit conventions, testing, code comments, environment and tool
-preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
-`standards/`. Neither is restated here.
+Universal rules live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
+`standards/`. Neither is restated here. `fleet standards applies dotfiles` is which ones reach
+this repo — an enumeration in this line would drift, which is the failure
+`standards/documentation.md` § "Where rules live" names.
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
@@ -32,8 +33,7 @@ none of it.
 
 **File Naming and Organization**:
 
-- All markdown files use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
-- Exceptions: README.md and CLAUDE.md (standard conventions)
+- Markdown filenames follow `standards/documentation.md` § "Markdown filenames are lowercase with hyphens"
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
 **Shell Script Patterns**:
@@ -68,7 +68,7 @@ none of it.
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 
-**Standards First**: Always prefer industry-standard defaults (e.g., GoReleaser naming, conventional commits). Do not deviate unless there is a documented reason.
+**Standards First**: Prefer the industry-standard default over a local invention, and where you deviate, write the reason down. Conventional commits are enforced at `commit-msg` rather than preferred, so that one is not a judgement call.
 
 **Generated Config — Never Hand-Edit** (⚠️ MANDATORY):
 
@@ -266,19 +266,20 @@ hub (`~/docs`), not here.
   - Good: "Copy the config file"
   - Bad: "You should copy the config file"
   - Bad: "Now you can copy the config file"
-- WHY over WHAT - explain decisions and trade-offs, not just commands
 - Conversational paragraphs over bulleted lists - maintain context and reasoning
-- Reference files instead of copying code examples
 - Technical and factual, not promotional
 - Add new docs to `mkdocs.yml` navigation
 
+Leading with why, and pointing at a file rather than pasting its contents, are
+`standards/documentation.md` § "Lead with what and why, then link to details" and
+§ "Never duplicate content that has a canonical source".
+
 **Never write a list a command produces** (⚠️ MANDATORY):
 
-A tool roster, a flag reference, a function table, a package list, a task list,
-a file enumeration, a count — each is true only at the instant it is written,
-and a reader who cannot verify it stops trusting the page. Write the command
-instead: `task --list-all`, `packages list --section=<x>`, `doit kit list`,
-`eza -1 install/manifests/`, `rg '^[a-z_]+\(\)' <lib>`, `<tool> --help`.
+The rule is `~/.claude/CLAUDE.md` § "A Count Is a Command, Not a Constant". The commands
+that replace the lists this repo kept writing: `task --list-all`,
+`packages list --section=<x>`, `doit kit list`, `eza -1 install/manifests/`,
+`rg '^[a-z_]+\(\)' <lib>`, `<tool> --help`.
 
 A doc earns its lines by explaining a decision, a rejected alternative, a
 non-obvious constraint, or a measured tradeoff — the things the code cannot
