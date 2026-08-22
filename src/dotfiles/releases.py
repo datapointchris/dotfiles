@@ -44,11 +44,22 @@ Twice a day is far more often than these tools release and far less often than
 shorter turns the timer into a rate-limit problem.
 """
 
-WORKERS = 8
-"""Bounded, because the ceiling here is GitHub's rate limit rather than the CPU.
+WORKERS = 16
+"""Bounded, because the ceiling here is GitHub rather than the CPU — but not the
+rate limit, which is a budget per hour and not per second.
 
-Unauthenticated that limit is 60 requests an hour, which one unbounded refresh of
-every declared release would spend a third of in a second.
+What a worker count decides is *concurrency*, and GitHub's documented guidance on
+that is to stay under 100 requests in flight. The request count is the same
+whatever this says: one per present declared release, counted from the plan.
+
+Measured 2026-08-22 over 73 of them, revalidating, median of three:
+
+    8   3.34s      24  2.04s
+    16  1.75s      32  0.92s
+
+32 is faster still and is not what this is set to. Halving the sweep is worth a
+doubling; quartering it is worth four times the requests in flight against one
+host, on a fleet where the rate limit is already the thing being careful about.
 """
 
 
