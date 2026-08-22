@@ -26,9 +26,12 @@ brew.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import shutil
+import tempfile
 from collections.abc import Sequence
+from pathlib import Path
 
 from dotfiles import effects
 from dotfiles.effects import Output
@@ -387,6 +390,10 @@ machine's own database is untouched and nothing needs root. Refreshing the real
 one is not an option: `pacman -Sy` without the `-u` is the partial-upgrade state
 Arch does not support, and a read verb must not leave a machine in it.
 
+apt has the same defect and ships no equivalent, so `_apt_outdated` does the same
+thing by hand and the row here is only its second half — the listing, which that
+function runs against the copy it refreshed.
+
 `--nocolor` because `Color` in `pacman.conf` would otherwise put escape codes in
 front of the first field, and `_names` reads that field. A parser that depends on
 a config file is one that works here and not on the next box.
@@ -415,25 +422,30 @@ is still a non-answer. `checkupdates` dies that way for every real fault it has 
 no fakeroot, an unwritable database copy, a sync that failed.
 """
 
-NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman'})
+NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman', 'apt'})
 """Which currency reads reach the network, and so are the ones `--cached` declines.
 
 None of them has a local answer worth giving. Flathub's available versions live on
-Flathub, the App Store has no offline catalogue, `yay -Qu` asks the AUR's RPC about
-every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%, which is
-the tell that a process is waiting rather than working — and `checkupdates` syncs a
-database copy before reading it.
+Flathub, the App Store has no offline catalogue, and `yay -Qu` asks the AUR's RPC
+about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
+which is the tell that a process is waiting rather than working.
 
-`pacman` is the entry that looks wrong and is not. The read it names is a sync, and
-the local answer it replaced was worse than no answer: `pacman -Qu` against a stale
-database reports a machine current, which reads as measured.
+`pacman` and `apt` are the two that look wrong and are not. Each names a read that
+refreshes a private copy of an index before consulting it, and the local answer
+each replaced was worse than no answer: `pacman -Qu` and `apt list --upgradable`
+against stale indexes report a machine current, which reads as measured. `OUTDATED`
+and `_apt_outdated` carry what each was measured at.
+
+brew and its casks are the ones genuinely left out. `brew outdated` reads a local
+tap clone that goes stale the same way, and this has not been measured on a Mac —
+so their absence here records what was checked rather than a claim they are exempt.
 
 **This names round trips; it does not ration them.** Every read verb measures, so
-all four are asked on a plain `plan` or `check`, and the set is what a run declining
+all five are asked on a plain `plan` or `check`, and the set is what a run declining
 the network consults to know which reads it must skip. Together they are a couple of
-seconds on this machine, worth not spending when somebody has said they do not want
-the network — and worth spending every other time, because what a machine is behind
-on is exactly what they asked about.
+seconds, worth not spending when somebody has said they do not want the network —
+and worth spending every other time, because what a machine is behind on is exactly
+what they asked about.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {
@@ -459,6 +471,59 @@ should not silently move the other.
 """
 
 
+APT_LISTS = Path('/var/lib/apt/lists')
+"""The index `apt list --upgradable` compares against, and cannot refresh unprivileged.
+
+Read to seed the private copy below. Never written: refreshing it is `apt-get
+update` as root, which a read verb does not get to be.
+"""
+
+
+def _apt_redirect(scratch: Path) -> tuple[str, ...]:
+    """Where an unprivileged apt keeps the state it would otherwise need root for.
+
+    Both options are needed. `Dir::State::lists` is the index itself, and
+    `Dir::Cache` moves the partial downloads that land beside it — without the
+    second, apt writes into `/var/cache/apt/archives/partial` and complains it
+    cannot.
+    """
+    return ('-o', f'Dir::State::lists={scratch / "lists"}', '-o', f'Dir::Cache={scratch / "cache"}')
+
+
+def _apt_outdated() -> frozenset[str] | None:
+    """apt's currency, measured against an index this run refreshed itself.
+
+    The same defect `checkupdates` exists to cure on Arch, and apt ships nothing
+    equivalent. `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers
+    from whenever that was last `apt-get update`d. Measured 2026-08-22 in the
+    Ubuntu test image: the machine's own lists reported nothing upgradable while a
+    refreshed copy reported eighteen packages.
+
+    apt takes its whole state layout from options, so a redirected `update` needs no
+    root and touches nothing the machine reads. The copy is seeded from
+    `APT_LISTS` for the reason checkupdates copies the pacman database: a cold fetch
+    is 25.6 MB and a delta from what the machine already has is 2.8 MB. Thrown away
+    afterwards, so nothing accumulates and there is no second index on disk.
+
+    A refresh that fails is not fatal. The listing still runs, against the seeded
+    copy, which is the machine's own answer — worse than a current one and better
+    than none, and the row says a number either way.
+    """
+    with tempfile.TemporaryDirectory(prefix='dotfiles-apt-') as directory:
+        scratch = Path(directory)
+        for leaf in ('lists/partial', 'cache/archives/partial'):
+            (scratch / leaf).mkdir(parents=True)
+        # Whatever it managed to copy is the seed. `copytree` collects per-file
+        # failures and raises at the end, so a `lists/partial` this account cannot
+        # read costs the files under it and not the other forty megabytes.
+        with contextlib.suppress(OSError, shutil.Error):
+            shutil.copytree(APT_LISTS, scratch / 'lists', dirs_exist_ok=True)
+        redirect = _apt_redirect(scratch)
+        effects.run(['apt-get', 'update', '-qq', *redirect], output=Output.QUIET)
+        listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET)
+    return _names(listed.stdout) if listed.ok else None
+
+
 def outdated(manager: str) -> frozenset[str] | None:
     """What this manager has installed and behind, or None where it cannot say.
 
@@ -470,10 +535,17 @@ def outdated(manager: str) -> frozenset[str] | None:
     An empty result is also returned for a manager with nothing to upgrade, and
     that is the answer, not a non-answer: the command exited 0 having listed
     nothing.
+
+    apt is the one manager whose read is two commands and a scratch directory
+    rather than a row of argv, which is why it branches here instead of being
+    expressed in `OUTDATED`. The probe still guards it: `apt-get` ships in the same
+    package as `apt`, so one answering `--version` vouches for both.
     """
     command = OUTDATED.get(manager)
     if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
         return None
+    if manager == 'apt':
+        return _apt_outdated()
     listed = effects.run(list(command), output=Output.QUIET)
     if listed.ok:
         return _names(listed.stdout)

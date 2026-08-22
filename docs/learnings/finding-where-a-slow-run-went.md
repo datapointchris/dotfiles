@@ -29,11 +29,13 @@ visible from a verdict row:
 - **The same flag pays for two other things nobody looks for.** `refresh` is a
   session-wide permission to spend the network, not a release-lookup switch.
   `plugins` fetches every clone under it and `evidence.query` asks the managers in
-  `syspkg.NETWORKED`. Two of those wear the spelling of a local index read and are
-  not one: `yay -Qu --aur` is a second of AUR round trip, and `checkupdates` syncs
-  a private copy of the pacman database before reading it. Measured on Arch: of the
+  `syspkg.NETWORKED`. Three of those wear the spelling of a local index read and
+  are not one: `yay -Qu --aur` is a second of AUR round trip, `checkupdates` syncs
+  a private copy of the pacman database before reading it, and apt's read
+  refreshes a copy of `/var/lib/apt/lists` the same way. Measured on Arch: of the
   7.6s a refresh added to a plan, the release lookup was 4.3s and the plugin
-  fetches were 2.9s.
+  fetches were 2.9s. Measured in the Ubuntu test image: apt's read is 1.8s, of
+  which the refresh is 0.9s.
 
 ## Solution
 

@@ -726,7 +726,7 @@ def test_a_manager_is_planned_for_every_one_the_machine_installs_through(tmp_pat
 def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset()})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     assert 'apt' not in manager_rows(live)
 
@@ -734,10 +734,15 @@ def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Pa
 def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """STALE rather than MISSING: the manager is there and doing its job, and what
     drifted is the machine's distance from what its repositories now hold. A count
-    alone says a machine is behind and nothing about whether it matters."""
+    alone says a machine is behind and nothing about whether it matters.
+
+    `refresh` because apt's currency read refreshes an index copy before consulting
+    it, which puts it in `syspkg.NETWORKED` — a session that declined the network
+    reaches the row below without asking the stub.
+    """
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset({'curl', 'linux-image-generic'})})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     change = manager_rows(live)['apt']
 
@@ -770,8 +775,8 @@ def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pyt
     measured whatever the caller said, and the ones that need a round trip are the
     only thing `--cached` buys back.
 
-    apt is the local one here rather than pacman, which reads through `checkupdates`
-    and syncs a database copy to answer.
+    brew is the local one here. Both Arch managers and apt refresh an index copy to
+    answer, which is the round trip that put them in `NETWORKED`.
     """
     asked: list[str] = []
 
@@ -783,8 +788,8 @@ def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pyt
 
     assert ev.query('outdated:mas') is None
     assert ev.query('outdated:mas', refresh=True) == frozenset()
-    assert ev.query('outdated:apt') == frozenset()
-    assert asked == ['mas', 'apt']
+    assert ev.query('outdated:brew') == frozenset()
+    assert asked == ['mas', 'brew']
 
 
 def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

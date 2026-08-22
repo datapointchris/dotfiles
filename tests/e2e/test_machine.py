@@ -164,6 +164,32 @@ def test_the_apps_work(converged_machine: Machine) -> None:
     assert result.returncode == 0, result.stdout[-4000:]
 
 
+def test_apt_currency_is_measured_against_an_index_the_run_refreshed(machine: Machine) -> None:
+    """The unprivileged refresh, against a real apt on a real Ubuntu.
+
+    `syspkg._apt_outdated` redirects `Dir::State::lists` and `Dir::Cache` at a
+    scratch directory so `apt-get update` needs no root, then lists against what it
+    fetched. Nothing below this level can say whether apt accepts that: the unit
+    tests assert the argv and a stub answers it.
+
+    The machine's own lists are what the assertion is against. These images ship them
+    stale, so a run reading them reports nothing upgradable — the measured-looking
+    wrong answer the redirect exists to stop.
+
+    Gated on the manager and the route rather than on the image name. A firewalled
+    environment cannot reach the archive, so its refresh fails and the seeded index
+    is the answer — correct behaviour, and not what this measures.
+    """
+    if machine.environment.firewalled or not machine.succeeds('command -v apt-get'):
+        pytest.skip('needs apt and a route to the archive')
+    home = machine.environment.home
+    probe = "from dotfiles.providers import syspkg; print(len(syspkg.outdated('apt') or ()))"
+    measured = machine.exec(f'cd {home}/dotfiles && uv run python -c "{probe}"')
+
+    assert measured.returncode == 0, measured.stdout[-4000:]
+    assert int(measured.stdout.strip().splitlines()[-1]) > 0, 'a stale index reports nothing behind, which is what this refresh is for'
+
+
 def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
     """There is deliberately no `~/.zshenv`: `/etc/zshenv` (or `/etc/zsh/zshenv`
     on Debian) is what points zsh at `~/.config/zsh`, and a missing one means the

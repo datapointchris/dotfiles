@@ -176,6 +176,20 @@ for, and a denylisted pair blocks it whether the binary on PATH is real or not. 
 one call that pattern does not reach is `no_stopping_this_machines_daemons`.
 """
 
+REDIRECTED_STATE = 'Dir::State::lists='
+"""The option that turns an `apt-get update` into a read of somebody else's directory.
+
+`('apt-get', 'update')` is on the list above because the bare form rewrites
+`/var/lib/apt/lists` and needs root for it. Pointed at a scratch directory it
+writes only there, which is how `syspkg._apt_outdated` measures apt currency
+without escalating — a read, and the guard has to be able to tell them apart.
+"""
+
+
+def would_change_this_machine(argv: tuple[str, ...]) -> bool:
+    """Whether a denylisted pair is really the form that writes to the machine."""
+    return argv[:2] in INSTALLING and not any(part.startswith(REDIRECTED_STATE) for part in argv)
+
 
 class WouldInstall(BaseException):
     """Raised where an install was attempted, and deliberately not an `Exception`.
@@ -308,7 +322,7 @@ def no_installing_on_this_machine(request, monkeypatch):
     def refuse_installs(original):
         def guarded(command, *args, **kwargs):
             argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
-            if argv[:2] in INSTALLING:
+            if would_change_this_machine(argv):
                 raise WouldInstall(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
             return original(command, *args, **kwargs)
 

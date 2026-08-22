@@ -195,10 +195,17 @@ def records(sandbox: Sandbox, *tools: str) -> Path:
 
     The file is the assertion. A message saying root was declined proves what the
     run *said*; an absent witness proves `groupadd` was never handed the account.
+
+    A redirected `apt-get update` writes no line, because it is not one of these.
+    `syspkg._apt_outdated` points `Dir::State::lists` at a scratch directory
+    precisely so the currency read needs no root, and a witness that could not tell
+    that apart would report every measuring run as an escalation. Same rule as
+    `would_change_this_machine` in `tests/conftest.py`, which guards the same call.
     """
     log = sandbox.root / WITNESS
+    unprivileged = 'case "$*" in *Dir::State::lists=*) exit 0 ;; esac'
     for tool in tools:
-        sandbox.shadow(tool, f'#!/bin/sh\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
+        sandbox.shadow(tool, f'#!/bin/sh\n{unprivileged}\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
     return log
 
 
