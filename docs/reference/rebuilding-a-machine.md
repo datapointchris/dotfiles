@@ -99,15 +99,18 @@ filesystem in one command and there is nothing to carry at all.
 
 ```bash
 ./install.sh --machine wsl-work-workstation --offline
-dotfiles plan  --machine wsl-work-workstation
+dotfiles plan  --machine wsl-work-workstation --offline
 dotfiles apply --machine wsl-work-workstation --offline
 ```
 
-`--offline` belongs on both: it tells the bootstrap where uv and the wheels come
-from, and it tells the apply to install from the staged bundle rather than the
-network. The `plan` in between matters most on this box, where a run started
-without one has sat on a blocked cargo download having never said what it meant
-to fetch.
+`--offline` belongs on all three, and on the `plan` for a reason of its own: every
+read verb measures upstream unless told not to, so a bare `plan` here asks GitHub
+about every declared release, fetches every plugin clone and refreshes a copy of
+the apt index — none of which this box can reach. `--offline` measures against the
+staged bundle instead, and `--cached` is the same decline where there is no bundle.
+
+The `plan` in between matters most on this box, where a run started without one
+has sat on a blocked cargo download having never said what it meant to fetch.
 
 Neither of the last two lines needs the bootstrap again. A bundle that arrives
 later — a newer one carried over to a machine already built — is unpacked by

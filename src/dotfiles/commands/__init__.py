@@ -40,16 +40,28 @@ A verb was invoked because somebody wanted an answer, so it gives the current on
 needs it to answer "is anything here behind" at all — which is the question it was
 asked. A figure up to `releases.TTL` old serves none of them.
 
-`check` read the cache until this was written, on the argument that it runs
-unattended and must not spend a request per declared release. That argument rested
-on a timer firing every ten minutes, and `schedule.INTERVAL_SECONDS` has been a day
-since `0f85cb33`. One refresh a day is not a budget worth designing around.
-Conditional requests settled the remainder: a revalidated refresh bills a handful
-of requests rather than one per release, because GitHub does not charge for a 304.
+The budget that would argue against it is not there. `check` is the verb that runs
+unattended, and `schedule.INTERVAL_SECONDS` fires it once a day — one refresh a day
+is not worth designing around. Conditional requests settle the rest: a revalidated
+refresh bills a handful of requests rather than one per release, because GitHub does
+not charge for a 304.
 """
 
 
-def refresh_flag() -> Any:
+EVERY_SOURCE = 'GitHub, the package managers and each plugin remote'
+"""What a composite verb reaches. `main.plan`, `main.check` and `main.apply`."""
+
+RELEASES_AND_MANAGERS = 'GitHub and the package managers'
+"""What `packages` reaches: declared releases, and the managers holding packages back."""
+
+THE_MANAGERS = 'the package managers'
+"""What `system` reaches. It asks GitHub about nothing."""
+
+EACH_PLUGIN_REMOTE = 'each plugin remote'
+"""What `plugins` reaches. It asks no package manager."""
+
+
+def refresh_flag(sources: str = EVERY_SOURCE) -> Any:
     """The currency axis, spelled one way on every verb that reads it.
 
     Tri-state rather than a plain bool, because `--offline` has to tell "not passed"
@@ -69,17 +81,18 @@ def refresh_flag() -> Any:
     other side. `show_default` cannot do it either: the declared value is `None`,
     which is the tri-state and not the answer.
 
-    The three sources are named because one line serves six verbs and each reads a
-    different subset: `plugins` asks no package manager and `system` asks GitHub
-    about nothing. Naming only what the composite verbs reach made this line false
-    on the two doors that reach less, and a reader has no way to tell a help string
-    that overstates from one that is right.
+    **`sources` is a parameter because one line rendered on eight leaves is wrong on
+    four of them.** `system` asks GitHub about nothing and `plugins` asks no package
+    manager, so a line naming all three overstates there — and `help.md` § "Every
+    screen is complete at its own altitude" wants each screen true on its own. The
+    flag's spelling and its default stay identical, which is what
+    `cli-design.md` asks for; only the sentence narrows.
     """
     return typer.Option(
         None,
         '--refresh/--cached',
         show_default=False,
-        help='Ask upstream what is newest — GitHub, the package managers, each plugin remote — or answer from cache (default: refresh)',
+        help=f'Ask {sources} what is newest, or answer from cache (default: refresh)',
     )
 
 

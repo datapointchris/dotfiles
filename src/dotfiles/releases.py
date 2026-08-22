@@ -1,13 +1,19 @@
 """Cached upstream release versions, so a tool that is present can still read as behind.
 
-`check` runs at a prompt and unattended on a timer, so it must not spend one GitHub
-API call per declared release answering "is anything out of date". It reads this
-cache, and the network is entered only by `--refresh`.
+Every read verb measures — `commands.MEASURES_UPSTREAM` carries why — so this is
+what a run *writes*, and what `--cached` reads when a caller declines the network.
+A rate-limited box, one with no route out, or somebody who wants the local answer
+in under a second are the three callers it serves.
 
-The consequence is deliberate: a release published in the last hour reads as
-current until the cache is refreshed. What the cache must never do is let an
-*unmeasured* tool read as current — a missing or expired entry answers `UNKNOWN`,
-never `ok`. That is the same rule `Verdict.UNKNOWN` exists for, and the state the
+Conditional requests are what make measuring affordable: each entry carries the
+`ETag` it was last answered with, so a project that has not released since answers
+304 and GitHub does not bill it. `refresh` and `github_release.revalidate` have the
+measurement.
+
+The stale-read consequence is why `--cached` is a flag rather than the default: a
+release published since the last refresh reads as current under it. What the cache
+must never do is let an *unmeasured* tool read as current — a missing or expired
+entry answers `UNKNOWN`, never `ok`. That is the same rule `Verdict.UNKNOWN` exists for, and the state the
 bash it replaces got wrong: an empty version string there falls through into "will
 reinstall", which is a guess wearing a measurement's clothes.
 
@@ -186,6 +192,13 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
     """
     if not wanted:
         return dict(existing)
+
+    # Primed on this thread, before any other exists. `functools.cache` releases
+    # its lock across the call it is filling, so every worker arriving before the
+    # first returns misses too — measured with 73 tasks through 16 workers and a
+    # 20ms call: 16 subprocesses, one per worker, where the memo was added to make
+    # it one per run. The pool's edge is the only place that can be true.
+    github_release.github_token()
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         fetched = list(pool.map(lambda item: (item, _newest(item, existing.get(item.key))), wanted))

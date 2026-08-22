@@ -13,6 +13,8 @@ from __future__ import annotations
 import stat
 from pathlib import Path
 
+import pytest
+
 from dotfiles.providers import syspkg
 
 
@@ -117,17 +119,36 @@ def test_apt_currency_is_read_against_an_index_this_run_refreshed(fake_bin: Path
     assert all('Dir::State::lists=' in line and 'Dir::Cache=' in line for line in handed)
 
 
-def test_an_apt_refresh_that_fails_still_reports_what_the_machine_knows(fake_bin: Path) -> None:
-    """A machine with no route out has an index, and it is the one apt already had.
+def test_an_apt_refresh_that_fails_is_a_non_answer_rather_than_a_smaller_one(fake_bin: Path) -> None:
+    """A count taken against an index nothing refreshed is a count nobody measured.
 
-    Worse than a current answer and better than none, so the refresh failing is not
-    fatal — the row says a number rather than going UNKNOWN. The failure that does
-    matter is the listing, which is what `None` is reserved for.
+    The listing would answer from whatever the seed held, and an empty seed answers
+    *nothing behind* — a machine reported current by a run that reached no archive.
+    This repo's own Debian image builds that state: its Dockerfile runs `rm -rf
+    /var/lib/apt/lists/*`, so only the network is missing.
+
+    `None` is what the pacman path already answers for the same failure, and it is
+    what `by_currency` turns into UNKNOWN with a cause.
     """
     manager(fake_bin, 'apt', 'printf "Listing...\\ncurl/noble 8.5.0 amd64 [upgradable from: 8.4.0]\\n"')
     executable(fake_bin, 'apt-get', '#!/bin/sh\necho "could not resolve host" >&2\nexit 100\n')
 
-    assert syspkg.outdated('apt') == frozenset({'curl'})
+    assert syspkg.outdated('apt') is None
+
+
+def test_a_currency_read_that_never_answers_is_not_read_as_nothing_behind(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`EMPTY_IS_NONZERO` decodes "exited non-zero having printed nothing" as
+    *nothing to upgrade*, which is `checkupdates`' and `yay`'s convention.
+
+    A read that hit its deadline exits non-zero too, and reading that the same way
+    would report a firewalled Arch box as current — the exact answer
+    `syspkg.CURRENCY_SECONDS` exists to stop it giving. `effects.run` names the
+    expiry in the transcript, so the silence test separates them.
+    """
+    monkeypatch.setattr(syspkg, 'CURRENCY_SECONDS', 0.2)
+    manager(fake_bin, 'checkupdates', 'sleep 5')
+
+    assert syspkg.outdated('pacman') is None
 
 
 def test_a_managers_progress_on_stderr_is_not_a_package_behind(fake_bin: Path) -> None:

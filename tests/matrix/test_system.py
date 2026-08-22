@@ -750,10 +750,10 @@ def a_machine_with_a_flatpak_app_behind(sandbox: Sandbox) -> None:
 def test_this_door_measures_a_networked_manager_without_being_asked_to(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`dotfiles system plan` is the door whose whole subject is the system.
 
-    It declined the network until this was written, so it reported `nothing asked
-    flatpak what is behind` while the composite `plan` measured — and the advice on
-    that row named a `--refresh` this verb did not accept. A door that prints an
-    instruction it rejects is worse than one that says nothing.
+    A narrower door answering from a cache while the composite one measures is two
+    front doors disagreeing about one dataset, and the row it produced named a
+    `--refresh` this verb did not accept. A door that prints an instruction it
+    rejects is worse than one that says nothing.
 
     PENDING rather than a verdict read off one document: a manager behind its
     remote is repairable, so `plan` keeps the row and `check` puts it in the

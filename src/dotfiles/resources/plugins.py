@@ -68,9 +68,24 @@ class Observed:
     behind: frozenset[str] = frozenset()
     """Addresses whose checkout is behind the branch it tracks.
 
-    Empty on a run that did not ask to spend the network, which is not the same as
-    "none are behind" — measuring it costs a `git fetch` per plugin, so `check`
-    declines and the row says only what it looked at.
+    Empty on a run that declined the network, which is not the same as "none are
+    behind" — measuring it costs a `git fetch` per plugin, and `--cached` says not
+    to spend it.
+    """
+
+    unaskable: frozenset[str] = frozenset()
+    """Addresses whose remote could not be reached, so nothing knows either way.
+
+    `clone.behind` answers `bool | None` and the None is this: a `git fetch` that
+    failed, an upstream that is not configured, a checkout that is not one. Folding
+    it into `behind`'s absence would report a plugin *current* on the strength of a
+    fetch nobody completed — the same measured-looking wrong answer `by_currency`
+    refuses to give a package manager, and the reason it gives one an UNKNOWN row.
+
+    Its reach is what makes it matter now. The fetch was opt-in behind `--refresh`
+    and is what `plan`, `check`, both `plugins` doors and the daily unattended run
+    all do, so a machine with no route out reported nine current plugins rather
+    than nine it could not ask about.
     """
 
     managers: tuple[tuple[str, str], ...] = ()
@@ -129,11 +144,13 @@ class Observed:
         """Each plugin with where it came from, then the managers with nothing outstanding.
 
         A checkout that is behind is left out, because `diff` already gives it a
-        row of its own — and `behind` is only ever populated by a run that spent
-        the network, so on a `check` this is every present plugin.
+        row of its own — and so is one nothing could ask about, for the same
+        reason. Both sets are empty on a run that declined the network, so this is
+        every present plugin there.
         """
         pending = {address for address, _ in self.unsynced}
-        found = tuple(Examined(address, self.origins.get(address, '')) for address in sorted(self.present - self.behind))
+        answered = self.present - self.behind - self.unaskable
+        found = tuple(Examined(address, self.origins.get(address, '')) for address in sorted(answered))
         managers = tuple(Examined(address, 'nothing pending') for address, _ in sorted(self.managers) if address not in pending)
         return found + managers
 
@@ -151,8 +168,8 @@ drag the other with it.
 """
 
 
-def _behind(present: tuple[DesiredItem, ...], home: Path) -> frozenset[str]:
-    """Which of these clones is behind the branch it tracks.
+def _fetched(present: tuple[DesiredItem, ...], home: Path) -> tuple[frozenset[str], frozenset[str]]:
+    """Which of these clones is behind its branch, and which could not be asked.
 
     `clone.behind` is a `git fetch` — a read that shares nothing with the next one,
     so running them together turns the sum of every round trip into the slowest
@@ -163,13 +180,20 @@ def _behind(present: tuple[DesiredItem, ...], home: Path) -> frozenset[str]:
     third of what a refreshing `plan` spent on the network — and none of it the
     release lookup anyone would think to look at first.
 
-    A set is the answer, so nothing here depends on the order they finish in.
+    **Both sets, because `clone.behind` has three answers and a boolean has two.**
+    Its None is a fetch that failed or an upstream that is not there, and reading
+    that as False reports a plugin current on the strength of a call nobody
+    completed. Sets rather than an order, so nothing depends on which finishes
+    first.
     """
     if not present:
-        return frozenset()
+        return frozenset(), frozenset()
     with ThreadPoolExecutor(max_workers=min(FETCH_WORKERS, len(present))) as pool:
         answered = list(pool.map(lambda item: (item.address, clone.behind(item, home)), present))
-    return frozenset(address for address, is_behind in answered if is_behind)
+    return (
+        frozenset(address for address, is_behind in answered if is_behind),
+        frozenset(address for address, is_behind in answered if is_behind is None),
+    )
 
 
 class PluginsResource:
@@ -186,10 +210,22 @@ class PluginsResource:
             for item in clones
             if item.address in present and not clone.subdirectory(item) and clone.tracked(item, session.home) is None
         }
+        # A subdirectory plugin is excluded because there was never a repository to
+        # ask: `clone.py` copies it out of a shallow checkout it then deletes. Its
+        # None is the same value an unreachable remote gives, and the difference is
+        # that this one is not a fault — the same line `unmanaged` draws one field
+        # up, and the reason `clone.tracked` cannot draw it.
+        #
+        # `unmanaged` stays in. `clone.behind` answers None for it without fetching,
+        # so excluding it would save no round trip, and `diff` reaches its more
+        # specific row first either way.
+        asked = tuple(item for item in clones if item.address in present and not clone.subdirectory(item))
+        behind, unaskable = _fetched(asked, session.home) if session.refresh else (frozenset(), frozenset())
         return Observed(
             present=present,
             met=session.preconditions,
-            behind=_behind(tuple(item for item in clones if item.address in present), session.home) if session.refresh else frozenset(),
+            behind=behind,
+            unaskable=unaskable,
             managers=tuple((item.address, item.name) for item, _ in syncs),
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
             unmanaged=unmanaged,
@@ -215,6 +251,8 @@ class PluginsResource:
                 changes.append(_unmanaged(item, directory))
             elif item.address in observed.behind:
                 changes.append(_change(item, Verdict.STALE, f'behind {_short(clone.repository(item))}', observed.met))
+            elif item.address in observed.unaskable:
+                changes.append(_unaskable(item))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
@@ -245,6 +283,29 @@ def _short(repo: str) -> str:
     it is.
     """
     return repo.removeprefix('https://github.com/').removesuffix('.git')
+
+
+def _unaskable(item: DesiredItem) -> Change:
+    """A checkout whose remote did not answer, so nothing knows whether it is behind.
+
+    UNKNOWN rather than MATCHED, which is the same call `evidence.by_currency`
+    makes for a package manager nobody could ask: a fetch that failed says nothing
+    about the clone, and reporting it current is a measured-looking wrong answer.
+
+    `Repair.NONE`, so `apply` does not try to pull it. Whatever stopped the fetch —
+    no route, a private repo, a remote that has moved — stops the pull as well, and
+    a run that attempted it would fail the row rather than report it.
+    """
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        Verdict.UNKNOWN,
+        repair=Repair.NONE,
+        detail=f'{_short(clone.repository(item))} did not answer, so nothing knows whether this is behind',
+        advice='check the route to the remote, or that this account can read it',
+        desired=item,
+    )
 
 
 def _unmanaged(item: DesiredItem, directory: str) -> Change:

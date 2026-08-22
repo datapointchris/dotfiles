@@ -390,10 +390,10 @@ def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should
     which is what makes the loop safe and what keeps `to-a-directory` from being
     walked twice.
 
-    Pinned because the traversal was rewritten from a recursive `iterdir` onto
-    `os.scandir`, and every answer here was previously decided by which of four
-    `is_dir()`/`is_symlink()` calls fired in which order. `KEPT` and `REFUSED` carry
-    what each case is for.
+    Every answer here rests on which of the walk's type questions fires in which
+    order, and none of them is visible from the function's signature — so the table
+    is what holds the traversal to its decisions. `KEPT` and `REFUSED` carry what
+    each case is for.
     """
     made = a_tree_of_every_shape(tmp_path)
 
@@ -406,10 +406,10 @@ def test_a_link_whose_target_cannot_be_reached_costs_only_itself(tmp_path: Path)
     """`is_dir()` follows, so a link into a directory this account cannot traverse
     raises `PermissionError` — on that one entry.
 
-    The failure was caught around the whole loop before this walk was rewritten,
-    which abandoned every remaining entry in the directory. An orphan scan that
-    stops early reports a machine with no orphans, and the repair it would have
-    named is a link into the repo at a file that no longer exists.
+    A catch around the whole loop would abandon every remaining entry in the
+    directory. An orphan scan that stops early reports a machine with no orphans,
+    and the repair it would have named is a link into the repo at a file that no
+    longer exists.
 
     Both links come back. The unreachable one is kept because its target cannot be
     established as a directory, which is the same answer a broken link gets — and a

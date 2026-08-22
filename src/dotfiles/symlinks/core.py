@@ -242,12 +242,14 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
 
     `os.scandir` rather than `Path.iterdir`, and rather than the `Path.walk` that
     would be the pathlib answer. Both of those hand back names, so every question
-    about what an entry *is* costs a syscall — and this asked four per entry, two
-    of them the same `is_dir()` twice. `scandir` answers from the type the
+    about what an entry *is* costs a syscall, and deciding a symlink from a
+    directory takes several per entry. `scandir` answers from the type the
     directory read already carried. Measured over one home directory, the three
-    returning the same set: `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s. The
-    pathlib form was tried first and is the one that buys nothing, because
-    `Path.walk` discards the entry it read the type from.
+    returning the same set: `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s.
+    `Path.walk` buys nothing because it discards the entry it read the type from,
+    which is the whole of the saving — so `python.md` § "Use `pathlib.Path` for
+    every filesystem operation" is departed from here with a number behind it
+    rather than a preference.
 
     A symlink is a result rather than a place to descend, whatever it points at.
     That is what stops a link to an ancestor turning the walk into a loop, and it
@@ -262,9 +264,9 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
     than the read that found it.
 
     Failure is caught per entry rather than around the loop. `is_dir()` follows, so
-    a link into a directory this account cannot traverse raises `PermissionError` on
-    that one entry — and the shape this replaced abandoned every remaining entry in
-    the directory when it did.
+    a link into a directory this account cannot traverse raises `PermissionError`
+    for that one entry, and a catch around the loop would abandon every entry after
+    it — an orphan scan that stops early reports a machine with no orphans.
     """
     symlinks: list[Path] = []
 

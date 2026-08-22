@@ -6,9 +6,9 @@ and what an upstream published, and every part of it — which upstream, whether
 answer is fresh, whether either side parses — changes the verdict. This walks that
 comparison across the three verbs and the flags each of them takes.
 
-**The upstream is a file, and there are only two of them.** `check` resolves a
-Session with `refresh=False` and `plan --cached` does the same, so the release
-cache under `$XDG_CACHE_HOME` is the whole of what either knows; `--offline`
+**The upstream is a file, and there are only two of them.** Every verb below
+carries `--cached`, which resolves a Session with `refresh=False`, so the release
+cache under `$XDG_CACHE_HOME` is the whole of what any of them knows; `--offline`
 replaces it with a staged bundle's manifest. Neither reaches GitHub, which is what
 makes a row here the same row on any machine.
 
@@ -164,13 +164,12 @@ READ = (
 release — so the selection narrows to the same provider the bare verb walks and
 the row must be identical.
 
-**`--cached` on `plan` is the subject, not a workaround.** Every relation below is
-a statement about how a *cached* figure is read, and `plan` measures upstream
-unless told not to — so without the flag these rows would be asserting against
-whatever GitHub published this morning, which is the machine-independence the
-whole matrix exists to keep. `check` needs no flag because reading the cache is
-already its default; that the two verbs arrive at one row from opposite defaults
-is the point of asserting them together.
+**`--cached` is the subject, not a workaround.** Every relation below is a
+statement about how a *cached* figure is read, and every read verb measures
+upstream unless told not to — so without the flag these rows would be asserting
+against whatever GitHub published this morning, which is the machine-independence
+the whole matrix exists to keep. All three verbs carry it for that one reason, and
+`tests/matrix/test_composite.py` is where the defaults themselves are asserted.
 """
 
 

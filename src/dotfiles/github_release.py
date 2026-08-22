@@ -239,6 +239,13 @@ def github_token() -> str | None:
     out from under a command. A test that changes either between cases is the one
     caller that needs the old behaviour, and `tests/conftest.py` clears this
     between every test rather than each test remembering to.
+
+    **The memo alone does not make it once per run, and the caller that matters is
+    concurrent.** `functools.cache` releases its lock across the call it is filling,
+    so every thread arriving before the first returns misses and spawns its own.
+    Measured with 73 tasks through 16 workers and a 20ms call: 16 subprocesses.
+    `releases.refresh` primes this before it opens its pool, which is what collapses
+    it to one.
     """
     token = os.environ.get('GITHUB_TOKEN')
     if token:
@@ -346,8 +353,8 @@ def revalidate(url: str, etag: str = '') -> Conditional:
     The quota is what it is for. A machine with no `gh` token has 60 GitHub requests
     an hour and more declared releases than that, so 65 does not fit and 2 does.
 
-    An empty `etag` is an unconditional fetch, so a cold entry costs exactly what
-    it did before.
+    An empty `etag` sends no `If-None-Match`, so a cold entry is an ordinary fetch
+    and pays an ordinary request.
     """
     response = httpx2.get(url, headers=_headers(url, etag=etag), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == NOT_MODIFIED:
@@ -409,12 +416,22 @@ def _version_url(repo: str, tag_prefix: str) -> str:
 
 
 def _version_from(payload: object, tag_prefix: str) -> str | None:
-    """The newest tag in a decoded payload, ranked by `_version_key` where a prefix narrows it."""
+    """The newest tag in a decoded payload, ranked by `_version_key` where a prefix narrows it.
+
+    **Pre-releases are excluded, which the unprefixed sibling gets for free.**
+    `/releases/latest` never returns one; this reads `/releases`, which returns
+    every one. Filtering `draft` and not `prerelease` let `cli/v0.26.1-rc1` outrank
+    `cli/v0.26.0`, because `_version_key` reads the suffix as a fourth component —
+    so a machine would be told it was behind, and an install would put a release
+    candidate on it. `release.md` § "Pre-releases are excluded by default
+    everywhere" is the rule, and the two endpoints agreeing is the point.
+    """
     if not tag_prefix:
         return payload.get('tag_name') if isinstance(payload, dict) else None
     if not isinstance(payload, list):
         return None
-    candidates = [tag for release in payload if not release.get('draft') and (tag := release.get('tag_name') or '').startswith(tag_prefix)]
+    published = [release for release in payload if not release.get('draft') and not release.get('prerelease')]
+    candidates = [tag for release in published if (tag := release.get('tag_name') or '').startswith(tag_prefix)]
     if not candidates:
         return None
     return max(candidates, key=lambda tag: _version_key(tag, tag_prefix))

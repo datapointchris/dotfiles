@@ -87,6 +87,21 @@ and shared by every host behind one egress, two machines were enough to keep tha
 pool at zero for the whole hour."""
 
 
+UNIT_SECONDS = 30 * 60
+"""How long one scheduled check may run before systemd gives up on it.
+
+Half an hour, against a run that takes seconds on a desk and minutes on the work
+box's firewall — wide enough that a slow link is never mistaken for a hang, and
+far inside `INTERVAL_SECONDS` so a killed run cannot still be holding the unit
+when the next fire is due.
+
+There is a floor under this rather than a preference: `Type=oneshot` disables the
+start timeout by default, and an active unit does not re-fire, so a run that hangs
+once ends the schedule silently and forever. That is a worse failure than any
+value of this constant.
+"""
+
+
 def cadence() -> str:
     if INTERVAL_SECONDS % 3600 == 0:
         return f'{INTERVAL_SECONDS // 3600}h'
@@ -144,9 +159,17 @@ def _service_content() -> str:
     # What this costs on a watched network is why `enabled` is off by default
     # rather than why the flag is absent here: the requests are the point of the
     # refresh, so a machine that does not want them declines the whole schedule.
+    # `TimeoutStartSec` because `Type=oneshot` disables the start timeout by
+    # default, which `man systemd.service` states outright. A check that hangs then
+    # leaves the unit active forever, and an active unit suppresses its own next
+    # fire — so one hung run silently ends the schedule. Every read verb now
+    # reaches the network, so the run this starts has more ways to hang than when
+    # the unit was written. `syspkg.CURRENCY_SECONDS` bounds each subprocess and
+    # this bounds the run, because a run is many of them.
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
-        f'[Service]\nType=oneshot\nEnvironment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
+        f'[Service]\nType=oneshot\nTimeoutStartSec={UNIT_SECONDS}\n'
+        f'Environment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
     )
 
 

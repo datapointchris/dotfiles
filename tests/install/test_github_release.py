@@ -8,6 +8,8 @@ Run with: pytest tests/install/test_github_release.py
 """
 
 import subprocess
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx2
 import pytest
@@ -327,6 +329,20 @@ class TestLatestVersion:
 
         assert github_release.latest_version('owner/repo', 'cli/') == 'cli/1.4.0'
 
+    def test_a_prerelease_does_not_outrank_the_release_it_precedes(self, monkeypatch):
+        """`/releases/latest` never returns a pre-release, and this reads
+        `/releases`, which returns every one — so the two endpoints answer
+        differently unless this filters.
+
+        `_version_key` reads `-rc1` as a fourth component, so `cli/v0.26.1-rc1`
+        sorted above `cli/v0.26.0` and a machine on the release was told it was
+        behind. An install would then put the candidate on it.
+        """
+        payload = b'[{"tag_name": "cli/v0.26.0"}, {"tag_name": "cli/v0.26.1-rc1", "prerelease": true}]'
+        monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
+
+        assert github_release.latest_version('owner/repo', 'cli/') == 'cli/v0.26.0'
+
     def test_a_prefix_nothing_matches_answers_nothing(self, monkeypatch):
         payload = b'[{"tag_name": "api/2.0.0", "draft": false}]'
         monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)
@@ -541,19 +557,64 @@ class TestTokenLookup:
     `plan` to answer a question whose answer cannot change while that plan runs.
     """
 
-    def test_the_gh_subprocess_runs_once_however_often_it_is_asked(self, monkeypatch):
+    @staticmethod
+    def counting_gh(monkeypatch, delay: float = 0.0) -> list[list[str]]:
+        """A `gh auth token` that records each spawn, optionally a slow one."""
         monkeypatch.delenv('GITHUB_TOKEN', raising=False)
-        runs = []
+        runs: list[list[str]] = []
 
         def fake(command, **_kwargs):
             runs.append(command)
+            time.sleep(delay)
             return subprocess.CompletedProcess(command, 0, stdout='ghp_from_gh\n', stderr='')
 
         monkeypatch.setattr(github_release.shutil, 'which', lambda name: '/usr/bin/gh')
         monkeypatch.setattr(github_release.subprocess, 'run', fake)
+        return runs
+
+    def test_the_gh_subprocess_runs_once_however_often_it_is_asked(self, monkeypatch):
+        runs = self.counting_gh(monkeypatch)
 
         assert [github_release.github_token() for _ in range(5)] == ['ghp_from_gh'] * 5
         assert runs == [['gh', 'auth', 'token']]
+
+    def test_concurrent_callers_still_spawn_one(self, monkeypatch):
+        """The shape the memo was added for, and the one a serial comprehension
+        cannot measure.
+
+        `functools.cache` releases its lock across the call it is filling, so every
+        worker arriving before the first returns misses and spawns its own. 73 tasks
+        through 16 workers spawned 16 subprocesses — one per worker, where the memo
+        promised one per run. The delay is what makes that reproducible rather than
+        a race the test wins by luck.
+
+        Primed first, the way `releases.refresh` primes it before opening its pool.
+        `tests/install/test_releases.py` asserts that the refresh itself does the
+        priming; this asserts that priming is what the memo needs.
+        """
+        runs = self.counting_gh(monkeypatch, delay=0.02)
+
+        github_release.github_token()
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            answers = list(pool.map(lambda _: github_release.github_token(), range(73)))
+
+        assert answers == ['ghp_from_gh'] * 73
+        assert runs == [['gh', 'auth', 'token']]
+
+    def test_concurrent_callers_without_priming_are_what_the_memo_cannot_fix(self, monkeypatch):
+        """The measurement the row above rests on, so the fix is not a change nobody
+        can see fail.
+
+        Asserted as "more than one" rather than exactly sixteen: the count is
+        scheduling, and pinning it would make this a flaky test about the pool
+        rather than a claim about the memo.
+        """
+        runs = self.counting_gh(monkeypatch, delay=0.02)
+
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            list(pool.map(lambda _: github_release.github_token(), range(73)))
+
+        assert len(runs) > 1
 
     def test_the_environment_still_wins_and_spawns_nothing(self, monkeypatch):
         """The variable outranks `gh` and always did. Worth pinning beside the cache

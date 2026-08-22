@@ -505,9 +505,14 @@ def _apt_outdated() -> frozenset[str] | None:
     is 25.6 MB and a delta from what the machine already has is 2.8 MB. Thrown away
     afterwards, so nothing accumulates and there is no second index on disk.
 
-    A refresh that fails is not fatal. The listing still runs, against the seeded
-    copy, which is the machine's own answer — worse than a current one and better
-    than none, and the row says a number either way.
+    **A refresh that fails is a non-answer, not a smaller one.** Listing against
+    whatever the seed happened to hold reports a count nobody measured, and an empty
+    seed reports *nothing behind* — a machine declared current by a run that reached
+    no archive. That is `NETWORKED`'s own thesis inverted, and this repo's Debian
+    image builds exactly that state: `tests/install/docker/Dockerfile` runs `rm -rf
+    /var/lib/apt/lists/*`, so the seed there is empty by construction and only the
+    network is missing. `None` is what the pacman path already answers for the same
+    failure, and `by_currency` turns it into UNKNOWN with a cause.
 
     An `apply` therefore runs `apt-get update` twice: this one to decide what is
     behind, and `REFRESH`'s privileged one before installing. That is the order
@@ -524,8 +529,10 @@ def _apt_outdated() -> frozenset[str] | None:
         with contextlib.suppress(OSError, shutil.Error):
             shutil.copytree(APT_LISTS, scratch / 'lists', dirs_exist_ok=True)
         redirect = _apt_redirect(scratch)
-        effects.run(['apt-get', 'update', '-qq', *redirect], output=Output.QUIET)
-        listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET)
+        refreshed = effects.run(['apt-get', 'update', '-qq', *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
+        if not refreshed.ok:
+            return None
+        listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
     return _names(listed.stdout) if listed.ok else None
 
 
@@ -551,9 +558,13 @@ def outdated(manager: str) -> frozenset[str] | None:
         return None
     if manager == 'apt':
         return _apt_outdated()
-    listed = effects.run(list(command), output=Output.QUIET)
+    listed = effects.run(list(command), output=Output.QUIET, timeout=CURRENCY_SECONDS)
     if listed.ok:
         return _names(listed.stdout)
+    # A timeout is not the "exited non-zero having printed nothing" that
+    # `EMPTY_IS_NONZERO` decodes as *nothing behind*. `effects.run` names the
+    # expiry in the transcript, so the silence test already separates them — and
+    # getting it wrong would report a firewalled Arch box as current.
     silent = not listed.transcript.strip()
     return frozenset() if manager in EMPTY_IS_NONZERO and silent else None
 
@@ -597,3 +608,22 @@ PROBE_SECONDS = 10.0
 """Long enough for a cold binary, short enough that a manager which is not going
 to answer does not hold the run. Same bound and same reason as
 `evidence.PROBE_SECONDS`."""
+
+CURRENCY_SECONDS = 90.0
+"""How long a currency read may take before it is a non-answer.
+
+Every read in `NETWORKED` reaches a network through a subprocess, and a subprocess
+is the one shape a network call can wear that nothing else here bounds — `httpx2`
+carries `REQUEST_TIMEOUT_SECONDS` and `effects.run` defaults to no deadline at all.
+
+Bounded at *this* layer because no layer above does. Every read verb makes these
+calls now, so a `checkupdates` that hangs behind a firewall hangs `dotfiles plan`
+at a prompt with nothing on screen, and hangs the timer's `Type=oneshot` unit,
+whose start timeout systemd disables by default — an active unit then suppresses
+its own next fire.
+
+Much longer than `PROBE_SECONDS` on purpose: this is a sync of a package index
+over whatever link the machine has, where that one is a local binary answering
+`--version`. Expiry is `effects.run` returning not-ok, which each caller already
+turns into the non-answer it is.
+"""

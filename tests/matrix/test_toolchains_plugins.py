@@ -611,9 +611,9 @@ def test_an_uncloned_plugin_is_drift_and_a_plugin_installed_by_something_else_is
 def test_this_door_fetches_each_clone_without_being_asked_to(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A clone behind its remote is drift, and this is the door named after clones.
 
-    It declined the fetch until this was written, so `plugins plan` reported a
-    machine converged while `dotfiles plan` reported the same clone stale. Two
-    front doors on one dataset, disagreeing about the dataset.
+    A door that declines the fetch reports a machine converged while `dotfiles
+    plan` reports the same clone stale. Two front doors on one dataset, disagreeing
+    about the dataset.
     """
     sandbox.shadow('tmux')
     declares(sandbox, tmux_plugins=True)
@@ -632,6 +632,17 @@ def test_declining_the_network_leaves_a_clone_measured_on_presence_alone(sandbox
     The clone is still measured — it is present and it is a checkout — so the row
     disappears rather than turning UNKNOWN. Being behind is the only question here
     that needs the remote.
+
+    The absence is asserted alongside the clone being *matched*. On its own it is
+    satisfied by a usage error, a traceback, or `--cached` being silently dropped —
+    and the last of those is the one failure this row exists to catch, which
+    `testing.md` § "An assertion that nothing happened is satisfied by a crash"
+    names by this shape. A matched row is what says the walk reached this clone and
+    decided about it.
+
+    The run is DRIFT rather than converged, and for something else: this fixture
+    deploys no `tmux.conf`, so `tmux-sync/tpm` has no plugin list to read. That row
+    is not this row's subject, which is why the assertion is on the clone.
     """
     sandbox.shadow('tmux')
     declares(sandbox, tmux_plugins=True)
@@ -639,7 +650,9 @@ def test_declining_the_network_leaves_a_clone_measured_on_presence_alone(sandbox
 
     ran = cli('plugins', 'plan', '--cached')
 
-    assert 'behind' not in unwrapped(ran.stderr)
+    reported = unwrapped(ran.stderr)
+    assert 'matched tpm/tpm' in reported, reported
+    assert 'behind' not in reported
 
 
 # ─────────────────────────────────────────────────────────────────────────────

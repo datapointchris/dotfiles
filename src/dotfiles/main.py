@@ -171,8 +171,12 @@ def plan(
     the narrowings do the same job more cheaply: `--package` and `--source` cut the
     refresh to the entries named, which is under a second for one entry.
 
-    Never writes *the machine*. The release cache is the one file this may leave
-    changed — deleting it costs a recompute, which is exactly why it is a cache.
+    Never writes *the machine*. Two things it does write: the release cache, where
+    deleting it costs a recompute, and each plugin checkout's git metadata, because
+    asking whether a clone is behind is a `git fetch` — so `FETCH_HEAD`, the
+    remote-tracking refs and any new objects land under `.git`. Nothing in the
+    working tree moves and no plugin is checked out to a different commit, which is
+    `apply`'s half.
 
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
@@ -208,7 +212,12 @@ def plan(
         report=None if as_json else answered,
     )
     results = walked.results
-    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
+    # `refresh` beside `offline` and for its reason: both decide how a row is read
+    # back, and a record omitting one cannot be read. It is the flag separating a
+    # run that measured upstream from one that answered from cache — seconds apart,
+    # and different answers — and `schedule.INTERVAL_SECONDS` calls these records
+    # the fleet's drift series. A series mixing the two is not one.
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline, 'refresh': refreshing})
 
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
@@ -264,7 +273,9 @@ def check(
     lens = reconcile.Lens.CHECK
     walked = reconcile.survey(lens, skipped, machine, refresh=refreshing, offline=offline, report=None if as_json else answered)
     results = walked.results
-    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
+    # `refresh` for the reason `plan` records it, and more sharply: this is the verb
+    # the timer runs, so these are the records the drift series is made of.
+    sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline, 'refresh': refreshing})
 
     # Written by every check, not only the scheduled one, so an interactive run
     # also refreshes what the next shell reports — which is what stops a nudge

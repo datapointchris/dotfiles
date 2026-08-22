@@ -41,10 +41,10 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     after all.
 
     The schedule is here for a sharper version of the same reason. It decides
-    whether a background process runs on this machine every ten minutes, and it is
-    the one setting whose effect is invisible from the terminal that set it — so
-    the question "does this box run a timer" has to be answerable without reading
-    a unit file.
+    whether a background process runs on this machine and reaches the network on
+    its own, and it is the one setting whose effect is invisible from the terminal
+    that set it — so the question "does this box run a timer" has to be answerable
+    without reading a unit file. `schedule.INTERVAL_SECONDS` is how often.
     """
     config = settings.read_config()
     path = settings.config_file()

@@ -23,6 +23,9 @@ from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles import status
+from dotfiles.commands import EACH_PLUGIN_REMOTE
+from dotfiles.commands import RELEASES_AND_MANAGERS
+from dotfiles.commands import THE_MANAGERS
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import currency
@@ -75,14 +78,22 @@ def _survey(
     machine: str | None,
     lens: reconcile.Lens,
     as_json: bool,
+    refresh: bool,
     *,
     source: str | None = None,
     owner: str | None = None,
     packages: frozenset[str] = frozenset(),
     offline: bool = False,
-    refresh: bool = False,
 ) -> None:
     """One noun's selection, through the same engine and the same fold the composite uses.
+
+    **`refresh` has no default, so every door states its own answer.** Both answers
+    are live and `python.md` § "Fail fast instead of defaulting" is what that
+    settles: a parameter defaulted to what its first callers wanted has every site
+    written afterwards silently answering for them. That is not hypothetical here —
+    `system` and `plugins` each spent a release answering `False` while the
+    composite verbs measured, and a person found both. The parser is the one check
+    that reaches a door nobody has written yet.
 
     One noun, not always one resource: `--source` selects by address, and an
     address carries its own resource, so a section whose runtime is declared
@@ -330,7 +341,7 @@ def packages_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(RELEASES_AND_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -363,7 +374,7 @@ def packages_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(RELEASES_AND_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -375,12 +386,10 @@ def packages_check(
     A machine whose bundle carries nothing for the tools it has installed is a
     machine nothing can speak for, which is exactly what `check` exists to say.
 
-    `--refresh` is here for neither of those reasons. This verb reads the release
-    cache, so it is where an unmeasurable row is printed and where the advice on
-    that row is read — and that advice names this flag. A tool whose own
-    instruction its verb rejects is worse than one that says nothing, because the
-    instruction reads as authoritative and the refusal reads as the reader's
-    mistake.
+    Measures upstream by default, as the composite `check` does and for its
+    reason: "is anything on this machine behind" is answered wrong by a figure up
+    to `releases.TTL` old. `--cached` declines, and `--refresh` restates the
+    default for a caller who wants it on the line.
     """
     verbosity(verbose, quiet)
     _survey(
@@ -486,7 +495,7 @@ def toolchains_plan(
 ) -> None:
     """Show which language runtimes `apply` would install or raise."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, offline=offline)
+    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -499,7 +508,7 @@ def toolchains_check(
 ) -> None:
     """Report toolchain drift."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('apply')
@@ -543,7 +552,7 @@ def plugins_plan(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(EACH_PLUGIN_REMOTE),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -563,7 +572,7 @@ def plugins_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(EACH_PLUGIN_REMOTE),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -602,7 +611,7 @@ def symlinks_plan(
 ) -> None:
     """Show which declared links `apply` would deploy or prune."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json)
+    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @symlinks_app.command('check')
@@ -611,7 +620,7 @@ def symlinks_check(
 ) -> None:
     """Report broken or missing symlinks without touching any."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json)
+    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @symlinks_app.command('apply')
@@ -686,14 +695,14 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.PLAN, as_json)
+    _survey('env', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.CHECK, as_json)
+    _survey('env', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @env_app.command('apply')
@@ -721,7 +730,7 @@ def system_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(THE_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -754,7 +763,7 @@ def system_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(),
+    refresh: bool | None = refresh_flag(THE_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -794,7 +803,7 @@ def identity_plan(
 ) -> None:
     """Show whether `apply` would set this machine’s git identity."""
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.PLAN, as_json)
+    _survey('identity', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @identity_app.command('check')
@@ -808,7 +817,7 @@ def identity_check(
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.CHECK, as_json)
+    _survey('identity', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @identity_app.command('show')
@@ -849,7 +858,7 @@ def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
     every finding is `BY_HAND`, so there is nothing for the write half to keep.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.PLAN, as_json)
+    _survey('auth', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @auth_app.command('check')
@@ -862,7 +871,7 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     runs unattended on a timer.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.CHECK, as_json)
+    _survey('auth', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @auth_app.command('show')
@@ -906,7 +915,7 @@ def credentials_plan(
     `test_conformance.py` exists to catch.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.PLAN, as_json)
+    _survey('credentials', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @credentials_app.command('check')
@@ -920,7 +929,7 @@ def credentials_check(
     where that lives.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.CHECK, as_json)
+    _survey('credentials', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @credentials_app.command('show')

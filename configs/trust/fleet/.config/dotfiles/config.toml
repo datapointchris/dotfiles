@@ -23,8 +23,9 @@ hosts_json = "~/.local/share/terminal-library-fleet/hosts.json"
 machines_json = "~/.local/share/terminal-library-fleet/machines.json"
 
 # The periodic `dotfiles check`, on here because this is a machine on its own
-# network. The run makes one request per declared release every ten minutes, and
-# on a fleet box that traffic goes to the same places everything else here does.
+# network. The run measures upstream once a day — a handful of GitHub requests,
+# because each declared release is revalidated with the ETag it carries — and on a
+# fleet box that traffic goes to the same places everything else here does.
 #
 # Off is the compiled-in default, so this line is what turns it on. Stated in the
 # nonfleet copy too even though it matches that default — a validator holds both

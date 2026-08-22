@@ -548,6 +548,41 @@ def test_every_present_clone_is_asked_whether_it_is_behind(tmp_path: Path, monke
     assert observed.behind == frozenset({'shell-plugin/beta'})
 
 
+def test_a_remote_that_did_not_answer_is_unknown_rather_than_current(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`clone.behind` has three answers and a set of "is behind" holds two.
+
+    Its None is a fetch that failed or an upstream that is not configured, and
+    folding that into the absence of `behind` reports the plugin current on the
+    strength of a call nobody completed. That is the measured-looking wrong answer
+    `by_currency` refuses to give a package manager, and this gives a clone the
+    same UNKNOWN row.
+
+    It matters now because of reach: the fetch was opt-in behind `--refresh` and is
+    what every read verb and the daily unattended run do, so a machine with no
+    route out reported every plugin current.
+    """
+
+    def unreachable(item: Any, home: Path) -> bool | None:
+        return None if item.name == 'beta' else False
+
+    live = refreshing(tmp_path, packages=THREE, manifest=SHELL_ONLY)
+    all_present(live, 'alpha', 'beta', 'gamma')
+    # Checkouts rather than bare directories: without `.git` these are `unmanaged`,
+    # which `diff` reaches first and answers with its own row. The subject here is
+    # a real clone whose remote did not answer.
+    for name in ('alpha', 'beta', 'gamma'):
+        (live.home / '.config' / 'zsh' / 'plugins' / name / '.git').mkdir()
+    monkeypatch.setattr(clone, 'behind', unreachable)
+
+    observed = plugins.RESOURCE.observe(live, live.plan)
+    rows = {change.item: change for change in plugins.RESOURCE.diff(live.plan, observed)}
+
+    assert observed.unaskable == frozenset({'shell-plugin/beta'})
+    assert rows['shell-plugin/beta'].verdict is Verdict.UNKNOWN
+    assert rows['shell-plugin/beta'].repair is Repair.NONE
+    assert [row.item for row in observed.inventory] == ['shell-plugin/alpha', 'shell-plugin/gamma']
+
+
 def test_a_clone_that_is_not_there_is_not_fetched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Presence is measured first, so a plugin yet to be cloned has no currency to
     have — and a fetch against a directory that does not exist is a round trip

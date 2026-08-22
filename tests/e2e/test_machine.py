@@ -165,17 +165,26 @@ def test_the_apps_work(converged_machine: Machine) -> None:
 
 
 CURRENCY_PROBE = (
-    'import shutil; from dotfiles.providers import syspkg; '
-    'present = [name for name in sorted(syspkg.NETWORKED) if shutil.which(syspkg.OUTDATED[name][0])]; '
-    'answers = [(name, syspkg.outdated(name)) for name in present]; '
+    'from dotfiles import commands; from dotfiles.providers import syspkg; '
+    'declared = set(commands.resolved(None).machine.coordinates.installers) & syspkg.NETWORKED; '
+    'answers = [(name, syspkg.outdated(name)) for name in sorted(declared)]; '
     "print('PROBE ' + '; '.join(name + '=' + ('unmeasurable' if held is None else str(len(held))) for name, held in answers))"
 )
-"""Every networked currency read this machine can actually perform, and its answer.
+"""Every networked currency read this machine's coordinates declare, and its answer.
 
-Derived from `syspkg.NETWORKED` rather than written out, so a manager added to that
-set is measured here without anyone remembering to. `shutil.which` on the command
-each one names is what separates "this machine has no flatpak" from "flatpak could
-not answer" — the first is not a failure and the second is the whole subject.
+**Derived from the declaration, not from what is on PATH.** Filtering on
+`shutil.which(OUTDATED[name][0])` measured whatever the environment happened to
+hold: on a box with pacman and yay but no `checkupdates` it yielded `['aur']`
+alone, printed `PROBE aur=0`, and passed — so a `pacman-contrib` that failed to
+install satisfied the row written to catch exactly that. `common-errors.md` § "A
+check that resolves its subject from the environment measures whatever the
+environment says".
+
+The coordinates are the right subject because they say what this machine installs
+*through*, so a manager missing from PATH is a failure rather than a case to skip.
+`flatpak` and `mas` are outside `installers` — they are opt-in per machine rather
+than carried by a package manager — which is why the intersection is with
+`NETWORKED` rather than a walk of it.
 
 **Single quotes throughout, and no f-strings.** `Machine.exec` wraps this in a
 double-quoted `bash -c`, so one double quote in here ends the shell's string and

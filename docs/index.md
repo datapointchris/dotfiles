@@ -16,7 +16,8 @@ dotfiles apply --machine <manifest>
 `install.sh` is a bootstrap and nothing more: it puts uv and the `dotfiles` CLI
 on the box, then prints those commands rather than running one. Converging is a
 separate decision because it is a long networked run, and it is worth seeing
-`dotfiles plan` first on a machine whose downloads are firewalled.
+`dotfiles plan` first on a machine whose downloads are firewalled — with
+`--offline` or `--cached` there, since a plan measures upstream by default.
 
 The manifest decides what a machine gets. They are in `install/manifests/`, and
 `eza -1 install/manifests/` is the current list — one per machine type, ranging

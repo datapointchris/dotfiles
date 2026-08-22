@@ -12,6 +12,7 @@ from __future__ import annotations
 import dataclasses as dc
 import shutil
 import stat
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -752,19 +753,50 @@ def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, 
     assert 'linux-image-generic' in change.detail
 
 
-def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reporting a manager current having asked nobody is the measured-looking wrong
-    answer this resource exists to stop.
+def only_missing(*absent: str) -> Callable[..., str | None]:
+    """A `shutil.which` where exactly these names are not on the machine.
 
-    The detail names `--cached` because that is what produces the row. Every read
-    verb measures, so an advice line naming `--refresh` would send a reader to type
-    the state they are already in.
-
-    `apt` is shadowed so that it is *present*. The row below distinguishes a manager
-    nothing asked from one the machine does not have, and this Arch box has no apt —
-    without the shadow this asserts one sentence at a desk and the other in CI.
+    Named binaries rather than a shadow directory, because the three causes below
+    turn on *which* of two binaries is missing and `fake_bin` keeps `/usr/bin`
+    behind it — so a real `apt` on the runner and none on this Arch box decide the
+    answer instead of the test.
     """
-    answers_empty(fake_bin, 'dpkg-query', 'apt')
+    return lambda name, *rest, **named: None if name in absent else f'/usr/bin/{name}'
+
+
+UNMEASURED_CAUSES = (
+    ('nothing-missing', (), ev.Unmeasured.DECLINED),
+    ('the-manager', ('apt-get',), ev.Unmeasured.MANAGER_ABSENT),
+    ('its-reader', ('apt',), ev.Unmeasured.READER_ABSENT),
+)
+"""Which binary is absent, and the cause that makes the row unmeasurable.
+
+apt is the pair that shows the distinction: `INSTALL` names `apt-get` and
+`OUTDATED` names `apt`. pacman is the case it was written for — `checkupdates` is
+a different package from pacman — and cannot be exercised from this table because
+this file's declaration is an apt machine.
+"""
+
+
+@pytest.mark.parametrize(('label', 'absent', 'reason'), UNMEASURED_CAUSES, ids=[case[0] for case in UNMEASURED_CAUSES])
+def test_an_unmeasurable_manager_says_which_of_the_three_causes_it_is(
+    label: str,
+    absent: tuple[str, ...],
+    reason: ev.Unmeasured,
+    tmp_path: Path,
+    fake_bin: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Three causes, three repairs: install the manager, install its reader, drop
+    the flag. A reader handed the wrong one goes and does the wrong thing.
+
+    Asserted as the member rather than the sentence. Reading `OUTDATED[name][0]` as
+    the manager's own binary told every Arch box `no pacman on this machine` — on a
+    machine pacman installed everything on — and no test could fail on it, because
+    the only thing separating the causes was their English.
+    """
+    answers_empty(fake_bin, 'dpkg-query')
+    monkeypatch.setattr(shutil, 'which', only_missing(*absent))
     behind(monkeypatch, {'apt': None})
     live = session(tmp_path, DECLARED, WORKSTATION)
 
@@ -772,33 +804,24 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
-    assert '`--cached` declines it' in change.detail
+    assert ev.by_currency(_row(live, 'apt'), {}).unmeasured is reason
 
 
-def test_a_manager_the_machine_does_not_have_says_so_rather_than_blaming_a_flag(
+def test_a_manager_whose_reader_ships_separately_names_the_package_to_install(
     tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A row saying `--cached` declined the call is wrong where there was no call to
-    decline.
+    """pacman's currency is `checkupdates`, which is `pacman-contrib` — so a machine
+    with pacman and no reader needs a package name, not a manager name.
 
-    Measured 2026-08-22 on the Arch e2e container, which declares flatpak apps and
-    has no flatpak. An `apply` — a run that measures — printed `nothing asked
-    flatpak what is behind` beside two rows correctly reading `no package manager on
-    this machine could be asked`. The manager row blamed a flag nobody typed.
-
-    Answerable here and nowhere else in the chain: `Inventory` hands back one `None`
-    for every reason, and whether the command is on PATH is a question this can ask
-    directly.
+    The window is real and this branch opens it: `pacman-contrib` is declared here
+    for the first time, so every Arch box prints this row until an apply lands it.
     """
-    answers_empty(fake_bin, 'dpkg-query')
-    monkeypatch.setattr(shutil, 'which', lambda name, *rest, **named: None if name == 'apt' else '/usr/bin/' + name)
-    behind(monkeypatch, {'apt': None})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    monkeypatch.setattr(shutil, 'which', only_missing('checkupdates'))
 
-    change = manager_rows(live)['apt']
+    evidence = ev._unmeasured_currency('pacman')
 
-    assert change.verdict is Verdict.UNKNOWN
-    assert change.detail == 'no apt on this machine to ask what is behind'
+    assert evidence.unmeasured is ev.Unmeasured.READER_ABSENT
+    assert 'pacman-contrib' in evidence.detail
 
 
 def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:

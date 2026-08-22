@@ -198,6 +198,45 @@ def test_refreshing_nothing_asks_nothing(answers: dict) -> None:
     assert releases.refresh((), {'owner/repo': releases.Cached('v1', NOW)}, NOW) == {'owner/repo': releases.Cached('v1', NOW)}
 
 
+def test_the_token_is_resolved_before_the_pool_opens(answers: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`functools.cache` releases its lock across the call it is filling, so every
+    worker arriving before the first returns spawns its own `gh auth token`.
+
+    Priming on this thread is the only place that can be one call, and it has to
+    happen here rather than in the memo — which is why the assertion is about
+    `refresh` and not about `github_token`. `tests/install/test_github_release.py`
+    holds the measurement of what the memo does without it.
+    """
+    asked: list[str] = []
+
+    def note() -> str:
+        asked.append('gh')
+        return ''
+
+    monkeypatch.setattr(releases.github_release, 'github_token', note)
+    answers[('owner/repo', '')] = 'v2.0.0'
+
+    releases.refresh((releases.Wanted('owner/repo'),), {}, NOW)
+
+    assert asked == ['gh']
+
+
+def test_nothing_to_refresh_resolves_no_token(answers: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The priming sits below the empty guard, so a run with nothing declared
+    spawns nothing — which is what `--package` narrowing to an absent tool does."""
+    asked: list[str] = []
+
+    def note() -> str:
+        asked.append('gh')
+        return ''
+
+    monkeypatch.setattr(releases.github_release, 'github_token', note)
+
+    releases.refresh((), {}, NOW)
+
+    assert asked == []
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Revalidating with an ETag
 # ─────────────────────────────────────────────────────────────────────────────

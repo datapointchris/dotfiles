@@ -30,9 +30,11 @@ import sys  # noqa: E402
 from pathlib import Path  # noqa: E402
 from types import ModuleType  # noqa: E402
 
+import httpx2  # noqa: E402
 import levels  # noqa: E402
 import pytest  # noqa: E402
 
+from dotfiles import github_release  # noqa: E402
 from dotfiles.privilege import Privilege  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -253,8 +255,6 @@ def a_token_lookup_that_forgot_the_last_test():
     Autouse rather than named by the tests that need it, because needing it is not
     visible from the test that breaks.
     """
-    from dotfiles import github_release
-
     github_release.github_token.cache_clear()
     yield
     github_release.github_token.cache_clear()
@@ -297,8 +297,6 @@ def no_network_from_a_test(request, monkeypatch):
     """
     if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
         return
-
-    import httpx2
 
     def refuse(*_args, **_kwargs):
         raise ReachedTheNetwork('a test made an HTTP request — stub the transport, or mark the test e2e')
