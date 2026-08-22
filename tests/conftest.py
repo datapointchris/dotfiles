@@ -234,6 +234,53 @@ def a_token_lookup_that_forgot_the_last_test():
     github_release.github_token.cache_clear()
 
 
+class ReachedTheNetwork(BaseException):
+    """Raised where a test made an HTTP request, and deliberately not an `Exception`.
+
+    `engine._measure` wraps every resource in `except Exception` and turns what it
+    raised into a `Refusal`, so a guard raised as one is caught by the code under
+    test: the request is refused, the run reports the resource as unexaminable, and
+    the test passes its exit-code assertion having learned nothing.
+
+    Same reasoning as `WouldInstall`, and as `matrix.harness.ReachedTheNetwork`.
+    """
+
+
+@pytest.fixture(autouse=True)
+def no_network_from_a_test(request, monkeypatch):
+    """Refuse every HTTP request outside the tiers that declare they make them.
+
+    `tests/matrix/` guarded itself and nothing else did, so `tests/install/`,
+    `tests/cli/` and `tests/resources/` could reach GitHub. Measured 2026-08-22:
+    one `pytest tests/` spent 17 requests against the rate limit, and
+    `test_a_refresh_passes_the_prefix_through` asserted against `cli/v0.25.0` —
+    what ichrisbirch had published that morning, not what the test wrote.
+
+    That is the failure worth stopping. A test reading live upstream passes today
+    and fails the week something ships, and the version it read is nowhere in the
+    test.
+
+    Guarded at `httpx2.get` and `HTTPTransport.handle_request`, which sit between
+    every caller and the socket — including a `Client` built somewhere else. Our own
+    `github_release.request` would prove only that nobody called that one, which is
+    the gap `no_installing_on_this_machine` documents about `effects.run`.
+
+    `tests/matrix/` patches these again with its own exception type, which its tests
+    name in `pytest.raises`. A child conftest's autouse fixture runs after this one,
+    so that one wins where both apply.
+    """
+    if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
+        return
+
+    import httpx2
+
+    def refuse(*_args, **_kwargs):
+        raise ReachedTheNetwork('a test made an HTTP request — stub the transport, or mark the test e2e')
+
+    monkeypatch.setattr(httpx2, 'get', refuse)
+    monkeypatch.setattr(httpx2.HTTPTransport, 'handle_request', refuse)
+
+
 @pytest.fixture(autouse=True)
 def no_installing_on_this_machine(request, monkeypatch):
     """Refuse a command that would change the box the tests run on.
