@@ -747,9 +747,13 @@ def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, 
 
 
 def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Flathub and the App Store have no offline catalogue, so `check` does not ask
-    them — and reporting them current having asked nobody is the measured-looking
-    wrong answer this resource exists to stop."""
+    """Reporting a manager current having asked nobody is the measured-looking wrong
+    answer this resource exists to stop.
+
+    The detail names `--cached` because that is what produces the row. Every read
+    verb measures, so an advice line naming `--refresh` would send a reader to type
+    the state they are already in.
+    """
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': None})
     live = session(tmp_path, DECLARED, WORKSTATION)
@@ -758,13 +762,13 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
-    assert '--refresh' in change.detail
+    assert '`--cached` declines it' in change.detail
 
 
-def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     """The gate is on the read, not on the row: a locally-answerable manager is
-    measured whatever the verb, and the two that need a round trip wait to be
-    asked for."""
+    measured whatever the caller said, and the ones that need a round trip are the
+    only thing `--cached` buys back."""
     asked: list[str] = []
 
     def record(manager: str) -> frozenset[str]:

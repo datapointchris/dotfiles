@@ -45,10 +45,15 @@ change, so `plan` keeps what `apply` can fix and `check` keeps what it cannot.
 The periodic timer runs `check`, and the shell nudge fires on issues alone.
 
 The split does not reach the network, though. All three verbs measure: they ask
-GitHub what each declared release is at, and the package managers what they are
-holding back. Being invoked is the reason to give a current answer. `--cached`
-declines the lot, and `commands.MEASURES_UPSTREAM` argues why that is the flag
-rather than the default.
+GitHub what each declared release is at, the package managers what they are
+holding back, and every plugin clone whether its remote has moved. Being invoked
+is the reason to give a current answer. `--cached` declines the lot, and
+`commands.MEASURES_UPSTREAM` argues why that is the flag rather than the default.
+
+The resource doors say the same thing. `dotfiles system plan` and `dotfiles
+plugins plan` take the flag and default to measuring exactly as the composite
+verbs do, because a narrower door answering from a cache while the wide one
+measures is two front doors disagreeing about one dataset.
 
 How a run renders on screen is `src/dotfiles/output.py`, which argues its own
 choices. None of that reaches `--json`, which a caller parses instead of the

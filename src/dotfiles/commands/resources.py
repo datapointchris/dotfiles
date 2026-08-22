@@ -543,12 +543,19 @@ def plugins_plan(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Show which declared plugins `apply` would clone."""
+    """Show which declared plugins `apply` would clone or fast-forward.
+
+    Whether a clone is behind its remote is a `git fetch`, so this door measures by
+    default like every other read verb and `--cached` declines to the presence
+    question alone. `resources/plugins.py` fetches the whole set at once, which is
+    what makes measuring here cost about as much as measuring one.
+    """
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline)
+    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('check')
@@ -556,12 +563,13 @@ def plugins_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Report plugin drift."""
+    """Report plugin drift, including clones behind their remote."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('apply')
@@ -713,6 +721,7 @@ def system_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -721,9 +730,23 @@ def system_plan(
     `--source` and `--package` are `apply`'s, and the narrow write they name — the
     package payload without the configuration rows, or one row out of it — is the
     one most worth rehearsing here.
+
+    This resource owns the one row per package manager saying what that manager has
+    installed and behind, and `syspkg.NETWORKED` names the ones that cost a round
+    trip to answer. Measuring by default is what stops those rows reading `nothing
+    asked flatpak what is behind` on the door whose whole subject is the system.
     """
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source, packages=frozenset(package or ()), offline=offline)
+    _survey(
+        'system',
+        machine,
+        reconcile.Lens.PLAN,
+        as_json,
+        source=source,
+        packages=frozenset(package or ()),
+        offline=offline,
+        refresh=currency(refresh, offline=offline),
+    )
 
 
 @system_app.command('check')
@@ -731,12 +754,13 @@ def system_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Report system configuration drift."""
+    """Report system configuration drift, and which managers are behind."""
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @system_app.command('apply')

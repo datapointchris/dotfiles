@@ -333,9 +333,11 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     """What one manager says, or None when it cannot answer or was not asked.
 
     Two questions through one door: what is installed, and what is installed and
-    behind. The second is prefixed, and the networked ones among them answer only
-    under `refresh` — Flathub and the App Store have no offline catalogue, and
-    `check` runs at a prompt and unattended on a timer.
+    behind. The second is prefixed, and the networked ones among them are the only
+    reads `refresh` gates — Flathub, the App Store and the AUR have no offline
+    catalogue to fall back to, so a declined run has no answer rather than a cheap
+    one. Every read verb passes `refresh=True`, so declining is something a caller
+    asked for with `--cached` or `--offline`.
     """
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)
@@ -379,12 +381,19 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     A named sample rather than a bare count. "23 pacman package(s) behind" says a
     machine is behind and nothing about whether that matters; the first few names
     are usually enough to tell a routine sync from a kernel bump.
+
+    UNKNOWN names the flag rather than a verb. Every read verb measures, so a row
+    reaching here was declined by the caller — `--cached`, or the `--offline` that
+    implies it. A manager that answered nothing because it failed lands here too,
+    and the sentence covers it: `None` is one value and the two causes are not
+    separable through `Inventory`, whose whole value is that a test can hand in a
+    plain dict.
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
         return Evidence(
             Verdict.UNKNOWN,
-            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles plan` or add `--refresh` to this verb',
+            f'nothing asked {item.name} what is behind — a network call, and `--cached` declines it',
         )
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')
