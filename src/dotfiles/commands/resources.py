@@ -377,10 +377,12 @@ def packages_check(
     A machine whose bundle carries nothing for the tools it has installed is a
     machine nothing can speak for, which is exactly what `check` exists to say.
 
-    `--refresh` is here for neither of those reasons: this verb reads the release
-    cache, so it is the verb the advice on an unmeasurable row is addressed to, and
-    that advice named a flag only the composite carried. Following a tool's own
-    instruction and getting `No such option` is worse than being told nothing.
+    `--refresh` is here for neither of those reasons. This verb reads the release
+    cache, so it is where an unmeasurable row is printed and where the advice on
+    that row is read — and that advice names this flag. A tool whose own
+    instruction its verb rejects is worse than one that says nothing, because the
+    instruction reads as authoritative and the refusal reads as the reader's
+    mistake.
     """
     verbosity(verbose, quiet)
     _survey(

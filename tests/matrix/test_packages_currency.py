@@ -336,13 +336,11 @@ def test_nothing_could_be_measured_says_which_refresh_would_fix_it(sandbox: Sand
 
 
 def test_the_flag_that_advice_names_is_one_this_verb_accepts(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Advice is only advice if it runs, and this one did not.
+    """Advice is only advice if it runs, and the verb printing it is where it is read.
 
-    `packages check` prints the row above and rejected the `--refresh` it named
-    with `No such option`, because the flag was declared on the composite verbs
-    alone. A person following the tool's own instruction got a usage error, which
-    is worse than being told nothing — the instruction reads as authoritative and
-    the failure reads as their mistake.
+    `packages check` is the verb that prints the row above, so a `--refresh` it
+    rejects makes the advice a usage error for anyone who follows it — the
+    instruction reads as authoritative and the refusal reads as their mistake.
 
     Asserted by reaching the guard rather than by reading help text: a flag can be
     accepted and dropped, and what makes the advice true is the request going out.

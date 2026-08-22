@@ -721,12 +721,15 @@ def _unmeasurable_advice(observed: Observed) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
     `dotfiles plan` rather than a flag, because it measures upstream without being
-    asked and this row is exactly the thing it would have answered. The advice here
-    once named `--refresh` on the composite verbs alone, while the row it advises is
-    just as reachable from `dotfiles packages check` — where that flag did not
-    exist. A person following it got `No such option`, which is worse than being
-    told nothing, and `refresh_flag` putting one spelling on every read verb is what
-    closed it.
+    asked and this row is exactly the thing it answers.
+
+    Both halves have to run from wherever the row was read, and this row is as
+    reachable from `dotfiles packages check` as from the composite verb. Advice
+    naming a flag the verb in hand rejects is worse than no advice at all: the
+    instruction reads as authoritative and the `No such option` reads as the
+    reader's mistake. `commands.refresh_flag` is what puts one spelling on every
+    read verb, and `test_the_flag_that_advice_names_is_one_this_verb_accepts` holds
+    it there.
 
     Offline has no such command at all: what is missing is a newer bundle, not a
     network call this run could make instead.
