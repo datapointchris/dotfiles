@@ -1429,11 +1429,11 @@ npm_globals:
     - name: sass
       description: Dart Sass CSS compiler
 
-    # tree-sitter-cli is installed via install/common/github-releases/tree-sitter.sh
-    # NOT via npm — npm install runs a post-install script that downloads the binary
-    # from GitHub directly, bypassing our offline-cache path. In firewalled environments
-    # (WSL work machine) that download fails. The github-releases installer integrates
-    # with the offline bundle, so it works online AND offline. Do not re-migrate to npm.
+    # tree-sitter-cli is a github_releases entry above, NOT an npm package. npm's
+    # post-install script downloads the binary from GitHub directly, bypassing the
+    # offline-cache path, and that download fails on a firewalled machine (the WSL
+    # work box). The github_releases provider integrates with the offline bundle, so
+    # it works online AND offline. Do not re-migrate to npm.
 
 # ================================================================
 # UV TOOLS (Python)
