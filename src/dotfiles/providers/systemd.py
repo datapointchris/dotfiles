@@ -40,6 +40,16 @@ def enable(unit: str) -> Completed:
 
     Reload first, or systemd enables the copy it read at boot — which for a unit
     this repo has just written is the previous one, or nothing at all.
+
+    **`sysconfig._apply_unit` is the same sequence for a *declared* row, and the
+    two differ deliberately.** This one discards the reload's result and starts
+    through `--now` with no guard, which is right for a release that ships its own
+    unit: nothing here is reported per-row, and the caller reads only this
+    `Completed`. That one has a row to report, so it distinguishes a manager that
+    would not answer from one holding an older copy, and reports the difference.
+
+    Whoever changes this policy has to change it in both places. Neither reads the
+    other, and they are apart because the reporting is, not by oversight.
     """
     effects.run(['systemctl', '--user', 'daemon-reload'], output=Output.QUIET)
     return effects.run(['systemctl', '--user', 'enable', '--now', unit], output=Output.QUIET)
