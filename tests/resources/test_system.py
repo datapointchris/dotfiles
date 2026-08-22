@@ -71,8 +71,8 @@ def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
 
     Autouse because the `manager` rows are planned from whatever else the plan
     reached, so every fixture here grows one per manager without asking — and the
-    unstubbed read is `pacman -Qu` against the Arch box running the suite, which
-    makes a verdict here depend on when that machine last synced. Currency is
+    unstubbed read is `checkupdates` against the Arch box running the suite, which
+    makes a verdict here depend on what that machine is behind on. Currency is
     measured in its own tests, against a stub that says what it wants.
     """
     monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
@@ -768,7 +768,11 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
 def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     """The gate is on the read, not on the row: a locally-answerable manager is
     measured whatever the caller said, and the ones that need a round trip are the
-    only thing `--cached` buys back."""
+    only thing `--cached` buys back.
+
+    apt is the local one here rather than pacman, which reads through `checkupdates`
+    and syncs a database copy to answer.
+    """
     asked: list[str] = []
 
     def record(manager: str) -> frozenset[str]:
@@ -779,8 +783,8 @@ def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pyt
 
     assert ev.query('outdated:mas') is None
     assert ev.query('outdated:mas', refresh=True) == frozenset()
-    assert ev.query('outdated:pacman') == frozenset()
-    assert asked == ['mas', 'pacman']
+    assert ev.query('outdated:apt') == frozenset()
+    assert asked == ['mas', 'apt']
 
 
 def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

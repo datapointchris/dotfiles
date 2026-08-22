@@ -363,8 +363,8 @@ def available(manager: str) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 OUTDATED: dict[str, tuple[str, ...]] = {
-    'pacman': ('pacman', '-Qu'),
-    'aur': ('yay', '-Qu'),
+    'pacman': ('checkupdates', '--nocolor'),
+    'aur': ('yay', '-Qu', '--aur'),
     'apt': ('apt', 'list', '--upgradable'),
     'brew': ('brew', 'outdated', '--formula', '--quiet'),
     'cask': ('brew', 'outdated', '--cask', '--greedy', '--quiet'),
@@ -373,13 +373,28 @@ OUTDATED: dict[str, tuple[str, ...]] = {
 }
 """How each manager is asked what it has installed and behind.
 
-Most read a local index and cost milliseconds. `NETWORKED` names the ones that do
-not, which is why this table is not uniform — and `aur` is in that set despite
-being spelled like its local neighbour.
+**A manager that compares against a local index answers from whenever that index
+was last synced.** `pacman -Qu` reads `/var/lib/pacman/sync`, so it reports what
+was behind at the last `-Sy` and nothing since. Measured on this machine
+2026-08-22, against a database 39 hours old: `pacman -Qu` printed nothing while
+ten packages were behind, and `plan` said "pacman has nothing to upgrade". That
+is the release cache's bug in a second manager — a figure correct when written,
+answering a question asked later.
 
-`yay -Qu` rather than `pacman -Qu` for the AUR: both list the same local
-packages, but only yay knows an AUR package's upstream version, so pacman reports
-every one of them current forever.
+`checkupdates` is pacman-contrib's answer to it. It copies the sync database to a
+private path, refreshes *that* under `fakeroot`, and reads the copy — so the
+machine's own database is untouched and nothing needs root. Refreshing the real
+one is not an option: `pacman -Sy` without the `-u` is the partial-upgrade state
+Arch does not support, and a read verb must not leave a machine in it.
+
+`--nocolor` because `Color` in `pacman.conf` would otherwise put escape codes in
+front of the first field, and `_names` reads that field. A parser that depends on
+a config file is one that works here and not on the next box.
+
+`yay -Qu --aur` rather than a bare `-Qu`: both list the same local packages, but
+only yay knows an AUR package's upstream version, so pacman reports every one of
+them current forever. `--aur` is what keeps the two Arch rows from counting the
+same repo package twice once `checkupdates` starts finding them.
 
 `--greedy` on the casks because an auto-updating cask is excluded otherwise, and
 this repo installed it and would like to know.
@@ -388,30 +403,37 @@ this repo installed it and would like to know.
 EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})
 """Which currency queries report "nothing to upgrade" as a failure.
 
-`pacman -Qu` exits 1 having printed nothing when every package is current, which
-is the query's convention for an empty result rather than an error — the same one
-`grep` uses. Reading that as "the manager could not answer" is what the first
-version of this did, and it reported a fully-current Arch box as unmeasurable.
+`checkupdates` exits 2 having printed nothing when every package is current, and
+`yay -Qu` exits 1 — both the query's convention for an empty result rather than an
+error, the same one `grep` uses. Reading that as "the manager could not answer" is
+what the first version of this did, and it reported a fully-current Arch box as
+unmeasurable.
 
-Only these two, and only with no output: a genuine pacman failure prints to
-stderr, which `Output.QUIET` keeps in the same transcript, so a non-zero exit that
-said something is still a non-answer.
+Only these two, and only with no output: a genuine failure prints to stderr, which
+`Output.QUIET` keeps in the same transcript, so a non-zero exit that said something
+is still a non-answer. `checkupdates` dies that way for every real fault it has —
+no fakeroot, an unwritable database copy, a sync that failed.
 """
 
-NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur'})
+NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman'})
 """Which currency reads reach the network, and so are the ones `--cached` declines.
 
-There is no local answer for any of them. Flathub's available versions live on
-Flathub, the App Store has no offline catalogue, and `yay -Qu` asks the AUR's RPC
-about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
-which is the tell that a process is waiting rather than working.
+None of them has a local answer worth giving. Flathub's available versions live on
+Flathub, the App Store has no offline catalogue, `yay -Qu` asks the AUR's RPC about
+every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%, which is
+the tell that a process is waiting rather than working — and `checkupdates` syncs a
+database copy before reading it.
+
+`pacman` is the entry that looks wrong and is not. The read it names is a sync, and
+the local answer it replaced was worse than no answer: `pacman -Qu` against a stale
+database reports a machine current, which reads as measured.
 
 **This names round trips; it does not ration them.** Every read verb measures, so
-all three are asked on a plain `plan` or `check`, and the set is what a run
-declining the network consults to know which reads it must skip. `yay -Qu` is a
-second of wall clock on this machine, which is worth not spending when somebody
-has said they do not want the network — and worth spending every other time,
-because a machine's AUR packages being behind is exactly what they asked about.
+all four are asked on a plain `plan` or `check`, and the set is what a run declining
+the network consults to know which reads it must skip. Together they are a couple of
+seconds on this machine, worth not spending when somebody has said they do not want
+the network — and worth spending every other time, because what a machine is behind
+on is exactly what they asked about.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {
