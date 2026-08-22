@@ -32,32 +32,29 @@ VerboseOption = typer.Option(
 )
 QuietOption = typer.Option(False, '--quiet', '-q', help='The verdict alone, without the per-item evidence')
 
-PLAN_REFRESHES = True
-"""`plan` answers what the machine would become, so it measures upstream itself.
+MEASURES_UPSTREAM = True
+"""Every read verb measures. `--cached` is how a caller declines.
 
-A cached figure cannot answer that question. It goes stale in one direction only —
-a release published since the last write reads as converged on a machine an apply
-would change — and that is the verdict a rehearsal exists to prevent trusting.
+A verb was invoked because somebody wanted an answer, so it gives the current one.
+`plan` and `apply` need it to be right about what a write would do, and `check`
+needs it to answer "is anything here behind" at all — which is the question it was
+asked. A figure up to `releases.TTL` old serves none of them.
+
+`check` read the cache until this was written, on the argument that it runs
+unattended and must not spend a request per declared release. That argument rested
+on a timer firing every ten minutes, and `schedule.INTERVAL_SECONDS` has been a day
+since `0f85cb33`. One refresh a day is not a budget worth designing around.
+Conditional requests settled the remainder: a revalidated refresh bills a handful
+of requests rather than one per release, because GitHub does not charge for a 304.
 """
 
-CHECK_REFRESHES = False
-"""`check` asks what is *wrong*, and a package a version behind is not.
 
-Drift is the normal state of a machine between applies, so the figure this verb
-reads may be behind without changing what it reports. That is what lets it run
-unattended off the cache. The scheduled unit passes `--refresh` regardless, for
-the findings that are gated on a freshly measured `latest` and reachable no other
-way.
-"""
-
-
-def refresh_flag(*, by_default: bool) -> Any:
+def refresh_flag() -> Any:
     """The currency axis, spelled one way on every verb that reads it.
 
-    Tri-state rather than a plain bool, because the default is not the same on both
-    read verbs and `--offline` has to be able to tell "not passed" from "passed
-    false". A `plan --offline` under a `True` default would resolve to refresh and
-    refuse itself as a contradiction, which is a usage error for typing neither
+    Tri-state rather than a plain bool, because `--offline` has to tell "not passed"
+    from "passed false". Under a plain `True` default, `plan --offline` resolves to
+    refresh and refuses itself as a contradiction — a usage error for typing neither
     flag.
 
     `--refresh/--cached` rather than a bare `--refresh` on one verb and `--cached`
@@ -69,27 +66,27 @@ def refresh_flag(*, by_default: bool) -> Any:
     normally render it in. Rich parses `[...]` in help text as a style tag and drops
     what it cannot resolve, so a bracketed default renders as nothing at all — the
     same trap `cli-design.md` § "Never use `[dim]` in text you write" names from the
-    other side. `show_default` cannot do it either: the value here is `None` on both
-    verbs, which is the tri-state and not the answer.
+    other side. `show_default` cannot do it either: the declared value is `None`,
+    which is the tri-state and not the answer.
     """
     return typer.Option(
         None,
         '--refresh/--cached',
         show_default=False,
-        help=f'Ask GitHub for the newest releases, or read the cache instead (default: {"refresh" if by_default else "cached"})',
+        help='Ask GitHub and the package managers what is newest, or answer from cache (default: refresh)',
     )
 
 
-def currency(refresh: bool | None, *, by_default: bool, offline: bool) -> bool:
+def currency(refresh: bool | None, *, offline: bool) -> bool:
     """Whether this run spends the network on upstream versions.
 
     The contradiction fires on an explicit `--refresh` alone. `--cached --offline`
     asks for the same thing twice rather than for two opposite things, and neither
-    flag typed is the verb's own default, which cannot be a usage error.
+    flag typed is the default, which cannot be a usage error.
     """
     if offline and refresh:
         contradiction('--offline', '--refresh')
-    return by_default if refresh is None else refresh
+    return MEASURES_UPSTREAM if refresh is None else refresh
 
 
 def contradiction(first: str, second: str) -> None:

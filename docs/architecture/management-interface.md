@@ -44,10 +44,11 @@ change, so `plan` keeps what `apply` can fix and `check` keeps what it cannot.
 `ExitCode` in `src/dotfiles/vocabulary.py` says why three is separate from one.
 The periodic timer runs `check`, and the shell nudge fires on issues alone.
 
-The same split decides which verb spends the network: `plan` asks GitHub, `check`
-reads a cache, and `--refresh`/`--cached` move either off its default. Why each
-default falls where it does is argued at `commands.refresh_flag` and at the two
-verbs in `src/dotfiles/main.py`.
+The split does not reach the network, though. All three verbs measure: they ask
+GitHub what each declared release is at, and the package managers what they are
+holding back. Being invoked is the reason to give a current answer. `--cached`
+declines the lot, and `commands.MEASURES_UPSTREAM` argues why that is the flag
+rather than the default.
 
 How a run renders on screen is `src/dotfiles/output.py`, which argues its own
 choices. None of that reaches `--json`, which a caller parses instead of the

@@ -155,7 +155,7 @@ against an upstream that was measured, where it is drift.
 READ = (
     pytest.param(('packages', 'plan', '--cached'), id='plan'),
     pytest.param(('packages', 'plan', '--cached', '--source', 'github_releases'), id='plan-source'),
-    pytest.param(('packages', 'check'), id='check'),
+    pytest.param(('packages', 'check', '--cached'), id='check'),
 )
 """The read verbs, and the one flag one of them takes that the other does not.
 
@@ -226,7 +226,7 @@ def test_currency_moves_plans_exit_code_and_never_checks(
 
 
 @pytest.mark.parametrize('relation', CACHED, ids=[relation.id for relation in CACHED])
-@pytest.mark.parametrize('verb', [('plan', '--cached'), ('check',)], ids=['plan', 'check'])
+@pytest.mark.parametrize('verb', [('plan', '--cached'), ('check', '--cached')], ids=['plan', 'check'])
 def test_a_json_run_names_the_relation_and_prints_no_rows(
     sandbox: Sandbox, cli: Callable[..., Invocation], relation: Against, verb: tuple[str, ...]
 ) -> None:
@@ -330,9 +330,9 @@ def test_nothing_could_be_measured_says_which_refresh_would_fix_it(sandbox: Sand
     """
     machine(sandbox, CACHED[6])
 
-    ran = cli('packages', 'check')
+    ran = cli('packages', 'check', '--cached')
 
-    assert 'run `dotfiles plan`, which measures upstream, or add `--refresh` to this verb' in said(ran)
+    assert 'this run answered from cache; drop `--cached` to measure upstream' in said(ran)
 
 
 def test_the_flag_that_advice_names_is_one_this_verb_accepts(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

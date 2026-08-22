@@ -360,19 +360,30 @@ def test_refresh_spends_the_network_on_a_tool_that_is_installed(verb: str, sandb
         cli(verb, '--refresh')
 
 
-@pytest.mark.parametrize('argv', [('plan',), ('packages', 'plan')], ids=['composite', 'scoped'])
-def test_plan_measures_upstream_without_being_asked_to(argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """`plan` answers what `apply` would change, and a cached figure cannot.
+@pytest.mark.parametrize(
+    'argv',
+    [('plan',), ('packages', 'plan'), ('check',), ('packages', 'check')],
+    ids=['plan', 'scoped-plan', 'check', 'scoped-check'],
+)
+def test_every_read_verb_measures_upstream_without_being_asked_to(
+    argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
+) -> None:
+    """A verb was invoked because somebody wanted an answer, so it gives a current one.
 
     The staleness runs one way. A release published since the last refresh leaves
     the cache holding a version the machine already has, so the row reads converged
-    on a machine an apply would upgrade — which is the one verdict a rehearsal must
-    never produce. Measured 2026-08-22: `packages plan` reported forge matched at
-    v1.37.5 while v1.38.0 was published, and the apply that followed installed it.
+    on a machine an apply would upgrade. Measured 2026-08-22: `packages plan`
+    reported forge matched at v1.37.5 while v1.38.0 was published, and the apply
+    that followed installed it.
 
-    Both doors, because the scoped verb is the one the bug was found through and
-    reading the cache there while the composite measured would be the same defect
-    with a narrower blast radius.
+    `check` is here for its own reason rather than for symmetry. "Is anything on
+    this machine behind" is the question it is asked, and a figure up to
+    `releases.TTL` old answers it wrong — the cache was defensible only while the
+    scheduled unit ran every ten minutes, and `schedule.INTERVAL_SECONDS` is a day.
+
+    Both doors for each, because the scoped verb is the one the bug was found
+    through and reading the cache there while the composite measured would be the
+    same defect with a narrower blast radius.
     """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
@@ -383,21 +394,20 @@ def test_plan_measures_upstream_without_being_asked_to(argv: tuple[str, ...], sa
 
 @pytest.mark.parametrize(
     'argv',
-    [('plan', '--cached'), ('packages', 'plan', '--cached'), ('check',), ('packages', 'check')],
-    ids=['plan-cached', 'scoped-plan-cached', 'check', 'scoped-check'],
+    [('plan', '--cached'), ('packages', 'plan', '--cached'), ('check', '--cached'), ('packages', 'check', '--cached')],
+    ids=['plan', 'scoped-plan', 'check', 'scoped-check'],
 )
-def test_the_cache_answers_wherever_the_network_was_not_asked_for(
+def test_the_cache_answers_wherever_the_network_was_declined(
     argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
     """What the release cache is for, stated as the set of runs that read it.
 
-    `check` by default, because drift is not what that verb reports and a figure
-    behind by a version changes none of its verdicts — which is what lets it run
-    unattended under an anonymous GitHub budget it would otherwise exhaust. `plan
-    --cached` on request, for a box that is rate-limited or has no route out.
+    One flag, on every read verb, and nothing else reaches it. That is the whole of
+    what the cache serves: a box that is rate-limited, one with no route out, or
+    somebody who wants the local answer in under a second.
 
-    Reaching the network on any of these would be a request nobody asked for, on
-    the paths chosen precisely because they cost none.
+    Reaching the network on any of these would be a request the caller explicitly
+    declined, which is a worse fault than a slow run.
     """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.44.0')

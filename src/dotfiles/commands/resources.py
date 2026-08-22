@@ -23,8 +23,6 @@ from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles import status
-from dotfiles.commands import CHECK_REFRESHES
-from dotfiles.commands import PLAN_REFRESHES
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import currency
@@ -332,7 +330,7 @@ def packages_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(by_default=PLAN_REFRESHES),
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -356,7 +354,7 @@ def packages_plan(
         owner=owner,
         packages=frozenset(package or ()),
         offline=offline,
-        refresh=currency(refresh, by_default=PLAN_REFRESHES, offline=offline),
+        refresh=currency(refresh, offline=offline),
     )
 
 
@@ -365,7 +363,7 @@ def packages_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool | None = refresh_flag(by_default=CHECK_REFRESHES),
+    refresh: bool | None = refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -391,7 +389,7 @@ def packages_check(
         reconcile.Lens.CHECK,
         as_json,
         offline=offline,
-        refresh=currency(refresh, by_default=CHECK_REFRESHES, offline=offline),
+        refresh=currency(refresh, offline=offline),
     )
 
 

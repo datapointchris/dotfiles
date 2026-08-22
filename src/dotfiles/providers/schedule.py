@@ -132,15 +132,14 @@ def _service_content() -> str:
     # is actually wrong — masking 1 here would be masking a real failure. Drift is
     # `plan`'s answer, not this verb's.
     #
-    # `--refresh`, because this is the run that can afford it and the one where it
-    # matters. Several findings are gated on `latest` having been measured this
-    # run rather than read from a cache — a version *ahead* of the newest release
-    # is the sharp one, since a cached figure cannot tell a tool that self-updated
-    # from a repo that re-versioned downwards and stranded the machine on bytes no
-    # declaration reproduces. This is the only check that runs unattended, so
-    # without it that finding is never reached. Nobody is waiting on a timer, and
-    # an unanswering upstream degrades to "upstream did not answer" rather than
-    # failing the run.
+    # `--refresh` is what every read verb does anyway, and is stated for the reason
+    # the nonfleet config states `[schedule] enabled = false` rather than leaving it
+    # to a matching default: a unit file is read by someone asking what this machine
+    # does unattended, and "it reaches GitHub" should be answerable from the file
+    # instead of from a constant they would have to go and find.
+    #
+    # Nobody is waiting on a timer, and an unanswering upstream degrades to
+    # "upstream did not answer" rather than failing the run.
     #
     # What this costs on a watched network is why `enabled` is off by default
     # rather than why the flag is absent here: the requests are the point of the
@@ -248,9 +247,8 @@ def _agent_content() -> bytes:
     return launchd.serialise(
         {
             'Label': LABEL,
-            # --refresh for the reason in _service_content: the findings gated on
-            # a freshly measured `latest` are invisible on every other run, and
-            # this is the one nobody is waiting on.
+            # --refresh for the reason in _service_content: it restates the default
+            # so the job file answers on its own what this machine reaches.
             'ProgramArguments': [_executable(), 'check', '--refresh'],
             # The same pinning `_service_content` gives the systemd unit. launchd
             # hands an agent `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so

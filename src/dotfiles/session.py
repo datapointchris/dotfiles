@@ -95,22 +95,19 @@ class Session:
     refresh: bool = False
     """Whether this run spends the network on being current.
 
-    `plan` and `apply` set it without being asked. Both answer what the machine
-    *would become*, and a cached figure cannot answer that — a release published
-    since the last write makes the answer wrong in the direction that matters,
-    which is a converged verdict on a machine an apply would change.
+    Every verb a person invokes sets it: `plan`, `check` and `apply` alike. Being
+    asked is the reason to give a current answer, and each of the three is asking a
+    question a stale figure gets wrong — what a write would do, what on this machine
+    is behind, and what to install.
 
-    `check` leaves it off, because the cache is what makes that verb cheap enough
-    to run unattended. Its own question is what is *wrong*, and a package a
-    version behind is drift rather than a fault, so the figure it reads may be
-    behind without changing the verdict. The scheduled unit passes `--refresh`
-    anyway: the findings gated on a freshly measured `latest` are reachable no
-    other way, and nobody is waiting on a timer.
+    False is the field's default and `--cached` is how a caller reaches it, for a
+    box that is rate-limited or has no route out. `--offline` resolves here too, by
+    way of `commands.currency`.
 
-    The ceiling this exists under is the anonymous GitHub budget of 60 requests an
-    hour, which a fleet machine's declared releases already exceed in a single
-    refresh. On a box with no `gh` token every refresh is therefore rationed, and
-    that is what the cache is rationing.
+    What this costs is one request per present declared release. Conditional
+    requests make most of them free against the rate limit, since GitHub does not
+    bill a 304 — `releases.refresh` and `github_release.revalidate` carry that
+    measurement.
     """
 
     force: bool = False

@@ -720,23 +720,22 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
 def _unmeasurable_advice(observed: Observed) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
-    `dotfiles plan` rather than a flag, because it measures upstream without being
-    asked and this row is exactly the thing it answers.
+    Three states, and only two of them have a next step.
 
-    Both halves have to run from wherever the row was read, and this row is as
-    reachable from `dotfiles packages check` as from the composite verb. Advice
-    naming a flag the verb in hand rejects is worse than no advice at all: the
-    instruction reads as authoritative and the `No such option` reads as the
-    reader's mistake. `commands.refresh_flag` is what puts one spelling on every
-    read verb, and `test_the_flag_that_advice_names_is_one_this_verb_accepts` holds
-    it there.
+    Every read verb measures, so a row nothing could measure means either the caller
+    declined the network or upstream did not answer. The first is undone by dropping
+    `--cached` and the second by nothing this run can do — saying "refresh" there
+    would advise the thing that just failed, which is how a machine ends up
+    reporting an unrepairable row with the reason unnamed.
 
-    Offline has no such command at all: what is missing is a newer bundle, not a
-    network call this run could make instead.
+    Offline is the third and has no command at all: what is missing is a newer
+    bundle, not a network call this run could make instead.
     """
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
-    return 'run `dotfiles plan`, which measures upstream, or add `--refresh` to this verb'
+    if not observed.consulted_network:
+        return 'this run answered from cache; drop `--cached` to measure upstream'
+    return 'upstream did not answer this run, so nothing here says what is newest; try again later'
 
 
 def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:
