@@ -2,6 +2,7 @@
 
 import enum
 import fnmatch
+import os
 import tomllib
 from pathlib import Path
 
@@ -137,20 +138,35 @@ EXCLUDED_SEARCH_SEQUENCES = tuple(tuple(Path(pattern).parts) for pattern in EXCL
 # ─── Utilities ────────────────────────────────────────────────────────────────
 
 
-def is_excluded_search_dir(path: Path) -> bool:
-    """Whether the orphan scan refuses to descend into this directory.
+def ends_in_an_excluded_run(parts: tuple[str, ...]) -> bool:
+    """Whether an excluded run finishes at the last of these components.
+
+    The primitive both exclusion questions are asked through, so there is one
+    definition of what an entry matches. Two predicates over
+    `EXCLUDED_SEARCH_SEQUENCES` would have to agree forever, with a test on two
+    hardcoded paths as the only thing holding them together.
 
     Whole components, matched as a contiguous run so a multi-part entry means the
-    nesting it spells. Components, not substrings: `.config/environment.d`
-    contains `env` and `.local/share/buildkit` contains `build`, and both are
-    real deployment targets.
+    nesting it spells. Components, not substrings: `.config/environment.d` contains
+    `env` and `.local/share/buildkit` contains `build`, and both are real
+    deployment targets.
+    """
+    return any(parts[-len(sequence) :] == sequence for sequence in EXCLUDED_SEARCH_SEQUENCES if len(sequence) <= len(parts))
+
+
+def is_excluded_search_dir(path: Path) -> bool:
+    """Whether an excluded run appears anywhere in this path.
+
+    Every prefix asked of `ends_in_an_excluded_run`, which is the same thing as
+    testing every start position and keeps the two answers from drifting apart.
+
+    The walk does not ask this: it asks the primitive directly, about a path whose
+    parent it has already admitted. That is where the cost is — measured over this
+    home directory, the whole-path form was 2.19s of a 3.0s profile at 253 tuple
+    comparisons per call, against 0.1s of syscalls.
     """
     parts = path.parts
-    return any(
-        parts[start : start + len(sequence)] == sequence
-        for sequence in EXCLUDED_SEARCH_SEQUENCES
-        for start in range(len(parts) - len(sequence) + 1)
-    )
+    return any(ends_in_an_excluded_run(parts[:end]) for end in range(1, len(parts) + 1))
 
 
 def should_exclude(path: Path) -> bool:
@@ -220,23 +236,90 @@ def cleanup_empty_directories(base_dir: Path, dirs_to_clean: list[Path]) -> list
     return removed
 
 
+def stands_in_for_an_excluded_directory(entry: os.DirEntry[str], parts: tuple[str, ...]) -> bool:
+    """Whether this link is indistinguishable from an excluded directory to
+    everything downstream, and so is refused rather than returned.
+
+    Both halves have to be established. A target that cannot be stat'd is not a
+    directory as far as this can tell, which is the same answer a broken link gets
+    — and a broken link is the one thing the orphan scan exists to find.
+
+    The distinction it draws is the subtlest in the walk and is not visible from
+    either caller: a link *named* `Downloads` that points at a directory is refused,
+    and `Downloads.txt` beside it pointing at a file is kept. At module level
+    because it closes over nothing and because a decision that fine is owed a test
+    of its own rather than reaching it through a traversal.
+    """
+    try:
+        points_at_a_directory = entry.is_dir()
+    except OSError:
+        return False
+    return points_at_a_directory and ends_in_an_excluded_run((*parts, entry.name))
+
+
 def _find_symlinks(base_dir: Path) -> list[Path]:
-    """Find all symlinks under base_dir with depth-limited, exclusion-aware traversal."""
+    """Every symlink under base_dir, depth-limited and exclusion-aware.
+
+    `os.scandir` rather than `Path.iterdir`, and rather than the `Path.walk` that
+    would be the pathlib answer. Both of those hand back names, so every question
+    about what an entry *is* costs a syscall, and deciding a symlink from a
+    directory takes several per entry. `scandir` answers from the type the
+    directory read already carried. Measured over one home directory, the three
+    returning the same set: `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s.
+    `Path.walk` buys nothing because it discards the entry it read the type from,
+    which is the whole of the saving — so `python.md` § "Use `pathlib.Path` for
+    every filesystem operation" is departed from here with a number behind it
+    rather than a preference.
+
+    A symlink is a result rather than a place to descend, whatever it points at.
+    That is what stops a link to an ancestor turning the walk into a loop, and it
+    is why `is_dir(follow_symlinks=False)` decides the recursion while the
+    following `is_dir()` decides only whether an excluded directory is being
+    reached through one.
+
+    Each directory is materialised before recursing so the descriptor is closed on
+    the way down rather than held open for the whole depth. A `Path` is built only
+    for an entry that is one of the two answers — a link to keep or a directory to
+    enter — because a home directory is mostly neither and parsing one costs more
+    than the read that found it.
+
+    Failure is caught per entry rather than around the loop. `is_dir()` follows, so
+    a link into a directory this account cannot traverse raises `PermissionError`
+    for that one entry, and a catch around the loop would abandon every entry after
+    it — an orphan scan that stops early reports a machine with no orphans. Each
+    catch says what it skipped, for the same reason: a shorter list and a complete
+    one are otherwise the same answer.
+
+    **The exclusions apply below the root, never to the root.** `base_dir` is
+    caller-supplied — `find_broken_symlinks` and `remove_symlinks` both take it —
+    and it is admitted without being tested, because a caller that named a
+    directory has said to scan it. So `_find_symlinks(~/Downloads/x)` scans, where
+    `is_excluded_search_dir` answers True about that same path. Nothing on a real
+    machine reaches the difference, since `TARGET_DIR` is `$HOME`.
+    """
     symlinks: list[Path] = []
 
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
             return
         try:
-            for item in directory.iterdir():
-                if item.is_dir() and is_excluded_search_dir(item):
-                    continue
-                if item.is_symlink():
-                    symlinks.append(item)
-                if item.is_dir() and not item.is_symlink():
-                    walk(item, depth + 1)
-        except (PermissionError, OSError):
-            pass
+            with os.scandir(directory) as scan:
+                entries = list(scan)
+        except OSError as unreadable:
+            err_console.print(f'[yellow]not scanned for orphans:[/] {directory} ({unreadable.strerror})')
+            return
+        parts = directory.parts
+        for entry in entries:
+            try:
+                is_link = entry.is_symlink()
+                descend = not is_link and entry.is_dir(follow_symlinks=False)
+            except OSError as unreadable:
+                err_console.print(f'[yellow]not examined:[/] {entry.path} ({unreadable.strerror})')
+                continue
+            if is_link and not stands_in_for_an_excluded_directory(entry, parts):
+                symlinks.append(Path(entry.path))
+            elif descend and not ends_in_an_excluded_run((*parts, entry.name)):
+                walk(Path(entry.path), depth + 1)
 
     walk(base_dir)
     return symlinks

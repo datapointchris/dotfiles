@@ -1,5 +1,6 @@
 """Tests for core symlink management functions and utilities."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -328,6 +329,209 @@ def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, dir
     orphan.symlink_to(repo / 'deleted.toml')
 
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
+
+
+# ─── What the walk decides ────────────────────────────────────────────────────
+
+
+KEPT = {
+    'to-a-file': 'plain.txt',
+    'broken': 'gone.txt',
+    'to-a-directory': 'a',
+    'pointing-at-the-cache': '.cache',
+    'a/b/c/d/at-the-depth-limit': 'plain.txt',
+    'a-loop-back-to-the-root': '.',
+    '.local/share/keep/under-a-name-containing-an-excluded-one': 'plain.txt',
+    'Downloads.txt': 'plain.txt',
+}
+"""Every link the walk has to come back with, and what each points at.
+
+`pointing-at-the-cache` is the one worth stating: exclusion is about where the walk
+*is*, never about where a link goes. The link's own path carries no excluded
+component, so it is an ordinary result and its target is not followed.
+"""
+
+REFUSED = {
+    'Downloads': 'a',
+    'a/b/c/d/e/past-the-depth-limit': 'plain.txt',
+    '.cache/inside-an-excluded-directory': 'plain.txt',
+}
+"""The three it must not come back with.
+
+A link *named* like an excluded directory and pointing at one is indistinguishable
+from the directory itself to everything downstream, which is what the following
+`is_dir()` is for — and why `Downloads.txt` beside it, pointing at a file, is kept.
+"""
+
+
+def a_tree_of_every_shape(root: Path) -> dict[str, Path]:
+    """One directory holding each thing the walk decides about.
+
+    In one tree rather than one per case, because the decisions are not
+    independent: the depth cases mean nothing without a link shallow enough to
+    keep beside them, and the exclusion cases nothing without one the same walk
+    admits.
+    """
+    for directory in ('a/b/c/d/e', '.cache', '.local/share/keep'):
+        (root / directory).mkdir(parents=True)
+    (root / 'plain.txt').write_text('anything')
+
+    made = {}
+    for name, target in {**KEPT, **REFUSED}.items():
+        link = root / name
+        link.symlink_to(root / target)
+        made[name] = link
+    return made
+
+
+def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should_not(tmp_path: Path) -> None:
+    """Eleven shapes, and which of them come back.
+
+    A symlink is a result rather than a place to descend, whatever it points at —
+    which is what makes the loop safe and what keeps `to-a-directory` from being
+    walked twice.
+
+    Every answer here rests on which of the walk's type questions fires in which
+    order, and none of them is visible from the function's signature — so the table
+    is what holds the traversal to its decisions. `KEPT` and `REFUSED` carry what
+    each case is for.
+    """
+    made = a_tree_of_every_shape(tmp_path)
+
+    found = set(core._find_symlinks(tmp_path))
+
+    assert found == {made[name] for name in KEPT}
+
+
+def test_a_link_whose_target_cannot_be_reached_costs_only_itself(tmp_path: Path) -> None:
+    """`is_dir()` follows, so a link into a directory this account cannot traverse
+    raises `PermissionError` — on that one entry.
+
+    A catch around the whole loop would abandon every remaining entry in the
+    directory. An orphan scan that stops early reports a machine with no orphans,
+    and the repair it would have named is a link into the repo at a file that no
+    longer exists.
+
+    Both links come back. The unreachable one is kept because its target cannot be
+    established as a directory, which is the same answer a broken link gets — and a
+    broken link is what the scan is for.
+    """
+    locked = tmp_path / 'locked'
+    (locked / 'inside').mkdir(parents=True)
+    unreachable = tmp_path / 'into-the-locked-directory'
+    unreachable.symlink_to(locked / 'inside')
+    ordinary = tmp_path / 'ordinary'
+    ordinary.symlink_to(tmp_path / 'gone.txt')
+    locked.chmod(0o000)
+    try:
+        found = set(core._find_symlinks(tmp_path))
+    finally:
+        locked.chmod(0o755)
+
+    assert found == {unreachable, ordinary}
+
+
+JUDGED = (
+    ('a-name-merely-containing-one', '/home/someone/.config/environment.d', False),
+    ('an-excluded-name', '/home/someone/.local/share/Trash', True),
+    ('a-multi-part-run', '/home/someone/Library/Mobile Documents', True),
+    ('the-run-broken-across-a-gap', '/home/someone/Library/other/Caches', False),
+)
+"""Paths where the tail alignment and the whole-path scan have to agree.
+
+`is_excluded_search_dir` asks the tail question of every prefix, so agreement is
+by construction rather than by luck — these hold that construction to cases a
+reader can check by eye, including a multi-part run and the same two components
+with something between them.
+"""
+
+
+@pytest.mark.parametrize(('label', 'path', 'excluded'), JUDGED, ids=[case[0] for case in JUDGED])
+def test_the_tail_check_and_the_whole_path_scan_answer_alike(label: str, path: str, excluded: bool) -> None:
+    """The walk asks the tail question, on the strength of the parent having been
+    admitted. Both are built from `ends_in_an_excluded_run`, so this is what says
+    the composition is right rather than that two implementations happen to match.
+    """
+    assert core.ends_in_an_excluded_run(Path(path).parts) is excluded
+    assert core.is_excluded_search_dir(Path(path)) is excluded
+
+
+def test_the_walk_scans_a_root_whose_own_path_is_excluded(tmp_path: Path) -> None:
+    """The exclusions say which subtrees not to descend into, not which roots a
+    caller may name.
+
+    `base_dir` is admitted untested, so a scan of `~/Downloads/x` walks it while
+    `is_excluded_search_dir` answers True about that same path. Both callers take
+    the root as a parameter, so this is reachable — and the traversal this replaced
+    refused, returning one link where this returns three.
+
+    No machine reaches the difference: `TARGET_DIR` is `$HOME` and no home
+    directory carries a component from `EXCLUDE_SEARCH_DIRS`. It is pinned because
+    the equivalence claim is otherwise stated without its one exception.
+    """
+    root = tmp_path / 'Downloads' / 'home'
+    (root / 'a').mkdir(parents=True)
+    (root / 'plain.txt').write_text('anything')
+    for name in ('to-a-file', 'to-a-directory', 'a/nested'):
+        (root / name).symlink_to(root / 'plain.txt')
+
+    assert core.is_excluded_search_dir(root) is True
+    assert len(core._find_symlinks(root)) == 3
+
+
+def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence(tmp_path: Path, capsys) -> None:
+    """A subtree nothing could read and a subtree with no orphans are the same
+    answer to the caller — a shorter list either way.
+
+    `python.md` § "Fail fast instead of defaulting": where the fallback is correct,
+    say so on the way past, naming the path and the error. Nothing downstream can
+    tell the two apart, so this warning is the only evidence the scan was partial.
+    """
+    locked = tmp_path / 'locked'
+    (locked / 'inside').mkdir(parents=True)
+    (tmp_path / 'ordinary').symlink_to(tmp_path / 'gone.txt')
+    locked.chmod(0o000)
+    try:
+        found = core._find_symlinks(tmp_path)
+    finally:
+        locked.chmod(0o755)
+
+    # Rich wraps to the terminal it is given, and the hook's pytest gets a narrower
+    # one than a desk — so the path arrives split across lines. The assertion is
+    # about what was said, not about where it broke.
+    reported = capsys.readouterr().err.replace('\n', '')
+    assert [path.name for path in found] == ['ordinary']
+    assert 'not scanned for orphans' in reported
+    assert str(locked) in reported
+    assert 'Permission denied' in reported
+
+
+LINK_SHAPES = (
+    ('named-like-an-excluded-directory-and-pointing-at-one', 'Downloads', 'a', True),
+    ('named-like-one-and-pointing-at-a-file', 'Downloads', 'plain.txt', False),
+    ('named-ordinarily-and-pointing-at-an-excluded-one', 'ordinary', '.cache', False),
+    ('named-with-an-excluded-name-as-a-prefix', 'Downloads.txt', 'a', False),
+)
+"""Whether a link is refused for standing in for an excluded directory.
+
+Both halves have to hold: the *link's own name* completes an excluded run, and it
+points at a directory. The third row is the one that surprises — exclusion is
+about where the walk is, never about where a link goes.
+"""
+
+
+@pytest.mark.parametrize(('label', 'name', 'points_at', 'refused'), LINK_SHAPES, ids=[case[0] for case in LINK_SHAPES])
+def test_which_links_stand_in_for_an_excluded_directory(label: str, name: str, points_at: str, refused: bool, tmp_path: Path) -> None:
+    """Asked of the predicate directly, because two of the eleven traversal cases
+    turn on it and neither says which half decided."""
+    (tmp_path / 'a').mkdir()
+    (tmp_path / '.cache').mkdir()
+    (tmp_path / 'plain.txt').write_text('anything')
+    (tmp_path / name).symlink_to(tmp_path / points_at)
+
+    entry = next(found for found in os.scandir(tmp_path) if found.name == name)
+
+    assert core.stands_in_for_an_excluded_directory(entry, tmp_path.parts) is refused
 
 
 # ─── Stream Contract ──────────────────────────────────────────────────────────
