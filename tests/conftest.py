@@ -185,10 +185,22 @@ writes only there, which is how `syspkg._apt_outdated` measures apt currency
 without escalating — a read, and the guard has to be able to tell them apart.
 """
 
+REDIRECTABLE = frozenset({('apt-get', 'update')})
+"""The one denylisted pair a redirect makes harmless, named rather than inferred.
+
+Every apt subcommand takes `Dir::State::lists`, and on `apt-get install` it moves
+where the *index* is read from while the packages still land on the machine. So the
+option cannot be read as "this is a read" on its own — the exemption is this pair
+plus that option, and nothing else.
+"""
+
 
 def would_change_this_machine(argv: tuple[str, ...]) -> bool:
     """Whether a denylisted pair is really the form that writes to the machine."""
-    return argv[:2] in INSTALLING and not any(part.startswith(REDIRECTED_STATE) for part in argv)
+    if argv[:2] not in INSTALLING:
+        return False
+    redirected = any(part.startswith(REDIRECTED_STATE) for part in argv)
+    return not (redirected and argv[:2] in REDIRECTABLE)
 
 
 class WouldInstall(BaseException):

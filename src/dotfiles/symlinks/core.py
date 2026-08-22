@@ -260,8 +260,27 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
     for an entry that is one of the two answers — a link to keep or a directory to
     enter — because a home directory is mostly neither and parsing one costs more
     than the read that found it.
+
+    Failure is caught per entry rather than around the loop. `is_dir()` follows, so
+    a link into a directory this account cannot traverse raises `PermissionError` on
+    that one entry — and the shape this replaced abandoned every remaining entry in
+    the directory when it did.
     """
     symlinks: list[Path] = []
+
+    def stands_in_for_an_excluded_directory(entry: os.DirEntry[str], parts: tuple[str, ...]) -> bool:
+        """Whether this link is indistinguishable from an excluded directory to
+        everything downstream, and so is refused rather than returned.
+
+        Both halves have to be established. A target that cannot be stat'd is not a
+        directory as far as this can tell, which is the same answer a broken link
+        gets — and a broken link is the one thing the orphan scan exists to find.
+        """
+        try:
+            points_at_a_directory = entry.is_dir()
+        except OSError:
+            return False
+        return points_at_a_directory and _excluded_by_the_component_just_added((*parts, entry.name))
 
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
@@ -273,10 +292,14 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
             return
         parts = directory.parts
         for entry in entries:
-            if entry.is_symlink():
-                if not (entry.is_dir() and _excluded_by_the_component_just_added((*parts, entry.name))):
-                    symlinks.append(Path(entry.path))
-            elif entry.is_dir(follow_symlinks=False) and not _excluded_by_the_component_just_added((*parts, entry.name)):
+            try:
+                is_link = entry.is_symlink()
+                descend = not is_link and entry.is_dir(follow_symlinks=False)
+            except OSError:
+                continue
+            if is_link and not stands_in_for_an_excluded_directory(entry, parts):
+                symlinks.append(Path(entry.path))
+            elif descend and not _excluded_by_the_component_just_added((*parts, entry.name)):
                 walk(Path(entry.path), depth + 1)
 
     walk(base_dir)

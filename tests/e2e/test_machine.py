@@ -164,30 +164,39 @@ def test_the_apps_work(converged_machine: Machine) -> None:
     assert result.returncode == 0, result.stdout[-4000:]
 
 
-def test_apt_currency_is_measured_against_an_index_the_run_refreshed(machine: Machine) -> None:
-    """The unprivileged refresh, against a real apt on a real Ubuntu.
+def test_apt_answers_its_currency_through_the_redirect_on_a_real_machine(machine: Machine) -> None:
+    """Whether apt accepts being pointed at somebody else's state directory.
 
     `syspkg._apt_outdated` redirects `Dir::State::lists` and `Dir::Cache` at a
     scratch directory so `apt-get update` needs no root, then lists against what it
     fetched. Nothing below this level can say whether apt accepts that: the unit
-    tests assert the argv and a stub answers it.
+    tests assert the argv a stub was handed, and a stub agrees with anything. An apt
+    that rejected either option would fail the listing, and the row would read
+    UNKNOWN on every apt machine.
 
-    The machine's own lists are what the assertion is against. These images ship them
-    stale, so a run reading them reports nothing upgradable — the measured-looking
-    wrong answer the redirect exists to stop.
+    *Measured* rather than a count, because this fixture converges the machine
+    first. `apply` runs `apt-get update` and the manager upgrade before any of these
+    tests, so a machine reporting nothing behind is correct and asserting otherwise
+    tests the archive's publishing schedule. The count that shows the bug was taken
+    against an unconverged base image: nothing upgradable from the machine's own
+    lists, eighteen from a refreshed copy.
 
     Gated on the manager and the route rather than on the image name. A firewalled
     environment cannot reach the archive, so its refresh fails and the seeded index
-    is the answer — correct behaviour, and not what this measures.
+    answers — correct behaviour, and a different assertion from this one.
     """
     if machine.environment.firewalled or not machine.succeeds('command -v apt-get'):
         pytest.skip('needs apt and a route to the archive')
     home = machine.environment.home
-    probe = "from dotfiles.providers import syspkg; print(len(syspkg.outdated('apt') or ()))"
+    probe = (
+        'from dotfiles.providers import syspkg; '
+        "answer = syspkg.outdated('apt'); "
+        "print('unmeasurable' if answer is None else f'measured {len(answer)}')"
+    )
     measured = machine.exec(f'cd {home}/dotfiles && uv run python -c "{probe}"')
 
     assert measured.returncode == 0, measured.stdout[-4000:]
-    assert int(measured.stdout.strip().splitlines()[-1]) > 0, 'a stale index reports nothing behind, which is what this refresh is for'
+    assert measured.stdout.strip().splitlines()[-1].startswith('measured'), measured.stdout[-4000:]
 
 
 def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:

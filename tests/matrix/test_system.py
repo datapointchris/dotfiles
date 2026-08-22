@@ -201,9 +201,14 @@ def records(sandbox: Sandbox, *tools: str) -> Path:
     precisely so the currency read needs no root, and a witness that could not tell
     that apart would report every measuring run as an escalation. Same rule as
     `would_change_this_machine` in `tests/conftest.py`, which guards the same call.
+
+    The subcommand is checked as well as the option, for the reason `REDIRECTABLE`
+    states there: every apt subcommand takes `Dir::State::lists`, and on an install
+    it moves only where the index is read from while the packages still land on the
+    machine.
     """
     log = sandbox.root / WITNESS
-    unprivileged = 'case "$*" in *Dir::State::lists=*) exit 0 ;; esac'
+    unprivileged = 'if [ "$1" = update ]; then case "$*" in *Dir::State::lists=*) exit 0 ;; esac; fi'
     for tool in tools:
         sandbox.shadow(tool, f'#!/bin/sh\n{unprivileged}\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
     return log
