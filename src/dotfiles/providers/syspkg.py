@@ -508,6 +508,11 @@ def _apt_outdated() -> frozenset[str] | None:
     A refresh that fails is not fatal. The listing still runs, against the seeded
     copy, which is the machine's own answer — worse than a current one and better
     than none, and the row says a number either way.
+
+    An `apply` therefore runs `apt-get update` twice: this one to decide what is
+    behind, and `REFRESH`'s privileged one before installing. That is the order
+    doing its job rather than a duplicate — measuring must not escalate, and
+    installing must resolve against the machine's real index.
     """
     with tempfile.TemporaryDirectory(prefix='dotfiles-apt-') as directory:
         scratch = Path(directory)

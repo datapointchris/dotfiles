@@ -68,12 +68,18 @@ def refresh_flag() -> Any:
     same trap `cli-design.md` § "Never use `[dim]` in text you write" names from the
     other side. `show_default` cannot do it either: the declared value is `None`,
     which is the tri-state and not the answer.
+
+    The three sources are named because one line serves six verbs and each reads a
+    different subset: `plugins` asks no package manager and `system` asks GitHub
+    about nothing. Naming only what the composite verbs reach made this line false
+    on the two doors that reach less, and a reader has no way to tell a help string
+    that overstates from one that is right.
     """
     return typer.Option(
         None,
         '--refresh/--cached',
         show_default=False,
-        help='Ask GitHub and the package managers what is newest, or answer from cache (default: refresh)',
+        help='Ask upstream what is newest — GitHub, the package managers, each plugin remote — or answer from cache (default: refresh)',
     )
 
 
