@@ -350,14 +350,62 @@ def test_the_run_record_carries_the_ceiling_only_when_one_was_named(sandbox: San
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
 def test_refresh_spends_the_network_on_a_tool_that_is_installed(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Both read verbs run at a prompt and on a timer, so both need the opt-in and
-    both have to honour it. A flag accepted by one and ignored by the other is a
-    `check` that silently answers from a cache the caller asked it not to trust."""
+    """Both read verbs take the flag and both have to honour it. One that accepted
+    it and answered from the cache anyway is a verb silently distrusting the caller
+    on the one question the flag exists to settle."""
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
 
     with pytest.raises(ReachedTheNetwork):
         cli(verb, '--refresh')
+
+
+@pytest.mark.parametrize('argv', [('plan',), ('packages', 'plan')], ids=['composite', 'scoped'])
+def test_plan_measures_upstream_without_being_asked_to(argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`plan` answers what `apply` would change, and a cached figure cannot.
+
+    The staleness runs one way. A release published since the last refresh leaves
+    the cache holding a version the machine already has, so the row reads converged
+    on a machine an apply would upgrade — which is the one verdict a rehearsal must
+    never produce. Measured 2026-08-22: `packages plan` reported forge matched at
+    v1.37.5 while v1.38.0 was published, and the apply that followed installed it.
+
+    Both doors, because the scoped verb is the one the bug was found through and
+    reading the cache there while the composite measured would be the same defect
+    with a narrower blast radius.
+    """
+    sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+    sandbox.installed('lazygit', 'lazygit version 0.44.0')
+
+    with pytest.raises(ReachedTheNetwork):
+        cli(*argv)
+
+
+@pytest.mark.parametrize(
+    'argv',
+    [('plan', '--cached'), ('packages', 'plan', '--cached'), ('check',), ('packages', 'check')],
+    ids=['plan-cached', 'scoped-plan-cached', 'check', 'scoped-check'],
+)
+def test_the_cache_answers_wherever_the_network_was_not_asked_for(
+    argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
+) -> None:
+    """What the release cache is for, stated as the set of runs that read it.
+
+    `check` by default, because drift is not what that verb reports and a figure
+    behind by a version changes none of its verdicts — which is what lets it run
+    unattended under an anonymous GitHub budget it would otherwise exhaust. `plan
+    --cached` on request, for a box that is rate-limited or has no route out.
+
+    Reaching the network on any of these would be a request nobody asked for, on
+    the paths chosen precisely because they cost none.
+    """
+    sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+    sandbox.installed('lazygit', 'lazygit version 0.44.0')
+    sandbox.upstream({'jesseduffield/lazygit': 'v0.45.0'})
+
+    ran = cli(*argv)
+
+    assert ran.exit_code in {ExitCode.CONVERGED, ExitCode.DRIFT, ExitCode.ISSUE}
 
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))

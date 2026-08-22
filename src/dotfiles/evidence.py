@@ -384,7 +384,7 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     if behind is None:
         return Evidence(
             Verdict.UNKNOWN,
-            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles check --refresh` or `dotfiles plan --refresh`',
+            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles plan` or add `--refresh` to this verb',
         )
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')

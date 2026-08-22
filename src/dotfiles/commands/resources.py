@@ -23,8 +23,12 @@ from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles import status
+from dotfiles.commands import CHECK_REFRESHES
+from dotfiles.commands import PLAN_REFRESHES
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import currency
+from dotfiles.commands import refresh_flag
 from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import CHANGE_COLOURS
@@ -78,6 +82,7 @@ def _survey(
     owner: str | None = None,
     packages: frozenset[str] = frozenset(),
     offline: bool = False,
+    refresh: bool = False,
 ) -> None:
     """One noun's selection, through the same engine and the same fold the composite uses.
 
@@ -100,9 +105,9 @@ def _survey(
     the composite one describing the same bundle two ways.
 
     The document is stamped from `dt.datetime.now` rather than from a `runs.begin`,
-    because this door deliberately files no run: the two read verbs are what a shell
-    prompt and a timer call, and a record per prompt is what filled the state
-    directory with thousands of empty files once already. The machine is the
+    because this door deliberately files no run: a read verb is what a timer calls
+    and what a person types between applies, and a record per invocation is what
+    filled the state directory with thousands of empty files once already. The machine is the
     resolved name for the reason the composite `check` takes it that way — under the
     timer nothing is passed and nothing is exported, and the document once said the
     machine was `""` while the walk had correctly read `~/.env`.
@@ -110,13 +115,19 @@ def _survey(
     began = dt.datetime.now(dt.UTC)
     if offline:
         reconcile.report_bundle(offline_bundle.describe())
-    session = _session(machine, owner=owner, packages=packages, offline=offline)
+    session = _session(machine, owner=owner, packages=packages, offline=offline, refresh=refresh)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
     _report(reconcile.fold(engine.assess(session, selection), lens), as_json, machine=session.machine_name, when=began, lens=lens)
 
 
-def _session(machine: str | None, owner: str | None = None, packages: frozenset[str] = frozenset(), offline: bool = False) -> Session:
-    return resolved(machine, owner, packages=packages, offline=offline)
+def _session(
+    machine: str | None,
+    owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
+    offline: bool = False,
+    refresh: bool = False,
+) -> Session:
+    return resolved(machine, owner, packages=packages, offline=offline, refresh=refresh)
 
 
 def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
@@ -321,6 +332,7 @@ def packages_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(by_default=PLAN_REFRESHES),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -328,7 +340,11 @@ def packages_plan(
 
     `--source`, `--owner` and `--package` are `apply`'s, and mean the same here:
     this is the rehearsal of the write those three narrow, which is the one case
-    where a preview is worth most.
+    where a preview is worth most. They narrow the refresh with it, so a plan for
+    one entry asks upstream about one entry.
+
+    Measures upstream by default, for the composite `plan`'s reason and answering
+    the same question. `--cached` declines it.
     """
     verbosity(verbose, quiet)
     _survey(
@@ -340,6 +356,7 @@ def packages_plan(
         owner=owner,
         packages=frozenset(package or ()),
         offline=offline,
+        refresh=currency(refresh, by_default=PLAN_REFRESHES, offline=offline),
     )
 
 
@@ -348,6 +365,7 @@ def packages_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(by_default=CHECK_REFRESHES),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -358,9 +376,21 @@ def packages_check(
     this is not one of them, because it changes the answer rather than narrowing it.
     A machine whose bundle carries nothing for the tools it has installed is a
     machine nothing can speak for, which is exactly what `check` exists to say.
+
+    `--refresh` is here for neither of those reasons: this verb reads the release
+    cache, so it is the verb the advice on an unmeasurable row is addressed to, and
+    that advice named a flag only the composite carried. Following a tool's own
+    instruction and getting `No such option` is worse than being told nothing.
     """
     verbosity(verbose, quiet)
-    _survey('packages', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey(
+        'packages',
+        machine,
+        reconcile.Lens.CHECK,
+        as_json,
+        offline=offline,
+        refresh=currency(refresh, by_default=CHECK_REFRESHES, offline=offline),
+    )
 
 
 @packages_app.command('apply')

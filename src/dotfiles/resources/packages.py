@@ -720,15 +720,20 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
 def _unmeasurable_advice(observed: Observed) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
-    `--refresh` is a flag of the two composite verbs (`dotfiles plan`, `dotfiles
-    check`), never of the resource-scoped `dotfiles packages check` this row can
-    just as easily be read from — naming the bare flag there would be advice that
-    does not run. Offline has no such command at all: what is missing is a newer
-    bundle, not a network call this run could make instead.
+    `dotfiles plan` rather than a flag, because it measures upstream without being
+    asked and this row is exactly the thing it would have answered. The advice here
+    once named `--refresh` on the composite verbs alone, while the row it advises is
+    just as reachable from `dotfiles packages check` — where that flag did not
+    exist. A person following it got `No such option`, which is worse than being
+    told nothing, and `refresh_flag` putting one spelling on every read verb is what
+    closed it.
+
+    Offline has no such command at all: what is missing is a newer bundle, not a
+    network call this run could make instead.
     """
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
-    return 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`'
+    return 'run `dotfiles plan`, which measures upstream, or add `--refresh` to this verb'
 
 
 def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:

@@ -93,12 +93,24 @@ class Session:
     offline: bool = False
     owner: str | None = None
     refresh: bool = False
-    """Permission to spend the network on being current.
+    """Whether this run spends the network on being current.
 
-    `check` reads cached upstream release versions so it can run at a prompt and
-    on a timer without an API call per release. This is the explicit
-    opt-in to measuring instead, and it is the only thing that makes a `check`
-    reach GitHub.
+    `plan` and `apply` set it without being asked. Both answer what the machine
+    *would become*, and a cached figure cannot answer that — a release published
+    since the last write makes the answer wrong in the direction that matters,
+    which is a converged verdict on a machine an apply would change.
+
+    `check` leaves it off, because the cache is what makes that verb cheap enough
+    to run unattended. Its own question is what is *wrong*, and a package a
+    version behind is drift rather than a fault, so the figure it reads may be
+    behind without changing the verdict. The scheduled unit passes `--refresh`
+    anyway: the findings gated on a freshly measured `latest` are reachable no
+    other way, and nobody is waiting on a timer.
+
+    The ceiling this exists under is the anonymous GitHub budget of 60 requests an
+    hour, which a fleet machine's declared releases already exceed in a single
+    refresh. On a box with no `gh` token every refresh is therefore rationed, and
+    that is what the cache is rationing.
     """
 
     force: bool = False

@@ -21,9 +21,12 @@ visible from a verdict row:
   syscalls crosses drvfs, and the count is in the tens of thousands.
 - **Version probes.** One `<binary> --version` per installed tool with an
   upstream, strictly one after another. 69 process starts in series.
-- **A networked refresh.** `apply` resolves with `refresh=True`, so it asks
-  GitHub for the newest release of every present tool. Behind a firewall that
-  answers slowly, this is minutes and it looks identical to a hang.
+- **A networked refresh.** `apply` and `plan` both resolve with `refresh=True`,
+  so each asks GitHub for the newest release of every present tool. Behind a
+  firewall that answers slowly, this is minutes and it looks identical to a hang.
+  `plan --cached` answers from the release cache instead, and `--package` or
+  `--source` cut the refresh to the entries named. `check` reads the cache
+  already, so it pays none of this unless handed `--refresh`.
 
 ## Solution
 
