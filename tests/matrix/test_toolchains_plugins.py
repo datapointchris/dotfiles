@@ -26,6 +26,7 @@ the network attempt it is, through the guard.
 from __future__ import annotations
 
 import os
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -155,6 +156,35 @@ def tpm_installed(sandbox: Sandbox) -> Path:
     installer = plugins / 'tpm' / 'bin' / 'install_plugins'
     installer.write_text('#!/bin/sh\nexit 0\n')
     installer.chmod(0o755)
+    return plugins
+
+
+IDENTITY = ('-c', 'user.email=box@example.invalid', '-c', 'user.name=Synthetic Box')
+"""On the command line rather than from config, so this works on a box that has
+written no git identity — which the CI runner has not."""
+
+
+def git(*argv: str) -> None:
+    subprocess.run(['git', *IDENTITY, *argv], check=True, capture_output=True)
+
+
+def tpm_behind_its_remote(sandbox: Sandbox) -> Path:
+    """TPM as a real clone whose origin has moved on since it was made.
+
+    Nothing weaker exercises `clone.behind`, which fetches and then compares `HEAD`
+    against `@{u}`. `tpm_installed`'s fabricated `.git` fails the fetch and answers
+    None, which is *unaskable* rather than *current* — a distinction every other
+    test here is indifferent to and this one is entirely about.
+
+    The remote is a directory in the sandbox. git fetches from a path with no route
+    out, so the flag is what this measures rather than the transport.
+    """
+    origin = git_checkout(sandbox.root / 'tpm-origin', {'bin/install_plugins': '#!/bin/sh\nexit 0\n'})
+    plugins = sandbox.home / '.config' / 'tmux' / 'plugins'
+    plugins.mkdir(parents=True, exist_ok=True)
+    git('clone', '-q', str(origin), str(plugins / 'tpm'))
+    (plugins / 'tpm' / 'bin' / 'install_plugins').chmod(0o755)
+    git('-C', str(origin), 'commit', '-q', '--allow-empty', '-m', 'the commit the clone has not seen')
     return plugins
 
 
@@ -575,6 +605,54 @@ def test_an_uncloned_plugin_is_drift_and_a_plugin_installed_by_something_else_is
     assert checked.exit_code == ExitCode.ISSUE
     assert 'present, but not a git checkout, so nothing here can update it' in unwrapped(advised.stderr)
     assert 'and re-run to clone it, or drop the entry if another tool owns this plugin' in unwrapped(advised.stderr)
+
+
+@pytest.mark.parametrize('verb', ['plan', 'check'], ids=['plan', 'check'])
+def test_this_door_fetches_each_clone_without_being_asked_to(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A clone behind its remote is drift, and this is the door named after clones.
+
+    A door that declines the fetch reports a machine converged while `dotfiles
+    plan` reports the same clone stale. Two front doors on one dataset, disagreeing
+    about the dataset.
+    """
+    sandbox.shadow('tmux')
+    declares(sandbox, tmux_plugins=True)
+    tpm_behind_its_remote(sandbox)
+
+    ran = cli('plugins', verb)
+
+    assert 'tpm/tpm' in unwrapped(ran.stderr)
+    assert 'behind' in unwrapped(ran.stderr)
+
+
+def test_declining_the_network_leaves_a_clone_measured_on_presence_alone(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`--cached` buys back the fetch, which is the whole of what this resource
+    spends on the network.
+
+    The clone is still measured — it is present and it is a checkout — so the row
+    disappears rather than turning UNKNOWN. Being behind is the only question here
+    that needs the remote.
+
+    The absence is asserted alongside the clone being *matched*. On its own it is
+    satisfied by a usage error, a traceback, or `--cached` being silently dropped —
+    and the last of those is the one failure this row exists to catch, which
+    `testing.md` § "An assertion that nothing happened is satisfied by a crash"
+    names by this shape. A matched row is what says the walk reached this clone and
+    decided about it.
+
+    The run is DRIFT rather than converged, and for something else: this fixture
+    deploys no `tmux.conf`, so `tmux-sync/tpm` has no plugin list to read. That row
+    is not this row's subject, which is why the assertion is on the clone.
+    """
+    sandbox.shadow('tmux')
+    declares(sandbox, tmux_plugins=True)
+    tpm_behind_its_remote(sandbox)
+
+    ran = cli('plugins', 'plan', '--cached')
+
+    reported = unwrapped(ran.stderr)
+    assert 'matched tpm/tpm' in reported, reported
+    assert 'behind' not in reported
 
 
 # ─────────────────────────────────────────────────────────────────────────────

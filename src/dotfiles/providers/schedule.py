@@ -87,6 +87,21 @@ and shared by every host behind one egress, two machines were enough to keep tha
 pool at zero for the whole hour."""
 
 
+UNIT_SECONDS = 30 * 60
+"""How long one scheduled check may run before systemd gives up on it.
+
+Half an hour, against a run that takes seconds on a desk and minutes on the work
+box's firewall — wide enough that a slow link is never mistaken for a hang, and
+far inside `INTERVAL_SECONDS` so a killed run cannot still be holding the unit
+when the next fire is due.
+
+There is a floor under this rather than a preference: `Type=oneshot` disables the
+start timeout by default, and an active unit does not re-fire, so a run that hangs
+once ends the schedule silently and forever. That is a worse failure than any
+value of this constant.
+"""
+
+
 def cadence() -> str:
     if INTERVAL_SECONDS % 3600 == 0:
         return f'{INTERVAL_SECONDS // 3600}h'
@@ -132,22 +147,29 @@ def _service_content() -> str:
     # is actually wrong — masking 1 here would be masking a real failure. Drift is
     # `plan`'s answer, not this verb's.
     #
-    # `--refresh`, because this is the run that can afford it and the one where it
-    # matters. Several findings are gated on `latest` having been measured this
-    # run rather than read from a cache — a version *ahead* of the newest release
-    # is the sharp one, since a cached figure cannot tell a tool that self-updated
-    # from a repo that re-versioned downwards and stranded the machine on bytes no
-    # declaration reproduces. This is the only check that runs unattended, so
-    # without it that finding is never reached. Nobody is waiting on a timer, and
-    # an unanswering upstream degrades to "upstream did not answer" rather than
-    # failing the run.
+    # `--refresh` is what every read verb does anyway, and is stated for the reason
+    # the nonfleet config states `[schedule] enabled = false` rather than leaving it
+    # to a matching default: a unit file is read by someone asking what this machine
+    # does unattended, and "it reaches GitHub" should be answerable from the file
+    # instead of from a constant they would have to go and find.
+    #
+    # Nobody is waiting on a timer, and an unanswering upstream degrades to
+    # "upstream did not answer" rather than failing the run.
     #
     # What this costs on a watched network is why `enabled` is off by default
     # rather than why the flag is absent here: the requests are the point of the
     # refresh, so a machine that does not want them declines the whole schedule.
+    # `TimeoutStartSec` because `Type=oneshot` disables the start timeout by
+    # default, which `man systemd.service` states outright. A check that hangs then
+    # leaves the unit active forever, and an active unit suppresses its own next
+    # fire — so one hung run silently ends the schedule. Every read verb now
+    # reaches the network, so the run this starts has more ways to hang than when
+    # the unit was written. `syspkg.CURRENCY_SECONDS` bounds each subprocess and
+    # this bounds the run, because a run is many of them.
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
-        f'[Service]\nType=oneshot\nEnvironment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
+        f'[Service]\nType=oneshot\nTimeoutStartSec={UNIT_SECONDS}\n'
+        f'Environment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
     )
 
 
@@ -248,9 +270,8 @@ def _agent_content() -> bytes:
     return launchd.serialise(
         {
             'Label': LABEL,
-            # --refresh for the reason in _service_content: the findings gated on
-            # a freshly measured `latest` are invisible on every other run, and
-            # this is the one nobody is waiting on.
+            # --refresh for the reason in _service_content: it restates the default
+            # so the job file answers on its own what this machine reaches.
             'ProgramArguments': [_executable(), 'check', '--refresh'],
             # The same pinning `_service_content` gives the systemd unit. launchd
             # hands an agent `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so

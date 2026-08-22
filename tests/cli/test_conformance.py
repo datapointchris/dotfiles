@@ -21,6 +21,8 @@ import pytest
 from typer.main import get_command
 
 import dotfiles
+from dotfiles import registry
+from dotfiles import resources
 from dotfiles import vocabulary
 from dotfiles.main import app
 
@@ -39,14 +41,51 @@ LEAVES = [(path, cmd) for path, cmd in TREE if not isinstance(cmd, click.Group)]
 GROUPS = [(path, cmd) for path, cmd in TREE if isinstance(cmd, click.Group)]
 
 
-ACCEPTED = {path: {option for parameter in command.params for option in parameter.opts} for path, command in LEAVES}
+ACCEPTED = {
+    path: {option for parameter in command.params for option in (*parameter.opts, *parameter.secondary_opts)} for path, command in LEAVES
+}
 """Every leaf's option names, derived once.
 
 Built here rather than inside each test because five of them ask the same
 question of the whole tree, and a policy asserted against its own private copy of
 the surface is a policy that can disagree with its neighbour about what the
 surface is.
+
+`secondary_opts` as well as `opts`, or a `--refresh/--cached` pair is half
+invisible. click keeps the negative spelling of a boolean flag there, so a policy
+about `--cached` asserted against `opts` alone could not fail whatever the tree
+said — and this file already carries a rule about `--refresh`.
 """
+
+
+def _branches_on_refresh(resource: str) -> bool:
+    """Whether this resource's own module reads `session.refresh`.
+
+    `packages` and `plugins` do. `system` does not and still depends on it, which
+    is why this is one of two sources below rather than the answer.
+    """
+    module = Path(resources.__file__).parent / f'{resource}.py'
+    return module.is_file() and 'session.refresh' in module.read_text()
+
+
+CURRENCY_RESOURCES = frozenset(
+    {provider.resource for provider in registry.PROVIDERS if isinstance(provider, registry.ManagerProvider)}
+    | {resource for resource in {provider.resource for provider in registry.PROVIDERS} if _branches_on_refresh(resource)}
+)
+"""Every resource whose answer changes with whether the run measured upstream.
+
+Two sources because there are two ways to depend on it, and a grep finds only one.
+`packages` and `plugins` branch on `session.refresh` in their own modules;
+`system` never names it — it carries a `ManagerProvider` row whose verdict comes
+from `evidence.by_currency`, which reads an inventory built from the session's
+answer one level down. Reading the resource modules alone reports `system` as
+currency-free, which is exactly how it came to have no flag for a release.
+
+Derived rather than listed, per `testing.md` § "A surface invariant is derived
+from the command tree": a table cannot tell "nobody added a networked resource"
+from "somebody added one and nothing looked".
+"""
+
 
 RECONCILING = [(path, command) for path, command in LEAVES if path[-1] in {'plan', 'check', 'apply'}]
 """Every `plan`, `check` and `apply` in the tree, with no exceptions carved out.
@@ -288,6 +327,41 @@ def test_no_apply_offers_refresh_because_every_apply_already_refreshes() -> None
     for path, options in ACCEPTED.items():
         if path[-1] == 'apply':
             assert '--refresh' not in options, f'{"/".join(path)} offers --refresh, which it cannot decline to do'
+
+
+def test_the_currency_flag_is_always_the_whole_pair() -> None:
+    """One axis, two spellings, and a verb offering one of them is a verb a caller
+    cannot reverse.
+
+    Derived rather than listed, per `testing.md` § "A surface invariant is derived
+    from the command tree": a table naming which verbs take the pair cannot tell
+    "nobody added a door" from "somebody added one and nothing looked". Six leaves
+    gained the pair in one branch, each by hand.
+    """
+    for path, options in ACCEPTED.items():
+        assert ('--refresh' in options) == ('--cached' in options), f'{"/".join(path)} offers half of the currency pair'
+
+
+def test_every_resource_that_reads_currency_offers_the_flag_on_both_read_verbs() -> None:
+    """A resource whose observation branches on `session.refresh` has two answers,
+    so its own doors have to let a caller pick between them.
+
+    `system` and `plugins` each spent a release answering `False` while the
+    composite verbs measured — two front doors disagreeing about one dataset, both
+    found by a person rather than by this. The set is read off the source for the
+    reason the section gives: a literal list is the thing that cannot notice a
+    seventh resource.
+
+    `system` reads it one level down, through `evidence.Inventories`, so the grep
+    is over the resource *and* what it dispatches to rather than over the module
+    alone.
+    """
+    assert CURRENCY_RESOURCES, 'nothing was found to read currency, so this asserts nothing'
+    for resource in sorted(CURRENCY_RESOURCES):
+        for verb in ('plan', 'check'):
+            options = ACCEPTED.get((resource, verb))
+            assert options is not None, f'{resource} {verb} is not in the tree'
+            assert '--refresh' in options, f'{resource} {verb} reads currency and cannot be told whether to measure'
 
 
 WITHHELD_FROM_CHECK = ('--source', '--owner', '--package')

@@ -720,15 +720,22 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
 def _unmeasurable_advice(observed: Observed) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
-    `--refresh` is a flag of the two composite verbs (`dotfiles plan`, `dotfiles
-    check`), never of the resource-scoped `dotfiles packages check` this row can
-    just as easily be read from — naming the bare flag there would be advice that
-    does not run. Offline has no such command at all: what is missing is a newer
+    Three states, and only two of them have a next step.
+
+    Every read verb measures, so a row nothing could measure means either the caller
+    declined the network or upstream did not answer. The first is undone by dropping
+    `--cached` and the second by nothing this run can do — saying "refresh" there
+    would advise the thing that just failed, which is how a machine ends up
+    reporting an unrepairable row with the reason unnamed.
+
+    Offline is the third and has no command at all: what is missing is a newer
     bundle, not a network call this run could make instead.
     """
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
-    return 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`'
+    if not observed.consulted_network:
+        return 'this run answered from cache; drop `--cached` to measure upstream'
+    return 'upstream did not answer this run, so nothing here says what is newest; try again later'
 
 
 def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:

@@ -30,9 +30,11 @@ import sys  # noqa: E402
 from pathlib import Path  # noqa: E402
 from types import ModuleType  # noqa: E402
 
+import httpx2  # noqa: E402
 import levels  # noqa: E402
 import pytest  # noqa: E402
 
+from dotfiles import github_release  # noqa: E402
 from dotfiles.privilege import Privilege  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -176,6 +178,32 @@ for, and a denylisted pair blocks it whether the binary on PATH is real or not. 
 one call that pattern does not reach is `no_stopping_this_machines_daemons`.
 """
 
+REDIRECTED_STATE = 'Dir::State::lists='
+"""The option that turns an `apt-get update` into a read of somebody else's directory.
+
+`('apt-get', 'update')` is on the list above because the bare form rewrites
+`/var/lib/apt/lists` and needs root for it. Pointed at a scratch directory it
+writes only there, which is how `syspkg._apt_outdated` measures apt currency
+without escalating — a read, and the guard has to be able to tell them apart.
+"""
+
+REDIRECTABLE = frozenset({('apt-get', 'update')})
+"""The one denylisted pair a redirect makes harmless, named rather than inferred.
+
+Every apt subcommand takes `Dir::State::lists`, and on `apt-get install` it moves
+where the *index* is read from while the packages still land on the machine. So the
+option cannot be read as "this is a read" on its own — the exemption is this pair
+plus that option, and nothing else.
+"""
+
+
+def would_change_this_machine(argv: tuple[str, ...]) -> bool:
+    """Whether a denylisted pair is really the form that writes to the machine."""
+    if argv[:2] not in INSTALLING:
+        return False
+    redirected = any(part.startswith(REDIRECTED_STATE) for part in argv)
+    return not (redirected and argv[:2] in REDIRECTABLE)
+
 
 class WouldInstall(BaseException):
     """Raised where an install was attempted, and deliberately not an `Exception`.
@@ -215,6 +243,69 @@ def logging_is_configured():
 
 
 @pytest.fixture(autouse=True)
+def a_token_lookup_that_forgot_the_last_test():
+    """Clear the memoised `github_token`, which is per-process and a suite is one.
+
+    `github_release.github_token` caches so a refresh does not spawn `gh auth token`
+    once per declared release. That is right for an invocation and wrong for a
+    suite: a test setting `$GITHUB_TOKEN` would otherwise be answered with whatever
+    the first test to ask happened to find, and the one it poisons is not the one
+    that set it — which is a failure that moves when tests are reordered.
+
+    Autouse rather than named by the tests that need it, because needing it is not
+    visible from the test that breaks.
+    """
+    github_release.github_token.cache_clear()
+    yield
+    github_release.github_token.cache_clear()
+
+
+class ReachedTheNetwork(BaseException):
+    """Raised where a test made an HTTP request, and deliberately not an `Exception`.
+
+    `engine._measure` wraps every resource in `except Exception` and turns what it
+    raised into a `Refusal`, so a guard raised as one is caught by the code under
+    test: the request is refused, the run reports the resource as unexaminable, and
+    the test passes its exit-code assertion having learned nothing.
+
+    Same reasoning as `WouldInstall`, and as `matrix.harness.ReachedTheNetwork`.
+    """
+
+
+@pytest.fixture(autouse=True)
+def no_network_from_a_test(request, monkeypatch):
+    """Refuse every HTTP request outside the tiers that declare they make them.
+
+    `tests/matrix/` guarded itself and nothing else did, so `tests/install/`,
+    `tests/cli/` and `tests/resources/` could reach GitHub. Measured 2026-08-22:
+    one `pytest tests/` spent 17 requests against the rate limit, and
+    `test_a_refresh_passes_the_prefix_through` asserted against `cli/v0.25.0` —
+    what ichrisbirch had published that morning, not what the test wrote.
+
+    That is the failure worth stopping. A test reading live upstream passes today
+    and fails the week something ships, and the version it read is nowhere in the
+    test.
+
+    Guarded at `httpx2.get` and `HTTPTransport.handle_request`, which sit between
+    every caller and the socket — including a `Client` built somewhere else. Our own
+    `github_release.request` would prove only that nobody called that one, which is
+    the gap `no_installing_on_this_machine` documents about `effects.run`.
+
+    `tests/matrix/` patches these again with its own exception type, which its tests
+    name in `pytest.raises`. A child conftest's autouse fixture runs after this one,
+    so that one wins where both apply.
+    """
+    if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
+        return
+
+    def refuse(*_args, **_kwargs):
+        raise ReachedTheNetwork('a test made an HTTP request — stub the transport, or mark the test e2e')
+
+    monkeypatch.setattr(httpx2, 'get', refuse)
+    monkeypatch.setattr(httpx2.HTTPTransport, 'handle_request', refuse)
+
+
+@pytest.fixture(autouse=True)
 def no_installing_on_this_machine(request, monkeypatch):
     """Refuse a command that would change the box the tests run on.
 
@@ -241,7 +332,7 @@ def no_installing_on_this_machine(request, monkeypatch):
     def refuse_installs(original):
         def guarded(command, *args, **kwargs):
             argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
-            if argv[:2] in INSTALLING:
+            if would_change_this_machine(argv):
                 raise WouldInstall(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
             return original(command, *args, **kwargs)
 

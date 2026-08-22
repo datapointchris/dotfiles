@@ -23,8 +23,13 @@ from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
 from dotfiles import status
+from dotfiles.commands import EACH_PLUGIN_REMOTE
+from dotfiles.commands import RELEASES_AND_MANAGERS
+from dotfiles.commands import THE_MANAGERS
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import currency
+from dotfiles.commands import refresh_flag
 from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import CHANGE_COLOURS
@@ -73,6 +78,7 @@ def _survey(
     machine: str | None,
     lens: reconcile.Lens,
     as_json: bool,
+    refresh: bool,
     *,
     source: str | None = None,
     owner: str | None = None,
@@ -80,6 +86,14 @@ def _survey(
     offline: bool = False,
 ) -> None:
     """One noun's selection, through the same engine and the same fold the composite uses.
+
+    **`refresh` has no default, so every door states its own answer.** Both answers
+    are live and `python.md` § "Fail fast instead of defaulting" is what that
+    settles: a parameter defaulted to what its first callers wanted has every site
+    written afterwards silently answering for them. That is not hypothetical here —
+    `system` and `plugins` each spent a release answering `False` while the
+    composite verbs measured, and a person found both. The parser is the one check
+    that reaches a door nobody has written yet.
 
     One noun, not always one resource: `--source` selects by address, and an
     address carries its own resource, so a section whose runtime is declared
@@ -100,9 +114,9 @@ def _survey(
     the composite one describing the same bundle two ways.
 
     The document is stamped from `dt.datetime.now` rather than from a `runs.begin`,
-    because this door deliberately files no run: the two read verbs are what a shell
-    prompt and a timer call, and a record per prompt is what filled the state
-    directory with thousands of empty files once already. The machine is the
+    because this door deliberately files no run: a read verb is what a timer calls
+    and what a person types between applies, and a record per invocation is what
+    filled the state directory with thousands of empty files once already. The machine is the
     resolved name for the reason the composite `check` takes it that way — under the
     timer nothing is passed and nothing is exported, and the document once said the
     machine was `""` while the walk had correctly read `~/.env`.
@@ -110,13 +124,19 @@ def _survey(
     began = dt.datetime.now(dt.UTC)
     if offline:
         reconcile.report_bundle(offline_bundle.describe())
-    session = _session(machine, owner=owner, packages=packages, offline=offline)
+    session = _session(machine, owner=owner, packages=packages, offline=offline, refresh=refresh)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
     _report(reconcile.fold(engine.assess(session, selection), lens), as_json, machine=session.machine_name, when=began, lens=lens)
 
 
-def _session(machine: str | None, owner: str | None = None, packages: frozenset[str] = frozenset(), offline: bool = False) -> Session:
-    return resolved(machine, owner, packages=packages, offline=offline)
+def _session(
+    machine: str | None,
+    owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
+    offline: bool = False,
+    refresh: bool = False,
+) -> Session:
+    return resolved(machine, owner, packages=packages, offline=offline, refresh=refresh)
 
 
 def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
@@ -321,6 +341,7 @@ def packages_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(RELEASES_AND_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -328,7 +349,11 @@ def packages_plan(
 
     `--source`, `--owner` and `--package` are `apply`'s, and mean the same here:
     this is the rehearsal of the write those three narrow, which is the one case
-    where a preview is worth most.
+    where a preview is worth most. They narrow the refresh with it, so a plan for
+    one entry asks upstream about one entry.
+
+    Measures upstream by default, for the composite `plan`'s reason and answering
+    the same question. `--cached` declines it.
     """
     verbosity(verbose, quiet)
     _survey(
@@ -340,6 +365,7 @@ def packages_plan(
         owner=owner,
         packages=frozenset(package or ()),
         offline=offline,
+        refresh=currency(refresh, offline=offline),
     )
 
 
@@ -348,6 +374,7 @@ def packages_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(RELEASES_AND_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -358,9 +385,21 @@ def packages_check(
     this is not one of them, because it changes the answer rather than narrowing it.
     A machine whose bundle carries nothing for the tools it has installed is a
     machine nothing can speak for, which is exactly what `check` exists to say.
+
+    Measures upstream by default, as the composite `check` does and for its
+    reason: "is anything on this machine behind" is answered wrong by a figure up
+    to `releases.TTL` old. `--cached` declines, and `--refresh` restates the
+    default for a caller who wants it on the line.
     """
     verbosity(verbose, quiet)
-    _survey('packages', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey(
+        'packages',
+        machine,
+        reconcile.Lens.CHECK,
+        as_json,
+        offline=offline,
+        refresh=currency(refresh, offline=offline),
+    )
 
 
 @packages_app.command('apply')
@@ -456,7 +495,7 @@ def toolchains_plan(
 ) -> None:
     """Show which language runtimes `apply` would install or raise."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, offline=offline)
+    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -469,7 +508,7 @@ def toolchains_check(
 ) -> None:
     """Report toolchain drift."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('apply')
@@ -513,12 +552,19 @@ def plugins_plan(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(EACH_PLUGIN_REMOTE),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Show which declared plugins `apply` would clone."""
+    """Show which declared plugins `apply` would clone or fast-forward.
+
+    Whether a clone is behind its remote is a `git fetch`, so this door measures by
+    default like every other read verb and `--cached` declines to the presence
+    question alone. `resources/plugins.py` fetches the whole set at once, which is
+    what makes measuring here cost about as much as measuring one.
+    """
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline)
+    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('check')
@@ -526,12 +572,13 @@ def plugins_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(EACH_PLUGIN_REMOTE),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Report plugin drift."""
+    """Report plugin drift, including clones behind their remote."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('apply')
@@ -564,7 +611,7 @@ def symlinks_plan(
 ) -> None:
     """Show which declared links `apply` would deploy or prune."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json)
+    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @symlinks_app.command('check')
@@ -573,7 +620,7 @@ def symlinks_check(
 ) -> None:
     """Report broken or missing symlinks without touching any."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json)
+    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @symlinks_app.command('apply')
@@ -648,14 +695,14 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.PLAN, as_json)
+    _survey('env', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.CHECK, as_json)
+    _survey('env', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @env_app.command('apply')
@@ -683,6 +730,7 @@ def system_plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(THE_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -691,9 +739,23 @@ def system_plan(
     `--source` and `--package` are `apply`'s, and the narrow write they name — the
     package payload without the configuration rows, or one row out of it — is the
     one most worth rehearsing here.
+
+    This resource owns the one row per package manager saying what that manager has
+    installed and behind, and `syspkg.NETWORKED` names the ones that cost a round
+    trip to answer. Measuring by default is what stops those rows reading `nothing
+    asked flatpak what is behind` on the door whose whole subject is the system.
     """
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.PLAN, as_json, source=source, packages=frozenset(package or ()), offline=offline)
+    _survey(
+        'system',
+        machine,
+        reconcile.Lens.PLAN,
+        as_json,
+        source=source,
+        packages=frozenset(package or ()),
+        offline=offline,
+        refresh=currency(refresh, offline=offline),
+    )
 
 
 @system_app.command('check')
@@ -701,12 +763,13 @@ def system_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
+    refresh: bool | None = refresh_flag(THE_MANAGERS),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Report system configuration drift."""
+    """Report system configuration drift, and which managers are behind."""
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline)
+    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @system_app.command('apply')
@@ -740,7 +803,7 @@ def identity_plan(
 ) -> None:
     """Show whether `apply` would set this machine’s git identity."""
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.PLAN, as_json)
+    _survey('identity', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @identity_app.command('check')
@@ -754,7 +817,7 @@ def identity_check(
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.CHECK, as_json)
+    _survey('identity', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @identity_app.command('show')
@@ -795,7 +858,7 @@ def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
     every finding is `BY_HAND`, so there is nothing for the write half to keep.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.PLAN, as_json)
+    _survey('auth', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @auth_app.command('check')
@@ -808,7 +871,7 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     runs unattended on a timer.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.CHECK, as_json)
+    _survey('auth', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @auth_app.command('show')
@@ -852,7 +915,7 @@ def credentials_plan(
     `test_conformance.py` exists to catch.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.PLAN, as_json)
+    _survey('credentials', machine, reconcile.Lens.PLAN, as_json, refresh=False)
 
 
 @credentials_app.command('check')
@@ -866,7 +929,7 @@ def credentials_check(
     where that lives.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.CHECK, as_json)
+    _survey('credentials', machine, reconcile.Lens.CHECK, as_json, refresh=False)
 
 
 @credentials_app.command('show')

@@ -6,11 +6,17 @@ and what an upstream published, and every part of it — which upstream, whether
 answer is fresh, whether either side parses — changes the verdict. This walks that
 comparison across the three verbs and the flags each of them takes.
 
-**The upstream is a file, and there are only two of them.** `plan` and `check`
-resolve a Session with `refresh=False`, so the release cache under
-`$XDG_CACHE_HOME` is the whole of what they know; `--offline` replaces it with a
-staged bundle's manifest. Neither reaches GitHub, which is what makes a row here
-the same row on any machine.
+**The upstream is a file, and there are only two of them.** Every verb below
+carries `--cached`, which resolves a Session with `refresh=False`, so the release
+cache under `$XDG_CACHE_HOME` is the whole of what any of them knows; `--offline`
+replaces it with a staged bundle's manifest. Neither reaches GitHub, which is what
+makes a row here the same row on any machine.
+
+**A bare `plan` is absent from this file for that reason.** It measures upstream
+without being asked, so every row it produced would be a statement about what
+GitHub published this morning. What it does instead — that the network is reached
+at all — is behaviour rather than a row, and `test_composite.py` measures it
+against the guard.
 
 **Every `apply` below is an offline one, and that is forced rather than chosen.**
 `reconcile.apply_machine` resolves its Session with `refresh=not offline`, so an
@@ -20,10 +26,12 @@ tool before it decides anything — measured, and it lands on
 off, so the online write verb is unreachable from a suite that may not use the
 network.
 
-**Which flag each verb takes is itself part of the matrix.** `--offline` is
-`apply`'s alone, `--source` is `plan`'s and `apply`'s, and `check` takes neither —
-so three of the twelve cells are usage errors rather than verdicts, and they are
-asserted as such.
+**Which flag each verb takes is itself part of the matrix.** `--source` narrows to
+one section, so `plan` and `apply` take it and `check` refuses it — a
+section-scoped answer to "what is wrong with this machine" reports a converged box
+by not having looked. `--offline` is on all three, `--refresh/--cached` on the two
+read verbs. The cells that are usage errors rather than verdicts are asserted as
+such, under "Which verb takes which flag" below.
 
 Rich wraps stderr at eighty columns, so every assertion here runs through
 `said`, which collapses whitespace. A detail is one sentence whatever the terminal
@@ -41,6 +49,7 @@ import pytest
 
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
+from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
 from matrix.harness import resource
 
@@ -144,9 +153,9 @@ against an upstream that was measured, where it is drift.
 """
 
 READ = (
-    pytest.param(('packages', 'plan'), id='plan'),
-    pytest.param(('packages', 'plan', '--source', 'github_releases'), id='plan-source'),
-    pytest.param(('packages', 'check'), id='check'),
+    pytest.param(('packages', 'plan', '--cached'), id='plan'),
+    pytest.param(('packages', 'plan', '--cached', '--source', 'github_releases'), id='plan-source'),
+    pytest.param(('packages', 'check', '--cached'), id='check'),
 )
 """The read verbs, and the one flag one of them takes that the other does not.
 
@@ -154,6 +163,13 @@ READ = (
 `packages/ghrelease` alone for this section — no toolchain is `needed_by` a
 release — so the selection narrows to the same provider the bare verb walks and
 the row must be identical.
+
+**`--cached` is the subject, not a workaround.** Every relation below is a
+statement about how a *cached* figure is read, and every read verb measures
+upstream unless told not to — so without the flag these rows would be asserting
+against whatever GitHub published this morning, which is the machine-independence
+the whole matrix exists to keep. All three verbs carry it for that one reason, and
+`tests/matrix/test_composite.py` is where the defaults themselves are asserted.
 """
 
 
@@ -209,9 +225,9 @@ def test_currency_moves_plans_exit_code_and_never_checks(
 
 
 @pytest.mark.parametrize('relation', CACHED, ids=[relation.id for relation in CACHED])
-@pytest.mark.parametrize('verb', ['plan', 'check'])
+@pytest.mark.parametrize('verb', [('plan', '--cached'), ('check', '--cached')], ids=['plan', 'check'])
 def test_a_json_run_names_the_relation_and_prints_no_rows(
-    sandbox: Sandbox, cli: Callable[..., Invocation], relation: Against, verb: str
+    sandbox: Sandbox, cli: Callable[..., Invocation], relation: Against, verb: tuple[str, ...]
 ) -> None:
     """The item is the answer a caller parses, and it is the same under both verbs.
 
@@ -228,7 +244,7 @@ def test_a_json_run_names_the_relation_and_prints_no_rows(
     """
     machine(sandbox, relation)
 
-    ran = cli('packages', verb, '--json')
+    ran = cli('packages', *verb, '--json')
     row = resource(ran, 'packages')
     measured = {change['item']: change['verdict'] for change in [*row['findings'], *row['others']]}
 
@@ -262,10 +278,10 @@ def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox
     """
     behind, placeholder = CACHED[1], CACHED[3]
     machine(sandbox, behind)
-    was_behind = said(cli('packages', 'plan'))
+    was_behind = said(cli('packages', 'plan', '--cached'))
 
     sandbox.installed(TOOL, placeholder.reported)
-    was_placeholder = said(cli('packages', 'plan'))
+    was_placeholder = said(cli('packages', 'plan', '--cached'))
 
     assert ROW.sub('', was_behind) == ROW.sub('', was_placeholder)
     assert "(is '0.0.0')" in was_placeholder
@@ -294,10 +310,10 @@ def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(s
     """
     placeholder = CACHED[3]
     machine(sandbox, placeholder)
-    was_asked = said(cli('packages', 'plan'))
+    was_asked = said(cli('packages', 'plan', '--cached'))
 
     machine(sandbox, placeholder, packages=UNASKABLE)
-    was_unaskable = said(cli('packages', 'plan'))
+    was_unaskable = said(cli('packages', 'plan', '--cached'))
 
     assert 'stale' in was_asked, 'the placeholder reads as behind while the entry is still asked'
     assert ROW.sub('', was_asked) != ROW.sub('', was_unaskable)
@@ -307,15 +323,33 @@ def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(s
 def test_nothing_could_be_measured_says_which_refresh_would_fix_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """An unmeasurable row carries the command that makes it measurable.
 
-    `--refresh` belongs to the composite verbs and not to `packages check`, which
-    is where this row is just as likely to be read — so the advice names the
-    command that exists rather than the flag this verb would reject.
+    Two commands, and both have to work from where the row was read. `dotfiles
+    plan` measures upstream without a flag, and `--refresh` is on this verb rather
+    than on the composite alone.
     """
     machine(sandbox, CACHED[6])
 
-    ran = cli('packages', 'check')
+    ran = cli('packages', 'check', '--cached')
 
-    assert 'refresh the release cache with `dotfiles check --refresh` or `dotfiles plan --refresh`' in said(ran)
+    assert 'this run answered from cache; drop `--cached` to measure upstream' in said(ran)
+
+
+def test_the_flag_that_advice_names_is_one_this_verb_accepts(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Advice is only advice if it runs, and the verb printing it is where it is read.
+
+    `packages check` is the verb that prints the row above, so a `--refresh` it
+    rejects makes the advice a usage error for anyone who follows it — the
+    instruction reads as authoritative and the refusal reads as their mistake.
+
+    Asserted by reaching the guard rather than by reading help text: a flag can be
+    accepted and dropped, and what makes the advice true is the request going out.
+    `cli-design.md` § "A flag the run cannot honour says so; it never parses into
+    silence" is the same failure from the other end.
+    """
+    machine(sandbox, CACHED[6])
+
+    with pytest.raises(ReachedTheNetwork):
+        cli('packages', 'check', '--refresh')
 
 
 # ─────────────────────────────────────────────────────────────────────────────

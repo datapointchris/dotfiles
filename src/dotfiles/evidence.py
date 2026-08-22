@@ -22,6 +22,7 @@ to tell it from a measured one.
 from __future__ import annotations
 
 import dataclasses as dc
+import enum
 import os
 import shutil
 import tomllib
@@ -55,6 +56,14 @@ class Evidence:
     read by different code. `detail` says what was found, for a person. This says
     the finding cannot be repaired by `apply`, for `repair_for` — which is what
     moves the item out of the plan and into what `check` reports.
+    """
+
+    unmeasured: Unmeasured | None = None
+    """Why an UNKNOWN row has no answer, where the row is a currency read.
+
+    Kept apart from `detail` for `blocked_by`'s reason, one field down: the
+    sentence is for a person and this is for anything that has to tell the causes
+    apart without matching it. A test is the caller that matters today.
     """
 
 
@@ -333,9 +342,14 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     """What one manager says, or None when it cannot answer or was not asked.
 
     Two questions through one door: what is installed, and what is installed and
-    behind. The second is prefixed, and the networked ones among them answer only
-    under `refresh` — Flathub and the App Store have no offline catalogue, and
-    `check` runs at a prompt and unattended on a timer.
+    behind. The second is prefixed, and the networked ones among them are the only
+    reads `refresh` gates. A declined run has no answer for any of them rather than
+    a cheap one, and for two different reasons: Flathub, the App Store and the AUR
+    have no offline catalogue at all, while pacman and apt have one that is as old
+    as the last sync and so answers the question wrong.
+
+    Every read verb passes `refresh=True`, so declining is something a caller asked
+    for with `--cached` or `--offline`.
     """
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)
@@ -368,6 +382,60 @@ class Inventory(Protocol):
     def get(self, name: str) -> frozenset[str] | None: ...
 
 
+class Unmeasured(enum.StrEnum):
+    """Why a currency row has no answer, as a value rather than a sentence.
+
+    Three causes with three different repairs — install the manager, install its
+    reader, drop the flag — and a reader who is handed the wrong one goes and does
+    the wrong thing. A test can assert the member; asserting the sentence pins
+    wording that exists to be rewritten, and pinned wording is what let
+    `MANAGER_ABSENT` be reported for `READER_ABSENT` on every Arch box.
+    """
+
+    MANAGER_ABSENT = 'manager-absent'
+    """The manager itself is not on this machine, so there is nothing to ask."""
+
+    READER_ABSENT = 'reader-absent'
+    """The manager is here and the program that answers its currency is not.
+
+    Only pacman today: `checkupdates` ships in `pacman-contrib`, which this repo
+    declares, so the window is between a machine having pacman and having had an
+    apply. Every other manager answers its own currency and cannot reach this.
+    """
+
+    DECLINED = 'declined'
+    """The caller said not to spend the network, with `--cached` or `--offline`."""
+
+
+UNMEASURED_DETAIL = {
+    Unmeasured.MANAGER_ABSENT: 'no {name} on this machine to ask what is behind',
+    Unmeasured.READER_ABSENT: '{name} is here but {reader} is not, so nothing can say what it is behind — install {package}',
+    Unmeasured.DECLINED: 'nothing asked {name} what is behind — a network call, and `--cached` declines it',
+}
+"""One sentence per cause, in one place, so a reword is not a test change."""
+
+READER_PACKAGE = {'checkupdates': 'pacman-contrib'}
+"""Which package ships a currency reader that is not its own manager.
+
+Named rather than derived: `packages.yml` is the declaration and this is the
+sentence a person reads, and working the second out of the first would mean
+`evidence` loading the catalog to write a hint.
+"""
+
+
+def _unmeasured_currency(manager: str) -> Evidence:
+    """The cause, and the sentence rendered from it."""
+    reader = syspkg.OUTDATED[manager][0]
+    if not shutil.which(syspkg.INSTALL[manager][0]):
+        reason = Unmeasured.MANAGER_ABSENT
+    elif not shutil.which(reader):
+        reason = Unmeasured.READER_ABSENT
+    else:
+        reason = Unmeasured.DECLINED
+    detail = UNMEASURED_DETAIL[reason].format(name=manager, reader=reader, package=READER_PACKAGE.get(reader, reader))
+    return Evidence(Verdict.UNKNOWN, detail, unmeasured=reason)
+
+
 def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     """Whether one package manager has anything installed and behind.
 
@@ -379,13 +447,24 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     A named sample rather than a bare count. "23 pacman package(s) behind" says a
     machine is behind and nothing about whether that matters; the first few names
     are usually enough to tell a routine sync from a kernel bump.
+
+    UNKNOWN has three causes and they take different repairs, so each is a
+    `Unmeasured` member and the sentence is rendered from it. A row whose cause
+    lives only in its English cannot be asserted except by matching the English,
+    which is the shape `code-quality.md` § "A failure mode gets a name callers can
+    branch on" names — and it is why the wrong binary below went unnoticed.
+
+    **The manager and its reader are two questions.** `INSTALL[name][0]` is the
+    manager itself and `OUTDATED[name][0]` is whatever answers its currency, which
+    since `checkupdates` is a different program. Reading the second as the first
+    told an Arch box `no pacman on this machine` — on a machine pacman installed
+    everything on — for the whole window before an apply lands `pacman-contrib`.
+    `syspkg.available` already draws this line and is the reason `INSTALL` is the
+    table asked.
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
-        return Evidence(
-            Verdict.UNKNOWN,
-            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles check --refresh` or `dotfiles plan --refresh`',
-        )
+        return _unmeasured_currency(item.name)
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')
     named = ', '.join(sorted(behind)[:3])

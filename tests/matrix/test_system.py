@@ -195,10 +195,22 @@ def records(sandbox: Sandbox, *tools: str) -> Path:
 
     The file is the assertion. A message saying root was declined proves what the
     run *said*; an absent witness proves `groupadd` was never handed the account.
+
+    A redirected `apt-get update` writes no line, because it is not one of these.
+    `syspkg._apt_outdated` points `Dir::State::lists` at a scratch directory
+    precisely so the currency read needs no root, and a witness that could not tell
+    that apart would report every measuring run as an escalation. Same rule as
+    `would_change_this_machine` in `tests/conftest.py`, which guards the same call.
+
+    The subcommand is checked as well as the option, for the reason `REDIRECTABLE`
+    states there: every apt subcommand takes `Dir::State::lists`, and on an install
+    it moves only where the index is read from while the packages still land on the
+    machine.
     """
     log = sandbox.root / WITNESS
+    unprivileged = 'if [ "$1" = update ]; then case "$*" in *Dir::State::lists=*) exit 0 ;; esac; fi'
     for tool in tools:
-        sandbox.shadow(tool, f'#!/bin/sh\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
+        sandbox.shadow(tool, f'#!/bin/sh\n{unprivileged}\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
     return log
 
 
@@ -698,6 +710,94 @@ def test_a_source_the_machine_declares_no_section_for_is_rejected_rather_than_em
 
     assert ran.exit_code == ExitCode.USAGE
     assert 'unknown source' in ran.output
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The manager currency rows, and the flag that declines them
+# ─────────────────────────────────────────────────────────────────────────────
+
+FLATPAK_MACHINE = {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation', 'flatpak': True}
+"""A machine whose plan reaches a networked manager.
+
+`manager/flatpak` exists only where the flatpak provider planned something, so the
+app below is what puts the row in the walk. apt is here too and is not networked,
+which is what makes the pair of rows say which half the flag governs.
+"""
+
+DBEAVER = {'flatpak_apps': [{'name': 'dbeaver', 'flatpak_id': 'io.dbeaver.DBeaverCommunity'}]}
+
+FLATPAK_WITH_AN_UPDATE = """#!/bin/sh
+case "$1" in
+  --version) exit 0 ;;
+  list) printf 'io.dbeaver.DBeaverCommunity\\n' ;;
+  remote-ls) printf 'io.dbeaver.DBeaverCommunity\\n' ;;
+esac
+exit 0
+"""
+"""A flatpak that has the app installed and Flathub holding a newer build.
+
+Three subcommands because two questions are asked of it and one is a probe:
+`--version` is `syspkg.outdated`'s liveness check, `list` is the inventory, and
+`remote-ls --updates` is the currency read that costs the round trip.
+"""
+
+
+def a_machine_with_a_flatpak_app_behind(sandbox: Sandbox) -> None:
+    sandbox.declare(packages=DBEAVER, manifest=FLATPAK_MACHINE)
+    sandbox.shadow('flatpak', FLATPAK_WITH_AN_UPDATE)
+
+
+def test_this_door_measures_a_networked_manager_without_being_asked_to(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`dotfiles system plan` is the door whose whole subject is the system.
+
+    A narrower door answering from a cache while the composite one measures is two
+    front doors disagreeing about one dataset, and the row it produced named a
+    `--refresh` this verb did not accept. A door that prints an instruction it
+    rejects is worse than one that says nothing.
+
+    PENDING rather than a verdict read off one document: a manager behind its
+    remote is repairable, so `plan` keeps the row and `check` puts it in the
+    residue. Both verbs are run because that split is what says the flag reached
+    each of them.
+    """
+    a_machine_with_a_flatpak_app_behind(sandbox)
+
+    planned = cli('system', 'plan', '--json')
+    checked = cli('system', 'check', '--json')
+
+    assert lands(planned, checked, 'manager/flatpak') is Lands.PENDING
+
+
+def test_declining_the_network_leaves_the_networked_manager_unmeasured(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`--cached` is the whole of what declines it, and the row says so rather than
+    reporting a manager with nothing to upgrade.
+
+    UNKNOWN rather than MATCHED is the property. Flathub is the only thing that
+    knows whether a flatpak app is behind, so a declined run has no local answer to
+    fall back to and must not manufacture one.
+    """
+    a_machine_with_a_flatpak_app_behind(sandbox)
+
+    planned = cli('system', 'plan', '--cached', '--json')
+    checked = cli('system', 'check', '--cached', '--json')
+
+    assert lands(planned, checked, 'manager/flatpak') is Lands.UNMEASURED
+
+
+def test_the_unmeasured_row_names_the_flag_that_declined_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The advice has to name something the verb printing it accepts.
+
+    Asserted on the string because that is the whole defect: every read verb
+    measures, so `--refresh` is the default and telling a reader to add it sends
+    them to type the state they are already in.
+    """
+    a_machine_with_a_flatpak_app_behind(sandbox)
+
+    ran = cli('system', 'plan', '--cached', '--json')
+
+    detail = next(entry['detail'] for entry in resource(ran, 'system')['others'] if entry['item'] == 'manager/flatpak')
+    assert '`--cached` declines it' in detail
+    assert '--refresh' not in detail
 
 
 # ─────────────────────────────────────────────────────────────────────────────

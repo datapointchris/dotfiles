@@ -164,6 +164,70 @@ def test_the_apps_work(converged_machine: Machine) -> None:
     assert result.returncode == 0, result.stdout[-4000:]
 
 
+CURRENCY_PROBE = (
+    'from dotfiles import commands; from dotfiles.providers import syspkg; '
+    'declared = set(commands.resolved(None).machine.coordinates.installers) & syspkg.NETWORKED; '
+    'answers = [(name, syspkg.outdated(name)) for name in sorted(declared)]; '
+    "print('PROBE ' + '; '.join(name + '=' + ('unmeasurable' if held is None else str(len(held))) for name, held in answers))"
+)
+"""Every networked currency read this machine's coordinates declare, and its answer.
+
+**Derived from the declaration, not from what is on PATH.** Filtering on
+`shutil.which(OUTDATED[name][0])` measured whatever the environment happened to
+hold: on a box with pacman and yay but no `checkupdates` it yielded `['aur']`
+alone, printed `PROBE aur=0`, and passed — so a `pacman-contrib` that failed to
+install satisfied the row written to catch exactly that. `common-errors.md` § "A
+check that resolves its subject from the environment measures whatever the
+environment says".
+
+The coordinates are the right subject because they say what this machine installs
+*through*, so a manager missing from PATH is a failure rather than a case to skip.
+`flatpak` and `mas` are outside `installers` — they are opt-in per machine rather
+than carried by a package manager — which is why the intersection is with
+`NETWORKED` rather than a walk of it.
+
+**Single quotes throughout, and no f-strings.** `Machine.exec` wraps this in a
+double-quoted `bash -c`, so one double quote in here ends the shell's string and
+the rest of the line becomes commands. It fails as a `SyntaxError` from a truncated
+program, which names the symptom and not the cause.
+"""
+
+
+def test_every_networked_currency_read_answers_on_a_real_machine(machine: Machine) -> None:
+    """Whether pacman and apt accept being read through a refreshed index copy.
+
+    Both take a route no lower level can exercise. `checkupdates` copies the pacman
+    database, refreshes the copy under fakeroot and reads it; `syspkg._apt_outdated`
+    points `Dir::State::lists` and `Dir::Cache` at a scratch directory and runs
+    `apt-get update` there. The unit tests assert the argv a stub was handed, and a
+    stub agrees with anything — a real manager rejecting either would report UNKNOWN
+    on every machine of that family.
+
+    `checkupdates` is also newly declared, so this is where its absence would show:
+    the package installs during the same run that first reads it.
+
+    *Answered* rather than a count, because this fixture converges the machine
+    first. `apply` refreshes each manager and runs the upgrade before any test here,
+    so a machine reporting nothing behind is correct and asserting otherwise tests
+    the archive's publishing schedule. The count that shows the bug was taken
+    against unconverged images: `pacman -Qu` listed nothing against a database 39
+    hours old while ten packages were behind, and apt listed nothing where a
+    refreshed copy listed eighteen.
+
+    A firewalled environment is skipped whole. Its refresh cannot reach the archive,
+    so the seeded index answers — correct behaviour, and a different assertion.
+    """
+    if machine.environment.firewalled:
+        pytest.skip('a firewalled machine answers from the seeded index, which is a different assertion')
+    home = machine.environment.home
+    measured = machine.exec(f'cd {home}/dotfiles && uv run python -c "{CURRENCY_PROBE}"')
+
+    assert measured.returncode == 0, measured.stdout[-4000:]
+    reported = next(line for line in measured.stdout.splitlines() if line.startswith('PROBE '))
+    assert reported != 'PROBE ', 'no networked manager was found, so this machine proved nothing'
+    assert 'unmeasurable' not in reported, reported
+
+
 def test_zdotdir_is_configured_system_wide(machine: Machine) -> None:
     """There is deliberately no `~/.zshenv`: `/etc/zshenv` (or `/etc/zsh/zshenv`
     on Debian) is what points zsh at `~/.config/zsh`, and a missing one means the

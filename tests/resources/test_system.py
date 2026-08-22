@@ -10,7 +10,9 @@ each manager.
 from __future__ import annotations
 
 import dataclasses as dc
+import shutil
 import stat
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -71,8 +73,8 @@ def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
 
     Autouse because the `manager` rows are planned from whatever else the plan
     reached, so every fixture here grows one per manager without asking — and the
-    unstubbed read is `pacman -Qu` against the Arch box running the suite, which
-    makes a verdict here depend on when that machine last synced. Currency is
+    unstubbed read is `checkupdates` against the Arch box running the suite, which
+    makes a verdict here depend on what that machine is behind on. Currency is
     measured in its own tests, against a stub that says what it wants.
     """
     monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
@@ -726,7 +728,7 @@ def test_a_manager_is_planned_for_every_one_the_machine_installs_through(tmp_pat
 def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset()})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     assert 'apt' not in manager_rows(live)
 
@@ -734,10 +736,15 @@ def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Pa
 def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """STALE rather than MISSING: the manager is there and doing its job, and what
     drifted is the machine's distance from what its repositories now hold. A count
-    alone says a machine is behind and nothing about whether it matters."""
+    alone says a machine is behind and nothing about whether it matters.
+
+    `refresh` because apt's currency read refreshes an index copy before consulting
+    it, which puts it in `syspkg.NETWORKED` — a session that declined the network
+    reaches the row below without asking the stub.
+    """
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset({'curl', 'linux-image-generic'})})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     change = manager_rows(live)['apt']
 
@@ -746,11 +753,50 @@ def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, 
     assert 'linux-image-generic' in change.detail
 
 
-def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Flathub and the App Store have no offline catalogue, so `check` does not ask
-    them — and reporting them current having asked nobody is the measured-looking
-    wrong answer this resource exists to stop."""
+def only_missing(*absent: str) -> Callable[..., str | None]:
+    """A `shutil.which` where exactly these names are not on the machine.
+
+    Named binaries rather than a shadow directory, because the three causes below
+    turn on *which* of two binaries is missing and `fake_bin` keeps `/usr/bin`
+    behind it — so a real `apt` on the runner and none on this Arch box decide the
+    answer instead of the test.
+    """
+    return lambda name, *rest, **named: None if name in absent else f'/usr/bin/{name}'
+
+
+UNMEASURED_CAUSES = (
+    ('nothing-missing', (), ev.Unmeasured.DECLINED),
+    ('the-manager', ('apt-get',), ev.Unmeasured.MANAGER_ABSENT),
+    ('its-reader', ('apt',), ev.Unmeasured.READER_ABSENT),
+)
+"""Which binary is absent, and the cause that makes the row unmeasurable.
+
+apt is the pair that shows the distinction: `INSTALL` names `apt-get` and
+`OUTDATED` names `apt`. pacman is the case it was written for — `checkupdates` is
+a different package from pacman — and cannot be exercised from this table because
+this file's declaration is an apt machine.
+"""
+
+
+@pytest.mark.parametrize(('label', 'absent', 'reason'), UNMEASURED_CAUSES, ids=[case[0] for case in UNMEASURED_CAUSES])
+def test_an_unmeasurable_manager_says_which_of_the_three_causes_it_is(
+    label: str,
+    absent: tuple[str, ...],
+    reason: ev.Unmeasured,
+    tmp_path: Path,
+    fake_bin: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Three causes, three repairs: install the manager, install its reader, drop
+    the flag. A reader handed the wrong one goes and does the wrong thing.
+
+    Asserted as the member rather than the sentence. Reading `OUTDATED[name][0]` as
+    the manager's own binary told every Arch box `no pacman on this machine` — on a
+    machine pacman installed everything on — and no test could fail on it, because
+    the only thing separating the causes was their English.
+    """
     answers_empty(fake_bin, 'dpkg-query')
+    monkeypatch.setattr(shutil, 'which', only_missing(*absent))
     behind(monkeypatch, {'apt': None})
     live = session(tmp_path, DECLARED, WORKSTATION)
 
@@ -758,13 +804,34 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
-    assert '--refresh' in change.detail
+    assert ev.by_currency(_row(live, 'apt'), {}).unmeasured is reason
 
 
-def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_manager_whose_reader_ships_separately_names_the_package_to_install(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pacman's currency is `checkupdates`, which is `pacman-contrib` — so a machine
+    with pacman and no reader needs a package name, not a manager name.
+
+    The window is real and this branch opens it: `pacman-contrib` is declared here
+    for the first time, so every Arch box prints this row until an apply lands it.
+    """
+    monkeypatch.setattr(shutil, 'which', only_missing('checkupdates'))
+
+    evidence = ev._unmeasured_currency('pacman')
+
+    assert evidence.unmeasured is ev.Unmeasured.READER_ABSENT
+    assert 'pacman-contrib' in evidence.detail
+
+
+def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     """The gate is on the read, not on the row: a locally-answerable manager is
-    measured whatever the verb, and the two that need a round trip wait to be
-    asked for."""
+    measured whatever the caller said, and the ones that need a round trip are the
+    only thing `--cached` buys back.
+
+    brew is the local one here. Both Arch managers and apt refresh an index copy to
+    answer, which is the round trip that put them in `NETWORKED`.
+    """
     asked: list[str] = []
 
     def record(manager: str) -> frozenset[str]:
@@ -775,8 +842,8 @@ def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.Mo
 
     assert ev.query('outdated:mas') is None
     assert ev.query('outdated:mas', refresh=True) == frozenset()
-    assert ev.query('outdated:pacman') == frozenset()
-    assert asked == ['mas', 'pacman']
+    assert ev.query('outdated:brew') == frozenset()
+    assert asked == ['mas', 'brew']
 
 
 def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

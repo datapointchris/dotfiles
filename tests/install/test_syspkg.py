@@ -13,6 +13,8 @@ from __future__ import annotations
 import stat
 from pathlib import Path
 
+import pytest
+
 from dotfiles.providers import syspkg
 
 
@@ -35,30 +37,57 @@ def manager(fake_bin: Path, name: str, body: str) -> None:
 
 
 def test_a_current_pacman_answers_nothing_rather_than_refusing(fake_bin: Path) -> None:
-    """`pacman -Qu` exits 1 having printed nothing when everything is current —
+    """`checkupdates` exits 2 having printed nothing when everything is current —
     the grep convention for an empty result, not an error.
 
     Reading it as a refusal is what the first version of this did, and it reported
     a fully-current Arch box as unmeasurable rather than converged.
     """
-    manager(fake_bin, 'pacman', 'exit 1')
+    manager(fake_bin, 'checkupdates', 'exit 2')
 
     assert syspkg.outdated('pacman') == frozenset()
 
 
-def test_a_pacman_that_actually_failed_is_still_a_non_answer(fake_bin: Path) -> None:
-    """Only a *silent* non-zero exit is the empty result. One that said something
-    is a broken database, and answering "nothing to upgrade" on the strength of an
-    error message would report a machine current that nobody measured."""
-    manager(fake_bin, 'pacman', 'echo "error: could not open database" >&2\nexit 1')
+def test_a_pacman_read_that_actually_failed_is_still_a_non_answer(fake_bin: Path) -> None:
+    """Only a *silent* non-zero exit is the empty result. One that said something is
+    a sync that failed or a missing fakeroot, and answering "nothing to upgrade" on
+    the strength of an error message would report a machine current that nobody
+    measured."""
+    manager(fake_bin, 'checkupdates', 'echo "==> ERROR: Cannot fetch updates" >&2\nexit 1')
 
     assert syspkg.outdated('pacman') is None
 
 
 def test_pacmans_names_are_taken_from_the_version_lines(fake_bin: Path) -> None:
-    manager(fake_bin, 'pacman', 'printf "curl 8.5.0-1 -> 8.6.0-1\\nlinux 6.9-1 -> 6.10-1\\n"')
+    manager(fake_bin, 'checkupdates', 'printf "curl 8.5.0-1 -> 8.6.0-1\\nlinux 6.9-1 -> 6.10-1\\n"')
 
     assert syspkg.outdated('pacman') == frozenset({'curl', 'linux'})
+
+
+def test_pacman_currency_is_read_through_checkupdates_rather_than_off_the_sync_database(fake_bin: Path) -> None:
+    """`pacman -Qu` compares against `/var/lib/pacman/sync`, so it reports what was
+    behind at the last `-Sy` and nothing published since.
+
+    Measured 2026-08-22 against a database 39 hours old: `pacman -Qu` printed
+    nothing while ten packages were behind, and `plan` said "pacman has nothing to
+    upgrade". A shadowed `pacman` that would answer is what pins the read to the
+    synced copy — if the command ever goes back, this test finds those two names.
+    """
+    manager(fake_bin, 'pacman', 'printf "stale-answer 1.0 -> 2.0\\n"')
+    manager(fake_bin, 'checkupdates', 'printf "fresh-answer 1.0 -> 2.0\\n"')
+
+    assert syspkg.outdated('pacman') == frozenset({'fresh-answer'})
+
+
+def apt_listing(fake_bin: Path, listing: str) -> Path:
+    """An apt that lists `listing`, and the `apt-get` its refresh runs first.
+
+    Both, always. `_apt_outdated` runs `apt-get update` before it lists, so an
+    unshadowed one is the real binary on whatever box runs the suite — absent on
+    Arch and a 25 MB fetch on the Ubuntu runner.
+    """
+    manager(fake_bin, 'apt', f'printf "{listing}"')
+    return executable(fake_bin, 'apt-get', '#!/bin/sh\nexit 0\n')
 
 
 def test_apts_preamble_is_not_mistaken_for_a_package(fake_bin: Path) -> None:
@@ -66,9 +95,60 @@ def test_apts_preamble_is_not_mistaken_for_a_package(fake_bin: Path) -> None:
     stable, both on the same stream as the answer — and spells the name
     `curl/noble-updates`."""
     listing = 'WARNING: apt does not have a stable CLI interface.\\nListing...\\ncurl/noble-updates 8.5.0 amd64 [upgradable from: 8.4.0]\\n'
-    manager(fake_bin, 'apt', f'printf "{listing}"')
+    apt_listing(fake_bin, listing)
 
     assert syspkg.outdated('apt') == frozenset({'curl'})
+
+
+def test_apt_currency_is_read_against_an_index_this_run_refreshed(fake_bin: Path) -> None:
+    """`apt list --upgradable` compares against `/var/lib/apt/lists`, so it answers
+    from whenever that was last updated as root.
+
+    Measured 2026-08-22 in the Ubuntu test image: the machine's own lists reported
+    nothing upgradable while a refreshed copy reported eighteen packages. Both
+    commands are asserted to carry the redirect, because one of them missing it is
+    the shape that either reads the stale index or writes the machine's.
+    """
+    argv = fake_bin / 'apt-argv'
+    manager(fake_bin, 'apt', f'printf "%s\\n" "$*" >> {argv}\nprintf "Listing...\\ncurl/noble 8.5.0 amd64 [upgradable from: 8.4.0]\\n"')
+    executable(fake_bin, 'apt-get', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {argv}\n')
+
+    assert syspkg.outdated('apt') == frozenset({'curl'})
+    handed = argv.read_text().splitlines()
+    assert [line.split()[0] for line in handed] == ['update', 'list']
+    assert all('Dir::State::lists=' in line and 'Dir::Cache=' in line for line in handed)
+
+
+def test_an_apt_refresh_that_fails_is_a_non_answer_rather_than_a_smaller_one(fake_bin: Path) -> None:
+    """A count taken against an index nothing refreshed is a count nobody measured.
+
+    The listing would answer from whatever the seed held, and an empty seed answers
+    *nothing behind* — a machine reported current by a run that reached no archive.
+    This repo's own Debian image builds that state: its Dockerfile runs `rm -rf
+    /var/lib/apt/lists/*`, so only the network is missing.
+
+    `None` is what the pacman path already answers for the same failure, and it is
+    what `by_currency` turns into UNKNOWN with a cause.
+    """
+    manager(fake_bin, 'apt', 'printf "Listing...\\ncurl/noble 8.5.0 amd64 [upgradable from: 8.4.0]\\n"')
+    executable(fake_bin, 'apt-get', '#!/bin/sh\necho "could not resolve host" >&2\nexit 100\n')
+
+    assert syspkg.outdated('apt') is None
+
+
+def test_a_currency_read_that_never_answers_is_not_read_as_nothing_behind(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`EMPTY_IS_NONZERO` decodes "exited non-zero having printed nothing" as
+    *nothing to upgrade*, which is `checkupdates`' and `yay`'s convention.
+
+    A read that hit its deadline exits non-zero too, and reading that the same way
+    would report a firewalled Arch box as current — the exact answer
+    `syspkg.CURRENCY_SECONDS` exists to stop it giving. `effects.run` names the
+    expiry in the transcript, so the silence test separates them.
+    """
+    monkeypatch.setattr(syspkg, 'CURRENCY_SECONDS', 0.2)
+    manager(fake_bin, 'checkupdates', 'sleep 5')
+
+    assert syspkg.outdated('pacman') is None
 
 
 def test_a_managers_progress_on_stderr_is_not_a_package_behind(fake_bin: Path) -> None:
@@ -192,9 +272,21 @@ def test_a_manager_that_refuses_the_removal_says_so(fake_bin: Path, unprivileged
     assert not syspkg.uninstall('brew', ['syncthing'], unprivileged).ok
 
 
-def test_the_networked_reads_are_the_ones_with_no_local_index() -> None:
-    """Flathub's available versions live on Flathub and the App Store has no
-    offline catalogue. Everything else answers off a local index, which is what
-    lets `check` measure them at a prompt and on a timer."""
-    assert sorted(syspkg.NETWORKED) == ['flatpak', 'mas']
+def test_the_networked_reads_are_the_ones_with_no_local_index_worth_reading() -> None:
+    """Flathub's available versions live on Flathub, the App Store has no offline
+    catalogue, and `yay -Qu` asks the AUR's RPC about every AUR package.
+
+    `pacman` and `apt` are the two a reader would not predict. Both really do have a
+    local index, which is exactly the problem: it is as old as the last sync, and a
+    stale one reports a machine current. Each read refreshes a private copy first,
+    which is the round trip that puts them here.
+
+    brew and its casks stay out, and that records what was checked rather than a
+    claim they are exempt — `brew outdated` reads a local tap clone and this has not
+    been measured on a Mac.
+
+    Membership decides only what a run declining the network skips. Every read verb
+    measures, so all five are asked on a plain `plan` or `check`.
+    """
+    assert sorted(syspkg.NETWORKED) == ['apt', 'aur', 'flatpak', 'mas', 'pacman']
     assert set(syspkg.OUTDATED) > syspkg.NETWORKED

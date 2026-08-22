@@ -26,9 +26,12 @@ brew.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import shutil
+import tempfile
 from collections.abc import Sequence
+from pathlib import Path
 
 from dotfiles import effects
 from dotfiles.effects import Output
@@ -363,8 +366,8 @@ def available(manager: str) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 OUTDATED: dict[str, tuple[str, ...]] = {
-    'pacman': ('pacman', '-Qu'),
-    'aur': ('yay', '-Qu'),
+    'pacman': ('checkupdates', '--nocolor'),
+    'aur': ('yay', '-Qu', '--aur'),
     'apt': ('apt', 'list', '--upgradable'),
     'brew': ('brew', 'outdated', '--formula', '--quiet'),
     'cask': ('brew', 'outdated', '--cask', '--greedy', '--quiet'),
@@ -373,12 +376,32 @@ OUTDATED: dict[str, tuple[str, ...]] = {
 }
 """How each manager is asked what it has installed and behind.
 
-The first five read a local index and cost milliseconds; the last two are network
-calls, which is why `NETWORKED` exists rather than this table being uniform.
+**A manager that compares against a local index answers from whenever that index
+was last synced.** `pacman -Qu` reads `/var/lib/pacman/sync`, so it reports what
+was behind at the last `-Sy` and nothing since. Measured on this machine
+2026-08-22, against a database 39 hours old: `pacman -Qu` printed nothing while
+ten packages were behind, and `plan` said "pacman has nothing to upgrade". That
+is the release cache's bug in a second manager — a figure correct when written,
+answering a question asked later.
 
-`yay -Qu` rather than `pacman -Qu` for the AUR: both list the same local
-packages, but only yay knows an AUR package's upstream version, so pacman reports
-every one of them current forever.
+`checkupdates` is pacman-contrib's answer to it. It copies the sync database to a
+private path, refreshes *that* under `fakeroot`, and reads the copy — so the
+machine's own database is untouched and nothing needs root. Refreshing the real
+one is not an option: `pacman -Sy` without the `-u` is the partial-upgrade state
+Arch does not support, and a read verb must not leave a machine in it.
+
+apt has the same defect and ships no equivalent, so `_apt_outdated` does the same
+thing by hand and the row here is only its second half — the listing, which that
+function runs against the copy it refreshed.
+
+`--nocolor` because `Color` in `pacman.conf` would otherwise put escape codes in
+front of the first field, and `_names` reads that field. A parser that depends on
+a config file is one that works here and not on the next box.
+
+`yay -Qu --aur` rather than a bare `-Qu`: both list the same local packages, but
+only yay knows an AUR package's upstream version, so pacman reports every one of
+them current forever. `--aur` is what keeps the two Arch rows from counting the
+same repo package twice once `checkupdates` starts finding them.
 
 `--greedy` on the casks because an auto-updating cask is excluded otherwise, and
 this repo installed it and would like to know.
@@ -387,23 +410,42 @@ this repo installed it and would like to know.
 EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})
 """Which currency queries report "nothing to upgrade" as a failure.
 
-`pacman -Qu` exits 1 having printed nothing when every package is current, which
-is the query's convention for an empty result rather than an error — the same one
-`grep` uses. Reading that as "the manager could not answer" is what the first
-version of this did, and it reported a fully-current Arch box as unmeasurable.
+`checkupdates` exits 2 having printed nothing when every package is current, and
+`yay -Qu` exits 1 — both the query's convention for an empty result rather than an
+error, the same one `grep` uses. Reading that as "the manager could not answer" is
+what the first version of this did, and it reported a fully-current Arch box as
+unmeasurable.
 
-Only these two, and only with no output: a genuine pacman failure prints to
-stderr, which `Output.QUIET` keeps in the same transcript, so a non-zero exit that
-said something is still a non-answer.
+Only these two, and only with no output: a genuine failure prints to stderr, which
+`Output.QUIET` keeps in the same transcript, so a non-zero exit that said something
+is still a non-answer. `checkupdates` dies that way for every real fault it has —
+no fakeroot, an unwritable database copy, a sync that failed.
 """
 
-NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas'})
-"""Which currency reads reach the network, and so are measured only on request.
+NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman', 'apt'})
+"""Which currency reads reach the network, and so are the ones `--cached` declines.
 
-There is no local answer for either: Flathub's available versions live on
-Flathub, and the App Store has no offline catalogue. `check` runs at a prompt and
-unattended on a timer, so it must not spend a round trip to say whether Discord is
-behind — the same rule the release cache follows, arrived at for the same reason.
+None of them has a local answer worth giving. Flathub's available versions live on
+Flathub, the App Store has no offline catalogue, and `yay -Qu --aur` asks the AUR's
+RPC about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
+which is the tell that a process is waiting rather than working.
+
+`pacman` and `apt` are the two that look wrong and are not. Each names a read that
+refreshes a private copy of an index before consulting it, and the local answer
+each replaced was worse than no answer: `pacman -Qu` and `apt list --upgradable`
+against stale indexes report a machine current, which reads as measured. `OUTDATED`
+and `_apt_outdated` carry what each was measured at.
+
+brew and its casks are the ones genuinely left out. `brew outdated` reads a local
+tap clone that goes stale the same way, and this has not been measured on a Mac —
+so their absence here records what was checked rather than a claim they are exempt.
+
+**This names round trips; it does not ration them.** Every read verb measures, so
+all five are asked on a plain `plan` or `check`, and the set is what a run declining
+the network consults to know which reads it must skip. Together they are a couple of
+seconds, worth not spending when somebody has said they do not want the network —
+and worth spending every other time, because what a machine is behind on is exactly
+what they asked about.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {
@@ -429,6 +471,71 @@ should not silently move the other.
 """
 
 
+APT_LISTS = Path('/var/lib/apt/lists')
+"""The index `apt list --upgradable` compares against, and cannot refresh unprivileged.
+
+Read to seed the private copy below. Never written: refreshing it is `apt-get
+update` as root, which a read verb does not get to be.
+"""
+
+
+def _apt_redirect(scratch: Path) -> tuple[str, ...]:
+    """Where an unprivileged apt keeps the state it would otherwise need root for.
+
+    Both options are needed. `Dir::State::lists` is the index itself, and
+    `Dir::Cache` moves the partial downloads that land beside it — without the
+    second, apt writes into `/var/cache/apt/archives/partial` and complains it
+    cannot.
+    """
+    return ('-o', f'Dir::State::lists={scratch / "lists"}', '-o', f'Dir::Cache={scratch / "cache"}')
+
+
+def _apt_outdated() -> frozenset[str] | None:
+    """apt's currency, measured against an index this run refreshed itself.
+
+    The same defect `checkupdates` exists to cure on Arch, and apt ships nothing
+    equivalent. `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers
+    from whenever that was last `apt-get update`d. Measured 2026-08-22 in the
+    Ubuntu test image: the machine's own lists reported nothing upgradable while a
+    refreshed copy reported eighteen packages.
+
+    apt takes its whole state layout from options, so a redirected `update` needs no
+    root and touches nothing the machine reads. The copy is seeded from
+    `APT_LISTS` for the reason checkupdates copies the pacman database: a cold fetch
+    is 25.6 MB and a delta from what the machine already has is 2.8 MB. Thrown away
+    afterwards, so nothing accumulates and there is no second index on disk.
+
+    **A refresh that fails is a non-answer, not a smaller one.** Listing against
+    whatever the seed happened to hold reports a count nobody measured, and an empty
+    seed reports *nothing behind* — a machine declared current by a run that reached
+    no archive. That is `NETWORKED`'s own thesis inverted, and this repo's Debian
+    image builds exactly that state: `tests/install/docker/Dockerfile` runs `rm -rf
+    /var/lib/apt/lists/*`, so the seed there is empty by construction and only the
+    network is missing. `None` is what the pacman path already answers for the same
+    failure, and `by_currency` turns it into UNKNOWN with a cause.
+
+    An `apply` therefore runs `apt-get update` twice: this one to decide what is
+    behind, and `REFRESH`'s privileged one before installing. That is the order
+    doing its job rather than a duplicate — measuring must not escalate, and
+    installing must resolve against the machine's real index.
+    """
+    with tempfile.TemporaryDirectory(prefix='dotfiles-apt-') as directory:
+        scratch = Path(directory)
+        for leaf in ('lists/partial', 'cache/archives/partial'):
+            (scratch / leaf).mkdir(parents=True)
+        # Whatever it managed to copy is the seed. `copytree` collects per-file
+        # failures and raises at the end, so a `lists/partial` this account cannot
+        # read costs the files under it and not the other forty megabytes.
+        with contextlib.suppress(OSError, shutil.Error):
+            shutil.copytree(APT_LISTS, scratch / 'lists', dirs_exist_ok=True)
+        redirect = _apt_redirect(scratch)
+        refreshed = effects.run(['apt-get', 'update', '-qq', *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
+        if not refreshed.ok:
+            return None
+        listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
+    return _names(listed.stdout) if listed.ok else None
+
+
 def outdated(manager: str) -> frozenset[str] | None:
     """What this manager has installed and behind, or None where it cannot say.
 
@@ -440,13 +547,24 @@ def outdated(manager: str) -> frozenset[str] | None:
     An empty result is also returned for a manager with nothing to upgrade, and
     that is the answer, not a non-answer: the command exited 0 having listed
     nothing.
+
+    apt is the one manager whose read is two commands and a scratch directory
+    rather than a row of argv, which is why it branches here instead of being
+    expressed in `OUTDATED`. The probe still guards it: `apt-get` ships in the same
+    package as `apt`, so one answering `--version` vouches for both.
     """
     command = OUTDATED.get(manager)
     if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
         return None
-    listed = effects.run(list(command), output=Output.QUIET)
+    if manager == 'apt':
+        return _apt_outdated()
+    listed = effects.run(list(command), output=Output.QUIET, timeout=CURRENCY_SECONDS)
     if listed.ok:
         return _names(listed.stdout)
+    # A timeout is not the "exited non-zero having printed nothing" that
+    # `EMPTY_IS_NONZERO` decodes as *nothing behind*. `effects.run` names the
+    # expiry in the transcript, so the silence test already separates them — and
+    # getting it wrong would report a firewalled Arch box as current.
     silent = not listed.transcript.strip()
     return frozenset() if manager in EMPTY_IS_NONZERO and silent else None
 
@@ -490,3 +608,22 @@ PROBE_SECONDS = 10.0
 """Long enough for a cold binary, short enough that a manager which is not going
 to answer does not hold the run. Same bound and same reason as
 `evidence.PROBE_SECONDS`."""
+
+CURRENCY_SECONDS = 90.0
+"""How long a currency read may take before it is a non-answer.
+
+Every read in `NETWORKED` reaches a network through a subprocess, and a subprocess
+is the one shape a network call can wear that nothing else here bounds — `httpx2`
+carries `REQUEST_TIMEOUT_SECONDS` and `effects.run` defaults to no deadline at all.
+
+Bounded at *this* layer because no layer above does. Every read verb makes these
+calls now, so a `checkupdates` that hangs behind a firewall hangs `dotfiles plan`
+at a prompt with nothing on screen, and hangs the timer's `Type=oneshot` unit,
+whose start timeout systemd disables by default — an active unit then suppresses
+its own next fire.
+
+Much longer than `PROBE_SECONDS` on purpose: this is a sync of a package index
+over whatever link the machine has, where that one is a local binary answering
+`--version`. Expiry is `effects.run` returning not-ok, which each caller already
+turns into the non-answer it is.
+"""
