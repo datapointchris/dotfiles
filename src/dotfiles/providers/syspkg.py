@@ -426,8 +426,8 @@ NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman', 'apt'}
 """Which currency reads reach the network, and so are the ones `--cached` declines.
 
 None of them has a local answer worth giving. Flathub's available versions live on
-Flathub, the App Store has no offline catalogue, and `yay -Qu` asks the AUR's RPC
-about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
+Flathub, the App Store has no offline catalogue, and `yay -Qu --aur` asks the AUR's
+RPC about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
 which is the tell that a process is waiting rather than working.
 
 `pacman` and `apt` are the two that look wrong and are not. Each names a read that

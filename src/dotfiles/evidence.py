@@ -334,10 +334,13 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
 
     Two questions through one door: what is installed, and what is installed and
     behind. The second is prefixed, and the networked ones among them are the only
-    reads `refresh` gates — Flathub, the App Store and the AUR have no offline
-    catalogue to fall back to, so a declined run has no answer rather than a cheap
-    one. Every read verb passes `refresh=True`, so declining is something a caller
-    asked for with `--cached` or `--offline`.
+    reads `refresh` gates. A declined run has no answer for any of them rather than
+    a cheap one, and for two different reasons: Flathub, the App Store and the AUR
+    have no offline catalogue at all, while pacman and apt have one that is as old
+    as the last sync and so answers the question wrong.
+
+    Every read verb passes `refresh=True`, so declining is something a caller asked
+    for with `--cached` or `--offline`.
     """
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)

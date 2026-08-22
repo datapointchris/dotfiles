@@ -104,10 +104,15 @@ class Session:
     box that is rate-limited or has no route out. `--offline` resolves here too, by
     way of `commands.currency`.
 
-    What this costs is one request per present declared release. Conditional
-    requests make most of them free against the rate limit, since GitHub does not
-    bill a 304 — `releases.refresh` and `github_release.revalidate` carry that
-    measurement.
+    What it buys is three reads, not one. GitHub is asked about every present
+    declared release, each plugin clone is fetched, and every manager in
+    `syspkg.NETWORKED` is asked what it holds back — which for pacman and apt means
+    refreshing a private copy of an index first. `docs/learnings/finding-where-a-slow-run-went.md`
+    is where a run that felt slow gets attributed between them.
+
+    Conditional requests make most of the release half free against the rate limit,
+    since GitHub does not bill a 304 — `releases.refresh` and
+    `github_release.revalidate` carry that measurement.
     """
 
     force: bool = False
