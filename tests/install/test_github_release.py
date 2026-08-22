@@ -8,6 +8,7 @@ Run with: pytest tests/install/test_github_release.py
 """
 
 import httpx2
+import pytest
 
 from dotfiles import github_release
 
@@ -389,6 +390,145 @@ class TestLatestTag:
         monkeypatch.setattr(github_release, 'request', refuse)
 
         assert github_release.latest_tag('aws/aws-cli') is None
+
+
+class TestRevalidate:
+    """Conditional reads, which are what keep a refresh inside an anonymous budget.
+
+    A machine with no `gh` token has 60 GitHub requests an hour and more declared
+    releases than that, so the question is not how fast a refresh is but whether it
+    fits at all. GitHub does not bill a 304, and a project that has not released
+    since the last refresh answers with one.
+    """
+
+    @staticmethod
+    def answering(monkeypatch, status: int, *, etag: str = '', body: bytes = b'{}') -> list[dict[str, str]]:
+        """Answer one status, recording the headers each call went out with."""
+        monkeypatch.setattr(github_release, 'github_token', lambda: None)
+        sent: list[dict[str, str]] = []
+
+        def fake(url, headers=None, **_kwargs):
+            sent.append(dict(headers or {}))
+            return httpx2.Response(
+                status,
+                headers={'ETag': etag} if etag else {},
+                content=b'' if status == github_release.NOT_MODIFIED else body,
+                request=httpx2.Request('GET', url),
+            )
+
+        monkeypatch.setattr(httpx2, 'get', fake)
+        return sent
+
+    def test_a_304_answers_unchanged_rather_than_raising(self, monkeypatch):
+        """httpx raises for anything that is not 2xx, so the status check has to run
+        after this branch. Letting it run first turns the cheap answer into an
+        exception, and the caller reports "upstream did not answer" about a repo
+        that answered perfectly."""
+        self.answering(monkeypatch, github_release.NOT_MODIFIED)
+
+        answer = github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest', 'W/"abc"')
+
+        assert answer.payload is None
+        assert answer.etag == 'W/"abc"'
+
+    def test_a_200_carries_the_servers_etag_forward(self, monkeypatch):
+        self.answering(monkeypatch, 200, etag='W/"fresh"', body=b'{"tag_name": "v1"}')
+
+        answer = github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest')
+
+        assert answer.payload == b'{"tag_name": "v1"}'
+        assert answer.etag == 'W/"fresh"'
+
+    def test_an_etag_is_offered_as_if_none_match(self, monkeypatch):
+        sent = self.answering(monkeypatch, github_release.NOT_MODIFIED)
+
+        github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest', 'W/"abc"')
+
+        assert sent[0]['If-None-Match'] == 'W/"abc"'
+
+    def test_no_etag_offers_no_header(self, monkeypatch):
+        """A cold entry costs exactly what it always did, and an empty header would
+        be a claim about a body this caller has never seen."""
+        sent = self.answering(monkeypatch, 200)
+
+        github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest')
+
+        assert 'If-None-Match' not in sent[0]
+
+    def test_a_real_failure_still_raises(self, monkeypatch):
+        """Only 304 is exempt. A 404 is still a repo that could not be read, and
+        swallowing it here would report every unreachable project as unchanged —
+        which is the cached answer standing forever with nothing to dislodge it."""
+        self.answering(monkeypatch, 404)
+
+        with pytest.raises(httpx2.HTTPStatusError):
+            github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest')
+
+
+class TestNewestVersion:
+    """The revalidating pair beside `latest_version` and `latest_tag`.
+
+    They share the URL choice and the parsing with the unconditional pair and
+    differ in one thing: they carry an `ETag` in and a possible 304 back out. Only
+    `releases.refresh` uses them, which is why the plain pair keeps its signature —
+    five callers elsewhere want a version or None and have no cache to revalidate
+    against.
+    """
+
+    @staticmethod
+    def answering(monkeypatch, answer: github_release.Conditional | None) -> list[tuple[str, str]]:
+        """Answer one `Conditional`, or raise where it is None. Records what was asked."""
+        asked: list[tuple[str, str]] = []
+
+        def fake(url: str, etag: str = '') -> github_release.Conditional:
+            asked.append((url, etag))
+            if answer is None:
+                raise httpx2.ConnectError('no route to host')
+            return answer
+
+        monkeypatch.setattr(github_release, 'revalidate', fake)
+        return asked
+
+    def test_a_body_is_parsed_and_its_etag_carried(self, monkeypatch):
+        self.answering(monkeypatch, github_release.Conditional(b'{"tag_name": "v1.2.3"}', 'W/"a"'))
+
+        assert github_release.newest_version('owner/repo') == github_release.Newest(version='v1.2.3', etag='W/"a"')
+
+    def test_an_unchanged_answer_says_so_and_names_no_version(self, monkeypatch):
+        """The version is the caller's to keep. A 304 sends no body, so reading one
+        off it would be inventing the answer it was told it already had."""
+        self.answering(monkeypatch, github_release.Conditional(None, 'W/"a"'))
+
+        assert github_release.newest_version('owner/repo') == github_release.Newest(etag='W/"a"', unchanged=True)
+
+    def test_an_unreachable_api_is_not_an_unchanged_one(self, monkeypatch):
+        """The sharp distinction here. Both keep the cached version, but only one of
+        them is entitled to restamp `checked` — treating a failure as unchanged
+        would keep an entry fresh forever without anything having confirmed it."""
+        self.answering(monkeypatch, None)
+
+        answer = github_release.newest_version('owner/repo')
+
+        assert answer == github_release.Newest()
+        assert not answer.unchanged
+
+    def test_a_body_that_will_not_parse_answers_nothing(self, monkeypatch):
+        self.answering(monkeypatch, github_release.Conditional(b'{not json', 'W/"a"'))
+
+        assert github_release.newest_version('owner/repo') == github_release.Newest()
+
+    def test_the_offered_etag_reaches_the_transport(self, monkeypatch):
+        asked = self.answering(monkeypatch, github_release.Conditional(None, 'W/"a"'))
+
+        github_release.newest_version('owner/repo', 'cli/', 'W/"held"')
+
+        assert asked == [('https://api.github.com/repos/owner/repo/releases?per_page=100', 'W/"held"')]
+
+    def test_newest_tag_revalidates_the_tags_endpoint(self, monkeypatch):
+        asked = self.answering(monkeypatch, github_release.Conditional(b'[{"name": "2.36.19"}]', 'W/"t"'))
+
+        assert github_release.newest_tag('aws/aws-cli', '', 'W/"held"') == github_release.Newest(version='2.36.19', etag='W/"t"')
+        assert asked[0][1] == 'W/"held"'
 
 
 class TestCredentialScope:

@@ -54,10 +54,19 @@ every declared release would spend a third of in a second.
 
 @dc.dataclass(frozen=True, slots=True)
 class Cached:
-    """One repo's newest release tag, and when that was true."""
+    """One repo's newest release tag, when that was true, and how to re-ask cheaply."""
 
     version: str
     checked: dt.datetime
+
+    etag: str = ''
+    """What GitHub called this answer, sent back as `If-None-Match` on the next refresh.
+
+    Optional because an entry written before there was one, or by a repo that
+    offers no `ETag`, is still a perfectly good answer — it just costs a full
+    response to confirm. Never load-bearing for the version: it decides how the
+    question is asked, never what the answer means.
+    """
 
     def fresh(self, now: dt.datetime, ttl: dt.timedelta = TTL) -> bool:
         return now - self.checked < ttl
@@ -108,7 +117,11 @@ def load(path: Path | None = None) -> dict[str, Cached]:
     entries = {}
     for key, record in payload.items():
         try:
-            entries[key] = Cached(version=record['version'], checked=dt.datetime.fromisoformat(record['checked']))
+            entries[key] = Cached(
+                version=record['version'],
+                checked=dt.datetime.fromisoformat(record['checked']),
+                etag=record.get('etag') or '',
+            )
         except (TypeError, KeyError, ValueError):
             continue
     return entries
@@ -126,7 +139,12 @@ def save(entries: dict[str, Cached], path: Path | None = None) -> bool:
     Returns whether it wrote, so a caller can tell the two apart without reading
     the warning.
     """
-    payload = {key: {'version': entry.version, 'checked': entry.checked.isoformat()} for key, entry in entries.items()}
+    # The etag is omitted where there is none rather than written empty, so a repo
+    # that offers no `ETag` reads the same on disk as one nobody has asked yet.
+    payload = {
+        key: {'version': entry.version, 'checked': entry.checked.isoformat()} | ({'etag': entry.etag} if entry.etag else {})
+        for key, entry in entries.items()
+    }
     target = path or cache_file()
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -144,30 +162,48 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
     Kept rather than dropped: a request that failed says nothing about whether the
     last answer was right, and dropping it would turn one rate-limited refresh into
     a report that every tool is unmeasurable.
+
+    **Each repo is asked with the `ETag` its own entry carries**, so a project that
+    has not released since the last refresh answers 304 — which GitHub does not bill
+    against the rate limit. That is what an entry keeps an etag for, and it is a
+    quota saving rather than a speed one: `github_release.revalidate` has the
+    measurement and the warning not to expect the other.
+
+    An unchanged answer restamps `checked` and changes nothing else. The version is
+    the one already held, which is precisely what the 304 asserted, so re-reading it
+    off the response would be reading a body that was never sent.
     """
     if not wanted:
         return dict(existing)
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        fetched = list(pool.map(lambda item: (item, _newest(item)), wanted))
+        fetched = list(pool.map(lambda item: (item, _newest(item, existing.get(item.key))), wanted))
 
     entries = dict(existing)
-    for item, version in fetched:
-        if version:
-            entries[item.key] = Cached(version=version, checked=now)
+    for item, answer in fetched:
+        previous = entries.get(item.key)
+        if answer.unchanged and previous is not None:
+            entries[item.key] = dc.replace(previous, checked=now)
+        elif answer.version:
+            entries[item.key] = Cached(version=answer.version, checked=now, etag=answer.etag)
     return entries
 
 
-def _newest(wanted: Wanted) -> str | None:
+def _newest(wanted: Wanted, previous: Cached | None = None) -> github_release.Newest:
     """Whichever endpoint this repo publishes its newest version on.
 
     Dispatched on the declaration rather than tried in turn: falling back to tags
     when the release lookup fails would read a rate-limited minute as "this project
     tags instead", and start answering a different question with no way to tell.
+
+    `previous` supplies the etag and nothing else. A repo with no entry, or one
+    whose entry predates etags being stored, is asked unconditionally and costs
+    exactly what it always did.
     """
+    etag = previous.etag if previous else ''
     if wanted.from_tags:
-        return github_release.latest_tag(wanted.repo, wanted.tag_prefix)
-    return github_release.latest_version(wanted.repo, wanted.tag_prefix)
+        return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
+    return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag)
 
 
 def current(wanted: Wanted, entries: dict[str, Cached], now: dt.datetime) -> Cached | None:

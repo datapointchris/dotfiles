@@ -126,10 +126,11 @@ def receipt(directory: Path, name: str, requirement: str) -> None:
 def cached(path: Path, entries: dict[str, str], age: dt.timedelta = dt.timedelta(0)) -> None:
     """An upstream release at a chosen version, written where a refresh would leave it.
 
-    The cache is the only upstream a test may have: `Session.refresh` is False by
-    default, so `observe` never enters `releases.refresh` and nothing reaches
-    GitHub. `age` past `releases.TTL` is how a test asks for an answer the code
-    must refuse to trust.
+    The cache is the only upstream a test may have, and reaching it is asked for
+    rather than assumed: `check` reads it, and `plan` reads it under `--cached`. A
+    bare `plan` measures upstream and is guarded by `no_network_from_the_matrix`,
+    so a test wanting these versions says which. `age` past `releases.TTL` is how a
+    test asks for an answer the code must refuse to trust.
     """
     checked = dt.datetime.now(dt.UTC) - age
     releases.save({key: releases.Cached(version, checked) for key, version in entries.items()}, path)
