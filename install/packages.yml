@@ -38,6 +38,16 @@ system_packages:
     pacman: base-devel
     description: Compiler and build tools
 
+  # Provides `checkupdates`, which is how `plan` and `check` ask pacman what is
+  # behind. `pacman -Qu` answers from `/var/lib/pacman/sync` and so reports what
+  # was behind at the last `-Sy`; refreshing that database from a read verb would
+  # leave the machine in the partial-upgrade state Arch does not support. It was
+  # present on this box only as a transitive dependency of an AUR helper.
+  - name: pacman-contrib
+    tier: core
+    pacman: pacman-contrib
+    description: checkupdates, which reads pacman currency against a synced database copy
+
   - name: ca-certificates
     tier: core
     apt: ca-certificates

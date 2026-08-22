@@ -350,14 +350,72 @@ def test_the_run_record_carries_the_ceiling_only_when_one_was_named(sandbox: San
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
 def test_refresh_spends_the_network_on_a_tool_that_is_installed(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Both read verbs run at a prompt and on a timer, so both need the opt-in and
-    both have to honour it. A flag accepted by one and ignored by the other is a
-    `check` that silently answers from a cache the caller asked it not to trust."""
+    """Both read verbs take the flag and both have to honour it. One that accepted
+    it and answered from the cache anyway is a verb silently distrusting the caller
+    on the one question the flag exists to settle."""
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
 
     with pytest.raises(ReachedTheNetwork):
         cli(verb, '--refresh')
+
+
+@pytest.mark.parametrize(
+    'argv',
+    [('plan',), ('packages', 'plan'), ('check',), ('packages', 'check')],
+    ids=['plan', 'scoped-plan', 'check', 'scoped-check'],
+)
+def test_every_read_verb_measures_upstream_without_being_asked_to(
+    argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
+) -> None:
+    """A verb was invoked because somebody wanted an answer, so it gives a current one.
+
+    The staleness runs one way. A release published since the last refresh leaves
+    the cache holding a version the machine already has, so the row reads converged
+    on a machine an apply would upgrade. Measured 2026-08-22: `packages plan`
+    reported forge matched at v1.37.5 while v1.38.0 was published, and the apply
+    that followed installed it.
+
+    `check` is here for its own reason rather than for symmetry. "Is anything on
+    this machine behind" is the question it is asked, and a figure up to
+    `releases.TTL` old answers it wrong — the cache was defensible only while the
+    scheduled unit ran every ten minutes, and `schedule.INTERVAL_SECONDS` is a day.
+
+    Both doors for each, because the scoped verb is the one the bug was found
+    through and reading the cache there while the composite measured would be the
+    same defect with a narrower blast radius.
+    """
+    sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+    sandbox.installed('lazygit', 'lazygit version 0.44.0')
+
+    with pytest.raises(ReachedTheNetwork):
+        cli(*argv)
+
+
+@pytest.mark.parametrize(
+    'argv',
+    [('plan', '--cached'), ('packages', 'plan', '--cached'), ('check', '--cached'), ('packages', 'check', '--cached')],
+    ids=['plan', 'scoped-plan', 'check', 'scoped-check'],
+)
+def test_the_cache_answers_wherever_the_network_was_declined(
+    argv: tuple[str, ...], sandbox: Sandbox, cli: Callable[..., Invocation]
+) -> None:
+    """What the release cache is for, stated as the set of runs that read it.
+
+    One flag, on every read verb, and nothing else reaches it. That is the whole of
+    what the cache serves: a box that is rate-limited, one with no route out, or
+    somebody who wants the local answer in under a second.
+
+    Reaching the network on any of these would be a request the caller explicitly
+    declined, which is a worse fault than a slow run.
+    """
+    sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+    sandbox.installed('lazygit', 'lazygit version 0.44.0')
+    sandbox.upstream({'jesseduffield/lazygit': 'v0.45.0'})
+
+    ran = cli(*argv)
+
+    assert ran.exit_code in {ExitCode.CONVERGED, ExitCode.DRIFT, ExitCode.ISSUE}
 
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))

@@ -93,12 +93,26 @@ class Session:
     offline: bool = False
     owner: str | None = None
     refresh: bool = False
-    """Permission to spend the network on being current.
+    """Whether this run spends the network on being current.
 
-    `check` reads cached upstream release versions so it can run at a prompt and
-    on a timer without an API call per release. This is the explicit
-    opt-in to measuring instead, and it is the only thing that makes a `check`
-    reach GitHub.
+    Every verb a person invokes sets it: `plan`, `check` and `apply` alike. Being
+    asked is the reason to give a current answer, and each of the three is asking a
+    question a stale figure gets wrong — what a write would do, what on this machine
+    is behind, and what to install.
+
+    False is the field's default and `--cached` is how a caller reaches it, for a
+    box that is rate-limited or has no route out. `--offline` resolves here too, by
+    way of `commands.currency`.
+
+    What it buys is three reads, not one. GitHub is asked about every present
+    declared release, each plugin clone is fetched, and every manager in
+    `syspkg.NETWORKED` is asked what it holds back — which for pacman and apt means
+    refreshing a private copy of an index first. `docs/learnings/finding-where-a-slow-run-went.md`
+    is where a run that felt slow gets attributed between them.
+
+    Conditional requests make most of the release half free against the rate limit,
+    since GitHub does not bill a 304 — `releases.refresh` and
+    `github_release.revalidate` carry that measurement.
     """
 
     force: bool = False

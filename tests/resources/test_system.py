@@ -10,6 +10,7 @@ each manager.
 from __future__ import annotations
 
 import dataclasses as dc
+import shutil
 import stat
 from pathlib import Path
 from typing import Any
@@ -71,8 +72,8 @@ def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
 
     Autouse because the `manager` rows are planned from whatever else the plan
     reached, so every fixture here grows one per manager without asking — and the
-    unstubbed read is `pacman -Qu` against the Arch box running the suite, which
-    makes a verdict here depend on when that machine last synced. Currency is
+    unstubbed read is `checkupdates` against the Arch box running the suite, which
+    makes a verdict here depend on what that machine is behind on. Currency is
     measured in its own tests, against a stub that says what it wants.
     """
     monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
@@ -726,7 +727,7 @@ def test_a_manager_is_planned_for_every_one_the_machine_installs_through(tmp_pat
 def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset()})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     assert 'apt' not in manager_rows(live)
 
@@ -734,10 +735,15 @@ def test_a_manager_with_nothing_behind_is_converged(tmp_path: Path, fake_bin: Pa
 def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """STALE rather than MISSING: the manager is there and doing its job, and what
     drifted is the machine's distance from what its repositories now hold. A count
-    alone says a machine is behind and nothing about whether it matters."""
+    alone says a machine is behind and nothing about whether it matters.
+
+    `refresh` because apt's currency read refreshes an index copy before consulting
+    it, which puts it in `syspkg.NETWORKED` — a session that declined the network
+    reaches the row below without asking the stub.
+    """
     answers_empty(fake_bin, 'dpkg-query')
     behind(monkeypatch, {'apt': frozenset({'curl', 'linux-image-generic'})})
-    live = session(tmp_path, DECLARED, WORKSTATION)
+    live = session(tmp_path, DECLARED, WORKSTATION, refresh=True)
 
     change = manager_rows(live)['apt']
 
@@ -747,10 +753,18 @@ def test_a_manager_with_packages_behind_is_stale_and_names_them(tmp_path: Path, 
 
 
 def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Flathub and the App Store have no offline catalogue, so `check` does not ask
-    them — and reporting them current having asked nobody is the measured-looking
-    wrong answer this resource exists to stop."""
-    answers_empty(fake_bin, 'dpkg-query')
+    """Reporting a manager current having asked nobody is the measured-looking wrong
+    answer this resource exists to stop.
+
+    The detail names `--cached` because that is what produces the row. Every read
+    verb measures, so an advice line naming `--refresh` would send a reader to type
+    the state they are already in.
+
+    `apt` is shadowed so that it is *present*. The row below distinguishes a manager
+    nothing asked from one the machine does not have, and this Arch box has no apt —
+    without the shadow this asserts one sentence at a desk and the other in CI.
+    """
+    answers_empty(fake_bin, 'dpkg-query', 'apt')
     behind(monkeypatch, {'apt': None})
     live = session(tmp_path, DECLARED, WORKSTATION)
 
@@ -758,13 +772,43 @@ def test_a_manager_nothing_asked_is_unknown_rather_than_current(tmp_path: Path, 
 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
-    assert '--refresh' in change.detail
+    assert '`--cached` declines it' in change.detail
 
 
-def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_manager_the_machine_does_not_have_says_so_rather_than_blaming_a_flag(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A row saying `--cached` declined the call is wrong where there was no call to
+    decline.
+
+    Measured 2026-08-22 on the Arch e2e container, which declares flatpak apps and
+    has no flatpak. An `apply` — a run that measures — printed `nothing asked
+    flatpak what is behind` beside two rows correctly reading `no package manager on
+    this machine could be asked`. The manager row blamed a flag nobody typed.
+
+    Answerable here and nowhere else in the chain: `Inventory` hands back one `None`
+    for every reason, and whether the command is on PATH is a question this can ask
+    directly.
+    """
+    answers_empty(fake_bin, 'dpkg-query')
+    monkeypatch.setattr(shutil, 'which', lambda name, *rest, **named: None if name == 'apt' else '/usr/bin/' + name)
+    behind(monkeypatch, {'apt': None})
+    live = session(tmp_path, DECLARED, WORKSTATION)
+
+    change = manager_rows(live)['apt']
+
+    assert change.verdict is Verdict.UNKNOWN
+    assert change.detail == 'no apt on this machine to ask what is behind'
+
+
+def test_only_the_networked_currency_reads_wait_to_be_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     """The gate is on the read, not on the row: a locally-answerable manager is
-    measured whatever the verb, and the two that need a round trip wait to be
-    asked for."""
+    measured whatever the caller said, and the ones that need a round trip are the
+    only thing `--cached` buys back.
+
+    brew is the local one here. Both Arch managers and apt refresh an index copy to
+    answer, which is the round trip that put them in `NETWORKED`.
+    """
     asked: list[str] = []
 
     def record(manager: str) -> frozenset[str]:
@@ -775,8 +819,8 @@ def test_only_check_declines_the_networked_currency_reads(monkeypatch: pytest.Mo
 
     assert ev.query('outdated:mas') is None
     assert ev.query('outdated:mas', refresh=True) == frozenset()
-    assert ev.query('outdated:pacman') == frozenset()
-    assert asked == ['mas', 'pacman']
+    assert ev.query('outdated:brew') == frozenset()
+    assert asked == ['mas', 'brew']
 
 
 def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

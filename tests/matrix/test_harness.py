@@ -116,12 +116,18 @@ def test_a_declared_release_that_is_absent_is_what_plan_reports(sandbox: Sandbox
 
 def test_an_installed_tool_at_the_newest_release_reports_nothing_pending(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Both version helpers, against each other. Neither figure exists anywhere but
-    in this test."""
+    in this test.
+
+    `--cached` is what keeps that true. `plan` measures upstream unless told not
+    to, so without it the figure `sandbox.upstream` wrote would be replaced by
+    whatever GitHub published this morning — and the test would be asserting about
+    lazygit rather than about the harness.
+    """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
     sandbox.installed('lazygit', 'lazygit version 0.45.0')
     sandbox.upstream({'jesseduffield/lazygit': 'v0.45.0'})
 
-    ran = cli('packages', 'plan', '--json')
+    ran = cli('packages', 'plan', '--cached', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
     assert resource(ran, 'packages')['findings'] == []
@@ -132,7 +138,7 @@ def test_an_installed_tool_behind_the_release_cache_is_pending(sandbox: Sandbox,
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
     sandbox.upstream({'jesseduffield/lazygit': 'v0.45.0'})
 
-    ran = cli('packages', 'plan', '--json')
+    ran = cli('packages', 'plan', '--cached', '--json')
 
     assert ran.exit_code == ExitCode.DRIFT
     assert [change['item'] for change in resource(ran, 'packages')['findings']] == ['ghrelease/lazygit']
@@ -145,7 +151,7 @@ def test_an_expired_cache_entry_is_unmeasured_rather_than_current(sandbox: Sandb
     sandbox.installed('lazygit', 'lazygit version 0.44.0')
     sandbox.upstream({'jesseduffield/lazygit': 'v0.45.0'}, age=releases.TTL + dt.timedelta(hours=1))
 
-    ran = cli('packages', 'plan', '--json')
+    ran = cli('packages', 'plan', '--cached', '--json')
 
     assert resource(ran, 'packages')['unmeasured'] == 1
 

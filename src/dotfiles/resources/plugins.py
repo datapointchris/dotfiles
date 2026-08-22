@@ -24,6 +24,8 @@ be asked, and why the two answers differ, is `providers/pluginsync.py`.
 from __future__ import annotations
 
 import dataclasses as dc
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from dotfiles import registry
 from dotfiles.privilege import Privilege
@@ -136,6 +138,40 @@ class Observed:
         return found + managers
 
 
+FETCH_WORKERS = 8
+"""How many clones are asked at once whether they are behind.
+
+Bounded rather than one thread per clone: the list grows with the declaration, and
+what is being overlapped is a git fetch against a handful of hosts.
+
+The same figure `releases.WORKERS` carries and deliberately not imported from it.
+That one is bounded by GitHub's tolerance for concurrent API requests and this one
+by a git host's for concurrent fetches; they agree today, and neither moving should
+drag the other with it.
+"""
+
+
+def _behind(present: tuple[DesiredItem, ...], home: Path) -> frozenset[str]:
+    """Which of these clones is behind the branch it tracks.
+
+    `clone.behind` is a `git fetch` — a read that shares nothing with the next one,
+    so running them together turns the sum of every round trip into the slowest
+    single one. That is the same argument `docs/learnings/finding-where-a-slow-run-went.md`
+    makes about the version probes, reaching a second serial loop it did not cover.
+
+    Measured 2026-08-22: nine clones cost 2.9s in series, which was more than a
+    third of what a refreshing `plan` spent on the network — and none of it the
+    release lookup anyone would think to look at first.
+
+    A set is the answer, so nothing here depends on the order they finish in.
+    """
+    if not present:
+        return frozenset()
+    with ThreadPoolExecutor(max_workers=min(FETCH_WORKERS, len(present))) as pool:
+        answered = list(pool.map(lambda item: (item.address, clone.behind(item, home)), present))
+    return frozenset(address for address, is_behind in answered if is_behind)
+
+
 class PluginsResource:
     name = NAME
     help = 'shell, tmux and yazi plugins, and the managers that own their own lists'
@@ -153,9 +189,7 @@ class PluginsResource:
         return Observed(
             present=present,
             met=session.preconditions,
-            behind=frozenset(item.address for item in clones if item.address in present and clone.behind(item, session.home))
-            if session.refresh
-            else frozenset(),
+            behind=_behind(tuple(item for item in clones if item.address in present), session.home) if session.refresh else frozenset(),
             managers=tuple((item.address, item.name) for item, _ in syncs),
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
             unmanaged=unmanaged,

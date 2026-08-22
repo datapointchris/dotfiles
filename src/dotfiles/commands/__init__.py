@@ -9,6 +9,8 @@ must read identically on twenty leaves is a flag that should have one definition
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 
 from dotfiles import logging
@@ -29,6 +31,68 @@ VerboseOption = typer.Option(
     help='Every item examined, and every step; -vv adds the HTTP requests behind them',
 )
 QuietOption = typer.Option(False, '--quiet', '-q', help='The verdict alone, without the per-item evidence')
+
+MEASURES_UPSTREAM = True
+"""Every read verb measures. `--cached` is how a caller declines.
+
+A verb was invoked because somebody wanted an answer, so it gives the current one.
+`plan` and `apply` need it to be right about what a write would do, and `check`
+needs it to answer "is anything here behind" at all — which is the question it was
+asked. A figure up to `releases.TTL` old serves none of them.
+
+`check` read the cache until this was written, on the argument that it runs
+unattended and must not spend a request per declared release. That argument rested
+on a timer firing every ten minutes, and `schedule.INTERVAL_SECONDS` has been a day
+since `0f85cb33`. One refresh a day is not a budget worth designing around.
+Conditional requests settled the remainder: a revalidated refresh bills a handful
+of requests rather than one per release, because GitHub does not charge for a 304.
+"""
+
+
+def refresh_flag() -> Any:
+    """The currency axis, spelled one way on every verb that reads it.
+
+    Tri-state rather than a plain bool, because `--offline` has to tell "not passed"
+    from "passed false". Under a plain `True` default, `plan --offline` resolves to
+    refresh and refuses itself as a contradiction — a usage error for typing neither
+    flag.
+
+    `--refresh/--cached` rather than a bare `--refresh` on one verb and `--cached`
+    on the other, per `cli-design.md` § "Two front doors on one dataset spell
+    everything identically": one axis answered two ways is a second spelling with
+    nothing to distinguish it.
+
+    The default is stated in parentheses rather than in the brackets Typer would
+    normally render it in. Rich parses `[...]` in help text as a style tag and drops
+    what it cannot resolve, so a bracketed default renders as nothing at all — the
+    same trap `cli-design.md` § "Never use `[dim]` in text you write" names from the
+    other side. `show_default` cannot do it either: the declared value is `None`,
+    which is the tri-state and not the answer.
+
+    The three sources are named because one line serves six verbs and each reads a
+    different subset: `plugins` asks no package manager and `system` asks GitHub
+    about nothing. Naming only what the composite verbs reach made this line false
+    on the two doors that reach less, and a reader has no way to tell a help string
+    that overstates from one that is right.
+    """
+    return typer.Option(
+        None,
+        '--refresh/--cached',
+        show_default=False,
+        help='Ask upstream what is newest — GitHub, the package managers, each plugin remote — or answer from cache (default: refresh)',
+    )
+
+
+def currency(refresh: bool | None, *, offline: bool) -> bool:
+    """Whether this run spends the network on upstream versions.
+
+    The contradiction fires on an explicit `--refresh` alone. `--cached --offline`
+    asks for the same thing twice rather than for two opposite things, and neither
+    flag typed is the default, which cannot be a usage error.
+    """
+    if offline and refresh:
+        contradiction('--offline', '--refresh')
+    return MEASURES_UPSTREAM if refresh is None else refresh
 
 
 def contradiction(first: str, second: str) -> None:
@@ -76,7 +140,14 @@ def verbosity(verbose: int, quiet: bool) -> None:
     logging.configure()
 
 
-def resolved(machine: str | None, owner: str | None = None, packages: frozenset[str] = frozenset(), *, offline: bool = False) -> Session:
+def resolved(
+    machine: str | None,
+    owner: str | None = None,
+    packages: frozenset[str] = frozenset(),
+    *,
+    offline: bool = False,
+    refresh: bool = False,
+) -> Session:
     """One machine's Session, for every leaf that takes `--machine`.
 
     Three failures, two answers, and none of them is decided here any more.
@@ -95,4 +166,4 @@ def resolved(machine: str | None, owner: str | None = None, packages: frozenset[
     What is left is a one-line alias, kept because twenty leaves name it and
     because the paragraph above is the thing worth having in one place.
     """
-    return Session.resolve(machine, owner=owner, packages=packages, offline=offline)
+    return Session.resolve(machine, owner=owner, packages=packages, offline=offline, refresh=refresh and not offline)

@@ -333,9 +333,14 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     """What one manager says, or None when it cannot answer or was not asked.
 
     Two questions through one door: what is installed, and what is installed and
-    behind. The second is prefixed, and the networked ones among them answer only
-    under `refresh` — Flathub and the App Store have no offline catalogue, and
-    `check` runs at a prompt and unattended on a timer.
+    behind. The second is prefixed, and the networked ones among them are the only
+    reads `refresh` gates. A declined run has no answer for any of them rather than
+    a cheap one, and for two different reasons: Flathub, the App Store and the AUR
+    have no offline catalogue at all, while pacman and apt have one that is as old
+    as the last sync and so answers the question wrong.
+
+    Every read verb passes `refresh=True`, so declining is something a caller asked
+    for with `--cached` or `--offline`.
     """
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)
@@ -379,12 +384,28 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     A named sample rather than a bare count. "23 pacman package(s) behind" says a
     machine is behind and nothing about whether that matters; the first few names
     are usually enough to tell a routine sync from a kernel bump.
+
+    UNKNOWN has two causes and the absent manager is separated out, because that
+    one is answerable here: the command is on PATH or it is not, and `Inventory`
+    never has to carry it. A row saying a flag declined the call is wrong on a
+    machine that has no such manager to call.
+
+    Measured 2026-08-22 on the Arch e2e container, which declares flatpak apps and
+    has no flatpak: an `apply` — a run that measures — printed `nothing asked
+    flatpak what is behind` beside two rows correctly reading `no package manager
+    on this machine could be asked`. The manager row blamed a flag nobody typed.
+
+    What is left is genuinely one value: a caller who declined and a manager that
+    failed both arrive as `None`, and separating them would mean a second method on
+    a protocol whose whole value is that a test can hand in a plain dict.
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
+        if not shutil.which(syspkg.OUTDATED[item.name][0]):
+            return Evidence(Verdict.UNKNOWN, f'no {item.name} on this machine to ask what is behind')
         return Evidence(
             Verdict.UNKNOWN,
-            f'nothing asked {item.name} what is behind — a network call, so run `dotfiles check --refresh` or `dotfiles plan --refresh`',
+            f'nothing asked {item.name} what is behind — a network call, and `--cached` declines it',
         )
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')

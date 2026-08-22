@@ -509,6 +509,71 @@ def test_a_subdirectory_plugin_is_never_reported_behind(tmp_path: Path, monorepo
     assert changes(refreshing(tmp_path, packages, manifest)) == ()
 
 
+THREE = {'shell_plugins': [{'name': name, 'repo': f'https://github.com/x/{name}.git'} for name in ('alpha', 'beta', 'gamma')]}
+SHELL_ONLY: dict[str, Any] = {'machine': 'box', 'platform': 'linux', 'shell_plugins': True}
+
+
+def all_present(live: Session, *names: str) -> None:
+    for name in names:
+        (live.home / '.config' / 'zsh' / 'plugins' / name).mkdir(parents=True)
+
+
+def recording(monkeypatch: pytest.MonkeyPatch, behind: str = '') -> list[str]:
+    """Answer `clone.behind` without a fetch, recording which items it was asked about."""
+    asked: list[str] = []
+
+    def fake(item: Any, home: Path) -> bool:
+        asked.append(item.name)
+        return item.name == behind
+
+    monkeypatch.setattr(clone, 'behind', fake)
+    return asked
+
+
+def test_every_present_clone_is_asked_whether_it_is_behind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The fetches run together, so what is worth pinning is that overlapping them
+    drops none of them and still answers about each one.
+
+    A lost result reads as a plugin that is current, and nothing later contradicts
+    it: `apply` leaves it alone and the next `plan` agrees. That is the failure a
+    concurrent rewrite can introduce and a serial one cannot.
+    """
+    live = refreshing(tmp_path, packages=THREE, manifest=SHELL_ONLY)
+    all_present(live, 'alpha', 'beta', 'gamma')
+    asked = recording(monkeypatch, behind='beta')
+
+    observed = plugins.RESOURCE.observe(live, live.plan)
+
+    assert sorted(asked) == ['alpha', 'beta', 'gamma']
+    assert observed.behind == frozenset({'shell-plugin/beta'})
+
+
+def test_a_clone_that_is_not_there_is_not_fetched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Presence is measured first, so a plugin yet to be cloned has no currency to
+    have — and a fetch against a directory that does not exist is a round trip
+    spent to learn what `is_dir` already said."""
+    live = refreshing(tmp_path, packages=THREE, manifest=SHELL_ONLY)
+    all_present(live, 'alpha')
+    asked = recording(monkeypatch)
+
+    plugins.RESOURCE.observe(live, live.plan)
+
+    assert asked == ['alpha']
+
+
+def test_a_run_that_did_not_ask_to_spend_the_network_fetches_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`check` and `plan --cached` reach here too, and neither has permission to
+    fetch. The pool must not turn "no items" into "start one anyway"."""
+    live = session(tmp_path, packages=THREE, manifest=SHELL_ONLY)
+    all_present(live, 'alpha', 'beta', 'gamma')
+    asked = recording(monkeypatch, behind='beta')
+
+    observed = plugins.RESOURCE.observe(live, live.plan)
+
+    assert asked == []
+    assert observed.behind == frozenset()
+
+
 def observation(live: Session) -> plugins.Observed:
     return plugins.RESOURCE.observe(live, live.plan)
 

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import enum
+import functools
 import hashlib
 import json
 import os
@@ -224,8 +225,21 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
+@functools.cache
 def github_token() -> str | None:
-    """Private repos need one for both the API and the download; public ones do not."""
+    """Private repos need one for both the API and the download; public ones do not.
+
+    **Memoised because `_headers` asks on every request.** A refresh makes one
+    request per declared release, so this ran `gh auth token` once per repo — a
+    subprocess at roughly 35ms, spawned dozens of times in a run, to answer a
+    question whose answer cannot change while that run is going.
+
+    Cached for the life of the process, which is the life of one invocation.
+    Nothing rewrites `$GITHUB_TOKEN` after start and `gh` does not rotate a token
+    out from under a command. A test that changes either between cases is the one
+    caller that needs the old behaviour, and `tests/conftest.py` clears this
+    between every test rather than each test remembering to.
+    """
     token = os.environ.get('GITHUB_TOKEN')
     if token:
         return token
@@ -275,16 +289,71 @@ def request(url: str, accept: str | None = None) -> bytes:
     `python.md`: redirects are *not* followed by default, and the default timeout
     is 5s — which a 200MB neovim tarball would meet as a failure.
     """
+    response = httpx2.get(url, headers=_headers(url, accept=accept), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.content
+
+
+def _headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, str]:
+    """What every request this module makes carries, built in one place.
+
+    Shared so the credential rule `request` argues is decided once. A second
+    header dict assembled beside it is a second place that rule can be got wrong,
+    and getting it wrong means a PAT on a host that never needed one.
+    """
     headers = {'User-Agent': USER_AGENT}
     if accept:
         headers['Accept'] = accept
+    if etag:
+        headers['If-None-Match'] = etag
     token = github_token()
     if token and authorized_host(url):
         headers['Authorization'] = f'Bearer {token}'
+    return headers
 
-    response = httpx2.get(url, headers=headers, follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+
+NOT_MODIFIED = 304
+
+
+@dataclass(frozen=True, slots=True)
+class Conditional:
+    """One revalidated read: the body, or the news that nothing changed.
+
+    `payload` is None exactly when GitHub answered 304, which is the whole point
+    of asking this way — the caller already holds the answer, and GitHub does not
+    bill a 304 against the rate limit.
+    """
+
+    payload: bytes | None
+    etag: str
+
+
+def revalidate(url: str, etag: str = '') -> Conditional:
+    """Fetch one URL, offering an `ETag` so an unchanged answer costs nothing.
+
+    **A 304 is not an error and must be read before `raise_for_status`.** httpx
+    raises for anything that is not a 2xx, so letting the status check run first
+    turns the cheap answer into an exception and the caller reads "upstream did
+    not answer" about a repo that answered perfectly.
+
+    **This buys quota, not wall-clock.** Measured 2026-08-22 over the declared
+    releases: a cold refresh spent 65 requests and the revalidated one that followed
+    spent 2. A 304 is faster in isolation — 147ms against 222ms median — but across
+    `WORKERS` threads that saving does not survive run-to-run variance, and the
+    whole sweep timed the same either way. Anyone reaching for this to speed up a
+    `plan` is reading it wrong.
+
+    The quota is what it is for. A machine with no `gh` token has 60 GitHub requests
+    an hour and more declared releases than that, so 65 does not fit and 2 does.
+
+    An empty `etag` is an unconditional fetch, so a cold entry costs exactly what
+    it did before.
+    """
+    response = httpx2.get(url, headers=_headers(url, etag=etag), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    if response.status_code == NOT_MODIFIED:
+        return Conditional(payload=None, etag=etag)
     response.raise_for_status()
-    return response.content
+    return Conditional(payload=response.content, etag=response.headers.get('etag', ''))
 
 
 def release_assets(repo: str, tag: str) -> dict[str, int] | None:
@@ -319,21 +388,88 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     the first match therefore froze a tool at 0.9.x the moment it shipped 0.10.0,
     and reported the machine converged while doing it.
     """
-    if not tag_prefix:
-        try:
-            payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
-        except (httpx2.HTTPError, json.JSONDecodeError):
-            return None
-        return payload.get('tag_name')
-
     try:
-        releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
+        payload = json.loads(request(_version_url(repo, tag_prefix)))
     except (httpx2.HTTPError, json.JSONDecodeError):
         return None
-    candidates = [tag for release in releases if not release.get('draft') and (tag := release.get('tag_name') or '').startswith(tag_prefix)]
+    return _version_from(payload, tag_prefix)
+
+
+def _version_url(repo: str, tag_prefix: str) -> str:
+    """Which endpoint holds this repo's newest version.
+
+    Shared by the unconditional and the revalidating lookup, because choosing the
+    wrong one is silent: `releases/latest` on a monorepo answers about whichever
+    component shipped last, which is a version for the wrong project rather than an
+    error anything could catch.
+    """
+    if tag_prefix:
+        return f'https://api.github.com/repos/{repo}/releases?per_page=100'
+    return f'https://api.github.com/repos/{repo}/releases/latest'
+
+
+def _version_from(payload: object, tag_prefix: str) -> str | None:
+    """The newest tag in a decoded payload, ranked by `_version_key` where a prefix narrows it."""
+    if not tag_prefix:
+        return payload.get('tag_name') if isinstance(payload, dict) else None
+    if not isinstance(payload, list):
+        return None
+    candidates = [tag for release in payload if not release.get('draft') and (tag := release.get('tag_name') or '').startswith(tag_prefix)]
     if not candidates:
         return None
     return max(candidates, key=lambda tag: _version_key(tag, tag_prefix))
+
+
+@dataclass(frozen=True, slots=True)
+class Newest:
+    """What one lookup established about a repo's newest version.
+
+    Three outcomes rather than two, and they need different handling. A `version`
+    is an answer. `unchanged` says the caller's own stored version still stands and
+    is the only case where `version` being None is not a failure. Neither, and
+    nothing could be read — which keeps whatever the caller already had, because a
+    request that failed says nothing about whether the last answer was right.
+
+    `etag` is what to send next time, and it is empty wherever there is nothing
+    worth revalidating against.
+    """
+
+    version: str | None = None
+    etag: str = ''
+    unchanged: bool = False
+
+
+def newest_version(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
+    """`latest_version`, plus the `ETag` that makes asking again cheap.
+
+    The endpoint is chosen by the prefix for the reason `latest_version` states,
+    and both of them revalidate: a monorepo's `releases?per_page=100` is the larger
+    payload and therefore the one a 304 saves most.
+    """
+    answer = _revalidated(_version_url(repo, tag_prefix), etag)
+    if answer is None:
+        return Newest()
+    if answer.payload is None:
+        return Newest(etag=answer.etag, unchanged=True)
+    try:
+        payload = json.loads(answer.payload)
+    except json.JSONDecodeError:
+        return Newest()
+    return Newest(version=_version_from(payload, tag_prefix), etag=answer.etag)
+
+
+def _revalidated(url: str, etag: str) -> Conditional | None:
+    """`revalidate`, answering None where it could not be reached at all.
+
+    The two are told apart by every caller here: a transport failure keeps what the
+    caller already holds, and a body that will not parse is the same. Folding them
+    into one return is what lets a rate-limited minute read as "this repo publishes
+    nothing".
+    """
+    try:
+        return revalidate(url, etag)
+    except httpx2.HTTPError:
+        return None
 
 
 def _version_key(tag: str, tag_prefix: str) -> tuple[int, ...]:
@@ -366,10 +502,20 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     `versions.parse` states.
     """
     try:
-        payload = json.loads(request(f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'))
+        payload = json.loads(request(_tag_url(repo)))
     except (httpx2.HTTPError, json.JSONDecodeError):
         return None
+    return _tag_from(payload, tag_prefix)
 
+
+def _tag_url(repo: str) -> str:
+    return f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'
+
+
+def _tag_from(payload: object, tag_prefix: str) -> str | None:
+    """The greatest tag by version in a decoded page, never the first in it."""
+    if not isinstance(payload, list):
+        return None
     best, highest = None, ()
     for entry in payload:
         name = entry.get('name') or ''
@@ -379,6 +525,20 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
         if parsed is not None and parsed > highest:
             best, highest = name, parsed
     return best
+
+
+def newest_tag(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
+    """`latest_tag`, plus the `ETag` that makes asking again cheap."""
+    answer = _revalidated(_tag_url(repo), etag)
+    if answer is None:
+        return Newest()
+    if answer.payload is None:
+        return Newest(etag=answer.etag, unchanged=True)
+    try:
+        payload = json.loads(answer.payload)
+    except json.JSONDecodeError:
+        return Newest()
+    return Newest(version=_tag_from(payload, tag_prefix), etag=answer.etag)
 
 
 def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None:

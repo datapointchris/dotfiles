@@ -153,15 +153,26 @@ def plan(
     package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
+    refresh: bool | None = commands.refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
     """Show what `apply` would change. Never writes.
 
-    Never writes *the machine*. `--refresh` updates the cache of upstream release
-    versions, which is the one file this may leave changed — deleting it costs a
-    recompute, which is exactly why it is a cache.
+    **Measures upstream rather than reading a cached figure**, which `apply` does
+    for the same reason: the question is what this machine would become, and a
+    release published since the last write reads as converged on a machine an
+    apply would change. That is the one direction the staleness runs, and it is
+    the verdict a rehearsal exists to stop anyone trusting.
+
+    `--cached` declines the network and answers from `$XDG_CACHE_HOME` instead,
+    for a rate-limited box or one with no route to GitHub. It also declines the
+    package managers that cost a round trip, which `syspkg.NETWORKED` names. And
+    the narrowings do the same job more cheaply: `--package` and `--source` cut the
+    refresh to the entries named, which is under a second for one entry.
+
+    Never writes *the machine*. The release cache is the one file this may leave
+    changed — deleting it costs a recompute, which is exactly why it is a cache.
 
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
@@ -180,8 +191,7 @@ def plan(
     commands.verbosity(verbose, quiet)
     if not as_json:
         banner.show()
-    if offline and refresh:
-        commands.contradiction('--offline', '--refresh')
+    refreshing = commands.currency(refresh, offline=offline)
     skipped = _skipped(skip)
     named = commands.resolved(machine).machine_name
     identity = runs.begin(named, 'plan')
@@ -191,7 +201,7 @@ def plan(
         lens,
         skipped,
         machine,
-        refresh=refresh,
+        refresh=refreshing,
         owner=owner,
         packages=frozenset(package or ()),
         offline=offline,
@@ -213,7 +223,7 @@ def check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
-    refresh: bool = typer.Option(False, '--refresh', help='Ask GitHub for the latest releases instead of reading the cache'),
+    refresh: bool | None = commands.refresh_flag(),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
@@ -227,6 +237,15 @@ def check(
 
     Exits 3 when it finds something, and never 1.
 
+    **Measures upstream, as `plan` and `apply` do.** "Is anything on this machine
+    behind" is the question being asked, and a figure up to `releases.TTL` old
+    answers it wrong. That reaches the package managers too, not only the release
+    cache: `syspkg.NETWORKED` names the currency reads that cost a round trip, and
+    this verb makes them.
+
+    `--cached` declines the lot, for a box that is rate-limited or has no route
+    out.
+
     `--offline` measures against the staged bundle, as `plan` does. It is here and
     not withheld on the symmetry argument that kept the selectors off this verb,
     because the question it changes is this verb's own: a machine whose bundle
@@ -236,15 +255,14 @@ def check(
     commands.verbosity(verbose, quiet)
     if not as_json:
         banner.show()
-    if offline and refresh:
-        commands.contradiction('--offline', '--refresh')
+    refreshing = commands.currency(refresh, offline=offline)
     skipped = _skipped(skip)
     checked_machine = commands.resolved(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)
     lens = reconcile.Lens.CHECK
-    walked = reconcile.survey(lens, skipped, machine, refresh=refresh, offline=offline, report=None if as_json else answered)
+    walked = reconcile.survey(lens, skipped, machine, refresh=refreshing, offline=offline, report=None if as_json else answered)
     results = walked.results
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline})
 
