@@ -326,15 +326,28 @@ def test_a_reload_is_issued_before_the_unit_is_enabled(fake_bin: Path, tmp_path:
     assert issued[1] == '--user enable ntfy-client.service'
 
 
-def test_a_failed_reload_stops_the_apply_rather_than_enabling_anyway(fake_bin: Path, granted: Privilege) -> None:
-    """Every other write here checks its result. Enabling after a failed reload
-    reports APPLIED over a machine still running the old definition."""
+def test_a_failed_reload_still_enables_the_unit_and_says_it_did_not_reload(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """`enable` writes a symlink and `daemon-reload` needs a session bus, so an
+    account can have the second unavailable and the first working.
+
+    Refusing the whole repair left such a machine with neither. Measured 2026-08-22
+    in the Arch e2e container: `is-enabled` answered `enabled`, `enable` wrote the
+    symlink, and `daemon-reload` failed with `Failed to connect to user scope bus` —
+    on which `apply` reported the unit did not converge, having attempted nothing.
+
+    Not decided by looking for a manager first. `_manager_answered` records the
+    2026-08-16 measurement that a directory check cannot answer this, because
+    reachability belongs to the calling process's environment rather than to a path.
+    Attempting the reload is what answers, and its failure is not fatal.
+    """
+    log = tmp_path / 'systemctl-calls'
     script = (
         '#!/bin/sh\n'
+        f'printf "%s\\n" "$*" >> {log}\n'
         '[ "$1" = "--user" ] && shift\n'
         'case "$1" in\n'
         '  show) echo yes; exit 0 ;;\n'
-        '  daemon-reload) exit 1 ;;\n'
+        '  daemon-reload) echo "Failed to connect to user scope bus" >&2; exit 1 ;;\n'
         '  *) echo enabled; exit 0 ;;\n'
         'esac\n'
     )
@@ -342,8 +355,26 @@ def test_a_failed_reload_stops_the_apply_rather_than_enabling_anyway(fake_bin: P
 
     result = sysconfig.apply(user_unit(enabled=True), granted)
 
-    assert not result.ok
-    assert 'daemon-reload' in result.detail
+    assert result.ok, result.detail
+    assert 'did not reload' in result.detail
+    issued = [line for line in log.read_text().splitlines() if 'show' not in line]
+    assert issued == ['--user daemon-reload', '--user enable ntfy-client.service']
+
+
+def test_a_reload_that_worked_says_nothing_about_reloading(fake_bin: Path, granted: Privilege) -> None:
+    """The note is a caveat on a partial repair, so a whole one does not carry it.
+
+    Worth its own row because the suffix is appended from a variable that is empty
+    on the ordinary path — an unconditional one would put a warning on every unit
+    this repo ever enables.
+    """
+    script = '#!/bin/sh\n[ "$1" = "--user" ] && shift\ncase "$1" in show) echo yes ;; *) echo enabled ;; esac\nexit 0\n'
+    executable(fake_bin, 'systemctl', script)
+
+    result = sysconfig.apply(user_unit(enabled=True), granted)
+
+    assert result.ok, result.detail
+    assert 'did not reload' not in result.detail
 
 
 def test_a_user_unit_declaring_needs_root_is_refused(fake_bin: Path) -> None:

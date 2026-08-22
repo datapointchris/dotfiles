@@ -291,14 +291,42 @@ def _needs_reload(entry: catalog.SystemdUnit) -> bool:
     return reading.stdout.strip() == 'yes'
 
 
+UNRELOADED = ', though the manager did not reload, so a running one may still hold the previous definition'
+"""Appended where `daemon-reload` failed and the enable went ahead regardless.
+
+`enable` writes a symlink and `daemon-reload` needs a session bus, so an account
+can have the second unavailable and the first working — which is not the same
+machine `_manager_answered` describes. There, `is-enabled` could not answer at all;
+here it answers off the disk while the bus is missing.
+
+Measured 2026-08-22 in the Arch e2e container: `systemctl --user is-enabled`
+returned `enabled`, `systemctl --user enable` wrote the symlink, and
+`daemon-reload` failed with `Failed to connect to user scope bus`. Treating that as
+fatal meant `apply` reported `systemd/ntfy-client.service` did not converge having
+attempted nothing, and the machine kept neither the reload nor the symlink.
+
+**Carrying on is safe because the one residual risk is already detected.** A
+skipped reload can leave a *running* manager holding an older copy, and
+`_needs_reload` asks `systemctl show -p NeedDaemonReload` about exactly that — so
+the next `check` reports it STALE and the next `apply` repairs it. On a machine
+with no manager the question is moot and that read answers `no`.
+
+Not decided by a directory check. `_manager_answered` records the 2026-08-16
+measurement that one cannot: `/run/user/<uid>/systemd` exists on a box where
+`systemctl --user` still fails, because reachability belongs to the calling
+process's environment rather than to a path. Attempting the call is what answers.
+"""
+
+
 def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     # Through the escalation like every other write here, rather than reading
     # first and deciding: a read issued before the privilege gate runs on a
     # machine that has already refused the repair.
+    unreloaded = ''
     if entry.scope == 'user':
         reloaded = escalation.run([*_systemctl(entry), 'daemon-reload'], reason=f'reload the manager before enabling {entry.name}')
         if not reloaded.ok:
-            return Result(False, f'systemctl daemon-reload failed: {reloaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+            unreloaded = UNRELOADED
 
     verb = 'enable' if entry.enabled else 'disable'
     changed = escalation.run([*_systemctl(entry), verb, entry.name], reason=f'{verb} {entry.name}')
@@ -306,7 +334,7 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
         return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     if not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
-        return Result(True, f'{entry.name} {verb}d', kind=Kind.APPLIED)
+        return Result(True, f'{entry.name} {verb}d{unreloaded}', kind=Kind.APPLIED)
 
     # `restart` rather than `start`: a reload replaces the definition without
     # touching the running process, so a unit that was already up would keep the
@@ -314,7 +342,7 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     started = escalation.run([*_systemctl(entry), 'restart', entry.name], reason=f'restart {entry.name}')
     if not started.ok:
         return Result(False, f'systemctl restart {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{entry.name} enabled and started', kind=Kind.APPLIED)
+    return Result(True, f'{entry.name} enabled and started{unreloaded}', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
