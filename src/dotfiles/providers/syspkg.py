@@ -373,8 +373,9 @@ OUTDATED: dict[str, tuple[str, ...]] = {
 }
 """How each manager is asked what it has installed and behind.
 
-The first five read a local index and cost milliseconds; the last two are network
-calls, which is why `NETWORKED` exists rather than this table being uniform.
+Most read a local index and cost milliseconds. `NETWORKED` names the ones that do
+not, which is why this table is not uniform — and `aur` is in that set despite
+being spelled like its local neighbour.
 
 `yay -Qu` rather than `pacman -Qu` for the AUR: both list the same local
 packages, but only yay knows an AUR package's upstream version, so pacman reports
@@ -397,15 +398,20 @@ stderr, which `Output.QUIET` keeps in the same transcript, so a non-zero exit th
 said something is still a non-answer.
 """
 
-NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas'})
-"""Which currency reads reach the network, and so are measured only on request.
+NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur'})
+"""Which currency reads reach the network, and so are the ones `--cached` declines.
 
-There is no local answer for either: Flathub's available versions live on
-Flathub, and the App Store has no offline catalogue. `check` runs unattended on a
-timer, so it must not spend a round trip to say whether Discord is behind — the
-same rule the release cache follows, arrived at for the same reason. `plan` does
-spend it, because what a manager is holding back is part of what an apply would
-change.
+There is no local answer for any of them. Flathub's available versions live on
+Flathub, the App Store has no offline catalogue, and `yay -Qu` asks the AUR's RPC
+about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
+which is the tell that a process is waiting rather than working.
+
+**This names round trips; it does not ration them.** Every read verb measures, so
+all three are asked on a plain `plan` or `check`, and the set is what a run
+declining the network consults to know which reads it must skip. `yay -Qu` is a
+second of wall clock on this machine, which is worth not spending when somebody
+has said they do not want the network — and worth spending every other time,
+because a machine's AUR packages being behind is exactly what they asked about.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {

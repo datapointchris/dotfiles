@@ -21,17 +21,18 @@ visible from a verdict row:
   syscalls crosses drvfs, and the count is in the tens of thousands.
 - **Version probes.** One `<binary> --version` per installed tool with an
   upstream, strictly one after another. 69 process starts in series.
-- **A networked refresh.** `apply` and `plan` both resolve with `refresh=True`,
-  so each asks GitHub for the newest release of every present tool. Behind a
-  firewall that answers slowly, this is minutes and it looks identical to a hang.
-  `plan --cached` answers from the release cache instead, and `--package` or
-  `--source` cut the refresh to the entries named. `check` reads the cache
-  already, so it pays none of this unless handed `--refresh`.
+- **A networked refresh.** Every verb resolves with `refresh=True`, so `plan`,
+  `check` and `apply` each ask GitHub for the newest release of every present
+  tool. Behind a firewall that answers slowly, this is minutes and it looks
+  identical to a hang. `--cached` answers locally instead, and `--package` or
+  `--source` cut the refresh to the entries named.
 - **The same flag pays for two other things nobody looks for.** `refresh` is a
   session-wide permission to spend the network, not a release-lookup switch.
-  `plugins` fetches every clone under it and `evidence.query` asks the networked
-  package managers. Measured on Arch: of the 7.6s a refresh added to a plan, the
-  release lookup was 4.3s and the plugin fetches were 2.9s.
+  `plugins` fetches every clone under it and `evidence.query` asks the managers in
+  `syspkg.NETWORKED`, which includes `aur` — `yay -Qu` is a second of AUR round
+  trip wearing the spelling of a local index read. Measured on Arch: of the 7.6s a
+  refresh added to a plan, the release lookup was 4.3s and the plugin fetches were
+  2.9s.
 
 ## Solution
 

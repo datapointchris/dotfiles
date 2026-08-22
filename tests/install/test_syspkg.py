@@ -193,8 +193,16 @@ def test_a_manager_that_refuses_the_removal_says_so(fake_bin: Path, unprivileged
 
 
 def test_the_networked_reads_are_the_ones_with_no_local_index() -> None:
-    """Flathub's available versions live on Flathub and the App Store has no
-    offline catalogue. Everything else answers off a local index, which is what
-    lets `check` measure them at a prompt and on a timer."""
-    assert sorted(syspkg.NETWORKED) == ['flatpak', 'mas']
+    """Flathub's available versions live on Flathub, the App Store has no offline
+    catalogue, and `yay -Qu` asks the AUR's RPC about every AUR package.
+
+    `aur` is the one a reader would not predict, because it is spelled like its
+    local neighbour and `pacman -Qu` really does answer off the sync database.
+    Measured at 41% CPU against `yay -Qu --repo`'s 103%: a process under 100% is
+    waiting on something.
+
+    Membership decides only what a run declining the network skips. Every read verb
+    measures, so all three are asked on a plain `plan` or `check`.
+    """
+    assert sorted(syspkg.NETWORKED) == ['aur', 'flatpak', 'mas']
     assert set(syspkg.OUTDATED) > syspkg.NETWORKED
