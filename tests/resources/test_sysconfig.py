@@ -326,24 +326,150 @@ def test_a_reload_is_issued_before_the_unit_is_enabled(fake_bin: Path, tmp_path:
     assert issued[1] == '--user enable ntfy-client.service'
 
 
-def test_a_failed_reload_stops_the_apply_rather_than_enabling_anyway(fake_bin: Path, granted: Privilege) -> None:
-    """Every other write here checks its result. Enabling after a failed reload
-    reports APPLIED over a machine still running the old definition."""
+def systemctl_that(fake_bin: Path, log: Path, *, reload_fails: bool, needs_reload: str = '', restart_fails: bool = False) -> None:
+    """A `systemctl` recording its argv, with the three answers these rows turn on.
+
+    `show` is what `_needs_reload` reads and decides whether a failed reload is
+    fatal, so it is a parameter rather than a fixed `yes`.
+    """
+    refuses = 'echo "Failed to connect to user scope bus" >&2; exit 1' if reload_fails else 'exit 0'
+    restarts = 'echo "Job for ntfy-client.service failed" >&2; exit 1' if restart_fails else 'exit 0'
     script = (
         '#!/bin/sh\n'
+        f'printf "%s\\n" "$*" >> {log}\n'
         '[ "$1" = "--user" ] && shift\n'
         'case "$1" in\n'
-        '  show) echo yes; exit 0 ;;\n'
-        '  daemon-reload) exit 1 ;;\n'
+        f'  show) echo "{needs_reload}"; exit 0 ;;\n'
+        f'  daemon-reload) {refuses} ;;\n'
+        f'  restart) {restarts} ;;\n'
         '  *) echo enabled; exit 0 ;;\n'
         'esac\n'
     )
     executable(fake_bin, 'systemctl', script)
 
+
+def issued(log: Path) -> list[str]:
+    """The calls that were writes, with `_needs_reload`'s read dropped."""
+    return [line for line in log.read_text().splitlines() if 'show' not in line]
+
+
+def test_a_failed_reload_still_enables_the_unit_where_no_manager_holds_an_older_copy(
+    fake_bin: Path, tmp_path: Path, granted: Privilege
+) -> None:
+    """`enable` writes a symlink and `daemon-reload` needs a session bus, so an
+    account can have the second unavailable and the first working.
+
+    Refusing the whole repair left such a machine with neither, and `PARTIALLY_APPLIED`
+    is what says which of the two success branches ran without matching the sentence.
+    """
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=True)
+
+    result = sysconfig.apply(user_unit(enabled=True), granted)
+
+    assert result.ok, result.detail
+    assert result.kind is Kind.PARTIALLY_APPLIED
+    assert issued(log) == ['--user daemon-reload', '--user enable ntfy-client.service']
+
+
+def test_the_caveat_carries_what_the_reload_said(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """A unit file systemd will not parse and a polkit refusal both fail this call,
+    and without the transcript they read identically to the missing bus this
+    tolerates. `python.md` § "Fail fast instead of defaulting" asks for the path and
+    the error, and the branch kept only the path."""
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=True)
+
+    result = sysconfig.apply(user_unit(enabled=True), granted)
+
+    assert 'Failed to connect to user scope bus' in result.detail
+
+
+def test_a_reload_that_worked_reports_a_whole_repair(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """The caveat is a claim about a partial repair, so a whole one does not carry
+    it — asserted as the kind, which is the value the sentence is built from."""
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=False)
+
+    result = sysconfig.apply(user_unit(enabled=True), granted)
+
+    assert result.ok, result.detail
+    assert result.kind is Kind.APPLIED
+
+
+def test_a_failed_reload_is_still_fatal_where_the_manager_holds_an_older_copy(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """The case the fatal branch was written for, and still the right answer.
+
+    A manager answering `NeedDaemonReload` is reachable and holding an older copy of
+    this file, so enabling against it leaves the service on the old one. It is also
+    what `_observe_unit` turns into STALE — so tolerating it would report `ok=True`
+    about a row the next `check` calls drift, every run, on a bus that is not coming
+    back.
+    """
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=True, needs_reload='yes')
+
     result = sysconfig.apply(user_unit(enabled=True), granted)
 
     assert not result.ok
-    assert 'daemon-reload' in result.detail
+    assert result.kind is Kind.COMMAND_FAILED
+    assert issued(log) == ['--user daemon-reload']
+
+
+def test_a_unit_wanted_running_is_not_started_after_a_reload_the_manager_refused(
+    fake_bin: Path, tmp_path: Path, granted: Privilege, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`systemctl --user restart` goes to the same bus the reload could not reach.
+
+    `SYSTEMD_RUNTIME` is `/run/systemd/system`, which answers for the *system*
+    manager — so a host whose system manager runs and whose user bus does not opens
+    that gate and then fails on the bus. `install/system.yml` declares this repo's
+    only user unit `active: true`, so it is the shape that ships and the one no row
+    here reached before.
+    """
+    monkeypatch.setattr(sysconfig, 'SYSTEMD_RUNTIME', Path(__file__).parent)
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=True)
+
+    result = sysconfig.apply(user_unit(enabled=True, active=True), granted)
+
+    assert result.ok, result.detail
+    assert result.kind is Kind.PARTIALLY_APPLIED
+    assert issued(log) == ['--user daemon-reload', '--user enable ntfy-client.service']
+
+
+def test_a_unit_wanted_running_is_started_when_the_reload_worked(
+    fake_bin: Path, tmp_path: Path, granted: Privilege, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The other side of the gate above, so neither answer is the only one measured."""
+    monkeypatch.setattr(sysconfig, 'SYSTEMD_RUNTIME', Path(__file__).parent)
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=False)
+
+    result = sysconfig.apply(user_unit(enabled=True, active=True), granted)
+
+    assert result.kind is Kind.APPLIED
+    assert issued(log) == ['--user daemon-reload', '--user enable ntfy-client.service', '--user restart ntfy-client.service']
+
+
+def test_a_start_the_manager_refused_fails_the_row_rather_than_caveating_it(
+    fake_bin: Path, tmp_path: Path, granted: Privilege, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A unit declared `active: true` that will not start is not a partial repair.
+
+    The reload succeeded, so the manager is reachable and it said no to this unit —
+    a bad unit file or a failing daemon, which is a person's to read. The caveat
+    above is for a manager that never answered.
+    """
+    monkeypatch.setattr(sysconfig, 'SYSTEMD_RUNTIME', Path(__file__).parent)
+    log = tmp_path / 'systemctl-calls'
+    systemctl_that(fake_bin, log, reload_fails=False, restart_fails=True)
+
+    result = sysconfig.apply(user_unit(enabled=True, active=True), granted)
+
+    assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
+    assert 'Job for ntfy-client.service failed' in result.detail
 
 
 def test_a_user_unit_declaring_needs_root_is_refused(fake_bin: Path) -> None:

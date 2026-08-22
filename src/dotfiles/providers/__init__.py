@@ -44,6 +44,20 @@ class Kind(enum.StrEnum):
     APPLIED = 'applied'
     """The change was made: something was installed, written, enabled or linked."""
 
+    PARTIALLY_APPLIED = 'partially-applied'
+    """The change was made, and a step it depends on could not be.
+
+    Still a success — the machine has what it declared — so `ok` stays True and
+    `Outcome.from_result` reads it as DONE. What separates it from `APPLIED` is the
+    fix hint: a whole repair needs nothing further, and this one is waiting on
+    something a person does, usually a login or a reboot.
+
+    `sysconfig._unit_applied` is the case it was added for: a user unit enabled
+    while its manager would not answer, so the symlink is on disk and nothing has
+    loaded it. Without a member, which of the two branches ran was legible only by
+    matching the `detail` sentence — the fault this enum's own docstring names.
+    """
+
     UNCHANGED = 'unchanged'
     """Nothing was written, and nothing needed to be.
 

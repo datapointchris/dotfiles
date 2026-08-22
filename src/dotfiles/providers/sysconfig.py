@@ -291,22 +291,86 @@ def _needs_reload(entry: catalog.SystemdUnit) -> bool:
     return reading.stdout.strip() == 'yes'
 
 
+UNRELOADED = ', though the manager did not reload, so it is enabled for the next login rather than loaded now: {cause}'
+"""The caveat on a unit that was enabled while its manager would not answer.
+
+`enable` writes a symlink and `daemon-reload` needs a session bus, so an account
+can have the second unavailable and the first working — which is not the same
+machine `_manager_answered` describes. There, `is-enabled` could not answer at all;
+here it answers off the disk while the bus is missing.
+
+Measured 2026-08-22 in the Arch e2e container: `systemctl --user is-enabled`
+returned `enabled`, `systemctl --user enable` wrote the symlink, and
+`daemon-reload` failed with `Failed to connect to user scope bus`. Treating that as
+fatal meant `apply` reported `systemd/ntfy-client.service` did not converge having
+attempted nothing, and the machine kept neither the reload nor the symlink.
+
+`{cause}` carries what the reload actually said, per `python.md` § "Fail fast
+instead of defaulting": a fallback taken silently is one nobody can diagnose. A
+unit file systemd will not parse and a polkit refusal both fail this call, and
+without the transcript they read identically to the missing bus this exists for.
+
+Not decided by a directory check. `_manager_answered` records the 2026-08-16
+measurement that one cannot: `/run/user/<uid>/systemd` exists on a box where
+`systemctl --user` still fails, because reachability belongs to the calling
+process's environment rather than to a path. Attempting the call is what answers.
+
+`providers/systemd.py` `enable` is the same sequence for a unit a release shipped,
+and it discards the reload's result instead. Its docstring carries why the two are
+apart, and a change to this policy is a change to both.
+"""
+
+
+def _unit_applied(done: str, unreloaded: str) -> Result:
+    """One place the caveat is rendered and the condition becomes a value.
+
+    Both success returns below go through here, so a third added later cannot
+    forget the caveat — and `Kind` is what a test asserts to prove which of the two
+    ran. `Kind`'s own docstring names the alternative as the fault: "A test
+    asserting a substring to prove which branch ran is a test pinned to wording
+    that exists to be rewritten."
+    """
+    return Result(True, f'{done}{unreloaded}', kind=Kind.PARTIALLY_APPLIED if unreloaded else Kind.APPLIED)
+
+
 def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     # Through the escalation like every other write here, rather than reading
     # first and deciding: a read issued before the privilege gate runs on a
     # machine that has already refused the repair.
+    unreloaded = ''
     if entry.scope == 'user':
         reloaded = escalation.run([*_systemctl(entry), 'daemon-reload'], reason=f'reload the manager before enabling {entry.name}')
         if not reloaded.ok:
-            return Result(False, f'systemctl daemon-reload failed: {reloaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+            # A manager that answers `NeedDaemonReload` is a manager that is
+            # reachable and holding an older copy of this file, which is the case
+            # the fatal branch was written for and still the right answer: enabling
+            # against a definition it has not read leaves the service on the old
+            # one. Answering nothing means there is no loaded copy to be stale, and
+            # refusing there wrote nothing at all.
+            #
+            # This also keeps `apply` and `observe` agreeing. `_observe_unit` turns
+            # the same `yes` into STALE, so a tolerated failure here would report
+            # `ok=True` about a row the next `check` calls drift — on a machine
+            # whose bus is not coming back, that is every run, forever.
+            if _needs_reload(entry):
+                return Result(False, f'systemctl daemon-reload failed: {reloaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+            unreloaded = UNRELOADED.format(cause=reloaded.transcript.strip())
 
     verb = 'enable' if entry.enabled else 'disable'
     changed = escalation.run([*_systemctl(entry), verb, entry.name], reason=f'{verb} {entry.name}')
     if not changed.ok:
         return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
-    if not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
-        return Result(True, f'{entry.name} {verb}d', kind=Kind.APPLIED)
+    # `unreloaded` gates the start as well, and this is the half a reader has to
+    # get right: `SYSTEMD_RUNTIME` is `/run/systemd/system`, which answers for the
+    # *system* manager, while `systemctl --user restart` goes to this account's.
+    # A host whose system manager runs and whose user bus does not opens that gate
+    # and then fails on the same bus the reload could not reach — and
+    # `install/system.yml` declares the repo's only user unit `active: true`, so
+    # that is the shape that ships. The reload is the reachability probe; a start
+    # after it failed cannot work.
+    if unreloaded or not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
+        return _unit_applied(f'{entry.name} {verb}d', unreloaded)
 
     # `restart` rather than `start`: a reload replaces the definition without
     # touching the running process, so a unit that was already up would keep the
@@ -314,7 +378,7 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     started = escalation.run([*_systemctl(entry), 'restart', entry.name], reason=f'restart {entry.name}')
     if not started.ok:
         return Result(False, f'systemctl restart {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return Result(True, f'{entry.name} enabled and started', kind=Kind.APPLIED)
+    return _unit_applied(f'{entry.name} enabled and started', unreloaded)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
