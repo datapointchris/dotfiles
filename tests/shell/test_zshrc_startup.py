@@ -19,7 +19,6 @@ their own tests; the file that sources them had none.
 from __future__ import annotations
 
 import os
-import pty
 import re
 import shutil
 import subprocess
@@ -113,41 +112,51 @@ def reported(result: Shell) -> list[str]:
     return [line for line in result.stderr.splitlines() if ERROR_MARK in line]
 
 
-def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true', terminal: bool = False) -> Shell:
-    """Start an interactive zsh in `home` and report what each stream carried.
+def run(argv: list[str], home: Path, path: str) -> Shell:
+    """A zsh in `home`, with the two streams kept apart.
 
-    Interactive because `.zshrc` is only read by one, and the streams stay apart
-    for the reason `shell_out` states: a merged stream passes whichever one the
-    code chose.
-
-    `terminal` hands stdin a pty, which only the completion test needs. A GitHub
-    runner has no controlling terminal, so `zsh -i` there writes `not interactive
-    and can't open terminal` and compinit answers `initialization aborted` — every
-    assertion about a *registered* completion then fails on the harness rather
-    than on the config. Off by default because a pty is not free, and because the
-    rest of this file asserts about function definitions and stderr, neither of
-    which compinit touches.
-
-    Only stdin is a pty. stdout and stderr stay pipes, so the two streams are
-    still separable and nothing has to be stripped of terminal escapes.
+    Separate for the reason `shell_out` states: a merged stream passes whichever
+    one the code chose. The timeout is a backstop rather than an expectation —
+    every shell here is given a command and exits on it, so hitting it means one
+    of them started waiting for input, which is a hang and not a slow test.
     """
-    controlling, terminal_side = pty.openpty() if terminal else (None, None)
-    try:
-        completed = subprocess.run(
-            ['zsh', '-i', '-c', snippet],
-            stdin=terminal_side if terminal else subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            env={'HOME': str(home), 'PATH': path, 'TERM': 'xterm'},
-            check=False,
-            cwd=home,
-            timeout=60,
-        )
-    finally:
-        for descriptor in (controlling, terminal_side):
-            if descriptor is not None:
-                os.close(descriptor)
+    completed = subprocess.run(
+        argv,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        env={'HOME': str(home), 'PATH': path, 'TERM': 'xterm'},
+        check=False,
+        cwd=home,
+        timeout=60,
+    )
     return Shell(completed.stdout, completed.stderr, completed.returncode)
+
+
+def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true') -> Shell:
+    """Start an interactive zsh in `home`, which is the only kind that reads `.zshrc`."""
+    return run(['zsh', '-i', '-c', snippet], home, path)
+
+
+def sourced(home: Path, *, path: str = BARE_PATH, snippet: str) -> Shell:
+    """Run `snippet` in a zsh that sourced `.zshrc` without being interactive.
+
+    For the one assertion that needs compinit to have finished. `zsh -i` requires
+    a terminal it can open, and a GitHub runner has none — it answers `not
+    interactive and can't open terminal`, compinit answers `initialization
+    aborted`, and an assertion about a *registered* completion then fails on the
+    harness rather than on the config.
+
+    *Rejected*: handing stdin a pty. It removes the error and replaces it with a
+    hang — with a real terminal, `zsh -i -c` stops being run-and-exit and the
+    shell sits there until the timeout fires. Measured on a runner at 60s.
+
+    Interactivity is not what this asserts about. `.zshrc` branches on no such
+    thing, compinit needs none, and what is being measured is whether the
+    function a generator wrote is indexed by the time the file has finished. The
+    tests above keep `zsh -i`, because reading the file is exactly their subject.
+    """
+    return run(['zsh', '-c', f'source "$HOME/.config/zsh/.zshrc"; {snippet}'], home, path)
 
 
 def test_a_shell_starting_without_the_optional_tools_says_nothing(tmp_path: Path) -> None:
@@ -342,8 +351,8 @@ def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_p
     # finds it. compinit in the first ran before the file existed, which is the
     # ordinary case for a tool installed since the last shell started.
     where = f'{fake}{os.pathsep}{BARE_PATH}'
-    start(home, path=where, snippet='cache_completion stubtool stubtool', terminal=True)
-    result = start(home, path=where, snippet='print "registered=${_comps[stubtool]:-none}"', terminal=True)
+    sourced(home, path=where, snippet='cache_completion stubtool stubtool')
+    result = sourced(home, path=where, snippet='print "registered=${_comps[stubtool]:-none}"')
 
     assert 'initialization aborted' not in result.stderr, 'compinit never ran, so this asserts nothing'
     assert result.stdout.strip().endswith('registered=_stubtool')
