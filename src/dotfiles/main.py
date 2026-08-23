@@ -278,8 +278,8 @@ def check(
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline, 'refresh': refreshing})
 
     # Written by every check, not only the scheduled one, so an interactive run
-    # also refreshes what the next shell reports — which is what stops a nudge
-    # outliving the problem it describes.
+    # refreshes it too — which is what stops a reader being handed a verdict that
+    # outlives the problem it describes.
     #
     # Resolved rather than taken from the argument: under the scheduled timer
     # neither `--machine` nor `$MACHINE` is set, and the document said the
@@ -420,7 +420,6 @@ def _converged(
 # shows. Typer renders panels in registration order, and these two are the ones
 # a reader needs first.
 app.command('update', rich_help_panel='Manage')(manage.update)
-app.command('shell-init', hidden=True)(manage.shell_init)
 
 
 if __name__ == '__main__':

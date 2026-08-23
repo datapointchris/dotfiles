@@ -33,12 +33,6 @@ coordinates:
 # left where it is.
 deploy_by_copy: true
 
-# Feature flags — overrides for install/flags.yml defaults. The review register
-# is personal, and its nudge has no place in a work shell, on either side of the
-# WSL boundary.
-flags:
-  SHELL_NUDGE: false
-
 # Only `winget_packages`, and the other tool lists are absent for a reason about
 # the catalog rather than about this machine. Six of these eight are declared as
 # `cargo_packages` too and one as a `github_releases` entry, and none of those

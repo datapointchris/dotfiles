@@ -18,8 +18,8 @@ class ExitCode(IntEnum):
     """What a caller branches on. See `cli-design.md` § Machine contract.
 
     Three exists to stop `check` reporting "a checker crashed" as "no drift".
-    Without it the shell nudge fires on a converged machine whose checker could
-    not run, and the caller has no way to tell the two apart.
+    Without it a caller reads a converged machine whose checker could not run as
+    converged, and has no way to tell the two apart.
     """
 
     CONVERGED = 0
@@ -51,7 +51,6 @@ EXCEPTION_VERBS: dict[str, str] = {
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
     'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
-    'shell-init': 'hidden; the `starship init` / `zoxide init` convention for a shell snippet',
 }
 """Each exception carries the reason it is not one of the five, so the next reader
 does not have to reconstruct it — and so a new one has to be argued for in writing."""

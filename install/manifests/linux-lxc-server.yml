@@ -7,7 +7,6 @@ platform: linux
 # a debugging session is a ~/.env edit rather than a reinstall — which is the
 # whole point of the flag layer sitting on top of the manifest.
 flags:
-  SHELL_NUDGE: false
   SHELL_VI_MODE: false
   SHELL_AUTOSUGGESTIONS: false
   SHELL_SYNTAX_HIGHLIGHTING: false

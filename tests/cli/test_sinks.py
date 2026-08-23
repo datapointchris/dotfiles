@@ -131,8 +131,8 @@ def _refuse_once():
 
 
 def test_a_refusal_is_an_issue_not_an_outcome() -> None:
-    """The distinction the nudge fires on. An Issue is something wrong; a decision
-    about an item is not, however unwelcome."""
+    """The distinction the exit code carries. An Issue is something wrong; a
+    decision about an item is not, however unwelcome."""
     written = sinks.record([Event('packages', Refusal('pacman is not installed'))], identity('check'))
 
     assert written.outcomes == []

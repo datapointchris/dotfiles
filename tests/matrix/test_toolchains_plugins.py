@@ -934,8 +934,8 @@ def test_a_resource_scoped_check_leaves_the_machines_own_status_alone(
 ) -> None:
     """One part of the machine answered for is not the machine answered for.
 
-    `dotfiles check` files a run record and writes the status document the shell
-    nudge and the scheduled unit read; a check narrowed to one noun writes neither.
+    `dotfiles check` files a run record and writes the status document a later
+    reader asks for; a check narrowed to one noun writes neither.
     It has to be that way round — a converged `toolchains check` overwriting the
     status would report the whole machine healthy on the strength of one resource.
     """

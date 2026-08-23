@@ -42,7 +42,7 @@ sat permanently `failed` on a machine whose only fault was being a version
 behind. The distinction was already in the data: `Repair` says who can fix a
 change, so `plan` keeps what `apply` can fix and `check` keeps what it cannot.
 `ExitCode` in `src/dotfiles/vocabulary.py` says why three is separate from one.
-The periodic timer runs `check`, and the shell nudge fires on issues alone.
+The periodic timer runs `check` and leaves its verdict in the state file.
 
 The split does not reach the network, though. All three verbs measure: they ask
 GitHub what each declared release is at, the package managers what they are
@@ -135,11 +135,12 @@ no reason to be installed and unwanted. A gate earns a flag only when *installed
 but off* is a state worth having.
 
 The shell plugins qualify, because they carry both a preference and a real
-startup cost. Turning the four off measures at roughly 130ms saved. The manifests
-use that: the work box sets `SHELL_NUDGE: false` because the review register is
-personal, and `linux-lxc-server` turns off the whole interactive plugin set. The
-plugins are still *installed* there, so turning one back on mid-debugging is a
-`~/.env` edit rather than a reinstall.
+startup cost. The manifests use that: `linux-lxc-server` and `scheduler` turn
+off the whole interactive plugin set, because a box that exists to be SSHed into
+for diagnosis wants a fast shell rather than a personal one. The plugins are
+still *installed* there, so turning one back on mid-debugging is a `~/.env` edit
+rather than a reinstall. What each flag costs on this machine is
+`zsh-startup --plugins`.
 
 A plugin must be sourced at top level, never from inside a helper function. A
 function scope changes what a plugin's own `typeset` calls do, so the loads stay

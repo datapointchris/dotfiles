@@ -83,8 +83,8 @@ class ResourceVerdict(StrEnum):
     `DRIFT` and `ISSUE` are different kinds, not degrees. Drift is expected and
     benign — the machine differs from its declaration, which is what `apply` is
     for. An Issue is something wrong: a checker crashed, a declaration is
-    invalid. Collapsing them is what would make an exit code meaningless and the
-    shell nudge not worth having.
+    invalid. Collapsing them is what would make an exit code meaningless, and the
+    scheduled unit sits `failed` on whichever one the code carries.
 
     There was a fourth, `PENDING`, for a resource whose checker had not been
     written yet. Every one of them answers for itself now, so a verdict
@@ -384,8 +384,8 @@ def _lead(kept: Sequence[Change]) -> str:
     """Which items, and the fix if every one of them takes the same one.
 
     A bare count answers nothing once the reader is at this line, having the rows
-    themselves underneath it — this is the line a shell nudge or a scheduled-run
-    summary carries on its own, with those rows long gone. Naming the items makes
+    themselves underneath it — this is the line a scheduled-run summary carries on
+    its own, with those rows long gone. Naming the items makes
     a scrollback search find them again; naming the fix too, when it is the one
     fix, means this line alone is the answer.
     """
@@ -420,7 +420,7 @@ SHORT_FIX = 60
 """How long a shared fix may be before the heading names the items alone.
 
 Both halves matter. `log in with \\`atuin login\\`` is the whole answer and belongs
-where a nudge or a scheduled summary will carry this line with no rows under it;
+where a scheduled summary will carry this line with no rows under it;
 a sentence naming an absolute path to delete is not, and it is already printed in
 full on its own row directly below."""
 

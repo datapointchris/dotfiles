@@ -668,30 +668,33 @@ def test_an_invalid_declaration_is_checks_business_and_applys_gate_and_not_plans
     assert cli(verb, '--json', catch_exceptions=True).exit_code == code
 
 
-def test_a_check_leaves_a_nudge_only_for_what_is_wrong(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The nudge fires on Issues, never on drift.
+def test_a_check_records_an_issue_and_leaves_drift_unrecorded_as_one(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """`ISSUE` and `DRIFT` are different kinds, not degrees of the same one.
 
-    Drift is the normal state of a machine between applies; nudging about it at
-    every prompt would train the nudge away inside a week. The declared release
-    that is absent is drift and leaves no file; the unset identity is an Issue and
-    names itself in one line.
+    Drift is the normal state of a machine between applies, and what `apply` is
+    for. An Issue is something wrong. Collapsing them makes the exit code
+    meaningless and leaves the scheduled unit permanently `failed` on a box whose
+    only fault is being a version behind. The declared release that is absent is
+    drift; the unset identity is an Issue, and only the second reaches the file.
     """
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
 
     assert cli('check').exit_code == ExitCode.CONVERGED
-    assert not sandbox.nudge_file.exists()
+    assert 'issue' not in {row['verdict'] for row in json.loads(sandbox.status_file.read_text())['resources']}
 
     broken_identity(sandbox)
 
     assert cli('check').exit_code == ExitCode.ISSUE
-    assert 'identity' in sandbox.nudge_file.read_text()
+    recorded = {row['address']: row['verdict'] for row in json.loads(sandbox.status_file.read_text())['resources']}
+    assert recorded['identity'] == 'issue'
 
 
-def test_skipping_the_resource_that_is_wrong_clears_the_nudge_it_left(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """A skip removes the finding, and the file the finding wrote goes with it.
+def test_skipping_the_resource_that_is_wrong_clears_the_issue_it_recorded(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A skip removes the finding, and the record the finding wrote goes with it.
 
-    Removed rather than emptied, because the shell tests for a non-empty file and a
-    stale empty one is a file whose mtime keeps saying the check ran.
+    Rewritten rather than merged into what was there: a status file that kept a
+    skipped resource's last verdict would report a machine as broken on the
+    strength of a run that never measured it.
     """
     broken_identity(sandbox)
     cli('check')
@@ -699,7 +702,7 @@ def test_skipping_the_resource_that_is_wrong_clears_the_nudge_it_left(sandbox: S
     ran = cli('check', '--skip', 'identity')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert not sandbox.nudge_file.exists()
+    assert 'identity' not in {row['address'] for row in json.loads(sandbox.status_file.read_text())['resources']}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -783,8 +786,8 @@ def test_the_run_record_is_filed_under_the_resolved_machine_rather_than_the_argu
 
 
 def test_the_status_file_a_check_writes_carries_its_verdicts_and_none_of_its_rows(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Every `check` refreshes what the next shell reports, not only the scheduled
-    one — which is what stops a nudge outliving the problem it describes.
+    """Every `check` refreshes this, not only the scheduled one — which is what
+    stops a reader being handed a verdict that outlives the problem it describes.
 
     The same run and not the same bytes. This file is written unasked into a
     directory the fleet syncs, several times a day, and the question it answers is

@@ -1,14 +1,8 @@
 """What a `check` leaves behind for something that is not watching it.
 
-Two files, and the split is the whole design. `status.json` is the state — every
-resource's verdict, its counts, and when it was measured — for a caller that
-wants to reason about the machine. `nudge` is one line of human text, present
-only when there is something a person should act on.
-
-Two rather than one because of who reads them. The nudge is read by a **shell
-snippet at every prompt**, and JSON parsing in zsh means `jq`, which means a
-subprocess per shell — the exact cost `.zshrc`'s completion caching exists to
-avoid. A one-line file is `$(<file)`, which zsh reads with no fork at all.
+`status-<box>.json` is the state — every resource's verdict, its counts, and when
+it was measured — for a caller that wants to reason about the machine without
+running a check of its own.
 
 **The state file is not the `--json` document, and the difference is who asked.**
 `document` below is composed for one run because a caller asked for it, and that
@@ -18,14 +12,8 @@ every check, wanted by nobody in particular, and lands in `$XDG_STATE_HOME`, whi
 is a Syncthing folder for the fleet. Written as the document it was 127 KB against
 2.8 KB for the same walk, several times a day, on every box.
 
-**It fires on Issues, not on drift.** Drift is the normal state of a machine
-between applies; nudging about it every prompt would train the nudge away inside
-a week. An Issue is something wrong — a checker that could not run, a declaration
-that will not parse — and those are rare enough to be worth interrupting for.
-
 Written by every `check`, not only the scheduled one, so an interactive check
-also refreshes what the next shell reports. That is what stops the nudge
-outliving the problem it describes.
+refreshes what a later reader sees.
 """
 
 from __future__ import annotations
@@ -42,7 +30,6 @@ from dotfiles import vocabulary
 from dotfiles.output import hint
 from dotfiles.output import warn
 from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import ResourceVerdict
 
 
 def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
@@ -66,21 +53,15 @@ def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
 
 
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
-    """Write both files, and say when the state directory would not take them.
+    """Write the state file, and say when the state directory would not take it.
 
     The state directory is on Syncthing for the fleet and absent on a fresh
     machine, and neither is a reason for `dotfiles check` to exit non-zero — it
     answered the question it was asked. Degrading is right here; degrading
     silently is not. An unwritable directory is indistinguishable from a
-    successful write to everything downstream, and what it produces is a prompt
-    nudge that never fires again — which reads as a converged machine.
-
-    Not atomic across the two, and it does not claim to be: a directory that
-    refuses the first write refuses both, which is the failure this actually
-    meets, but a status file written and a nudge that then fails leaves the
-    status on disk beside a nudge that is one run out of date. Bounded rather
-    than repaired, because the shell stops reading a nudge older than
-    `MAX_AGE_SECONDS` anyway.
+    successful write to everything downstream, so a reader asking where this
+    machine stands would get an answer from whenever the last write landed and
+    nothing saying it was stale.
 
     Returns whether it recorded. The warning goes to stderr so it cannot corrupt
     a `--json` run, which is also why the answer is a value rather than the
@@ -89,10 +70,9 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
     try:
         paths.STATE_HOME.mkdir(parents=True, exist_ok=True)
         paths.STATUS_FILE.write_text(json.dumps(state(results, machine, when), indent=2) + '\n')
-        _write_nudge(results)
     except OSError as unwritable:
         warn(f'could not record this check under {paths.STATE_HOME}: {unwritable}')
-        hint(f'no shell will nudge until {paths.STATE_HOME} takes a write — check its permissions and free space')
+        hint(f'{paths.STATUS_FILE.name} is now out of date — check the directory permissions and free space')
         return False
     return True
 
@@ -210,78 +190,3 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
 
 def _worst(results: Sequence[ResourceResult]) -> str:
     return str(reconcile.worst(results))
-
-
-def _write_nudge(results: Sequence[ResourceResult]) -> None:
-    """One line, or the file removed. Removed rather than emptied, because the
-    shell tests for a non-empty file and a stale empty one is a file whose mtime
-    keeps saying the check ran."""
-    issues = [result for result in results if result.verdict is ResourceVerdict.ISSUE]
-    if not issues:
-        paths.NUDGE_FILE.unlink(missing_ok=True)
-        return
-
-    named = ', '.join(result.address for result in issues)
-    paths.NUDGE_FILE.write_text(f'dotfiles: {len(issues)} resource(s) need attention ({named}) — run: dotfiles check\n')
-
-
-SNIPPETS = {
-    'zsh': """\
-# Generated by `dotfiles shell-init zsh`; cached by cache_eval in .zshrc.
-() {
-  # Suffixed because the fleet shares this directory: an unsuffixed nudge would
-  # be whichever machine checked last, reporting its failure on every other one.
-  #
-  # The bare lowercased hostname, matching what Python writes. Not $MACHINE:
-  # that names the manifest, and both Macs declare the same one, so their nudges
-  # would share a path in a directory the fleet syncs. $HOST is a zsh parameter
-  # and (L) is an expansion flag, so this still forks nothing — which is the
-  # whole point of the snippet.
-  local nudge=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/nudge-${(L)HOST%%%%.*}
-  [[ -s $nudge ]] || return 0
-
-  # zsh/stat and zsh/datetime are builtin modules, so the whole check costs no
-  # subprocess: the point of a startup nudge is that it is invisible when there
-  # is nothing to say, and a fork per prompt is not invisible.
-  zmodload -F zsh/stat b:zstat 2>/dev/null || return 0
-  zmodload zsh/datetime 2>/dev/null || return 0
-
-  local -a stamp
-  zstat -A stamp +mtime -- $nudge 2>/dev/null || return 0
-  # A stale nudge is worse than none: a timer that stopped running would leave a
-  # week-old warning on screen with nothing to say it had stopped being true.
-  (( EPOCHSECONDS - stamp[1] < %(max_age)d )) || return 0
-
-  print -r -- $(<$nudge)
-}
-""",
-    'bash': """\
-# Generated by `dotfiles shell-init bash`.
-__dotfiles_nudge() {
-  # bash has no case-folding expansion before 4.0 and macOS ships 3.2, so this
-  # takes the hostname as it comes. Every host in this fleet is already
-  # lowercase; one that is not gets no nudge under bash, which is the fallback
-  # shell and not the daily one.
-  local nudge="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/nudge-${HOSTNAME%%%%.*}"
-  [ -s "$nudge" ] || return 0
-  # bash has no builtin stat, so this is one subprocess per shell rather than
-  # zsh's none. Accepted: bash here is a fallback shell, not the daily one.
-  local age=$(( $(date +%%s) - $(stat -c %%Y "$nudge" 2>/dev/null || echo 0) ))
-  [ "$age" -lt %(max_age)d ] || return 0
-  cat "$nudge"
-}
-__dotfiles_nudge
-""",
-}
-
-MAX_AGE_SECONDS = 60 * 60 * 24
-"""How old the nudge may be before the shell ignores it.
-
-A day, because the schedule runs several times a day: anything older means the
-timer is not running, and a warning nobody is refreshing is a warning that has
-stopped being evidence.
-"""
-
-
-def snippet(shell: str) -> str:
-    return SNIPPETS[shell] % {'max_age': MAX_AGE_SECONDS}

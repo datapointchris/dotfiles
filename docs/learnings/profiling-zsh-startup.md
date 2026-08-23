@@ -41,11 +41,13 @@ awk '/^\+[0-9]{10}\./ {
 
 Run that in a loop until a slow start is caught, since an intermittent stall will not appear on demand.
 
-Generated completions and hooks are then cached under `$XDG_CACHE_HOME/zsh/completions/`, keyed on the tool's binary mtime, so each is regenerated only after that tool is upgraded. Force a rebuild by deleting the directory:
+Generated blocks are cached and keyed on the tool's binary mtime, so each is regenerated only after that tool is upgraded. They land in two directories, because caching a completion is not the same as not paying for it — a cached file still costs its whole size to source, and `ruff` and `uv` generate 668K and 516K of clap definitions. Completions go to `$XDG_CACHE_HOME/zsh/functions/` as `_<tool>`, where compinit indexes them and zsh reads a body only when Tab asks for it. Hooks and keybindings — zoxide, fzf, atuin, direnv — go to `$XDG_CACHE_HOME/zsh/completions/` and are sourced, because they must exist before the first prompt. Force a rebuild by deleting either:
 
 ```bash
-rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"/{functions,completions}
 ```
+
+`zsh-startup` is the tool for the wall clock the trace above cannot see, and `zsh-startup --steps` prints one `ZSHRC_DEBUG` run sorted by cost.
 
 ## Key Learnings
 

@@ -1,9 +1,9 @@
 """What a check leaves behind, and what it says when it cannot leave anything.
 
-The nudge is read by a shell snippet at every prompt, so a state directory that
-cannot be written produces a machine that never nudges again — which is exactly
-what a converged machine looks like. Nothing downstream can tell the two apart,
-which is why the failure has to announce itself here or nowhere.
+A state directory that cannot be written leaves the previous status file in
+place, so every later reader gets an answer with nothing marking it as out of
+date. Nothing downstream can tell that from a check that ran, which is why the
+failure has to announce itself here or nowhere.
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ def state_at(monkeypatch: pytest.MonkeyPatch, home: Path) -> Path:
     """Point every state path at `home`, the way a real run derives them."""
     monkeypatch.setattr(paths, 'STATE_HOME', home)
     monkeypatch.setattr(paths, 'STATUS_FILE', home / 'status-box.json')
-    monkeypatch.setattr(paths, 'NUDGE_FILE', home / 'nudge-box')
     return home
 
 
@@ -56,9 +55,9 @@ def test_an_unwritable_state_directory_is_reported_rather_than_swallowed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
     """A failure here is indistinguishable from a successful write to everything
-    downstream: the file it cannot write is what the prompt nudge reads, and a
-    nudge that never fires is what a converged machine looks like. So the answer
-    is a value the caller can read, not only a sentence on stderr."""
+    downstream: the file it cannot write is the only record of where this machine
+    stands, and a stale one reads exactly like a fresh one. So the answer is a
+    value the caller can read, not only a sentence on stderr."""
     refused = tmp_path / 'refused'
     refused.mkdir()
     refused.chmod(0o500)

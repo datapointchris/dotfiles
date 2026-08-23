@@ -663,7 +663,7 @@ def test_each_plugin_says_where_its_directory_came_from(tmp_path: Path, monorepo
 
 def test_the_summary_no_longer_calls_every_declared_plugin_a_clone(tmp_path: Path, monorepo: Path) -> None:
     """Two of the nine on this machine never were clones, so the word was wrong on
-    the one line a nudge or a scheduled run carries by itself."""
+    the one line a scheduled run carries by itself."""
     live = session(
         tmp_path,
         packages={'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]},

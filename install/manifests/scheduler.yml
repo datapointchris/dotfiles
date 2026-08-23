@@ -5,7 +5,6 @@ platform: linux
 # SSHed into when a run goes wrong, not to be lived in. The plugins are still
 # installed, so turning one back on for a debugging session is a ~/.env edit.
 flags:
-  SHELL_NUDGE: false
   SHELL_VI_MODE: false
   SHELL_AUTOSUGGESTIONS: false
   SHELL_SYNTAX_HIGHLIGHTING: false

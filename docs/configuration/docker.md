@@ -70,11 +70,12 @@ the installer supports this path.
 
 ## Completions are generated from the CLI
 
-`.zshrc` generates the zsh completion with `docker completion zsh` and caches it under
-`$XDG_CACHE_HOME/zsh/completions`. Neither Homebrew nor OrbStack installs a `_docker` on fpath, and
-the compose plugin ships no completion of its own. The generated one covers `docker compose` as
-well. Where a package does supply `_docker`, the generated copy wins, because it is sourced after
-compinit and re-registers the command.
+`.zshrc` generates the zsh completion with `docker completion zsh` and writes it to
+`$XDG_CACHE_HOME/zsh/functions/_docker`, where compinit indexes it and zsh autoloads the body on
+the first Tab. Neither Homebrew nor OrbStack installs a `_docker` on fpath, and the compose plugin
+ships no completion of its own. The generated one covers `docker compose` as well. Where a package
+does supply `_docker`, the generated copy wins, because that directory is prepended to fpath and
+the first match is the one compinit takes.
 
 ## Config lives under XDG
 

@@ -19,6 +19,7 @@ their own tests; the file that sources them had none.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -44,14 +45,11 @@ here installs. The temp home has neither anyway; naming the PATH says so."""
 
 FLAGS_OFF = (
     'ZSHRC_DEBUG',
-    'SHELL_NUDGE',
     'SHELL_VI_MODE',
     'SHELL_AUTOSUGGESTIONS',
     'SHELL_SYNTAX_HIGHLIGHTING',
     'SHELL_FORGIT',
     'SHELL_HISTORY_DB',
-    'SHELL_CLISTENO',
-    'SHELL_YOU_SHOULD_USE',
 )
 """Every plugin gate `.zshrc` reads, held off so the fixture declares nothing.
 
@@ -247,3 +245,83 @@ def test_neither_branch_of_an_optional_tool_writes_to_stderr(tmp_path: Path, too
     said = [line for line in reported(result) if tool in line]
 
     assert said == [], f'{tool} reported its own absence: ' + '; '.join(said)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Completions are autoloaded off fpath, never sourced at startup
+# ─────────────────────────────────────────────────────────────────────────────
+
+ZSHRC = ZSH_CONFIG / '.zshrc'
+
+SOURCED_AT_STARTUP = {'zoxide', 'fzf', 'atuin', 'direnv', 'doit-widgets'}
+"""The blocks `cache_eval` may still source, because none of them is a completion.
+
+Each defines an alias, a hook or a keybinding that has to exist before the first
+prompt, so there is nothing to defer. Everything else a tool generates is a
+completion function and belongs on fpath.
+"""
+
+CACHE_EVAL_CALL = re.compile(r'\bcache_eval\s+(?:-b\s+\S+\s+)?(\S+)')
+"""One `cache_eval` call, capturing the cache key it writes and sources.
+
+Matched anywhere on the line rather than at its start: the calls are variously
+indented inside an `if`, chained behind a `flag_enabled &&`, and inside a
+function body, so anchoring finds a third of them and the assertion below passes
+on the ones it never looked at. `-b BIN` is consumed and discarded — the binary
+is what staleness is measured against, and the key is what names the file.
+"""
+
+
+def test_the_function_directory_joins_fpath_before_compinit_reads_it() -> None:
+    """compinit scans fpath once and caches the result in its dump.
+
+    A directory added afterwards is never indexed, and the failure is silent in
+    the worst way: every shell starts clean, nothing reaches stderr, and Tab does
+    nothing for every tool whose completion is generated. Ordering is the whole
+    correctness of the arrangement, so it is asserted on position in the file
+    rather than on behaviour, which would need a machine carrying the tools.
+    """
+    lines = ZSHRC.read_text().splitlines()
+    joined = next(i for i, line in enumerate(lines) if line.startswith('fpath=("$ZSH_COMPLETION_FPATH"'))
+    initialised = next(i for i, line in enumerate(lines) if line.startswith('compinit -d '))
+
+    assert joined < initialised, 'the generated functions are written where compinit will never index them'
+
+
+def test_every_generated_completion_is_written_rather_than_sourced() -> None:
+    """`cache_eval` sources its file; `cache_completion` writes it to fpath.
+
+    Sourcing a completion costs its whole size on every shell, whether or not
+    anything ever completes that tool — `ruff` and `uv` generate 668K and 516K of
+    clap definitions between them. The split is what keeps that off the startup
+    path, and a completion moved back to `cache_eval` would reintroduce it
+    silently, because sourcing works perfectly well and only costs time.
+    """
+    body = [line for line in ZSHRC.read_text().splitlines() if not line.lstrip().startswith('#')]
+    sourced = {matched.group(1) for line in body for matched in [CACHE_EVAL_CALL.search(line)] if matched}
+
+    assert sourced, 'no cache_eval call was matched, so this asserts nothing'
+    assert sourced <= SOURCED_AT_STARTUP, f'a completion is sourced at startup rather than autoloaded: {sourced}'
+
+
+def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_path: Path) -> None:
+    """The other half of the ordering test, end to end on a real shell.
+
+    Position in the file says the directory joins fpath in time; this says the
+    function a generator wrote is actually registered against its command. A stub
+    tool stands in for a real one, so this asserts on the mechanism rather than on
+    whatever the machine running it happens to have installed.
+    """
+    home = deployed_home(tmp_path)
+    fake = home / 'bin'
+    fake.mkdir()
+    (fake / 'stubtool').write_text("#!/bin/sh\nprintf '#compdef stubtool\\n_stubtool() { _message stub }\\n'\n")
+    (fake / 'stubtool').chmod(0o755)
+
+    # Two shells: the first generates the function, the second is the one that
+    # finds it. compinit in the first ran before the file existed, which is the
+    # ordinary case for a tool installed since the last shell started.
+    start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='cache_completion stubtool stubtool')
+    result = start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='print "registered=${_comps[stubtool]:-none}"')
+
+    assert result.stdout.strip().endswith('registered=_stubtool')

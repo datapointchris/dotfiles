@@ -21,7 +21,7 @@ repos_registry = "~/.config/repos.json"
 # surface. The cadence is not the objection; the beacon is.
 #
 # Nothing is lost that a person cannot ask for: `dotfiles check` answers on
-# demand, and the shell nudge simply has no fresh status to read.
+# demand, and it is the only thing that ever reported this.
 #
 # Stated rather than left to the default it matches, so the key is visible on the
 # machine where it matters most. A validator holds both variants to naming it.
