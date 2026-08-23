@@ -19,6 +19,7 @@ their own tests; the file that sources them had none.
 from __future__ import annotations
 
 import os
+import pty
 import re
 import shutil
 import subprocess
@@ -112,21 +113,40 @@ def reported(result: Shell) -> list[str]:
     return [line for line in result.stderr.splitlines() if ERROR_MARK in line]
 
 
-def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true') -> Shell:
+def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true', terminal: bool = False) -> Shell:
     """Start an interactive zsh in `home` and report what each stream carried.
 
     Interactive because `.zshrc` is only read by one, and the streams stay apart
     for the reason `shell_out` states: a merged stream passes whichever one the
     code chose.
+
+    `terminal` hands stdin a pty, which only the completion test needs. A GitHub
+    runner has no controlling terminal, so `zsh -i` there writes `not interactive
+    and can't open terminal` and compinit answers `initialization aborted` — every
+    assertion about a *registered* completion then fails on the harness rather
+    than on the config. Off by default because a pty is not free, and because the
+    rest of this file asserts about function definitions and stderr, neither of
+    which compinit touches.
+
+    Only stdin is a pty. stdout and stderr stay pipes, so the two streams are
+    still separable and nothing has to be stripped of terminal escapes.
     """
-    completed = subprocess.run(
-        ['zsh', '-i', '-c', snippet],
-        capture_output=True,
-        text=True,
-        env={'HOME': str(home), 'PATH': path, 'TERM': 'xterm'},
-        check=False,
-        cwd=home,
-    )
+    controlling, terminal_side = pty.openpty() if terminal else (None, None)
+    try:
+        completed = subprocess.run(
+            ['zsh', '-i', '-c', snippet],
+            stdin=terminal_side if terminal else subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            env={'HOME': str(home), 'PATH': path, 'TERM': 'xterm'},
+            check=False,
+            cwd=home,
+            timeout=60,
+        )
+    finally:
+        for descriptor in (controlling, terminal_side):
+            if descriptor is not None:
+                os.close(descriptor)
     return Shell(completed.stdout, completed.stderr, completed.returncode)
 
 
@@ -321,7 +341,9 @@ def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_p
     # Two shells: the first generates the function, the second is the one that
     # finds it. compinit in the first ran before the file existed, which is the
     # ordinary case for a tool installed since the last shell started.
-    start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='cache_completion stubtool stubtool')
-    result = start(home, path=f'{fake}{os.pathsep}{BARE_PATH}', snippet='print "registered=${_comps[stubtool]:-none}"')
+    where = f'{fake}{os.pathsep}{BARE_PATH}'
+    start(home, path=where, snippet='cache_completion stubtool stubtool', terminal=True)
+    result = start(home, path=where, snippet='print "registered=${_comps[stubtool]:-none}"', terminal=True)
 
+    assert 'initialization aborted' not in result.stderr, 'compinit never ran, so this asserts nothing'
     assert result.stdout.strip().endswith('registered=_stubtool')
