@@ -206,9 +206,20 @@ log "Setup" "XDG Directories"
 # ------------------------------------------------------------------ #
 # COMPLETIONS
 # ------------------------------------------------------------------ #
-# Create cache directories
+# Created with the mode set rather than inherited from the umask, because one of
+# these ends up on fpath and compaudit refuses a group- or world-writable
+# directory there. compinit then asks whether to continue, `read -q` finds no
+# terminal to ask on, and the whole completion system aborts — every Tab silent,
+# with `compinit: initialization aborted` the only thing said about it. A machine
+# whose umask is 002 creates exactly that directory.
+#
+# The parent counts too: compaudit tests each fpath entry and its parent, since a
+# writable parent lets someone drop a digest file beside the directory.
+#
+# A subshell so the umask change cannot leak into the rest of this file, and it
+# forks only when the directory is absent, which is once per machine.
 if [[ ! -d "$XDG_CACHE_HOME/zsh" ]]; then
-  mkdir -p "$XDG_CACHE_HOME/zsh"
+  (umask 022; mkdir -p "$XDG_CACHE_HOME/zsh")
   log "Setup" "Created $XDG_CACHE_HOME/zsh"
 fi
 
@@ -231,8 +242,8 @@ zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 # prompt, so they are sourced where they sit and their order is load-bearing.
 ZSH_COMPLETION_FPATH="$XDG_CACHE_HOME/zsh/functions"
 ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
-[[ -d "$ZSH_COMPLETION_FPATH" ]] || mkdir -p "$ZSH_COMPLETION_FPATH"
-[[ -d "$ZSH_COMPLETION_CACHE" ]] || mkdir -p "$ZSH_COMPLETION_CACHE"
+[[ -d "$ZSH_COMPLETION_FPATH" ]] || (umask 022; mkdir -p "$ZSH_COMPLETION_FPATH")
+[[ -d "$ZSH_COMPLETION_CACHE" ]] || (umask 022; mkdir -p "$ZSH_COMPLETION_CACHE")
 
 # Regenerate `$2` from the generator in `$3...` when the binary that produces it
 # is newer, and say nothing when there is nothing to say. `$1` is the binary to

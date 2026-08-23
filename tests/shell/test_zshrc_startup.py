@@ -333,6 +333,26 @@ def test_every_generated_completion_is_written_rather_than_sourced() -> None:
     assert sourced <= SOURCED_AT_STARTUP, f'a completion is sourced at startup rather than autoloaded: {sourced}'
 
 
+def insecure(home: Path, path: str) -> str:
+    """What compaudit objects to, and the mode and owner of every fpath entry.
+
+    compinit's refusal names nothing — it says `initialization aborted` and stops
+    — so a failure without this is a fact with no cause attached, and the cause
+    is a property of the machine running the test rather than of the config.
+
+    compaudit rejects an fpath directory, or its parent, that is group- or
+    world-writable and not owned by root or the current user. A umask of 002 is
+    enough on a box whose login group is shared, which is why the modes are
+    printed alongside: the answer is usually a `775` in that list.
+    """
+    listing = run(
+        ['zsh', '-c', 'source "$HOME/.config/zsh/.zshrc" >/dev/null 2>&1; autoload -Uz compaudit; compaudit; print -l -- $fpath'],
+        home,
+        path,
+    )
+    return f'{listing.stdout}\n{listing.stderr}'
+
+
 def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_path: Path) -> None:
     """The other half of the ordering test, end to end on a real shell.
 
@@ -354,5 +374,5 @@ def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_p
     sourced(home, path=where, snippet='cache_completion stubtool stubtool')
     result = sourced(home, path=where, snippet='print "registered=${_comps[stubtool]:-none}"')
 
-    assert 'initialization aborted' not in result.stderr, 'compinit never ran, so this asserts nothing'
+    assert 'initialization aborted' not in result.stderr, f'compinit refused to run:\n{insecure(home, where)}'
     assert result.stdout.strip().endswith('registered=_stubtool')
