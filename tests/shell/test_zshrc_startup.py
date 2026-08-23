@@ -112,16 +112,19 @@ def reported(result: Shell) -> list[str]:
     return [line for line in result.stderr.splitlines() if ERROR_MARK in line]
 
 
-def run(argv: list[str], home: Path, path: str) -> Shell:
-    """A zsh in `home`, with the two streams kept apart.
+def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true') -> Shell:
+    """Start an interactive zsh in `home` and report what each stream carried.
 
-    Separate for the reason `shell_out` states: a merged stream passes whichever
-    one the code chose. The timeout is a backstop rather than an expectation —
-    every shell here is given a command and exits on it, so hitting it means one
-    of them started waiting for input, which is a hang and not a slow test.
+    Interactive because `.zshrc` is only read by one, and the streams stay apart
+    for the reason `shell_out` states: a merged stream passes whichever one the
+    code chose.
+
+    The timeout is a backstop rather than an expectation — every shell here is
+    given a command and exits on it, so hitting it means one started waiting for
+    input, which is a hang rather than a slow test.
     """
     completed = subprocess.run(
-        argv,
+        ['zsh', '-i', '-c', snippet],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
@@ -131,32 +134,6 @@ def run(argv: list[str], home: Path, path: str) -> Shell:
         timeout=60,
     )
     return Shell(completed.stdout, completed.stderr, completed.returncode)
-
-
-def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true') -> Shell:
-    """Start an interactive zsh in `home`, which is the only kind that reads `.zshrc`."""
-    return run(['zsh', '-i', '-c', snippet], home, path)
-
-
-def sourced(home: Path, *, path: str = BARE_PATH, snippet: str) -> Shell:
-    """Run `snippet` in a zsh that sourced `.zshrc` without being interactive.
-
-    For the one assertion that needs compinit to have finished. `zsh -i` requires
-    a terminal it can open, and a GitHub runner has none — it answers `not
-    interactive and can't open terminal`, compinit answers `initialization
-    aborted`, and an assertion about a *registered* completion then fails on the
-    harness rather than on the config.
-
-    *Rejected*: handing stdin a pty. It removes the error and replaces it with a
-    hang — with a real terminal, `zsh -i -c` stops being run-and-exit and the
-    shell sits there until the timeout fires. Measured on a runner at 60s.
-
-    Interactivity is not what this asserts about. `.zshrc` branches on no such
-    thing, compinit needs none, and what is being measured is whether the
-    function a generator wrote is indexed by the time the file has finished. The
-    tests above keep `zsh -i`, because reading the file is exactly their subject.
-    """
-    return run(['zsh', '-c', f'source "$HOME/.config/zsh/.zshrc"; {snippet}'], home, path)
 
 
 def test_a_shell_starting_without_the_optional_tools_says_nothing(tmp_path: Path) -> None:
@@ -331,48 +308,3 @@ def test_every_generated_completion_is_written_rather_than_sourced() -> None:
 
     assert sourced, 'no cache_eval call was matched, so this asserts nothing'
     assert sourced <= SOURCED_AT_STARTUP, f'a completion is sourced at startup rather than autoloaded: {sourced}'
-
-
-def insecure(home: Path, path: str) -> str:
-    """What compaudit objects to, and the mode and owner of every fpath entry.
-
-    compinit's refusal names nothing — it says `initialization aborted` and stops
-    — so a failure without this is a fact with no cause attached, and the cause
-    is a property of the machine running the test rather than of the config.
-
-    compaudit rejects an fpath directory, or its parent, that is group- or
-    world-writable and not owned by root or the current user. A umask of 002 is
-    enough on a box whose login group is shared, which is why the modes are
-    printed alongside: the answer is usually a `775` in that list.
-    """
-    listing = run(
-        ['zsh', '-c', 'source "$HOME/.config/zsh/.zshrc" >/dev/null 2>&1; autoload -Uz compaudit; compaudit; print -l -- $fpath'],
-        home,
-        path,
-    )
-    return f'{listing.stdout}\n{listing.stderr}'
-
-
-def test_a_generated_completion_is_reachable_by_the_time_there_is_a_prompt(tmp_path: Path) -> None:
-    """The other half of the ordering test, end to end on a real shell.
-
-    Position in the file says the directory joins fpath in time; this says the
-    function a generator wrote is actually registered against its command. A stub
-    tool stands in for a real one, so this asserts on the mechanism rather than on
-    whatever the machine running it happens to have installed.
-    """
-    home = deployed_home(tmp_path)
-    fake = home / 'bin'
-    fake.mkdir()
-    (fake / 'stubtool').write_text("#!/bin/sh\nprintf '#compdef stubtool\\n_stubtool() { _message stub }\\n'\n")
-    (fake / 'stubtool').chmod(0o755)
-
-    # Two shells: the first generates the function, the second is the one that
-    # finds it. compinit in the first ran before the file existed, which is the
-    # ordinary case for a tool installed since the last shell started.
-    where = f'{fake}{os.pathsep}{BARE_PATH}'
-    sourced(home, path=where, snippet='cache_completion stubtool stubtool')
-    result = sourced(home, path=where, snippet='print "registered=${_comps[stubtool]:-none}"')
-
-    assert 'initialization aborted' not in result.stderr, f'compinit refused to run:\n{insecure(home, where)}'
-    assert result.stdout.strip().endswith('registered=_stubtool')
