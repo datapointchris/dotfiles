@@ -616,8 +616,7 @@ macos_defaults:
 steps:
   # Its own row rather than something set up by hand on each box: a schedule
   # nobody can check is a schedule that silently stops. It writes status.json,
-  # which the shell nudge reads, and keeps the release cache warm so an
-  # interactive check spends no API calls.
+  # and keeps the release cache warm so an interactive check spends no API calls.
   # Excluded from Windows rather than left to fall through: the two mechanisms
   # named below are the whole of what `providers/schedule.py` can address, and a
   # box with neither reports UNKNOWN on every run with nothing to repair. Task

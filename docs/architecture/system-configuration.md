@@ -55,8 +55,7 @@ them are worth knowing about from here.
 **The scheduled check is a `steps` row.** `providers/steps.py` hands it to
 `providers/schedule.py`, which installs the timer and argues why a machine opts
 in rather than getting one by default. What each check leaves for a reader who
-is not watching, what makes the shell nudge about it, and how long the shell
-keeps believing that nudge are `src/dotfiles/status.py`.
+is not watching is `src/dotfiles/status.py`.
 
 **`install/wsl/docker-repo.sh` is deliberately not a row.** Nothing in the
 install path runs it. WSL borrows its engine from Docker Desktop, and

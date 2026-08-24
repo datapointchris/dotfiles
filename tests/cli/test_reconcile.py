@@ -1,8 +1,9 @@
 """How many verdicts become one exit code, and how a shelled-out status is read.
 
 Pure functions over data, so none of this touches the machine. The exit-code
-rule is the part a caller binds to — the shell nudge, a systemd timer, CI — and
-it is the part most easily broken by a well-meaning change to a checker.
+rule is the part a caller binds to — a systemd timer, CI, a script reading the
+status — and it is the part most easily broken by a well-meaning change to a
+checker.
 """
 
 from __future__ import annotations
@@ -245,8 +246,8 @@ def test_the_issue_line_caps_how_many_items_it_names() -> None:
 
 def test_a_package_a_version_behind_is_not_something_wrong() -> None:
     """The case that made the split necessary. Drift is the normal state of a
-    machine between applies; reporting it as an Issue is what trained the nudge
-    away and left a systemd unit red on a box with nothing to fix."""
+    machine between applies; reporting it as an Issue is what left a systemd unit
+    red on a box with nothing to fix."""
     behind = [change(Verdict.STALE, Repair.AUTOMATIC)]
 
     assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.PLAN).verdict is ResourceVerdict.DRIFT
@@ -497,8 +498,8 @@ def test_a_long_shared_fix_is_left_to_the_row_below_rather_than_wrapping_the_hea
 
 
 def test_a_short_shared_fix_still_rides_on_the_heading() -> None:
-    """It is the whole answer, and the line a nudge or a scheduled summary carries
-    on its own with no rows under it."""
+    """It is the whole answer, and the line a scheduled summary carries on its own
+    with no rows under it."""
     short = change(Verdict.MISSING, Repair.BY_HAND, item='atuin', advice='log in with `atuin login`')
 
     folded = reconcile.from_changes('auth', [short], '3 of 7 authenticated', reconcile.Lens.CHECK)

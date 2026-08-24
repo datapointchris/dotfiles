@@ -333,10 +333,6 @@ class Sandbox:
         return self.state / 'dotfiles' / f'status-{paths.MACHINE_ID}.json'
 
     @property
-    def nudge_file(self) -> Path:
-        return self.state / 'dotfiles' / f'nudge-{paths.MACHINE_ID}'
-
-    @property
     def run_files(self) -> list[Path]:
         """Everything the runs directory holds, records and event logs alike.
 
@@ -646,7 +642,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
         'RUNS_DIR': state / 'runs',
         'LATEST_RUN': state / f'latest-{paths.MACHINE_ID}',
         'STATUS_FILE': state / f'status-{paths.MACHINE_ID}.json',
-        'NUDGE_FILE': state / f'nudge-{paths.MACHINE_ID}',
     }
     for name, value in derived.items():
         monkeypatch.setattr(paths, name, value)

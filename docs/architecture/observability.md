@@ -6,31 +6,26 @@ rather than one.
 Every module named here documents its own job. This page is the arrangement —
 the thing none of them can state, because each knows only its own end.
 
-## Four artefacts, and the reader is what splits them
+## Three artefacts, and the reader is what splits them
 
 | Artefact | Written by | Read by |
 | --- | --- | --- |
 | `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
 | `runs/<id>.jsonl` | every `plan`, `check` and `apply` | `dotfiles logs`, during the run or after |
 | `status-<box>.json` | every `check` | a caller asking where this machine stands |
-| `nudge-<box>` | every `check` | zsh, at every prompt |
 
-All four sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
+All three sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
 folder. The fleet shares one history that way, and the work box keeps its own by
-construction rather than by a rule, because it is not on Syncthing. Three of the
-names carry the box because the directory is shared; what collided before they
-did is `src/dotfiles/paths.py`.
+construction rather than by a rule, because it is not on Syncthing. Every name
+carries the box because the directory is shared — a run id embeds it
+(`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
+What collided before they did is `src/dotfiles/paths.py`.
 
-The split that matters most is the last row. The status file is a document a
-caller reasons about. The nudge is one line of human text. Deriving that line
-from the document at prompt time would mean parsing JSON in zsh, which means
-`jq`, which means a subprocess per shell — the exact cost `.zshrc`'s completion
-caching exists to avoid. A file holding exactly the sentence to print is
-`$(<file)`, with no fork at all. What makes it fire, and how old it may be
-before the shell stops reading it, are the module docstring and
-`MAX_AGE_SECONDS` in `src/dotfiles/status.py`. The schedule that writes it is a
-`steps` row, declared in `architecture/system-configuration.md` § "`steps` is
-the name for no shared mechanism".
+Nothing here is pushed at a person. Every one of the three is read by asking for
+it, and the schedule that refreshes the status file is a `steps` row declared in
+`architecture/system-configuration.md` § "`steps` is the name for no shared
+mechanism". A machine reports what is wrong when `dotfiles check` is run, which
+is the only place it says so.
 
 The record and the stream divide one level down, on the same question. A record
 is composed and travels off the machine. A stream is emitted and stays behind.
@@ -45,10 +40,10 @@ than a sample. Why there is no retention bound is `src/dotfiles/runs.py`. What
 happens to the directory afterwards is Syncthing's, which makes it the fleet's
 question rather than this tool's.
 
-## The interchange document is a fifth thing, and nothing here writes it
+## The interchange document is a fourth thing, and nothing here writes it
 
 `plan --json` and `check --json` compose it and hand it to stdout, so where it
-lands is the caller's business. It is the one artefact of the five with no reader
+lands is the caller's business. It is the one artefact of the four with no reader
 on this machine. The work box is git-only and off Syncthing, so the way its needs
 reach the fleet is its check output travelling as a file, and what that file says
 is missing is what the fleet builds into the next offline bundle for it. Why it

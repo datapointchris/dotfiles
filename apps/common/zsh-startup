@@ -1,0 +1,334 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = []
+# ///
+"""How long this machine takes to give you a prompt, and what is spending it.
+
+  zsh-startup time              median, fastest, slowest over N starts
+  zsh-startup time -n 30        more samples, for a change you expect to be small
+  zsh-startup steps             one start broken down, slowest step first
+  zsh-startup steps --top 5     just the worst offenders
+  zsh-startup flags             what each ~/.env feature flag costs here
+  zsh-startup time --json       the same numbers, for something that will parse them
+
+`ZSHRC_DEBUG=1` already prints a per-step trace, and it answers a different
+question from `time`. That trace is `.zshrc`'s own accounting: it starts at the
+first line of the file and stops at the last, so everything zsh does before and
+after — the binary, `/etc/zsh/zshenv`, compinit writing its dump, the first
+prompt — is outside it. The number you feel is the wall clock around `zsh -i`.
+
+**The median, not the mean.** Startup is a floor plus whatever else the machine
+was doing, so the distribution has a long right tail and one descheduled run
+moves a mean by more than a real regression does. The min is the floor the code
+could reach on an idle box; the spread between min and max says how much of what
+you saw was the machine rather than the config.
+
+**A discarded warmup run.** The first start of a session pays for page cache on
+every plugin file and every completion dump, and that cost is real exactly once.
+Counting it makes the first measurement of the day look like a regression.
+
+`flags` turns one flag off at a time and re-measures, so each row is that
+feature's cost on this machine rather than a number from someone else's. It reads
+the flag names out of `~/.env`, which is what the shell itself reads — nothing
+here knows about the repo that rendered it, so this works on a machine whose
+`~/.env` was written by a different manifest.
+
+Everything is measured against `$HOME`. The subject is the shell you actually
+sit in, not a synthetic one, so a slow completion generator or a plugin clone
+that only exists here is included rather than fixtured away.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import statistics
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+DISCARDED_WARMUPS = 1
+"""Starts run and thrown away before the first measured one.
+
+One is enough. The cost being warmed is the page cache for the plugin files and
+the completion dump, and a single read populates it — a second warmup measures
+an already-warm machine and costs a run.
+"""
+
+DEFAULT_RUNS = 10
+"""Enough that the median is stable, few enough to wait for.
+
+At roughly 150ms a start this is a second and a half. Ten samples put the median
+between the fifth and sixth, so a single outlier cannot move it at all.
+"""
+
+START_TIMEOUT_SECONDS = 30
+"""When a start stops being slow and starts being stuck.
+
+Two hundred times a normal start, so nothing healthy reaches it. What does is a
+shell waiting for an answer: compinit asks `Ignore insecure directories and
+continue [y] or abort compinit [n]?` when compaudit refuses an fpath directory,
+and stdin here is the terminal, so the question is real and the answer never
+comes. `capture_output` sends the prompt into a pipe, so the screen stays blank
+while it waits — which is the state this exists to name rather than sit in.
+"""
+
+TRACE_LINE = re.compile(r'^\s*\S+\s+(\d+)ms\s+(\d+)ms\s+(\S+)\s*:\s*(.*)$')
+"""One row of the `ZSHRC_DEBUG` trace, as `log()` in `.zshrc` prints it.
+
+`log()` formats `mark, step ms, cumulative ms, kind, subject`. The mark is an
+emoji whose width varies by terminal, so it is matched as one non-space run and
+discarded. Group 1 is the step's own cost, which is what gets sorted on; group 2
+is the running total, kept so a row can be placed in the start rather than only
+ranked. Groups 3 and 4 are the kind (`Load`, `Setup`, `Path`) and what it acted
+on.
+"""
+
+FLAG_EXPORT = re.compile(r'^\s*export\s+(ZSHRC_[A-Z0-9_]+|SHELL_[A-Z0-9_]+)=')
+"""A feature flag exported by `~/.env`, by the two prefixes `.zshrc` gates on.
+
+Anchored on `export` so a flag named inside a comment is not offered as one to
+measure. The prefixes are the naming convention rather than a list of flags, so a
+flag added later is picked up with no edit here.
+"""
+
+
+class Stuck(Exception):
+    """A start that never finished, with the partial output it managed."""
+
+
+def start_once(env_overrides: dict[str, str] | None = None) -> tuple[float, str]:
+    """Run one interactive zsh to completion and return its seconds and stdout.
+
+    `-i` because `.zshrc` is read by nothing else, and `-c exit` because the
+    shell has to be given something to finish on. What this measures is process
+    creation through to the point the shell would have drawn a prompt.
+
+    stdin is inherited rather than closed. `zsh -i` with no terminal answers
+    `not interactive and can't open terminal` and takes a different path through
+    its own startup, which would make this measure a shell nobody runs. The cost
+    of inheriting is that a shell asking a question can block, which is what the
+    timeout is for.
+
+    stdout is what comes back, because `log()` in `.zshrc` is a bare `printf` and
+    the `ZSHRC_DEBUG` trace goes there. stderr is discarded: an interactive zsh
+    driven without a terminal writes `can't change option: zle` on its own
+    account, and nothing here reads it.
+    """
+    env = dict(os.environ)
+    env.update(env_overrides or {})
+
+    started = time.perf_counter()
+    try:
+        finished = subprocess.run(
+            ['zsh', '-i', '-c', 'exit'],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=Path.home(),
+            check=False,
+            timeout=START_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as waited:
+        raise Stuck(
+            f'a shell did not finish in {START_TIMEOUT_SECONDS}s, so it is waiting for an answer rather than\n'
+            f'running slowly. compinit asks one when compaudit refuses an fpath directory — run\n'
+            f"zsh -c 'autoload -Uz compaudit; compaudit' to see which."
+        ) from waited
+    elapsed = time.perf_counter() - started
+    return elapsed, finished.stdout
+
+
+def sample(runs: int, env_overrides: dict[str, str] | None = None) -> list[float]:
+    """`runs` measured starts in milliseconds, after the warmups are discarded."""
+    for _ in range(DISCARDED_WARMUPS):
+        start_once(env_overrides)
+    return [start_once(env_overrides)[0] * 1000 for _ in range(runs)]
+
+
+def summarise(timings: list[float]) -> tuple[float, float, float]:
+    return statistics.median(timings), min(timings), max(timings)
+
+
+def report_runs(runs: int, as_json: bool) -> None:
+    timings = sample(runs)
+    median, floor, ceiling = summarise(timings)
+
+    if as_json:
+        emit({
+            'runs': runs,
+            'warmups_discarded': DISCARDED_WARMUPS,
+            'median_ms': round(median, 1),
+            'fastest_ms': round(floor, 1),
+            'slowest_ms': round(ceiling, 1),
+            'spread_ms': round(ceiling - floor, 1),
+        })
+        return
+
+    print(f'{runs} interactive starts, {DISCARDED_WARMUPS} warmup discarded\n')
+    print(f'  median   {median:6.0f}ms')
+    print(f'  fastest  {floor:6.0f}ms')
+    print(f'  slowest  {ceiling:6.0f}ms')
+    print(f'  spread   {ceiling - floor:6.0f}ms')
+    print('\nThe median is the number to track. The spread is the machine, not the config.')
+
+
+def trace_rows() -> list[tuple[int, int, str, str]]:
+    """One traced start, as `(step ms, cumulative ms, kind, subject)` rows."""
+    _, traced = start_once({'ZSHRC_DEBUG': '1'})
+    rows = []
+    for line in traced.splitlines():
+        matched = TRACE_LINE.match(line)
+        if matched:
+            step, cumulative, kind, subject = matched.groups()
+            rows.append((int(step), int(cumulative), kind, subject))
+    return rows
+
+
+def report_steps(top: int, as_json: bool) -> None:
+    """One traced start, its rows sorted by their own cost.
+
+    Sorted rather than printed in file order, because the reason to run this is
+    to find what to act on and the file order buries a 20ms step between forty
+    1ms ones. The cumulative column is kept so a row can still be placed.
+    """
+    rows = trace_rows()
+    if not rows:
+        print('no trace rows — `.zshrc` did not report any, so ZSHRC_DEBUG may not have reached it', file=sys.stderr)
+        raise SystemExit(1)
+
+    total = max(cumulative for _, cumulative, _, _ in rows)
+    shown = sorted(rows, reverse=True)[:top]
+
+    if as_json:
+        emit({
+            'steps': len(rows),
+            'inside_zshrc_ms': total,
+            'slowest': [
+                {'step_ms': step, 'at_ms': cumulative, 'kind': kind, 'subject': shorten(subject)}
+                for step, cumulative, kind, subject in shown
+            ],
+        })
+        return
+
+    print(f'{len(rows)} steps, {total}ms inside .zshrc — slowest {len(shown)}\n')
+    for step, cumulative, kind, subject in shown:
+        print(f'  {step:5d}ms  at {cumulative:5d}ms  {kind:<6} {shorten(subject)}')
+    print('\nThis is .zshrc alone. The wall clock around it is `zsh-startup time`.')
+
+
+def shorten(subject: str) -> str:
+    """`~`-rooted, the way a person would type the path."""
+    home = str(Path.home())
+    return subject.replace(home, '~') if subject.startswith(home) else subject
+
+
+def declared_flags() -> list[str]:
+    """Every feature flag this machine's `~/.env` exports, in the order it sets them.
+
+    File order rather than sorted, because `~/.env` groups related flags and a
+    reader comparing two runs wants the rows in the same places both times.
+    """
+    env_file = Path.home() / '.env'
+    if not env_file.is_file():
+        return []
+    found = []
+    for line in env_file.read_text().splitlines():
+        matched = FLAG_EXPORT.match(line)
+        if matched:
+            found.append(matched.group(1))
+    return list(dict.fromkeys(found))
+
+
+def report_flags(runs: int, as_json: bool) -> None:
+    """What each flag costs, measured by turning exactly one of them off.
+
+    One at a time rather than cumulatively: two plugins can each cost 10ms while
+    turning both off saves 15, because they share work that only happens once.
+    A per-flag row is the honest question — what would turning *this* off buy —
+    and the rows deliberately do not sum.
+
+    `~/.env` writes every value as `${NAME:-default}`, so an ambient value wins
+    for one shell and none of this touches the file.
+    """
+    flags = declared_flags()
+    if not flags:
+        print('~/.env exports no SHELL_* or ZSHRC_* flag, so there is nothing to measure', file=sys.stderr)
+        raise SystemExit(1)
+
+    baseline, _, _ = summarise(sample(runs))
+    measured = []
+    for flag in flags:
+        median, _, _ = summarise(sample(runs, {flag: 'false'}))
+        measured.append((flag, median, baseline - median))
+
+    if as_json:
+        emit({
+            'runs_per_row': runs,
+            'baseline_ms': round(baseline, 1),
+            'flags': [{'flag': f, 'median_ms': round(m, 1), 'saved_ms': round(s, 1)} for f, m, s in measured],
+        })
+        return
+
+    print(f'baseline {baseline:.0f}ms, {runs} starts per row\n')
+    for flag, median, saved in measured:
+        print(f'  {flag:<28} {median:5.0f}ms   {saved:+5.0f}ms')
+    print('\nEach row is that flag alone. They share work, so the savings do not sum.')
+
+
+def emit(document: dict) -> None:
+    print(json.dumps(document, indent=2))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog='zsh-startup',
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    # Subcommands rather than mode flags on the root: three reports is a verb's
+    # job, and `-n` and `--top` each belong to a subset of them, which a flag on
+    # the root cannot say. A fourth report is a fourth subcommand rather than a
+    # third member of an exclusive group.
+    reports = parser.add_subparsers(dest='report', metavar='<report>')
+
+    timing = reports.add_parser('time', help='median, fastest and slowest over N interactive starts')
+    timing.add_argument('-n', '--runs', type=int, default=DEFAULT_RUNS, help=f'measured starts (default {DEFAULT_RUNS})')
+
+    steps = reports.add_parser('steps', help='one start broken down, slowest step first')
+    steps.add_argument('--top', type=int, default=15, help='rows to print (default 15)')
+
+    flags = reports.add_parser('flags', help='what each ~/.env feature flag costs on this machine')
+    flags.add_argument('-n', '--runs', type=int, default=DEFAULT_RUNS, help=f'starts per row (default {DEFAULT_RUNS})')
+
+    for report in (timing, steps, flags):
+        report.add_argument('--json', action='store_true', help='emit the numbers rather than a table')
+
+    parsed = parser.parse_args()
+    if parsed.report is None:
+        parser.print_help()
+        raise SystemExit(0)
+
+    if getattr(parsed, 'runs', 1) < 1:
+        parser.error('--runs must be at least 1')
+    if getattr(parsed, 'top', 1) < 1:
+        parser.error('--top must be at least 1')
+
+    try:
+        if parsed.report == 'steps':
+            report_steps(parsed.top, parsed.json)
+        elif parsed.report == 'flags':
+            report_flags(parsed.runs, parsed.json)
+        else:
+            report_runs(parsed.runs, parsed.json)
+    except Stuck as stuck:
+        print(f'zsh-startup: {stuck}', file=sys.stderr)
+        raise SystemExit(1) from stuck
+
+
+if __name__ == '__main__':
+    main()

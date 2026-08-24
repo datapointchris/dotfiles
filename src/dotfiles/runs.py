@@ -162,7 +162,7 @@ class Issue:
     Drift is the machine differing from its declaration, which is what apply is
     for and is not worth reporting as a problem. An Issue is a checker that
     crashed, a checksum that mismatched, a declaration that is invalid — the
-    things a nudge should fire on.
+    things a scheduled run should report as a failure.
     """
 
     address: str

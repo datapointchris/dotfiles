@@ -76,25 +76,24 @@ FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 # Syncthing folder, so the fleet shares run history and the work box — which is
 # not on Syncthing — keeps its own by construction rather than by a rule.
 #
-# Run records already carry the machine in the filename. The three below did not,
-# and sharing the directory without them would have four machines overwriting one
-# another's "what happened last" and one box's nudge reporting another's failure.
+# Run records already carry the machine in the filename. The two below do not on
+# their own, and sharing the directory without a suffix would have four machines
+# overwriting one another's "what happened last".
 STATE_HOME = xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
 RUNS_DIR = STATE_HOME / 'runs'
 
 
 def machine_id() -> str:
-    """Which *box* wrote a file, for the three the fleet shares a directory for.
+    """Which *box* wrote a file, for the ones the fleet shares a directory for.
 
     The bare lowercased hostname, per standards/data.md § "Machine identity
     is a bare lowercased hostname".
 
-    Deliberately not `$MACHINE`, which was the first answer and is wrong: that
-    names the *manifest*, and two machines legitimately share one — macmini and
-    mbp are both `macos-personal-workstation`. Keying on it put their status and
-    nudge files at a single path in a directory the fleet now syncs, so the
-    second Mac to run silently overwrote the first, which is precisely the
-    collision the suffix was added to prevent.
+    Deliberately not `$MACHINE`, which names the *manifest*: two machines
+    legitimately share one — macmini and mbp are both
+    `macos-personal-workstation` — so keying on it puts their status files at a
+    single path in a directory the fleet syncs, and the second Mac to run
+    silently overwrites the first.
     """
     return socket.gethostname().split('.')[0].lower()
 
@@ -103,14 +102,6 @@ MACHINE_ID = machine_id()
 
 LATEST_RUN = STATE_HOME / f'latest-{MACHINE_ID}'
 STATUS_FILE = STATE_HOME / f'status-{MACHINE_ID}.json'
-
-NUDGE_FILE = STATE_HOME / f'nudge-{MACHINE_ID}'
-"""One line of human text, read by a shell snippet at every prompt.
-
-Beside `status.json` rather than derived from it, because the reader is zsh:
-parsing JSON there means `jq`, which means a subprocess per shell, and a file
-holding exactly the sentence to print is `$(<file)` with no fork at all.
-"""
 
 
 def cache_home() -> Path:

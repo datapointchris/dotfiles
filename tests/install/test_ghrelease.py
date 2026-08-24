@@ -224,8 +224,13 @@ class TestPlacement:
         stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
 
         asset = ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo', unit='etc/linux-systemd/user/demo.service')
-        install_one(asset, entry(), offline=True)
+        result = install_one(asset, entry(), offline=True)
 
+        # The absence alone is satisfied by an install that never ran: measured,
+        # this file with nothing staged reports ok=False, places no binary, and
+        # the assertion below still holds.
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo').exists()
         assert not (home / '.local' / 'bin' / 'demo.service').exists()
 
     def test_a_unit_is_not_marked_executable(self, home, bundle, tmp_path):
@@ -248,8 +253,10 @@ class TestPlacement:
         tarball(archive, {'demo': PAYLOAD})
         stage(bundle, 'demo.tar.gz', 'demo', 'v1.2.3', archive.read_bytes())
 
-        install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
+        result = install_one(ReleaseArtifact('demo.tar.gz', Archive.TARBALL, path='demo'), entry(), offline=True)
 
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo').exists()
         assert not (home / '.config' / 'systemd' / 'user' / 'demo.service').exists()
 
     def test_a_declared_unit_the_archive_lacks_fails_rather_than_passing_quietly(self, home, bundle, tmp_path):
@@ -605,8 +612,10 @@ class TestLaunchAgent:
         Mac that asked for nothing."""
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
 
-        install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN)
+        result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN)
 
+        assert result.ok, result.detail
+        assert (home / '.local' / 'bin' / 'demo').exists()
         assert not (home / 'Library' / 'LaunchAgents').exists()
 
     def test_a_plist_that_cannot_be_written_fails_the_install(self, home, bundle):

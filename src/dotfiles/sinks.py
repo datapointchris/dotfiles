@@ -68,7 +68,7 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
 
     A `Change` is what was decided and an `Outcome` is what was done, so a `plan`
     records verdicts with no action and an `apply` records both. A `Refusal`
-    becomes an Issue, which is the distinction the nudge fires on.
+    becomes an Issue, which is the distinction the exit code carries.
 
     Timing comes off the event rather than being measured here: the engine is what
     holds the clock, because it is the only thing that knows when observing

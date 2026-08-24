@@ -1,4 +1,4 @@
-"""The scheduled check, and the two files it leaves for something not watching it.
+"""The scheduled check, and the state file it leaves for something not watching it.
 
 Both halves of this were found by installing the timer on a real machine and
 reading its first failure, so the tests below are mostly the shape of those two
@@ -56,7 +56,6 @@ def state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory = tmp_path / 'state'
     monkeypatch.setattr(paths, 'STATE_HOME', directory)
     monkeypatch.setattr(paths, 'STATUS_FILE', directory / 'status.json')
-    monkeypatch.setattr(paths, 'NUDGE_FILE', directory / 'nudge')
     return directory
 
 
@@ -113,33 +112,6 @@ def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) ->
     assert written['checked'] == WHEN.isoformat()
 
 
-def test_drift_writes_no_nudge(state: Path) -> None:
-    """Drift is the normal state of a machine between applies. Nudging about it
-    at every prompt would train the nudge away inside a week."""
-    status.record(results(('packages', ResourceVerdict.DRIFT)), 'box', WHEN)
-
-    assert not paths.NUDGE_FILE.exists()
-
-
-def test_an_issue_writes_one_line_naming_what_is_wrong(state: Path) -> None:
-    status.record(results(('packages', ResourceVerdict.DRIFT), ('system', ResourceVerdict.ISSUE)), 'box', WHEN)
-    line = paths.NUDGE_FILE.read_text()
-
-    assert 'system' in line
-    assert len(line.splitlines()) == 1
-
-
-def test_a_resolved_issue_removes_the_nudge_rather_than_emptying_it(state: Path) -> None:
-    """The shell tests for a *non-empty* file and then for its age. An emptied
-    file would keep a fresh mtime saying the check ran and nothing to print,
-    which is the same as removing it — until someone reads the directory and
-    finds a nudge that has been there for weeks."""
-    status.record(results(('system', ResourceVerdict.ISSUE)), 'box', WHEN)
-    status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
-
-    assert not paths.NUDGE_FILE.exists()
-
-
 def test_an_unwritable_state_directory_never_fails_the_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A check answered the question it was asked. Not being able to write a
     convenience file afterwards is not a reason to exit non-zero."""
@@ -147,38 +119,6 @@ def test_an_unwritable_state_directory_never_fails_the_check(tmp_path: Path, mon
     (tmp_path / 'file').write_text('not a directory')
 
     status.record(results(('system', ResourceVerdict.ISSUE)), 'box', WHEN)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# The shell snippet
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_the_zsh_snippet_forks_nothing(state: Path) -> None:
-    """The point of a startup nudge is being invisible when there is nothing to
-    say, and a fork per prompt is not invisible. `zstat` and `EPOCHSECONDS` are
-    builtin modules; `$(<file)` is a zsh optimisation with no subprocess."""
-    code = [line for line in status.snippet('zsh').splitlines() if not line.strip().startswith('#')]
-
-    assert any('zmodload' in line for line in code)
-    # `$(<file)` is the one command substitution zsh answers without forking.
-    for line in code:
-        assert 'jq' not in line
-        assert '$(' not in line or '$(<' in line
-
-
-def test_the_snippet_carries_a_reader_rather_than_the_message(state: Path) -> None:
-    """`.zshrc` caches it against the binary's mtime, so a snippet holding the
-    text would be as old as the last upgrade."""
-    assert 'nudge' in status.snippet('zsh')
-    assert 'need attention' not in status.snippet('zsh')
-
-
-def test_every_supported_shell_bounds_the_age_of_what_it_prints() -> None:
-    """A timer that stopped running would otherwise leave a week-old warning on
-    screen with nothing to say it had stopped being true."""
-    for shell in status.SNIPPETS:
-        assert str(status.MAX_AGE_SECONDS) in status.snippet(shell)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -393,24 +333,6 @@ def test_the_agent_is_serialised_by_plistlib_on_both_sides(darwin: Path, fake_bi
     assert written['Label'] == schedule.LABEL
     assert written['StartInterval'] == schedule.INTERVAL_SECONDS
     assert written['ProgramArguments'][1:] == ['check', '--refresh']
-
-
-def test_the_nudge_path_keeps_its_longest_match_trim(state: Path) -> None:
-    """`SNIPPETS` is %-formatted for max_age, so a literal `%%` in the source
-    renders as one `%` — turning zsh's longest-match trim into the shortest, which
-    leaves `host.domain` from `host.domain.tld` and reads a file nothing writes."""
-    for shell in ('zsh', 'bash'):
-        line = next(line for line in status.snippet(shell).splitlines() if 'nudge=' in line)
-        assert '%%.*}' in line, f'{shell} lost the longest-match trim'
-
-
-def test_the_nudge_is_keyed_on_the_host_not_the_manifest(state: Path) -> None:
-    """Both Macs declare `macos-personal-workstation`, so keying on $MACHINE puts
-    their nudges at one path in a directory the fleet syncs — one box reporting
-    the other's failure, which is the collision the suffix exists to prevent."""
-    for shell in ('zsh', 'bash'):
-        line = next(line for line in status.snippet(shell).splitlines() if 'nudge=' in line)
-        assert 'MACHINE' not in line
 
 
 def test_the_unit_declares_the_directories_this_repo_installs_into() -> None:

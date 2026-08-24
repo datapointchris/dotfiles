@@ -158,6 +158,11 @@ tasks:
     cmds:
       - PYTHONPATH=tests uv run python -m mutation.redundancy {{.CLI_ARGS}}
 
+  test:undiscriminating:
+    desc: List tests a broken run would also satisfy — every assertion negative, nothing pinning the exit
+    cmds:
+      - "{{.DOTFILES_DIR}}/install/ops/undiscriminating-tests.py {{.CLI_ARGS}}"
+
   # The ladder, cheapest rung first. `tests/e2e/levels.py` is what each one costs
   # and what it can answer; these exist so reaching for the right one is typing a
   # name rather than remembering a file path and a flag combination.

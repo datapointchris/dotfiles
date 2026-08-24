@@ -4,22 +4,22 @@
 # ///
 """Rank every page in `docs/` by how much of it is a second copy of a docstring.
 
-The number is six-word runs a page shares with any docstring under
-`src/dotfiles/`. A page carrying decisions scores in the single digits whatever
-its length; a page walking through a mechanism the code already explains scores
-in the hundreds. `standards/documentation.md` § "A page never restates a module
+The number is six-word runs a page shares with any docstring under `src/dotfiles/`
+or `apps/`. A page carrying decisions scores in the single digits whatever its
+length; a page walking through a mechanism the code already explains scores in
+the hundreds. `standards/documentation.md` § "A page never restates a module
 docstring" is the rule, and `docs/development/docs-audit.md` § "Third pass" is
 the measurement this threshold came from.
 
-`--pages` and `--code` point it at another pair, which is how the mutation
-harness's README is ranked against the package it sits beside. A README beside
-its own code shares more vocabulary than a page in `docs/` does, so `LOUD` is
-calibrated for the default pair and reads high there.
+`--pages` points it at another directory of prose and `--code` is repeatable,
+which is how the mutation harness's README is ranked against the package it sits
+beside. A README beside its own code shares more vocabulary than a page in
+`docs/` does, so `LOUD` is calibrated for the default set and reads high there.
 
-Two limits, both deliberate. It compares one directory of prose against one of
-code, so it is blind to two pages stating one subject. And a high score is a
-question rather than a verdict — shared vocabulary is not duplication, so read
-the runs before cutting. `--runs` prints them.
+Two limits, both deliberate. It compares prose against code and never prose
+against prose, so it is blind to two pages stating one subject. And a high score
+is a question rather than a verdict — shared vocabulary is not duplication, so
+read the runs before cutting. `--runs` prints them.
 """
 
 from __future__ import annotations
@@ -39,9 +39,40 @@ between 529 and 613. Nothing in the corpus has ever sat near this line.
 """
 
 
+DEFAULT_CODE = ('src/dotfiles', 'apps')
+"""Both trees that carry docstrings a page could be restating.
+
+`apps/` was outside this for as long as the tool existed, and `docs/apps/` is a
+whole nav section — so the pages most likely to restate a docstring were the ones
+it could not see. A script-app has no `.py` extension either, which is why the
+walk below reads whatever is executable rather than globbing a suffix.
+"""
+
+
 def shingles(text: str, window: int = WINDOW) -> set[str]:
     words = re.findall(r'[a-z_`.\-/]+', text.lower())
     return {' '.join(words[index : index + window]) for index in range(max(0, len(words) - window))}
+
+
+def source(root: Path, where: str) -> str:
+    """Every readable source file under `where`, joined.
+
+    `.py` plus anything executable, because `apps/` ships Python and bash under
+    no extension at all. A binary that slips through is skipped rather than
+    raising — the score is a ranking, and one unreadable file is not worth
+    failing the run over.
+    """
+    collected = []
+    for path in sorted((root / where).rglob('*')):
+        if not path.is_file():
+            continue
+        if path.suffix != '.py' and not path.stat().st_mode & 0o111:
+            continue
+        try:
+            collected.append(path.read_text())
+        except (UnicodeDecodeError, OSError):
+            continue
+    return ' '.join(collected)
 
 
 def main() -> int:
@@ -49,11 +80,16 @@ def main() -> int:
     parser.add_argument('--runs', metavar='PAGE', help='print the shared runs for one page instead of the ranking')
     parser.add_argument('--max', type=int, default=LOUD, help=f'exit non-zero if any page scores above this (default {LOUD})')
     parser.add_argument('--pages', default='docs', help='directory of markdown to rank (default docs)')
-    parser.add_argument('--code', default='src/dotfiles', help='directory of Python to compare against (default src/dotfiles)')
+    parser.add_argument(
+        '--code',
+        action='append',
+        metavar='DIR',
+        help='directory of code to compare against; repeatable (default src/dotfiles and apps)',
+    )
     parsed = parser.parse_args()
 
     root = Path(__file__).resolve().parents[2]
-    package = shingles(' '.join(path.read_text() for path in (root / parsed.code).rglob('*.py')))
+    package = shingles(' '.join(source(root, where) for where in (parsed.code or DEFAULT_CODE)))
 
     if parsed.runs:
         page = Path(parsed.runs) if Path(parsed.runs).is_absolute() else root / parsed.runs

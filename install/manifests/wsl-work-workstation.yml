@@ -1,12 +1,6 @@
 machine: wsl-work-workstation
 platform: wsl
 
-# Feature flags — overrides for install/flags.yml defaults. Rendered into ~/.env
-# by `dotfiles env apply`, where they can be overridden again per machine.
-flags:
-  # The review register is personal, and its nudge has no place in a work shell.
-  SHELL_NUDGE: false
-
 # Installation
 system_packages: workstation
 

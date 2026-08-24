@@ -206,29 +206,263 @@ log "Setup" "XDG Directories"
 # ------------------------------------------------------------------ #
 # COMPLETIONS
 # ------------------------------------------------------------------ #
-# Create cache directories
-if [[ ! -d "$XDG_CACHE_HOME/zsh" ]]; then
-  mkdir -p "$XDG_CACHE_HOME/zsh"
-  log "Setup" "Created $XDG_CACHE_HOME/zsh"
-fi
-
 # Set the cache path for Zsh completion to a directory within the XDG cache home.
 # This helps in storing completion cache files in a standardized location.
 zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 
-# Rust keeps _cargo inside the toolchain rather than anywhere already on fpath,
-# so it is the one completion that arrives as a file to autoload instead of as a
-# generator to run. This has to precede compinit, which scans fpath once to build
-# the dump — anything added after it is never registered. Stable explicitly: with
-# a nightly toolchain also installed both would match, and nightly's _cargo lists
-# flags the stable cargo rejects.
-fpath+=(~/.rustup/toolchains/stable-*/share/zsh/site-functions(N))
+# Three directories, and what distinguishes them is who else reads them.
+#
+# `ZSH_AUTOLOADED` is a namespace compinit governs rather than a cache of ours.
+# One file per tool, named `_<tool>` the way zsh's own completion system names
+# them, and nothing else at all: compinit enumerates the directory, counts what
+# it finds, and would autoload anything in it. Each function's body is read the
+# first time a Tab asks for it, never at startup — `ruff` and `uv` are 668K and
+# 516K of generated clap definitions, so sourcing that pair cost 53ms of a 160ms
+# start.
+#
+# `ZSH_SOURCED` holds the generated blocks that are not completions — zoxide's
+# `cd` wrapper, direnv's hook, fzf's keybindings, atuin's init, doit's widgets.
+# Those define aliases, hooks and keybindings that have to exist before the first
+# prompt, so they are sourced where they sit and their order is load-bearing.
+#
+# `ZSH_GENERATOR_STATE` is this file's own bookkeeping — the half-written output
+# and the marker naming a generator that produced nothing. It is separate because
+# the first directory is not ours to put things in: a stray file there changes
+# compinit's count, and a `_tool.new` would be autoloaded as if it were a
+# completion.
+ZSH_AUTOLOADED="$XDG_CACHE_HOME/zsh/functions"
+ZSH_SOURCED="$XDG_CACHE_HOME/zsh/completions"
+ZSH_GENERATOR_STATE="$XDG_CACHE_HOME/zsh/generator-state"
+
+# The mode is set rather than inherited, and repaired rather than only set at
+# creation. compaudit refuses an fpath directory, or its parent, that is group-
+# or world-writable — with an exemption for a group that is the user's own
+# private one, which is why this does not bite on a stock Arch or Debian box and
+# does on macOS, where every account's primary group is the shared `staff`.
+# What follows a refusal is a y/n prompt at every single startup, because
+# `read -q` reads the terminal an interactive shell has.
+#
+# Unconditional, because a machine that already holds a `775` directory from an
+# earlier umask is exactly the one that needs repairing, and a guard on absence
+# never reaches it. `chmod` is a builtin here, so this forks nothing.
+zmodload -F zsh/files b:zf_chmod b:zf_mkdir 2>/dev/null
+for _zsh_cache_dir in "$XDG_CACHE_HOME/zsh" "$ZSH_AUTOLOADED" "$ZSH_SOURCED" "$ZSH_GENERATOR_STATE"; do
+  [[ -d "$_zsh_cache_dir" ]] || (umask 022; mkdir -p "$_zsh_cache_dir")
+  # `(#qN-f:g+w:,-f:o+w:)` is compaudit's own test: the directory, and only when
+  # it is group-writable or other-writable. A shell without zsh/files falls back
+  # to the external chmod, which then forks only on a machine actually at fault.
+  if [[ -n "$_zsh_cache_dir"(#qN-f:g+w:,-f:o+w:) ]]; then
+    if (( $+builtins[zf_chmod] )); then
+      zf_chmod go-w "$_zsh_cache_dir"
+    else
+      chmod go-w "$_zsh_cache_dir"
+    fi
+    log "Setup" "tightened $_zsh_cache_dir, which compaudit would refuse"
+  fi
+done
+unset _zsh_cache_dir
+
+# Regenerate `$3` from the generator in `$4...` when the binary that produces it
+# is newer, and say nothing when there is nothing to say. `$1` is the key this
+# is reported and bookkept under, `$2` the binary to age against and look for —
+# the two differ whenever one tool generates more than one block. Answers 0 when
+# a usable file is on disk, and sets `REPLY` to `written` when it rewrote one.
+#
+# Staleness is measured against the binary rather than against the generator's
+# first word: `env VAR=x tool` would otherwise stat env(1), whose mtime never
+# moves, and the cache would outlive every upgrade of the tool itself.
+#
+# The half-written file and the failure marker live in `$ZSH_GENERATOR_STATE`,
+# never beside the output. One output goes to a directory compinit enumerates,
+# and a `_tool.new` there is both a file it counts and a function it would
+# autoload.
+cache_generate() {
+  local key="$1" bin_name="$2" out="$3"; shift 3
+  local bin err ret
+  # Its own statement: zsh expands every word of a `local` before assigning any
+  # of them, so $key on that line is still empty and this becomes ./.failed.
+  local failed="$ZSH_GENERATOR_STATE/$key.failed"
+  local pending="$ZSH_GENERATOR_STATE/$key.new"
+  REPLY=''
+
+  if ! bin="$(command -v "$bin_name")"; then
+    log "Skip" "$bin_name not installed"
+    return 1
+  fi
+
+  # Being on PATH does not mean the tool can generate anything: WSL ships a
+  # /usr/bin/docker stub for Docker Desktop's distro integration that exits 1
+  # for every subcommand, so `command -v` finds it and generation can never
+  # succeed. Remember the failure against the tool that caused it, or that costs
+  # a subprocess and an error line in every shell forever. The marker holds the
+  # resolved target, so swapping a stub for the real binary retries even when
+  # the replacement's mtime predates the marker — enabling the integration fixes
+  # completion on the next shell without anything to clear by hand.
+  if [[ -f "$failed" && "$(<"$failed")" == "${bin:A}" && ! "$bin" -nt "$failed" ]]; then
+    log "Skip" "$key generated nothing last time"
+  elif [[ ! -s "$out" || "$bin" -nt "$out" ]]; then
+    # `2>&1 >file` splits the streams: stdout to the file, stderr into $err.
+    err="$("$@" 2>&1 >"$pending")"
+    ret=$?
+    if (( ret == 0 )) && [[ -s "$pending" ]]; then
+      mv -f "$pending" "$out"
+      rm -f "$failed"
+      REPLY=written
+    else
+      # A tool that answers an unknown subcommand with its usage text writes it
+      # to stdout and exits non-zero, leaving stderr empty — report whichever
+      # stream said something, and the status either way, or the failure is
+      # indistinguishable from a generator that legitimately printed nothing.
+      [[ -n "$err" ]] || err="$(head -n1 "$pending" 2>/dev/null)"
+      rm -f "$pending"
+      print -r -- "${bin:A}" >| "$failed"
+      log_error "Setup" "$key: exit $ret: ${err:-generated nothing}"
+    fi
+  fi
+
+  # A failed regeneration above still leaves the previous file usable.
+  [[ -s "$out" ]]
+}
+
+# A completion function on fpath, for compinit to index and zsh to autoload.
+# Nothing is sourced here, so the size of what a tool generates costs the shell
+# nothing — which is the whole reason these are split from cache_eval.
+#
+# **Only for a generator whose output is autoloadable**, which is a stricter
+# contract than `source` imposes and is not something a producer can be trusted
+# to meet. compinit reads the literal first line for a `#compdef` tag and skips
+# the file outright when it is not there, and an autoloaded file's whole body
+# runs on the first Tab — so it has to re-dispatch when `$funcstack[1]` is its
+# own name, or that first Tab only re-registers and returns no matches. Anything
+# failing either test goes to `cache_eval`, which sources it and cares about
+# neither.
+cache_completion() {
+  local name="$1"; shift
+  local out="$ZSH_AUTOLOADED/_$name"
+
+  # A tool that is gone takes its completion with it. Sourcing gave this for
+  # free by returning before the `source`; a file on fpath outlives the binary,
+  # and keeps completing a command that no longer exists.
+  if ! command -v "$name" >/dev/null 2>&1; then
+    [[ -e "$out" ]] && { rm -f "$out"; compinit_stale=1; }
+    log "Skip" "$name not installed"
+    return 0
+  fi
+
+  local REPLY
+  cache_generate "$name" "$name" "$out" "$@" || return 0
+
+  # Checked here rather than left to a test, because the failure is silent
+  # everywhere else: compinit enumerates a file whose first line is not a
+  # `#compdef` tag, skips it, and says nothing — Tab then reads exactly like a
+  # tool that ships no completion at all. Only on the write path, so a shell
+  # that regenerated nothing reads no files.
+  if [[ $REPLY == written ]]; then
+    compinit_stale=1
+    if [[ "$(head -n1 "$out")" != '#compdef '* ]]; then
+      rm -f "$out"
+      log_error "Setup" "$name: first line is not a #compdef tag, so compinit would skip it — use cache_eval"
+      return 0
+    fi
+  fi
+
+  log "Setup" "$name"
+  return 0
+}
+
+# A block that is not a completion, sourced where it sits. `-b BIN` names the
+# binary when it differs from the cache key, which is what a tool generating more
+# than one block needs: one key per block, all aged against the one binary.
+cache_eval() {
+  local bin_name=""
+  [[ "$1" == -b ]] && { bin_name="$2"; shift 2; }
+  local name="$1"; shift
+  : "${bin_name:=$name}"
+  local cache="$ZSH_SOURCED/$name.zsh"
+
+  local REPLY
+  if cache_generate "$name" "$bin_name" "$cache" "$@"; then
+    source "$cache"
+    log "Setup" "$name"
+  fi
+  return 0
+}
+
+# Every generator runs before compinit, because compinit scans fpath once to
+# build its dump and a file written afterwards is never registered.
+#
+# Whether it reuses that dump turns on a **file count and a zsh version**, and on
+# nothing else — `compinit:494` reads `#files: N  version: X` from the dump's
+# first line and compares N against what it just found on fpath. No mtime is
+# consulted anywhere in the file. So a tool upgraded in place, whose new
+# completion has the same filename, changes no count and is read from a dump
+# that predates it: a completion claiming a second command name never registers
+# that name. `compinit_stale` is how this file notices instead — `cache_completion`
+# sets it whenever it actually rewrote or removed a function, and the dump is
+# unlinked below so the next compinit rebuilds.
+typeset -g compinit_stale=0
+
+cache_completion gh gh completion -s zsh
+
+# Own cobra tools.
+cache_completion forge forge completion zsh
+cache_completion todoui todoui completion zsh
+cache_completion icb icb completion zsh
+cache_completion learning learning completion zsh
+cache_completion meso meso completion zsh
+cache_completion nomad nomad completion zsh
+# ifiles completes remote paths by calling the server, so each Tab there is a
+# request rather than a lookup. The generated script is static; the network call
+# happens inside `ifiles __complete`.
+cache_completion ifiles ifiles completion zsh
+
+# The Typer tools and doit are completions too, and they are sourced rather than
+# autoloaded — which puts them below compinit, not here. See "SOURCED
+# COMPLETIONS" after compinit runs.
+
+# Third party, kept to what is typed at a prompt rather than run from a Taskfile
+# or a hook. task completes task names out of the Taskfile and sesh completes
+# session names, which is most of the value here.
+cache_completion task task --completion zsh
+cache_completion sesh sesh completion zsh
+cache_completion tenv tenv completion zsh
+cache_completion trivy trivy completion zsh
+cache_completion yq yq completion zsh
+cache_completion cheat cheat --completion zsh
+cache_completion ruff ruff generate-shell-completion zsh
+cache_completion uv uv generate-shell-completion zsh
+# docker covers `docker compose` too — the compose plugin has no completion of
+# its own. brew ships no _docker, and neither does OrbStack.
+cache_completion docker docker completion zsh
+cache_completion rustup rustup completions zsh
+
+log "Setup" "Completions"
+
+# The generated functions above, plus the one completion that arrives as a file
+# rather than as a generator: Rust keeps _cargo inside the toolchain, where
+# nothing else on fpath reaches. Stable explicitly — with a nightly toolchain
+# also installed both would match, and nightly's _cargo lists flags the stable
+# cargo rejects.
+fpath=("$ZSH_AUTOLOADED" ~/.rustup/toolchains/stable-*/share/zsh/site-functions(N) $fpath)
 
 # Initialize the Zsh completion system using a version-specific dump file.
 # The dump file stores the state of the completion system and is located in the XDG cache home.
 # Using a version-specific file ensures compatibility with the current Zsh version.
+zsh_compdump="$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
+
+# Removed when a generator above rewrote or dropped a function, because
+# compinit's own freshness test cannot see that. It compares a file count and a
+# version, so a tool upgraded in place is read from a dump written before the
+# upgrade — and a completion that has learned a second command name never
+# registers it. Rebuilding costs about 250ms and happens only on the shell that
+# regenerated something.
+if (( compinit_stale )); then
+  rm -f "$zsh_compdump"
+  log "Setup" "completions changed, so the compinit dump is being rebuilt"
+fi
+
 autoload -Uz compinit
-compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
+compinit -d "$zsh_compdump"
 log "Setup" "compinit"
 
 # Completion styling
@@ -242,98 +476,37 @@ zstyle ':completion:*:descriptions' format "%B--- %d%b"
 
 setopt COMPLETE_ALIASES
 
-# Cache generated completions, regenerating when the tool's binary is newer. Each
-# otherwise spawns a subprocess per shell, and a slow one blocks startup — todoui
-# reconciled with its API here and cost 6s. A missing tool is normal and stays at
-# debug level; one that fails to generate always prints its stderr, and only a
-# cache that actually sourced gets the success mark.
-ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
-[[ -d "$ZSH_COMPLETION_CACHE" ]] || mkdir -p "$ZSH_COMPLETION_CACHE"
-
-cache_eval() {
-  # `-b BIN` names the binary when it differs from the cache key, which is what
-  # a tool generating more than one block needs: one key per block, all aged
-  # against the one binary. doit does this, and its blocks load at different
-  # points in this file because only the nudge prints.
-  local bin_name=""
-  [[ "$1" == -b ]] && { bin_name="$2"; shift 2; }
-  local name="$1"; shift
-  : "${bin_name:=$name}"
-  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err ret
-  # Its own statement: zsh expands every word of a `local` before assigning any
-  # of them, so $cache on that line is still empty and this becomes ./.failed.
-  local failed="$cache.failed"
-
-  # Staleness is measured against the binary, not $1: a generator invoked as
-  # `env VAR=x tool` would otherwise stat env(1), whose mtime never moves, and
-  # the cache would outlive every upgrade of the tool itself.
-  if ! bin="$(command -v "$bin_name")"; then
-    log "Skip" "$bin_name not installed"
-    return 0
-  fi
-
-  # Being on PATH does not mean the tool can generate anything: WSL ships a
-  # /usr/bin/docker stub for Docker Desktop's distro integration that exits 1
-  # for every subcommand, so `command -v` finds it and generation can never
-  # succeed. Remember the failure against the tool that caused it, or that costs
-  # a subprocess and an error line in every shell forever. The marker holds the
-  # resolved target, so swapping a stub for the real binary retries even when
-  # the replacement's mtime predates the marker — enabling the integration fixes
-  # completion on the next shell without anything to clear by hand.
-  if [[ -f "$failed" && "$(<"$failed")" == "${bin:A}" && ! "$bin" -nt "$failed" ]]; then
-    log "Skip" "$name generated nothing last time"
-  elif [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
-    # `2>&1 >file` splits the streams: stdout to the cache, stderr into $err.
-    err="$("$@" 2>&1 >"$cache.new")"
-    ret=$?
-    if (( ret == 0 )) && [[ -s "$cache.new" ]]; then
-      mv -f "$cache.new" "$cache"
-      rm -f "$failed"
-    else
-      # A tool that answers an unknown subcommand with its usage text writes it
-      # to stdout and exits non-zero, leaving stderr empty — report whichever
-      # stream said something, and the status either way, or the failure is
-      # indistinguishable from a generator that legitimately printed nothing.
-      [[ -n "$err" ]] || err="$(head -n1 "$cache.new" 2>/dev/null)"
-      rm -f "$cache.new"
-      print -r -- "${bin:A}" >| "$failed"
-      log_error "Setup" "$name: exit $ret: ${err:-generated nothing}"
-    fi
-  fi
-
-  # A failed regeneration above still leaves the previous cache usable.
-  if [[ -s "$cache" ]]; then
-    source "$cache"
-    log "Setup" "$name"
-  fi
-  return 0
-}
-
-# Terraform completion
+# bashcompinit and `complete -C` are a bash bridge rather than a zsh function, so
+# terraform cannot go on fpath with the rest and has to follow compinit.
 if command -v terraform >/dev/null 2>&1; then
     autoload -U +X bashcompinit && bashcompinit
     complete -o nospace -C terraform terraform
     log "Setup" "terraform completions"
 fi
 
-cache_eval gh gh completion -s zsh
-
-# Own cobra tools.
-cache_eval forge forge completion zsh
-cache_eval todoui todoui completion zsh
-cache_eval icb icb completion zsh
-cache_eval learning learning completion zsh
-cache_eval meso meso completion zsh
-cache_eval nomad nomad completion zsh
-# ifiles completes remote paths by calling the server, so each Tab there is a
-# request rather than a lookup. The generated script is static; the network call
-# happens inside `ifiles __complete`.
-cache_eval ifiles ifiles completion zsh
-
-# Own Typer tools. The shell is named through the env var rather than with
-# --show-completion, which detects it from the parent process and answers
-# "Shell  not supported." when generated from anything but an interactive shell.
-# Each Tab spawns Python, so these are the slow ones.
+# ------------------------------------------------------------------ #
+# SOURCED COMPLETIONS
+# ------------------------------------------------------------------ #
+# Completions whose generated block is not an autoloadable function, so they are
+# sourced instead. **Below compinit and not above it**, which is the opposite of
+# every autoloaded one: each of these ends on a `compdef` call, and `compdef` is
+# defined by compinit. Run before it, they abort on `command not found: compdef`
+# and complete nothing.
+#
+# Typer's template fails the autoload contract twice. It emits a blank line
+# before `#compdef`, and compinit reads the literal first line for that tag — so
+# on fpath it is enumerated and skipped, leaving Tab dead with nothing said.
+# dectl is worse still: its first line is `environment: dev  (from config)`.
+# Typer also ships no `$funcstack[1]` re-dispatch, so fixing the tag alone would
+# spend the first Tab of every shell re-registering and returning no matches.
+#
+# Sourcing costs what these weigh, which is 162-174 bytes each. The split exists
+# for `ruff` and `uv` at 668K and 516K, not for a rule about kinds.
+#
+# The shell is named through the env var rather than with --show-completion,
+# which detects it from the parent process and answers "Shell  not supported."
+# when generated from anything but an interactive shell. Each Tab spawns Python,
+# so these are the slow ones.
 cache_eval dectl env _DECTL_COMPLETE=source_zsh dectl
 cache_eval indy env _INDY_COMPLETE=source_zsh indy
 cache_eval relate env _RELATE_COMPLETE=source_zsh relate
@@ -341,24 +514,10 @@ cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 
 # doit writes its own rather than using Typer's generator, so that completing a
 # pursuit name reads doit's flat name cache instead of spawning Python on Tab.
-cache_eval doit doit shell completion zsh
-
-# Third party, kept to what is typed at a prompt rather than run from a Taskfile
-# or a hook. task completes task names out of the Taskfile and sesh completes
-# session names, which is most of the value here.
-cache_eval task task --completion zsh
-cache_eval sesh sesh completion zsh
-cache_eval tenv tenv completion zsh
-cache_eval trivy trivy completion zsh
-cache_eval yq yq completion zsh
-cache_eval cheat cheat --completion zsh
-cache_eval ruff ruff generate-shell-completion zsh
-# docker covers `docker compose` too — the compose plugin has no completion of
-# its own. brew ships no _docker, and neither does OrbStack.
-cache_eval docker docker completion zsh
-cache_eval rustup rustup completions zsh
-
-log "Setup" "Completions"
+# It tags `#compdef` correctly and still fails the second half: a bare
+# `compdef _doit doit` with no re-dispatch. cobra and clap both emit the guard,
+# which is why every other tool here autoloads.
+cache_eval -b doit doit-completion doit shell completion zsh
 
 # ------------------------------------------------------------------ #
 # PROMPT
@@ -449,13 +608,12 @@ zle -N doshell-explain-widget
 # The line-editor half of `doit choose`: a ZLE widget that apply_shell_keybindings
 # binds, plus dochoose for the same pick without a chord. A subprocess cannot
 # reach into its parent's line editor, so doit emits the block and this only
-# caches it — the same split the completion and the startup nudge already use,
-# and `-b doit` ages its own cache key against the one binary.
+# caches it — the same split doit's completion block uses, and `-b doit` ages its
+# own cache key against the one binary.
 #
 # Here rather than among the completions because this is a prompt-line widget,
-# and it sits with the two it is bound beside. Ungated, unlike the nudge: this
-# only defines two functions, and a keybinding that disappears when a reminder
-# toggle is turned off is a keybinding nobody trusts.
+# and it sits with the two it is bound beside. Ungated: this only defines two
+# functions, and it prints nothing until a key is pressed.
 cache_eval -b doit doit-widgets doit shell widgets zsh
 
 # ------------------------------------------------------------------ #
@@ -568,8 +726,6 @@ fi
 # removed: rm ~/.cache/zsh/completions/atuin.zsh
 flag_enabled SHELL_HISTORY_DB && cache_eval atuin atuin init zsh --disable-up-arrow
 
-cache_eval uv uv generate-shell-completion zsh
-
 cache_eval direnv direnv hook zsh
 
 # An integration below is offered, not required: a manifest that never declares
@@ -639,7 +795,6 @@ zsh_vi_mode_file="$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
 forgit_file="$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
 forgit_completions="$ZSH_PLUGINS_DIR/forgit/completions"
 autosuggestions_file="$ZSH_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
-you_should_use_file="$ZSH_PLUGINS_DIR/zsh-you-should-use/you-should-use.plugin.zsh"
 syntax_highlighting_file="$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # git-open
@@ -715,139 +870,6 @@ else
   log_error "Load" "$autosuggestions_file"
 fi
 
-# clisteno — what is on the line, and the fast way to type it.
-#
-# Complementary to zsh-autosuggestions rather than competing with it: that owns
-# the inline space ahead of the cursor, this owns the line under the prompt, and
-# neither needs a keystroke. Type the long form and it offers the short one;
-# type the short one and it says what that command does.
-#
-# `zle -M` rather than RPROMPT. A line-pre-redraw widget is documented not to
-# call `zle reset-prompt`, and measured here it does not repaint at all — the
-# hook fires on every keystroke and the right margin never changes. -M paints.
-#
-# Nothing forks per keystroke. A tool's index is read once per shell into an
-# assoc array through the `read` builtin, and every keystroke after that is a
-# hash lookup — the same rule this file states for the doshell widgets.
-typeset -g _clisteno_shown=''
-typeset -gA _clisteno_meaning _clisteno_sequence _clisteno_loaded
-
-_clisteno_load() {
-  local tool=$1 file typed command summary key
-  [[ -n ${_clisteno_loaded[$tool]} ]] && return
-  # Marked before the readability check, so a tool with no index is looked for
-  # once rather than stat-ed on every keystroke for the life of the shell.
-  _clisteno_loaded[$tool]=1
-  file="${XDG_CACHE_HOME:-$HOME/.cache}/clisteno/${tool}.tsv"
-  [[ -r $file ]] || return
-  # The key goes into a variable and the subscript is left unquoted: zsh reads a
-  # quoted subscript literally, so arr["a b"] stores the quotes as part of the
-  # key and every later lookup silently misses.
-  while IFS=$'\t' read -r typed command summary; do
-    key="$tool $typed"
-    _clisteno_meaning[$key]=$summary
-    key="$command"
-    _clisteno_sequence[$key]=$typed
-  done <$file
-}
-
-# The shallowest command the line could still become, when exactly one qualifies.
-# Without this the hint only fires on exact boundaries, which makes it a receipt
-# for what was typed rather than an offer about what is being typed: `dectl exa`
-# showed nothing, and `exg` never appeared until `glue` was already complete.
-# `(I)` matches keys inside the shell rather than looping over them, and `(b)`
-# stops a `*` or `[` in the buffer being read as pattern. Answers in REPLY: a
-# printing function has to be read back through `$(...)`, which forks per
-# keystroke and cost 0.68ms against 0.10ms for the same work assigned.
-_clisteno_best() {
-  REPLY=''
-  local -a matches
-  matches=(${(k)_clisteno_sequence[(I)${(b)1}*]})
-  local best='' candidate count=0 fewest=0 depth
-  for candidate in $matches; do
-    depth=${#${(z)candidate}}
-    if (( fewest == 0 || depth < fewest )); then
-      fewest=$depth
-      best=$candidate
-      count=1
-    elif (( depth == fewest )); then
-      # A tie is a genuine fork — `dectl e` is still both env and
-      # example-pipeline — and answering it with either is a guess.
-      (( count++ ))
-    fi
-  done
-  (( count == 1 )) && REPLY=$best
-}
-
-_clisteno_hint() {
-  local -a words
-  # REPLY is scoped here so _clisteno_best writes the caller's local rather than
-  # clobbering the global every keystroke.
-  local REPLY
-  words=(${(z)BUFFER})
-  local shown=''
-  if (( ${#words} >= 2 )); then
-    _clisteno_load $words[1]
-    local line="${(j: :)words}"
-    local offer=${_clisteno_sequence[$line]}
-    local meaning=${_clisteno_meaning[$line]}
-    if [[ -n $offer ]]; then
-      shown="⌁ ${words[1]} ${offer}"
-    elif [[ -n $meaning ]]; then
-      shown="$meaning"
-    else
-      _clisteno_best "$line"
-      [[ -n $REPLY ]] && shown="⌁ ${words[1]} ${_clisteno_sequence[$REPLY]}"
-    fi
-  fi
-  # Only on change, but including empty: the message survives until something
-  # replaces it, so skipping a real change leaves the previous command's summary
-  # under a line that no longer means it — while repainting an unchanged one
-  # erases the completion list, which zsh draws in this same area. The hook fires
-  # on the redraw a Tab causes, so an unconditional -M wiped every listing the
-  # instant it appeared.
-  if [[ $shown != $_clisteno_shown ]]; then
-    _clisteno_shown=$shown
-    zle -M "$shown"
-  fi
-}
-
-if flag_enabled SHELL_CLISTENO; then
-  autoload -Uz add-zle-hook-widget
-  zle -N _clisteno_hint
-  add-zle-hook-widget line-pre-redraw _clisteno_hint
-  log "Setup" "clisteno hint"
-else
-  log "Skip" "clisteno hint (SHELL_CLISTENO)"
-fi
-
-# zsh-you-should-use — the alias that already existed for what was just typed.
-#
-# Distinct from clisteno above rather than a second copy of it: clisteno indexes
-# a *tool's* own subcommand short forms from its TSV, while this reads the shell's
-# alias table. `git status` earns the `gst` reminder here precisely because
-# clisteno has no index for it.
-#
-# `after` buffers the reminder and flushes it from precmd instead of writing it
-# during preexec, so the nudge lands once the command has already run and never
-# delays or interrupts what was typed.
-YSU_MESSAGE_POSITION=after
-
-# `gp` and `gl` were never adopted rather than being missed, so a reminder about
-# them teaches a habit instead of enforcing one. Measured over August 2026:
-# `git pull` typed 10 times and `git push` 4, against zero uses of either alias,
-# while `gst` won 17 to 2 and needs no help. Ignoring the two keeps the nudge for
-# aliases added later, which is the only thing it is any use for here.
-YSU_IGNORED_ALIASES=(gp gl)
-if ! flag_enabled SHELL_YOU_SHOULD_USE; then
-  log "Skip" "zsh-you-should-use (SHELL_YOU_SHOULD_USE)"
-elif [[ -f "$you_should_use_file" ]]; then
-  source "$you_should_use_file"
-  log "Load" "$you_should_use_file"
-else
-  log_error "Load" "$you_should_use_file"
-fi
-
 # zsh-syntax-highlighting (MUST load last)
 if ! flag_enabled SHELL_SYNTAX_HIGHLIGHTING; then
   log "Skip" "zsh-syntax-highlighting (SHELL_SYNTAX_HIGHLIGHTING)"
@@ -866,36 +888,4 @@ flag_enabled SHELL_VI_MODE || apply_shell_keybindings
 if flag_enabled ZSHRC_DEBUG 0; then
   printf " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded in %.0fms 🟰🟰🟰🟰🟰🟰\n" \
     $(( (EPOCHREALTIME - ZSHRC_START) * 1000 ))
-else
-  echo " ✓ zsh loaded"
-fi
-
-# ------------------------------------------------------------------ #
-# DOIT REVIEW - What's Due to Revisit (Shell Startup)
-# ------------------------------------------------------------------ #
-# Surface the review register's due items on the first shell of each interval —
-# only when something is due, so a clear day adds no startup noise. The gate is
-# a marker-mtime check, so doit itself spawns once per interval rather than once
-# per shell. Marker and interval live in the synced doit state dir, making the
-# rolling schedule (default 4h; set with `doit review nudge-every <dur>`) shared
-# across machines rather than per machine.
-#
-# doit owns the block and this only caches it: the gate is generated with an
-# absolute state path resolved on the machine that generated it, so it must not
-# be committed here. Cached rather than eval'd for the reason every generator in
-# this file is — an eval would put a Python start in front of every shell.
-#
-# An `if` rather than `flag_enabled && cache_eval`: this is the last line of the
-# file, and the && form would leave .zshrc exiting non-zero whenever the flag is
-# off, which the prompt renders as a failed command on the first line.
-if flag_enabled SHELL_NUDGE; then
-  cache_eval -b doit doit-nudge doit shell init zsh
-fi
-
-# Fires on an Issue only — a checker that could not run, a declaration that will
-# not parse — never on drift, which is the normal state of a machine between
-# applies and would train the nudge away inside a week. The snippet reads a file
-# the scheduled check writes; nothing here runs a check at a prompt.
-if flag_enabled DOTFILES_NUDGE; then
-  cache_eval -b dotfiles dotfiles-nudge dotfiles shell-init zsh
 fi

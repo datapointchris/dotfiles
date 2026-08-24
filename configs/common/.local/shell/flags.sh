@@ -16,7 +16,7 @@
 #
 # Usage:
 #   source "$HOME/.local/shell/flags.sh"
-#   flag_enabled SHELL_NUDGE      && doit shell init zsh # unset => on
+#   flag_enabled SHELL_FORGIT     && source "$forgit"    # unset => on
 #   flag_enabled ZSHRC_DEBUG 0    && print_timings       # unset => off
 # ================================================================
 

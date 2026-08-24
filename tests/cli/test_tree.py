@@ -71,7 +71,6 @@ def nameless(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ['machines', 'show', 'no-such-machine'],
         ['machines', 'edit', 'no-such-machine'],
         ['bundle', 'create', '--machine', 'box', '--arch', 'vax'],
-        ['shell-init', 'fish'],
         ['check', '--skip', 'sytem'],
         ['plan', '--skip', 'plugins/tmux'],
         ['plan', '--skip', 'plugins/'],

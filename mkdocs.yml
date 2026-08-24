@@ -119,6 +119,7 @@ nav:
       - Backup: apps/backup.md
       - Safekeep: apps/safekeep.md
       - Work Monitor: apps/work-monitor.md
+      - Zsh Startup: apps/zsh-startup.md
       - WSL Tools: apps/wsl-disk-and-speed.md
   - Architecture:
       - architecture/index.md

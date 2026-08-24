@@ -48,7 +48,7 @@ Ubuntu distro, then Apply & Restart. The CLI appears at
 
 Until that toggle is on, Ubuntu's own `/usr/bin/docker` stub answers instead. It exists only to
 print the "could not be found in this WSL 2 distro" hint, and it exits 1 for every subcommand —
-including `docker completion zsh`. That is why `cache_eval` in `.zshrc` records a failure marker
+including `docker completion zsh`. That is why `cache_generate` in `.zshrc` records a failure marker
 for it rather than retrying the generator in every shell. Enabling the integration changes what
 `docker` resolves to, the marker stops matching, and completion regenerates on the next shell.
 
@@ -70,11 +70,12 @@ the installer supports this path.
 
 ## Completions are generated from the CLI
 
-`.zshrc` generates the zsh completion with `docker completion zsh` and caches it under
-`$XDG_CACHE_HOME/zsh/completions`. Neither Homebrew nor OrbStack installs a `_docker` on fpath, and
-the compose plugin ships no completion of its own. The generated one covers `docker compose` as
-well. Where a package does supply `_docker`, the generated copy wins, because it is sourced after
-compinit and re-registers the command.
+`.zshrc` generates the zsh completion with `docker completion zsh` and writes it to
+`$XDG_CACHE_HOME/zsh/functions/_docker`, where compinit indexes it and zsh autoloads the body on
+the first Tab. Neither Homebrew nor OrbStack installs a `_docker` on fpath, and the compose plugin
+ships no completion of its own. The generated one covers `docker compose` as well. Where a package
+does supply `_docker`, the generated copy wins, because that directory is prepended to fpath and
+the first match is the one compinit takes.
 
 ## Config lives under XDG
 

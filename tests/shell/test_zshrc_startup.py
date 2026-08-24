@@ -19,6 +19,7 @@ their own tests; the file that sources them had none.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -44,14 +45,11 @@ here installs. The temp home has neither anyway; naming the PATH says so."""
 
 FLAGS_OFF = (
     'ZSHRC_DEBUG',
-    'SHELL_NUDGE',
     'SHELL_VI_MODE',
     'SHELL_AUTOSUGGESTIONS',
     'SHELL_SYNTAX_HIGHLIGHTING',
     'SHELL_FORGIT',
     'SHELL_HISTORY_DB',
-    'SHELL_CLISTENO',
-    'SHELL_YOU_SHOULD_USE',
 )
 """Every plugin gate `.zshrc` reads, held off so the fixture declares nothing.
 
@@ -120,14 +118,20 @@ def start(home: Path, *, path: str = BARE_PATH, snippet: str = 'true') -> Shell:
     Interactive because `.zshrc` is only read by one, and the streams stay apart
     for the reason `shell_out` states: a merged stream passes whichever one the
     code chose.
+
+    The timeout is a backstop rather than an expectation — every shell here is
+    given a command and exits on it, so hitting it means one started waiting for
+    input, which is a hang rather than a slow test.
     """
     completed = subprocess.run(
         ['zsh', '-i', '-c', snippet],
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         env={'HOME': str(home), 'PATH': path, 'TERM': 'xterm'},
         check=False,
         cwd=home,
+        timeout=60,
     )
     return Shell(completed.stdout, completed.stderr, completed.returncode)
 
@@ -247,3 +251,70 @@ def test_neither_branch_of_an_optional_tool_writes_to_stderr(tmp_path: Path, too
     said = [line for line in reported(result) if tool in line]
 
     assert said == [], f'{tool} reported its own absence: ' + '; '.join(said)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Completions are autoloaded off fpath, never sourced at startup
+# ─────────────────────────────────────────────────────────────────────────────
+
+ZSHRC = ZSH_CONFIG / '.zshrc'
+
+CACHE_COMPLETION_CALL = re.compile(r'\bcache_completion\s+(\S+)')
+"""One `cache_completion` call, capturing the tool it autoloads a completion for.
+
+Matched anywhere on the line rather than at its start, because these calls are
+variously indented and chained and anchoring would find a fraction of them —
+which is the failure mode where the assertion passes on the calls it never saw.
+"""
+
+
+def uncommented() -> list[str]:
+    return [line for line in ZSHRC.read_text().splitlines() if not line.lstrip().startswith('#')]
+
+
+def test_every_autoloaded_completion_is_generated_before_compinit_reads_fpath() -> None:
+    """compinit enumerates fpath once, so a function written after it is invisible.
+
+    Derived from where the `cache_completion` calls actually sit rather than from
+    the `fpath=` line alone. The hazard is a call placed after compinit, and the
+    natural place to add one is beside the `cache_eval` block much further down —
+    which a fixed two-line comparison passes unchanged while the tool it added
+    silently has no completion.
+    """
+    lines = uncommented()
+    calls = [i for i, line in enumerate(lines) if CACHE_COMPLETION_CALL.search(line) and 'cache_completion()' not in line]
+    joined = next(i for i, line in enumerate(lines) if line.startswith('fpath=("$ZSH_AUTOLOADED"'))
+    initialised = next(i for i, line in enumerate(lines) if line.startswith('compinit -d '))
+
+    assert calls, 'no cache_completion call was matched, so this asserts nothing'
+    assert joined < initialised, 'the generated functions are written where compinit will never index them'
+    late = [lines[i].strip() for i in calls if i > initialised]
+    assert not late, f'these run after compinit and are never registered: {late}'
+
+
+def test_a_completion_that_compinit_would_skip_is_refused_rather_than_written(tmp_path: Path) -> None:
+    """compinit reads the literal first line for a `#compdef` tag.
+
+    A file without one is enumerated, skipped, and never mentioned — Tab then
+    behaves exactly as it does for a tool that ships no completion, which is why
+    four tools lost theirs here with every guard in this file passing. Typer's
+    template emits a blank line before the tag and is the shape that caused it.
+
+    Asserted through a stub rather than a real tool, so this runs on a machine
+    carrying none of them.
+    """
+    home = deployed_home(tmp_path)
+    fake = home / 'bin'
+    fake.mkdir()
+    # A leading blank line, exactly as Typer's generator emits it.
+    (fake / 'blanktool').write_text("#!/bin/sh\nprintf '\\n#compdef blanktool\\n_blanktool() { _message x }\\n'\n")
+    (fake / 'blanktool').chmod(0o755)
+
+    result = start(
+        home,
+        path=f'{fake}{os.pathsep}{BARE_PATH}',
+        snippet='cache_completion blanktool blanktool; [[ -e $ZSH_AUTOLOADED/_blanktool ]] && print left || print removed',
+    )
+
+    assert 'not a #compdef tag' in result.stderr, f'a file compinit would skip was accepted:\n{result.stderr}'
+    assert result.stdout.strip().endswith('removed'), 'the unusable file was left on fpath, where it holds the dump count'
