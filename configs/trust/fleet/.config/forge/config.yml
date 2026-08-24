@@ -23,7 +23,9 @@ repos_registry: ~/.local/share/terminal-library-fleet/repos.json
 # chose into a repo and reports success. Naming the file is also what lets a
 # version bump be one edit and a sweep instead of a forge release.
 #
-# So this key is what makes forge usable on a machine, and a machine that has
-# the binary without this file gets an error naming the key. `forge config show`
-# reports which layer answered.
+# The binary and this file arrive together, so requiring it strands nothing:
+# install/manifests/ selects forge only for the machines this trust tree
+# deploys to. A machine holding one without the other is mid-provision, and
+# forge names the key rather than guessing. `forge config show` reports which
+# layer answered.
 versions_file: ~/.local/share/terminal-library-fleet/versions.json
