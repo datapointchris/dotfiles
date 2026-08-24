@@ -7,6 +7,7 @@
 
     worktree new <slug>    isolate before touching a repo another session is in
     worktree land          rebase, push onto the default branch, then clean up
+    worktree sweep         dispose of every worktree whose work already merged
     worktree list          every worktree on this machine, or one repo's
     worktree show          what one worktree carries, and who is in it
     worktree choose        pick one with fzf; prints the path it chose
@@ -22,6 +23,13 @@ as a fast-forward, so a single commit stays a single commit and the resulting
 history is identical to having committed on main directly. A PR is still there
 for work that grew into a large feature — push the branch and open one — which is
 why the landing decision is made at the end rather than guessed at the start.
+
+A worktree that went the PR route is finished somewhere this tool never sees: the
+merge happens on the forge and the branch is deleted there, so `land` never runs
+and nothing disposes of the directory. `sweep` is what collects them, from wherever
+you are standing, and it removes one only when the tree is clean, no session is in
+it, its commits are on the base branch, and the remote branch it was pushed to is
+gone. `drop` remains the verb for work you are abandoning rather than finishing.
 
 `list`, `show` and `choose` read every repo on the machine rather than the one you
 happen to be standing in: the worktrees exist because several sessions are running
@@ -80,6 +88,23 @@ FZF_DELIMITER = '\t'
 class State(StrEnum):
     CLEAN = 'clean'
     DIRTY = 'dirty'
+
+
+class Kept(StrEnum):
+    """Why a sweep left a worktree standing.
+
+    Every member names something that could still be lost, or something git could
+    not be asked. A worktree is removed only when none of them applies, so a check
+    that cannot be answered has to have a member here rather than fall through.
+    """
+
+    DIRTY = 'uncommitted changes'
+    SESSION = 'a session is standing in it'
+    UNFETCHED_BASE = 'its base branch has never been fetched, so nothing can be counted'
+    UNLANDED = 'commits that are on no other branch'
+    UNPUBLISHED = 'never pushed under its own name'
+    REMOTE_LIVE = 'its remote branch still exists'
+    REMOTE_UNREADABLE = "git could not list origin's branches"
 
 
 class Refused(Exception):
@@ -351,16 +376,79 @@ def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session])
     )
 
 
-def discover(repo_filter: str | None) -> list[Worktree]:
-    """Read the world once: every worktree, with what it carries and who is in it."""
+def discover(repo_filter: str | None, fetch: bool = False) -> list[Worktree]:
+    """Read the world once: every worktree, with what it carries and who is in it.
+
+    `fetch` updates each checkout with --prune first, and any decision about a
+    remote branch needs it. refs/remotes/origin/<branch> outlives the branch being
+    deleted on the remote until something prunes it, and the ahead count is measured
+    against a base that is itself only as current as the last fetch. Reads leave it
+    off: `list` is answering what is on this machine, and a network call per repo
+    would make the cheapest command the slowest.
+    """
     sessions = live_sessions()
+    rows = scan(worktree_root(), repo_filter)
+    if fetch:
+        for _, checkout, path in rows:
+            if checkout:
+                git_effect(path, 'fetch', '--prune', '--quiet', 'origin')
+
     found = []
-    for repo, checkout, path in scan(worktree_root(), repo_filter):
+    for repo, checkout, path in rows:
         try:
             found.append(describe(repo, path, checkout, sessions))
         except subprocess.CalledProcessError as error:
             say_warning(f'skipping {display_path(path)}: git refused ({error.stderr.strip() or error})')
     return found
+
+
+def remote_branches(checkout: Path) -> frozenset[str] | None:
+    """Every branch origin still carries, or None when git could not be asked.
+
+    One read per repo rather than a probe per worktree: the answer is the same for
+    every worktree cut from the same checkout. lstrip=3 drops `refs/remotes/origin`
+    and leaves the branch, slashes in its name included.
+    """
+    listing = git_optional(checkout, 'for-each-ref', '--format=%(refname:lstrip=3)', 'refs/remotes/origin/')
+    if listing is None:
+        return None
+    return frozenset(listing.splitlines())
+
+
+def published(worktree: Worktree) -> bool:
+    """Whether the branch was ever pushed under its own name.
+
+    `new` cuts the branch from origin/<base>, and git's branch.autoSetupMerge points
+    it at origin/<base> rather than at itself. `git push -u origin HEAD` is what moves
+    the upstream onto the branch's own ref. So a branch still tracking the base never
+    left this machine, and its remote branch cannot have been deleted because it never
+    existed.
+    """
+    merge = git_optional(worktree.path, 'config', '--get', f'branch.{worktree.branch}.merge')
+    return merge == f'refs/heads/{worktree.branch}'
+
+
+def held_by(worktree: Worktree, remote: frozenset[str] | None) -> Kept | None:
+    """Why this worktree survives a sweep, or None when every check clears it.
+
+    Ordered so the reason a reader is given is the one they would have named
+    themselves: what is in the tree, then who is in it, then what is in the branch.
+    """
+    if worktree.state is State.DIRTY:
+        return Kept.DIRTY
+    if worktree.sessions:
+        return Kept.SESSION
+    if worktree.ahead is None:
+        return Kept.UNFETCHED_BASE
+    if worktree.ahead > 0:
+        return Kept.UNLANDED
+    if not published(worktree):
+        return Kept.UNPUBLISHED
+    if remote is None:
+        return Kept.REMOTE_UNREADABLE
+    if worktree.branch in remote:
+        return Kept.REMOTE_LIVE
+    return None
 
 
 def session_cell(worktree: Worktree) -> str:
@@ -558,6 +646,46 @@ def prune_repo_dir(path: Path) -> None:
         parent.rmdir()
 
 
+def dispose(checkout: Path, path: Path, branch: str, *, force: bool) -> str | None:
+    """Remove a worktree and delete its branch. None when both worked, else what failed.
+
+    The two results are returned rather than discarded. A removal that fails silently
+    is how a worktree outlives the landing that announced success — the commits reach
+    the base branch, the directory stays, and $WORKTREE_ROOT grows a tree whose work
+    is already elsewhere.
+
+    `force` removes a tree carrying changes, which only a caller that has offered to
+    lose them may ask for.
+
+    -D rather than -d, in every caller, and the evidence is the caller's rather than
+    git's. `branch -d` asks whether the branch is merged into the *checkout's* HEAD,
+    and the checkout is a different tree whose local base branch is only as current as
+    its last pull. It refuses a branch that merged on the remote hours ago, and it
+    accepts one merged into a base that has since been rewritten. Every caller here
+    proves the commits are elsewhere against `origin/<base>` — the branch they were
+    actually merged into — immediately before calling.
+    """
+    removal = git_effect(checkout, 'worktree', 'remove', *(['--force'] if force else []), str(path))
+    if removal.returncode != 0:
+        return removal.stderr.strip() or 'git refused to remove the worktree'
+
+    prune_repo_dir(path)
+    deletion = git_effect(checkout, 'branch', '--quiet', '-D', branch)
+    if deletion.returncode != 0:
+        return deletion.stderr.strip() or f'git refused to delete {branch}'
+    return None
+
+
+def confirm(question: str) -> bool:
+    """A y/N a human has to type, on stderr beside everything else written for one.
+
+    Only ever called behind an isatty check. Nothing here invents an answer: a caller
+    with no terminal to ask is refused rather than defaulted either way.
+    """
+    ERR.print(f'  {escape(question)} [y/N] ', end='', highlight=False)
+    return sys.stdin.readline().strip().lower() in ('y', 'yes')
+
+
 def declares_setup(path: Path) -> bool:
     """Whether the repo declares a `setup` target to make a checkout runnable.
 
@@ -652,9 +780,9 @@ def cmd_land() -> int:
         raise Refused(f"Push rejected — origin/{base} moved again; run 'worktree land' to retry")
 
     say_ok(f'Landed {ahead} commit(s) on {base}')
-    git_effect(checkout, 'worktree', 'remove', str(path))
-    git_effect(checkout, 'branch', '--quiet', '-D', branch)
-    prune_repo_dir(path)
+    failure = dispose(checkout, path, branch, force=False)
+    if failure:
+        say_warning(f'{display_path(path)} is still here: {failure}')
 
     catch_up_checkout(checkout, base)
     say_info(f'cd {checkout}')
@@ -700,12 +828,94 @@ def cmd_drop(force: bool) -> int:
                 "'worktree land' to keep them, or 'worktree drop --force' to lose them",
             )
 
-    git_effect(checkout, 'worktree', 'remove', '--force', str(path))
-    git_effect(checkout, 'branch', '--quiet', '-D', branch)
-    prune_repo_dir(path)
+    failure = dispose(checkout, path, branch, force=True)
+    if failure:
+        raise Refused(f'Could not drop {display_path(path)}: {failure}')
+
     say_ok(f'Dropped {path}')
     say_info(f'cd {checkout}')
     return 0
+
+
+def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
+    """Dispose of every worktree whose work is finished, from wherever you are standing.
+
+    `land` and `drop` both read Path.cwd() and refuse outside a linked worktree, so
+    neither can reach one you are not in. Work that goes through a PR is merged on the
+    forge and the remote branch deleted there, and nothing ever runs `drop` — so the
+    directories accumulate, and every tool that reports branch state reports each one
+    forever.
+    """
+    worktrees = discover(repo_filter, fetch=True)
+
+    # Owner by path rather than by `repo`, which is a directory basename and so is not
+    # unique across a machine: ~/code/thing and ~/tools/thing are two repos with one
+    # name. This is the command that deletes, so it asks git which checkout owns each
+    # tree rather than joining on a string that can collide.
+    owners: dict[Path, Path] = {}
+    remotes: dict[Path, frozenset[str] | None] = {}
+    for worktree in worktrees:
+        if worktree.checkout:
+            continue
+        owner = primary_checkout(worktree.path)
+        if owner is None:
+            continue
+        owners[worktree.path] = owner
+        if owner not in remotes:
+            remotes[owner] = remote_branches(owner)
+
+    finished: list[Worktree] = []
+    kept: list[tuple[Worktree, Kept]] = []
+    for worktree in worktrees:
+        if worktree.checkout or worktree.path not in owners:
+            continue
+        reason = held_by(worktree, remotes[owners[worktree.path]])
+        if reason is None:
+            finished.append(worktree)
+        else:
+            kept.append((worktree, reason))
+
+    for worktree, reason in kept:
+        say_info(f'{display_path(worktree.path)} — kept, {reason}')
+
+    if not finished:
+        scope = f' of {repo_filter}' if repo_filter else ''
+        say_ok(f'Nothing to sweep: {len(kept)} worktree(s){scope} checked, none merged with its remote branch deleted')
+        return 0
+
+    ERR.print('')
+    for worktree in finished:
+        ERR.print(f'  [red]remove[/] {escape(display_path(worktree.path))}  [dim]{escape(worktree.branch)}[/]', highlight=False)
+    ERR.print('')
+
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            raise Refused(
+                f'Refusing to remove {len(finished)} worktree(s) with no terminal to ask',
+                'Pass --yes to sweep unattended',
+            )
+        if not confirm(f'Remove {len(finished)} worktree(s) and delete their branches?'):
+            say_info('Nothing removed')
+            return 0
+
+    swept = 0
+    for worktree in finished:
+        # The count is re-read against the branch these commits actually merged into,
+        # immediately before the write. Everything above was measured during the scan,
+        # and a session that committed into the worktree since then would lose the only
+        # copy. git_optional answering None is a read that failed, which is not a zero.
+        if git_optional(worktree.path, 'rev-list', '--count', f'origin/{worktree.base}..HEAD') != '0':
+            say_warning(f'{display_path(worktree.path)} — kept, {Kept.UNLANDED}')
+            continue
+
+        failure = dispose(owners[worktree.path], worktree.path, worktree.branch, force=False)
+        if failure:
+            say_warning(f'{display_path(worktree.path)} — {failure}')
+            continue
+        swept += 1
+
+    say_ok(f'Swept {swept} of {len(finished)} worktree(s)')
+    return 0 if swept == len(finished) else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -736,8 +946,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')
 
-    drop = commands.add_parser('drop', parents=[quiet], help='abandon this worktree without landing it')
+    drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
     drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
+
+    # `sweep` is the counterpart to `drop`, not a bulk spelling of it. `drop` abandons
+    # work that was never landed and needs you standing in it; `sweep` disposes of work
+    # that is already merged, anywhere on the machine, and refuses anything unlanded.
+    sweep = commands.add_parser(
+        'sweep',
+        parents=[quiet],
+        help='remove every finished worktree on the machine: merged, and deleted on the remote',
+    )
+    sweep.add_argument('repo', nargs='?', help='narrow to one repo')
+    sweep.add_argument('--yes', action='store_true', help='remove without asking; required when there is no terminal')
 
     listing = commands.add_parser('list', parents=[quiet], help="every worktree on this machine, or one repo's")
     listing.add_argument('repo', nargs='?', help='narrow to one repo')
@@ -766,6 +987,8 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
             return cmd_land()
         case 'drop':
             return cmd_drop(args.force)
+        case 'sweep':
+            return cmd_sweep(args.repo, args.yes)
         case 'list':
             if args.all:
                 args.subparser.error("no --all: 'worktree list' is already every repo, and 'worktree list <repo>' narrows it")
