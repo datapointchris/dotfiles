@@ -236,8 +236,8 @@ def by_command(item: DesiredItem) -> Evidence:
     return Evidence(Verdict.MATCHED, found) if found else Evidence(Verdict.MISSING, f'{item.executable} is not on PATH')
 
 
-def by_release(item: DesiredItem) -> Evidence:
-    """A release binary at the path this provider chose, not any binary of that name.
+def in_provider_dir(item: DesiredItem, directory: Path) -> Evidence:
+    """The binary in the directory this provider installs into, not any of that name.
 
     `by_command` answers "is a syncthing installed", which is a different question
     from "is the syncthing this declaration asks for installed" — and the two
@@ -245,12 +245,18 @@ def by_release(item: DesiredItem) -> Evidence:
     2026-08-16: Homebrew's syncthing sat on PATH answering the version the release
     publishes, so `dotfiles packages plan` had nothing to say about an entry no part
     of this repo had ever satisfied. `brew uninstall` would have taken the tool off
-    the machine with every verb still calling it converged.
+    the machine with every verb still calling it converged. Measured on mbp
+    2026-08-24: `oxker` and `rg` are `cargo_packages` entries whose only copy is a
+    brew formula somebody chose, and both report `MATCHED` off `/usr/local/bin`.
 
-    Narrow on purpose. The claim is that a binary *this* provider installed is at a
-    path it chose, which `ghrelease.installed_at` owns — nothing here reads a receipt
-    or asks who wrote the file, so a copy placed there by hand still counts. That is
-    the same trust `by_command` already puts in PATH, moved to one directory.
+    Narrow on purpose. The claim is that a binary *this* provider installed is in a
+    directory it owns — nothing here reads a receipt or asks who wrote the file, so
+    a copy placed there by hand still counts. That is the same trust `by_command`
+    already puts in PATH, moved to one directory.
+
+    `directory` comes from whichever module installs into it, so a provider that
+    moves its directory moves this with it. `toolchain.TOOL_PATH_DIRS` records what
+    retyping one costs.
 
     The other copy is named where there is one. A row reading "not installed" on a
     machine whose `syncthing --version` answers is the reading that sends somebody
@@ -258,13 +264,18 @@ def by_release(item: DesiredItem) -> Evidence:
     """
     if not item.executable:
         return Evidence(Verdict.UNKNOWN, 'installs no binary and declares no path, so nothing here can measure it')
-    placed = ghrelease.installed_at(item.executable)
+    placed = directory / item.executable
     if placed.exists():
         return Evidence(Verdict.MATCHED, str(placed))
     elsewhere = shutil.which(item.executable)
     if elsewhere:
         return Evidence(Verdict.MISSING, f'{placed} does not exist; the {item.executable} on PATH is {elsewhere}')
     return Evidence(Verdict.MISSING, f'{placed} does not exist')
+
+
+def by_release(item: DesiredItem) -> Evidence:
+    """A release binary, in the directory `ghrelease` puts one."""
+    return in_provider_dir(item, ghrelease.bin_dir())
 
 
 def by_path(item: DesiredItem) -> Evidence:

@@ -77,6 +77,14 @@ Every install method writes to its own directory, and PATH order decides which
 copy wins. User-installed tools outrank system ones, and each ecosystem keeps its
 own prefix.
 
+**A declared tool is measured in its own provider's directory, not by name on
+PATH.** `evidence.in_provider_dir` is where that happens, and the two questions
+come apart wherever another manager ships the same tool: a `cargo_packages` entry
+answering from `/usr/local/bin` is a brew formula somebody installed, not a
+declaration this repo has ever satisfied. Such an entry reads `missing` and the
+row names the copy that does answer, so a machine whose `rg --version` works is
+never reported as simply lacking it.
+
 **PATH is built in two places, and they are not the same order.** `.zshenv` sets
 a base every shell gets, including non-interactive ones. Interactive shells then
 run `.zshrc`, which rebuilds the front of PATH with `add_path`. **`add_path`
