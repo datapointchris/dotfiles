@@ -11,6 +11,7 @@ own.
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -203,17 +204,42 @@ def test_an_empty_diagnosis_is_falsey() -> None:
     assert diagnose.Diagnosis(unavailable=('lsof is missing',))
 
 
-def test_the_process_holding_a_running_binary_is_named(tmp_path: Path) -> None:
-    """The ntfy case, which took three commands by hand: the message named the
-    path and nothing said what was holding it."""
+def unavailable_probe() -> str:
+    """What is missing here that the holder fixture needs, or '' when nothing is."""
     if not diagnose.shutil.which('lsof'):
-        pytest.skip('lsof is what this probe uses, and it is not installed here')
+        return 'lsof is what this probe uses, and it is not installed here'
+    if sys.platform == 'darwin' and not diagnose.shutil.which('codesign'):
+        return 'codesign is what makes a copied system binary runnable on macOS'
+    return ''
 
+
+def held_binary(tmp_path: Path) -> tuple[Path, subprocess.Popen[bytes]]:
+    """A file a live process is executing, which is the state both probes read.
+
+    The copy is re-signed on macOS because `/bin/sleep` is an Apple *platform*
+    binary — signed `com.apple.sleep`, carrying a platform identifier — and the
+    kernel SIGKILLs it the instant it is executed from anywhere but the signed
+    system volume. A copy that dies on exec holds nothing, so `lsof` answers
+    correctly with nothing and the assertion below has no subject. Linux runs the
+    copy untouched.
+    """
     held = tmp_path / 'held'
     held.write_bytes(Path('/bin/sleep').read_bytes())
     held.chmod(0o755)
+    if sys.platform == 'darwin':
+        subprocess.run(['codesign', '--sign', '-', '--force', str(held)], check=True, capture_output=True)
     child = subprocess.Popen([str(held), '60'])
     time.sleep(0.2)
+    return held, child
+
+
+def test_the_process_holding_a_running_binary_is_named(tmp_path: Path) -> None:
+    """The ntfy case, which took three commands by hand: the message named the
+    path and nothing said what was holding it."""
+    if missing := unavailable_probe():
+        pytest.skip(missing)
+
+    held, child = held_binary(tmp_path)
     try:
         holder, why = diagnose.process_holding(held)
         assert why == ''
@@ -255,14 +281,10 @@ def test_a_known_failure_with_no_path_is_returned_untouched() -> None:
 def test_a_busy_binary_is_explained_and_the_unit_named(tmp_path: Path) -> None:
     """The ntfy case end to end. The provider's message is kept as the first
     line, because it is what the run actually reported."""
-    if not diagnose.shutil.which('lsof'):
-        pytest.skip('lsof is what this probe uses, and it is not installed here')
+    if missing := unavailable_probe():
+        pytest.skip(missing)
 
-    held = tmp_path / 'held'
-    held.write_bytes(Path('/bin/sleep').read_bytes())
-    held.chmod(0o755)
-    child = subprocess.Popen([str(held), '60'])
-    time.sleep(0.2)
+    held, child = held_binary(tmp_path)
     try:
         message = f"[Errno 26] Text file busy: '{held}'"
         explained = diagnose.explain('ghrelease/held', message).splitlines()
