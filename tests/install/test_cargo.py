@@ -112,6 +112,19 @@ def test_an_online_run_takes_binstall_even_when_a_bundle_is_present(home, staged
     assert reached.calls == [('cargo', 'binstall', '-y', 'fd-find')]
 
 
+def test_binstall_is_streamed_so_a_source_build_is_visible(home, staged, ready, crates) -> None:
+    """binstall's last strategy is `compile`, and a crate with no asset for this
+    machine's target reaches it silently. Held quiet, that is a multi-minute build
+    with nothing on screen, which reads as a deadlock — the failure `Output.STREAM`
+    exists to prevent. The default is streaming, so this pins that no caller here
+    opts out of it."""
+    reached = crates()
+
+    cargo.install(FD, LINUX, offline=False)
+
+    assert reached.kwargs[0].get('output', effects.Output.STREAM) is effects.Output.STREAM
+
+
 def test_an_offline_run_takes_the_bundle_without_trying_crates_io(home, staged, ready, crates) -> None:
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     reached = crates()
