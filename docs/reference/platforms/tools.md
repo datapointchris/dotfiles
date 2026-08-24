@@ -21,6 +21,10 @@ Silicon, and `cargo binstall` would fall through to compiling from source.
 brew's bottle covers both Mac architectures. So every Mac takes brew while every
 other platform takes the uniform GitHub-releases path.
 
+atuin is the exception because no Mac ever installed it the Linux way. A tool
+already installed one way does not get split for being slow — see
+[cargo binstall falls back to compiling](../../learnings/cargo-binstall-needs-release-binaries.md).
+
 ## fnm reaches non-interactive shells, and nvm cannot
 
 Node.js versions come from **fnm**, installed as a cargo package. Repos across

@@ -1,53 +1,56 @@
-# cargo binstall Needs Upstream Release Binaries
+# cargo binstall Falls Back to Compiling, and That Is Usually Fine
 
 ## Problem
 
-Consolidating Rust CLI tools into `cargo_packages` (installed via `cargo binstall`)
-looks like it should apply uniformly to every Rust tool. It does not. `cargo
-binstall` only fetches **prebuilt binaries** that upstream attaches to GitHub
-releases (or a comparable host). When a crate ships no release binaries, binstall
-silently falls back to `cargo install`, which **compiles from source**.
+`cargo binstall` tries three sources in order — `crate-meta-data`,
+`quick-install`, `compile`. The last is a source build, and it used to be taken
+**silently**: no error, no output, just a long pause that could not be told from a
+deadlock. That was the whole fault, and `providers/cargo.py` streams the call so
+binstall's own `will be installed from source` and `Compiling` lines reach the
+screen.
 
-`tokei` is the trap. It is written in Rust, so it seems like an obvious fit — but
-XAMPPRocky/tokei stopped attaching release binaries after `v13.0.0-alpha.0`. Its
-current stable tags carry zero assets. Moving it to `cargo_packages` therefore:
+A compiled crate still converges the machine. Slow is not broken, and a tool does
+not change its install method for being slow — every Rust CLI comes from
+`cargo binstall` on every machine, and a second declaration for one platform costs
+more than the build does.
 
-- compiles ~200 crates from source on every workstation install (slow), and
-- **cannot be carried in the offline bundle at all** — the bundler can only cache a
-  binary upstream actually published, so the firewalled WSL work box compiles it
-  from source too.
-
-The failure mode to know is the quiet one, and it does not need the registry to be
-unreachable. `cargo binstall` resolves a crate's version through the crates.io API
-and then fetches the binary from wherever the project publishes its releases —
-two different hosts, and only the second one has to be refused. When it is,
-binstall resolves every crate and downloads no prebuilt binary at all, falling
-back to a source build for *every* cargo package rather than failing. Run
-`dotfiles network check` on the machine in question if you need to know which half
-is answering.
-
-Contrast `ripgrep`, which ships prebuilt binaries for every target on each release —
-it moves to `cargo binstall` cleanly and even works on minimal LXC servers.
+**The one thing a source build genuinely breaks is the offline bundle.** The
+bundler caches a binary upstream published, so a crate with nothing to cache
+cannot ride along and the firewalled WSL box compiles it too. `tokei` is that
+case, which is why it sits in `system_packages`: it stopped attaching release
+binaries after `v13.0.0-alpha.0` and its stable tags carry zero assets.
 
 ## Solution
 
-Before moving a Rust tool into `cargo_packages`, confirm upstream ships release
-binaries for the targets you install:
+Ask binstall which source answers. It resolves exactly as an install would and
+writes nothing:
 
 ```bash
-gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name, (.assets[].name)'
+cargo binstall --force --dry-run -y --targets <triple> <crate>
 ```
 
-No matching assets → keep it in `system_packages` (pacman/brew ship maintained
-binaries) and leave a comment on the entry explaining why, so the consolidation
-isn't attempted again.
+`--force` is what makes it answer: without it a crate at the resolved version
+reports `already installed` and never says where the binary would come from.
+`--targets` lets one machine answer for the whole portfolio.
+
+**Counting a repo's assets answers the wrong question.** Upstream is only the
+first source. `cargo-bins/cargo-quickinstall` builds binaries for crates whose
+maintainers do not, and it covers `fnm`, `fd-find`, `eza` and `git-delta` on
+x86_64 macOS where upstream publishes nothing at all.
+
+If the answer is `will be installed from source`, that is information, not a
+defect. Act on it only when the crate also has to reach a machine that installs
+from the offline bundle.
 
 ## Key Learnings
 
-- "Written in Rust" does not imply "installable via cargo binstall" — the deciding
-  factor is whether **upstream publishes prebuilt release binaries**, not the language.
-- binstall's fallback to source compilation is silent; it turns a fast binary install
-  into a slow (or, offline, impossible) build without erroring up front.
-- Verify release assets with the `gh api` one-liner above before reclassifying a tool.
-- A tool that installs fine on your workstation can still break the offline WSL bundle —
-  always reason about the most-constrained machine before moving install methods.
+- A source build is visible and acceptable. Do not move a tool to another package
+  manager to avoid one — that splits a declaration across two sections, leaves the
+  old binary on every machine that already installed it, and buys a shorter
+  install.
+- "Written in Rust" does not imply "installable via cargo binstall", and neither
+  does a populated asset list. What decides it is whether a prebuilt binary exists
+  for the target, from any of the three strategies.
+- A refused *download* host produces the same source build with every asset in
+  place: the crates.io API and the release host are two hosts, and only the second
+  has to be blocked. `dotfiles network check` says which half is answering.

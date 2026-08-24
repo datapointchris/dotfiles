@@ -30,7 +30,6 @@ from dotfiles import effects
 from dotfiles import paths
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
-from dotfiles.effects import Output
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle
@@ -146,8 +145,20 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
     directly, which it also supports: cargo is a hard dependency of this provider
     either way — the Rust toolchain converges at an earlier stage — and the
     subcommand spelling is what every crates.io instruction uses.
+
+    **Streamed, because binstall's last strategy is a source build.** Its default
+    order is `crate-meta-data,quick-install,compile`, so a crate whose upstream
+    publishes no asset for this machine's target does not fail — it falls through
+    to `cargo install` and compiles, for as long as that crate takes. Held quiet
+    that is indistinguishable from a deadlock, which is the failure
+    `Output.STREAM` already names: buffering is what makes a long install look
+    hung. Streamed, the `Compiling` lines say which crate is building and that it
+    is still moving, and a declaration that has drifted onto the compile path
+    announces itself rather than being found by stopwatch. `packages.yml` puts
+    such a tool in `system_packages` instead; nothing here enforces that, because
+    a slow install still converges and a refusal does not.
     """
-    completed = effects.run(['cargo', 'binstall', '-y', entry.name], output=Output.QUIET)
+    completed = effects.run(['cargo', 'binstall', '-y', entry.name])
     if completed.ok:
         return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
     return Result(
