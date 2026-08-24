@@ -434,6 +434,9 @@ class CargoProvider(CatalogProvider):
     the release its project published, and places the binary.
     """
 
+    def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        return ev.in_provider_dir(item, cargo.cargo_bin())
+
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.CargoPackage):
@@ -450,6 +453,9 @@ class GoToolProvider(CatalogProvider):
     `go install` resolves the module, builds it and places the binary, and the
     only alternative source is the prebuilt binary an offline bundle carries.
     """
+
+    def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        return ev.in_provider_dir(item, gotool.gobin())
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
@@ -468,6 +474,9 @@ class NpmProvider(CatalogProvider):
     asking per package whether it is behind is asking a question npm already
     answers for itself — which is what `resources/packages.CURRENCY` says.
     """
+
+    def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        return ev.in_provider_dir(item, npm.prefix() / 'bin')
 
     def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry

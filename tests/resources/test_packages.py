@@ -56,24 +56,32 @@ from dotfiles.session import Session
 
 @pytest.fixture(autouse=True)
 def a_home_this_test_owns(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`$HOME` named as the directory `harness.session` builds a home in, and its
-    `~/.local/bin` put on `PATH`.
+    """`$HOME` named as the directory `harness.session` builds a home in, and every
+    directory a provider installs into put on `PATH`.
 
     Two halves of one machine that have to agree. `session` hands the `Session` a
-    home under `tmp_path`, while every provider resolves `providers.bin_dir` off
+    home under `tmp_path`, while every provider resolves its own directory off
     `Path.home()` — the *process's* home, not the Session's. Unnamed, a release
     measured by provenance reads the developer's real `~/.local/bin`: the test then
     passes on a runner and fails at a desk that happens to have the tool, which is
     the fixture reading the machine it runs on that `fake_bin` exists to stop.
+
+    The provider directories are on `PATH` for the reason `toolchain.TOOL_PATH_DIRS`
+    puts them there on a real machine: a tool is invisible to anything walking
+    `PATH` unless the directory holding it is named. `_shadowing` is that walk, and
+    without them a declared tool measured at its provider's directory has no copy on
+    `PATH` for a second one to shadow.
 
     Autouse because the hole is one a test cannot see it has, and behind `fake_bin`
     on `PATH` because that is the order a real machine has — a shadowed package
     manager answers ahead of anything installed.
     """
     home = tmp_path / 'home'
-    (home / '.local' / 'bin').mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv('HOME', str(home))
-    monkeypatch.setenv('PATH', f'{fake_bin}{os.pathsep}{home / ".local" / "bin"}{os.pathsep}{os.environ["PATH"]}')
+    installed = [providers.bin_dir(), cargo.cargo_bin(), gotool.gobin(), npm.prefix() / 'bin']
+    for directory in installed:
+        directory.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv('PATH', os.pathsep.join([str(fake_bin), *map(str, installed), os.environ['PATH']]))
     # Anything resolving an XDG directory prefers the variable over `$HOME`, so a
     # developer whose `$XDG_CONFIG_HOME` is set has `ghrelease.unit_dir` reading
     # their real `~/.config/systemd/user` — where this desk will have a syncthing
@@ -82,16 +90,31 @@ def a_home_this_test_owns(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.Mo
     return home
 
 
-def released(name: str, version: str | None = None) -> Path:
-    """A release this machine has, at the path its own provider chose.
+def placed(directory: Path, name: str, version: str | None = None) -> Path:
+    """A tool this machine has, in the directory its own provider installs into.
 
-    `evidence.by_release` measures a release entry at `providers.bin_dir()` rather
-    than on `PATH`, so a binary anywhere else is one this repo did not install — the
-    whole distinction the provenance check exists to draw. Placing through
-    `bin_dir()` rather than a literal keeps the fixture and the code reading one
+    `evidence.in_provider_dir` measures an entry there rather than on `PATH`, so a
+    binary anywhere else is one this repo did not install — the whole distinction
+    the provenance check exists to draw. Placing through the provider's own
+    function rather than a literal keeps the fixture and the code reading one
     answer.
     """
-    return reporting(providers.bin_dir(), name, version) if version is not None else executable(providers.bin_dir(), name)
+    return reporting(directory, name, version) if version is not None else executable(directory, name)
+
+
+def released(name: str, version: str | None = None) -> Path:
+    """A release, where `ghrelease` puts one."""
+    return placed(providers.bin_dir(), name, version)
+
+
+def cargo_installed(name: str, version: str | None = None) -> Path:
+    """A Rust CLI, where `cargo binstall` puts one."""
+    return placed(cargo.cargo_bin(), name, version)
+
+
+def go_installed(name: str, version: str | None = None) -> Path:
+    """A Go tool, where `go install` puts one."""
+    return placed(gotool.gobin(), name, version)
 
 
 def released_script(name: str, script: str) -> Path:
@@ -123,11 +146,34 @@ def test_a_declared_tool_that_is_absent_is_missing(tmp_path: Path, fake_bin: Pat
     assert verdicts(live) == {'go/task': Verdict.MISSING}
 
 
-def test_a_declared_tool_on_path_is_matched(tmp_path: Path, fake_bin: Path) -> None:
-    executable(fake_bin, 'task')
+def test_a_declared_tool_in_its_provider_directory_is_matched(tmp_path: Path, fake_bin: Path) -> None:
+    go_installed('task')
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert verdicts(live) == {'go/task': Verdict.MATCHED}
+
+
+def test_a_declared_tool_only_somewhere_else_on_path_is_not_matched(tmp_path: Path, fake_bin: Path) -> None:
+    """The provenance question, for a Go tool. Measured on mbp 2026-08-24: `rg` and
+    `oxker` are `cargo_packages` entries whose only copy is a brew formula somebody
+    chose, and both reported MATCHED off `/usr/local/bin` while cargo had never
+    installed either."""
+    executable(fake_bin, 'task')
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    assert verdicts(live) == {'go/task': Verdict.MISSING}
+
+
+def test_the_copy_that_does_answer_is_named_for_a_provider_directory(tmp_path: Path, fake_bin: Path) -> None:
+    """A row reading "not installed" on a machine whose `task --version` answers is
+    the reading that sends somebody looking for a broken installer."""
+    elsewhere = executable(fake_bin, 'task')
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+    observed = packages.RESOURCE.observe(live, live.plan)
+
+    detail = observed.evidence['go/task'].detail
+    assert str(gotool.gobin() / 'task') in detail, 'the directory that should hold it'
+    assert str(elsewhere) in detail, 'and the copy that answers instead'
 
 
 def test_an_entry_the_manifest_does_not_declare_is_not_looked_for(tmp_path: Path, fake_bin: Path) -> None:
@@ -141,7 +187,7 @@ def test_the_command_field_is_what_gets_looked_up(tmp_path: Path, fake_bin: Path
     """ripgrep ships rg, `@taplo/cli` ships taplo. Without this an installed tool
     reads as missing forever, which is the failure mode that makes a checker get
     ignored."""
-    executable(fake_bin, 'rg')
+    cargo_installed('rg')
     declared = {'cargo_packages': [{'name': 'ripgrep', 'command': 'rg'}]}
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['ripgrep']})
 
@@ -672,7 +718,7 @@ def test_a_missing_release_is_missing_rather_than_unmeasured(tmp_path: Path, fak
 def test_a_registry_installed_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """apt and npm upgrade on their own schedule, and an entry naming no repo has
     no upstream to ask. Either way it is a question nothing here owns."""
-    executable(fake_bin, 'task')
+    go_installed('task')
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
     assert changes(live) == ()
@@ -686,7 +732,7 @@ def test_a_cargo_package_behind_its_release_is_stale(tmp_path: Path, fake_bin: P
     """`cargo binstall` is the upgrade, so being behind the repo the declaration
     names is drift rather than someone else's schedule. Without this, converting
     the phase would have silently removed the only thing that moved these."""
-    reporting(fake_bin, 'fd', 'fd 10.2.0')
+    cargo_installed('fd', 'fd 10.2.0')
     cached(release_cache, {'sharkdp/fd': 'v10.4.2'})
     live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
 
@@ -703,7 +749,7 @@ def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin:
     test that only checked the verdict would pass while still running the thing.
     """
     ran = tmp_path / 'ran'
-    executable(fake_bin, 'webviewrs', f'#!/bin/sh\ntouch "{ran}"\nprintf "1.0.0\\n"\n')
+    executable(cargo.cargo_bin(), 'webviewrs', f'#!/bin/sh\ntouch "{ran}"\nprintf "1.0.0\\n"\n')
     cached(release_cache, {'datapointchris/webviewrs': 'v2.0.0'})
     declared = {'cargo_packages': [{'name': 'webviewrs', 'github_repo': 'datapointchris/webviewrs', 'reports_version': False}]}
     live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['webviewrs']})
@@ -853,7 +899,7 @@ def test_offline_never_refreshes_however_it_was_asked(tmp_path: Path, fake_bin: 
 
 
 def test_a_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin: Path) -> None:
-    executable(fake_bin, 'task')
+    go_installed('task')
     live = dc.replace(session(tmp_path, GO_TOOL, DECLARES_TASK), reinstall=True)
 
     found = changes(live)
@@ -865,7 +911,7 @@ def test_a_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin
 def test_an_installed_tool_is_left_alone_without_the_flag(tmp_path: Path, fake_bin: Path) -> None:
     """The default, and the thing the flag exists to override: a tool that measures
     fine is not touched."""
-    executable(fake_bin, 'task')
+    go_installed('task')
 
     assert changes(session(tmp_path, GO_TOOL, DECLARES_TASK)) == ()
 
@@ -1244,7 +1290,7 @@ def shadow_changes(live: Session) -> list[Change]:
 
 
 def test_one_copy_of_a_declared_tool_reports_nothing(tmp_path: Path, fake_bin: Path) -> None:
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
 
     assert shadow_changes(live) == []
@@ -1257,7 +1303,7 @@ def test_a_second_copy_on_path_is_reported_against_the_item_that_declares_it(
     and the loser is invisible to every other check: `apply` installs, evidence
     finds *a* binary, and the machine reports converged while the tool anyone
     actually runs came from somewhere else."""
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     stray = executable(second_bin(tmp_path, monkeypatch), 'frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
 
@@ -1265,14 +1311,14 @@ def test_a_second_copy_on_path_is_reported_against_the_item_that_declares_it(
 
     assert [change.item for change in found] == ['cargo/frobnicate']
     assert found[0].observed == str(stray)
-    assert str(fake_bin / 'frob') in found[0].detail
+    assert found[0].detail.endswith('.cargo/bin/frob'), 'the copy that wins is named, abbreviated under ~'
 
 
 def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`check`'s subject and not `plan`'s. The declaration says what should be
     installed and cannot say which of two copies may be removed safely, so an
     `apply` that deleted one would be acting on a judgement nobody declared."""
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     executable(second_bin(tmp_path, monkeypatch), 'frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
 
@@ -1286,7 +1332,7 @@ def test_the_same_binary_reachable_twice_is_one_installation(tmp_path: Path, fak
     """`~/.local/bin/fd` pointing at `/usr/bin/fd` is one tool with two names.
     Counting paths rather than real paths reports every symlinked companion this
     repo deploys on purpose."""
-    real = executable(fake_bin, 'frob')
+    real = cargo_installed('frob')
     (second_bin(tmp_path, monkeypatch) / 'frob').symlink_to(real)
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
 
@@ -1298,7 +1344,7 @@ def test_a_copy_a_declared_package_owns_is_explained(tmp_path: Path, fake_bin: P
     while pacman's `nodejs` ships `/usr/bin/node` underneath, and that second copy
     is the bootstrap the declaration asks for. Asking the package manager who put
     a file there is what separates it from a stray."""
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     executable(second_bin(tmp_path, monkeypatch), 'frob')
     executable(fake_bin, 'pacman', OWNED_BY_FROBNICATE)
     declared = {**CARGO_TOOL, 'system_packages': [{'name': 'frobnicate', 'apt': 'frobnicate', 'pacman': 'frobnicate'}]}
@@ -1333,7 +1379,7 @@ def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake
     """The inverse, and the direction that must not fail open: a package manager
     answering at all is not an explanation, or every `/usr/bin` copy on a Linux
     box would excuse itself."""
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     executable(second_bin(tmp_path, monkeypatch), 'frob')
     executable(fake_bin, 'pacman', OWNED_BY_FROBNICATE)
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
@@ -1345,7 +1391,7 @@ def test_a_copy_inside_the_checkout_is_not_machine_state(tmp_path: Path, fake_bi
     """`uv run dotfiles check` from the repo puts `.venv/bin` first on PATH, so
     every tool the dev environment also carries reads as duplicated. A second copy
     that exists for the duration of a development command is not the machine."""
-    executable(fake_bin, 'frob')
+    cargo_installed('frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
     inside = live.repo / '.venv' / 'bin'
     inside.mkdir(parents=True)
