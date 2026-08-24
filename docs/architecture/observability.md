@@ -16,9 +16,10 @@ the thing none of them can state, because each knows only its own end.
 
 All three sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
 folder. The fleet shares one history that way, and the work box keeps its own by
-construction rather than by a rule, because it is not on Syncthing. Two of the
-names carry the box because the directory is shared; what collided before they
-did is `src/dotfiles/paths.py`.
+construction rather than by a rule, because it is not on Syncthing. Every name
+carries the box because the directory is shared — a run id embeds it
+(`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
+What collided before they did is `src/dotfiles/paths.py`.
 
 Nothing here is pushed at a person. Every one of the three is read by asking for
 it, and the schedule that refreshes the status file is a `steps` row declared in

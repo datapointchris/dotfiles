@@ -48,7 +48,7 @@ Ubuntu distro, then Apply & Restart. The CLI appears at
 
 Until that toggle is on, Ubuntu's own `/usr/bin/docker` stub answers instead. It exists only to
 print the "could not be found in this WSL 2 distro" hint, and it exits 1 for every subcommand —
-including `docker completion zsh`. That is why `cache_eval` in `.zshrc` records a failure marker
+including `docker completion zsh`. That is why `cache_generate` in `.zshrc` records a failure marker
 for it rather than retrying the generator in every shell. Enabling the integration changes what
 `docker` resolves to, the marker stops matching, and completion regenerates on the next shell.
 

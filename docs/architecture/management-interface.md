@@ -140,7 +140,7 @@ off the whole interactive plugin set, because a box that exists to be SSHed into
 for diagnosis wants a fast shell rather than a personal one. The plugins are
 still *installed* there, so turning one back on mid-debugging is a `~/.env` edit
 rather than a reinstall. What each flag costs on this machine is
-`zsh-startup --plugins`.
+`zsh-startup flags`.
 
 A plugin must be sourced at top level, never from inside a helper function. A
 function scope changes what a plugin's own `typeset` calls do, so the loads stay

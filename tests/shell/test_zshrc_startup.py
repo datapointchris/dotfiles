@@ -259,52 +259,62 @@ def test_neither_branch_of_an_optional_tool_writes_to_stderr(tmp_path: Path, too
 
 ZSHRC = ZSH_CONFIG / '.zshrc'
 
-SOURCED_AT_STARTUP = {'zoxide', 'fzf', 'atuin', 'direnv', 'doit-widgets'}
-"""The blocks `cache_eval` may still source, because none of them is a completion.
+CACHE_COMPLETION_CALL = re.compile(r'\bcache_completion\s+(\S+)')
+"""One `cache_completion` call, capturing the tool it autoloads a completion for.
 
-Each defines an alias, a hook or a keybinding that has to exist before the first
-prompt, so there is nothing to defer. Everything else a tool generates is a
-completion function and belongs on fpath.
-"""
-
-CACHE_EVAL_CALL = re.compile(r'\bcache_eval\s+(?:-b\s+\S+\s+)?(\S+)')
-"""One `cache_eval` call, capturing the cache key it writes and sources.
-
-Matched anywhere on the line rather than at its start: the calls are variously
-indented inside an `if`, chained behind a `flag_enabled &&`, and inside a
-function body, so anchoring finds a third of them and the assertion below passes
-on the ones it never looked at. `-b BIN` is consumed and discarded — the binary
-is what staleness is measured against, and the key is what names the file.
+Matched anywhere on the line rather than at its start, because these calls are
+variously indented and chained and anchoring would find a fraction of them —
+which is the failure mode where the assertion passes on the calls it never saw.
 """
 
 
-def test_the_function_directory_joins_fpath_before_compinit_reads_it() -> None:
-    """compinit scans fpath once and caches the result in its dump.
+def uncommented() -> list[str]:
+    return [line for line in ZSHRC.read_text().splitlines() if not line.lstrip().startswith('#')]
 
-    A directory added afterwards is never indexed, and the failure is silent in
-    the worst way: every shell starts clean, nothing reaches stderr, and Tab does
-    nothing for every tool whose completion is generated. Ordering is the whole
-    correctness of the arrangement, so it is asserted on position in the file
-    rather than on behaviour, which would need a machine carrying the tools.
+
+def test_every_autoloaded_completion_is_generated_before_compinit_reads_fpath() -> None:
+    """compinit enumerates fpath once, so a function written after it is invisible.
+
+    Derived from where the `cache_completion` calls actually sit rather than from
+    the `fpath=` line alone. The hazard is a call placed after compinit, and the
+    natural place to add one is beside the `cache_eval` block much further down —
+    which a fixed two-line comparison passes unchanged while the tool it added
+    silently has no completion.
     """
-    lines = ZSHRC.read_text().splitlines()
-    joined = next(i for i, line in enumerate(lines) if line.startswith('fpath=("$ZSH_COMPLETION_FPATH"'))
+    lines = uncommented()
+    calls = [i for i, line in enumerate(lines) if CACHE_COMPLETION_CALL.search(line) and 'cache_completion()' not in line]
+    joined = next(i for i, line in enumerate(lines) if line.startswith('fpath=("$ZSH_AUTOLOADED"'))
     initialised = next(i for i, line in enumerate(lines) if line.startswith('compinit -d '))
 
+    assert calls, 'no cache_completion call was matched, so this asserts nothing'
     assert joined < initialised, 'the generated functions are written where compinit will never index them'
+    late = [lines[i].strip() for i in calls if i > initialised]
+    assert not late, f'these run after compinit and are never registered: {late}'
 
 
-def test_every_generated_completion_is_written_rather_than_sourced() -> None:
-    """`cache_eval` sources its file; `cache_completion` writes it to fpath.
+def test_a_completion_that_compinit_would_skip_is_refused_rather_than_written(tmp_path: Path) -> None:
+    """compinit reads the literal first line for a `#compdef` tag.
 
-    Sourcing a completion costs its whole size on every shell, whether or not
-    anything ever completes that tool — `ruff` and `uv` generate 668K and 516K of
-    clap definitions between them. The split is what keeps that off the startup
-    path, and a completion moved back to `cache_eval` would reintroduce it
-    silently, because sourcing works perfectly well and only costs time.
+    A file without one is enumerated, skipped, and never mentioned — Tab then
+    behaves exactly as it does for a tool that ships no completion, which is why
+    four tools lost theirs here with every guard in this file passing. Typer's
+    template emits a blank line before the tag and is the shape that caused it.
+
+    Asserted through a stub rather than a real tool, so this runs on a machine
+    carrying none of them.
     """
-    body = [line for line in ZSHRC.read_text().splitlines() if not line.lstrip().startswith('#')]
-    sourced = {matched.group(1) for line in body for matched in [CACHE_EVAL_CALL.search(line)] if matched}
+    home = deployed_home(tmp_path)
+    fake = home / 'bin'
+    fake.mkdir()
+    # A leading blank line, exactly as Typer's generator emits it.
+    (fake / 'blanktool').write_text("#!/bin/sh\nprintf '\\n#compdef blanktool\\n_blanktool() { _message x }\\n'\n")
+    (fake / 'blanktool').chmod(0o755)
 
-    assert sourced, 'no cache_eval call was matched, so this asserts nothing'
-    assert sourced <= SOURCED_AT_STARTUP, f'a completion is sourced at startup rather than autoloaded: {sourced}'
+    result = start(
+        home,
+        path=f'{fake}{os.pathsep}{BARE_PATH}',
+        snippet='cache_completion blanktool blanktool; [[ -e $ZSH_AUTOLOADED/_blanktool ]] && print left || print removed',
+    )
+
+    assert 'not a #compdef tag' in result.stderr, f'a file compinit would skip was accepted:\n{result.stderr}'
+    assert result.stdout.strip().endswith('removed'), 'the unusable file was left on fpath, where it holds the dump count'
