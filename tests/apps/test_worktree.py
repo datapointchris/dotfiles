@@ -100,9 +100,16 @@ def fleet(tmp_path: Path) -> dict[str, Path]:
 @pytest.fixture
 def bin_dir(tmp_path: Path) -> Path:
     """A directory that leads PATH, so anything written into it shadows the real
-    tool of that name."""
+    tool of that name.
+
+    It starts with a `claude-sessions` reporting an empty machine. Without one the
+    real binary answers, and what it says is whichever sessions happen to be running
+    — so a suite that gates on sessions would pass on this laptop and, where the tool
+    is not installed at all, take a different branch on CI.
+    """
     path = tmp_path / 'bin'
     path.mkdir()
+    stub_sessions(path)
     return path
 
 
@@ -127,6 +134,11 @@ def run(tmp_path: Path, fleet: dict[str, Path], bin_dir: Path):
     HOME is the fixture root so `~`-relative paths in the listing are the
     fixture's, and PATH leads with the stub directory so a shadowed
     `claude-sessions` or `fzf` is the one that answers.
+
+    stdin is /dev/null so the suite is the same run whether or not a terminal
+    launched it. capture_output leaves stdin inherited, and `sweep` asks a y/N on a
+    terminal — under `pytest` from a shell that would block forever, and under CI it
+    would not, so the two would be testing different code.
     """
 
     def _run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -137,7 +149,14 @@ def run(tmp_path: Path, fleet: dict[str, Path], bin_dir: Path):
             'UV_CACHE_DIR': UV_CACHE,
             'WORKTREE_ROOT': str(fleet['roots']),
         }
-        return subprocess.run([str(WORKTREE), *args], cwd=cwd, capture_output=True, text=True, env=env)
+        return subprocess.run(
+            [str(WORKTREE), *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            env=env,
+            stdin=subprocess.DEVNULL,
+        )
 
     return _run
 
@@ -148,13 +167,56 @@ def commit_in(worktree: Path, name: str) -> None:
     git(worktree, 'commit', '-qm', f'feat: {name}')
 
 
+def origin_of(clone: Path) -> Path:
+    """The bare repo `make_repo` cloned from, which is the only place a branch can be
+    deleted without this clone noticing."""
+    return clone.parent / f'{clone.name}.git'
+
+
+def publish(clone: Path, worktree: Path, branch: str) -> None:
+    """Push the branch under its own name, so its upstream is its own ref.
+
+    That is what `git push -u origin HEAD` does to a worktree branch, and it is the
+    only thing separating work that reached a remote from work that never left the
+    machine — `new` points a fresh branch at origin/<base>, not at itself.
+    """
+    git(worktree, 'push', '-q', '-u', 'origin', branch)
+
+
+def delete_on_origin(clone: Path, branch: str) -> None:
+    """Delete a branch in the bare repo, where this clone cannot see it happen.
+
+    `sweep` looks for a remote-tracking ref that is still here and no longer there,
+    so the deletion has to leave one behind for the prune to find. `push --delete`
+    drops that ref as a side effect, which is a fixture that passes without ever
+    exercising the check.
+    """
+    git(origin_of(clone), 'update-ref', '-d', f'refs/heads/{branch}')
+
+
+def merged_worktree(clone: Path, roots: Path, run: Any, branch: str) -> Path:
+    """The one shape `sweep` collects: a worktree whose commits are on main and whose
+    remote branch has been deleted. Returns its path."""
+    run(clone, 'new', branch)
+    worktree = roots / clone.name / branch
+    commit_in(worktree, f'{branch}.txt')
+    publish(clone, worktree, branch)
+    git(worktree, 'push', '-q', 'origin', 'HEAD:main')
+    delete_on_origin(clone, branch)
+    return worktree
+
+
 def plain(text: str) -> str:
     """The text with its colour stripped, which is what an assertion reads."""
     return ANSI.sub('', text)
 
 
 def fake_worktree(app: Any, path: str, **overrides: Any) -> Any:
-    """A Worktree with no repository behind it, for the renderers to lay out."""
+    """A Worktree with no repository behind it, for the renderers to lay out.
+
+    Its defaults are also the shape `sweep` removes — clean, nobody in it, nothing
+    the base branch lacks — so a `held_by` case states only the one field it is about.
+    """
     fields: dict[str, Any] = {
         'repo': 'primary',
         'path': Path(path),
@@ -165,8 +227,40 @@ def fake_worktree(app: Any, path: str, **overrides: Any) -> Any:
         'behind': 0,
         'state': app.State.CLEAN,
         'sessions': (),
+        'detached': False,
     }
     return app.Worktree(**(fields | overrides))
+
+
+def fake_evidence(app: Any, **overrides: Any) -> Any:
+    """Evidence that clears every check, so a case states only its one difference.
+
+    An empty `remote` means origin carries no branch of this name, which with
+    `published` is the pair that says *pushed once, deleted since*.
+    """
+    fields: dict[str, Any] = {'published': True, 'fetched': True, 'remote': frozenset()}
+    return app.Evidence(**(fields | overrides))
+
+
+def held_by_cases(app: Any) -> list[tuple[Any, dict[str, Any], dict[str, Any]]]:
+    """Every reason a worktree survives, as (member, worktree fields, evidence fields).
+
+    One table rather than one test each, because the claim worth asserting is that it
+    covers `Kept` exactly. A member with no row here is a reason nothing can produce.
+    """
+    occupant = app.Session(name='reviewer', status='idle', waiting=None, cwd=Path('/w/alpha'), tmux=None)
+    return [
+        (app.Kept.DIRTY, {'state': app.State.DIRTY}, {}),
+        (app.Kept.SESSIONS_UNREADABLE, {'sessions': None}, {}),
+        (app.Kept.SESSION, {'sessions': (occupant,)}, {}),
+        (app.Kept.DETACHED, {'branch': 'HEAD', 'detached': True}, {}),
+        (app.Kept.UNFETCHED_REMOTE, {}, {'fetched': False}),
+        (app.Kept.UNFETCHED_BASE, {'ahead': None}, {}),
+        (app.Kept.UNLANDED, {'ahead': 2}, {}),
+        (app.Kept.UNPUBLISHED, {}, {'published': False}),
+        (app.Kept.REMOTE_UNREADABLE, {}, {'remote': None}),
+        (app.Kept.REMOTE_LIVE, {}, {'remote': frozenset({'alpha'})}),
+    ]
 
 
 def rows(result: subprocess.CompletedProcess[str]) -> list[str]:
@@ -325,6 +419,43 @@ class TestNothingIsDestroyed:
         assert forced.returncode == 0
         assert not alpha.exists()
 
+    def test_a_removal_that_failed_is_said_rather_than_announced_as_cleaned_up(self, fleet, run):
+        """A removal git refuses leaves the worktree standing after the landing has
+        already announced success, and $WORKTREE_ROOT then holds a tree whose work is
+        on main. The landing line alone cannot be the whole verdict.
+
+        A lock is the deterministic way to make git refuse: the tree is clean, so
+        every other refusal has already been ruled out by the time removal runs.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'x')
+        git(fleet['primary'], 'worktree', 'lock', str(alpha))
+
+        result = run(alpha, 'land')
+
+        assert 'feat: x' in git(fleet['primary'], 'log', '--oneline', 'origin/main'), 'the landing itself still happened'
+        assert alpha.exists()
+        assert 'still here' in plain(result.stderr)
+
+    def test_a_kept_branch_is_not_reported_as_a_worktree_still_standing(self, fleet, run, worktree_app):
+        """The two halves of a disposal fail separately, and after the branch deletion
+        fails the directory is already gone.
+
+        One failure value cannot carry that, and a caller holding one says the worktree
+        is still here about a path that no longer exists — sending a reader to look at
+        a directory rather than at the ref that survived.
+        """
+        checkout = fleet['primary']
+        run(checkout, 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+
+        outcome, detail = worktree_app.dispose(checkout, alpha, 'no-such-branch', force=False)
+
+        assert outcome is worktree_app.Disposal.BRANCH_KEPT
+        assert not alpha.exists(), 'the removal half succeeded, so the path is gone'
+        assert detail
+
     def test_a_busy_primary_checkout_is_left_alone(self, fleet, run):
         """Another session may be working there, and its tree is not ours to move."""
         run(fleet['primary'], 'new', 'alpha')
@@ -336,6 +467,307 @@ class TestNothingIsDestroyed:
 
         assert result.returncode == 0, 'the landing still happens; only the catch-up is skipped'
         assert (fleet['primary'] / 'f.txt').read_text() == 'someone is editing this\n'
+
+
+class TestHeldBy:
+    """The decision that deletes a directory, exercised with no repository behind it.
+
+    `held_by` is a function of its arguments, which is what lets a case *state* the
+    thing it is about instead of assembling a repo that happens to produce it. Three
+    of the reasons cannot be built through the CLI at all — a base branch nobody has
+    fetched is restored by the sweep's own fetch, and `for-each-ref` returns 0 on any
+    valid repository — so without this class they are guards no test can reach.
+    """
+
+    def test_a_finished_worktree_clears_every_check(self, worktree_app):
+        cleared = fake_worktree(worktree_app, '/w/alpha')
+
+        assert worktree_app.held_by(cleared, fake_evidence(worktree_app)) is None
+
+    def test_each_reason_is_what_its_own_state_produces(self, worktree_app):
+        for member, worktree_fields, evidence_fields in held_by_cases(worktree_app):
+            worktree = fake_worktree(worktree_app, '/w/alpha', **worktree_fields)
+            evidence = fake_evidence(worktree_app, **evidence_fields)
+            assert worktree_app.held_by(worktree, evidence) is member, member
+
+    def test_every_reason_is_reachable(self, worktree_app):
+        """A `Kept` member nothing returns is a guard that was written and never wired.
+
+        The enum is where the guards are declared, so it is the side to compare
+        against — a table that only covered what the code happens to do would agree
+        with the code by construction and assert nothing.
+        """
+        covered = {member for member, _, _ in held_by_cases(worktree_app)}
+
+        assert covered == set(worktree_app.Kept)
+
+    def test_an_unanswerable_check_never_reads_as_cleared(self, worktree_app):
+        """The three reads that can fail, each proved to hold the worktree rather than
+        resolve to a falsy value the next check walks past.
+
+        This is the direction that costs work: `held_by` ends in *remove*, so a failed
+        read that returns an empty tuple or a missing ref authorises a deletion on the
+        strength of a question nobody managed to ask.
+        """
+        unanswerable = [
+            (fake_worktree(worktree_app, '/w/alpha', sessions=None), fake_evidence(worktree_app)),
+            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, fetched=False)),
+            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, remote=None)),
+        ]
+
+        for worktree, evidence in unanswerable:
+            assert worktree_app.held_by(worktree, evidence) is not None
+
+
+class TestSweep:
+    """`sweep` removes worktrees nobody is standing in, so every test here is about
+    what it declines to touch.
+
+    `land` and `drop` both read Path.cwd(), which means the only worktrees they can
+    dispose of are ones a session is already in. Work that goes through a PR is
+    merged on the forge and its branch deleted there, so `land` never runs and the
+    directory outlives the work by months. `sweep` is what reaches those, and the
+    price of reaching them is that it acts on trees whose owner is not present to
+    object.
+    """
+
+    def test_a_merged_branch_with_its_remote_deleted_is_removed(self, fleet, run):
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert not alpha.exists()
+        assert 'alpha' not in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
+
+    def test_a_branch_tracking_the_base_is_never_swept(self, fleet, run):
+        """The long-lived worktree that clears every other check: clean, nothing on it
+        that main lacks, and no remote branch of its own to be deleted.
+
+        `new` points a branch at origin/<base> rather than at itself, so this is also
+        the shape of every worktree between creation and its first push. Sweeping it
+        would delete work that has been nowhere else.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'unpushed.txt')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert alpha.exists()
+        assert git(alpha, 'log', '--oneline', '-1').endswith('feat: unpushed.txt')
+
+    def test_a_checkout_behind_origin_still_gives_up_the_branch(self, fleet, run):
+        """The proof of a merge is ancestry against origin/<base>, never `git branch -d`.
+
+        -d asks whether the branch is merged into the *checkout's* HEAD, and the
+        checkout is a different tree whose local main is only as current as its last
+        pull. Here main merged on the remote and the checkout has not pulled it, which
+        is the ordinary state of every repo the moment a PR lands — and -d refuses the
+        whole sweep in it.
+        """
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        behind = git(fleet['primary'], 'rev-list', '--count', 'main..origin/main')
+        assert behind != '0', 'the fixture has to leave the checkout behind, or this proves nothing'
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert not alpha.exists()
+        assert 'alpha' not in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
+
+    def test_a_detached_worktree_is_kept_for_being_detached(self, fleet, run):
+        """It has no branch, so nothing can be asked about where its commits are.
+
+        The reason is asserted, not just the survival. Every keep here has several
+        reasons available and the first one wins, so a test that only checks the
+        directory still exists passes whichever guard actually fired.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        git(alpha, 'checkout', '-q', '--detach', 'HEAD')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert alpha.exists()
+        assert 'a detached HEAD' in plain(result.stderr)
+
+    def test_a_merged_worktree_whose_remote_branch_lives_is_kept(self, fleet, run):
+        """The other half of what the command's own help promises — merged *and* deleted
+        on the remote. Merged alone is a branch someone is still publishing to."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'shipped.txt')
+        publish(fleet['primary'], alpha, 'alpha')
+        git(alpha, 'push', '-q', 'origin', 'HEAD:main')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert alpha.exists()
+        assert 'its remote branch still exists' in plain(result.stderr)
+
+    def test_claude_sessions_failing_keeps_everything(self, fleet, run, bin_dir):
+        """An unanswerable session check held the worktree rather than clearing it.
+
+        `live_sessions` answering with an empty tuple would mean *nobody is in this
+        worktree*, which is the one sentence a failed read cannot support. The exposed
+        window is the minutes after a merge, when the author's session is still in the
+        worktree the sweep is coming for.
+        """
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        write_stub(bin_dir, 'claude-sessions', 'exit 1')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert 'could not say whether anyone is in it' in plain(result.stderr)
+
+    def test_claude_sessions_missing_reads_as_unknown_not_as_empty(self, worktree_app, monkeypatch, tmp_path):
+        """Absent from PATH is the same unanswerable question reached another way, and
+        it is the one that used to pass in complete silence — no warning, no mention of
+        sessions at all, and a removal.
+
+        Asserted against `live_sessions` rather than through the CLI, because PATH is
+        the subject: the run fixture prepends its stub directory to the real PATH, so a
+        removed stub is answered by whatever the machine has installed.
+        """
+        empty = tmp_path / 'nothing'
+        empty.mkdir()
+        monkeypatch.setenv('PATH', str(empty))
+
+        assert worktree_app.live_sessions() is None
+
+    def test_an_unreachable_origin_keeps_everything(self, fleet, run):
+        """Every remote fact below the fetch is read out of refs/remotes/origin, which
+        outlives a deleted branch until a prune. A fetch that failed leaves those refs
+        saying whatever they said before, and a verdict read off them is about a remote
+        the command never reached."""
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        git(fleet['primary'], 'remote', 'set-url', 'origin', '/nonexistent/origin.git')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert 'origin could not be reached' in plain(result.stderr)
+
+    def test_a_dirty_worktree_is_kept(self, fleet, run):
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        (alpha / 'half-finished.txt').write_text('half\n')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert (alpha / 'half-finished.txt').read_text() == 'half\n'
+        assert 'uncommitted changes' in plain(result.stderr)
+
+    def test_a_session_standing_in_it_keeps_it(self, fleet, run, bin_dir):
+        """Merged is not the same as finished with. Somebody is in there."""
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        stub_sessions(bin_dir, session('reviewer', alpha))
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert 'a session is standing in it' in plain(result.stderr)
+
+    def test_a_branch_deleted_without_merging_is_kept(self, fleet, run):
+        """A deleted remote branch is not evidence of a merge. The commits are here
+        and nowhere else, which is the one thing that must never be swept."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'only-copy.txt')
+        publish(fleet['primary'], alpha, 'alpha')
+        delete_on_origin(fleet['primary'], 'alpha')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert (alpha / 'only-copy.txt').exists()
+        assert 'commits that are on no other branch' in plain(result.stderr)
+
+    def test_ignored_build_output_does_not_block_removal(self, fleet, run):
+        """`new` runs `task setup`, so a real worktree carries a .venv or a
+        node_modules by the time it is finished with. git counts neither as untracked,
+        which is what lets the removal run without --force."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        (alpha / '.gitignore').write_text('.venv/\n')
+        git(alpha, 'add', '.gitignore')
+        git(alpha, 'commit', '-qm', 'chore: ignore the venv')
+        publish(fleet['primary'], alpha, 'alpha')
+        git(alpha, 'push', '-q', 'origin', 'HEAD:main')
+        delete_on_origin(fleet['primary'], 'alpha')
+        (alpha / '.venv').mkdir()
+        (alpha / '.venv' / 'pyvenv.cfg').write_text('home = /usr\n')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert not alpha.exists()
+
+    def test_it_refuses_to_remove_anything_without_a_terminal(self, fleet, run):
+        """The y/N is the guard, so losing the terminal has to mean losing the sweep
+        rather than defaulting to yes.
+
+        Exit 2, because the remedy is an argument. A partial removal failure exits 1,
+        and only the first of those is worth reinvoking with different arguments.
+        """
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        result = run(fleet['primary'], 'sweep')
+
+        assert result.returncode == 2
+        assert alpha.exists()
+        assert '--yes' in plain(result.stderr)
+
+    def test_the_primary_checkout_is_never_touched(self, fleet, run):
+        """It is in every scan and it is nobody's worktree to remove."""
+        merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        run(fleet['primary'], 'sweep', '--yes')
+
+        assert fleet['primary'].exists()
+        assert (fleet['primary'] / 'f.txt').exists()
+
+    def test_it_sweeps_every_repo_from_wherever_it_is_run(self, fleet, run):
+        """The reason it is not a bulk `drop`: the worktrees it collects are in repos
+        the session is not standing in, which is where they accumulate."""
+        elsewhere = merged_worktree(fleet['other'], fleet['roots'], run, 'beta')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert not elsewhere.exists()
+
+    def test_one_repo_can_be_named(self, fleet, run):
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        beta = merged_worktree(fleet['other'], fleet['roots'], run, 'beta')
+
+        run(fleet['primary'], 'sweep', 'primary', '--yes')
+
+        assert not alpha.exists()
+        assert beta.exists()
+
+    def test_an_empty_sweep_names_what_it_checked(self, fleet, run):
+        """An all-clear that names the whole machine, from a command that measured one
+        worktree, is the shape that stops being believed."""
+        run(fleet['primary'], 'new', 'alpha')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert '1 worktree(s) checked' in plain(result.stderr)
+
+    def test_every_survivor_is_named_with_its_reason(self, fleet, run):
+        """A worktree left standing with no reason given reads as one the tool missed."""
+        run(fleet['primary'], 'new', 'alpha')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert 'alpha — kept, never pushed under its own name' in plain(result.stderr)
 
 
 class TestUsage:
