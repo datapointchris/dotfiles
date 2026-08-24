@@ -13,6 +13,15 @@ repair a `STALE` tool by reinstalling the same stale bytes and never converge.
 Offline is the inverse: crates.io and the release hosts are both unreachable, so
 the bundle is the only source there is.
 
+**A failed binstall reaches the bundle too, and the same version check governs
+it.** "Online" means a network rather than a reachable crates.io, so a firewalled
+machine arrives here for every crate it declares. A bundle that has aged out
+repairs none of them: installing from it writes the version the machine already
+has, `apply` reports a change, and the next plan finds the row behind upstream
+again. That is the non-convergence above, reached from the other direction — so
+the fallback takes the bundle only where it is ahead of what is installed, and
+reports `BUNDLE_BEHIND` where it is not.
+
 The bundle's layout is read from its manifest rather than guessed at.
 `cargo-tools.sh` globbed for four increasingly loose patterns against two
 candidate names, which is the shape a program takes when it cannot ask the
@@ -28,6 +37,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
+from dotfiles import versions
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import Kind
@@ -114,8 +124,13 @@ def stage(entry: catalog.CargoPackage, version: str, target: Target) -> str:
     )
 
 
-def install(entry: catalog.CargoPackage, target: Target, *, offline: bool) -> Result:
-    """Converge one Rust CLI, from whichever source this run can reach."""
+def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, installed: str = '') -> Result:
+    """Converge one Rust CLI, from whichever source this run can reach.
+
+    `installed` is the version already on the machine, and it is the floor the
+    bundle has to clear on an online run. Empty means there is no floor: the tool
+    is missing, or `--reinstall` asked for it again whatever it reports.
+    """
     if offline:
         return _from_bundle(entry) or Result(
             False,
@@ -125,17 +140,41 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool) -> Re
 
     ready = binstall(target, offline=offline)
     if not ready.ok:
-        return _from_bundle(entry) or ready
+        return _fallback(entry, ready, installed)
 
     built = _from_binstall(entry)
     if built.ok:
         return built
+    return _fallback(entry, built, installed)
 
-    # Worth trying even on an online run, because "online" means a network rather
-    # than a reachable crates.io. On a firewalled machine it never is, and without
-    # this every Rust tool stays at the version the machine was built with while a
-    # current bundle sits unused on disk.
-    return _from_bundle(entry) or built
+
+def _fallback(entry: catalog.CargoPackage, failure: Result, installed: str) -> Result:
+    """The bundle, on a run that had a network and could not install through it.
+
+    Worth reaching at all because "online" means a network rather than a reachable
+    crates.io. On a firewalled machine it never is, and without this every Rust
+    tool stays at the version the machine was built with while a current bundle
+    sits unused on disk.
+
+    Worth declining where the staged version is no newer than the installed one:
+    the write would produce a byte-identical binary, and the row would be behind
+    upstream again on the next plan. `failure.detail` is carried into the refusal
+    because it holds the transcript naming why the preferred source could not be
+    reached, which is the half a person acts on — the bundle's age is the reason
+    nothing rescued it, not the reason it broke.
+
+    Both versions have to be readable before either can lose. A row carrying no
+    version is a manifest half-written, and reading that as "not newer" would
+    refuse the bundle on the strength of a question nothing answered.
+    """
+    carried = bundle.staged(entry.name, BUNDLE_CATEGORY)
+    if carried is not None and carried.version and installed and not versions.exceeds(carried.version, installed):
+        return Result(
+            False,
+            f'{failure.detail}; the staged bundle carries {carried.version}, which is no newer than the installed {installed}',
+            kind=Kind.BUNDLE_BEHIND,
+        )
+    return _from_bundle(entry) or failure
 
 
 def _from_binstall(entry: catalog.CargoPackage) -> Result:
@@ -146,19 +185,29 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
     either way — the Rust toolchain converges at an earlier stage — and the
     subcommand spelling is what every crates.io instruction uses.
 
-    **Streamed, because binstall's last strategy is a source build.** Its default
-    order is `crate-meta-data,quick-install,compile`, so a crate whose upstream
-    publishes no asset for this machine's target does not fail — it falls through
-    to `cargo install` and compiles, for as long as that crate takes. Held quiet
-    that is indistinguishable from a deadlock, which is the failure
-    `Output.STREAM` already names: buffering is what makes a long install look
-    hung. Streamed, the `Compiling` lines say which crate is building and that it
-    is still moving, and a declaration that has drifted onto the compile path
-    announces itself rather than being found by stopwatch. `packages.yml` puts
-    such a tool in `system_packages` instead; nothing here enforces that, because
-    a slow install still converges and a refusal does not.
+    **The compile strategy is disabled, so the prebuilt binary is the only source
+    this asks for.** binstall's default order is
+    `crate-meta-data,quick-install,compile`, and the last of those is `cargo
+    install` building the crate. Two things make it the wrong answer here. It
+    takes as long as the crate takes, with no bound and nothing declaring it. And
+    it cannot succeed at all wherever an earlier run installed from a bundle:
+    `place` writes the binary straight into `~/.cargo/bin` and records nothing in
+    `.crates.toml`, so `cargo install` finds a binary it does not own and exits
+    with `binary ... already exists in destination`. Disabled, an unreachable
+    release host fails in about a second with the transport error that caused it,
+    which is both faster and the diagnosis a person can act on.
+
+    Every `cargo_packages` entry declares `github_repo` and `binary_pattern`,
+    which is this repo asserting that upstream publishes a binary for it — a crate
+    that genuinely publishes none belongs in `system_packages`, and refusing it
+    here is what says so.
+
+    **Still streamed**, which the default `Output.STREAM` supplies. binstall
+    retries each candidate URL with a backoff, so a blocked host takes seconds of
+    silence before it gives up, and buffering that is what makes a working install
+    look hung.
     """
-    completed = effects.run(['cargo', 'binstall', '-y', entry.name])
+    completed = effects.run(['cargo', 'binstall', '-y', '--disable-strategies', 'compile', entry.name])
     if completed.ok:
         return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
     return Result(

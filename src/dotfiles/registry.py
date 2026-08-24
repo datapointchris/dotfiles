@@ -425,6 +425,21 @@ class WingetProvider(VendoredProvider):
         return winget.install(entry, providers.bin_dir(), offline=session.offline)
 
 
+def version_floor(session: Session, change: Change) -> str:
+    """What a staged bundle has to beat before an online fallback installs from it.
+
+    `change.observed` is the installed version wherever currency settled the
+    verdict, which is every `STALE` row and no `MISSING` one. A missing tool
+    therefore sets no floor, which is correct — any version the bundle holds is
+    the machine gaining a tool it does not have.
+
+    `--reinstall` sets no floor either, and that one is a decision rather than a
+    consequence. It asks for the tool again whatever it reports, so comparing
+    against what it reports would decline the only thing it was invoked to do.
+    """
+    return '' if session.reinstall else change.observed
+
+
 @dc.dataclass(frozen=True, slots=True)
 class CargoProvider(CatalogProvider):
     """A Rust CLI installed by `cargo binstall`, or restored from a bundle.
@@ -441,7 +456,12 @@ class CargoProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.CargoPackage):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a cargo_packages entry')
-        result = cargo.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+        result = cargo.install(
+            entry,
+            coordinates.target_for(session.machine.coordinates),
+            offline=session.offline,
+            installed=version_floor(session, change),
+        )
         return Outcome.from_result(change, result)
 
 
@@ -461,7 +481,7 @@ class GoToolProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
-        result = gotool.install(entry, offline=session.offline)
+        result = gotool.install(entry, offline=session.offline, installed=version_floor(session, change))
         return Outcome.from_result(change, result)
 
 

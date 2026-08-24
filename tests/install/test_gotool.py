@@ -58,6 +58,21 @@ def stage(bundle: Path, name: str = 'task') -> Path:
     return binary
 
 
+def record(bundle: Path, version: str, *, name: str = 'task', executable: str = 'task') -> None:
+    """The manifest row `create_bundle.add_go_binaries` writes beside the binary.
+
+    Kept apart from `stage` because a directory of binaries with no manifest is a
+    real state — every test above relies on it, and `gotool.bundled` opens the file
+    by path and never asks the manifest anything. The version floor is the one
+    question that can only be answered from the row, so a test about it writes both
+    halves. `name` keys the row and `executable` names the file, which is the split
+    the bundler records.
+    """
+    manifest = bundle / providers.MANIFEST
+    rows = manifest.read_text() if manifest.is_file() else '# Dotfiles Offline Bundle\n'
+    manifest.write_text(f'{rows}{gotool.BUNDLE_CATEGORY}|{name}|{version}|{executable}\n')
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Which source, and why
 # ─────────────────────────────────────────────────────────────────────────────
@@ -121,6 +136,61 @@ def test_an_unreachable_proxy_falls_back_to_the_bundle(home, bundle, proxy) -> N
     result = gotool.install(TASK, offline=False)
 
     assert result.ok
+    assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
+
+
+def test_a_bundle_no_newer_than_what_is_installed_is_not_written_again(home, bundle, proxy) -> None:
+    """The write would produce a byte-identical binary, `apply` would report a change
+    it did not make, and the next plan would find the row behind upstream again. A
+    bundle a week older than the proxy on a firewalled machine is that state, and it
+    repeats for as long as both stay true."""
+    stage(bundle)
+    record(bundle, 'v3.45.0')
+    proxy(reachable=False, said='go: module lookup disabled: tls: handshake failure')
+
+    result = gotool.install(TASK, offline=False, installed='3.45.0')
+
+    assert not result.ok
+    assert result.kind is Kind.BUNDLE_BEHIND
+    assert not (home / 'go' / 'bin' / 'task').exists()
+    assert '3.45.0' in result.detail
+    assert 'handshake failure' in result.detail, 'the TLS error is the half a person acts on'
+
+
+def test_a_bundle_ahead_of_what_is_installed_still_rescues_an_unreachable_proxy(home, bundle, proxy) -> None:
+    """The floor refuses a bundle that repairs nothing, never one that repairs
+    something — a firewalled machine with a fresh bundle is the case the fallback
+    exists for."""
+    stage(bundle)
+    record(bundle, 'v3.45.0')
+    proxy(reachable=False)
+
+    result = gotool.install(TASK, offline=False, installed='3.44.0')
+
+    assert result.ok
+    assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
+
+
+def test_a_bundle_whose_manifest_says_nothing_is_still_a_fallback(home, bundle, proxy) -> None:
+    """`gotool.bundled` opens the staged file by path, so a directory of binaries
+    with no manifest row installs. Reading an absent row as "not newer" would refuse
+    the whole bundle on the strength of a question nothing answered."""
+    stage(bundle)
+    proxy(reachable=False)
+
+    assert gotool.install(TASK, offline=False, installed='3.45.0').ok
+    assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
+
+
+def test_an_offline_run_ignores_the_version_floor(home, bundle, proxy) -> None:
+    """Offline, the bundle *is* what upstream published — `bundle.published` answers
+    currency from the same manifest — so nothing can be ahead of it, and a floor
+    would only refuse the one source there is."""
+    stage(bundle)
+    record(bundle, 'v3.45.0')
+    proxy()
+
+    assert gotool.install(TASK, offline=True, installed='3.45.0').ok
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
 
 

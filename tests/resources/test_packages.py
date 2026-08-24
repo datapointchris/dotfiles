@@ -962,13 +962,17 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False, again=False, before_place=None):
+    def record(entry, target=None, *, offline=False, again=False, before_place=None, installed=''):
         """The engine's shape rather than only its name.
 
         `before_place` is what the release provider hands in to displace a package
         once the asset is downloaded and verified, so a spy that ignored it would
         report an install nothing was cleared for — and would pass every ordering
         assertion below while the real engine did something else.
+
+        `installed` is the version floor the two providers with a bundle fallback
+        take. Accepted and ignored: what it governs is which *source* answers, and
+        nothing here has a source to choose between.
         """
         if before_place is not None:
             cleared = before_place()

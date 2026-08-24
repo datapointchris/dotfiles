@@ -25,16 +25,26 @@ from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import effects
+from dotfiles import versions
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
+from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
 from dotfiles.providers import releases
 from dotfiles.providers import toolchain
 
 BUNDLE_BINARIES = 'go-binaries'
+
+BUNDLE_CATEGORY = 'go-binary'
+"""What `create_bundle.add_go_binaries` records these rows under.
+
+The directory and the category are separate constants because they are separate
+facts: `BUNDLE_BINARIES` is where the file sits and this is how the manifest
+names it, and nothing makes one follow the other.
+"""
 
 
 def gobin() -> Path:
@@ -199,13 +209,17 @@ def stage(entry: catalog.GoTool, version: str, target: Target) -> str:
     return releases.expand_pattern(entry.binary_pattern, version, target)
 
 
-def install(entry: catalog.GoTool, *, offline: bool) -> Result:
+def install(entry: catalog.GoTool, *, offline: bool, installed: str = '') -> Result:
     """Converge one Go tool, from whichever source this run can reach.
 
     Offline takes the bundle and does not try the proxy at all. That is not
     caution: behind the work firewall `go install` does not fail fast, it hangs on
     a TLS handshake per tool, and thirteen of those is the difference between an
     install that finishes and one that looks broken.
+
+    `installed` is the version already on the machine, and it is the floor the
+    bundle has to clear on an online run. Empty means there is no floor: the tool
+    is missing, or `--reinstall` asked for it again whatever it reports.
     """
     if offline:
         return _from_bundle(entry) or Result(
@@ -217,14 +231,41 @@ def install(entry: catalog.GoTool, *, offline: bool) -> Result:
     fetched = _from_proxy(entry)
     if fetched.ok:
         return fetched
+    return _fallback(entry, fetched, installed)
 
-    # The bundle is worth trying even on an online run, because "online" here
-    # means a network — not a reachable proxy. On a firewalled machine it never
-    # is, and without this every Go tool stays pinned at the version the machine
-    # was first built with while a current bundle sits unused on disk.
-    if restored := _from_bundle(entry):
-        return restored
-    return fetched
+
+def _fallback(entry: catalog.GoTool, failure: Result, installed: str) -> Result:
+    """The bundle, on a run that had a network and could not install through it.
+
+    Worth reaching at all because "online" here means a network rather than a
+    reachable proxy. On a firewalled machine it never is, and without this every
+    Go tool stays pinned at the version the machine was first built with while a
+    current bundle sits unused on disk.
+
+    Worth declining where the staged version is no newer than the installed one:
+    the write would produce a byte-identical binary, `apply` would report a change
+    it did not make, and the row would be behind upstream again on the next plan.
+    `failure.detail` is carried into the refusal because it holds the TLS error
+    naming why the proxy could not be reached, which is the half a person acts on.
+
+    The row is keyed by the declared name, which is what `create_bundle` records
+    it under. `bundled` opens the file under `executable` instead — the two are
+    different questions wherever a Go tool declares a `command`, and only the
+    manifest carries a version at all.
+
+    Both versions have to be readable before either can lose. `bundled` needs no
+    manifest, so a directory of staged binaries with no rows in it installs, and
+    reading an absent or empty version as "not newer" would refuse the one source
+    a firewalled machine has on the strength of a question nothing answered.
+    """
+    carried = bundle.staged(entry.name, BUNDLE_CATEGORY)
+    if carried is not None and carried.version and installed and not versions.exceeds(carried.version, installed):
+        return Result(
+            False,
+            f'{failure.detail}; the staged bundle carries {carried.version}, which is no newer than the installed {installed}',
+            kind=Kind.BUNDLE_BEHIND,
+        )
+    return _from_bundle(entry) or failure
 
 
 def _from_proxy(entry: catalog.GoTool) -> Result:

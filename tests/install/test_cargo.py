@@ -40,6 +40,10 @@ MACOS = Target(OSFamily.DARWIN, Arch.ARM64)
 
 BINARY = b'#!/bin/sh\necho fd\n'
 
+BINSTALL = ('cargo', 'binstall', '-y', '--disable-strategies', 'compile', 'fd-find')
+"""The whole command, in one place, so the tests that assert binstall was the
+source and the one that asserts which strategies it may use cannot drift apart."""
+
 
 @pytest.fixture
 def home(tmp_path, monkeypatch) -> Path:
@@ -109,14 +113,30 @@ def test_an_online_run_takes_binstall_even_when_a_bundle_is_present(home, staged
     result = cargo.install(FD, LINUX, offline=False)
 
     assert result.ok
-    assert reached.calls == [('cargo', 'binstall', '-y', 'fd-find')]
+    assert reached.calls == [BINSTALL]
 
 
-def test_binstall_is_streamed_so_a_source_build_is_visible(home, staged, ready, crates) -> None:
-    """binstall's last strategy is `compile`, and a crate with no asset for this
-    machine's target reaches it silently. Held quiet, that is a multi-minute build
-    with nothing on screen, which reads as a deadlock — the failure `Output.STREAM`
-    exists to prevent.
+def test_binstall_is_never_allowed_to_reach_its_compile_strategy(home, staged, ready, crates) -> None:
+    """binstall's default order ends in `compile`, which is `cargo install` building
+    the crate. It is unbounded, and it cannot succeed at all on a machine whose
+    binary came from a bundle: `place` writes into `~/.cargo/bin` and records
+    nothing in `.crates.toml`, so `cargo install` refuses a binary it does not own.
+
+    The flag is asserted in the argv rather than through the exit code, because
+    the only way to observe the strategy running is to let a real build start.
+    """
+    reached = crates()
+
+    cargo.install(FD, LINUX, offline=False)
+
+    assert reached.calls == [BINSTALL]
+    assert BINSTALL[3:5] == ('--disable-strategies', 'compile'), 'the flag is the whole subject of this test'
+
+
+def test_binstall_is_streamed_so_a_stalled_download_is_visible(home, staged, ready, crates) -> None:
+    """binstall retries each candidate URL with a backoff, so a blocked release host
+    takes seconds of silence before it gives up. Buffered, that reads as a deadlock
+    — the failure `Output.STREAM` exists to prevent.
 
     Asserted as an absence, because `effects.run` owns the default and
     `test_provider_seams.py` pins it there. Restating `Output.STREAM` here would
@@ -157,6 +177,58 @@ def test_an_unreachable_crates_io_falls_back_to_the_bundle(home, staged, ready, 
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 
+def test_a_bundle_no_newer_than_what_is_installed_is_not_written_again(home, staged, ready, crates) -> None:
+    """The write would produce a byte-identical binary, `apply` would report a change
+    it did not make, and the next plan would find the row behind upstream again. A
+    bundle a week older than crates.io on a firewalled machine is that state, and it
+    repeats for as long as both stay true."""
+    stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
+    crates(reachable=False, said='could not GET the release asset: timeout')
+
+    result = cargo.install(FD, LINUX, offline=False, installed='10.4.2')
+
+    assert not result.ok
+    assert result.kind is Kind.BUNDLE_BEHIND
+    assert not (home / '.cargo' / 'bin' / 'fd').exists()
+    assert '10.4.2' in result.detail
+    assert 'timeout' in result.detail, 'the transport error is the half a person acts on'
+
+
+def test_a_bundle_ahead_of_what_is_installed_still_rescues_a_failed_binstall(home, staged, ready, crates) -> None:
+    """The floor refuses a bundle that repairs nothing, never one that repairs
+    something — a firewalled machine with a fresh bundle is the case the fallback
+    exists for."""
+    stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
+    crates(reachable=False)
+
+    result = cargo.install(FD, LINUX, offline=False, installed='10.3.0')
+
+    assert result.ok
+    assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
+
+
+def test_a_manifest_row_carrying_no_version_does_not_lose_the_comparison(home, staged, ready, crates) -> None:
+    """A row with an empty version field is a manifest half-written. Reading it as
+    "not newer" would refuse the bundle on the strength of a question nothing
+    answered, on the one machine that has no other source."""
+    stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz', version='')
+    crates(reachable=False)
+
+    assert cargo.install(FD, LINUX, offline=False, installed='10.4.2').ok
+    assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
+
+
+def test_an_offline_run_ignores_the_version_floor(home, staged, ready, crates) -> None:
+    """Offline, the bundle *is* what upstream published — `bundle.published` answers
+    currency from the same manifest — so nothing can be ahead of it, and a floor
+    would only refuse the one source there is."""
+    stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
+    crates()
+
+    assert cargo.install(FD, LINUX, offline=True, installed='10.4.2').ok
+    assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
+
+
 def test_an_unreachable_crates_io_with_no_bundle_reports_what_binstall_said(home, staged, ready, crates) -> None:
     crates(reachable=False, said='error: could not resolve fd-find: dns error')
 
@@ -184,7 +256,7 @@ def test_a_manifest_row_naming_a_file_the_bundle_lacks_is_a_miss(home, staged, r
     reached = crates()
 
     assert cargo.install(FD, LINUX, offline=False).ok
-    assert reached.calls == [('cargo', 'binstall', '-y', 'fd-find')]
+    assert reached.calls == [BINSTALL]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

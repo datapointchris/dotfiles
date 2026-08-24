@@ -275,6 +275,33 @@ class TestUvToolRepair:
         assert '--reinstall' not in self.repair(monkeypatch, 'uv-git', 'syncer', self.SYNCER, Verdict.MISSING)
 
 
+class TestTheVersionFloorABundleHasToClear:
+    """What an online fallback compares a staged bundle against before writing it.
+
+    One function because both providers with a bundle fallback ask it, and two
+    copies is what lets cargo and go answer `--reinstall` differently — which is
+    the one case where the honest answer is not the installed version.
+    """
+
+    FD = catalog.CargoPackage.from_mapping({'name': 'fd-find', 'command': 'fd'})
+
+    def floor(self, *, reinstall: bool, observed: str, verdict: Verdict = Verdict.STALE) -> str:
+        planned = item('cargo', 'fd-find', self.FD)
+        change = Change('packages', planned.stage, planned.address, verdict, repair=Repair.AUTOMATIC, desired=planned, observed=observed)
+        return registry.version_floor(Session(machine_name='box', reinstall=reinstall), change)
+
+    def test_a_stale_row_floors_the_bundle_at_the_version_currency_measured(self) -> None:
+        assert self.floor(reinstall=False, observed='10.4.2') == '10.4.2'
+
+    def test_a_missing_tool_sets_no_floor_because_any_version_is_a_gain(self) -> None:
+        assert self.floor(reinstall=False, observed='', verdict=Verdict.MISSING) == ''
+
+    def test_reinstall_sets_no_floor_at_all(self) -> None:
+        """It asks for the tool again whatever it reports, so comparing against what
+        it reports would decline the only thing it was invoked to do."""
+        assert self.floor(reinstall=True, observed='10.4.2') == ''
+
+
 def test_every_packages_provider_can_install_what_it_plans() -> None:
     """The whole `packages` resource has converted, so the base `Provider.install`
     — which refuses, to stop a run reporting converged for work it never did — is

@@ -103,6 +103,17 @@ class Kind(enum.StrEnum):
     Go tarball, and a missing `jq.exe` is a bundle that failed to build.
     """
 
+    BUNDLE_BEHIND = 'bundle-behind'
+    """The bundle carries this row, and its version is no newer than what is installed.
+
+    Separated from `NOT_IN_BUNDLE` by which half is wrong, which is what decides
+    the repair. A bundle with no row for a tool was built without it or was
+    pruned. A bundle whose row has aged out was built correctly and is simply old,
+    so the fix is to build a new one — and installing what it holds is not a fix at
+    all, because it writes the version the machine already has and leaves the row
+    behind upstream for the next plan to find again.
+    """
+
     VERSION_UNRESOLVED = 'version-unresolved'
     """No tag to install: the release API answered nothing, or a pin matches no
     release. The transport worked, so a network fix is the wrong one."""
