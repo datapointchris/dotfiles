@@ -370,7 +370,7 @@ OUTDATED: dict[str, tuple[str, ...]] = {
     'aur': ('yay', '-Qu', '--aur'),
     'apt': ('apt', 'list', '--upgradable'),
     'brew': ('brew', 'outdated', '--formula', '--quiet'),
-    'cask': ('brew', 'outdated', '--cask', '--greedy', '--quiet'),
+    'cask': ('brew', 'outdated', '--cask', '--quiet'),
     'flatpak': ('flatpak', 'remote-ls', '--updates', '--columns=application'),
     'mas': ('mas', 'outdated'),
 }
@@ -403,8 +403,12 @@ only yay knows an AUR package's upstream version, so pacman reports every one of
 them current forever. `--aur` is what keeps the two Arch rows from counting the
 same repo package twice once `checkupdates` starts finding them.
 
-`--greedy` on the casks because an auto-updating cask is excluded otherwise, and
-this repo installed it and would like to know.
+The cask read is Homebrew's default, which excludes a cask declaring
+`auto_updates`. Such a cask carries its own updater, and brew's idea of its
+version is the Caskroom metadata rather than the bundle on disk — so asking
+greedily reports an app that already updated itself as behind, and the row never
+converges however many times `apply` runs. `UPGRADE` says what acting on that
+answer costs.
 """
 
 EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})
@@ -453,7 +457,7 @@ UPGRADE: dict[str, tuple[str, ...]] = {
     'aur': ('yay', '-Syu', '--noconfirm'),
     'apt': ('apt-get', 'upgrade', '-y'),
     'brew': ('brew', 'upgrade'),
-    'cask': ('brew', 'upgrade', '--cask', '--greedy'),
+    'cask': ('brew', 'upgrade', '--cask'),
     'flatpak': ('flatpak', 'update', '-y'),
     'mas': ('mas', 'upgrade'),
 }
@@ -468,6 +472,15 @@ The pacman and yay rows are the same command as their `REFRESH`, because on Arch
 the sync *is* the upgrade. Spelling it twice is deliberate: `refresh` runs before
 an install, `upgrade` runs because a machine is behind, and a later change to one
 should not silently move the other.
+
+Brew is the cask's installer and never its updater, which is what leaving
+`--greedy` off buys. An upgrade deletes the app bundle and unpacks a fresh copy,
+and macOS can read the replacement as a different app and drop the TCC grants the
+old one held. For an app holding Accessibility that is not cosmetic:
+BetterTouchTool's event tap dies with the grant, and macOS can freeze mouse and
+keyboard input until it is re-granted by hand. `--adopt` on `INSTALL` is the other
+half — a cask arrives once, over whatever bundle is already there, and afterwards
+the app's own updater owns its version.
 """
 
 
