@@ -149,7 +149,17 @@ if [ -n "$OFFLINE" ]; then
     # on the one machine that cannot download another.
     rm -rf "$STAGING/.unpacking"
     mkdir -p "$STAGING/.unpacking"
-    tar -xzf "$archive" -C "$STAGING/.unpacking"
+    # bsdtar reads a `._name` member as AppleDouble metadata belonging to
+    # `name`, and exits non-zero when it cannot apply it — having already
+    # extracted every real member correctly. A bundle repacked on macOS carries
+    # those sidecars, and this script runs before Homebrew is on the box, so
+    # `tar` here is /usr/bin/tar rather than the GNU one a converged Mac has.
+    # GNU tar takes the sidecar as an ordinary file and rejects the flag.
+    if tar --version 2>/dev/null | head -n 1 | grep -q bsdtar; then
+      tar --no-mac-metadata -xzf "$archive" -C "$STAGING/.unpacking"
+    else
+      tar -xzf "$archive" -C "$STAGING/.unpacking"
+    fi
 
     member=""
     for candidate in "$STAGING"/.unpacking/*/; do
