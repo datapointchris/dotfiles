@@ -479,14 +479,23 @@ def test_the_walk_scans_a_root_whose_own_path_is_excluded(tmp_path: Path) -> Non
     assert len(core._find_symlinks(root)) == 3
 
 
-def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence(tmp_path: Path, capsys) -> None:
+def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A subtree nothing could read and a subtree with no orphans are the same
     answer to the caller — a shorter list either way.
 
     `python.md` § "Fail fast instead of defaulting": where the fallback is correct,
     say so on the way past, naming the path and the error. Nothing downstream can
     tell the two apart, so this warning is the only evidence the scan was partial.
+
+    `COLUMNS` is pinned because Rich wraps to whatever width it is handed, and a
+    `tmp_path` long enough to push the wrap into the middle of "Permission denied"
+    splits the phrase across two lines. The assertion is about what was said, so
+    the width it was said at is fixed rather than normalised back out afterwards —
+    stripping the newlines welds the two halves into `Permissiondenied`.
     """
+    monkeypatch.setenv('COLUMNS', '400')
     locked = tmp_path / 'locked'
     (locked / 'inside').mkdir(parents=True)
     (tmp_path / 'ordinary').symlink_to(tmp_path / 'gone.txt')
@@ -496,10 +505,7 @@ def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence
     finally:
         locked.chmod(0o755)
 
-    # Rich wraps to the terminal it is given, and the hook's pytest gets a narrower
-    # one than a desk — so the path arrives split across lines. The assertion is
-    # about what was said, not about where it broke.
-    reported = capsys.readouterr().err.replace('\n', '')
+    reported = capsys.readouterr().err
     assert [path.name for path in found] == ['ordinary']
     assert 'not scanned for orphans' in reported
     assert str(locked) in reported
