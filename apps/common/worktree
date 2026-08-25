@@ -6,6 +6,7 @@
 """Give a session its own index, and land it on main without a PR.
 
     worktree new <slug>    isolate before touching a repo another session is in
+    worktree spawn [slug]  start a Claude session in a pane, in a worktree of its own
     worktree land          rebase, push onto the default branch, then clean up
     worktree sweep         dispose of every worktree whose work already merged
     worktree list          every worktree on this machine, or one repo's
@@ -38,9 +39,23 @@ $WORKTREE_ROOT is the whole index — a repo has a directory there exactly when 
 has a worktree — and each one's checkout is read back out of git. No registry of
 repos is consulted, because this app is deployed to machines that have none.
 
+`spawn` is `new` with a session in it. The dozen steps between deciding a repo
+needs an agent and having one — cut the worktree, open a pane, launch `claude`
+against a written brief, wait for the registry to name it — are one command, so
+a caller's next move is a message to the name it returns. A slug is the branch,
+so `spawn <slug>` is a worker with a worktree and `spawn` with no slug is a
+session standing in the primary checkout with no branch at all. That second form
+is what a reviewer needs: it reads a pull request from any checkout, and a
+session inside a worktree is refused any `git -C` that leaves it.
+
+It never merges and never starts anything that merges. The chain it enables ends
+at a pull request that is ready, which is where `~/.claude/CLAUDE.md` puts the
+boundary: merging is a separate act and green checks are not permission for it.
+
 stdout carries what a command produced: the table, the JSON, the path `choose`
-picked, the path `new` created. Everything written for a human to read goes to
-stderr, so `cd "$(worktree choose)"` cannot pick up a warning instead of a path.
+picked, the path `new` created, the session name `spawn` started. Everything
+written for a human to read goes to stderr, so `cd "$(worktree choose)"` cannot
+pick up a warning instead of a path.
 
 Every subprocess is echoed to stderr before it runs, indented and green, exactly
 as it could be re-typed. A fetch, a rebase and a push onto the default branch are
@@ -62,8 +77,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -88,6 +105,33 @@ USAGE_ERROR = 2
 # fields it displays. The path rides in front as the handle, the rendered line
 # behind it as the thing a human reads and types against.
 FZF_DELIMITER = '\t'
+
+BRIEF_PROMPT = 'Read {brief} and carry out the work it describes. It names the session to report to.'
+"""What the spawned pane runs `claude` with.
+
+A brief is pages long and does not survive being quoted into a command line, so the
+prompt is a pointer and the file carries the work. The second sentence is what makes
+the session look for its reporting address rather than finishing in silence.
+"""
+
+REGISTRATION_TIMEOUT = 60.0
+"""How long a spawn waits to be told the name of the session it just started.
+
+Registration is not instant — measured at about sixteen seconds — and the name is the
+whole reason a caller runs this rather than `tmux split-window` itself.
+"""
+
+POLL_SECONDS = 1.0
+
+MAIN_PANE_WIDTH = '66%'
+"""The caller's share of the window once panes are stacked beside it.
+
+A percentage rather than a column count, because tmux resolves it against whatever
+window the caller is in and holds it across a resize. Two thirds because the caller's
+pane is being read continuously and the spawned ones are being watched — so the larger
+share goes to the one carrying prose. tmux's own default is 80 columns, which is the
+value that made this worth setting.
+"""
 
 
 class State(StrEnum):
@@ -117,6 +161,36 @@ class Kept(StrEnum):
     REMOTE_UNREADABLE = "git could not list origin's branches"
 
 
+class Pane(StrEnum):
+    """What tmux says about a pane a spawn is waiting on.
+
+    DEAD and GONE are the same event seen with and without a corpse. `spawn` turns
+    `remain-on-exit` on for the pane it made, so a command that fails to start leaves
+    its exit status behind to be read; a pane destroyed before that option lands has
+    nothing left to say. Collapsing them would throw away the only diagnosis available
+    for the failure that is otherwise invisible.
+    """
+
+    RUNNING = 'running'
+    DEAD = 'dead'
+    GONE = 'gone'
+
+
+class Registration(StrEnum):
+    """How the wait for a spawned session ended.
+
+    Only REGISTERED produces a name, and a name is the whole product of the command.
+    The other three are apart because they need different things done about them: a
+    dead pane is a launch that failed, a timeout is a session that may yet appear, and
+    an unreadable registry is a question that was never answered either way.
+    """
+
+    REGISTERED = 'registered'
+    PANE_DIED = 'pane_died'
+    TIMED_OUT = 'timed_out'
+    REGISTRY_UNREADABLE = 'registry_unreadable'
+
+
 class Refused(Exception):
     """A refusal a human has to read: the reason, then anything that unblocks it."""
 
@@ -135,6 +209,9 @@ class Session:
     waiting: str | None
     cwd: Path
     tmux: str | None
+    # The process the registry is keyed on. Optional because only `spawn` reads it, and a
+    # row is worth having in a listing whether or not it carried one.
+    pid: int | None = None
 
 
 @dataclass(frozen=True)
@@ -175,9 +252,67 @@ class Worktree:
                     'waiting': session.waiting,
                     'cwd': str(session.cwd),
                     'tmux': session.tmux,
+                    'pid': session.pid,
                 }
                 for session in self.sessions
             ],
+        }
+
+
+@dataclass(frozen=True)
+class Destination:
+    """Where a spawned session stands, and what it may commit on.
+
+    A branch of None is the whole of the no-slug form: the session has nothing of its
+    own to commit to, which is what makes sharing a checkout with other sessions safe
+    for it and unsafe for a worker.
+    """
+
+    path: Path
+    branch: str | None
+    worktree: bool
+
+
+@dataclass(frozen=True)
+class Landing:
+    """How the wait for a session ended, and whatever the pane said if it died.
+
+    `status` and `output` are only ever set on PANE_DIED, and either can still be absent
+    there — a pane destroyed before `remain-on-exit` took hold leaves neither.
+    """
+
+    registration: Registration
+    session: str | None = None
+    status: int | None = None
+    output: str = ''
+
+
+@dataclass(frozen=True)
+class Spawned:
+    """One session this command started, and everything a caller needs to reach it."""
+
+    repo: str
+    path: Path
+    branch: str | None
+    worktree: bool
+    pane: str
+    brief: Path
+    landing: Landing
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'repo': self.repo,
+            'path': str(self.path),
+            'branch': self.branch,
+            'worktree': self.worktree,
+            'pane': self.pane,
+            'brief': str(self.brief),
+            'session': self.landing.session,
+            # Why there is no `session`, for a caller that has to say something about it.
+            # No `registered` boolean beside it: `session` being null already carries that,
+            # and a second field saying the same thing is one more that can disagree.
+            'registration': str(self.landing.registration),
+            'exit_status': self.landing.status,
         }
 
 
@@ -272,6 +407,19 @@ def worktree_root() -> Path:
     return Path(os.environ.get('WORKTREE_ROOT') or Path.home() / '.worktrees')
 
 
+def briefs_dir() -> Path:
+    """Where a spawned session's brief is kept, per standards/data.md § "Every path a
+    tool writes is an XDG base directory".
+
+    State rather than cache or data: nothing recomputes a brief, no human authored it,
+    and deleting one changes what a session was told rather than costing a rebuild. Not
+    a synced store either — a brief is about one spawn on one machine, and replicating
+    it to every box would put another machine's instructions in this one's directory.
+    """
+    state = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state')
+    return state / 'worktree' / 'briefs'
+
+
 def display_path(path: Path) -> str:
     """`~`-relative, which is how a path reads in a table."""
     home = Path.home()
@@ -340,6 +488,7 @@ def live_sessions() -> tuple[Session, ...] | None:
             waiting=row.get('waiting'),
             cwd=Path(row['cwd']),
             tmux=row.get('tmux'),
+            pid=row.get('pid'),
         )
         for row in json.loads(result.stdout)
     )
@@ -810,9 +959,13 @@ def provision(path: Path) -> None:
         say_warning('task setup failed; the worktree exists but is not provisioned')
 
 
-def cmd_new(slug: str) -> int:
-    cwd = Path.cwd()
-    checkout = require_checkout(cwd)
+def create_worktree(cwd: Path, checkout: Path, slug: str) -> Path:
+    """Cut a worktree off origin's default branch, provision it, and return its path.
+
+    Shared by `new` and `spawn` so the two cannot drift: a session started by `spawn`
+    would otherwise be the one landing in a tree that `task setup` never ran in, and
+    nothing about that failure would name the branch they took differently.
+    """
     path = worktree_root() / checkout.name / slug
 
     if path.exists():
@@ -825,10 +978,392 @@ def cmd_new(slug: str) -> int:
         raise Refused(created.stderr.strip() or f'git could not create {path}')
 
     provision(path)
+    return path
+
+
+def cmd_new(slug: str) -> int:
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    path = create_worktree(cwd, checkout, slug)
 
     say_ok(f'Isolated at {path}')
     OUT.print(str(path), markup=False, highlight=False)
     return 0
+
+
+def require_tool(name: str, why: str) -> None:
+    if shutil.which(name) is None:
+        raise Refused(f'{name} is not installed', why)
+
+
+def require_caller_pane() -> str:
+    """The pane a spawn splits, which is the caller's own.
+
+    tmux exports $TMUX_PANE into everything it starts, so a session's shell already
+    carries the address of the pane that session is in and nothing has to be passed.
+    Outside tmux there is no pane to split, and a session started anyway would be a
+    process nobody can see — which is the failure this refuses rather than produces.
+    """
+    require_tool('tmux', 'A spawned session is a tmux pane, and there is nowhere else to put one')
+    pane = os.environ.get('TMUX_PANE')
+    if not os.environ.get('TMUX') or not pane:
+        raise Refused(
+            'Not inside tmux, so there is no pane to split',
+            'Run this from a session that is itself in a tmux pane',
+        )
+    return pane
+
+
+def require_unoccupied(path: Path) -> None:
+    """Refuse to put a second session into a worktree that already holds one.
+
+    An unreadable registry refuses too, for the reason `held_by` keeps its four
+    unanswerable members apart from its false ones: *nobody is here* and *nobody could
+    be asked* are the same empty list, and reading the second as the first is what
+    authorises the collision. A worktree exists to have one session in it, so this is
+    the one place the tool must not guess.
+    """
+    sessions = sessions_at(live_sessions(), path)
+    if sessions is None:
+        raise Refused(
+            f'Cannot tell whether a session is already in {display_path(path)}',
+            'claude-sessions is what answers that, and two sessions in one worktree is the collision this tool exists to prevent',
+        )
+    if sessions:
+        raise Refused(
+            f'{display_path(path)} already holds {", ".join(session.name for session in sessions)}',
+            'Spawn under a different slug, or send that session a message instead of a second session',
+        )
+
+
+def resolve_destination(cwd: Path, checkout: Path, slug: str | None) -> Destination:
+    """Where the session will stand: a worktree of its own, or the checkout itself.
+
+    The absent slug is `cli-design.md` § "Scope is structural: the argument's presence
+    selects it, never a flag" — a slug names a branch, so no slug is a session with no
+    branch, and a session with no branch has nothing a worktree would isolate.
+
+    An existing worktree is attached to rather than refused, because a coordinator
+    respawning an agent into work already in progress is the ordinary case and losing
+    the branch would be the wrong repair. Its branch is read back out of git rather
+    than assumed to be the slug: a session standing there may have moved it.
+
+    An occupied checkout warns and proceeds, where an occupied worktree refuses. The
+    asymmetry is deliberate and it is not a softer version of the same check. A checkout
+    holding other sessions is the normal condition of every repo anyone is working in,
+    and the no-slug form exists for the reviewer that has to stand there — so refusing
+    would make a review impossible exactly when the repo is busy, which is always. What
+    makes it tolerable is that the session gets no branch: it has nothing of its own to
+    commit, and the warning says what to do if that assumption is wrong.
+    """
+    if slug is None:
+        occupants = sessions_at(live_sessions(), checkout)
+        if occupants:
+            names = ', '.join(session.name for session in occupants)
+            say_warning(f'{display_path(checkout)} already holds {names}, and this session will share its index')
+            say_info('Give it a slug if it will commit; with none it gets no branch, which is what makes sharing a checkout safe')
+        return Destination(checkout, None, worktree=False)
+
+    path = worktree_root() / checkout.name / slug
+    if not path.exists():
+        return Destination(create_worktree(cwd, checkout, slug), slug, worktree=True)
+
+    if primary_checkout(path) is None:
+        raise Refused(f'{display_path(path)} exists but is not a worktree', 'Remove it, or spawn under a different slug')
+    require_unoccupied(path)
+    return Destination(path, git(path, 'rev-parse', '--abbrev-ref', 'HEAD'), worktree=True)
+
+
+def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
+    """Copy the brief somewhere it outlives its author, and return the copy.
+
+    The session reads its brief once, at launch, so the file has to survive only until
+    then — but the caller writing it has no way to know when that is, and a coordinator
+    writing briefs into its own scratch directory would be racing its agents' startup.
+
+    Kept rather than deleted afterwards because it is the only record of what a session
+    was told, which is what a later reader needs to tell a wrong agent from a wrong
+    brief. The stamp is what stops a respawn overwriting the instructions the first
+    attempt actually ran on.
+    """
+    stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    destination = briefs_dir() / f'{repo}-{slug or "checkout"}-{stamp}.md'
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(source.read_text())
+    return destination
+
+
+def open_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -> str:
+    """Split the caller's pane, start a session in it, and return the new pane's id.
+
+    -d leaves the focus where it was. The caller is mid-turn when it runs this, and a
+    spawn that moves the cursor interrupts whoever is reading that pane.
+
+    -P -F is tmux's own answer for which pane it just made, so nothing has to be matched
+    back afterwards by comparing pane lists before and against after.
+
+    `remain-on-exit` is turned on immediately after, and it is what makes a failed
+    launch diagnosable: without it a command that cannot start destroys its pane in
+    milliseconds, leaving no error text, no exit status and no pane — so the only
+    symptom is a session that never registers. Setting it can itself lose that race,
+    which is why `pane_state` still has a GONE to report.
+    """
+    created = run(
+        [
+            'tmux',
+            'split-window',
+            '-d',
+            '-v' if below else '-h',
+            '-P',
+            '-F',
+            '#{pane_id}',
+            '-t',
+            caller,
+            '-c',
+            str(workdir),
+            f'claude {shlex.quote(prompt)}',
+        ]
+    )
+    if created.returncode != 0:
+        raise Refused(created.stderr.strip() or 'tmux refused to split the pane')
+
+    pane = created.stdout.strip()
+    run(['tmux', 'set-option', '-p', '-t', pane, 'remain-on-exit', 'on'])
+    return pane
+
+
+def stack_beside(caller: str, width: str) -> None:
+    """Put the caller back in the large left pane, with everything spawned stacked right.
+
+    tmux halves the pane it splits, so a coordinator that dispatched four agents would
+    be reading its own work in a sixteenth of the window. `main-vertical` collapses that
+    into one stack, and the width says how much of the window the reading pane keeps —
+    without it tmux uses its own `main-pane-width` default of 80 columns, which puts the
+    narrow pane on the side that carries prose.
+
+    Only ever called for a split beside. A split below is a reviewer deliberately placed
+    under its author, and this layout would lift it into the right-hand stack.
+
+    A failure here is reported and not raised. The session is already running by this
+    point, and losing it over a cosmetic call would be the worse outcome.
+    """
+    window = run(['tmux', 'display-message', '-p', '-t', caller, '#{window_id}'])
+    if window.returncode != 0:
+        say_warning('tmux could not name the window, so the layout is left as it is')
+        return
+
+    target = window.stdout.strip()
+    run(['tmux', 'set-window-option', '-t', target, 'main-pane-width', width])
+    if run(['tmux', 'select-layout', '-t', target, 'main-vertical']).returncode != 0:
+        say_warning('tmux refused the layout, so the panes are left as the split arranged them')
+
+
+def pane_state(pane: str) -> tuple[Pane, int | None]:
+    """Whether a pane is running, dead with a status to read, or gone entirely.
+
+    `display-message` cannot answer the first question: it exits 0 and prints an empty
+    line for a pane that no longer exists, so a check built on it reads every dead pane
+    as healthy. `list-panes` refuses, and that refusal is the existence test.
+
+    It answers for the whole window the pane is in rather than for the pane, so the row
+    has to be found by id — a window's other panes are the caller's own and say nothing
+    about this one.
+    """
+    listed = run(['tmux', 'list-panes', '-t', pane, '-F', '#{pane_id} #{pane_dead} #{pane_dead_status}'])
+    if listed.returncode != 0:
+        return Pane.GONE, None
+
+    for row in listed.stdout.splitlines():
+        pane_id, _, rest = row.partition(' ')
+        if pane_id != pane:
+            continue
+        dead, _, status = rest.partition(' ')
+        if dead != '1':
+            return Pane.RUNNING, None
+        return Pane.DEAD, int(status) if status.strip().isdigit() else None
+    return Pane.GONE, None
+
+
+def last_words(pane: str) -> str:
+    """What a dead pane printed before it died, scrollback included.
+
+    Without `-S -` the capture starts at the top of the visible pane, and a command that
+    wrote one line and exited leaves that line above the window — so the capture comes
+    back as blank lines and tmux's own "Pane is dead" notice, which says nothing the
+    exit status has not already said.
+    """
+    captured = run(['tmux', 'capture-pane', '-p', '-S', '-', '-E', '-', '-t', pane])
+    if captured.returncode != 0:
+        return ''
+    return '\n'.join(line for line in captured.stdout.splitlines() if line.strip())
+
+
+def pane_process(pane: str) -> int | None:
+    """The pid of the process tmux started in a pane, or None where it cannot be read.
+
+    For a pane this command made, that pid is the `claude` process itself, which is what
+    the session registry is keyed on. tmux runs a pane command through `sh -c`, and a
+    simple command is exec'd rather than forked, so the pid survives the shell.
+
+    It is not the session's pid for a pane someone typed `claude` into — there it is the
+    shell, and the session is its child. That is exactly why this is only ever asked about
+    a pane this command just created, and never used to identify a session in general.
+    """
+    found = run(['tmux', 'display-message', '-p', '-t', pane, '#{pane_pid}'])
+    process = found.stdout.strip()
+    return int(process) if found.returncode == 0 and process.isdigit() else None
+
+
+def session_in_pane(sessions: Sequence[Session], pane: str, pane_pid: int | None) -> str | None:
+    """The registered session running in one pane.
+
+    Not matched on the working directory, which is ambiguous by design here. A session
+    with no slug stands in the primary checkout on purpose, and that is the one directory
+    several sessions share — so a directory match returns whichever of them the registry
+    lists first. Handing a coordinator the wrong name is how a real instruction reaches an
+    agent that never asked for it; `review-pr` § "Hand it to whoever is on the branch"
+    records what that costs when the same match is loosened.
+
+    The registry spells a pane as `<tmux session>:@<window>.%<pane>`, and only the last
+    field is compared. The window half is unreliable: a pane moved between windows with
+    `tmux join-pane` keeps its id while the registry keeps the window it was recorded in,
+    so the address as a whole names a window the pane has left.
+
+    The pane id is not unique either. A `claude` started from inside another session's
+    pane inherits that pane's $TMUX_PANE and registers against it, so an agent's own pane
+    can be claimed by a second row for as long as that child lives. The pid is what
+    separates them, and it is required rather than used as a tiebreak — a claimant that
+    appears before the real session registers would otherwise be answered with, and the
+    caller's next act is to send that name an instruction.
+
+    A tmux session name may itself contain a dot, so the split has to come from the right.
+    """
+    for session in sessions:
+        if not session.tmux or session.tmux.rsplit('.', 1)[-1] != pane:
+            continue
+        if pane_pid is not None and session.pid != pane_pid:
+            continue
+        return session.name
+    return None
+
+
+def await_registration(pane: str, timeout: float) -> Landing:
+    """Wait for the new session to appear in the registry, and name it.
+
+    The name is the product of the whole command: a caller's next move is a message
+    addressed to it, and there is nothing to address until the session has registered.
+
+    The pane is watched alongside, because a launch that failed to start leaves no
+    session to wait for — and without this the whole timeout is spent to report nothing
+    but that the timeout elapsed. The corpse is read for its exit status and then killed,
+    since `remain-on-exit` would otherwise leave a dead pane in the window forever.
+
+    The command echo is off for the loop. It is one `claude-sessions` per second, and a
+    reader watching for a name does not need sixty copies of the same line.
+    """
+    say_info('Waiting for the session to register')
+    deadline = time.monotonic() + timeout
+    echoing = ECHO
+    set_echo(False)
+    try:
+        # Read once, before anything has had time to move: the pane's process does not
+        # change for its lifetime, and it is what tells the session apart from any other
+        # row claiming the same pane.
+        pane_pid = pane_process(pane)
+        while time.monotonic() < deadline:
+            time.sleep(POLL_SECONDS)
+
+            sessions = live_sessions()
+            if sessions is None:
+                return Landing(Registration.REGISTRY_UNREADABLE)
+            name = session_in_pane(sessions, pane, pane_pid)
+            if name:
+                return Landing(Registration.REGISTERED, session=name)
+
+            state, status = pane_state(pane)
+            if state is Pane.RUNNING:
+                continue
+            output = last_words(pane) if state is Pane.DEAD else ''
+            run(['tmux', 'kill-pane', '-t', pane])
+            return Landing(Registration.PANE_DIED, status=status, output=output)
+    finally:
+        set_echo(echoing)
+
+    return Landing(Registration.TIMED_OUT)
+
+
+def announce(spawned: Spawned, timeout: float) -> None:
+    """Everything a human reads about a spawn, on stderr beside the rest of it."""
+    say_ok(f'Spawned in pane {spawned.pane}, {display_path(spawned.path)}')
+    if spawned.branch:
+        say_info(f'branch {spawned.branch}')
+    say_info(f'brief {display_path(spawned.brief)}')
+
+    landing = spawned.landing
+    match landing.registration:
+        case Registration.REGISTERED:
+            say_ok(f'Session {landing.session}')
+        case Registration.PANE_DIED:
+            status = 'an unreadable status' if landing.status is None else f'status {landing.status}'
+            say_error(f'`claude` exited with {status} before a session registered')
+            if landing.output:
+                say_info('what the pane printed:')
+                ERR.print(escape(landing.output), highlight=False)
+        case Registration.TIMED_OUT:
+            say_error(f'No session registered in {spawned.pane} within {timeout:g}s')
+            say_info('The pane is still running; `claude-sessions` will name it if it registers late')
+        case Registration.REGISTRY_UNREADABLE:
+            say_error('claude-sessions stopped answering, so the session in that pane cannot be named')
+
+
+def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout: float, as_json: bool) -> int:
+    """Start a Claude session in a pane of its own, and name it.
+
+    Everything that can refuse is settled before anything is created, per
+    `cli-design.md` § "Everything that can refuse runs before the first byte of data" —
+    a missing tmux, an absent brief or an occupied worktree costs nothing to discover
+    and would otherwise be found after a pane, a branch and a directory already exist.
+    """
+    caller = require_caller_pane()
+    require_tool('claude', 'It is the session this starts')
+    require_tool('claude-sessions', 'It is what names the session that lands in the pane')
+
+    source = Path(brief).expanduser()
+    if not source.is_file():
+        raise Refused(f'No brief at {source}', 'Write the brief to a file — a prompt long enough to be one does not survive quoting')
+    if not source.read_text().strip():
+        raise Refused(f'{source} is empty', 'A session given nothing to read will ask what it is for')
+
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    # Copied before the worktree is cut, so the one thing a later refusal can leave
+    # behind is a file in a state directory rather than a branch and a checkout.
+    kept = keep_brief(source, checkout.name, slug)
+    where = resolve_destination(cwd, checkout, slug)
+
+    pane = open_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below)
+    if not below:
+        stack_beside(caller, width)
+
+    spawned = Spawned(
+        repo=checkout.name,
+        path=where.path,
+        branch=where.branch,
+        worktree=where.worktree,
+        pane=pane,
+        brief=kept,
+        landing=await_registration(pane, timeout),
+    )
+
+    if as_json:
+        OUT.print(json.dumps(spawned.as_json(), indent=2), markup=False, highlight=False)
+    elif spawned.landing.session:
+        OUT.print(spawned.landing.session, markup=False, highlight=False)
+
+    announce(spawned, timeout)
+    # Non-zero without a name, because the caller's next move is a message to it. A spawn
+    # reported as success with nothing to address is the failure that reads as working.
+    return 0 if spawned.landing.registration is Registration.REGISTERED else 1
 
 
 def cmd_land() -> int:
@@ -1045,6 +1580,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     new.add_argument('slug', help='names both the directory and the branch')
 
+    spawn = commands.add_parser(
+        'spawn',
+        parents=[quiet],
+        help='start a Claude session in a tmux pane, in a worktree of its own',
+        description=(
+            'Create or attach the worktree, split the caller\'s pane, launch `claude` against a written brief, '
+            'and print the name the session registered under. '
+            'A slug names the branch, so `spawn <slug>` is a worker with a worktree of its own and `spawn` with '
+            'no slug is a session standing in the primary checkout with no branch — which is what a reviewer '
+            'needs, since a session inside a worktree is refused any `git -C` that leaves it. '
+            'The brief is copied into $XDG_STATE_HOME/worktree/briefs and the copy is what the session reads. '
+            'It exits non-zero when no session registered, because the name is the product.'
+        ),
+    )
+    spawn.add_argument('slug', nargs='?', help='names the directory and the branch; without it the session stands in the checkout and gets no branch')
+    spawn.add_argument('--brief', required=True, metavar='PATH', help='the file the session is told to read; it is copied, and the copy is what it reads')
+    spawn.add_argument('--below', action='store_true', help='split under the caller rather than beside it, and leave the layout alone')
+    # argparse runs a help string through %-formatting, so a literal percent in the
+    # default has to arrive doubled or `--help` dies rather than the command.
+    spawn.add_argument(
+        '--width',
+        default=MAIN_PANE_WIDTH,
+        metavar='WIDTH',
+        help=f"the caller's share of the window after the split, in columns or a percentage (default {MAIN_PANE_WIDTH.replace('%', '%%')})",
+    )
+    spawn.add_argument('--timeout', type=float, default=REGISTRATION_TIMEOUT, metavar='SECONDS', help=f'how long to wait for the session to register (default {REGISTRATION_TIMEOUT:g})')
+    spawn.add_argument('--json', action='store_true', dest='as_json', help='the session, pane, path, branch and brief for a script to read')
+    spawn.set_defaults(subparser=spawn)
+
     commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')
 
     drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
@@ -1093,6 +1657,14 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     match args.command:
         case 'new':
             return cmd_new(args.slug)
+        case 'spawn':
+            # `--width` is spawn's own flag and `--below` is what voids it: a below split
+            # leaves the layout alone, so main-pane-width would parse and reach nothing.
+            # `cli-design.md` § "A flag the run cannot honour says so" makes that a usage
+            # error rather than a silent no-op.
+            if args.below and args.width != MAIN_PANE_WIDTH:
+                args.subparser.error('no --width with --below: a split below leaves the layout alone, so there is no main pane to size')
+            return cmd_spawn(args.slug, args.brief, below=args.below, width=args.width, timeout=args.timeout, as_json=args.as_json)
         case 'land':
             return cmd_land()
         case 'drop':
