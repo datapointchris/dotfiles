@@ -962,7 +962,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False, again=False, before_place=None, installed=''):
+    def record(entry, target=None, *, offline=False, again=False, before_place=None, floor=''):
         """The engine's shape rather than only its name.
 
         `before_place` is what the release provider hands in to displace a package
@@ -970,9 +970,12 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         report an install nothing was cleared for — and would pass every ordering
         assertion below while the real engine did something else.
 
-        `installed` is the version floor the two providers with a bundle fallback
-        take. Accepted and ignored: what it governs is which *source* answers, and
-        nothing here has a source to choose between.
+        `floor` is the version a staged bundle has to beat, taken by the two
+        providers with a bundle fallback and by neither of the other five. Accepted
+        and ignored here, because what it governs is which *source* answers and
+        nothing in this suite has a source to choose between —
+        `tests/resolver/test_registry.py` is where the value reaching the provider
+        is asserted.
         """
         if before_place is not None:
             cleared = before_place()

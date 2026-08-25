@@ -33,7 +33,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from dotfiles import versions
 from dotfiles.providers import MANIFEST
+from dotfiles.providers import Kind
+from dotfiles.providers import Result
 from dotfiles.providers import staged_bundles
 
 DOCUMENT = 'bundle.json'
@@ -304,6 +307,63 @@ def staged(name: str, *categories: str) -> Staged | None:
     both name `bat` — a GitHub release entry and a cargo package are different
     declarations of the same tool on different machines — and a provider asking
     for its own category is asking about the file it knows how to install.
+
+    Merged newest-first across every staged bundle, so the row that answers is not
+    necessarily the one whose bundle holds the file a provider will open. Where
+    those two have to agree, `row_in` is the question to ask instead.
     """
     wanted = frozenset(categories)
     return next((row for row in rows() if row.name == name and row.category in wanted), None)
+
+
+def row_in(root: Path, name: str, *categories: str) -> Staged | None:
+    """One bundle's own row for a tool, ignoring every other staged bundle.
+
+    The same reasoning `Located.beside` records, asked of a manifest row rather
+    than of a sibling file. A provider that compares a version from `staged` and
+    then installs a file resolved by its own newest-first search is reading two
+    bundles: the newer one can record a row whose file failed to extract, leaving
+    the older one's binary to be installed against the newer one's version.
+    Pairing both to one root is what makes the version describe the bytes.
+    """
+    wanted = frozenset(categories)
+    return next((row for row in parse(_text(root)) if row.name == name and row.category in wanted), None)
+
+
+def behind_refusal(carried: Staged | None, floor: str, failure: Result) -> Result | None:
+    """The refusal a staged row earns when installing it would leave the machine as it is.
+
+    `None` where the bundle is still worth reaching for, so a provider reads this
+    as a guard in front of its own installer:
+    `behind_refusal(...) or _from_bundle(...) or failure`.
+
+    Shared because both providers with a bundle fallback ask the identical
+    question, and the answer carries a comparison, a sentence and a `Kind` — the
+    part that is free to diverge once it exists twice. What stays with each
+    provider is its own category and its own installer, which are the only things
+    that differ.
+
+    **Readable, not merely present.** `versions.exceeds` answers `False` for a
+    string it cannot parse, so testing the two versions for emptiness would read
+    "unreadable" as "not newer" and decline a bundle nothing had measured.
+    `create_bundle` records whatever tag upstream published and that shape is not
+    this repo's to constrain, so a row reading `nightly` is one this cannot rank —
+    which is a reason to install it rather than to refuse it.
+
+    **`failure.kind` survives unless the install command itself failed.** A
+    command that ran and exited non-zero is a transport problem, and a current
+    bundle is exactly what would have covered it. Anything else — no cargo to
+    build with, no toolchain unpacked yet — is a fault in the machine that
+    outranks the bundle's age, and answering `BUNDLE_BEHIND` there would send the
+    reader to rebuild a bundle when the machine needs a runtime.
+    """
+    if carried is None or not floor:
+        return None
+    if versions.at_least(carried.version, floor) is None or versions.exceeds(carried.version, floor):
+        return None
+    return Result(
+        False,
+        f'{failure.detail}; the staged bundle carries {carried.version}, no newer than the installed {floor}. '
+        'A newer bundle is what repairs this: dotfiles bundle download, then dotfiles bundle stage',
+        kind=Kind.BUNDLE_BEHIND if failure.kind is Kind.COMMAND_FAILED else failure.kind,
+    )

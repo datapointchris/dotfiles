@@ -84,7 +84,7 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
     stage(bundle)
     reached = proxy()
 
-    result = gotool.install(TASK, offline=False)
+    result = gotool.install(TASK, offline=False, floor='')
 
     assert result.ok
 
@@ -109,7 +109,7 @@ def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_i
     stage(bundle)
     proxy()
 
-    assert gotool.install(TASK, offline=False).ok
+    assert gotool.install(TASK, offline=False, floor='').ok
     assert str(toolchain.GO_ROOT / 'bin') in os.environ['PATH'].split(os.pathsep)
 
 
@@ -119,7 +119,7 @@ def test_an_offline_run_takes_the_bundle_without_trying_the_proxy(home, bundle, 
     stage(bundle)
     reached = proxy()
 
-    result = gotool.install(TASK, offline=True)
+    result = gotool.install(TASK, offline=True, floor='')
 
     assert result.ok
     assert reached.calls == []
@@ -133,7 +133,7 @@ def test_an_unreachable_proxy_falls_back_to_the_bundle(home, bundle, proxy) -> N
     stage(bundle)
     proxy(reachable=False)
 
-    result = gotool.install(TASK, offline=False)
+    result = gotool.install(TASK, offline=False, floor='')
 
     assert result.ok
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
@@ -148,7 +148,7 @@ def test_a_bundle_no_newer_than_what_is_installed_is_not_written_again(home, bun
     record(bundle, 'v3.45.0')
     proxy(reachable=False, said='go: module lookup disabled: tls: handshake failure')
 
-    result = gotool.install(TASK, offline=False, installed='3.45.0')
+    result = gotool.install(TASK, offline=False, floor='3.45.0')
 
     assert not result.ok
     assert result.kind is Kind.BUNDLE_BEHIND
@@ -165,7 +165,7 @@ def test_a_bundle_ahead_of_what_is_installed_still_rescues_an_unreachable_proxy(
     record(bundle, 'v3.45.0')
     proxy(reachable=False)
 
-    result = gotool.install(TASK, offline=False, installed='3.44.0')
+    result = gotool.install(TASK, offline=False, floor='3.44.0')
 
     assert result.ok
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
@@ -178,8 +178,50 @@ def test_a_bundle_whose_manifest_says_nothing_is_still_a_fallback(home, bundle, 
     stage(bundle)
     proxy(reachable=False)
 
-    assert gotool.install(TASK, offline=False, installed='3.45.0').ok
+    assert gotool.install(TASK, offline=False, floor='3.45.0').ok
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
+
+
+def test_a_bundle_below_what_is_installed_is_refused_too(home, bundle, proxy) -> None:
+    """The guard covers equal *and* below, and below is the aged-out bundle this is
+    named for. Written against `exactly` rather than `exceeds`, every other case
+    here stays green while an old bundle overwrites a newer binary with an older
+    one."""
+    stage(bundle)
+    record(bundle, 'v3.44.0')
+    proxy(reachable=False)
+
+    result = gotool.install(TASK, offline=False, floor='3.45.0')
+
+    assert not result.ok
+    assert result.kind is Kind.BUNDLE_BEHIND
+    assert not (home / 'go' / 'bin' / 'task').exists()
+
+
+def test_the_floor_reads_the_row_from_the_bundle_the_file_comes_from(home, bundle, proxy, tmp_path) -> None:
+    """`bundled` resolves the binary newest-first and never opens a manifest, while
+    `bundle.staged` merges rows newest-first across every staged bundle. Read
+    independently, a newer bundle whose extraction left no binary lends its version
+    to an older bundle's file — and the floor then passes on a version the bytes do
+    not carry, writing 3.44.0 over 3.45.0.
+
+    The newer bundle here records v3.46.0 and holds no `go-binaries/task`, which is
+    the shape an interrupted build leaves.
+    """
+    newer = tmp_path / 'staged' / 'dotfiles-offline-v20260901T000000Z-box-linux-x86_64'
+    (newer / gotool.BUNDLE_BINARIES).mkdir(parents=True)
+    record(newer, 'v3.46.0')
+
+    stage(bundle)
+    record(bundle, 'v3.44.0')
+    proxy(reachable=False)
+
+    result = gotool.install(TASK, offline=False, floor='3.45.0')
+
+    assert not result.ok
+    assert result.kind is Kind.BUNDLE_BEHIND
+    assert '3.44.0' in result.detail, 'the version compared has to be the one the bytes carry'
+    assert not (home / 'go' / 'bin' / 'task').exists()
 
 
 def test_an_offline_run_ignores_the_version_floor(home, bundle, proxy) -> None:
@@ -190,7 +232,7 @@ def test_an_offline_run_ignores_the_version_floor(home, bundle, proxy) -> None:
     record(bundle, 'v3.45.0')
     proxy()
 
-    assert gotool.install(TASK, offline=True, installed='3.45.0').ok
+    assert gotool.install(TASK, offline=True, floor='3.45.0').ok
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
 
 
@@ -200,7 +242,7 @@ def test_an_unreachable_proxy_with_no_bundle_reports_what_go_said(home, bundle, 
     command exited non-zero."""
     proxy(reachable=False, said='go: module lookup disabled: tls: handshake failure')
 
-    result = gotool.install(TASK, offline=False)
+    result = gotool.install(TASK, offline=False, floor='')
 
     assert not result.ok
     assert result.kind is Kind.COMMAND_FAILED
@@ -213,7 +255,7 @@ def test_progress_lines_are_not_mistaken_for_the_diagnosis(home, bundle, proxy) 
     report becomes unreadable."""
     proxy(reachable=False, said='go: downloading github.com/a/b\ngo: downloading github.com/c/d\ngo: no such module')
 
-    result = gotool.install(TASK, offline=False)
+    result = gotool.install(TASK, offline=False, floor='')
 
     assert result.kind is Kind.COMMAND_FAILED
     assert 'downloading' not in result.detail
@@ -223,7 +265,7 @@ def test_progress_lines_are_not_mistaken_for_the_diagnosis(home, bundle, proxy) 
 def test_offline_with_nothing_staged_says_where_it_looked(home, bundle, proxy) -> None:
     proxy()
 
-    result = gotool.install(TASK, offline=True)
+    result = gotool.install(TASK, offline=True, floor='')
 
     assert not result.ok
     assert result.kind is Kind.NOT_IN_BUNDLE
@@ -244,7 +286,7 @@ def test_a_bundled_binary_replaces_one_that_is_currently_running(home, bundle, p
     running.chmod(0o755)
     proxy(reachable=False)
 
-    result = gotool.install(TASK, offline=False)
+    result = gotool.install(TASK, offline=False, floor='')
 
     assert result.ok
     assert running.read_bytes() == BINARY
@@ -259,7 +301,7 @@ def test_the_binary_lands_where_the_declaration_says_it_is_called(home, bundle, 
     stage(bundle, 'gdu')
     proxy(reachable=False)
 
-    result = gotool.install(entry, offline=False)
+    result = gotool.install(entry, offline=False, floor='')
 
     assert result.ok
     assert (home / 'go' / 'bin' / 'gdu').read_bytes() == BINARY

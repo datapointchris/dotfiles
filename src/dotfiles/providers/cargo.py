@@ -32,12 +32,12 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import tomllib
 from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import paths
-from dotfiles import versions
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.providers import Kind
@@ -124,12 +124,13 @@ def stage(entry: catalog.CargoPackage, version: str, target: Target) -> str:
     )
 
 
-def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, installed: str = '') -> Result:
+def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor: str) -> Result:
     """Converge one Rust CLI, from whichever source this run can reach.
 
-    `installed` is the version already on the machine, and it is the floor the
-    bundle has to clear on an online run. Empty means there is no floor: the tool
-    is missing, or `--reinstall` asked for it again whatever it reports.
+    `floor` is the version a staged bundle has to beat before an online run will
+    install from it, and it is required rather than defaulted. A default here is
+    the reinstall loop restored by omission at a call site nothing would fail on —
+    `registry.version_floor` is the one thing that knows the answer.
     """
     if offline:
         return _from_bundle(entry) or Result(
@@ -140,15 +141,15 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, insta
 
     ready = binstall(target, offline=offline)
     if not ready.ok:
-        return _fallback(entry, ready, installed)
+        return _from_bundle_unless_behind(entry, ready, floor)
 
     built = _from_binstall(entry)
     if built.ok:
         return built
-    return _fallback(entry, built, installed)
+    return _from_bundle_unless_behind(entry, built, floor)
 
 
-def _fallback(entry: catalog.CargoPackage, failure: Result, installed: str) -> Result:
+def _from_bundle_unless_behind(entry: catalog.CargoPackage, failure: Result, floor: str) -> Result:
     """The bundle, on a run that had a network and could not install through it.
 
     Worth reaching at all because "online" means a network rather than a reachable
@@ -156,25 +157,13 @@ def _fallback(entry: catalog.CargoPackage, failure: Result, installed: str) -> R
     tool stays at the version the machine was built with while a current bundle
     sits unused on disk.
 
-    Worth declining where the staged version is no newer than the installed one:
-    the write would produce a byte-identical binary, and the row would be behind
-    upstream again on the next plan. `failure.detail` is carried into the refusal
-    because it holds the transcript naming why the preferred source could not be
-    reached, which is the half a person acts on — the bundle's age is the reason
-    nothing rescued it, not the reason it broke.
-
-    Both versions have to be readable before either can lose. A row carrying no
-    version is a manifest half-written, and reading that as "not newer" would
-    refuse the bundle on the strength of a question nothing answered.
+    Worth declining where the staged version is no newer: the write would produce
+    a byte-identical binary, and the row would be behind upstream again on the
+    next plan. `bundle.behind_refusal` holds that comparison, because the go
+    provider asks it in the same words.
     """
     carried = bundle.staged(entry.name, BUNDLE_CATEGORY)
-    if carried is not None and carried.version and installed and not versions.exceeds(carried.version, installed):
-        return Result(
-            False,
-            f'{failure.detail}; the staged bundle carries {carried.version}, which is no newer than the installed {installed}',
-            kind=Kind.BUNDLE_BEHIND,
-        )
-    return _from_bundle(entry) or failure
+    return bundle.behind_refusal(carried, floor, failure) or _from_bundle(entry) or failure
 
 
 def _from_binstall(entry: catalog.CargoPackage) -> Result:
@@ -185,34 +174,75 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
     either way — the Rust toolchain converges at an earlier stage — and the
     subcommand spelling is what every crates.io instruction uses.
 
-    **The compile strategy is disabled, so the prebuilt binary is the only source
-    this asks for.** binstall's default order is
-    `crate-meta-data,quick-install,compile`, and the last of those is `cargo
-    install` building the crate. Two things make it the wrong answer here. It
-    takes as long as the crate takes, with no bound and nothing declaring it. And
-    it cannot succeed at all wherever an earlier run installed from a bundle:
-    `place` writes the binary straight into `~/.cargo/bin` and records nothing in
-    `.crates.toml`, so `cargo install` finds a binary it does not own and exits
-    with `binary ... already exists in destination`. Disabled, an unreachable
-    release host fails in about a second with the transport error that caused it,
-    which is both faster and the diagnosis a person can act on.
+    **`--force` where a bundle already wrote this binary, and only there.**
+    binstall's last strategy is `compile`, which is `cargo install` building the
+    crate, and `cargo install` refuses to overwrite a binary it does not own:
 
-    Every `cargo_packages` entry declares `github_repo` and `binary_pattern`,
-    which is this repo asserting that upstream publishes a binary for it — a crate
-    that genuinely publishes none belongs in `system_packages`, and refusing it
-    here is what says so.
+        error: binary `oxker` already exists in destination
+        Add --force to overwrite
 
-    **Still streamed**, which the default `Output.STREAM` supplies. binstall
-    retries each candidate URL with a backoff, so a blocked host takes seconds of
-    silence before it gives up, and buffering that is what makes a working install
-    look hung.
+    `_from_bundle` is what produces an unowned one. It goes through `place`,
+    which copies the file into `~/.cargo/bin` and writes no row in
+    `.crates.toml`, so cargo has no record of it. The machine that most needs the
+    compile strategy is therefore the one where it cannot run — a firewalled box
+    reaches crates.io and no release host, so every crate falls to `compile`, and
+    every crate it restored from a bundle refuses. `--force` clears that, and
+    clears it once: the successful build records the crate, `cargo_owns` answers
+    True from then on, and the flag stops being passed.
+
+    Narrow on purpose. Passing it unconditionally would defeat binstall's
+    already-installed short-circuit and re-download every crate on every apply.
+
+    **Streamed, because the compile strategy is reachable.** A crate with no
+    prebuilt binary for this target builds from source, for as long as that crate
+    takes — `docs/learnings/cargo-binstall-needs-release-binaries.md` is the
+    account of why that is acceptable rather than a defect. Held quiet it cannot
+    be told from a deadlock, and streamed the `Compiling` lines say it is moving.
     """
-    completed = effects.run(['cargo', 'binstall', '-y', '--disable-strategies', 'compile', entry.name])
+    forced = ['--force'] if _placed_by_something_else(entry) else []
+    completed = effects.run(['cargo', 'binstall', '-y', *forced, entry.name])
     if completed.ok:
         return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
     return Result(
         False, f'cargo binstall {entry.name} exited {completed.returncode}: {completed.transcript.strip()}', kind=Kind.COMMAND_FAILED
     )
+
+
+CRATES_RECEIPT = '.crates.toml'
+"""Cargo's record of what it installed, beside the `bin` directory it installed into.
+
+Read rather than `cargo install --list`, which spawns a process per package to
+answer a question one file already holds.
+"""
+
+
+def cargo_owns(executable: str) -> bool:
+    """Whether cargo installed the binary of this name, by its own receipt.
+
+    The receipt is a `[v1]` table keyed by a crate spec, whose value is the list of
+    binaries that crate placed — so the answer is a membership test across every
+    value, not a lookup by crate name. A crate installs binaries under names of its
+    own choosing, which is the same split `entry.command` exists for.
+
+    False where the receipt is absent or will not parse. Both mean nothing here can
+    show cargo owns the file, and claiming ownership it cannot demonstrate is the
+    reading that leaves `cargo install` refusing with no way out.
+    """
+    try:
+        recorded = tomllib.loads((cargo_bin().parent / CRATES_RECEIPT).read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+    return any(executable in binaries for binaries in recorded.get('v1', {}).values())
+
+
+def _placed_by_something_else(entry: catalog.CargoPackage) -> bool:
+    """Whether a binary is at the destination that cargo did not put there.
+
+    Both halves are needed. Nothing at the destination is the ordinary first
+    install, and a binary cargo owns is the ordinary upgrade; only a file cargo
+    cannot account for makes `cargo install` refuse.
+    """
+    return (cargo_bin() / entry.executable).exists() and not cargo_owns(entry.executable)
 
 
 def _from_bundle(entry: catalog.CargoPackage) -> Result | None:

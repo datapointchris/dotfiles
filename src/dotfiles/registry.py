@@ -460,7 +460,7 @@ class CargoProvider(CatalogProvider):
             entry,
             coordinates.target_for(session.machine.coordinates),
             offline=session.offline,
-            installed=version_floor(session, change),
+            floor=version_floor(session, change),
         )
         return Outcome.from_result(change, result)
 
@@ -481,7 +481,7 @@ class GoToolProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
-        result = gotool.install(entry, offline=session.offline, installed=version_floor(session, change))
+        result = gotool.install(entry, offline=session.offline, floor=version_floor(session, change))
         return Outcome.from_result(change, result)
 
 

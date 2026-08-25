@@ -111,7 +111,12 @@ class Kind(enum.StrEnum):
     pruned. A bundle whose row has aged out was built correctly and is simply old,
     so the fix is to build a new one — and installing what it holds is not a fix at
     all, because it writes the version the machine already has and leaves the row
-    behind upstream for the next plan to find again.
+    behind upstream for the next plan to report again.
+
+    Answered only where the *install command* failed, never where the machine could
+    not run one. `bundle.behind_refusal` keeps a `PREREQUISITE_MISSING` as it
+    found it, because a missing toolchain outranks a bundle's age and naming the
+    bundle there would send a reader to the second-best repair.
     """
 
     VERSION_UNRESOLVED = 'version-unresolved'
