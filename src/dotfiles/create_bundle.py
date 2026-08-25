@@ -920,7 +920,7 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
         # `go/<name>`. The `record` below keeps `entry.executable`, which is what
         # `gotool` opens the staged file as — the two are different questions, and
         # a Go tool declaring `command` is where they diverge.
-        if bundle.already_current('go', 'go-binary', entry.name, version):
+        if bundle.already_current('go', gotool.BUNDLE_CATEGORY, entry.name, version):
             log.info(f'  {entry.executable} ({version}) is what the target already has')
             continue
         asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
@@ -932,7 +932,7 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
         # by the declared name — `packages._bundled` reads `item.name` — while
         # `gotool.bundled` opens `binaries/<executable>`, so the row answers both
         # only if the two halves carry the two different facts.
-        bundle.record('go-binary', entry.name, version, entry.executable)
+        bundle.record(gotool.BUNDLE_CATEGORY, entry.name, version, entry.executable)
 
 
 def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
@@ -948,7 +948,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
     for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
         version = fetch_latest_version(entry.github_repo)
-        if bundle.already_current('cargo', 'cargo', entry.name, version):
+        if bundle.already_current('cargo', cargo.BUNDLE_CATEGORY, entry.name, version):
             log.info(f'  {entry.name} ({version}) is what the target already has')
             continue
         filename = cargo.stage(entry, version, target)
@@ -960,7 +960,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
         if filename.endswith('.zip'):
             filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
 
-        bundle.record('cargo', entry.name, version, filename)
+        bundle.record(cargo.BUNDLE_CATEGORY, entry.name, version, filename)
 
 
 UV_REPO = 'astral-sh/uv'

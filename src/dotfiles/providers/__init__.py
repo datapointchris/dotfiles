@@ -103,6 +103,18 @@ class Kind(enum.StrEnum):
     Go tarball, and a missing `jq.exe` is a bundle that failed to build.
     """
 
+    BUNDLE_BEHIND = 'bundle-behind'
+    """The bundle carries this row at the version already installed, so it repairs nothing.
+
+    Separated from `NOT_IN_BUNDLE` by which half is wrong, which is what decides
+    the repair. A bundle with no row for a tool was built without it or was pruned.
+    A bundle whose row has aged out was built correctly and is simply old, so the
+    fix is to build a new one.
+
+    `bundle.behind_refusal` is the only thing that answers this, and it records why
+    — including which failures keep their own kind instead.
+    """
+
     VERSION_UNRESOLVED = 'version-unresolved'
     """No tag to install: the release API answered nothing, or a pin matches no
     release. The transport worked, so a network fix is the wrong one."""
@@ -213,6 +225,22 @@ class Result:
 
     What is *not* refused: a bundle missing something the bundler does stage. That
     is a broken bundle and the run should say so.
+    """
+
+    advice: str = ''
+    """The command that changes the situation, kept out of `detail`.
+
+    `detail` answers what went wrong and `advice` answers what to do about it —
+    the same split `Change.advice` draws, arriving from the other side. A provider
+    that knows the remedy had nowhere structured to put it: `Outcome.from_result`
+    does not carry `kind`, and `advice_for` answers `''` for every `STALE` row, so
+    the remedy went into `detail` as English and the only way to test it was to
+    match a sentence fragment.
+
+    Defaulted, unlike `kind`, because most results genuinely have no remedy to
+    name and a required field would make every construction invent one. The two
+    fields differ in what an omission means: no `kind` is a site that never
+    answered, and no `advice` is a site with nothing to say.
     """
 
 

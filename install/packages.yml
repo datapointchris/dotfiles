@@ -1136,8 +1136,9 @@ custom_installers:
 # ================================================================
 # CARGO PACKAGES (Rust)
 # ================================================================
-# Installed via: cargo binstall -y <package>
-# Fast pre-compiled binaries (much faster than cargo install)
+# Installed by src/dotfiles/providers/cargo.py, which builds the argv.
+# Prebuilt release binaries where a crate publishes one for the target, and a
+# source build where it does not — see docs/learnings/cargo-binstall-needs-release-binaries.md
 
 cargo_packages:
   # Node version manager. Reads .nvmrc, and unlike nvm it is a binary rather

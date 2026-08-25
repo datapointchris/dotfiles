@@ -42,6 +42,18 @@ If the answer is `will be installed from source`, that is information, not a
 defect. Act on it only when the crate also has to reach a machine that installs
 from the offline bundle.
 
+## A binary restored from a bundle makes the source build fail
+
+```text
+error: binary `oxker` already exists in destination
+Add --force to overwrite
+ERROR Cargo errored! ExitStatus(unix_wait_status(25856))
+```
+
+**Read past the last four lines.** The refusal names `--force`, which reads as a
+flag somebody forgot, and the two hosts that timed out are ten lines above it.
+`providers/cargo._from_binstall` handles this and records why.
+
 ## Key Learnings
 
 - A source build is visible and acceptable. Do not move a tool to another package
@@ -54,3 +66,7 @@ from the offline bundle.
 - A refused *download* host produces the same source build with every asset in
   place: the crates.io API and the release host are two hosts, and only the second
   has to be blocked. `dotfiles network check` says which half is answering.
+- Cargo owning a binary is a fact with a receipt. `~/.cargo/.crates.toml` lists
+  every binary cargo placed, and a file missing from it is one `cargo install`
+  will not write over — which is what anything filling `~/.cargo/bin` by another
+  route leaves behind.

@@ -347,15 +347,21 @@ class Outcome:
         `Result(True, ...)` works around that gap from the other side, and puts a
         green tick in front of "not bundled, so it is skipped".
         """
+        # A provider that named a remedy is the only thing that knows it, and
+        # `advice_for` cannot: it answers off the verdict, and every `STALE`
+        # package row is `AUTOMATIC` rather than `BY_HAND`. Carried onto the
+        # change so a renderer and a `--json` consumer read it as the field every
+        # other next step arrives in, rather than out of a sentence.
+        carrying = dc.replace(change, advice=result.advice) if result.advice else change
         if result.refused:
-            return cls(change, OutcomeStatus.REFUSED, result.detail)
+            return cls(carrying, OutcomeStatus.REFUSED, result.detail)
         if result.ok:
-            return cls(change, OutcomeStatus.DONE, result.detail)
+            return cls(carrying, OutcomeStatus.DONE, result.detail)
         # Only a failure is diagnosed, and only here. A refusal wrote nothing
         # because a precondition was unmet, which the provider already states in
         # its own terms; a success has nothing to ask about. Probing on either
         # would spend I/O on every item of every run.
-        return cls(change, OutcomeStatus.FAILED, diagnose.explain(change.item, result.detail))
+        return cls(carrying, OutcomeStatus.FAILED, diagnose.explain(change.item, result.detail))
 
 
 @dc.dataclass(frozen=True, slots=True)

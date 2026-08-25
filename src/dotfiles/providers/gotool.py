@@ -29,12 +29,22 @@ from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
+from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
 from dotfiles.providers import place
 from dotfiles.providers import releases
+from dotfiles.providers import staged_bundles
 from dotfiles.providers import toolchain
 
 BUNDLE_BINARIES = 'go-binaries'
+
+BUNDLE_CATEGORY = 'go-binary'
+"""What `create_bundle.add_go_binaries` records these rows under.
+
+The directory and the category are separate constants because they are separate
+facts: `BUNDLE_BINARIES` is where the file sits and this is how the manifest
+names it, and nothing makes one follow the other.
+"""
 
 
 def gobin() -> Path:
@@ -199,16 +209,23 @@ def stage(entry: catalog.GoTool, version: str, target: Target) -> str:
     return releases.expand_pattern(entry.binary_pattern, version, target)
 
 
-def install(entry: catalog.GoTool, *, offline: bool) -> Result:
+def install(entry: catalog.GoTool, *, offline: bool, floor: str) -> Result:
     """Converge one Go tool, from whichever source this run can reach.
 
     Offline takes the bundle and does not try the proxy at all. That is not
     caution: behind the work firewall `go install` does not fail fast, it hangs on
     a TLS handshake per tool, and thirteen of those is the difference between an
     install that finishes and one that looks broken.
+
+    `floor` is what a staged bundle is ranked against before an online run installs
+    from it, and it is required rather than defaulted. A default is the loop
+    `bundle.behind_refusal` describes, restored by omission at a call site nothing
+    would fail on — `registry.version_floor` is the one thing that knows the answer.
     """
     if offline:
-        return _from_bundle(entry) or Result(
+        carried = _carried(entry)
+        installed = _from_bundle(entry, carried[1]) if carried else None
+        return installed or Result(
             False,
             f'{entry.name} is not in the offline bundle at {bundled(entry).parent}, and offline cannot reach the proxy',
             kind=Kind.NOT_IN_BUNDLE,
@@ -217,14 +234,51 @@ def install(entry: catalog.GoTool, *, offline: bool) -> Result:
     fetched = _from_proxy(entry)
     if fetched.ok:
         return fetched
+    return _from_bundle_unless_behind(entry, fetched, floor)
 
-    # The bundle is worth trying even on an online run, because "online" here
-    # means a network — not a reachable proxy. On a firewalled machine it never
-    # is, and without this every Go tool stays pinned at the version the machine
-    # was first built with while a current bundle sits unused on disk.
-    if restored := _from_bundle(entry):
-        return restored
-    return fetched
+
+def _from_bundle_unless_behind(entry: catalog.GoTool, failure: Result, floor: str) -> Result:
+    """The bundle, on a run that had a network and could not install through it.
+
+    Worth reaching at all because "online" here means a network rather than a
+    reachable proxy. On a firewalled machine it never is, and without this every
+    Go tool stays pinned at the version the machine was first built with while a
+    current bundle sits unused on disk.
+
+    Worth declining where the staged version is what is already installed, for the
+    reason `bundle.behind_refusal` records. One `_carried` answers both halves, so
+    the version ranked and the bytes written come out of one bundle.
+    """
+    carried = _carried(entry)
+    if carried is None:
+        return failure
+    row, binary = carried
+    return bundle.behind_refusal(row, floor, failure) or _from_bundle(entry, binary) or failure
+
+
+def _carried(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] | None:
+    """The staged binary and its own bundle's row, or None where no bundle has the file.
+
+    The file decides which bundle answers, because `bundled` is what installs and
+    a row describes bytes rather than producing them. A root holding the binary and
+    no row is a real state — the manifest is how a version travels and the file
+    opens without one — so the row half is optional and the pair is not.
+
+    Read from one root rather than asking `bundle.staged`, which merges rows
+    newest-first across every staged bundle. A newer bundle recording `v3.46.0`
+    whose extraction left no binary would otherwise lend its version to an older
+    bundle's `v3.44.0` file, and the floor would pass on a version the bytes do not
+    carry.
+
+    The row is keyed by the declared name, which is what `create_bundle` records it
+    under, while the file is named by `executable` — different questions wherever a
+    Go tool declares a `command`.
+    """
+    for root in staged_bundles():
+        binary = root / BUNDLE_BINARIES / entry.executable
+        if binary.is_file():
+            return bundle.row_in(root, entry.name, BUNDLE_CATEGORY), binary
+    return None
 
 
 def _from_proxy(entry: catalog.GoTool) -> Result:
@@ -252,14 +306,17 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
 
 
-def _from_bundle(entry: catalog.GoTool) -> Result | None:
-    """The prebuilt binary, or None where the bundle carries none.
+def _from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:
+    """Install one staged binary, or None where it is not there to install.
+
+    Handed the file rather than resolving it, so the version a caller ranked and
+    the bytes written here cannot come from two bundles — `_carried` records what
+    that costs when they do.
 
     None rather than a failed Result, so a caller can tell "the bundle does not
     have this" from "the bundle has it and it would not install" — only the first
     is a reason to fall through to something else.
     """
-    cached = bundled(entry)
     if not cached.is_file():
         return None
 

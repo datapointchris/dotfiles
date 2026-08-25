@@ -15,11 +15,14 @@ from dotfiles import effects
 from dotfiles import evidence as ev
 from dotfiles import github_release
 from dotfiles import machine as machines
+from dotfiles import providers
 from dotfiles import registry
 from dotfiles import vocabulary
 from dotfiles.effects import Completed
 from dotfiles.privilege import Privilege
+from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import toolchain
 from dotfiles.resolve import DesiredItem
@@ -273,6 +276,70 @@ class TestUvToolRepair:
         installed copy for the flag to replace."""
         assert '--reinstall' not in self.repair(monkeypatch, 'uv', 'ruff', self.RUFF, Verdict.MISSING)
         assert '--reinstall' not in self.repair(monkeypatch, 'uv-git', 'syncer', self.SYNCER, Verdict.MISSING)
+
+
+class TestTheVersionFloorABundleHasToClear:
+    """What an online fallback compares a staged bundle against before writing it.
+
+    One function because both providers with a bundle fallback ask it, and two
+    copies is what lets cargo and go answer `--reinstall` differently — which is
+    the one case where the honest answer is not the installed version.
+
+    A MISSING row setting no floor is the other premise this rests on, and it is
+    not asserted here: the fact lives in `packages.diff`, and
+    `test_a_missing_tool_carries_no_installed_version` pins it where a change to
+    that branch would be caught.
+    """
+
+    FD = catalog.CargoPackage.from_mapping({'name': 'fd-find', 'command': 'fd'})
+    TASK = catalog.GoTool.from_mapping({'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'})
+
+    def change(self, provider: str, name: str, entry: catalog.Entry, observed: str, verdict: Verdict) -> tuple[Change, DesiredItem]:
+        planned = item(provider, name, entry)
+        return Change(
+            'packages', planned.stage, planned.address, verdict, repair=Repair.AUTOMATIC, desired=planned, observed=observed
+        ), planned
+
+    def floor(self, *, reinstall: bool, observed: str) -> str:
+        change, _ = self.change('cargo', 'fd-find', self.FD, observed, Verdict.STALE)
+        return registry.version_floor(Session(machine_name='box', reinstall=reinstall), change)
+
+    def test_a_stale_row_floors_the_bundle_at_the_version_currency_measured(self) -> None:
+        assert self.floor(reinstall=False, observed='10.4.2') == '10.4.2'
+
+    def test_reinstall_sets_no_floor_at_all(self) -> None:
+        """It asks for the tool again whatever it reports, so comparing against what
+        it reports would decline the only thing it was invoked to do."""
+        assert self.floor(reinstall=True, observed='10.4.2') == ''
+
+    @pytest.mark.parametrize(
+        ('provider', 'name', 'attribute'),
+        [('cargo', 'fd-find', 'FD'), ('go', 'task', 'TASK')],
+    )
+    def test_the_floor_reaches_the_provider_that_installs(self, monkeypatch, provider, name, attribute) -> None:
+        """The keyword is the whole seam this exists to create, and nothing else
+        fails when a call site stops passing it. Dropping it from `registry.py`
+        leaves the provider suites green — they call the providers directly — and
+        the packages suite green, because its spy takes a default. This is where the
+        value is read back.
+        """
+        passed: dict[str, str] = {}
+
+        def spy(entry, *args, floor='', **_kwargs):
+            passed['floor'] = floor
+            return providers.Result(True, '', kind=providers.Kind.APPLIED)
+
+        monkeypatch.setattr(cargo, 'install', spy)
+        monkeypatch.setattr(gotool, 'install', spy)
+
+        change, planned = self.change(provider, name, getattr(self, attribute), '10.4.2', Verdict.STALE)
+        found = registry.named(provider)
+        assert found is not None
+        # A declared machine rather than `box`: the cargo branch resolves a target
+        # from the manifest's coordinates before it reaches the provider at all.
+        found.install(Session(machine_name=next(iter(machines.names()))), change, planned, Privilege(offer=False))
+
+        assert passed == {'floor': '10.4.2'}
 
 
 def test_every_packages_provider_can_install_what_it_plans() -> None:
