@@ -76,7 +76,7 @@ class Lands(StrEnum):
     """Which set one address has to turn up in, once both read verbs have run.
 
     Four, and the pair of verbs is what separates them: `plan` keeps what `apply`
-    can repair, `check` keeps what needs a person, what neither keeps is what
+    can repair, `check` keeps what needs attention, what neither keeps is what
     nothing could measure, and an address in no finding at all was looked at and
     matched.
     """
@@ -855,7 +855,7 @@ def test_the_package_summary_does_not_claim_an_install_the_counts_contradict(san
     "installed". `check --json` answered `pending: 1` beside it in the same
     object, and the human run prints the sentence alone, so a reader who believed
     the prose was told the opposite of what was measured. `check` prints it
-    whenever nothing needs a person, which is the common case for a machine that
+    whenever nothing needs attention, which is the common case for a machine that
     is merely missing a package.
     """
     a_machine_missing_its_declared_package(sandbox)

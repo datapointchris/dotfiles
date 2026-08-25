@@ -65,7 +65,7 @@ def finding(ran: Invocation) -> dict:
     """The one row this machine's packages resource reported, from either list.
 
     Both, because which of them a row lands in is the thing under test one row
-    down: `sift` puts what `apply` will act on in `findings` and what needs a person
+    down: `sift` puts what `apply` will act on in `findings` and what needs attention
     in `others`, and a helper that read one of them would decide the answer before
     the assertion did.
     """

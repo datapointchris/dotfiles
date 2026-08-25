@@ -729,7 +729,7 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert 'needs a person' in capsys.readouterr().err
+        assert 'needs attention' in capsys.readouterr().err
 
     def test_stdout_stays_empty(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
         """`--json` owns stdout, so every one of these rows is a diagnostic."""
@@ -870,7 +870,7 @@ class TestTheClosingLine:
 
         line = reconcile.applied_line(1, [], deferred, [])
 
-        assert line == '1 item(s) changed; 1 item(s) need a person'
+        assert line == '1 item(s) changed; 1 item(s) need attention'
         assert 'dotfiles check' not in line
 
     def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:

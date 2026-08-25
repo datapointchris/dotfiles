@@ -237,7 +237,7 @@ class Change:
         the two are supposed to be one classification: `providers/sysconfig.py`
         answers `MISSING` with `Repair.NONE` for a declared group nothing here
         creates, and `resources/env.py` does the same for an undeclared flag. Both
-        printed under "needs a person" and were recorded as `observed`. Deriving it
+        printed under "needs attention" and were recorded as `observed`. Deriving it
         from what the item is *not* leaves no third category for a repair that is
         neither automatic nor by hand to fall into.
         """

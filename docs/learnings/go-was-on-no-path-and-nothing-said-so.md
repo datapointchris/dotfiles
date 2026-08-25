@@ -5,7 +5,7 @@
 `dotfiles apply` on macOS reported the same thing on every run:
 
 ```text
-✗ packages    1 item(s) need a person  ·  1 differ, 18 unmeasured
+✗ packages    1 item(s) need attention  ·  1 differ, 18 unmeasured
     unknown     go/forge     forge is installed but would not report a version
     unknown     go/sesh      sesh is installed but would not report a version
     missing     go/fleet     fleet is not on PATH

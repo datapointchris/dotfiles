@@ -35,7 +35,7 @@ sync.
 
 A package a version behind is drift: expected, benign, and exactly what `apply`
 is for. A machine-local value nobody set, a file only safekeep can restore, a
-declaration that will not validate, a checker that crashed — those need a person.
+declaration that will not validate, a checker that crashed — those need attention.
 
 One verb answering both meant one exit code carrying both, and the scheduled unit
 sat permanently `failed` on a machine whose only fault was being a version

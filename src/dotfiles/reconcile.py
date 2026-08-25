@@ -127,7 +127,7 @@ class ResourceResult:
     """Which question produced this row, so the renderer can word it.
 
     On the row it decides two words. "3 pending" under `check` means the drift
-    `plan` owns, and "4 need a person" under `plan` means the findings `check`
+    `plan` owns, and "4 need attention" under `plan` means the findings `check`
     owns — the same two counts, each read from the other side. Rendered without
     it, one of the two always reads as contradicting the verdict beside it.
     """
@@ -306,7 +306,7 @@ def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Ch
     other two here. The subtraction was the same classification written a second
     time, and it disagreed with the first: `sinks.intention` asked the change and
     this asked the list, so a `MISSING` verdict with no repairer printed under
-    "needs a person" and was recorded as `observed`.
+    "needs attention" and was recorded as `observed`.
     """
     unmeasured = [change for change in changes if change.unmeasured]
     pending = [change for change in changes if change.actionable]
@@ -360,7 +360,7 @@ def from_changes(
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
         return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from what this machine declares{root}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need a person{_lead(kept)}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need attention{_lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -707,12 +707,12 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
 
     **Every clause names its subjects, and no clause names another verb.** The rule
     `applied_line` already keeps, and the whole of what this line is worth. A bare
-    count is a question rather than an answer: `2 resource(s) need a person` above
+    count is a question rather than an answer: `2 resource(s) need attention` above
     rows that say `env` and `auth` sends the reader hunting for what is on screen,
     and a drift count names the one set on the machine with no row anywhere. Naming
     the other verb instead asks for a second full walk to print those names.
 
-    The drift half is `check`'s alone and the by-hand half is `plan`'s alone: each
+    The drift half is `check`'s alone and the attention half is `plan`'s alone: each
     is the other verb's subject, carried here because a verdict that omits it reads
     as a machine with nothing else to say. What refused to be measured is neither,
     and is named under both.
@@ -727,9 +727,9 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     if lens is Lens.PLAN:
         if own:
             return _sentence(_clause(own, 'to change'), blind)
-        by_hand = _clause([change.item for result in results for change in result.others if change.declined], 'need a person')
-        head = 'nothing for apply to change' if by_hand or blind else 'nothing to change'
-        return _sentence(head, by_hand, blind)
+        attention = _clause([change.item for result in results for change in result.others if change.declined], 'need attention')
+        head = 'nothing for apply to change' if attention or blind else 'nothing to change'
+        return _sentence(head, attention, blind)
 
     # A declaration finding has no Change to carry it and is the same kind of thing
     # as one: `machines` is the resource nobody but a person can put right.
@@ -739,7 +739,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     # rather than a filler. The verdict word beside it is green, because drift is
     # not this verb's subject and does not move it — so a line that opened on the
     # drift alone would read as a contradiction of the word to its left.
-    answered = _sentence(_clause(troubled, 'need a person'), blind) or 'nothing wrong'
+    answered = _sentence(_clause(troubled, 'need attention'), blind) or 'nothing wrong'
     return _sentence(answered, _clause(drift, 'differ from what this machine declares'))
 
 
@@ -748,8 +748,8 @@ def _refused(result: ResourceResult) -> bool:
 
     A checker that could not run, which `fold` turns into an Issue carrying its
     reason and nothing else. It has no item to name, so the resource is the
-    subject — and it must not be counted as an item needing a person, which is a
-    different thing a person can actually go and do.
+    subject — and it must not be counted as an item needing attention, which is a
+    different thing someone can actually go and do.
     """
     return result.verdict is ResourceVerdict.ISSUE and not result.findings and not result.invalid
 
@@ -1225,9 +1225,9 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     repaired = f'{changed} item(s) changed' if changed else ''
     failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
     head = '; '.join(clause for clause in (repaired, failed) if clause) or 'nothing to change'
-    person = f'; {len(deferred)} item(s) need a person' if deferred else ''
+    attention = f'; {len(deferred)} item(s) need attention' if deferred else ''
     blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
-    return f'{head}{person}{blind}'
+    return f'{head}{attention}{blind}'
 
 
 def _name_the_shared_fix(changes: Sequence[Change]) -> None:
@@ -1268,7 +1268,7 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     borrowing `~` or `✗` for either would state something the run did not measure.
     """
     for name, colour, group, why in (
-        ('needs a person', 'yellow', deferred, 'differ, and apply is not what repairs them'),
+        ('needs attention', 'yellow', deferred, 'differ, and apply is not what repairs them'),
         ('not measurable', 'magenta', unmeasured, 'have no evidence either way, so nothing was decided'),
     ):
         if not group:

@@ -182,17 +182,17 @@ def tallies(result: ResourceResult) -> str:
     would report, how much nothing could measure either way, and how much of the
     work will ask for a password.
 
-    **Each verb shows only the count that is not its own answer**, and words it as
-    the other verb's business. A `plan` row saying `converged` beside
-    `4 need attention` contradicts itself: apply has nothing to do here, and four
-    tools are logged out, and both are true. Saying "4 need a person" is the same
-    number read from the side that owns it. The mirror case is
-    a `check` row saying `converged` beside a non-zero `pending`, which is a
-    declared package merely absent — drift, and not something wrong.
+    **Each verb shows only the count that is not its own answer.** A `plan` row
+    saying `converged` beside `4 need attention` is not contradicting itself:
+    apply has nothing to do here, and four tools are logged out, and both are
+    true. The verdict is scoped to the verb that produced it, which `lens`
+    decides, and the tally beside it is what the other verb would report. The
+    mirror case is a `check` row saying `converged` beside a non-zero `pending`,
+    which is a declared package merely absent — drift, and not something wrong.
 
     The count a verb *does* answer with never appears, because its own detail
-    sentence already states it. `4 item(s) need a person: learning, meso, ...`
-    followed by `4 need a person` is the sentence twice.
+    sentence already states it. `4 item(s) need attention: learning, meso, ...`
+    followed by `4 need attention` is the sentence twice.
 
     Only non-zero counts appear. A converged resource with zeroes would otherwise
     print a row of noughts on every line of a healthy machine, which is the "pages
@@ -200,7 +200,7 @@ def tallies(result: ResourceResult) -> str:
     """
     if str(result.lens) == 'check':
         return tally((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
-    return tally((result.attention, 'need a person'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
+    return tally((result.attention, 'need attention'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
 
 
 def tally(*counts: tuple[int, str]) -> str:

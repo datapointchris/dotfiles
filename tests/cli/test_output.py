@@ -254,18 +254,16 @@ def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture
     assert '2 need a password' in written
 
 
-def test_a_plan_row_words_the_other_half_as_the_other_verb_owns_it(capsys: pytest.CaptureFixture) -> None:
-    """The row Chris read as self-contradictory: `plan` said `converged` and the
-    tally beside it said `4 need attention`. Both were true — apply has nothing to
-    do, and four CLIs are logged out — and the pair read as one row disagreeing
-    with itself."""
+def test_a_converged_plan_row_still_carries_the_other_verbs_count(capsys: pytest.CaptureFixture) -> None:
+    """`plan` says `converged` and the tally beside it says `4 need attention`.
+    Both are true: apply has nothing to do, and four CLIs are logged out. The
+    verdict answers for the verb that produced it, so dropping the count would
+    leave a row claiming there is nothing to say about this resource."""
     result = ResourceResult(address='auth', verdict=ResourceVerdict.CONVERGED, detail='3 of 7 authenticated', lens=Lens.PLAN, attention=4)
 
     output.render_result(result, output.console)
 
-    written = capsys.readouterr().out
-    assert '4 need a person' in written
-    assert 'attention' not in written
+    assert '4 need attention' in capsys.readouterr().out
 
 
 def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixture) -> None:
@@ -280,11 +278,11 @@ def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixtur
 
 
 def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureFixture) -> None:
-    """A `check` issue row is *made of* the items needing a person and its detail
+    """A `check` issue row is *made of* the items needing attention and its detail
     names them, and a `plan` drift row is made of what it would change. Either
     count beside its own sentence is the sentence twice."""
     output.render_result(
-        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4),
+        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', lens=Lens.CHECK, attention=4),
         output.console,
     )
     assert '·' not in capsys.readouterr().out
@@ -321,7 +319,7 @@ def test_an_unmeasurable_count_survives_the_wording_rules(capsys: pytest.Capture
     count whose word is the same on both sides."""
     output.render_result(
         ResourceResult(
-            address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need a person', lens=Lens.CHECK, attention=4, unmeasured=1
+            address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', lens=Lens.CHECK, attention=4, unmeasured=1
         ),
         output.console,
     )
@@ -338,7 +336,7 @@ def test_the_evidence_is_printed_under_the_verdict_it_belongs_to(capsys: pytest.
     terminal where they interleave."""
     finding = a_change(resource='auth', item='nomad', verdict=Verdict.MISSING, detail='the OS keychain holds no token')
     result = ResourceResult(
-        address='auth', verdict=ResourceVerdict.ISSUE, detail='1 item(s) need a person', lens=Lens.CHECK, findings=(finding,)
+        address='auth', verdict=ResourceVerdict.ISSUE, detail='1 item(s) need attention', lens=Lens.CHECK, findings=(finding,)
     )
 
     output.render_result(result, output.console)
