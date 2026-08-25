@@ -129,26 +129,20 @@ confused with, so a key there would be a fact with no question behind it.
 def discriminator(trust: axes.NetworkTrust) -> str:
     """What tells this box apart from the others sharing its manifest.
 
-    Two machines legitimately share one manifest — `macos-personal-workstation` is
-    both Macs — so a filename keyed on the manifest alone has one silently
-    overwrite the other, which is the collision standards/data.md § "In a synced
-    directory, every machine writes its own file" exists to make unreachable.
+    Two machines legitimately share one, so a filename keyed on the manifest alone
+    has one overwrite the other — standards/data.md § "In a synced directory, every
+    machine writes its own file".
 
-    **Which answer depends on the trust coordinate, because the constraint does.**
-    On a fleet machine the hostname is not a secret and it is what a reader wants:
-    a shelf listing says `macmini` rather than eight hex characters nobody can
-    resolve. Off the fleet the hostname is an employer asset tag, so a blake2b
-    digest disambiguates and identifies nothing. Anything that is not `FLEET` gets
-    the digest, which is the direction a privacy boundary has to fail in.
+    **The trust coordinate decides which answer**, because the constraint does. On
+    the fleet the hostname is not a secret and is what a reader wants. Anything
+    that is not `FLEET` gets a blake2b digest, which is the direction a privacy
+    boundary has to fail in.
 
-    A hostname carrying a hyphen also falls back, because `wrote` recovers this by
-    splitting on the last one and the manifest name it follows is full of them.
+    A hostname carrying a hyphen also falls back, since `wrote` recovers this by
+    splitting on the last one and manifest names are full of them.
 
-    **Here rather than in `status.py`, because this is the same decision
-    `identifying` makes** — which name may leave this box — and the two disagreeing
-    is how a row came to be withheld to hide a string published one key over. It
-    also puts the naming where nothing needs `reconcile`, which is what let
-    `offline_bundle` reach it without a deferred import round a cycle.
+    **Here rather than in `status.py`, because this is the decision `identifying`
+    makes** — which name may leave this box — and the two must not disagree.
     """
     named = paths.machine_id()
     if trust is axes.NetworkTrust.FLEET and '-' not in named:
@@ -164,18 +158,12 @@ def filename(machine: str, when: dt.datetime, trust: axes.NetworkTrust) -> str:
 def wrote(name: str) -> str:
     """Which box published a status, from the discriminator in its own filename.
 
-    The discriminator is what makes two machines sharing one manifest write two
-    files instead of overwriting each other, so it is also the only thing that
-    tells their documents apart afterwards. A reader that ignores it picks
-    whichever published last, and the `machine` field cannot object because both
-    carry the same one.
+    The only thing telling apart two documents whose `machine` field is identical,
+    so a reader ignoring it picks whichever published last.
 
-    A hostname on a fleet machine and a digest off it, and this returns whichever
-    is there — the two are told apart by being read rather than by being parsed,
-    since a caller wants an identity to group on and not the kind of one it is.
-
-    Empty where the name is not one of ours, which groups strangers together
-    rather than inventing an owner for each.
+    Returns a hostname or a digest without distinguishing them: a caller wants an
+    identity to group on, not the kind of one it is. Empty where the name is not
+    ours, which groups strangers rather than inventing an owner for each.
     """
     stem = name.removesuffix(SUFFIX)
     return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
@@ -184,15 +172,11 @@ def wrote(name: str) -> str:
 def published_by(document: object, name: str = '') -> str:
     """Which box a status document came from, preferring what it says over its name.
 
-    The document is authoritative and the filename is the fallback. A file can be
-    renamed, moved out of the cache, or handed over by any means a person chooses,
-    and `--against` takes whatever path it is given — so the identity has to
-    survive inside the bytes. `data.md` § "A reader of a shared directory selects
-    by the key that made the writes unique" is the rule, and it asks for the key in
-    the document as well as in the name.
+    A file can be renamed or moved, and `--against` takes whatever path it is
+    given, so the identity has to survive inside the bytes — `data.md` § "A reader
+    of a shared directory selects by the key that made the writes unique".
 
-    The name still answers for a document published before the field existed,
-    which is every one already sitting on a shelf.
+    The name answers for a document carrying no such field.
     """
     found = document.get(WRITTEN_BY) if isinstance(document, dict) else None
     return str(found) if found else wrote(name)
@@ -201,17 +185,12 @@ def published_by(document: object, name: str = '') -> str:
 def rooted(value: Any, home: str) -> Any:
     """Every absolute path under this home, rewritten the way a person types it.
 
-    A published row's evidence is usually the path a tool was found at, and that
-    path carries the account name — which is the thing the gate refuses. So a
-    document composed without this refuses itself, and the return leg of the loop
-    never runs at all.
+    A published row's evidence is usually the path a tool was found at, which
+    carries the account name the gate refuses — so a document composed without this
+    refuses itself and the return leg never runs.
 
-    Recursive over the whole document rather than over a named field, because an
-    account name can appear in any string a resource chose to write, and the
-    field it appears in next is the one nobody thought of.
-
-    Measured 2026-08-15: a real `status show --json` on this machine carried 28
-    occurrences of the account, every one of them an absolute path in a `detail`.
+    Recursive over the whole document rather than a named field, because an account
+    name can appear in any string a resource chose to write.
     """
     if isinstance(value, str):
         return value.replace(home, '~') if home else value
@@ -235,30 +214,20 @@ def placeholder(what: str) -> str:
 def masked(value: Any, identities: Mapping[str, str]) -> Any:
     """Every identifying name replaced in place, keeping the shape around it.
 
-    The counterpart to `screened` for a document with no rows to drop. A run
-    record is a stream of commands, and dropping the line an identifier appears
-    in takes the command, its exit code and its timing with it — which is the
-    half a person reads a log for. `/mnt/c/Users/<windows-account>/AppData/…`
-    still says which path failed; a missing line says nothing.
+    **Masking rather than withholding, because a run record is read by a person
+    diagnosing a failure.** Dropping the line takes the command, its exit code and
+    its timing with it. `screened` drops rows instead, for a document whose
+    consumer is a bundle builder that can afford to lose one.
 
-    **Masking rather than withholding is a choice about what the artefact is
-    for.** A status document is consumed by a bundle builder, and a row it never
-    sees is a tool it carries anyway — the cost is a larger bundle. A run record
-    is consumed by a person diagnosing a failure, and a line they never see is a
-    fault they cannot find. Neither leaks the name; what differs is how much of
-    the surrounding evidence survives, and only one of the two can afford to lose
-    it.
+    **Case-insensitive**, because `machine_id` lowercases and Windows reports a
+    hostname in upper — so a case-sensitive pass reads the asset tag straight past
+    and the gate then refuses the document.
 
-    Case-insensitive, because `redacted` is: `machine_id` lowercases and Windows
-    reports a hostname in upper, so an asset tag is the shape a case-sensitive
-    pass reads straight past and the gate then refuses the document for. Longest
-    first, so a name that contains another does not leave the shorter one's
-    placeholder embedded in a half-substituted string.
+    **Longest first**, so a name containing another does not leave the shorter
+    one's placeholder embedded in a half-substituted string.
 
-    Recursive over the whole document for the reason `rooted` is: an account name
-    can appear in any string a resource chose to write, and the field it appears
-    in next is the one nobody thought of — `transcript` and `target` were both
-    found that way.
+    Recursive over the whole document: an account name can appear in any string a
+    resource chose to write.
     """
     named = sorted(((value, placeholder(what)) for what, value in identities.items() if value), key=lambda pair: len(pair[0]), reverse=True)
     return _masking(value, named)
@@ -279,29 +248,18 @@ def _masking(value: Any, named: list[tuple[str, str]]) -> Any:
 def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
     """The names that must not leave, read off the machine this is running on.
 
-    `paths.machine_id()` is the bare hostname, which on the machine this exists
-    for is an employer asset tag. `getpass.getuser()` is the work account. Two
-    names and not a pattern: a general "does this look like an identifier" test
-    would refuse half the package names in a document and teach whoever hit it to
-    pass a flag.
+    Two names and not a pattern: a general "does this look like an identifier"
+    test would refuse half the package names in a document.
 
     **The hostname is on this list only where publishing it is not already the
-    decision.** `discriminator` puts the bare hostname in `written_by` on a
-    `FLEET` box, deliberately — it is not a secret there, and a shelf listing that
-    reads `macmini` rather than eight hex characters is the point. Screening rows
-    against it as well withholds a row to hide a string the same document carries
-    one key over: the builder loses a tool it had a version for, and the name
-    ships regardless. Off the fleet the hostname is an employer asset tag,
-    `written_by` is a blake2b digest, and this is the whole reason the gate exists.
-
-    So one coordinate decides both halves. The account name is on the list
-    everywhere, because nothing ever publishes it on purpose.
+    decision.** `discriminator` puts it in `written_by` on a `FLEET` box
+    deliberately, so screening rows against it there withholds a row to hide a
+    string the same document carries one key over. One coordinate decides both
+    halves. The account name is on the list everywhere.
 
     Separate from `redacted` so the decision is pure and the reads sit at the edge
-    — standards/python.md § "Structure effects as impure -> pure -> impure". A
-    gate that read the machine inside itself can only be tested against whatever
-    machine the suite runs on, which is how an assertion comes to hold at a desk
-    and fail on a runner whose hostname happens to contain its username.
+    — standards/python.md § "Structure effects as impure -> pure -> impure". Read
+    inside the gate, it can only be tested against the machine the suite runs on.
     """
     named = {'the account this runs as': getpass.getuser()}
     if trust is axes.NetworkTrust.FLEET:
@@ -317,20 +275,13 @@ def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
 def declared_by_hand(name: str) -> str:
     """A value from the OVERRIDES half of `~/.env`, or empty where it is unset.
 
-    `WINDOWS_USER` is the employer's account name and `WINDOWS_DOMAIN` the domain
-    it authenticates against — the two entries `machines requirements` lists as
-    set by hand, which is what makes them identifiers rather than configuration.
-    They are not derivable from the machine the way a hostname is, so they are
-    read from where a person put them.
+    Not derivable from the machine the way a hostname is, so it is read from where
+    a person put it.
 
-    The environment first, because a run started from an interactive shell has
-    `~/.env` sourced already and that is every run a person watches. The file
-    second, because a scheduled run has no such shell and is exactly when nobody
-    is looking at what left the box.
+    **The environment first, then the file.** A scheduled run has no shell to have
+    sourced `~/.env`, and that is exactly when nobody is watching what leaves.
 
-    Empty on a machine that declares neither, which is every fleet box. `redacted`
-    skips an empty value, so this adds nothing to a document that has no Windows
-    side — the coordinate does not have to be consulted twice.
+    Empty on a machine declaring neither, and `redacted` skips an empty value.
     """
     if value := os.environ.get(name, '').strip():
         return value
@@ -340,20 +291,14 @@ def declared_by_hand(name: str) -> str:
 def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
     """Every reason this document may not be published, empty where there are none.
 
-    Measured against the serialized bytes rather than the object, because the
-    question is what would land on the server. A field added to a row, a path that
-    slipped into a detail string, a hostname inside an error message — none of
-    those are reachable by walking the shape this module expects, and all of them
-    are reachable by looking at the text.
+    **Measured against the serialized bytes, never the object.** A field added to a
+    row, a path in a detail string, a hostname inside an error message — none are
+    reachable by walking the shape this module expects.
 
-    `identities` has no default. Both callers already hold one, and a default here
-    would be the seam that hides the machine again — the same reason the split
-    above exists.
+    `identities` has no default, which would be the seam that hides the machine.
 
-    Matched without regard to case, because the two names arrive here normalized
-    and a document carries whatever the OS rendered. `machine_id` lowercases and
-    Windows reports a hostname in upper, so the two never meet as typed and a
-    case-sensitive pass reads an asset tag straight past.
+    Matched without regard to case: `machine_id` lowercases and Windows reports a
+    hostname in upper, so the two never meet as typed.
     """
     scanned = {key: value for key, value in document.items() if key not in PROTOCOL_KEYS} if isinstance(document, dict) else document
     lowered = json.dumps(scanned).lower()
@@ -396,27 +341,18 @@ class Screened:
 def screened(document: Any, identities: Mapping[str, str]) -> Screened:
     """Drop the rows carrying a name that must not leave, then judge what is left.
 
-    **A row is the unit, because the fault is per row and refusing is not.** One
-    tool's version banner collided with this machine's hostname — `syncthing
-    v2.1.3 ... syncthing@archlinux`, the Arch package relaying its own build host
-    — and the whole document was refused for it, which took the return leg off
-    this machine entirely while a hundred innocent rows were sitting in it. A row
-    that cannot travel does not travel; nothing else changes.
+    **A row is the unit, because the fault is per row and refusing is not.** A tool
+    relaying a name from elsewhere is what makes this necessary: syncthing's banner
+    carries the host that built the Arch package, so `syncthing@archlinux` reaches
+    the scan on a box named `archlinux` while identifying nothing about it.
+    Refusing the whole document for that takes the return leg off the machine.
 
-    Withholding is not a loosening. Nothing carrying the name leaves either way,
-    and the row's absence is a state the format already has a meaning for: a tool
-    in neither the manifest nor `current` is unmeasurable, so the builder carries
-    it rather than assuming it is current. The failure direction is a slightly
-    larger bundle.
+    Withholding is not a loosening: nothing carrying the name leaves either way,
+    and an absent row is already meaningful — unmeasurable, so the builder carries
+    the tool. The failure direction is a slightly larger bundle.
 
-    **What cannot be withheld is still refused.** A name outside these lists — in
-    the header, in a resource's own fields — has no row to drop and comes back as
-    a problem, which is the whole document refused exactly as before.
-
-    A tool relaying a name it got from elsewhere is what makes this necessary:
-    syncthing's version banner carries the host that built the Arch package, so
-    `syncthing@archlinux` reaches the scan on a box named `archlinux` while
-    identifying nothing about it.
+    **What cannot be withheld is still refused.** A name in the header or a
+    resource's own fields has no row to drop and comes back as a problem.
     """
     if not isinstance(document, dict):
         return Screened(document, (), redacted(document, identities))
@@ -466,15 +402,11 @@ def _named(row: Any) -> str:
 def publishable(document: Any, trust: axes.NetworkTrust) -> Screened:
     """The document as it may travel, or a refusal naming every reason at once.
 
-    Called before the bytes move rather than after, so a refusal never leaves half
-    an artefact on a server — `standards/cli-design.md` § "Everything that can
-    refuse runs before the first byte of data", applied to a remote instead of to
-    stdout.
+    Called before the bytes move, per `standards/cli-design.md` § "Everything that
+    can refuse runs before the first byte of data".
 
-    Answers the screened document rather than checking the caller's, because a
-    caller that published the one it already held would send the rows this just
-    took out. There is no arrangement of two calls that cannot get that wrong,
-    which is why there is one.
+    **Answers the screened document rather than checking the caller's**, or a caller
+    publishing the one it already held sends the rows this took out.
     """
     found = screened(document, identifying(trust))
     if found.problems:

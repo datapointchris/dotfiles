@@ -44,15 +44,8 @@ class NoMachine(Refusal):
 def declared_machine() -> str:
     """What `~/.env` says this machine is, or '' where there is no such file.
 
-    Module-level rather than a method, because both front doors need it and only
-    one of them had it. `Session.resolve` reads the *file* and not only the
-    environment so that a run outside a login shell still knows what it is — a
-    systemd user timer, a launchd agent, `docker exec` and cron all inherit no
-    `~/.env`, which is why the file is read and not only the environment. The
-    wsl e2e run is where that is load-bearing: its second `apply` — the
-    idempotence assertion — is a bare `docker exec`, so a resolver reading the
-    environment alone answers "MACHINE is not set" on a machine whose `~/.env`
-    says exactly what it is.
+    The file, not only the environment: the wsl e2e idempotence assertion is a
+    bare `docker exec`, which inherits no `~/.env`.
     """
     try:
         return envfile.read(Path.home() / '.env').get('MACHINE', '')
@@ -64,10 +57,7 @@ def resolve_machine(machine: str | None = None) -> str:
     """The machine this run is about, from the argument, the environment or `~/.env`.
 
     One function raising one error, so every front door says the same thing about
-    the same failure. Two messages kept in step by hand is an arrangement where
-    the more-used door gets the less actionable half, and nothing reports the
-    divergence — the message therefore has one home and `apply` resolves through
-    it like everything else.
+    the same failure.
     """
     name = machine or os.environ.get('MACHINE') or declared_machine()
     if not name:
@@ -95,24 +85,14 @@ class Session:
     refresh: bool = False
     """Whether this run spends the network on being current.
 
-    Every verb a person invokes sets it: `plan`, `check` and `apply` alike. Being
-    asked is the reason to give a current answer, and each of the three is asking a
-    question a stale figure gets wrong — what a write would do, what on this machine
-    is behind, and what to install.
+    Every verb a person invokes sets it, since each asks a question a stale figure
+    gets wrong. `--cached` reaches the False default, for a box that is rate-limited
+    or has no route out; `--offline` resolves here too via `commands.currency`.
 
-    False is the field's default and `--cached` is how a caller reaches it, for a
-    box that is rate-limited or has no route out. `--offline` resolves here too, by
-    way of `commands.currency`.
-
-    What it buys is three reads, not one. GitHub is asked about every present
-    declared release, each plugin clone is fetched, and every manager in
-    `syspkg.NETWORKED` is asked what it holds back — which for pacman and apt means
-    refreshing a private copy of an index first. `docs/learnings/finding-where-a-slow-run-went.md`
-    is where a run that felt slow gets attributed between them.
-
-    Conditional requests make most of the release half free against the rate limit,
-    since GitHub does not bill a 304 — `releases.refresh` and
-    `github_release.revalidate` carry that measurement.
+    **It buys three reads, not one**: GitHub per declared release, a fetch per
+    plugin clone, and every manager in `syspkg.NETWORKED`.
+    `docs/learnings/finding-where-a-slow-run-went.md` attributes a slow run between
+    them.
     """
 
     force: bool = False
@@ -129,72 +109,47 @@ class Session:
       between them and a machine running both is worse than a machine running
       either.
 
-    The second is the wider blast radius by a long way and it is narrowed by
-    declaration rather than by this flag: only a `Blocker` carrying an
-    `under_force` command is cleared, which is a superseded *release*. A
-    superseded system package refuses whatever this says — there the manager is
-    what refuses, and authorising this repo to overwrite what it did not create
-    says nothing to pacman.
+    **The second is narrowed by declaration rather than by this flag**: only a
+    `Blocker` carrying an `under_force` command is cleared, which is a superseded
+    *release*. A superseded system package refuses whatever this says.
     """
 
     packages: frozenset[str] = frozenset()
     """Entry names this run is narrowed to, or empty for every one this machine declares.
 
-    `--package`, and it narrows the plan exactly as `owner` above does — plus the
-    prerequisites the named entries need, which `resolve._named` keeps. Empty
-    means unnarrowed, so the field spells "no narrowing" the same way `owner`'s
-    None does rather than as a plan with nothing in it.
+    `--package`, narrowing the plan as `owner` does, plus the prerequisites
+    `resolve._named` keeps. Empty means unnarrowed, never a plan with nothing in it.
 
-    The names are measured against the walk's `Selection` before anything runs, so
-    a name outside the narrowing is a usage error rather than a run that reports a
-    converged machine having looked at none of it.
+    Measured against the walk's `Selection` before anything runs, so a name outside
+    the narrowing is a usage error rather than a converged verdict about a machine
+    nothing looked at.
     """
 
     reinstall: bool = False
     """Install again whatever measuring concludes, for everything this run covers.
 
-    A boolean rather than a set of names, because scope is `--package`'s job:
-    `cli-design.md` § "Scope is structural: the argument's presence selects it,
-    never a flag" is what a name-taking `--reinstall` broke, welding one narrowing
-    onto a force flag that every resource could otherwise honour. What survives as
-    a flag is § "A flag never decides whether the command writes"'s test — what
-    parameterises the work the same way whichever verb runs it — and a boolean
-    passes it where `--reinstall lazygit` does not.
+    A boolean, never a set of names: scope is `--package`'s job, per `cli-design.md`
+    § "Scope is structural: the argument's presence selects it, never a flag".
 
-    Bare, it therefore means everything the run covers. That is expensive rather
-    than dangerous — a fresh `go install` of every Go tool and a re-download of
-    every release — which is exactly the case § "Scope is structural" sanctions a
-    set-wide act for, and `--package` is how a caller spends less.
-
-    Distinct from `force` above, which authorises destroying something *foreign* —
-    a file this repo did not write, or a package another manager owns — and decides
-    nothing about which release is installed in its place.
+    Bare it means everything the run covers, which is expensive rather than
+    dangerous. Distinct from `force`, which authorises destroying something
+    *foreign* and decides nothing about what is installed in its place.
     """
 
     @classmethod
     def resolve(cls, machine: str | None = None, **kwargs: object) -> Session:
         """Name the machine from the argument, else the environment, else `~/.env`.
 
-        `~/.env` is where `MACHINE` lives, and it is also the file the env
-        resource manages — the bootstrap this design lives with. A fresh box has
-        no such file and passes `--machine` instead.
+        **Reading the *file* and not only the environment is what makes this work
+        outside a login shell.** A systemd timer, a launchd agent, `docker exec`
+        and cron all inherit no `~/.env`.
 
-        Reading the *file* and not only the environment is what makes this work
-        outside a login shell. A systemd user timer, a launchd agent, `docker
-        exec` and cron all inherit no `~/.env`, so a scheduled `check` failed
-        with "MACHINE is unset" on a machine whose `~/.env` said exactly what it
-        was. Found by installing the timer and reading its first failure.
+        **The manifest is read here, so a Session this returns has one.** Left
+        lazy, `MachineError` surfaces from wherever the property is first touched
+        — inside `survey`, past every handler, as a traceback and exit 1.
 
-        **The manifest is read here, so a Session this returns has one.** Naming a
-        machine and proving the name means something are the same act. Split, the
-        `machine` property is lazy and `MachineError` surfaces from wherever it is
-        first touched — inside `survey`, past every handler, as a traceback and
-        exit 1. A name that resolves to no manifest is not a resolved machine.
-
-        Deliberately not in `__init__`: constructing a Session directly is the
-        bootstrap and test affordance, where the caller supplies the repo and
-        knows what is on disk. This is the front door, and only the front door
-        carries the guarantee.
+        Not in `__init__`: constructing a Session directly is the bootstrap and
+        test affordance, and only the front door carries the guarantee.
         """
         session = cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
         _ = session.machine
