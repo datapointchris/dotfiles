@@ -538,6 +538,11 @@ def tmux_rearrange():
     return load_app('tmux-rearrange')
 
 
+@pytest.fixture(scope='session')
+def tmux_place():
+    return load_app('tmux-place')
+
+
 @pytest.fixture
 def unprivileged() -> Privilege:
     """A `Privilege` that will not offer a prompt, which is what refuses.

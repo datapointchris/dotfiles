@@ -1,0 +1,1165 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = []
+# ///
+"""Decide where an agent's pane goes, so that no pane ends up too small to read.
+
+    tmux-place list                     every window this tool can place into
+    tmux-place plan worker              where a worker would go, without going there
+    tmux-place plan reviewer --for %26  where its reviewer would go
+    tmux-place open worker -- <cmd>     make the pane and run <cmd> in it
+    tmux-place release                  drop the marks this tool wrote
+
+A coordinator that dispatches agents by splitting its own pane divides the window
+by two every time. Five splits in one column measured 186x15, which is too short
+to follow an agent working, and the relief was `tmux break-pane` typed by hand.
+This is that hand step: the window is measured, the pane goes where it still fits,
+and when nothing fits the layout is rearranged until something does.
+
+The decision is pure computation. `place()` takes window dimensions, the panes
+already there, and what is being placed, and returns which pane to split, which
+way, and how wide -- or that a window has to be opened. Every tmux call lives
+below it and does what it was told. `plan` and `open` reach that one function with
+the same arguments, so the read verb is the write verb's dry run by construction.
+
+A pair is a unit. A reviewer sits directly below the worker it reviews, in that
+worker's column, always, because the two are read against each other.
+
+Panes carry their role and their partner as tmux user options, and a window
+carries whether it belongs to a promoted coordinator. A pane keeps its own marks
+through `break-pane` and `join-pane`, which is what an address, a window id or a
+process id does not survive. `release` is what retires them, because nothing else
+can tell a live mark from an abandoned one.
+
+A pane with no mark is one this tool did not place. It is never split, moved or
+resized, and a window holding one is not placed into at all -- a horizontal split
+reflows every column in the window, so placing beside somebody's work is the same
+act as resizing it. Losing a pane opened by hand is not recoverable, and opening
+a window instead costs nothing.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from collections.abc import Sequence
+from dataclasses import dataclass
+from dataclasses import replace
+from enum import StrEnum
+from typing import Any
+
+MIN_COLUMNS = 120
+MIN_ROWS = 35
+"""The smallest pane an agent can be followed in, measured rather than chosen.
+
+A Claude session wraps its prose to the pane, and under about 120 columns the
+wrapping breaks up a sentence badly enough that reading it stops being possible
+at a glance. Under about 35 rows a tool call and its result cannot both be on
+screen, so following the work means scrolling.
+
+Every other number here is derived from these two against the window in front of
+it. A 377x81 window holds three columns of 125 and two rows of 40; a narrower
+client holds fewer, and that is the whole point of deriving rather than fixing a
+layout that is right on one screen and collapses on the next.
+
+`readable()` is the only thing that compares against them, so a change here has
+one site to find rather than five.
+"""
+
+PANE_ROLE = 'place_role'
+PANE_PAIR = 'place_pair'
+WINDOW_ROLE = 'place_window'
+"""The tmux user options this tool writes, and the whole of what it remembers.
+
+`@place_role` and `@place_pair` are per-pane, so they ride along through
+`break-pane` and `join-pane` -- verified on tmux 3.7c across both hops.
+`@place_pair` holds the worker's pane id on a reviewer and is empty elsewhere.
+
+`@place_window` is per-window and says the window belongs to a promoted
+coordinator. It is written by the promotion rather than inferred from the monitor
+pane beside it, because that pane is best-effort: a machine without the monitor
+binary gets the promotion anyway, and a window whose dedication was inferred from
+a pane that was never created reads as an ordinary target for the next pair.
+"""
+
+MONITOR_COMMAND = 'abtop'
+"""What goes beside the coordinator once it has a window of its own.
+
+A machine without it promotes the coordinator anyway and says so. Losing a
+dashboard is not a reason to leave five agents in one column.
+"""
+
+WINDOW_NAME = 'agents'
+"""The default name for a window this has to open, spelled once.
+
+The coordinator's own window derives its name from this, and so does the flag's
+default and the sentence in its help.
+"""
+
+USAGE_ERROR = 2
+FAILURE = 1
+"""What a caller retries with different arguments, against what it cannot retry.
+
+argparse already exits 2 for a flag it cannot parse. A tmux call that failed is
+not a usage error: there are no different arguments, and collapsing the two is
+what makes a caller retry a command that will never work.
+"""
+
+
+class Refusal(StrEnum):
+    """Why a run refused, as a value rather than a sentence.
+
+    A caller branches on this. The wording lives in `REFUSALS` and is free to
+    change without breaking anything that reads the reason.
+    """
+
+    NO_TMUX = 'no_tmux'
+    OUTSIDE_TMUX = 'outside_tmux'
+    UNKNOWN_CALLER = 'unknown_caller'
+    NO_PARTNER = 'no_partner'
+    NO_SUCH_PANE = 'no_such_pane'
+    NOT_A_WORKER = 'not_a_worker'
+    REVIEWER_TAKEN = 'reviewer_taken'
+    STRAY_PARTNER = 'stray_partner'
+    UNPLACEABLE = 'unplaceable'
+    NOTHING_TO_SPLIT = 'nothing_to_split'
+
+
+REFUSALS: dict[Refusal, str] = {
+    Refusal.NO_TMUX: 'tmux is not installed, and a pane is the only thing this places',
+    Refusal.OUTSIDE_TMUX: 'not inside tmux, so there is no pane to place beside',
+    Refusal.UNKNOWN_CALLER: 'this pane ({pane}) is not on the tmux server being read',
+    Refusal.NO_PARTNER: 'a reviewer needs the worker it reviews: --for %<pane>',
+    Refusal.NO_SUCH_PANE: 'no pane {pane} on this server',
+    Refusal.NOT_A_WORKER: '{pane} is a {role}, and a reviewer sits below a worker',
+    Refusal.REVIEWER_TAKEN: '{pane} already has a reviewer in {reviewer}',
+    Refusal.STRAY_PARTNER: '--for names the worker a reviewer belongs to, and a worker has none',
+    Refusal.UNPLACEABLE: 'nothing places a {role}; place a worker or a reviewer',
+    Refusal.NOTHING_TO_SPLIT: '{window} holds no pane this tool placed, so there is nothing to split',
+}
+
+
+class Usage(Exception):
+    """Bad invocation or unusable input: exits 2, not 1."""
+
+    def __init__(self, refusal: Refusal, **fields: object) -> None:
+        self.refusal = refusal
+        self.fields = fields
+        super().__init__(REFUSALS[refusal].format(**fields))
+
+
+class TmuxFailed(Exception):
+    """A tmux command this tool issued came back non-zero.
+
+    Its own exception because it exits 1 rather than 2. Nothing about the
+    arguments was wrong and there are no different ones to try, so a caller told
+    to retry would retry forever.
+    """
+
+
+def err(*parts: object) -> None:
+    """Diagnostics go to stderr; stdout carries data only."""
+    print(*parts, file=sys.stderr)
+
+
+class Role(StrEnum):
+    COORDINATOR = 'coordinator'
+    WORKER = 'worker'
+    REVIEWER = 'reviewer'
+    MONITOR = 'monitor'
+    UNKNOWN = 'unknown'
+    """A pane this tool did not place. Deliberately its own outcome rather than a
+    fifth kind of ours: it is counted and never touched."""
+
+
+PLACED = frozenset({Role.COORDINATOR, Role.WORKER, Role.REVIEWER, Role.MONITOR})
+AGENTS = frozenset({Role.COORDINATOR, Role.WORKER, Role.REVIEWER})
+
+
+class Direction(StrEnum):
+    BESIDE = 'beside'
+    BELOW = 'below'
+
+
+@dataclass(frozen=True)
+class Pane:
+    pane_id: str
+    left: int
+    top: int
+    width: int
+    height: int
+    role: Role = Role.UNKNOWN
+    pair: str = ''
+
+
+@dataclass(frozen=True)
+class Window:
+    """A window and its panes, where the dimensions are the reconciled ones.
+
+    `#{window_width}` is not reliable on its own. A window that has never been
+    displayed keeps tmux's default 80x24 while the panes inside it are sized to
+    the real client -- observed on a live server, where a window reported 80x24
+    while holding a 377x81 pane. Taking the larger of the two readings is what
+    makes a detached or never-shown window place the same as an attached one,
+    which is the case the whole size rule would otherwise get wrong.
+    """
+
+    window_id: str
+    width: int
+    height: int
+    panes: tuple[Pane, ...] = ()
+    session: str = ''
+    dedicated: bool = False
+    """True where a promoted coordinator lives, which is never a placement target."""
+
+    @property
+    def columns(self) -> tuple[tuple[Pane, ...], ...]:
+        """The panes grouped into columns, left to right and top to bottom.
+
+        Read off `pane_left` rather than off the layout string, because the
+        question here is which panes share a column and a layout string answers
+        the different question of how the splits nest.
+        """
+        grouped: dict[int, list[Pane]] = {}
+        for pane in self.panes:
+            grouped.setdefault(pane.left, []).append(pane)
+        return tuple(tuple(sorted(group, key=lambda pane: pane.top)) for _, group in sorted(grouped.items()))
+
+    def without(self, pane_id: str) -> Window:
+        """This window as it would be with one pane gone, for costing a promotion."""
+        return replace(self, panes=tuple(pane for pane in self.panes if pane.pane_id != pane_id))
+
+    def holds(self, pane_id: str) -> bool:
+        return any(pane.pane_id == pane_id for pane in self.panes)
+
+
+def reconcile(width: int, height: int, panes: Sequence[Pane]) -> tuple[int, int]:
+    """A window's real extent: the larger of what tmux calls it and what it renders.
+
+    A pane's right edge is `pane_left + pane_width`, and the rightmost of those is
+    how wide the window has to be. The heights come out one short of the window,
+    because each pane gives a row to its border, so the reading is only ever used
+    to correct a window that is reported far smaller than its own contents.
+    """
+    if not panes:
+        return width, height
+    return (
+        max(width, max(pane.left + pane.width for pane in panes)),
+        max(height, max(pane.top + pane.height for pane in panes)),
+    )
+
+
+def readable(width: int, height: int) -> bool:
+    """Whether a pane of this size can be followed. The only comparison against
+    the two minimums, so every verdict in the tool agrees by construction."""
+    return width >= MIN_COLUMNS and height >= MIN_ROWS
+
+
+def fits_across(width: int) -> int:
+    """How many readable columns a given width holds, dividers included.
+
+    `n` columns need `n * MIN_COLUMNS + (n - 1)`, so the answer is
+    `(width + 1) // (MIN_COLUMNS + 1)`. The divider is why this is not a plain
+    floor division: at 240 columns a plain floor says two and two 120-wide panes
+    with a divider between them need 241.
+    """
+    return max(0, (width + 1) // (MIN_COLUMNS + 1))
+
+
+def fits_down(height: int) -> int:
+    """How many readable panes a given height stacks, dividers included.
+
+    One row short of the column rule, and the asymmetry is tmux's rather than an
+    inconsistency here: a pane gives a row to its own border and no column to it.
+    A 377-wide window divides into three 125s with nothing left over, while an
+    81-row window yields 80 usable rows and splits into 40 and 39.
+
+    So `n` panes need `n * MIN_ROWS + (n - 1)` out of `height - 1`, which is
+    `height // (MIN_ROWS + 1)`. Two 35-row panes need 72 rows, not 71 -- and at 71
+    the split really does produce a 34-row pane, which is under the minimum.
+
+    How many rows a pane gives up is a tmux setting rather than a constant:
+    `pane-border-status` takes one per pane and an unconfigured server takes
+    none. Assuming one is the conservative direction, so on a server that spends
+    nothing this under-reports by a pane and never over-reports.
+    """
+    return max(0, height // (MIN_ROWS + 1))
+
+
+def even_share(extent: int, parts: int) -> int:
+    """One part's size when `extent` is divided `parts` ways with dividers between.
+
+    The remainder goes to the *first* part, which is what tmux does: a split
+    passes the new pane an explicit size and the pane being split keeps the rest.
+    """
+    return (extent - (parts - 1)) // parts if parts > 0 else extent
+
+
+def ours(column: Sequence[Pane]) -> bool:
+    """Whether a whole column is panes this tool placed."""
+    return bool(column) and all(pane.role in PLACED for pane in column)
+
+
+def free_columns(window: Window) -> int:
+    """How many more columns this window can hold at a readable size.
+
+    The width a hand-made pane occupies is subtracted before the rule is applied,
+    along with its divider. That only matters for what `list` reports -- a window
+    holding one is not eligible, so nothing is ever placed by this count there --
+    but reporting three free columns in a window that has room for one would be
+    wrong on screen as well as in a decision.
+    """
+    if not readable(window.width, window.height):
+        return 0
+    theirs = [column for column in window.columns if not ours(column)]
+    reserved = sum(column[0].width + 1 for column in theirs)
+    mine = len(window.columns) - len(theirs)
+    return max(0, fits_across(window.width - reserved) - mine)
+
+
+def eligible(window: Window) -> bool:
+    """Whether a pair may be placed in this window.
+
+    Three conditions. It already holds an agent, so a window full of somebody
+    else's work is never commandeered. It is not a promoted coordinator's own
+    window. And it holds no pane this tool did not place -- adding a column
+    reflows every column in the window, so there is no way to place beside a
+    hand-made pane without resizing it.
+    """
+    if window.dedicated:
+        return False
+    roles = {pane.role for pane in window.panes}
+    if Role.UNKNOWN in roles or Role.MONITOR in roles:
+        return False
+    return bool(roles & AGENTS)
+
+
+def rightmost_ours(window: Window) -> Pane | None:
+    """The top pane of the rightmost column this tool placed, or None.
+
+    A new column is made by splitting an existing pane, so it has to be one of
+    ours. Rightmost, so the new column arrives on the right and the panes already
+    on screen keep their order.
+    """
+    for column in reversed(window.columns):
+        if ours(column):
+            return column[0]
+    return None
+
+
+def pane_in(windows: Sequence[Window], pane_id: str) -> tuple[Window, Pane] | None:
+    for window in windows:
+        for pane in window.panes:
+            if pane.pane_id == pane_id:
+                return window, pane
+    return None
+
+
+@dataclass(frozen=True)
+class Promotion:
+    """Move the coordinator to a window of its own before the placement happens.
+
+    Triggered by need: the window is full, and the coordinator is the one pane in
+    it that has somewhere else to be. It is never reversed when agents finish and
+    space frees up -- a layout that reflowed on every completion would move
+    everything under the eye reading it, and nobody asked for that.
+
+    `pane` is whichever pane carries the coordinator's mark, never whichever pane
+    invoked the command. A worker that dispatches would otherwise break itself out
+    of the pairs window and take the dashboard with it.
+    """
+
+    pane: str
+    window_name: str
+    monitor_width: int
+    monitor_command: str
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'pane': self.pane,
+            'window_name': self.window_name,
+            'monitor_width': self.monitor_width,
+            'monitor_command': self.monitor_command,
+        }
+
+
+@dataclass(frozen=True)
+class Placement:
+    """Where one pane goes, and what has to happen first.
+
+    `window` empty means open a new one; `near` then says which window to open it
+    after, so it lands in that window's session rather than wherever tmux would
+    have put it. `size` is `None` in that branch, because nothing is being divided
+    and a number there would be a measurement of a window that does not exist.
+    """
+
+    role: Role
+    window: str
+    near: str
+    target: str
+    direction: Direction
+    size: int | None
+    balance: bool
+    readable: bool
+    why: str
+    pair: str = ''
+    promote: Promotion | None = None
+
+    @property
+    def opens_window(self) -> bool:
+        return not self.window
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'role': str(self.role),
+            'opens_window': self.opens_window,
+            'window': self.window,
+            'near': self.near,
+            'target': self.target,
+            'direction': str(self.direction),
+            'size': self.size,
+            'balance': self.balance,
+            'readable': self.readable,
+            'why': self.why,
+            'pair': self.pair,
+            'promote': self.promote.as_json() if self.promote else None,
+        }
+
+
+@dataclass(frozen=True)
+class Request:
+    """What is being placed, and which pane asked for it.
+
+    `caller` is the pane the command ran in. It is not assumed to be the
+    coordinator: `crown()` treats it as one only when nothing on the server
+    carries that mark yet, and the promotion moves whichever pane does.
+    """
+
+    role: Role
+    caller: str
+    partner: str = ''
+    window_name: str = WINDOW_NAME
+    monitor_command: str = MONITOR_COMMAND
+
+
+def crown(windows: Sequence[Window], caller: str) -> tuple[Window, ...]:
+    """The workspace as `place()` reads it, with the first caller made coordinator.
+
+    On the first dispatch nothing carries a mark, so no window is `eligible()` and
+    every placement would open a window of its own. The pane running the command
+    is the coordinator in that situation and in no other.
+
+    Done here rather than by writing the mark first, so `plan` and `open` decide
+    from the same picture. Marking before deciding made the read verb answer
+    differently from the write verb on exactly the placement that matters most,
+    and left a permanent mark behind when the run then refused.
+    """
+    if any(pane.role is Role.COORDINATOR for window in windows for pane in window.panes):
+        return tuple(windows)
+    return tuple(
+        replace(
+            window,
+            panes=tuple(
+                replace(pane, role=Role.COORDINATOR) if pane.pane_id == caller and pane.role is Role.UNKNOWN else pane
+                for pane in window.panes
+            ),
+        )
+        for window in windows
+    )
+
+
+def place(windows: Sequence[Window], request: Request) -> Placement:
+    """Where the requested pane goes. Pure: nothing here touches tmux."""
+    known = crown(windows, request.caller)
+    if pane_in(known, request.caller) is None:
+        raise Usage(Refusal.UNKNOWN_CALLER, pane=request.caller)
+    if request.role is Role.REVIEWER:
+        return beneath(known, request)
+    if request.role is Role.WORKER:
+        if request.partner:
+            raise Usage(Refusal.STRAY_PARTNER)
+        return alongside(known, request)
+    raise Usage(Refusal.UNPLACEABLE, role=request.role)
+
+
+def beneath(windows: Sequence[Window], request: Request) -> Placement:
+    """A reviewer, directly below the worker it reviews.
+
+    There is no search. The pair is the unit being read, so the reviewer's
+    position is decided by its worker and the only open question is whether the
+    result is tall enough -- which it is not when the client cannot stack two
+    readable panes, and saying so is better than putting the pair where it cannot
+    be seen together.
+    """
+    if not request.partner:
+        raise Usage(Refusal.NO_PARTNER)
+
+    found = pane_in(windows, request.partner)
+    if found is None:
+        raise Usage(Refusal.NO_SUCH_PANE, pane=request.partner)
+    window, worker = found
+    if worker.role is not Role.WORKER:
+        raise Usage(Refusal.NOT_A_WORKER, pane=request.partner, role=worker.role)
+
+    # Every window, not this one. The marks exist to survive `break-pane`, so a
+    # reviewer moved to another window still reviews this worker -- and a guard
+    # that scanned one window would be disarmed by the one operation the marks
+    # were kept for.
+    taken = [pane for other in windows for pane in other.panes if pane.role is Role.REVIEWER and pane.pair == worker.pane_id]
+    if taken:
+        raise Usage(Refusal.REVIEWER_TAKEN, pane=request.partner, reviewer=taken[0].pane_id)
+
+    rows = even_share(worker.height, 2)
+    kept = worker.height - 1 - rows
+    fits = readable(worker.width, rows) and readable(worker.width, kept)
+    why = f'below its worker in {window.window_id}, splitting {worker.height} rows into {kept} and {rows}'
+    if not fits:
+        why += f'; a pair needs {fits_down(2 * MIN_ROWS + 1)} readable rows and this column stacks {fits_down(worker.height)}'
+    return Placement(
+        role=Role.REVIEWER,
+        window=window.window_id,
+        near='',
+        target=worker.pane_id,
+        direction=Direction.BELOW,
+        size=rows,
+        balance=False,
+        readable=fits,
+        why=why,
+        pair=worker.pane_id,
+    )
+
+
+def alongside(windows: Sequence[Window], request: Request) -> Placement:
+    """A worker, in a new column of whichever window still has room for one.
+
+    Three branches in order, and the order is the behaviour. Pack an existing
+    window up to its ceiling first. Then free a column by promoting the
+    coordinator, which is what turns the coordinator's window into three pairs
+    rather than two pairs and an overflow. Only then open a window.
+
+    Every candidate is in the caller's own tmux session. A worker placed in
+    another session is a pane the caller cannot see, in a window it did not mean
+    to touch, and fullness alone would send it there.
+    """
+    home = next(window for window in windows if window.holds(request.caller))
+    local = [window for window in windows if window.session == home.session]
+
+    roomy = [window for window in local if eligible(window) and free_columns(window) > 0]
+    if roomy:
+        chosen = min(roomy, key=lambda window: preference(window, request.caller))
+        return column_in(chosen, 'has room for another column')
+
+    crowned = next((pane for pane in home.panes if pane.role is Role.COORDINATOR), None)
+    if crowned is not None and eligible(home):
+        opened = home.without(crowned.pane_id)
+        if free_columns(opened) > 0 and any(pane.role is Role.WORKER for pane in opened.panes):
+            promotion = Promotion(
+                pane=crowned.pane_id,
+                window_name=f'{request.window_name}-coordinator',
+                monitor_width=MIN_COLUMNS,
+                monitor_command=request.monitor_command,
+            )
+            placement = column_in(opened, 'the coordinator moved out, which freed its column')
+            return replace(placement, promote=promotion)
+
+    return Placement(
+        role=Role.WORKER,
+        window='',
+        near=home.window_id,
+        target='',
+        direction=Direction.BESIDE,
+        size=None,
+        balance=False,
+        readable=readable(home.width, home.height),
+        why='every window this tool placed into is full, so the pair gets one of its own',
+    )
+
+
+def preference(window: Window, caller: str) -> tuple[int, int, int]:
+    """Which of several roomy windows to fill: the fullest, then the caller's.
+
+    Fullest first is what packing to the ceiling means. Spreading pairs evenly
+    across half-empty windows reaches the same total in more windows, and every
+    one of those is a window to switch to.
+    """
+    mine = len([column for column in window.columns if ours(column)])
+    return (-mine, 0 if window.holds(caller) else 1, window_order(window.window_id))
+
+
+def window_order(window_id: str) -> int:
+    """`@11` sorts after `@2`, which a string comparison gets backwards."""
+    digits = window_id.lstrip('@')
+    return int(digits) if digits.isdigit() else 0
+
+
+def column_in(window: Window, why: str) -> Placement:
+    """A new column in a window that has room, and the width every column becomes.
+
+    The split itself is made without a size and tmux halves the pane it lands on.
+    The width is applied afterwards by resizing each column in turn, which is the
+    only order that works: the pane being sized into existence has no id until it
+    exists, and asking tmux for a pane wider than the one being split is refused.
+
+    No reserved-width arithmetic here. `eligible()` has already excluded every
+    window holding a pane this tool did not place, so the whole width is ours to
+    divide -- and a second copy of that arithmetic would let the tool report room
+    by one rule and size by another.
+    """
+    target = rightmost_ours(window)
+    if target is None:
+        raise Usage(Refusal.NOTHING_TO_SPLIT, window=window.window_id)
+
+    columns = len(window.columns) + 1
+    width = even_share(window.width, columns)
+    return Placement(
+        role=Role.WORKER,
+        window=window.window_id,
+        near='',
+        target=target.pane_id,
+        direction=Direction.BESIDE,
+        size=width,
+        balance=True,
+        readable=readable(width, window.height),
+        why=f'{window.window_id} {why}, so {columns} columns of {width}',
+    )
+
+
+PANE_FIELDS = '\t'.join(
+    (
+        '#{window_id}',
+        '#{pane_id}',
+        '#{pane_left}',
+        '#{pane_top}',
+        '#{pane_width}',
+        '#{pane_height}',
+        f'#{{@{PANE_ROLE}}}',
+        f'#{{@{PANE_PAIR}}}',
+    )
+)
+"""An unset user option renders as an empty field rather than being dropped, so a
+tab-separated row always carries eight fields and a pane with no marks parses the
+same way as one with both."""
+
+WINDOW_FIELDS = '\t'.join(('#{window_id}', '#{window_width}', '#{window_height}', f'#{{@{WINDOW_ROLE}}}', '#{session_name}'))
+"""The session name is last and is the only free-text field asked for.
+
+A tmux session name can hold a space, and nothing stops it holding a tab either,
+so a field after it would be shifted by its contents. Reading one such field and
+splitting with a maxsplit puts whatever it contains in the tail where it can do no
+harm. The window name would be a second one, so it is not read at all; nothing
+here addresses a window by name.
+"""
+
+COLUMN_FIELDS = '#{pane_id}\t#{pane_left}'
+
+
+def tmux(*args: str) -> str:
+    """Run one tmux command, or raise.
+
+    The missing-binary guard is here rather than at the entry points because every
+    path reaches this function and only some reach an entry point that checked.
+    `list` read the server directly and gave an eleven-frame traceback on a machine
+    without tmux.
+
+    The failure message names the subcommand and passes tmux's own stderr through.
+    Interpolating the whole argv put a tab-separated format string in front of a
+    reader who needed the one line tmux wrote.
+    """
+    if shutil.which('tmux') is None:
+        raise Usage(Refusal.NO_TMUX)
+    done = subprocess.run(['tmux', *args], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise TmuxFailed(f'tmux {args[0]}: {done.stderr.strip() or "failed with no message"}')
+    return done.stdout
+
+
+def tmux_soft(*args: str) -> str | None:
+    """For a call whose failure is not worth abandoning the run over.
+
+    Returns tmux's stderr on failure and None on success, so a caller reports it
+    rather than discarding it. A pane is already running by the time these are
+    made, and losing a working agent over a resize would be the worse outcome --
+    but a reflow that silently failed leaves the column at the half-width the
+    split gave it, which is the outcome this whole tool exists to prevent.
+    """
+    if shutil.which('tmux') is None:
+        return 'tmux is not installed'
+    done = subprocess.run(['tmux', *args], capture_output=True, text=True)
+    return None if done.returncode == 0 else (done.stderr.strip() or f'tmux {args[0]} failed')
+
+
+def read_role(name: str) -> Role:
+    try:
+        return Role(name)
+    except ValueError:
+        return Role.UNKNOWN
+
+
+def parse_window(line: str) -> tuple[str, int, int, bool, str]:
+    """One `WINDOW_FIELDS` row: the id, its size, whether it is dedicated, and its session.
+
+    The maxsplit is what makes the session name safe. It is the last field and it
+    can hold anything, so the split stops before it and whatever it contains --
+    spaces, tabs -- stays in the tail instead of shifting a column.
+    """
+    window_id, width, height, dedicated, session = line.split('\t', 4)
+    return window_id, int(width), int(height), dedicated == str(Role.COORDINATOR), session
+
+
+def parse_pane(line: str) -> tuple[str, Pane]:
+    """One `PANE_FIELDS` row: which window it is in, and the pane.
+
+    Eight fields always, because an unset user option renders as an empty field
+    rather than being dropped. So a pane nobody marked parses the same way as one
+    carrying both marks, and comes back `UNKNOWN` rather than as a parse failure.
+    """
+    window_id, pane_id, left, top, width, height, role, pair = line.split('\t')
+    return window_id, Pane(
+        pane_id=pane_id,
+        left=int(left),
+        top=int(top),
+        width=int(width),
+        height=int(height),
+        role=read_role(role),
+        pair=pair,
+    )
+
+
+def read_workspace() -> tuple[Window, ...]:
+    """Every window on the server, with its panes, sizes and marks."""
+    sizes: dict[str, tuple[int, int, bool, str]] = {}
+    for line in tmux('list-windows', '-a', '-F', WINDOW_FIELDS).splitlines():
+        window_id, width, height, dedicated, session = parse_window(line)
+        sizes[window_id] = (width, height, dedicated, session)
+
+    panes: dict[str, list[Pane]] = {}
+    for line in tmux('list-panes', '-a', '-F', PANE_FIELDS).splitlines():
+        window_id, pane = parse_pane(line)
+        panes.setdefault(window_id, []).append(pane)
+
+    windows = []
+    for window_id, (width, height, dedicated, session) in sizes.items():
+        members = tuple(panes.get(window_id, ()))
+        across, down = reconcile(width, height, members)
+        windows.append(Window(window_id=window_id, width=across, height=down, session=session, dedicated=dedicated, panes=members))
+    return tuple(windows)
+
+
+def mark(pane_id: str, role: Role, pair: str = '') -> None:
+    """Record what a pane is, on the pane itself."""
+    tmux('set-option', '-p', '-t', pane_id, f'@{PANE_ROLE}', str(role))
+    if pair:
+        tmux('set-option', '-p', '-t', pane_id, f'@{PANE_PAIR}', pair)
+
+
+def dedicate(window_id: str) -> None:
+    """Record that a window belongs to a promoted coordinator."""
+    tmux('set-option', '-w', '-t', window_id, f'@{WINDOW_ROLE}', str(Role.COORDINATOR))
+
+
+def caller_pane() -> str:
+    """The pane this ran in.
+
+    tmux exports $TMUX_PANE into everything it starts, so the address is already
+    in the environment and nothing has to be passed. Outside tmux there is no
+    workspace to place into and no pane to split.
+    """
+    if shutil.which('tmux') is None:
+        raise Usage(Refusal.NO_TMUX)
+    pane = os.environ.get('TMUX_PANE')
+    if not os.environ.get('TMUX') or not pane:
+        raise Usage(Refusal.OUTSIDE_TMUX)
+    return pane
+
+
+def perform_promotion(promotion: Promotion) -> str:
+    """Break the coordinator out to its own window and put the monitor beside it.
+
+    `break-pane -d` leaves the focus where it was. The coordinator is mid-turn
+    when this runs, and moving the cursor interrupts whoever is reading it.
+
+    The window is marked before the monitor is started, so a machine without the
+    monitor binary still produces a window nothing will place into. Inferring that
+    from the monitor pane made the degraded case place the next pair on top of the
+    coordinator that had just been moved out.
+
+    The monitor command is resolved by its first word. `shutil.which` takes a
+    binary name, so a value carrying an argument was reported as missing while the
+    shell tmux runs it through would have found it.
+    """
+    window = tmux('break-pane', '-d', '-P', '-F', '#{window_id}', '-s', promotion.pane, '-n', promotion.window_name).strip()
+    dedicate(window)
+
+    binary = shlex.split(promotion.monitor_command)[0] if promotion.monitor_command.strip() else ''
+    if not binary or shutil.which(binary) is None:
+        err(f'{promotion.monitor_command} is not installed, so the coordinator gets its window without one')
+        return window
+
+    made = tmux(
+        'split-window',
+        '-d',
+        '-h',
+        '-l',
+        str(promotion.monitor_width),
+        '-P',
+        '-F',
+        '#{pane_id}',
+        '-t',
+        promotion.pane,
+        promotion.monitor_command,
+    ).strip()
+    mark(made, Role.MONITOR)
+    return window
+
+
+def balance_columns(window_id: str, width: int) -> None:
+    """Reflow one window's columns to an even width, left to right.
+
+    tmux halves the pane a split lands on, which is the whole reason a coordinator
+    that dispatched four agents ends up reading its own work in a sixteenth of the
+    window. Each column is resized in turn and the last is left alone to absorb
+    the remainder, which is what `even_share` already assumed.
+
+    The window is re-read rather than predicted, because this runs after the split
+    and the pane it made had no id until then. One pane per column is enough: the
+    panes in a stacked column share their width, so resizing any of them moves the
+    whole column.
+    """
+    leaders: dict[int, str] = {}
+    for line in tmux('list-panes', '-t', window_id, '-F', COLUMN_FIELDS).splitlines():
+        pane_id, left = line.split('\t')
+        leaders.setdefault(int(left), pane_id)
+    for edge in sorted(leaders)[:-1]:
+        if problem := tmux_soft('resize-pane', '-t', leaders[edge], '-x', str(width)):
+            err(f'the column at {leaders[edge]} could not be resized to {width}: {problem}')
+
+
+@dataclass(frozen=True)
+class Landed:
+    """What the pane actually came out as, read back from tmux.
+
+    `place()` announces a size and nothing below it was ever held to that number.
+    This is the check: the window is re-read after the split, and a result that
+    differs from the plan is reported rather than assumed.
+    """
+
+    pane: str
+    width: int
+    height: int
+    readable: bool
+    as_planned: bool
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'pane': self.pane,
+            'width': self.width,
+            'height': self.height,
+            'readable': self.readable,
+            'as_planned': self.as_planned,
+        }
+
+
+def measure(pane: str, placement: Placement) -> Landed:
+    """Read the pane back and say whether it matches what was announced."""
+    row = tmux('display-message', '-p', '-t', pane, '#{pane_width}\t#{pane_height}').strip()
+    width, height = (int(part) for part in row.split('\t'))
+    got = height if placement.direction is Direction.BELOW else width
+    return Landed(
+        pane=pane,
+        width=width,
+        height=height,
+        readable=readable(width, height),
+        as_planned=placement.size is None or got == placement.size,
+    )
+
+
+def execute(placement: Placement, command: Sequence[str], cwd: str, window_name: str) -> Landed:
+    """Carry out one placement and read back the pane it made.
+
+    Everything is addressed by `#{pane_id}` and `#{window_id}`. Pane indices
+    renumber on every split, so an index read before a split names a different
+    pane after it -- measured while the geometry for this was being taken, where
+    targeting index 3 after splitting index 2 hit the first column's lower half.
+
+    `-P -F` is tmux's own answer for what it just made, so nothing is matched back
+    afterwards by comparing a pane list before against after.
+
+    `-f` is what makes a new column a column. Without it `split-window -h` splits
+    the pane it was given, and the pane at the top of a stacked pair occupies only
+    the upper half of its column -- so the new pane arrives beside that half while
+    the reviewer underneath keeps spanning the original width. Measured: a second
+    pair placed that way came out 125x20 with its neighbour's reviewer 251 columns
+    wide across two columns. It also reflows every column in the window, which is
+    why `eligible()` refuses a window holding a pane this tool did not place. It
+    is never used on a stacked split, where it would span the window and take the
+    reviewer out of its worker's column.
+    """
+    if placement.promote is not None:
+        perform_promotion(placement.promote)
+
+    run = ['-c', cwd] if cwd else []
+    payload = [shlex.join(command)] if command else []
+
+    if placement.opens_window:
+        after = ['-a', '-t', placement.near] if placement.near else []
+        made = tmux('new-window', '-d', *after, '-n', window_name, '-P', '-F', '#{pane_id}', *run, *payload).strip()
+    else:
+        axis = ['-h', '-f'] if placement.direction is Direction.BESIDE else ['-v']
+        # A size is given for a stacked split, where nothing reflows afterwards, and
+        # withheld for a new column, where balancing sets every width at once. Asking
+        # tmux for a column wider than the pane being split is refused outright.
+        size = ['-l', str(placement.size)] if placement.direction is Direction.BELOW and placement.size else []
+        made = tmux('split-window', '-d', *axis, *size, '-P', '-F', '#{pane_id}', '-t', placement.target, *run, *payload).strip()
+
+    mark(made, placement.role, placement.pair)
+
+    if placement.balance and placement.size is not None:
+        balance_columns(placement.window, placement.size)
+    return measure(made, placement)
+
+
+def release(panes: Sequence[str]) -> int:
+    """Drop the marks this tool wrote, and say how many it dropped.
+
+    A tmux pane option lives as long as the pane, and nothing else can tell a live
+    mark from an abandoned one. Without this the shell someone ran `open` from
+    stays a coordinator for the server's whole life, and its window keeps reading
+    as a placement target.
+
+    Named panes, or every marked pane and window when none are named.
+    """
+    dropped = 0
+    wanted = set(panes)
+    for line in tmux('list-panes', '-a', '-F', PANE_FIELDS).splitlines():
+        _, pane = parse_pane(line)
+        if wanted and pane.pane_id not in wanted:
+            continue
+        if pane.role is Role.UNKNOWN and not pane.pair:
+            continue
+        tmux_soft('set-option', '-pu', '-t', pane.pane_id, f'@{PANE_ROLE}')
+        tmux_soft('set-option', '-pu', '-t', pane.pane_id, f'@{PANE_PAIR}')
+        dropped += 1
+
+    if not wanted:
+        for line in tmux('list-windows', '-a', '-F', WINDOW_FIELDS).splitlines():
+            window_id, _, _, dedicated, _ = parse_window(line)
+            if dedicated:
+                tmux_soft('set-option', '-wu', '-t', window_id, f'@{WINDOW_ROLE}')
+                dropped += 1
+    return dropped
+
+
+def describe(placement: Placement) -> str:
+    where = 'a new window' if placement.opens_window else f'{placement.direction} {placement.target} in {placement.window}'
+    unit = 'rows' if placement.direction is Direction.BELOW else 'columns'
+    extent = 'the whole window' if placement.size is None else f'{placement.size} {unit}'
+    lines = []
+    if placement.promote is not None:
+        lines.append(f'first: move {placement.promote.pane} to a window named {placement.promote.window_name}')
+        lines.append(f'       with {placement.promote.monitor_command} beside it at {placement.promote.monitor_width} columns')
+    lines.append(f'place: {placement.role} {where}, {extent}')
+    lines.append(f'  why: {placement.why}')
+    if not placement.readable:
+        lines.append(f'  ▲    under the {MIN_COLUMNS}x{MIN_ROWS} minimum, and there is nowhere on this client that is not')
+    return '\n'.join(lines)
+
+
+def request_from(args: argparse.Namespace) -> Request:
+    return Request(
+        role=Role(args.role),
+        caller=caller_pane(),
+        partner=args.partner or '',
+        window_name=args.window_name,
+        monitor_command=args.monitor,
+    )
+
+
+def cmd_list(as_json: bool) -> int:
+    windows = read_workspace()
+    if as_json:
+        payload = [
+            {
+                'window': window.window_id,
+                'session': window.session,
+                'size': f'{window.width}x{window.height}',
+                'dedicated': window.dedicated,
+                'columns': [[pane.pane_id for pane in column] for column in window.columns],
+                'free': free_columns(window),
+                'eligible': eligible(window),
+                'panes': [
+                    {'pane': pane.pane_id, 'role': str(pane.role), 'pair': pane.pair, 'size': f'{pane.width}x{pane.height}'}
+                    for pane in window.panes
+                ],
+            }
+            for window in windows
+        ]
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    for window in windows:
+        verdict = 'eligible' if eligible(window) else ("the coordinator's own" if window.dedicated else 'not placed into')
+        size = f'{window.width}x{window.height}'
+        room = f'{len(window.columns)} columns, {free_columns(window)} free'
+        print(f'{window.window_id:5} {size:<9} {room}, {verdict}  [{window.session}]')
+        for column in window.columns:
+            for pane in column:
+                pair = f' of {pane.pair}' if pane.pair else ''
+                print(f'      {pane.pane_id:5} {pane.width}x{pane.height:<8} {pane.role}{pair}')
+    return 0
+
+
+def cmd_plan(args: argparse.Namespace) -> int:
+    placement = place(read_workspace(), request_from(args))
+    if args.json:
+        print(json.dumps(placement.as_json(), indent=2))
+    else:
+        print(describe(placement))
+    return 0
+
+
+def cmd_open(args: argparse.Namespace) -> int:
+    request = request_from(args)
+    windows = read_workspace()
+
+    # `place()` decides first and the marks are written after, so a refused run
+    # leaves nothing behind and `plan` sees the same workspace `open` does.
+    placement = place(windows, request)
+    err(describe(placement))
+
+    # `crown()` names a coordinator where the server had none. Where it did that,
+    # the mark is written so the next run reads the same answer off the server
+    # instead of deriving it again from whichever pane happens to call.
+    was = pane_in(windows, request.caller)
+    now = pane_in(crown(windows, request.caller), request.caller)
+    if was is not None and now is not None and was[1].role is not now[1].role:
+        mark(request.caller, Role.COORDINATOR)
+
+    landed = execute(placement, args.command, args.cwd, args.window_name)
+    if not landed.as_planned:
+        err(f'▲ tmux made {landed.pane} {landed.width}x{landed.height}, and the plan said {placement.size}')
+    if not landed.readable:
+        err(f'▲ {landed.pane} is {landed.width}x{landed.height}, under the {MIN_COLUMNS}x{MIN_ROWS} minimum')
+
+    if args.json:
+        print(json.dumps(placement.as_json() | {'landed': landed.as_json()}, indent=2))
+    else:
+        print(landed.pane)
+    return 0
+
+
+def cmd_release(panes: Sequence[str]) -> int:
+    dropped = release(panes)
+    err(f'dropped {dropped} mark{"" if dropped == 1 else "s"}')
+    return 0
+
+
+EXAMPLES = """examples:
+  tmux-place list                     what is on the server, and where a pane could go
+  tmux-place plan worker              where the next agent would land, changing nothing
+  tmux-place open worker -- claude    put an agent there and start it
+  tmux-place plan reviewer --for %26  where %26's reviewer would go: directly below it
+  tmux-place release %26              stop treating %26 as a pane this tool placed
+
+A worker is an agent doing a piece of work. A reviewer reads one worker's output
+and is always placed in that worker's column, directly below it. A coordinator is
+the pane that dispatches them; when its window fills up it moves to a window of
+its own with a monitor beside it, and never moves back."""
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='tmux-place',
+        description=__doc__.splitlines()[0],
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest='verb')
+
+    listing = sub.add_parser(
+        'list',
+        help='every window this tool can place into',
+        description='Print every window on the server, its columns, how many more it can hold, and whether a pane may be placed in it.',
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    listing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
+
+    verbs = [
+        (
+            'plan',
+            'where a pane would go, without going there',
+            'Work out where a pane would be placed and print the decision. Changes nothing.',
+        ),
+        (
+            'open',
+            'make the pane and run a command in it',
+            'Place a pane where it fits, start a command in it, and print its pane id on stdout.',
+        ),
+    ]
+    for verb, help_text, description in verbs:
+        command = sub.add_parser(
+            verb,
+            help=help_text,
+            description=description,
+            epilog=EXAMPLES,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        command.add_argument('role', choices=[str(Role.WORKER), str(Role.REVIEWER)], help='what is being placed')
+        command.add_argument(
+            '--for', dest='partner', default='', metavar='%PANE', help='the worker a reviewer belongs to; a worker takes none'
+        )
+        command.add_argument('--window-name', default=WINDOW_NAME, help=f'the name for a window this has to open (default: {WINDOW_NAME})')
+        command.add_argument(
+            '--monitor', default=MONITOR_COMMAND, help=f'runs beside a coordinator moved to its own window (default: {MONITOR_COMMAND})'
+        )
+        command.add_argument('--json', action='store_true', help='machine-readable output on stdout')
+        if verb == 'open':
+            command.add_argument('--cwd', default='', help="the new pane's working directory")
+            command.add_argument('command', nargs='*', help='what to run in it, after --')
+
+    dropping = sub.add_parser(
+        'release',
+        help='drop the marks this tool wrote',
+        description=(
+            'Remove the role and pair options this tool set on panes, and the dedication it set on windows. '
+            'A mark outlives the work it described, and nothing else can tell a live one from an abandoned one.'
+        ),
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    dropping.add_argument('panes', nargs='*', metavar='%PANE', help='panes to clear; every marked pane and window when none are named')
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    # No args shows help rather than an error: a namespace can be walked down one
+    # token at a time only if every node answers with what is under it.
+    if not args.verb:
+        parser.print_help()
+        return 0
+    if args.verb == 'list':
+        return cmd_list(args.json)
+    if args.verb == 'plan':
+        return cmd_plan(args)
+    if args.verb == 'release':
+        return cmd_release(args.panes)
+    return cmd_open(args)
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Usage as problem:
+        err(f'tmux-place: {problem}')
+        sys.exit(USAGE_ERROR)
+    except TmuxFailed as problem:
+        err(f'tmux-place: {problem}')
+        sys.exit(FAILURE)
