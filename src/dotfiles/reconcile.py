@@ -193,20 +193,12 @@ class ResourceResult:
     def as_counts(self) -> dict[str, object]:
         """This resource's verdict and how much of it stands where. No items.
 
-        `detail` is prose and will be reworded; the numbers are the answer. A
-        reader that had to parse "3 item(s) differ" back out of English was
-        reading a rendering rather than a result — and so was every test that
-        asserted on it.
+        `detail` is prose and will be reworded; the numbers are the answer. Read
+        this rather than parsing the sentence, per `standards/testing.md` § "Never
+        assert on rendered output".
 
-        The half a reader wants when the artifact accrues rather than being asked
-        for: `status.state` writes one of these per resource on every scheduled
-        check into a directory the fleet syncs, and what it needs to answer is
-        whether this machine is converged, not which hundred and seventy-eight
-        symlinks were fine. `as_dict` below is the other half's home.
-
-        `lens` is held back from both. The document names the verb once, at the
-        top, and it is the same fact — a row repeating it would be a second place
-        for the two to disagree.
+        The half `status.state` writes per resource on every scheduled check.
+        `lens` is held back, since the document names the verb once at the top.
         """
         return {
             'address': self.address,
@@ -254,14 +246,8 @@ class ResourceResult:
 def check_declaration() -> ResourceResult:
     """Validate `packages.yml` against the manifests and what can install them.
 
-    An Issue rather than drift whatever it finds, and first in the walk: a
-    machine checked against an invalid declaration produces a verdict that means
-    nothing.
-
-    The findings are values, so the row names them and `--json` carries them.
-    Running `packages verify` in-process and reading its exit status could say
-    only that something was wrong and where to go and look — and it would need
-    `SystemExit` caught and stdout redirected to say even that.
+    An Issue rather than drift whatever it finds, and first in the walk: a machine
+    checked against an invalid declaration produces a verdict that means nothing.
     """
     findings = validate.declaration()
     return declaration_row(findings, validate.errors(findings))
@@ -297,18 +283,12 @@ def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[valid
 def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Change]]:
     """Split one resource's changes into what each verb keeps, and what neither does.
 
-    An item nobody could measure is in neither. Nothing about it differs — that is
-    the claim there is no evidence for — and no checker crashed, so it is counted
-    and named rather than rendered as a row and rather than moving the exit code.
-    The alternative was measured on a cold release cache: every declared release
-    is unmeasurable until something refreshes it, which would print a screen of
-    rows and exit non-zero on a machine with nothing wrong with it.
+    An item nobody could measure is in neither, and moves no exit code: a cold
+    release cache makes every declared release unmeasurable at once.
 
-    Each of the three is read off the change rather than derived by subtracting the
-    other two here. The subtraction was the same classification written a second
-    time, and it disagreed with the first: `sinks.intention` asked the change and
-    this asked the list, so a `MISSING` verdict with no repairer printed under
-    "needs attention" and was recorded as `observed`.
+    **All three are read off the change, never derived by subtracting the other
+    two.** `sinks.intention` classifies by asking the change, so a subtraction here
+    is a second classification that can disagree with it.
     """
     unmeasured = [change for change in changes if change.unmeasured]
     pending = [change for change in changes if change.actionable]
@@ -368,15 +348,8 @@ def from_changes(
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
     """The listed items that no finding already covers.
 
-    Subtracted here rather than by each resource, so a resource's `inventory` can
-    be a plain restatement of what it looked at. Deciding what differs is `diff`'s,
-    and a second opinion formed in the observation is one that can disagree with
-    it — which is how one item comes to be both a stale row and a fine one in the
-    same section.
-
-    Keyed on `item`, which is why `inventory` has to address a thing the way `diff`
-    addresses it. A resource keying its rows two ways gets both spellings printed
-    and neither subtracted.
+    **Keyed on `item`, so a resource's `inventory` must address a thing the way its
+    `diff` does.** Keyed two ways, both spellings print and neither subtracts.
     """
     reported = {change.item for change in changes}
     return tuple(row for row in examined if row.item not in reported)
@@ -496,23 +469,13 @@ class NoBundle(refusal.Refusal):
 def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, packages: frozenset[str]) -> engine.Selection:
     """This selection, reduced to the providers the narrowed plan still needs.
 
-    One function for all three doors, because they had come apart on exactly the
-    case it refuses. `apply` said `nothing selected for owner X` and exited 2 while
-    both read verbs walked the empty selection and folded it to converged — so a
-    misspelt `--owner` answered `nothing to change` about a machine nothing had
-    measured, which is the one thing `plan` must never say.
+    **One function for all three doors**, or they disagree about the empty case: a
+    read verb folding an empty selection to converged answers `nothing to change`
+    about a machine nothing measured, which is what `plan` must never say.
 
-    Both narrowings arrive already applied to `plan`, which is what lets one
-    reduction serve them: `--owner` and `--package` each answer "which entries",
-    and the selection only has to follow the providers those entries left. Why the
-    narrowing has to reach the walk and not only the plan is
-    `Selection.narrowed_to`'s, and stays there.
-
-    Only `--owner` can empty this today: a `--package` name is refused above
-    unless the selection already covers it, so its provider survives by
-    construction. The refusal still names whichever narrowing was given rather
-    than assuming that, because a message whose accuracy rests on an argument
-    elsewhere in the file is a message that goes wrong quietly.
+    The refusal names whichever narrowing was given rather than assuming `--owner`.
+    A `--package` name cannot empty this today, but a message whose accuracy rests
+    on an argument elsewhere in the file goes wrong quietly.
     """
     confirm_reachable(packages, plan, selection)
     if owner is None and not packages:
@@ -527,23 +490,14 @@ def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, package
 def confirm_reachable(packages: frozenset[str], plan: Plan, selection: engine.Selection) -> None:
     """Refuse a `--package` name this run does not reach, before anything is measured.
 
-    Against the *selection* rather than against `plan.items` alone, which answers
-    for the whole machine and so speaks about a run nobody asked for.
-    `apply_machine` already refused a name the machine does not declare, and said
-    why: one "would otherwise be accepted and then match nothing, which reads as a
-    reinstall that ran and did nothing". A name the machine declares and the
-    narrowing excludes has exactly that shape — `packages apply --reinstall uv`
-    named the toolchain, passed against the whole plan, and converged having
-    reinstalled nothing.
+    Against the *selection*, not `plan.items` alone: a name the machine declares
+    and the narrowing excludes is accepted, matches nothing, and reads as a
+    reinstall that ran and did nothing.
 
-    Two ways to miss and two sentences, because the fixes differ: a name nothing
-    declares is retyped, and a name outside the narrowing is reached by widening
-    or by naming the address that carries it. The second sentence names that
-    address, which is the one thing a caller cannot work out from the refusal.
-
-    `plan` is already narrowed to these names, so the entries it still holds are
-    the named ones and their prerequisites — which is why a name absent from it is
-    a name nothing declares.
+    Two sentences because the fixes differ — a name nothing declares is retyped,
+    and a name outside the narrowing is reached by widening or by naming the
+    address carrying it. The second names that address, which is the one thing a
+    caller cannot work out from the refusal.
     """
     if not packages:
         return
@@ -589,30 +543,19 @@ def survey(
 ) -> Surveyed:
     """Measure the machine once, folding and reporting each resource as it lands.
 
-    A skipped address is absent rather than present as a fourth verdict: it was not
-    examined, so it has nothing to report, and inventing a row for it would put
-    something in `--json` that no checker produced. A skip naming one provider
-    leaves the resource in the walk with that provider gone, so the row is still
-    there and is honest about the narrower thing it measured.
+    A skipped address is absent rather than a fourth verdict: inventing a row would
+    put something in `--json` that no checker produced.
 
     `owner` and `packages` go through the same `narrowed` `apply_machine` does,
-    refusals included: a rehearsal that walked a scope the write refuses is a
-    rehearsal of a run that never happens.
+    refusals included — a rehearsal walking a scope the write refuses rehearses a
+    run that never happens.
 
-    **Reported a resource at a time, not once at the end.** The walk is a generator
-    and materialising it is what made a slow resource indistinguishable from a hung
-    one. Folding at the end had the same shape one layer up: every progress line
-    printed, then every verdict, so the screen carried two lists of the same nine
-    names and a reader had to work out that one was a question and one an answer.
-    Each resource now announces itself, erases that line, and prints its own
-    section — so what is on screen is one list, and the wait is visible while it
-    is happening rather than reconstructable afterwards.
+    **Reported a resource at a time, not once at the end**, because the walk is a
+    generator and materialising it makes a slow resource look like a hung one.
 
-    `offline` swaps the upstream for the staged bundle, exactly as it does for the
-    write, and never stages one. `refresh` is dropped rather than refused alongside
-    it: the flag means "spend the network on being current", there is no network to
-    spend, and `resources.packages._upstream` already ignores it on this branch — so
-    passing it through would be one more place the two could come to disagree.
+    `offline` swaps the upstream for the staged bundle and never stages one.
+    `refresh` is dropped rather than refused: there is no network to spend, and
+    `resources.packages._upstream` already ignores it on this branch.
     """
     # `announce_bundle` is off for a caller that is not rehearsing an install.
     # `status show` walks offline to get versions rather than to install anything,
@@ -682,15 +625,9 @@ def fold_walk(events: Iterable[Event], lens: Lens) -> Iterator[ResourceResult]:
 def machines_row(skip: frozenset[str]) -> list[ResourceResult]:
     """The `machines` verdict, unless it was skipped.
 
-    One place, because both readers of it have to agree on two things: that it
-    comes before the walk, and that `--skip machines` removes it rather than
-    leaving a row nothing measured.
-
-    `check`'s and never `plan`'s. A semantically invalid `packages.yml` is
-    something *wrong*, and a plan that refused to print because a manifest names a
-    retired tool would be answering a question nobody asked. A declaration too
-    broken to load is a different thing, and shows up in either verb as every
-    resource refusing.
+    `check`'s and never `plan`'s: an invalid `packages.yml` is something *wrong*,
+    and a plan refusing because a manifest names a retired tool would answer a
+    question nobody asked.
     """
     return [] if 'machines' in skip else [check_declaration()]
 
@@ -698,26 +635,15 @@ def machines_row(skip: frozenset[str]) -> list[ResourceResult]:
 def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     """What this verb answered, named, and what it deliberately left alone.
 
-    The line that makes the pair legible. `plan` and `check` walk the same machine
-    and keep different halves, so on a machine with logged-out CLIs and nothing
-    else wrong, `plan` prints nine converged rows and `check` prints four
-    findings — which reads as one of them being broken rather than as two
-    questions.
+    Always printed, including when there is nothing to report: the run that most
+    needs this line is the one that found nothing.
 
-    Always printed, including when there is nothing to report, because the run
-    that most needs it is the one that found nothing.
+    **Every clause names its subjects, and no clause names another verb.** A bare
+    count sends the reader hunting for what is on screen; naming the other verb
+    asks for a second full walk to produce those names.
 
-    **Every clause names its subjects, and no clause names another verb.** The rule
-    `applied_line` already keeps, and the whole of what this line is worth. A bare
-    count is a question rather than an answer: `2 resource(s) need attention` above
-    rows that say `env` and `auth` sends the reader hunting for what is on screen,
-    and a drift count names the one set on the machine with no row anywhere. Naming
-    the other verb instead asks for a second full walk to print those names.
-
-    The drift half is `check`'s alone and the attention half is `plan`'s alone: each
-    is the other verb's subject, carried here because a verdict that omits it reads
-    as a machine with nothing else to say. What refused to be measured is neither,
-    and is named under both.
+    Each verb carries the other's half — drift is `check`'s, attention is `plan`'s
+    — because a verdict omitting it reads as a machine with nothing else to say.
     """
     blind = _clause([result.address for result in results if _refused(result)], 'could not be measured', 'resource')
     # Read off the changes rather than off the counts beside them, and asked with
@@ -829,48 +755,24 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
-    **Both identities are threaded, and for one reason.** `machine` is the
-    manifest and `box` is the discriminator that tells two machines sharing one
-    apart. `offline_bundle.target()` answers `$MACHINE` or the default, so an
-    `apply --machine X --offline` measured a correct bundle against the wrong name
-    and refused it — and `--machine` is most likely to be typed explicitly during
-    a rebuild, which is exactly when this path runs. `Session.resolve` has already
-    proven the manifest exists, where an ambient resolve swallows that refusal into
-    `''` and silently disables the guard. Reaching for the box the same way would
-    reintroduce the same hole one guard later: under `--machine X` whose manifest
-    carries a different `network_trust`, an ambient `discriminator` answers with a
-    digest where the bundle recorded a hostname, and a valid bundle is refused with
-    two strings that cannot be compared.
+    **Both identities are passed in, never resolved from the ambient environment.**
+    `machine` is the manifest and `box` is the discriminator telling two machines
+    sharing one apart. `offline_bundle.target()` answers `$MACHINE`, so an ambient
+    resolve under `apply --machine X --offline` measures a correct bundle against
+    the wrong name and refuses it — and `--machine` is typed explicitly during a
+    rebuild, which is exactly when this path runs.
 
-    Staged rather than refused, because unpacking a tarball that is sitting right
-    there is what `--offline` already promised: the bootstrap has always done it
-    unasked, and this is that same act on a machine that does not need
-    bootstrapping. Distinct from a bootstrap that starts a networked convergence
-    nobody asked for: this is local, cheap, and precisely what the flag was given
-    in order to install from.
+    Nothing is staged over an existing bundle, so a machine part way through an
+    offline install does not re-read the archive each run.
 
-    Nothing is staged over an existing bundle: a machine part way through an
-    offline install has one, and re-reading the archive each run would be work
-    for an answer that is already on disk.
+    **Both branches report**, because the bundle is the upstream under this flag and
+    the already-staged branch is the one every run after the first takes.
 
-    **Both branches report, because both install from a bundle.** The bundle is the
-    upstream under this flag, so a run that does not name it has withheld the thing
-    every verdict below was decided against — and the branch that finds one already
-    staged is the one every run after the first takes. Unreported, a bundle carrying
-    no version for an item makes it unmeasurable with nothing on screen naming the
-    bundle, its location, its date or its contents.
-
-    An empty manifest ends the run rather than starting it. Every provider reads
-    the bundle through that file, so a staged directory without one installs
-    nothing from anywhere and reports each tool separately as its own mystery.
-
-    **Every one of the three ways this ends a run is a `Refusal`**, so the walk that
-    never happened closes in the one grammar `apply` keeps for that — see
-    `apply_machine`. The unreadable branch refuses on top of `report_bundle`'s
-    warning rather than instead of it, because that warning is shared with `plan`
-    and `check`, where the same measurement is a caveat on their verdicts rather
-    than the end of the run. One line says what is wrong with the bundle; the other
-    says this verb stopped.
+    **All three ways this ends a run are a `Refusal`**, so a walk that never happened
+    closes in the grammar `apply_machine` keeps for that. The unreadable branch
+    refuses on top of `report_bundle`'s warning rather than instead of it: that
+    warning is shared with `plan` and `check`, where it is a caveat rather than a
+    stop.
     """
     extracted = None
     if not providers.staged_bundles():
@@ -983,23 +885,17 @@ def report_bundle(staged: offline_bundle.Staging) -> None:
 def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
     """Which declaration errors stop this run.
 
-    A finding names the thing it is about, in one of two vocabularies. A fault in
-    `packages.yml` carries that file's *section* — `github_releases`, `go_tools` —
-    and a fault elsewhere carries a resource, like `auth` or `symlinks`. The
-    section-to-resource map is read off `registry.PROVIDERS`, which is where a
-    provider already declares which section it plans from, so nothing here decides
-    it a second time.
+    A finding names either a `packages.yml` section or a resource. The
+    section-to-resource map is read off `registry.PROVIDERS`, where a provider
+    already declares which section it plans from.
 
-    Whatever a finding resolves to, it gates a run that selected that resource and
-    lets a run aimed elsewhere proceed. A whole-machine `apply` therefore refuses
-    on any error, and `dotfiles symlinks apply` still works on a machine whose
-    `packages.yml` is broken — which is a deliberate narrowing, unlike converging
-    everything against a declaration nobody can satisfy.
+    A finding gates a run selecting that resource and lets one aimed elsewhere
+    proceed, so `dotfiles symlinks apply` still works on a machine whose
+    `packages.yml` is broken.
 
-    What resolves to no resource — a manifest that will not parse, a broken git
-    include chain, a registry declared in the wrong place — gates every run. Not
-    because each was traced to every resource, but because it was traced to none,
-    and a fault nobody can attribute is one nobody can rule out.
+    **What resolves to no resource gates every run** — not because it was traced to
+    all of them, but because it was traced to none, and a fault nobody can
+    attribute is one nobody can rule out.
     """
     # Imported here for the reason `resolve.plan_for` gives: the providers build
     # item types defined in `resolve`, so asking for the registry at module scope
@@ -1029,40 +925,22 @@ def apply_machine(
 ) -> ExitCode:
     """Measure the machine once, then act on what was decided, in stage order.
 
-    One walk over the whole plan, sorted by `Stage`, which is where the ordering
-    is declared. Every resource is observed once and every provider that planned
-    something is acted on.
-
-    The declaration check, the machine's own resolution and the offline check are
-    all before the walk. A run measured against a declaration that will not hold
+    The declaration check, the machine's resolution and the offline check all come
+    before the walk: a run measured against a declaration that will not hold
     together installs whatever survived the parse and reports success.
 
-    **A whole-machine apply refuses on any error; a scoped one refuses on the
-    errors that concern what it was asked to converge.** Keyed on what the fault
-    is, never on whether the selection holds a resource with a *provider* — that
-    is a fact about how a resource is implemented, and it lets `symlinks apply`
-    run against a `packages.yml` that will not parse. Narrowing to one resource is
-    a deliberate act and stays possible; converging the whole machine against a
-    declaration nobody can satisfy is not.
+    **A whole-machine apply refuses on any error; a scoped one refuses on the errors
+    concerning what it was asked to converge.** Keyed on what the fault is, never on
+    whether the selection holds a resource with a *provider*.
 
-    **Every human line this verb prints goes to stderr, the closing verdict
-    included.** Its stdout is the run record and nothing else, so there is no
-    branch that has to remember to fall silent under `--json` and no refusal path
-    that can hand a caller a heading where the document should be. The read verbs
-    split the two streams instead — heading to stdout, evidence to stderr — because
-    for them the heading *is* the answer; here the answer is what the machine
-    became, and the report is the working that got it there.
+    **Every human line goes to stderr, the closing verdict included**, so no branch
+    has to remember to fall silent under `--json` and no refusal can hand a caller a
+    heading where the document should be.
 
-    **A run that measured something closes on a verdict line; a run that never
-    started closes through `refusal.report`.** The verdict line is composed from
-    counts of items this walk decided, and a refusal has none — nothing selected, a
-    machine that will not resolve, `--offline` with no bundle to install from — so
-    putting a verdict word in front of a sentence about how the command was typed
-    claims a measurement nobody made. `✗ <sentence>` with the advice hung under it
-    is what every other door in this tool prints for the same event, so the two
-    shapes are *what the machine became* and *why this never ran*, and no exit is
-    left in a third. The declaration gate belongs to the first of them: it measured
-    the declaration and closes on that row's own verdict.
+    **A run that measured something closes on a verdict line; one that never started
+    closes through `refusal.report`.** A verdict line is composed from counts this
+    walk decided, and a refusal has none — so a verdict word in front of a sentence
+    about how the command was typed claims a measurement nobody made.
     """
     began = dt.datetime.now(dt.UTC)
     checkout.report_stray_branch()
@@ -1199,30 +1077,12 @@ def apply_machine(
 def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
     """What this run did, what it walked past, and which verb owns the rest.
 
-    `verdict_line`'s counterpart for the write verb, carrying the counts for the
-    same reason: a closing line naming only the machine ends a run that repaired
-    eleven things and a run that repaired none identically, and says nothing about
-    either of the two sets `apply` deliberately does not act on.
+    **The repaired count is joined to the failure clause, never chosen against it.**
+    One failure after eleven repairs is a run that mostly worked, and dropping the
+    eleven makes it read as a run that did nothing.
 
-    **What was repaired is on the line whatever else went wrong.** It is the count
-    this verb exists to produce, and it is worth most on the branch where something
-    failed — one failure after eleven repairs is a run that mostly worked, and
-    dropping the eleven makes it read exactly like a run that did nothing at all.
-    The two clauses are joined rather than chosen between, so every combination of
-    the pair is a different sentence.
-
-    **A by-hand item is counted, never pointed elsewhere.** Its row is already on
-    screen with its own detail and its own command, so naming another verb sends a
-    reader to reprint what they just read. `Repair.BY_HAND` is not a failure
-    either, and exiting non-zero for it makes every freshly-installed work box
-    look broken between the install and the safekeep restore.
-
-    **What nothing could measure is named, not just counted.** It is neither a
-    failure nor drift — there is no evidence the item differs, and inventing some
-    would exit non-zero on a healthy machine — so the only thing standing between a
-    hole in the run's coverage and a converged machine is this sentence. It carries
-    the names because this is the line a scheduled run's summary keeps with the rows
-    long gone, which is the argument `_lead` makes for the read verbs' rows.
+    **What nothing could measure is named, not just counted**, because this is the
+    line a scheduled run's summary keeps once the rows are gone.
     """
     repaired = f'{changed} item(s) changed' if changed else ''
     failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
@@ -1248,26 +1108,11 @@ def _name_the_shared_fix(changes: Sequence[Change]) -> None:
 def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) -> None:
     """The two sets `apply` walked past, each as a section saying which it is.
 
-    Reported and not counted, both of them. A machine-local value nobody has set and
-    a file only safekeep restores are real findings, and exiting non-zero for them
-    makes every freshly-installed work box look like a failed install between the
-    install and the restore. `apply` answers whether the work it attempted
-    succeeded; whether anything is *wrong* is the question `check` exists for.
+    Reported, never counted into the exit status: `apply` answers whether the work
+    it attempted succeeded, and whether anything is *wrong* is `check`'s question.
 
-    Both sets are reachable and both get a heading. Bare rows without one read as a
-    continuation of whatever provider acted last, and a set with no renderer at all
-    is a part of the machine the run passed over in silence.
-
-    Without this an `apply --offline` plans a set of package items, acts on the one
-    it can, and says nothing whatsoever about the rest it declined because the staged
-    bundle carried no version to compare them against. Each declined item already
-    holds the sentence explaining itself — `packages._unmeasurable`
-    composes it, and `plan` prints it — so the gap this closes is a renderer rather
-    than a diagnosis.
-
-    Neither carries a verdict mark, and that is the point of `NOTICE_MARK`: one is
-    real drift a person has to deal with and the other is an absence of evidence, so
-    borrowing `~` or `✗` for either would state something the run did not measure.
+    `NOTICE_MARK` on both, because one is drift and the other is an absence of
+    evidence — borrowing `~` or `✗` would state something the run did not measure.
     """
     for name, colour, group, why in (
         (NEEDS_ATTENTION, 'yellow', deferred, 'differ, and apply is not what repairs them'),
