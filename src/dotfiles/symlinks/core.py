@@ -1,5 +1,6 @@
 """Dotfiles symlink manager: configuration constants, utilities, and management functions."""
 
+import dataclasses as dc
 import enum
 import fnmatch
 import os
@@ -257,47 +258,41 @@ def stands_in_for_an_excluded_directory(entry: os.DirEntry[str], parts: tuple[st
     return points_at_a_directory and ends_in_an_excluded_run((*parts, entry.name))
 
 
-def _find_symlinks(base_dir: Path) -> list[Path]:
+@dc.dataclass(frozen=True, slots=True)
+class Scan:
+    """What the walk found, and what it could not read.
+
+    `skipped` is carried rather than only printed because a shorter list and a
+    complete one are otherwise the same answer to the caller, and the warning that
+    distinguishes them is prose on a stream nobody parses.
+    """
+
+    found: tuple[Path, ...] = ()
+    skipped: tuple[tuple[Path, str], ...] = ()
+    """Each path the walk could not read, with the OS reason for it."""
+
+
+def _find_symlinks(base_dir: Path) -> Scan:
     """Every symlink under base_dir, depth-limited and exclusion-aware.
 
-    `os.scandir` rather than `Path.iterdir`, and rather than the `Path.walk` that
-    would be the pathlib answer. Both of those hand back names, so every question
-    about what an entry *is* costs a syscall, and deciding a symlink from a
-    directory takes several per entry. `scandir` answers from the type the
-    directory read already carried. Measured over one home directory, the three
-    returning the same set: `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s.
-    `Path.walk` buys nothing because it discards the entry it read the type from,
-    which is the whole of the saving — so `python.md` § "Use `pathlib.Path` for
-    every filesystem operation" is departed from here with a number behind it
-    rather than a preference.
+    `os.scandir` departs from `python.md` § "Use `pathlib.Path` for every
+    filesystem operation" with a number behind it: over one home directory,
+    `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s. Both alternatives discard the
+    entry type the directory read already carried, so every is-it-a-link question
+    costs another syscall.
 
-    A symlink is a result rather than a place to descend, whatever it points at.
-    That is what stops a link to an ancestor turning the walk into a loop, and it
-    is why `is_dir(follow_symlinks=False)` decides the recursion while the
-    following `is_dir()` decides only whether an excluded directory is being
-    reached through one.
+    A symlink is a result rather than a place to descend, whatever it points at,
+    which is what stops a link to an ancestor turning the walk into a loop.
 
-    Each directory is materialised before recursing so the descriptor is closed on
-    the way down rather than held open for the whole depth. A `Path` is built only
-    for an entry that is one of the two answers — a link to keep or a directory to
-    enter — because a home directory is mostly neither and parsing one costs more
-    than the read that found it.
+    Failure is caught per entry, never around the loop: an orphan scan that stops
+    early reports a machine with no orphans.
 
-    Failure is caught per entry rather than around the loop. `is_dir()` follows, so
-    a link into a directory this account cannot traverse raises `PermissionError`
-    for that one entry, and a catch around the loop would abandon every entry after
-    it — an orphan scan that stops early reports a machine with no orphans. Each
-    catch says what it skipped, for the same reason: a shorter list and a complete
-    one are otherwise the same answer.
-
-    **The exclusions apply below the root, never to the root.** `base_dir` is
-    caller-supplied — `find_broken_symlinks` and `remove_symlinks` both take it —
-    and it is admitted without being tested, because a caller that named a
-    directory has said to scan it. So `_find_symlinks(~/Downloads/x)` scans, where
-    `is_excluded_search_dir` answers True about that same path. Nothing on a real
-    machine reaches the difference, since `TARGET_DIR` is `$HOME`.
+    **The exclusions apply below the root, never to the root.** A caller naming a
+    directory has said to scan it, so `_find_symlinks(~/Downloads/x)` scans where
+    `is_excluded_search_dir` answers True about that same path.
     """
     symlinks: list[Path] = []
+    skipped: list[tuple[Path, str]] = []
 
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
@@ -306,6 +301,7 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
             with os.scandir(directory) as scan:
                 entries = list(scan)
         except OSError as unreadable:
+            skipped.append((directory, unreadable.strerror or ''))
             err_console.print(f'[yellow]not scanned for orphans:[/] {directory} ({unreadable.strerror})')
             return
         parts = directory.parts
@@ -314,6 +310,7 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
                 is_link = entry.is_symlink()
                 descend = not is_link and entry.is_dir(follow_symlinks=False)
             except OSError as unreadable:
+                skipped.append((Path(entry.path), unreadable.strerror or ''))
                 err_console.print(f'[yellow]not examined:[/] {entry.path} ({unreadable.strerror})')
                 continue
             if is_link and not stands_in_for_an_excluded_directory(entry, parts):
@@ -322,7 +319,7 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
                 walk(Path(entry.path), depth + 1)
 
     walk(base_dir)
-    return symlinks
+    return Scan(tuple(symlinks), tuple(skipped))
 
 
 # ─── Symlink Management ───────────────────────────────────────────────────────
@@ -419,7 +416,7 @@ def remove_symlinks(
     err_console.print(f'[blue]Removing {origin} symlinks...[/]')
     count = 0
 
-    for symlink in _find_symlinks(_target_dir):
+    for symlink in _find_symlinks(_target_dir).found:
         try:
             target = resolve_broken_symlink(symlink) if not symlink.exists() else symlink.resolve()
             if target and target.is_relative_to(source_dir):
@@ -447,7 +444,7 @@ def find_broken_symlinks(
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
     broken = []
 
-    for symlink in _find_symlinks(_target_dir):
+    for symlink in _find_symlinks(_target_dir).found:
         if symlink.exists():
             continue
         target = resolve_broken_symlink(symlink)

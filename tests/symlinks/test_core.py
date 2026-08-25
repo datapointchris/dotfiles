@@ -398,7 +398,7 @@ def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should
     """
     made = a_tree_of_every_shape(tmp_path)
 
-    found = set(core._find_symlinks(tmp_path))
+    found = set(core._find_symlinks(tmp_path).found)
 
     assert found == {made[name] for name in KEPT}
 
@@ -424,7 +424,7 @@ def test_a_link_whose_target_cannot_be_reached_costs_only_itself(tmp_path: Path)
     ordinary.symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        found = set(core._find_symlinks(tmp_path))
+        found = set(core._find_symlinks(tmp_path).found)
     finally:
         locked.chmod(0o755)
 
@@ -476,40 +476,25 @@ def test_the_walk_scans_a_root_whose_own_path_is_excluded(tmp_path: Path) -> Non
         (root / name).symlink_to(root / 'plain.txt')
 
     assert core.is_excluded_search_dir(root) is True
-    assert len(core._find_symlinks(root)) == 3
+    assert len(core._find_symlinks(root).found) == 3
 
 
-def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence(
-    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_directory_that_cannot_be_read_is_reported_rather_than_skipped_in_silence(tmp_path: Path) -> None:
     """A subtree nothing could read and a subtree with no orphans are the same
-    answer to the caller — a shorter list either way.
-
-    `python.md` § "Fail fast instead of defaulting": where the fallback is correct,
-    say so on the way past, naming the path and the error. Nothing downstream can
-    tell the two apart, so this warning is the only evidence the scan was partial.
-
-    `COLUMNS` is pinned because Rich wraps to whatever width it is handed, and a
-    `tmp_path` long enough to push the wrap into the middle of "Permission denied"
-    splits the phrase across two lines. The assertion is about what was said, so
-    the width it was said at is fixed rather than normalised back out afterwards —
-    stripping the newlines welds the two halves into `Permissiondenied`.
+    answer to the caller — a shorter list either way. `Scan.skipped` is what
+    separates them.
     """
-    monkeypatch.setenv('COLUMNS', '400')
     locked = tmp_path / 'locked'
     (locked / 'inside').mkdir(parents=True)
     (tmp_path / 'ordinary').symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        found = core._find_symlinks(tmp_path)
+        scan = core._find_symlinks(tmp_path)
     finally:
         locked.chmod(0o755)
 
-    reported = capsys.readouterr().err
-    assert [path.name for path in found] == ['ordinary']
-    assert 'not scanned for orphans' in reported
-    assert str(locked) in reported
-    assert 'Permission denied' in reported
+    assert [path.name for path in scan.found] == ['ordinary']
+    assert scan.skipped == ((locked, 'Permission denied'),)
 
 
 LINK_SHAPES = (
