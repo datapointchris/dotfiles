@@ -308,9 +308,9 @@ class Spawned:
             'pane': self.pane,
             'brief': str(self.brief),
             'session': self.landing.session,
-            # Why there is no `session`, for a caller that has to say something about it.
-            # No `registered` boolean beside it: `session` being null already carries that,
-            # and a second field saying the same thing is one more that can disagree.
+            # Why a null `session` is null, for a caller that has to say something about it.
+            # No `registered` boolean beside it: `session` already carries whether there is
+            # one, and a second field saying the same thing is one more that can disagree.
             'registration': str(self.landing.registration),
             'exit_status': self.landing.status,
         }
@@ -1225,9 +1225,10 @@ def session_in_pane(sessions: Sequence[Session], pane: str, pane_pid: int | None
     records what that costs when the same match is loosened.
 
     The registry spells a pane as `<tmux session>:@<window>.%<pane>`, and only the last
-    field is compared. The window half is unreliable: a pane moved between windows with
-    `tmux join-pane` keeps its id while the registry keeps the window it was recorded in,
-    so the address as a whole names a window the pane has left.
+    field is compared. The other two rot when the pane is moved. `tmux break-pane` gives
+    it a new window and `tmux join-pane` can give it a new tmux session, while the
+    registry keeps the address it recorded at startup — so the address as a whole names a
+    place the pane has left. The id it kept is the part still worth comparing.
 
     The pane id is not unique either. A `claude` started from inside another session's
     pane inherits that pane's $TMUX_PANE and registers against it, so an agent's own pane
@@ -1355,12 +1356,15 @@ def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout:
         landing=await_registration(pane, timeout),
     )
 
+    # The prose first, so a terminal interleaving the two streams reads in the order the
+    # run happened rather than ending on the line it opened with.
+    announce(spawned, timeout)
+
     if as_json:
         OUT.print(json.dumps(spawned.as_json(), indent=2), markup=False, highlight=False)
     elif spawned.landing.session:
         OUT.print(spawned.landing.session, markup=False, highlight=False)
 
-    announce(spawned, timeout)
     # Non-zero without a name, because the caller's next move is a message to it. A spawn
     # reported as success with nothing to address is the failure that reads as working.
     return 0 if spawned.landing.registration is Registration.REGISTERED else 1
