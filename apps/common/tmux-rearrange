@@ -377,7 +377,7 @@ def restore_shape(members: list[str], home: dict[str, Pane], source_of: dict[str
     Both follow the source window's own axis. Restoring a stacked window as a
     side-by-side one would be its own kind of flattening.
     """
-    lines = []
+    lines: list[str] = []
     sources = {source_of[p].window_id for p in members if p in source_of}
     source = source_of.get(members[0])
     if source is None or not source.axis:

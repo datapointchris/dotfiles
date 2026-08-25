@@ -159,14 +159,16 @@ def report_runs(runs: int, as_json: bool) -> None:
     median, floor, ceiling = summarise(timings)
 
     if as_json:
-        emit({
-            'runs': runs,
-            'warmups_discarded': DISCARDED_WARMUPS,
-            'median_ms': round(median, 1),
-            'fastest_ms': round(floor, 1),
-            'slowest_ms': round(ceiling, 1),
-            'spread_ms': round(ceiling - floor, 1),
-        })
+        emit(
+            {
+                'runs': runs,
+                'warmups_discarded': DISCARDED_WARMUPS,
+                'median_ms': round(median, 1),
+                'fastest_ms': round(floor, 1),
+                'slowest_ms': round(ceiling, 1),
+                'spread_ms': round(ceiling - floor, 1),
+            }
+        )
         return
 
     print(f'{runs} interactive starts, {DISCARDED_WARMUPS} warmup discarded\n')
@@ -205,14 +207,16 @@ def report_steps(top: int, as_json: bool) -> None:
     shown = sorted(rows, reverse=True)[:top]
 
     if as_json:
-        emit({
-            'steps': len(rows),
-            'inside_zshrc_ms': total,
-            'slowest': [
-                {'step_ms': step, 'at_ms': cumulative, 'kind': kind, 'subject': shorten(subject)}
-                for step, cumulative, kind, subject in shown
-            ],
-        })
+        emit(
+            {
+                'steps': len(rows),
+                'inside_zshrc_ms': total,
+                'slowest': [
+                    {'step_ms': step, 'at_ms': cumulative, 'kind': kind, 'subject': shorten(subject)}
+                    for step, cumulative, kind, subject in shown
+                ],
+            }
+        )
         return
 
     print(f'{len(rows)} steps, {total}ms inside .zshrc — slowest {len(shown)}\n')
@@ -267,11 +271,13 @@ def report_flags(runs: int, as_json: bool) -> None:
         measured.append((flag, median, baseline - median))
 
     if as_json:
-        emit({
-            'runs_per_row': runs,
-            'baseline_ms': round(baseline, 1),
-            'flags': [{'flag': f, 'median_ms': round(m, 1), 'saved_ms': round(s, 1)} for f, m, s in measured],
-        })
+        emit(
+            {
+                'runs_per_row': runs,
+                'baseline_ms': round(baseline, 1),
+                'flags': [{'flag': f, 'median_ms': round(m, 1), 'saved_ms': round(s, 1)} for f, m, s in measured],
+            }
+        )
         return
 
     print(f'baseline {baseline:.0f}ms, {runs} starts per row\n')
