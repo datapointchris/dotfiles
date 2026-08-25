@@ -272,6 +272,11 @@ def rows(result: subprocess.CompletedProcess[str]) -> list[str]:
 
 TMUX = shutil.which('tmux')
 
+RIG_COLUMNS = 200
+"""How wide the rig's window is, so a layout claim can be a share of it rather than a
+comparison between two panes. `split-window -h` halves a pane on its own, so "the caller
+is wider than what it spawned" is true with the sizing removed."""
+
 CLAUDE_STUB = r"""
 __PREAMBLE__
 printf '%s' "$TMUX_PANE" > "__STATE__/pane"
@@ -305,7 +310,11 @@ if [ -f "$state/pane" ]; then
     tail=$(printf '"cwd":"/nowhere","tmux":"gone:@11.%s","pid":999999}' "$pane")
     add "{\"name\":\"phantom\",$head$tail"
   fi
-  tail=$(printf '"cwd":"%s","tmux":"gone:@9.%s","pid":%s}' "$(cat "$state/cwd")" "$pane" "$(cat "$state/pid")")
+  if [ -f "$state/drop-pid" ]; then
+    tail=$(printf '"cwd":"%s","tmux":"gone:@9.%s"}' "$(cat "$state/cwd")" "$pane")
+  else
+    tail=$(printf '"cwd":"%s","tmux":"gone:@9.%s","pid":%s}' "$(cat "$state/cwd")" "$pane" "$(cat "$state/pid")")
+  fi
   add "{\"name\":\"spawned\",$head$tail"
 fi
 printf '[%s]' "$out"
@@ -322,6 +331,10 @@ pane, and every success here also asserts that only the pane id is compared.
 pane's, which is what a `claude` started from inside another session's pane looks like in
 the registry. It is emitted ahead of the real row, so a matcher that answered with the
 first claimant would fail rather than pass by luck.
+
+`<state>/drop-pid` emits the row without its `pid` at all, which is the sibling app's
+output changing shape. The stub writes that field itself, so nothing else here would
+notice the real producer dropping it.
 
 Rows in `<state>/preset` are whatever was already on the machine, comma-separated and
 without their brackets, so a case can put a session somewhere before spawning into it.
@@ -364,6 +377,17 @@ class Rig:
     def window_of(self, pane: str) -> str:
         return self.tmux('display-message', '-p', '-t', pane, '#{window_id}')
 
+    def add_pane_before_the_caller(self) -> str:
+        """Put an unrelated pane at index 0, so the caller no longer leads its window.
+
+        That is the ordinary arrangement rather than a contrivance — a session is rarely
+        the first pane of the window it is in — and a rig that only ever makes the caller
+        pane 0 cannot see a layout handing the main pane to somebody else.
+        """
+        before = set(self.panes())
+        self.tmux('split-window', '-d', '-b', '-h', '-t', self.caller, '-c', '/tmp', 'sleep 300')
+        return (set(self.panes()) - before).pop()
+
 
 @pytest.fixture
 def spawn_state(tmp_path: Path) -> Path:
@@ -387,7 +411,7 @@ def rig(tmp_path: Path, bin_dir: Path, spawn_state: Path):
     socket = tmp_path / 'tmux.sock'
     server = os.environ | {'PATH': f'{bin_dir}:{os.environ["PATH"]}', 'HOME': str(tmp_path)}
     subprocess.run(
-        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', '200', '-y', '50', '-c', str(tmp_path)],
+        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', '50', '-c', str(tmp_path)],
         check=True,
         capture_output=True,
         env=server,
@@ -1495,25 +1519,80 @@ class TestSpawnBrief:
         assert kept[0].parent == tmp_path / '.local' / 'state' / 'worktree' / 'briefs'
         assert kept[0].name.startswith('primary-alpha-')
 
-    def test_a_respawn_does_not_overwrite_what_the_first_attempt_ran_on(self, fleet, spawn, tmp_path):
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'one.md', 'first\n')))
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'two.md', 'second\n')))
+    def test_two_spawns_in_the_same_second_get_their_own_brief(self, fleet, spawn, tmp_path):
+        """Both calls have to reach `keep_brief` through a spawn that happens, or the
+        second brief lands only because the copy runs ahead of a refusal.
 
+        Different slugs, because a second spawn into one worktree is refused — and with no
+        slug at all the two would be indistinguishable, which is the collision itself.
+        """
+        first = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'one.md', 'first\n')))
+        second = spawn(fleet['primary'], 'beta', '--brief', str(brief_at(tmp_path / 'two.md', 'second\n')))
+
+        assert (first.returncode, second.returncode) == (0, 0), plain(first.stderr + second.stderr)
         assert sorted(path.read_text() for path in briefs_in(tmp_path)) == ['first\n', 'second\n']
+
+    def test_a_brief_is_not_overwritten_by_one_minted_in_the_same_second(self, worktree_app, tmp_path, monkeypatch):
+        """A timestamp at second resolution is not a distinguishing part. Two no-slug
+        spawns into one repo have nothing else left, and that is the reviewer form — the
+        one a coordinator dispatches several of at once."""
+        monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
+        one = brief_at(tmp_path / 'one.md', 'review PR 33\n')
+        two = brief_at(tmp_path / 'two.md', 'review PR 41\n')
+
+        first = worktree_app.keep_brief(one, 'dotfiles', None)
+        second = worktree_app.keep_brief(two, 'dotfiles', None)
+
+        assert first != second
+        assert first.read_text() == 'review PR 33\n'
+        assert second.read_text() == 'review PR 41\n'
 
     def test_a_missing_brief_refuses_before_anything_is_created(self, fleet, spawn, rig, tmp_path):
         result = spawn(fleet['primary'], 'alpha', '--brief', str(tmp_path / 'absent.md'))
 
         assert result.returncode == 1
-        assert 'No brief at' in plain(result.stderr)
         assert not (fleet['roots'] / 'primary').exists()
         assert rig.panes() == [rig.caller]
+
+    def test_a_refused_split_takes_back_the_worktree_it_had_just_cut(self, fleet, spawn, bin_dir, rig, tmp_path):
+        """tmux runs out of room in a full window, which is the everyday case for a
+        coordinator dispatching a fourth agent. What a refusal must not leave is a branch
+        and a provisioned checkout — `sweep` will not collect one, because nothing was
+        ever pushed and it is held as UNPUBLISHED.
+        """
+        write_stub(
+            bin_dir,
+            'tmux',
+            f'[ "$1" = split-window ] && {{ echo "no space for a new pane" >&2; exit 1; }}\nexec {TMUX} -S {rig.socket} "$@"',
+        )
+
+        result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
+
+        assert result.returncode == 1
+        assert not (fleet['roots'] / 'primary' / 'alpha').exists(), 'the worktree outlived the refusal'
+        assert 'alpha' not in git(fleet['primary'], 'branch', '--list', 'alpha')
+
+    def test_a_worktree_it_only_attached_to_survives_a_refused_split(self, fleet, run, spawn, bin_dir, rig, tmp_path):
+        """The other half of the same rule: work somebody else started is not this run's
+        to take away, however badly this run went."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'theirs.txt')
+        write_stub(
+            bin_dir,
+            'tmux',
+            f'[ "$1" = split-window ] && {{ echo "no space for a new pane" >&2; exit 1; }}\nexec {TMUX} -S {rig.socket} "$@"',
+        )
+
+        result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
+
+        assert result.returncode == 1
+        assert (alpha / 'theirs.txt').exists()
 
     def test_an_empty_brief_refuses(self, fleet, spawn, rig, tmp_path):
         result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md', '   \n')))
 
         assert result.returncode == 1
-        assert 'is empty' in plain(result.stderr)
         assert rig.panes() == [rig.caller]
 
 
@@ -1534,7 +1613,6 @@ class TestSpawnCollision:
         result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
         assert result.returncode == 1
-        assert 'already holds already-here' in plain(result.stderr)
         assert rig.panes() == [rig.caller]
 
     def test_an_unreadable_registry_refuses_rather_than_reading_as_empty(self, fleet, run, spawn, bin_dir, rig, tmp_path):
@@ -1546,7 +1624,6 @@ class TestSpawnCollision:
         result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
         assert result.returncode == 1
-        assert 'Cannot tell whether a session is already in' in plain(result.stderr)
         assert rig.panes() == [rig.caller]
 
     def test_an_occupied_checkout_warns_and_still_spawns(self, fleet, spawn, spawn_state, tmp_path):
@@ -1655,6 +1732,20 @@ class TestSpawnRegistration:
 
         assert rig.panes() == [rig.caller]
 
+    def test_a_registry_row_with_no_pid_is_reported_as_that_rather_than_as_a_timeout(self, fleet, spawn, spawn_state, bin_dir, tmp_path):
+        """`pid` is an undeclared field of a sibling app's JSON, and its disappearance
+        would otherwise present as sixty seconds of waiting that blames `claude` for a
+        pane which is perfectly healthy. Nothing in the report would point at the registry.
+        """
+        (spawn_state / 'drop-pid').touch()
+
+        result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--timeout', '20', '--json')
+        reported = json.loads(result.stdout)
+
+        assert result.returncode == 1
+        assert reported['registration'] == 'no_pid_in_registry'
+        assert 'claude-sessions' in plain(result.stderr)
+
     def test_a_session_that_never_registers_exits_non_zero(self, fleet, spawn, bin_dir, tmp_path):
         stub_silent_claude(bin_dir)
 
@@ -1664,7 +1755,6 @@ class TestSpawnRegistration:
         assert result.returncode == 1
         assert reported['session'] is None
         assert reported['registration'] == 'timed_out'
-        assert 'No session registered' in plain(result.stderr)
 
     def test_the_worktree_and_the_pane_survive_a_timeout(self, fleet, spawn, bin_dir, rig, tmp_path):
         """A session that has not registered yet may still be starting, and the work it was
@@ -1686,22 +1776,44 @@ class TestSpawnLayout:
     narrow one, which is the failure the width exists to stop.
     """
 
-    def test_a_beside_split_leaves_the_caller_wider_than_what_it_spawned(self, fleet, spawn, rig, tmp_path):
+    def test_a_beside_split_gives_the_caller_the_share_it_asked_for(self, fleet, spawn, rig, tmp_path):
+        """Asserted against the requested share of the window, not merely against the pane
+        beside it. `split-window -h` halves a pane by itself, so `caller > spawned` holds
+        with the sizing deleted and the check could never fail."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
         geometry = rig.geometry()
         caller_left, _, caller_width = geometry[rig.caller]
-        spawned_left, _, spawned_width = geometry[rig.spawned()]
+        spawned_left, _, _ = geometry[rig.spawned()]
 
         assert spawned_left > caller_left, 'beside means to the right of it'
-        assert caller_width > spawned_width
+        assert abs(caller_width - RIG_COLUMNS * 66 // 100) <= 2, f'{caller_width} of {RIG_COLUMNS} is not the 66% default'
+
+    def test_the_caller_takes_the_main_pane_even_when_it_does_not_lead_the_window(self, fleet, spawn, rig, tmp_path):
+        """`main-vertical` assigns the main pane by index, so a caller that is not the
+        window's first pane hands the wide pane to whichever one is. A session is rarely
+        the first pane of its window, so this is the ordinary case rather than the edge."""
+        rig.add_pane_before_the_caller()
+
+        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
+        caller_width = rig.geometry()[rig.caller][2]
+
+        assert abs(caller_width - RIG_COLUMNS * 66 // 100) <= 2, f'the caller got {caller_width} of {RIG_COLUMNS}'
 
     def test_the_width_flag_reaches_tmux(self, fleet, spawn, rig, tmp_path):
-        """Asserted by inverting the result rather than by matching a column count, which
-        would pin tmux's rounding instead of the flag."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--width', '25%')
-        geometry = rig.geometry()
+        caller_width = rig.geometry()[rig.caller][2]
 
-        assert geometry[rig.caller][2] < geometry[rig.spawned()][2]
+        assert abs(caller_width - RIG_COLUMNS * 25 // 100) <= 2, f'the caller got {caller_width} of {RIG_COLUMNS}'
+
+    def test_a_width_tmux_would_silently_ignore_is_a_usage_error(self, fleet, run, rig, tmp_path):
+        """tmux answers `abc`, `-5`, `0` and `999%` with exit 0 and then falls back to 80
+        columns — the value `--width` exists to replace. Nothing downstream can catch it,
+        because no return code in the sequence carries the failure."""
+        for bogus in ('abc', '-5', '0', '0%', '999%', '66%%', ''):
+            result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--width', bogus)
+
+            assert result.returncode == 2, f'--width {bogus!r} was accepted'
+            assert '--width takes columns or a percentage' in plain(result.stderr)
 
     def test_a_below_split_is_under_the_caller_and_the_same_width(self, fleet, spawn, rig, tmp_path):
         """A reviewer is put under its author on purpose, and `main-vertical` would lift it
@@ -1744,14 +1856,16 @@ class TestHelp:
             assert result.stdout.startswith('usage:'), f'{command} --help printed no usage'
 
 
+@pytest.mark.interpreter('tmux')
 class TestSpawnRefusals:
-    """What it will not do, none of which needs a tmux server to assert."""
+    """What it will not do. None of it needs a tmux *server*, and all of it needs the
+    binary: `require_caller_pane` checks tmux is installed before it looks at $TMUX, so
+    without the mark these fail on a machine that has no tmux instead of skipping."""
 
     def test_it_refuses_outside_tmux_rather_than_starting_something_invisible(self, fleet, run, tmp_path):
         result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
         assert result.returncode == 1
-        assert 'Not inside tmux' in plain(result.stderr)
 
     def test_width_with_below_is_a_usage_error(self, fleet, run, tmp_path):
         """`cli-design.md` § "A flag the run cannot honour says so; it never parses into
@@ -1876,6 +1990,62 @@ class TestPaneState:
         self.listing(monkeypatch, worktree_app, '%1 1 \n')
 
         assert worktree_app.pane_state('%1') == (worktree_app.Pane.DEAD, None)
+
+
+class TestRefusalFaults:
+    """A refusal is asserted by what it is, never by the sentence it prints.
+
+    `testing.md` § "Never assert on rendered output — assert the value it was built from".
+    Matching the prose means rewording an error breaks the suite, and it means the suite
+    passes when the right sentence is raised for the wrong reason. These call the refusing
+    functions directly, which is the only way the member is reachable at all.
+    """
+
+    def refusal(self, app, call) -> Any:
+        with pytest.raises(app.Refused) as raised:
+            call()
+        return raised.value.fault
+
+    def test_a_missing_binary_is_a_tool_fault(self, worktree_app, monkeypatch):
+        monkeypatch.setattr(worktree_app.shutil, 'which', lambda _name: None)
+
+        assert self.refusal(worktree_app, lambda: worktree_app.require_tool('tmux', 'why')) is worktree_app.Fault.TOOL_MISSING
+
+    def test_being_outside_tmux_is_its_own_fault(self, worktree_app, monkeypatch):
+        monkeypatch.setattr(worktree_app.shutil, 'which', lambda name: f'/usr/bin/{name}')
+        monkeypatch.delenv('TMUX', raising=False)
+        monkeypatch.delenv('TMUX_PANE', raising=False)
+
+        assert self.refusal(worktree_app, worktree_app.require_caller_pane) is worktree_app.Fault.NO_TMUX
+
+    def test_an_occupied_worktree_and_an_unreadable_registry_are_different_faults(self, worktree_app, monkeypatch, tmp_path):
+        occupant = worktree_app.Session(name='someone', status='idle', waiting=None, cwd=tmp_path, tmux=None, pid=1)
+
+        monkeypatch.setattr(worktree_app, 'live_sessions', lambda: (occupant,))
+        occupied = self.refusal(worktree_app, lambda: worktree_app.require_unoccupied(tmp_path))
+
+        monkeypatch.setattr(worktree_app, 'live_sessions', lambda: None)
+        unreadable = self.refusal(worktree_app, lambda: worktree_app.require_unoccupied(tmp_path))
+
+        assert occupied is worktree_app.Fault.WORKTREE_OCCUPIED
+        assert unreadable is worktree_app.Fault.SESSIONS_UNREADABLE
+        assert occupied is not unreadable, 'nobody is here and nobody could be asked are the same empty list'
+
+
+class TestUsableWidth:
+    """What tmux honours, which is a smaller set than what it parses.
+
+    Every rejected value here was measured against real tmux answering exit 0 and then
+    falling back to 80 columns — so `0` and `999%` are as unusable as `abc`, and only the
+    first of those three looks wrong.
+    """
+
+    def test_columns_and_percentages_are_taken(self, worktree_app):
+        assert all(worktree_app.usable_width(value) for value in ('1', '80', '120', '1%', '66%', '100%'))
+
+    def test_a_value_tmux_would_ignore_is_refused(self, worktree_app):
+        for value in ('abc', '-5', '0', '0%', '101%', '999%', '66%%', '', '12.5', '80 '):
+            assert not worktree_app.usable_width(value), value
 
 
 class TestBriefsDirectory:
