@@ -9,8 +9,14 @@ from a hit on the wrong tool, and either way the machine the bundle exists for
 silently installs nothing.
 
 Read here rather than in each provider so the format is spelled once. A category
-is a provider's word for its own files and stays with the provider; what is
-shared is only how to find the row.
+is a provider's word for its own files and stays with the provider.
+
+What else is shared is what every provider reading these rows has to decide the
+same way. `behind_refusal` is that: whether a staged row is worth installing over
+what is already there, and what to say when it is not. It sits here rather than
+in one provider because two of them ask it and a third and fourth would — and
+because the answer is a version ranking, a `Kind` and a remedy, which is the part
+two copies are free to disagree about.
 
 **Two files, carrying disjoint facts.** `manifest.txt` says which files are here.
 `bundle.json` says what this bundle *is* — when, for which machine, and whether
@@ -330,40 +336,69 @@ def row_in(root: Path, name: str, *categories: str) -> Staged | None:
     return next((row for row in parse(_text(root)) if row.name == name and row.category in wanted), None)
 
 
+REBUILD = 'dotfiles bundle download, then dotfiles bundle stage'
+"""What a machine holding a bundle too old to repair a row can run itself.
+
+Building and uploading the newer bundle happens on a machine with a network, and
+naming that here would be an instruction the reader cannot follow where they are
+standing.
+"""
+
+
 def behind_refusal(carried: Staged | None, floor: str, failure: Result) -> Result | None:
-    """The refusal a staged row earns when installing it would leave the machine as it is.
+    """The refusal a staged row earns when installing it would write bytes already there.
 
     `None` where the bundle is still worth reaching for, so a provider reads this
     as a guard in front of its own installer:
     `behind_refusal(...) or _from_bundle(...) or failure`.
 
     Shared because both providers with a bundle fallback ask the identical
-    question, and the answer carries a comparison, a sentence and a `Kind` — the
+    question, and the answer carries a comparison, a remedy and a `Kind` — the
     part that is free to diverge once it exists twice. What stays with each
-    provider is its own category and its own installer, which are the only things
-    that differ.
+    provider is its own category and its own installer.
+
+    **This is the whole reason the floor exists**, and every other site names it
+    rather than restating it. Reinstalling the version a machine already has
+    writes identical bytes, `apply` reports a change it did not make, and the next
+    plan reads the row as behind upstream again. On a machine that cannot reach
+    the release hosts, that repeats on every run for as long as the bundle stays
+    where it is.
+
+    **Equality, not "no newer".** A staged version *below* the installed one is a
+    real write, and there is a verdict that wants it: `resources.packages` calls a
+    tool ahead of the newest release `STALE`, to bring it back to the version a
+    fresh install reproduces. Refusing everything that fails to exceed the floor
+    makes that row permanently unrepairable, and names a remedy that cannot work —
+    no bundle can carry a version above what upstream published.
 
     **Readable, not merely present.** `versions.exceeds` answers `False` for a
     string it cannot parse, so testing the two versions for emptiness would read
-    "unreadable" as "not newer" and decline a bundle nothing had measured.
+    "unrankable" as "equal" and decline a bundle nothing had measured.
     `create_bundle` records whatever tag upstream published and that shape is not
-    this repo's to constrain, so a row reading `nightly` is one this cannot rank —
-    which is a reason to install it rather than to refuse it.
+    this repo's to constrain.
+
+    **Built from the incoming failure rather than from literals.** `refused` and
+    every other field survive, which matters because a provider adopting this can
+    hand in a refusal — and a fresh `Result` would silently turn it into a hard
+    failure, the state `Result.refused` exists to prevent. The remedy goes in
+    `advice` rather than into the sentence, and the sentence puts the refusal
+    ahead of `failure.detail`, which carries an unbounded transcript.
 
     **`failure.kind` survives unless the install command itself failed.** A
     command that ran and exited non-zero is a transport problem, and a current
-    bundle is exactly what would have covered it. Anything else — no cargo to
-    build with, no toolchain unpacked yet — is a fault in the machine that
-    outranks the bundle's age, and answering `BUNDLE_BEHIND` there would send the
-    reader to rebuild a bundle when the machine needs a runtime.
+    bundle is exactly what would have covered it. Anything else — no cargo, no
+    cargo-binstall that would build — is a fault in the machine that outranks the
+    bundle's age, and answering `BUNDLE_BEHIND` there would send the reader to
+    rebuild a bundle when the machine needs a toolchain.
     """
     if carried is None or not floor:
         return None
-    if versions.at_least(carried.version, floor) is None or versions.exceeds(carried.version, floor):
+    if not versions.exactly(carried.version, floor):
         return None
-    return Result(
-        False,
-        f'{failure.detail}; the staged bundle carries {carried.version}, no newer than the installed {floor}. '
-        'A newer bundle is what repairs this: dotfiles bundle download, then dotfiles bundle stage',
+    return dc.replace(
+        failure,
+        detail=f'the staged bundle carries {carried.version}, which is what is installed — '
+        f'installing it again would write the same bytes. The install failed first: {failure.detail}',
         kind=Kind.BUNDLE_BEHIND if failure.kind is Kind.COMMAND_FAILED else failure.kind,
+        advice=REBUILD,
     )

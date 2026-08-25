@@ -31,9 +31,9 @@ from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bundle
 from dotfiles.providers import bundle_file
-from dotfiles.providers import locate
 from dotfiles.providers import place
 from dotfiles.providers import releases
+from dotfiles.providers import staged_bundles
 from dotfiles.providers import toolchain
 
 BUNDLE_BINARIES = 'go-binaries'
@@ -217,13 +217,15 @@ def install(entry: catalog.GoTool, *, offline: bool, floor: str) -> Result:
     a TLS handshake per tool, and thirteen of those is the difference between an
     install that finishes and one that looks broken.
 
-    `floor` is the version a staged bundle has to beat before an online run will
-    install from it, and it is required rather than defaulted. A default here is
-    the reinstall loop restored by omission at a call site nothing would fail on —
-    `registry.version_floor` is the one thing that knows the answer.
+    `floor` is what a staged bundle is ranked against before an online run installs
+    from it, and it is required rather than defaulted. A default is the loop
+    `bundle.behind_refusal` describes, restored by omission at a call site nothing
+    would fail on — `registry.version_floor` is the one thing that knows the answer.
     """
     if offline:
-        return _from_bundle(entry) or Result(
+        carried = _carried(entry)
+        installed = _from_bundle(entry, carried[1]) if carried else None
+        return installed or Result(
             False,
             f'{entry.name} is not in the offline bundle at {bundled(entry).parent}, and offline cannot reach the proxy',
             kind=Kind.NOT_IN_BUNDLE,
@@ -243,29 +245,40 @@ def _from_bundle_unless_behind(entry: catalog.GoTool, failure: Result, floor: st
     Go tool stays pinned at the version the machine was first built with while a
     current bundle sits unused on disk.
 
-    Worth declining where the staged version is no newer: the write would produce
-    a byte-identical binary, `apply` would report a change it did not make, and
-    the row would be behind upstream again on the next plan.
-    `bundle.behind_refusal` holds that comparison, because the cargo provider asks
-    it in the same words.
-
-    **The row is read out of the bundle the file will come from, not the newest
-    one holding a row.** `bundled` resolves `go-binaries/<executable>` newest-first
-    and never consults a manifest, and `bundle.staged` merges rows newest-first
-    across every staged bundle — so a newer bundle recording `v3.46.0` whose
-    extraction left no binary would let an older bundle's `v3.44.0` file be
-    installed against `3.46.0` and pass the floor. `bundle.row_in` asks one root,
-    and `locate` is what names the root the bytes are in. The cargo provider has no
-    such split, because there `_from_bundle` opens `row.filename` from the row it
-    compared.
-
-    The row is keyed by the declared name, which is what `create_bundle` records
-    it under, while the file is named by `executable` — different questions
-    wherever a Go tool declares a `command`.
+    Worth declining where the staged version is what is already installed, for the
+    reason `bundle.behind_refusal` records. One `_carried` answers both halves, so
+    the version ranked and the bytes written come out of one bundle.
     """
-    found = locate(f'{BUNDLE_BINARIES}/{entry.executable}')
-    carried = bundle.row_in(found.root, entry.name, BUNDLE_CATEGORY) if found else None
-    return bundle.behind_refusal(carried, floor, failure) or _from_bundle(entry) or failure
+    carried = _carried(entry)
+    if carried is None:
+        return failure
+    row, binary = carried
+    return bundle.behind_refusal(row, floor, failure) or _from_bundle(entry, binary) or failure
+
+
+def _carried(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] | None:
+    """The staged binary and its own bundle's row, or None where no bundle has the file.
+
+    The file decides which bundle answers, because `bundled` is what installs and
+    a row describes bytes rather than producing them. A root holding the binary and
+    no row is a real state — the manifest is how a version travels and the file
+    opens without one — so the row half is optional and the pair is not.
+
+    Read from one root rather than asking `bundle.staged`, which merges rows
+    newest-first across every staged bundle. A newer bundle recording `v3.46.0`
+    whose extraction left no binary would otherwise lend its version to an older
+    bundle's `v3.44.0` file, and the floor would pass on a version the bytes do not
+    carry.
+
+    The row is keyed by the declared name, which is what `create_bundle` records it
+    under, while the file is named by `executable` — different questions wherever a
+    Go tool declares a `command`.
+    """
+    for root in staged_bundles():
+        binary = root / BUNDLE_BINARIES / entry.executable
+        if binary.is_file():
+            return bundle.row_in(root, entry.name, BUNDLE_CATEGORY), binary
+    return None
 
 
 def _from_proxy(entry: catalog.GoTool) -> Result:
@@ -293,14 +306,17 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
 
 
-def _from_bundle(entry: catalog.GoTool) -> Result | None:
-    """The prebuilt binary, or None where the bundle carries none.
+def _from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:
+    """Install one staged binary, or None where it is not there to install.
+
+    Handed the file rather than resolving it, so the version a caller ranked and
+    the bytes written here cannot come from two bundles — `_carried` records what
+    that costs when they do.
 
     None rather than a failed Result, so a caller can tell "the bundle does not
     have this" from "the bundle has it and it would not install" — only the first
     is a reason to fall through to something else.
     """
-    cached = bundled(entry)
     if not cached.is_file():
         return None
 

@@ -104,19 +104,15 @@ class Kind(enum.StrEnum):
     """
 
     BUNDLE_BEHIND = 'bundle-behind'
-    """The bundle carries this row, and its version is no newer than what is installed.
+    """The bundle carries this row at the version already installed, so it repairs nothing.
 
     Separated from `NOT_IN_BUNDLE` by which half is wrong, which is what decides
-    the repair. A bundle with no row for a tool was built without it or was
-    pruned. A bundle whose row has aged out was built correctly and is simply old,
-    so the fix is to build a new one — and installing what it holds is not a fix at
-    all, because it writes the version the machine already has and leaves the row
-    behind upstream for the next plan to report again.
+    the repair. A bundle with no row for a tool was built without it or was pruned.
+    A bundle whose row has aged out was built correctly and is simply old, so the
+    fix is to build a new one.
 
-    Answered only where the *install command* failed, never where the machine could
-    not run one. `bundle.behind_refusal` keeps a `PREREQUISITE_MISSING` as it
-    found it, because a missing toolchain outranks a bundle's age and naming the
-    bundle there would send a reader to the second-best repair.
+    `bundle.behind_refusal` is the only thing that answers this, and it records why
+    — including which failures keep their own kind instead.
     """
 
     VERSION_UNRESOLVED = 'version-unresolved'
@@ -229,6 +225,22 @@ class Result:
 
     What is *not* refused: a bundle missing something the bundler does stage. That
     is a broken bundle and the run should say so.
+    """
+
+    advice: str = ''
+    """The command that changes the situation, kept out of `detail`.
+
+    `detail` answers what went wrong and `advice` answers what to do about it —
+    the same split `Change.advice` draws, arriving from the other side. A provider
+    that knows the remedy had nowhere structured to put it: `Outcome.from_result`
+    does not carry `kind`, and `advice_for` answers `''` for every `STALE` row, so
+    the remedy went into `detail` as English and the only way to test it was to
+    match a sentence fragment.
+
+    Defaulted, unlike `kind`, because most results genuinely have no remedy to
+    name and a required field would make every construction invent one. The two
+    fields differ in what an omission means: no `kind` is a site that never
+    answered, and no `advice` is a site with nothing to say.
     """
 
 

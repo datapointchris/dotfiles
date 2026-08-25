@@ -140,10 +140,8 @@ def test_an_unreachable_proxy_falls_back_to_the_bundle(home, bundle, proxy) -> N
 
 
 def test_a_bundle_no_newer_than_what_is_installed_is_not_written_again(home, bundle, proxy) -> None:
-    """The write would produce a byte-identical binary, `apply` would report a change
-    it did not make, and the next plan would find the row behind upstream again. A
-    bundle a week older than the proxy on a firewalled machine is that state, and it
-    repeats for as long as both stay true."""
+    """The loop `bundle.behind_refusal` describes, arrived at through the go
+    provider: a bundle a week older than the proxy on a firewalled machine."""
     stage(bundle)
     record(bundle, 'v3.45.0')
     proxy(reachable=False, said='go: module lookup disabled: tls: handshake failure')
@@ -182,52 +180,50 @@ def test_a_bundle_whose_manifest_says_nothing_is_still_a_fallback(home, bundle, 
     assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
 
 
-def test_a_bundle_below_what_is_installed_is_refused_too(home, bundle, proxy) -> None:
-    """The guard covers equal *and* below, and below is the aged-out bundle this is
-    named for. Written against `exactly` rather than `exceeds`, every other case
-    here stays green while an old bundle overwrites a newer binary with an older
-    one."""
+def test_a_bundle_below_what_is_installed_is_still_written(home, bundle, proxy) -> None:
+    """A staged version below the installed one is a real write, and there is a
+    verdict that wants it: `resources.packages` calls a tool ahead of the newest
+    release STALE, to bring it back to what a fresh install reproduces."""
     stage(bundle)
     record(bundle, 'v3.44.0')
     proxy(reachable=False)
 
     result = gotool.install(TASK, offline=False, floor='3.45.0')
 
-    assert not result.ok
-    assert result.kind is Kind.BUNDLE_BEHIND
-    assert not (home / 'go' / 'bin' / 'task').exists()
+    assert result.ok
+    assert (home / 'go' / 'bin' / 'task').read_bytes() == BINARY
 
 
-def test_the_floor_reads_the_row_from_the_bundle_the_file_comes_from(home, bundle, proxy, tmp_path) -> None:
+def test_the_version_ranked_is_the_one_the_bytes_came_with(home, bundle, proxy, tmp_path) -> None:
     """`bundled` resolves the binary newest-first and never opens a manifest, while
-    `bundle.staged` merges rows newest-first across every staged bundle. Read
-    independently, a newer bundle whose extraction left no binary lends its version
-    to an older bundle's file — and the floor then passes on a version the bytes do
-    not carry, writing 3.44.0 over 3.45.0.
+    `bundle.staged` merges rows newest-first across every staged bundle. Read apart,
+    a newer bundle whose extraction left no binary lends its version to an older
+    bundle's file, and the ranking then describes bytes it did not come with.
 
     The newer bundle here records v3.46.0 and holds no `go-binaries/task`, which is
-    the shape an interrupted build leaves.
+    the shape an interrupted extraction leaves. Paired, the row that answers is
+    v3.45.0 and equals the floor, so nothing is written. Read apart, v3.46.0 would
+    pass and the older binary would land at the version already installed.
     """
     newer = tmp_path / 'staged' / 'dotfiles-offline-v20260901T000000Z-box-linux-x86_64'
     (newer / gotool.BUNDLE_BINARIES).mkdir(parents=True)
     record(newer, 'v3.46.0')
 
     stage(bundle)
-    record(bundle, 'v3.44.0')
+    record(bundle, 'v3.45.0')
     proxy(reachable=False)
 
     result = gotool.install(TASK, offline=False, floor='3.45.0')
 
     assert not result.ok
     assert result.kind is Kind.BUNDLE_BEHIND
-    assert '3.44.0' in result.detail, 'the version compared has to be the one the bytes carry'
+    assert '3.45.0' in result.detail, 'the version ranked has to be the one the bytes carry'
     assert not (home / 'go' / 'bin' / 'task').exists()
 
 
 def test_an_offline_run_ignores_the_version_floor(home, bundle, proxy) -> None:
-    """Offline, the bundle *is* what upstream published — `bundle.published` answers
-    currency from the same manifest — so nothing can be ahead of it, and a floor
-    would only refuse the one source there is."""
+    """The reason is `bundle.behind_refusal`; what is asserted here is that the go
+    provider does not consult it offline."""
     stage(bundle)
     record(bundle, 'v3.45.0')
     proxy()

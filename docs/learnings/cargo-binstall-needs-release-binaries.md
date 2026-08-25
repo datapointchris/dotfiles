@@ -44,28 +44,15 @@ from the offline bundle.
 
 ## A binary restored from a bundle makes the source build fail
 
-The compile strategy ends in `cargo install`, which refuses to overwrite a binary
-it has no record of:
-
 ```text
 error: binary `oxker` already exists in destination
 Add --force to overwrite
 ERROR Cargo errored! ExitStatus(unix_wait_status(25856))
 ```
 
-`providers.place` is what leaves one. Restoring from an offline bundle copies the
-file into `~/.cargo/bin` and writes no row in `~/.cargo/.crates.toml`, so cargo
-has no record of it. The machine that most needs the compile strategy is
-therefore the one where it cannot run — a firewalled box reaches crates.io and no
-release host, so every crate falls through to `compile`, and every crate it once
-restored from a bundle refuses.
-
 **Read past the last four lines.** The refusal names `--force`, which reads as a
 flag somebody forgot, and the two hosts that timed out are ten lines above it.
-
-`providers/cargo.py` passes `--force` for exactly this state — a binary at the
-destination that `.crates.toml` does not list — and passes it once, because the
-build that succeeds records the crate.
+`providers/cargo._from_binstall` handles this and records why.
 
 ## Key Learnings
 
@@ -80,6 +67,6 @@ build that succeeds records the crate.
   place: the crates.io API and the release host are two hosts, and only the second
   has to be blocked. `dotfiles network check` says which half is answering.
 - Cargo owning a binary is a fact with a receipt. `~/.cargo/.crates.toml` lists
-  every binary cargo placed, keyed by crate and listing binary names, and a file
-  missing from it is one `cargo install` will not write over. Anything that puts a
-  binary in `~/.cargo/bin` by another route leaves that state behind.
+  every binary cargo placed, and a file missing from it is one `cargo install`
+  will not write over — which is what anything filling `~/.cargo/bin` by another
+  route leaves behind.

@@ -146,6 +146,25 @@ def test_a_declared_tool_that_is_absent_is_missing(tmp_path: Path, fake_bin: Pat
     assert verdicts(live) == {'go/task': Verdict.MISSING}
 
 
+def test_a_missing_tool_carries_no_installed_version(tmp_path: Path, fake_bin: Path) -> None:
+    """`registry.version_floor` hands `change.observed` down as the floor a staged
+    bundle has to beat, and its documented premise is that a MISSING row sets no
+    floor because any version the bundle holds is a gain.
+
+    The fact that makes that true is here — `diff`'s non-MATCHED branch builds its
+    `Change` with no `observed=` — and it lives two modules from where it is relied
+    on. Asserting it in `test_registry.py` against a hand-built `Change` restates
+    the premise instead of pinning it: adding `observed=` to that branch would leave
+    every floor test green while the floor started refusing bundles for tools the
+    machine does not have.
+    """
+    live = session(tmp_path, GO_TOOL, DECLARES_TASK)
+
+    (change,) = changes(live)
+    assert change.verdict is Verdict.MISSING
+    assert change.observed == ''
+
+
 def test_a_declared_tool_in_its_provider_directory_is_matched(tmp_path: Path, fake_bin: Path) -> None:
     go_installed('task')
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)

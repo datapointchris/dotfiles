@@ -284,6 +284,11 @@ class TestTheVersionFloorABundleHasToClear:
     One function because both providers with a bundle fallback ask it, and two
     copies is what lets cargo and go answer `--reinstall` differently — which is
     the one case where the honest answer is not the installed version.
+
+    A MISSING row setting no floor is the other premise this rests on, and it is
+    not asserted here: the fact lives in `packages.diff`, and
+    `test_a_missing_tool_carries_no_installed_version` pins it where a change to
+    that branch would be caught.
     """
 
     FD = catalog.CargoPackage.from_mapping({'name': 'fd-find', 'command': 'fd'})
@@ -295,15 +300,12 @@ class TestTheVersionFloorABundleHasToClear:
             'packages', planned.stage, planned.address, verdict, repair=Repair.AUTOMATIC, desired=planned, observed=observed
         ), planned
 
-    def floor(self, *, reinstall: bool, observed: str, verdict: Verdict = Verdict.STALE) -> str:
-        change, _ = self.change('cargo', 'fd-find', self.FD, observed, verdict)
+    def floor(self, *, reinstall: bool, observed: str) -> str:
+        change, _ = self.change('cargo', 'fd-find', self.FD, observed, Verdict.STALE)
         return registry.version_floor(Session(machine_name='box', reinstall=reinstall), change)
 
     def test_a_stale_row_floors_the_bundle_at_the_version_currency_measured(self) -> None:
         assert self.floor(reinstall=False, observed='10.4.2') == '10.4.2'
-
-    def test_a_missing_tool_sets_no_floor_because_any_version_is_a_gain(self) -> None:
-        assert self.floor(reinstall=False, observed='', verdict=Verdict.MISSING) == ''
 
     def test_reinstall_sets_no_floor_at_all(self) -> None:
         """It asks for the tool again whatever it reports, so comparing against what
