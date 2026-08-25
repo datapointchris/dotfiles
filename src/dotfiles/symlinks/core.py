@@ -6,6 +6,7 @@ import fnmatch
 import os
 import tomllib
 from pathlib import Path
+from typing import NamedTuple
 
 from dotfiles import paths
 from dotfiles.output import err_console
@@ -258,6 +259,20 @@ def stands_in_for_an_excluded_directory(entry: os.DirEntry[str], parts: tuple[st
     return points_at_a_directory and ends_in_an_excluded_run((*parts, entry.name))
 
 
+class Unreadable(NamedTuple):
+    """One path the walk could not read, and why.
+
+    `errno` is the field a caller branches on; `strerror` is libc's sentence for
+    it and varies by platform and locale, so a test comparing that string is
+    asserting on rendered output — `standards/testing.md` § "Never assert on
+    rendered output".
+    """
+
+    path: Path
+    errno: int
+    strerror: str
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Scan:
     """What the walk found, and what it could not read.
@@ -265,11 +280,14 @@ class Scan:
     `skipped` is carried rather than only printed because a shorter list and a
     complete one are otherwise the same answer to the caller, and the warning that
     distinguishes them is prose on a stream nobody parses.
+
+    **Neither field has a default.** An empty `skipped` is the claim that every
+    directory was read, and a `Scan()` that promised it by omission would be the
+    conflation this type exists to end.
     """
 
-    found: tuple[Path, ...] = ()
-    skipped: tuple[tuple[Path, str], ...] = ()
-    """Each path the walk could not read, with the OS reason for it."""
+    found: tuple[Path, ...]
+    skipped: tuple[Unreadable, ...]
 
 
 def _find_symlinks(base_dir: Path) -> Scan:
@@ -292,7 +310,7 @@ def _find_symlinks(base_dir: Path) -> Scan:
     `is_excluded_search_dir` answers True about that same path.
     """
     symlinks: list[Path] = []
-    skipped: list[tuple[Path, str]] = []
+    skipped: list[Unreadable] = []
 
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
@@ -301,7 +319,7 @@ def _find_symlinks(base_dir: Path) -> Scan:
             with os.scandir(directory) as scan:
                 entries = list(scan)
         except OSError as unreadable:
-            skipped.append((directory, unreadable.strerror or ''))
+            skipped.append(Unreadable(directory, unreadable.errno or 0, unreadable.strerror or ''))
             err_console.print(f'[yellow]not scanned for orphans:[/] {directory} ({unreadable.strerror})')
             return
         parts = directory.parts
@@ -310,7 +328,7 @@ def _find_symlinks(base_dir: Path) -> Scan:
                 is_link = entry.is_symlink()
                 descend = not is_link and entry.is_dir(follow_symlinks=False)
             except OSError as unreadable:
-                skipped.append((Path(entry.path), unreadable.strerror or ''))
+                skipped.append(Unreadable(Path(entry.path), unreadable.errno or 0, unreadable.strerror or ''))
                 err_console.print(f'[yellow]not examined:[/] {entry.path} ({unreadable.strerror})')
                 continue
             if is_link and not stands_in_for_an_excluded_directory(entry, parts):
@@ -438,17 +456,24 @@ def remove_symlinks(
 def find_broken_symlinks(
     target_dir: Path | None = None,
     dotfiles_dir: Path | None = None,
-) -> list[Path]:
-    """Find all broken symlinks in target_dir that point into dotfiles_dir."""
+) -> Scan:
+    """Broken symlinks under target_dir pointing into dotfiles_dir, and what was unread.
+
+    A `Scan` rather than the list alone, because a scan that could not read a
+    subtree returns a shorter list and no other sign of it. A caller pruning from
+    that list is pruning from a set nothing can say is complete, and a caller
+    reporting it converged is reporting a machine it did not finish measuring.
+    """
     _target_dir = (target_dir or TARGET_DIR).resolve()
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
+    scanned = _find_symlinks(_target_dir)
     broken = []
 
-    for symlink in _find_symlinks(_target_dir).found:
+    for symlink in scanned.found:
         if symlink.exists():
             continue
         target = resolve_broken_symlink(symlink)
         if target and target.is_relative_to(_dotfiles_dir):
             broken.append(symlink)
 
-    return broken
+    return Scan(tuple(broken), scanned.skipped)

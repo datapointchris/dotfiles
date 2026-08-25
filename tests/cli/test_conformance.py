@@ -21,6 +21,7 @@ import pytest
 from typer.main import get_command
 
 import dotfiles
+from dotfiles import output
 from dotfiles import registry
 from dotfiles import resources
 from dotfiles import vocabulary
@@ -525,6 +526,39 @@ def test_one_function_lays_out_every_section_heading() -> None:
 def test_the_heading_scan_finds_the_line_it_is_asserting_about() -> None:
     """Guards the test above: a walk that matches nothing passes vacuously."""
     assert heading_layouts()
+
+
+def files_spelling(phrase: str) -> set[str]:
+    """Which files in the package write this phrase as a string literal."""
+    return {
+        path.name
+        for path in SOURCE
+        for node in ast.walk(ast.parse(path.read_text()))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and phrase in node.value
+    }
+
+
+def test_the_attention_wording_is_spelled_in_exactly_one_file() -> None:
+    """The invariant centralising it created, which nothing else asserts.
+
+    Six render sites across `output.py` and `reconcile.py` became one owner, and
+    the copies were themselves the guard: while six existed, rewording meant
+    finding all six. A seventh site typing the literal is invisible to a suite
+    that only ever compares against the constant.
+
+    Docstrings count, and that is the point. `documentation.md` § "A comment
+    explains the thing, not the change that produced it" refuses a docstring that
+    pastes a rendered string, for the same reason — nothing keeps the copy in step,
+    and no linter or type checker reads it.
+    """
+    assert files_spelling('need attention') == {'output.py'}
+
+
+def test_the_two_attention_spellings_agree() -> None:
+    """They differ by one character and are interchangeable at every call site, so
+    a site picking the wrong one renders `1 item(s) needs attention` with nothing
+    to say so."""
+    assert output.NEED_ATTENTION.replace('need', 'needs', 1) == output.NEEDS_ATTENTION
 
 
 def test_the_heading_widths_are_named_only_where_the_heading_is_built() -> None:

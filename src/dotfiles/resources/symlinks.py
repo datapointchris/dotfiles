@@ -177,6 +177,16 @@ class Observed:
     deploys by copy that is the machine most likely to be holding one.
     """
 
+    unreadable: tuple[core.Unreadable, ...] = ()
+    """Directories the orphan scan could not read, so `orphans` is a floor rather
+    than the whole set.
+
+    Empty is the claim that the scan was complete, and `diff` turns a non-empty one
+    into an `UNKNOWN` change — nothing about those paths differs, and nothing
+    established that it does not. Without it a home holding an unreadable subtree
+    reports converged, which is the reading `orphans` exists to prevent.
+    """
+
     home: Path = dc.field(default_factory=Path.home)
     """The home a row's paths are shortened against, so a target and its source
     read as `~/...` rather than spending the width on whose machine it is."""
@@ -374,7 +384,8 @@ class SymlinksResource:
                 adoptable.add(link.target)
 
         wanted = {link.target for link in links}
-        orphans = tuple(path for path in core.find_broken_symlinks(session.home.resolve(), session.repo) if path not in wanted)
+        scanned = core.find_broken_symlinks(session.home.resolve(), session.repo)
+        orphans = tuple(path for path in scanned.found if path not in wanted)
         return Observed(
             links=links,
             copying=False,
@@ -383,6 +394,7 @@ class SymlinksResource:
             adoptable=frozenset(adoptable),
             content={},
             orphans=orphans,
+            unreadable=scanned.skipped,
             home=session.home.resolve(),
         )
 
@@ -398,6 +410,22 @@ class SymlinksResource:
                 detail='points into the repo at a file that no longer exists',
             )
             for path in observed.orphans
+        )
+        # `UNKNOWN` with `Repair.NONE`, which `Change.unmeasured` reads as no
+        # evidence either way. The orphan scan did not reach these, so nothing
+        # here differs and nothing established that it does not — and a run that
+        # exited non-zero for a directory it merely could not read would be
+        # reporting drift it never measured.
+        changes.extend(
+            Change(
+                NAME,
+                Stage.SYMLINKS,
+                str(paths.under_home(unread.path)),
+                Verdict.UNKNOWN,
+                repair=Repair.NONE,
+                detail=f'not scanned for orphans ({unread.strerror})',
+            )
+            for unread in observed.unreadable
         )
         return tuple(changes)
 

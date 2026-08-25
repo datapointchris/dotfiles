@@ -129,9 +129,9 @@ class ResourceResult:
     """Which question produced this row, so the renderer can word it.
 
     On the row it decides two words. "3 pending" under `check` means the drift
-    `plan` owns, and "4 need attention" under `plan` means the findings `check`
-    owns — the same two counts, each read from the other side. Rendered without
-    it, one of the two always reads as contradicting the verdict beside it.
+    `plan` owns, and `attention` under `plan` means the findings `check` owns —
+    the same two counts, each read from the other side. Rendered without it, one
+    of the two always reads as contradicting the verdict beside it.
     """
 
     findings: tuple[Change, ...] = ()
@@ -342,7 +342,7 @@ def from_changes(
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
         return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from what this machine declares{root}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) {NEED_ATTENTION}{_lead(kept)}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) {NEED_ATTENTION}{lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -355,7 +355,7 @@ def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tupl
     return tuple(row for row in examined if row.item not in reported)
 
 
-def _lead(kept: Sequence[Change]) -> str:
+def lead(kept: Sequence[Change]) -> str:
     """Which items, and the fix if every one of them takes the same one.
 
     A bare count answers nothing once the reader is at this line, having the rows

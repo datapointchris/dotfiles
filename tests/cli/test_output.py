@@ -255,10 +255,10 @@ def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture
 
 
 def test_a_converged_plan_row_still_carries_the_other_verbs_count(capsys: pytest.CaptureFixture) -> None:
-    """`plan` says `converged` and the tally beside it says `4 need attention`.
-    Both are true: apply has nothing to do, and four CLIs are logged out. The
-    verdict answers for the verb that produced it, so dropping the count would
-    leave a row claiming there is nothing to say about this resource."""
+    """`plan` says `converged` and the tally beside it carries `attention`. Both
+    are true: apply has nothing to do, and four CLIs are logged out. The verdict
+    answers for the verb that produced it, so dropping the count would leave a row
+    claiming there is nothing to say about this resource."""
     result = ResourceResult(address='auth', verdict=ResourceVerdict.CONVERGED, detail='3 of 7 authenticated', lens=Lens.PLAN, attention=4)
 
     output.render_result(result, output.console)
