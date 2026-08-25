@@ -21,17 +21,13 @@ def _looks_like_repo(candidate: Path) -> bool:
 def _repo_root() -> Path:
     """The checkout this package belongs to.
 
-    `DOTFILES_DIR` wins unconditionally where it is set: the bootstrap exports it,
-    the CLI runs from any directory, and it is how a test points the
-    whole package at a synthetic tree — which must work even when that tree is
-    incomplete.
+    `DOTFILES_DIR` wins unconditionally, including over an incomplete synthetic
+    tree a test points it at.
 
-    Otherwise walk up from this file, which is right for an editable install and
-    wrong for any other kind. A non-editable `uv tool install` puts this file
-    under `site-packages`, where the same walk lands in `.../lib/python3.13`: a
-    directory that exists, so nothing raises, and every path below is silently
-    wrong instead of absent. Checking for the marker is what turns that into
-    falling through to the one place the checkout actually lives.
+    **Otherwise walk up, then check the marker.** A non-editable install puts this
+    file under `site-packages`, where the same walk lands in `.../lib/python3.13`
+    — a directory that exists, so nothing raises and every path below is silently
+    wrong rather than absent.
     """
     if declared := os.environ.get('DOTFILES_DIR'):
         return Path(declared).resolve()
@@ -48,13 +44,10 @@ def xdg_home(variable: str, fallback: str) -> Path:
 def under_home(path: Path, home: Path | None = None) -> str:
     """A path written the way a person would type it, `~`-rooted where it can be.
 
-    For a screen, never for a filesystem call. `/home/chris/.config/git/config`
-    spends fourteen characters saying whose machine it is, on every row of a
-    column that has to align with its neighbours — and a fleet of five machines
-    reads the same file at the same place under a different absolute prefix.
+    For a screen, never for a filesystem call.
 
-    Left absolute when it is not under this home, because a path outside it is a
-    finding on its own and rewriting it would hide that.
+    Left absolute when it is not under this home: a path outside it is a finding on
+    its own, and rewriting it would hide that.
     """
     root = home or Path.home()
     try:
@@ -89,11 +82,9 @@ def machine_id() -> str:
     The bare lowercased hostname, per standards/data.md § "Machine identity
     is a bare lowercased hostname".
 
-    Deliberately not `$MACHINE`, which names the *manifest*: two machines
-    legitimately share one — macmini and mbp are both
-    `macos-personal-workstation` — so keying on it puts their status files at a
-    single path in a directory the fleet syncs, and the second Mac to run
-    silently overwrites the first.
+    **Never `$MACHINE`, which names the *manifest*.** Two machines legitimately
+    share one, so keying on it puts their status files at a single path in a synced
+    directory and the second to run overwrites the first.
     """
     return socket.gethostname().split('.')[0].lower()
 
@@ -107,11 +98,8 @@ STATUS_FILE = STATE_HOME / f'status-{MACHINE_ID}.json'
 def cache_home() -> Path:
     """Where this tool's caches live, re-read on every call.
 
-    A function rather than a constant, because a cache is the one thing a test
-    legitimately needs to point elsewhere, and `$XDG_CACHE_HOME` is the knob that
-    already means that — the same reasoning as `evidence.uv_tool_dir`. A constant
-    bound at import cannot be redirected without patching this module, which is a
-    name somebody has to remember to rebind.
+    A function rather than a constant, so `$XDG_CACHE_HOME` redirects it without a
+    module patch somebody has to remember.
     """
     return xdg_home('XDG_CACHE_HOME', '.cache') / 'dotfiles'
 
@@ -138,27 +126,14 @@ def status_cache() -> Path:
 def staging_dir() -> Path:
     """One directory per unpacked bundle, named after the archive it came from.
 
-    A directory *of* bundles rather than one bundle, so a sparse bundle can land on
-    top of a full one without merging into it. `providers.locate` reads across them
-    newest-first, which is what makes an entry a sparse bundle omits fall through to
-    the older full bundle that still carries it. Merging into one tree instead
-    refreshes the files and replaces the manifest, leaving everything the older
-    bundle staged on disk and unlisted.
+    A directory *of* bundles, so a sparse one lands on top of a full one without
+    merging: `providers.locate` reads across them newest-first, and an entry the
+    sparse bundle omits falls through to the older full bundle carrying it.
 
-    Named after the archive so a machine can say which bundle a file came from.
+    **Cache rather than state, whatever the recovery cost.** `STATE_HOME` is a
+    Syncthing folder, and a gigabyte of archives there replicates across the fleet.
 
-    **Cache rather than state**, which is the harder half of the classification
-    here. The usual test is whether losing it costs only time, and for the machine
-    this exists for it very nearly does not — a work box behind a firewall cannot
-    re-fetch these from upstream. It is a cache all the same, because the transport
-    that delivered them is still there and `bundle download` fetches them again.
-    What it must not be is state: `STATE_HOME` is a Syncthing folder, and a
-    gigabyte of archives there replicates across the fleet.
-
-    A function rather than a constant, for the reason `cache_home` gives and this
-    one needs twice over: `$DOTFILES_BUNDLE` is read on every call, so the
-    bootstrap and a test can both point staging somewhere and be obeyed. Bound at
-    import, each of these is a name a harness has to rebind by hand, and the one
-    nobody remembers is what writes into the real `~/.cache`.
+    A function rather than a constant, so `$DOTFILES_BUNDLE` is read on every call
+    and a test cannot miss rebinding it.
     """
     return Path(os.environ.get('DOTFILES_BUNDLE') or cache_home() / 'staged')

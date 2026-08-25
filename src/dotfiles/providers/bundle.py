@@ -349,47 +349,23 @@ def behind_refusal(carried: Staged | None, floor: str, failure: Result) -> Resul
     """The refusal a staged row earns when installing it would write bytes already there.
 
     `None` where the bundle is still worth reaching for, so a provider reads this
-    as a guard in front of its own installer:
-    `behind_refusal(...) or _from_bundle(...) or failure`.
+    as a guard: `behind_refusal(...) or _from_bundle(...) or failure`.
 
-    Shared because both providers with a bundle fallback ask the identical
-    question, and the answer carries a comparison, a remedy and a `Kind` — the
-    part that is free to diverge once it exists twice. What stays with each
-    provider is its own category and its own installer.
-
-    **This is the whole reason the floor exists**, and every other site names it
-    rather than restating it. Reinstalling the version a machine already has
-    writes identical bytes, `apply` reports a change it did not make, and the next
-    plan reads the row as behind upstream again. On a machine that cannot reach
-    the release hosts, that repeats on every run for as long as the bundle stays
-    where it is.
-
-    **Equality, not "no newer".** A staged version *below* the installed one is a
-    real write, and there is a verdict that wants it: `resources.packages` calls a
-    tool ahead of the newest release `STALE`, to bring it back to the version a
-    fresh install reproduces. Refusing everything that fails to exceed the floor
-    makes that row permanently unrepairable, and names a remedy that cannot work —
-    no bundle can carry a version above what upstream published.
+    **Equality, never "no newer".** A staged version *below* the installed one is a
+    real write that `resources.packages` wants, to bring a tool ahead of the newest
+    release back to what a fresh install reproduces. Refusing everything that fails
+    to exceed the floor makes that row permanently unrepairable.
 
     **Readable, not merely present.** `versions.exceeds` answers `False` for a
-    string it cannot parse, so testing the two versions for emptiness would read
-    "unrankable" as "equal" and decline a bundle nothing had measured.
-    `create_bundle` records whatever tag upstream published and that shape is not
-    this repo's to constrain.
+    string it cannot parse, so testing for emptiness reads "unrankable" as "equal"
+    and declines a bundle nothing measured.
 
-    **Built from the incoming failure rather than from literals.** `refused` and
-    every other field survive, which matters because a provider adopting this can
-    hand in a refusal — and a fresh `Result` would silently turn it into a hard
-    failure, the state `Result.refused` exists to prevent. The remedy goes in
-    `advice` rather than into the sentence, and the sentence puts the refusal
-    ahead of `failure.detail`, which carries an unbounded transcript.
+    **Built from the incoming failure, never from literals**, so a `refused` handed
+    in survives rather than becoming a hard failure.
 
-    **`failure.kind` survives unless the install command itself failed.** A
-    command that ran and exited non-zero is a transport problem, and a current
-    bundle is exactly what would have covered it. Anything else — no cargo, no
-    cargo-binstall that would build — is a fault in the machine that outranks the
-    bundle's age, and answering `BUNDLE_BEHIND` there would send the reader to
-    rebuild a bundle when the machine needs a toolchain.
+    **`failure.kind` survives unless the install command itself failed.** A command
+    that ran and exited non-zero is a transport problem a current bundle covers;
+    anything else is a fault in the machine that outranks the bundle's age.
     """
     if carried is None or not floor:
         return None

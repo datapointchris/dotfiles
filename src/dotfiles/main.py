@@ -241,8 +241,8 @@ def check(
     Not what *differs* — that is `plan`. A package a version behind is drift and
     entirely normal between applies; a machine-local value nobody set, a file only
     safekeep can restore, a declaration that will not validate or a checker that
-    could not run are things that need attention. Folding the two together
-    leaves the scheduled unit permanently failed on a healthy box.
+    could not run are what this verb keeps. Folding the two together leaves the
+    scheduled unit permanently failed on a healthy box.
 
     Exits 3 when it finds something, and never 1.
 

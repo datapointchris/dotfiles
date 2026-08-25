@@ -21,24 +21,17 @@ from dotfiles import paths
 class Kind(enum.StrEnum):
     """What condition a `Result` reports, as a value rather than a sentence.
 
-    `detail` is prose written for the person reading the report, and it stays
-    prose — it interpolates the entry, the URL and the path, which is the half a
-    member can never carry. What a member carries is the half prose is bad at:
-    telling two sibling branches of one installer apart without matching English.
-    A test asserting a substring to prove which branch ran is a test pinned to
-    wording that exists to be rewritten, which `standards/testing.md` § "Never
-    assert on rendered output" names by this exact shape.
+    `detail` stays prose, interpolating the entry, the URL and the path. A member
+    carries what prose is bad at: telling two branches of one installer apart
+    without matching English — `standards/testing.md` § "Never assert on rendered
+    output".
 
-    The set is deliberately coarse. A member earns its place by being a condition
-    something could plausibly act on differently — a different fix hint, a
-    different column, a different exit — never by being a different sentence.
-    Where two conditions share a remedy they share a member, and the prose still
-    tells them apart for the reader.
+    **Deliberately coarse.** A member earns its place by being a condition
+    something could act on differently, never by being a different sentence.
 
-    `ok` and `refused` are not folded in here and still decide the verdict.
-    `NOT_IN_BUNDLE` is the clearest case: with `refused=True` it is a source the
-    bundle deliberately does not stage, and with `refused=False` it is a bundle
-    that is broken.
+    `ok` and `refused` are not folded in and still decide the verdict:
+    `NOT_IN_BUNDLE` with `refused=True` is a source the bundle does not stage, and
+    with `refused=False` it is a bundle that is broken.
     """
 
     APPLIED = 'applied'
@@ -47,15 +40,10 @@ class Kind(enum.StrEnum):
     PARTIALLY_APPLIED = 'partially-applied'
     """The change was made, and a step it depends on could not be.
 
-    Still a success — the machine has what it declared — so `ok` stays True and
-    `Outcome.from_result` reads it as DONE. What separates it from `APPLIED` is the
-    fix hint: a whole repair needs nothing further, and this one is waiting on
-    something a person does, usually a login or a reboot.
-
-    `sysconfig._unit_applied` is the case it was added for: a user unit enabled
-    while its manager would not answer, so the symlink is on disk and nothing has
-    loaded it. Without a member, which of the two branches ran was legible only by
-    matching the `detail` sentence — the fault this enum's own docstring names.
+    Still a success, so `ok` stays True and `Outcome.from_result` reads it as DONE.
+    What separates it from `APPLIED` is the fix hint: this one waits on something a
+    person does. `sysconfig._unit_applied` is the case — a user unit enabled while
+    its manager would not answer.
     """
 
     UNCHANGED = 'unchanged'
@@ -106,13 +94,8 @@ class Kind(enum.StrEnum):
     BUNDLE_BEHIND = 'bundle-behind'
     """The bundle carries this row at the version already installed, so it repairs nothing.
 
-    Separated from `NOT_IN_BUNDLE` by which half is wrong, which is what decides
-    the repair. A bundle with no row for a tool was built without it or was pruned.
-    A bundle whose row has aged out was built correctly and is simply old, so the
-    fix is to build a new one.
-
-    `bundle.behind_refusal` is the only thing that answers this, and it records why
-    — including which failures keep their own kind instead.
+    Separated from `NOT_IN_BUNDLE` by which half is wrong: no row means built
+    without it or pruned, an aged row means build a new bundle.
     """
 
     VERSION_UNRESOLVED = 'version-unresolved'
@@ -282,14 +265,12 @@ one. `bundle.py` imports the name from here, so there is one definition.
 def staged_bundles() -> tuple[Path, ...]:
     """Every unpacked bundle, newest first.
 
-    Newest first is the whole ordering contract: a sparse bundle staged over a
-    full one has to win for the entries it carries and fall through for the rest.
-    Sorted on the directory name, which carries the UTC stamp `bundle_name`
-    writes for exactly this.
+    **Newest first is the ordering contract**: a sparse bundle staged over a full
+    one wins for the entries it carries and falls through for the rest. Sorted on
+    the directory name, which carries the UTC stamp `bundle_name` writes for this.
 
-    A directory without a manifest is not a bundle and is skipped rather than
-    refused — a half-finished unpack should not make every staged bundle beside it
-    unreadable.
+    A directory without a manifest is skipped rather than refused, so a
+    half-finished unpack does not make the bundles beside it unreadable.
     """
     if not paths.staging_dir().is_dir():
         return ()
@@ -331,11 +312,9 @@ def locate(relative: str) -> Located | None:
 def bundle_file(relative: str) -> Path:
     """Where a staged file is, or where it would be if anything carried it.
 
-    A path either way, because every caller asks `.is_file()` and a `None` would
-    make each of them answer that question a second way. The path for a file
-    nothing carries is under the staging directory itself, which exists on no
-    machine and so reads as absent — and reads as a sensible location in the
-    message a provider builds from it.
+    A path either way, since every caller asks `.is_file()` and a `None` makes each
+    answer that a second way. The fallback is under the staging directory itself,
+    which reads as absent and as a sensible location in a provider's message.
     """
     found = locate(relative)
     return found.path if found else paths.staging_dir() / relative

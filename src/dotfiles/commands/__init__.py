@@ -64,29 +64,18 @@ EACH_PLUGIN_REMOTE = 'each plugin remote'
 def refresh_flag(sources: str = EVERY_SOURCE) -> Any:
     """The currency axis, spelled one way on every verb that reads it.
 
-    Tri-state rather than a plain bool, because `--offline` has to tell "not passed"
-    from "passed false". Under a plain `True` default, `plan --offline` resolves to
-    refresh and refuses itself as a contradiction — a usage error for typing neither
-    flag.
+    **Tri-state rather than a plain bool**, because `--offline` has to tell "not
+    passed" from "passed false". Under a `True` default, `plan --offline` refuses
+    itself as a contradiction for typing neither flag.
 
-    `--refresh/--cached` rather than a bare `--refresh` on one verb and `--cached`
-    on the other, per `cli-design.md` § "Two front doors on one dataset spell
-    everything identically": one axis answered two ways is a second spelling with
-    nothing to distinguish it.
+    **The default is in parentheses, never brackets.** Rich parses `[...]` in help
+    text as a style tag and drops what it cannot resolve — `cli-design.md` § "Never
+    use `[dim]` in text you write". `show_default` cannot do it either, since the
+    declared value is the tri-state `None`.
 
-    The default is stated in parentheses rather than in the brackets Typer would
-    normally render it in. Rich parses `[...]` in help text as a style tag and drops
-    what it cannot resolve, so a bracketed default renders as nothing at all — the
-    same trap `cli-design.md` § "Never use `[dim]` in text you write" names from the
-    other side. `show_default` cannot do it either: the declared value is `None`,
-    which is the tri-state and not the answer.
-
-    **`sources` is a parameter because one line rendered on eight leaves is wrong on
-    four of them.** `system` asks GitHub about nothing and `plugins` asks no package
-    manager, so a line naming all three overstates there — and `help.md` § "Every
-    screen is complete at its own altitude" wants each screen true on its own. The
-    flag's spelling and its default stay identical, which is what
-    `cli-design.md` asks for; only the sentence narrows.
+    **`sources` is a parameter because one line on eight leaves is wrong on four.**
+    `system` asks GitHub about nothing and `plugins` asks no package manager. The
+    spelling and default stay identical; only the sentence narrows.
     """
     return typer.Option(
         None,
@@ -111,16 +100,11 @@ def currency(refresh: bool | None, *, offline: bool) -> bool:
 def contradiction(first: str, second: str) -> None:
     """Refuse two flags that cancel each other, rather than picking one.
 
-    `verbosity` does this for `-v` with `-q`, and the reasoning generalises: either
-    order of resolution is defensible, which is the tell that a caller passing both
-    did not mean either. Shared rather than written inside one function, or the next
-    pair goes unguarded — `--offline --refresh` resolves silently to offline, where
-    `--refresh` means spend the network on being current and `--offline` means
-    there is none.
+    Shared so the next pair does not go unguarded: `--offline --refresh` otherwise
+    resolves silently to offline.
 
-    `BadParameter`, so it exits 2 as a usage error. A caller has to be able to tell
-    "you typed it wrong" from "it ran and failed", and only the first is worth
-    retrying with different arguments.
+    `BadParameter`, so it exits 2 — a caller has to tell "you typed it wrong" from
+    "it ran and failed", and only the first is worth retrying.
     """
     raise typer.BadParameter(f'{first} and {second} contradict each other; pass one')
 
@@ -128,24 +112,17 @@ def contradiction(first: str, second: str) -> None:
 def verbosity(verbose: int, quiet: bool) -> None:
     """Point the console sink at what the flags asked for, before anything logs.
 
-    Counted `-v` with a `-q` beside it, which is what every neighbour on this
-    machine ships — uv, ruff, cargo, rsync and curl all take that pair, and none
-    of them takes a `--verbosity` naming a log level.
+    Counted `-v` with a `-q` beside it, as uv, ruff, cargo, rsync and curl all
+    ship. The two together are a usage error rather than a precedence rule: either
+    resolution is defensible, which is the tell that the caller meant neither.
 
-    The two together are a usage error rather than a precedence rule. Either
-    order of resolution is defensible, which is the tell that a caller passing
-    both did not mean either.
-
-    The file sink is untouched by both: it keeps everything whatever the terminal
-    shows, because the questions asked after a failed install are only answerable
-    if the detail was recorded while nobody wanted it.
+    The file sink is untouched by both, because the questions asked after a failed
+    install are only answerable if the detail was recorded while nobody wanted it.
 
     **Reconfigured here rather than left to the next `configure`.** Only the three
-    verbs that record call `sinks.open_log`, and that is the only other place the
-    console gets rebuilt — so on `dotfiles packages check`, which opens no log,
-    `-v` recorded a choice that nothing ever read and the flag did nothing at all.
-    Nothing has opened the file sink this early in any verb, so rebuilding the
-    console here cannot drop a handler a run is already writing to.
+    recording verbs call `sinks.open_log`, so on a verb that opens no log `-v`
+    would record a choice nothing reads. Nothing has opened the file sink this
+    early, so rebuilding the console here drops no handler.
     """
     if verbose and quiet:
         raise typer.BadParameter('--verbose and --quiet ask for opposite things; pass one')
@@ -170,13 +147,8 @@ def resolved(
     exists and will not parse is `ExitCode.ISSUE` — the machine really is wrong
     and no amount of retyping helps.
 
-    Every one of them is raised by `Session.resolve`, which reads the manifest
-    rather than only naming it. That is why the guarantee belongs there: a helper
-    reaching for a lazy property to provoke an error is loading the manifest for a
-    reason it does not otherwise have, and the next reader deletes the line as
-    dead.
-
-    What is left is a one-line alias, kept because twenty leaves name it and
-    because the paragraph above is the thing worth having in one place.
+    All three are raised by `Session.resolve`, which reads the manifest rather than
+    only naming it — a helper touching a lazy property to provoke an error reads as
+    a dead line to the next person.
     """
     return Session.resolve(machine, owner=owner, packages=packages, offline=offline, refresh=refresh and not offline)

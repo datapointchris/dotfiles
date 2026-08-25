@@ -1,5 +1,6 @@
 """Tests for core symlink management functions and utilities."""
 
+import errno
 import os
 from pathlib import Path
 
@@ -155,7 +156,7 @@ def test_find_broken_symlinks(tmp_path):
     broken_link = target / 'broken'
     broken_link.symlink_to(dotfiles / 'nonexistent')
 
-    broken = core.find_broken_symlinks(target_dir=target, dotfiles_dir=dotfiles)
+    broken = core.find_broken_symlinks(target_dir=target, dotfiles_dir=dotfiles).found
 
     assert len(broken) == 1
     assert broken[0] == broken_link
@@ -228,7 +229,7 @@ def test_a_broken_link_into_a_repo_sibling_is_not_an_orphan(tmp_path):
     home.mkdir()
     (home / '.zshrc').symlink_to(tmp_path / 'dotfiles-backup' / '.zshrc')
 
-    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == []
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo).found == ()
 
 
 def test_remove_symlinks_leaves_a_sibling_trees_links_alone(tmp_path):
@@ -274,7 +275,7 @@ def test_the_scan_reaches_the_deepest_deployed_darwin_path(tmp_path):
     orphan.parent.mkdir(parents=True)
     orphan.symlink_to(repo / 'deleted.json')
 
-    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo).found == (orphan,)
 
 
 def test_the_darwin_variant_still_deploys_that_path():
@@ -303,7 +304,7 @@ def test_the_scan_still_skips_the_expensive_subtrees_under_library(tmp_path, dir
     skipped.mkdir(parents=True)
     (skipped / 'extensions.json').symlink_to(repo / 'deleted.json')
 
-    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == []
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo).found == ()
 
 
 @pytest.mark.parametrize(
@@ -328,7 +329,7 @@ def test_a_directory_merely_containing_an_excluded_name_is_scanned(tmp_path, dir
     orphan = deployed / 'config.toml'
     orphan.symlink_to(repo / 'deleted.toml')
 
-    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo) == [orphan]
+    assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo).found == (orphan,)
 
 
 # ─── What the walk decides ────────────────────────────────────────────────────
@@ -398,7 +399,7 @@ def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should
     """
     made = a_tree_of_every_shape(tmp_path)
 
-    found = set(core._find_symlinks(tmp_path))
+    found = set(core._find_symlinks(tmp_path).found)
 
     assert found == {made[name] for name in KEPT}
 
@@ -424,7 +425,7 @@ def test_a_link_whose_target_cannot_be_reached_costs_only_itself(tmp_path: Path)
     ordinary.symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        found = set(core._find_symlinks(tmp_path))
+        found = set(core._find_symlinks(tmp_path).found)
     finally:
         locked.chmod(0o755)
 
@@ -476,40 +477,45 @@ def test_the_walk_scans_a_root_whose_own_path_is_excluded(tmp_path: Path) -> Non
         (root / name).symlink_to(root / 'plain.txt')
 
     assert core.is_excluded_search_dir(root) is True
-    assert len(core._find_symlinks(root)) == 3
+    assert len(core._find_symlinks(root).found) == 3
 
 
-def test_a_directory_that_cannot_be_read_is_named_rather_than_skipped_in_silence(
-    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_directory_that_cannot_be_read_is_reported_rather_than_skipped_in_silence(tmp_path: Path) -> None:
     """A subtree nothing could read and a subtree with no orphans are the same
-    answer to the caller — a shorter list either way.
-
-    `python.md` § "Fail fast instead of defaulting": where the fallback is correct,
-    say so on the way past, naming the path and the error. Nothing downstream can
-    tell the two apart, so this warning is the only evidence the scan was partial.
-
-    `COLUMNS` is pinned because Rich wraps to whatever width it is handed, and a
-    `tmp_path` long enough to push the wrap into the middle of "Permission denied"
-    splits the phrase across two lines. The assertion is about what was said, so
-    the width it was said at is fixed rather than normalised back out afterwards —
-    stripping the newlines welds the two halves into `Permissiondenied`.
+    answer to the caller — a shorter list either way. `Scan.skipped` is what
+    separates them.
     """
-    monkeypatch.setenv('COLUMNS', '400')
     locked = tmp_path / 'locked'
     (locked / 'inside').mkdir(parents=True)
     (tmp_path / 'ordinary').symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        found = core._find_symlinks(tmp_path)
+        scan = core._find_symlinks(tmp_path)
     finally:
         locked.chmod(0o755)
 
-    reported = capsys.readouterr().err
-    assert [path.name for path in found] == ['ordinary']
-    assert 'not scanned for orphans' in reported
-    assert str(locked) in reported
-    assert 'Permission denied' in reported
+    assert [path.name for path in scan.found] == ['ordinary']
+    assert [(unread.path, unread.errno) for unread in scan.skipped] == [(locked, errno.EACCES)]
+
+
+def test_a_partial_orphan_scan_is_not_reported_as_a_clean_one(tmp_path: Path) -> None:
+    """The defect `Scan` exists for, asserted through the public function rather
+    than the walk: an unreadable subtree and a subtree with no orphans both shorten
+    `found`, and only `skipped` separates them."""
+    repo = tmp_path / 'dotfiles'
+    repo.mkdir()
+    home = tmp_path / 'home'
+    locked = home / 'locked'
+    locked.mkdir(parents=True)
+    (locked / 'orphan').symlink_to(repo / 'gone.txt')
+    locked.chmod(0o000)
+    try:
+        scan = core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo)
+    finally:
+        locked.chmod(0o755)
+
+    assert scan.found == ()
+    assert [unread.errno for unread in scan.skipped] == [errno.EACCES]
 
 
 LINK_SHAPES = (

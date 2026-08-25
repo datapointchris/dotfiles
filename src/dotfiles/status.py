@@ -113,37 +113,22 @@ def document(
 ) -> dict[str, object]:
     """The versioned interchange document, from every read door.
 
-    Versioned because it crosses machines: the work box's output is what decides
-    what the fleet builds into its next offline bundle, and an unversioned
-    document breaks silently when the two ends disagree about its shape. What each
-    generation holds, and why this one is 2, is `VERSION`'s own.
+    Versioned because it crosses machines: an unversioned document breaks silently
+    when the two ends disagree about its shape. `VERSION` says what each generation
+    holds.
 
-    `verb` names which question produced it. `plan` and `check` measure the same
-    machine and keep different findings, so two documents of one shape would
-    otherwise be indistinguishable — and the bundle builder wants the plan's rows
-    rather than the check's.
+    `verb` names which question produced it — `plan` and `check` measure the same
+    machine and keep different findings, and the bundle builder wants the plan's.
 
-    **`scope` names which resources it covers, and a reader has to honour it.**
-    One shape now comes from three widths: every resource from `check`, one from a
-    resource-scoped door, and the publishable subset from `status show`. Without
-    it, a consumer diffing this against a declaration reads "the resources this
-    document does not mention" as "resources this machine has nothing for" —
-    which is the sweep-as-deletion failure `standards/cli-design.md` § "A
-    narrowing default reads as a deletion to anything that reconciles by sweep"
-    measures. Additive, so `VERSION` does not move: a reader that ignores it is
-    exactly as correct as it was, which was correct for the one width that
-    existed.
+    **`scope` names which resources it covers, and a reader has to honour it.** One
+    shape comes from three widths, so without it a consumer diffing this against a
+    declaration reads "not mentioned" as "this machine has nothing for it" —
+    `standards/cli-design.md` § "A narrowing default reads as a deletion to
+    anything that reconciles by sweep". Additive, so `VERSION` does not move.
 
-    **One shape for one resource and for nine.** The resource-scoped verbs emitted
-    a bare row for a single result and an array for several, on the argument that a
-    reader tells those apart on the first byte. It can, and having to is the defect:
-    a consumer of `packages plan --json` branches on a count it did not choose,
-    because `--source` reaching a runtime through `needed_by` silently makes the
-    walk two resources wide, and a two-resource walk then dropped a row through the
-    door that takes an object. `standards/cli-design.md` § "A fact on screen is
-    reachable through some machine door" states the property — one run reads
-    identically through either door — and § "Two front doors on one dataset spell
-    everything identically" is why a second spelling has nothing to distinguish.
+    **One shape for one resource and for nine.** A bare row for a single result
+    makes a consumer branch on a count it did not choose: `--source` reaching a
+    runtime through `needed_by` silently makes the walk two resources wide.
     """
     composed: dict[str, object] = {
         'version': VERSION,
