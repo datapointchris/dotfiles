@@ -42,6 +42,18 @@ A literal rather than `str(Verdict.MATCHED)`, so this module keeps its runtime
 distance from `resources`: nothing about presentation should be a reason to import
 the logic. `tests/cli/test_output.py` asserts the two agree."""
 
+NEED_ATTENTION = 'need attention'
+"""How drift that `apply` declines to act on is worded, everywhere it is counted.
+
+Named because six sites across two modules render it, and the tests build their
+expected strings from it rather than repeating it — so rewording is this line and
+its neighbour, not a sweep. `attention` rather than a repairer is what the bucket
+can honestly claim: `Change.declined` is the complement of "apply will act", so it
+carries `Repair.NONE` items with no by-hand route to point at."""
+
+NEEDS_ATTENTION = 'needs attention'
+"""The same phrase as a section heading, where the subject is singular."""
+
 VERDICT_MARKS = {'converged': '✓', 'drift': '~', 'issue': '✗'}
 """What stands in front of a section's name, since the name itself is the heading.
 
@@ -200,7 +212,7 @@ def tallies(result: ResourceResult) -> str:
     """
     if str(result.lens) == 'check':
         return tally((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
-    return tally((result.attention, 'need attention'), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
+    return tally((result.attention, NEED_ATTENTION), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
 
 
 def tally(*counts: tuple[int, str]) -> str:

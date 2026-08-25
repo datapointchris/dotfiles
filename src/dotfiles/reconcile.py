@@ -43,6 +43,8 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.output import NEED_ATTENTION
+from dotfiles.output import NEEDS_ATTENTION
 from dotfiles.output import NOTICE_MARK
 from dotfiles.output import PROGRESS_MARK
 from dotfiles.output import SUBJECT_CEILING
@@ -360,7 +362,7 @@ def from_changes(
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
         return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from what this machine declares{root}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) need attention{_lead(kept)}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) {NEED_ATTENTION}{_lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -727,7 +729,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     if lens is Lens.PLAN:
         if own:
             return _sentence(_clause(own, 'to change'), blind)
-        attention = _clause([change.item for result in results for change in result.others if change.declined], 'need attention')
+        attention = _clause([change.item for result in results for change in result.others if change.declined], NEED_ATTENTION)
         head = 'nothing for apply to change' if attention or blind else 'nothing to change'
         return _sentence(head, attention, blind)
 
@@ -739,7 +741,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     # rather than a filler. The verdict word beside it is green, because drift is
     # not this verb's subject and does not move it — so a line that opened on the
     # drift alone would read as a contradiction of the word to its left.
-    answered = _sentence(_clause(troubled, 'need attention'), blind) or 'nothing wrong'
+    answered = _sentence(_clause(troubled, NEED_ATTENTION), blind) or 'nothing wrong'
     return _sentence(answered, _clause(drift, 'differ from what this machine declares'))
 
 
@@ -1225,7 +1227,7 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     repaired = f'{changed} item(s) changed' if changed else ''
     failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
     head = '; '.join(clause for clause in (repaired, failed) if clause) or 'nothing to change'
-    attention = f'; {len(deferred)} item(s) need attention' if deferred else ''
+    attention = f'; {len(deferred)} item(s) {NEED_ATTENTION}' if deferred else ''
     blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
     return f'{head}{attention}{blind}'
 
@@ -1268,7 +1270,7 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     borrowing `~` or `✗` for either would state something the run did not measure.
     """
     for name, colour, group, why in (
-        ('needs attention', 'yellow', deferred, 'differ, and apply is not what repairs them'),
+        (NEEDS_ATTENTION, 'yellow', deferred, 'differ, and apply is not what repairs them'),
         ('not measurable', 'magenta', unmeasured, 'have no evidence either way, so nothing was decided'),
     ):
         if not group:

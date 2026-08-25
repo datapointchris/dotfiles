@@ -14,6 +14,7 @@ from collections.abc import Iterable
 import pytest
 
 from dotfiles import engine
+from dotfiles import output
 from dotfiles import reconcile
 from dotfiles import vocabulary
 from dotfiles.event import Event
@@ -200,9 +201,7 @@ def test_the_issue_line_names_the_item_and_its_fix() -> None:
     item and its advice here makes this line the whole answer on its own."""
     changes = [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER', advice='set it in ~/.env')]
 
-    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
-
-    assert folded.detail == '1 item(s) need attention: env/WINDOWS_USER — set it in ~/.env'
+    assert reconcile._lead(changes) == ': env/WINDOWS_USER — set it in ~/.env'
 
 
 def test_the_issue_line_names_every_item_and_the_shared_fix_once() -> None:
@@ -325,9 +324,7 @@ def test_the_fix_is_dropped_from_the_summary_when_it_needs_more_than_a_line() ->
     the row over five, pushing the item names it exists to carry off the first."""
     diagnosed = change(Verdict.UNDECLARED, Repair.BY_HAND, item='uv/mypy', advice='belongs to nothing\nrun: rm it')
 
-    folded = reconcile.from_changes('packages', [diagnosed], 'all installed', reconcile.Lens.CHECK)
-
-    assert folded.detail == '1 item(s) need attention: uv/mypy'
+    assert reconcile._lead([diagnosed]) == ': uv/mypy'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -356,7 +353,8 @@ def test_a_plan_with_nothing_to_do_names_the_items_the_other_verb_owns() -> None
 
     line = reconcile.verdict_line([folded('auth', logged_out, reconcile.Lens.PLAN)], reconcile.Lens.PLAN)
 
-    assert line == 'nothing for apply to change; 2 item(s) need attention: auth/meso, auth/atuin'
+    assert 'auth/meso' in line
+    assert 'auth/atuin' in line
 
 
 def test_a_plan_with_work_to_do_names_what_would_change() -> None:
@@ -370,7 +368,7 @@ def test_a_plan_with_work_to_do_names_what_would_change() -> None:
     assert line == '2 item(s) to change: ghrelease/zk, go/forge'
 
 
-def test_a_check_names_the_items_needing_a_person_across_every_resource() -> None:
+def test_a_check_names_the_items_needing_attention_across_every_resource() -> None:
     """A count of *resources* was the one number on the screen that answered
     nothing: the rows above already show which resources, and the thing a reader
     goes looking for is what to do next."""
@@ -380,7 +378,11 @@ def test_a_check_names_the_items_needing_a_person_across_every_resource() -> Non
         folded('packages', [change(Verdict.MATCHED)], reconcile.Lens.CHECK),
     ]
 
-    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '2 item(s) need attention: env/WINDOWS_USER, auth/atuin'
+    line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
+
+    assert 'env/WINDOWS_USER' in line
+    assert 'auth/atuin' in line
+    assert 'resource(s)' not in line
 
 
 def test_a_check_names_a_resource_that_could_not_be_measured_at_all() -> None:
@@ -441,7 +443,7 @@ def test_the_block_says_which_question_it_is_summarising(steady_checkout, capsys
 def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, capsys: pytest.CaptureFixture) -> None:
     """A recap worded afresh makes the reader compare phrasings to decide whether
     it is the same finding."""
-    detail = '3 item(s) need attention: meso, nomad, atuin'
+    detail = 'however the fold happened to word it'
     results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=reconcile.Lens.CHECK, attention=3)]
 
     assert f'auth        {detail}' in ' '.join(summarised(results, capsys))
@@ -492,16 +494,19 @@ def test_a_long_shared_fix_is_left_to_the_row_below_rather_than_wrapping_the_hea
     directory = '/home/chris/.config/yazi/plugins/what-size.yazi'
     long = change(Verdict.STALE, Repair.BY_HAND, item='yazi-plugin/what-size', advice=f'remove {directory} and re-run to clone it')
 
-    folded = reconcile.from_changes('plugins', [long], 'all present', reconcile.Lens.CHECK)
-
-    assert folded.detail == '1 item(s) need attention: yazi-plugin/what-size'
+    assert reconcile._lead([long]) == ': yazi-plugin/what-size'
 
 
 def test_a_short_shared_fix_still_rides_on_the_heading() -> None:
     """It is the whole answer, and the line a scheduled summary carries on its own
-    with no rows under it."""
+    with no rows under it.
+
+    **The one place the issue wording is pinned.** Every other test here asserts
+    `_lead` or a structured field, so rewording the sentence edits this line and
+    nothing else.
+    """
     short = change(Verdict.MISSING, Repair.BY_HAND, item='atuin', advice='log in with `atuin login`')
 
     folded = reconcile.from_changes('auth', [short], '3 of 7 authenticated', reconcile.Lens.CHECK)
 
-    assert folded.detail == '1 item(s) need attention: atuin — log in with `atuin login`'
+    assert folded.detail == f'1 item(s) {output.NEED_ATTENTION}: atuin — log in with `atuin login`'

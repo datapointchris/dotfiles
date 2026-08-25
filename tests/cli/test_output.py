@@ -263,7 +263,7 @@ def test_a_converged_plan_row_still_carries_the_other_verbs_count(capsys: pytest
 
     output.render_result(result, output.console)
 
-    assert '4 need attention' in capsys.readouterr().out
+    assert f'4 {output.NEED_ATTENTION}' in capsys.readouterr().out
 
 
 def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixture) -> None:
@@ -282,13 +282,13 @@ def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureF
     names them, and a `plan` drift row is made of what it would change. Either
     count beside its own sentence is the sentence twice."""
     output.render_result(
-        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', lens=Lens.CHECK, attention=4),
+        ResourceResult(address='auth', verdict=ResourceVerdict.ISSUE, detail='however check worded it', lens=Lens.CHECK, attention=4),
         output.console,
     )
     assert '·' not in capsys.readouterr().out
 
     output.render_result(
-        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='4 item(s) differ', lens=Lens.PLAN, pending=4),
+        ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail='however plan worded it', lens=Lens.PLAN, pending=4),
         output.console,
     )
     assert '·' not in capsys.readouterr().out
@@ -319,7 +319,7 @@ def test_an_unmeasurable_count_survives_the_wording_rules(capsys: pytest.Capture
     count whose word is the same on both sides."""
     output.render_result(
         ResourceResult(
-            address='packages', verdict=ResourceVerdict.ISSUE, detail='4 item(s) need attention', lens=Lens.CHECK, attention=4, unmeasured=1
+            address='packages', verdict=ResourceVerdict.ISSUE, detail='however check worded it', lens=Lens.CHECK, attention=4, unmeasured=1
         ),
         output.console,
     )
@@ -336,7 +336,7 @@ def test_the_evidence_is_printed_under_the_verdict_it_belongs_to(capsys: pytest.
     terminal where they interleave."""
     finding = a_change(resource='auth', item='nomad', verdict=Verdict.MISSING, detail='the OS keychain holds no token')
     result = ResourceResult(
-        address='auth', verdict=ResourceVerdict.ISSUE, detail='1 item(s) need attention', lens=Lens.CHECK, findings=(finding,)
+        address='auth', verdict=ResourceVerdict.ISSUE, detail='however check worded it', lens=Lens.CHECK, findings=(finding,)
     )
 
     output.render_result(result, output.console)

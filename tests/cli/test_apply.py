@@ -24,6 +24,7 @@ from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
+from dotfiles import output
 from dotfiles import paths
 from dotfiles import reconcile
 from dotfiles import registry
@@ -720,7 +721,7 @@ class TestWhatApplyDeclinedToTouch:
 
         assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
 
-    def test_what_needs_a_person_gets_a_heading_of_its_own(
+    def test_what_needs_attention_gets_a_heading_of_its_own(
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
     ) -> None:
         """These were printed as bare rows with no heading, so they read as a
@@ -729,7 +730,7 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert 'needs attention' in capsys.readouterr().err
+        assert output.NEEDS_ATTENTION in capsys.readouterr().err
 
     def test_stdout_stays_empty(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
         """`--json` owns stdout, so every one of these rows is a diagnostic."""
@@ -862,7 +863,7 @@ class TestTheClosingLine:
         run, and the sentence beside it already says what happened."""
         assert reconcile.applied_line(0, ['claude-code'], [], []) == '1 item(s) did not converge: claude-code'
 
-    def test_what_needs_a_person_is_counted_and_never_pointed_elsewhere(self) -> None:
+    def test_what_needs_attention_is_counted_and_never_pointed_elsewhere(self) -> None:
         """`Repair.BY_HAND` is not a failure, so it is not counted as work this verb
         did not do. Its row is already on screen with its own command, so naming
         another verb sends a reader to reprint what they just read."""
@@ -870,7 +871,7 @@ class TestTheClosingLine:
 
         line = reconcile.applied_line(1, [], deferred, [])
 
-        assert line == '1 item(s) changed; 1 item(s) need attention'
+        assert line == f'1 item(s) changed; 1 item(s) {output.NEED_ATTENTION}'
         assert 'dotfiles check' not in line
 
     def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:

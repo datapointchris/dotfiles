@@ -145,7 +145,7 @@ reaches the exit code from here.
 
 
 @pytest.mark.parametrize(('arrange', 'checked'), AUTH_STATES)
-def test_auth_check_reports_only_the_tool_that_needs_a_person(
+def test_auth_check_reports_only_the_tool_that_needs_attention(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation], arrange: Arrange, checked: ExitCode
 ) -> None:
     """3 for a login nobody can automate, 0 for everything else.
