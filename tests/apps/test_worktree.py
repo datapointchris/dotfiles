@@ -273,6 +273,7 @@ def rows(result: subprocess.CompletedProcess[str]) -> list[str]:
 TMUX = shutil.which('tmux')
 
 CLAUDE_STUB = r"""
+__PREAMBLE__
 printf '%s' "$TMUX_PANE" > "__STATE__/pane"
 printf '%s' "$$" > "__STATE__/pid"
 pwd > "__STATE__/cwd"
@@ -301,20 +302,21 @@ head='"sessionId":"x","status":"idle","waiting":null,'
 if [ -f "$state/pane" ]; then
   pane=$(cat "$state/pane")
   if [ -f "$state/phantom" ]; then
-    tail=$(printf '"cwd":"/nowhere","tmux":"rig:@11.%s","pid":999999}' "$pane")
+    tail=$(printf '"cwd":"/nowhere","tmux":"gone:@11.%s","pid":999999}' "$pane")
     add "{\"name\":\"phantom\",$head$tail"
   fi
-  tail=$(printf '"cwd":"%s","tmux":"rig:@9.%s","pid":%s}' "$(cat "$state/cwd")" "$pane" "$(cat "$state/pid")")
+  tail=$(printf '"cwd":"%s","tmux":"gone:@9.%s","pid":%s}' "$(cat "$state/cwd")" "$pane" "$(cat "$state/pid")")
   add "{\"name\":\"spawned\",$head$tail"
 fi
 printf '[%s]' "$out"
 """
 """A `claude-sessions` that reports the spawned session once its pane is running.
 
-`@9` is a window the rig does not have, and it is wrong on purpose. The registry records
-the window a session started in and keeps it after `tmux join-pane` moves the pane
-elsewhere, so a matcher comparing the whole address would fail on every moved pane. Every
-success here therefore also asserts that only the pane id is compared.
+`gone:@9` is neither the rig's tmux session nor a window it has, and both halves are wrong
+on purpose. A pane moved with `tmux join-pane` keeps its id and takes a new window, and a
+new tmux session too when it is moved between them — while the registry keeps the address
+it recorded at startup. So a matcher comparing the whole address fails on every moved
+pane, and every success here also asserts that only the pane id is compared.
 
 `<state>/phantom` adds a second row claiming the same pane with a pid that is not the
 pane's, which is what a `claude` started from inside another session's pane looks like in
@@ -359,6 +361,9 @@ class Rig:
         assert len(others) == 1, f'expected exactly one spawned pane, got {others}'
         return others[0]
 
+    def window_of(self, pane: str) -> str:
+        return self.tmux('display-message', '-p', '-t', pane, '#{window_id}')
+
 
 @pytest.fixture
 def spawn_state(tmp_path: Path) -> Path:
@@ -402,8 +407,14 @@ def rig(tmp_path: Path, bin_dir: Path, spawn_state: Path):
     subprocess.run([str(TMUX), '-S', str(socket), 'kill-server'], capture_output=True)
 
 
-def stub_claude(bin_dir: Path, spawn_state: Path, body: str = 'exec sleep 300') -> None:
-    write_stub(bin_dir, 'claude', CLAUDE_STUB.replace('__STATE__', str(spawn_state)).replace('__BODY__', body))
+def stub_claude(bin_dir: Path, spawn_state: Path, body: str = 'exec sleep 300', preamble: str = ':') -> None:
+    """A `claude` that runs `preamble`, records where tmux put it, then runs `body`.
+
+    The preamble runs before the recording so a case can change the machine in the window
+    between the split and the moment the session becomes findable.
+    """
+    script = CLAUDE_STUB.replace('__PREAMBLE__', preamble).replace('__STATE__', str(spawn_state)).replace('__BODY__', body)
+    write_stub(bin_dir, 'claude', script)
 
 
 def stub_registry(bin_dir: Path, spawn_state: Path) -> None:
@@ -1606,6 +1617,23 @@ class TestSpawnRegistration:
 
         assert json.loads(result.stdout)['session'] == 'spawned'
 
+    def test_a_pane_moved_to_another_window_before_it_registers_is_still_found(self, fleet, spawn, bin_dir, spawn_state, rig, tmp_path):
+        """A pane can be anywhere by the time its session appears in the registry.
+
+        `tmux break-pane` gives it a new window, and moving it between tmux sessions gives
+        it a new session name, so two of the address's three parts are gone. The pane id
+        and the pane's process are what survive, and they are the two this matches on.
+        """
+        # -s is the pane being moved; break-pane's -t is the window it lands in.
+        stub_claude(bin_dir, spawn_state, preamble='tmux break-pane -d -s "$TMUX_PANE" || exit 9')
+
+        result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--json')
+        reported = json.loads(result.stdout)
+
+        assert result.returncode == 0, plain(result.stderr)
+        assert reported['session'] == 'spawned'
+        assert rig.window_of(reported['pane']) != rig.window_of(rig.caller), 'the pane really did move'
+
     def test_a_pane_that_died_reports_its_exit_status_rather_than_timing_out(self, fleet, spawn, bin_dir, tmp_path):
         stub_failing_claude(bin_dir, 17, 'could not start')
 
@@ -1756,6 +1784,14 @@ class TestSessionMatching:
         moved = self.registered(worktree_app, 'moved', 'system:@13.%24')
 
         assert worktree_app.session_in_pane([moved], '%24', 100) == 'moved'
+
+    def test_a_pane_moved_to_another_tmux_session_still_matches(self, worktree_app):
+        """The same move between tmux sessions rather than between windows, which rots the
+        first field as well. Two of the address's three parts go stale and the pane id does
+        not, so it is the only part worth comparing."""
+        relocated = self.registered(worktree_app, 'relocated', 'the-old-one:@13.%24')
+
+        assert worktree_app.session_in_pane([relocated], '%24', 100) == 'relocated'
 
     def test_a_tmux_session_name_containing_a_dot_still_resolves(self, worktree_app):
         awkward = self.registered(worktree_app, 'awkward', 'de.initiative:@0.%7')
