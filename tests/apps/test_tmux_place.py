@@ -7,10 +7,11 @@ worth pinning, and every one of them is reachable here for the cost of building 
 dataclass.
 
 The windows these tests build carry the arithmetic tmux itself performs. The
-numbers were checked against a live server before they were written down: two
-columns of a 377-wide window are 188 wide at lefts 0 and 189, three are 125 wide,
-and an 81-row window splits into a 40-row worker above a 39-row reviewer.
-`layout()` reproduces exactly that.
+widths were checked against a live server and are config-independent: two columns
+of a 377-wide window are 188 wide at lefts 0 and 189, and three are 125 wide.
+How many rows a column has is not -- `pane-border-status` takes one per pane --
+so `layout()` models a client that spends a row on the border, and the
+real-server cases assert relationships rather than row counts.
 
 Three layers are covered, because the pure one alone was not enough. `place()` and
 its helpers are exercised directly. `execute()` and the command functions run
@@ -54,8 +55,13 @@ def layout(module, window_id: str, columns, width: int = WINDOW, height: int = H
     right by `resize-pane -x`, so the rightmost absorbs what is left over. A row
     is made by `split-window -v -l <n>`, which gives the new *bottom* pane that
     many rows and leaves the rest on the pane above -- so a worker is the taller
-    half of its pair. A helper that got this backwards would build every fixture
-    one row off the real thing, and the readability boundary is one row wide.
+    half of its pair. A helper that got that backwards would build every fixture
+    with the pair inverted, and the readability boundary is one row wide.
+
+    The row total models a client spending one row on a pane border, which is one
+    configuration among several. What the fixture has to be is internally
+    consistent -- the heights and the dividers add up to the column -- because
+    the module only ever divides the height it is handed.
     """
     count = len(columns)
     share = (width - (count - 1)) // count
@@ -135,9 +141,8 @@ def test_the_helper_reproduces_the_column_widths_a_real_tmux_produces(build):
 
 
 def test_the_helper_puts_the_taller_half_of_a_pair_on_the_worker(build):
-    # `split-window -v -l 39` gives the new bottom pane 39 rows and leaves 40 on
-    # the pane above, so the worker is the taller half. The live capture reads
-    # `%1 125x40 worker` above `%2 125x39 reviewer`.
+    # `split-window -v -l <n>` gives the new bottom pane n rows and leaves the
+    # rest on the pane above, so the worker is never the shorter half.
     window = build('@1', [[('%1', 'worker'), ('%2', 'reviewer', '%1')]])
     worker, reviewer = window.panes
     assert (worker.height, reviewer.height) == (40, 39)
@@ -1127,9 +1132,14 @@ def server(tmux_place, tmp_path, monkeypatch):
     """
     socket = str(tmp_path / 'tmux.sock')
     idle = 'bash -c "while :; do sleep 5; done"'
+    # `-f /dev/null` starts the server with no configuration, so the geometry is
+    # tmux's own rather than whatever the machine running the tests happens to
+    # set. `pane-border-status` takes a row per pane, which is enough on its own
+    # to make a desk and a CI runner disagree about the same 81-row window.
+    blank = ('-f', '/dev/null')
 
     def control(*args: str) -> str:
-        done = subprocess.run(['tmux', '-S', socket, *args], capture_output=True, text=True)
+        done = subprocess.run(['tmux', *blank, '-S', socket, *args], capture_output=True, text=True)
         assert done.returncode == 0, f'tmux {" ".join(args)}: {done.stderr}'
         # Newlines only. An unset user option renders as an empty trailing field,
         # and a full strip eats the tab in front of it -- so a pane with no role
@@ -1147,18 +1157,24 @@ def server(tmux_place, tmp_path, monkeypatch):
         idle_command = ('bash', '-c', 'while :; do sleep 5; done')
 
         @staticmethod
-        def geometry() -> list[tuple[str, int, int, int, str]]:
-            rows = control('list-panes', '-a', '-F', '#{pane_id}\t#{pane_width}\t#{pane_height}\t#{pane_left}\t#{@place_role}')
-            out = []
+        def geometry() -> dict[str, tuple[int, int, int, int, str]]:
+            """Every pane on the server: width, height, left, top and role, by id.
+
+            A mapping rather than a list, so a test names the pane it means
+            instead of unpacking five positions it does not care about.
+            """
+            fields = ('#{pane_id}', '#{pane_width}', '#{pane_height}', '#{pane_left}', '#{pane_top}', '#{@place_role}')
+            rows = control('list-panes', '-a', '-F', '\t'.join(fields))
+            out = {}
             for line in rows.splitlines():
-                pane_id, width, height, left, role = line.split('\t')
-                out.append((pane_id, int(width), int(height), int(left), role))
+                pane_id, width, height, left, top, role = line.split('\t')
+                out[pane_id] = (int(width), int(height), int(left), int(top), role)
             return out
 
     try:
         yield Server()
     finally:
-        subprocess.run(['tmux', '-S', socket, 'kill-server'], capture_output=True, text=True)
+        subprocess.run(['tmux', *blank, '-S', socket, 'kill-server'], capture_output=True, text=True)
 
 
 @needs_tmux
@@ -1172,22 +1188,40 @@ def test_a_real_first_dispatch_places_beside_the_caller_and_plan_agrees(tmux_pla
 
     landed = tmux_place.execute(before, server.idle_command, '', 'agents')
     assert landed.as_planned
-    assert [(width, left) for _, width, _, left, _ in server.geometry()] == [(188, 0), (188, 189)]
+    assert sorted((left, width) for width, _, left, _, _ in server.geometry().values()) == [(0, 188), (189, 188)]
 
 
 @needs_tmux
-def test_a_real_pair_comes_out_at_the_measured_geometry(tmux_place, server):
+def test_a_real_pair_divides_one_column_between_two_readable_halves(tmux_place, server):
+    """The relationships, not the row counts.
+
+    How many rows a column has depends on the tmux configuration reading it --
+    `pane-border-status` takes one per pane, so a desk with it set and a runner
+    without it disagree by a row on the same 81-row window. The absolute split is
+    pinned in the pure tests, where `layout()` fixes the geometry. What has to
+    hold on any server is that the pair shares one column, divides it between
+    them, and that both halves stay readable.
+    """
     caller = tmux_place.caller_pane()
     request = tmux_place.Request(role=tmux_place.Role.WORKER, caller=caller)
     worker = tmux_place.execute(tmux_place.place(tmux_place.read_workspace(), request), server.idle_command, '', 'agents')
+    column = worker.height
 
     review = tmux_place.Request(role=tmux_place.Role.REVIEWER, caller=caller, partner=worker.pane)
     reviewer = tmux_place.execute(tmux_place.place(tmux_place.read_workspace(), review), server.idle_command, '', 'agents')
 
-    sizes = {pane: (width, height, left) for pane, width, height, left, _ in server.geometry()}
-    assert sizes[worker.pane][:2] == (188, 40)
-    assert sizes[reviewer.pane][:2] == (188, 39)
-    assert sizes[worker.pane][2] == sizes[reviewer.pane][2], 'a reviewer shares its worker column'
+    sizes = server.geometry()
+    above, below = sizes[worker.pane], sizes[reviewer.pane]
+
+    width, height, left, top, _ = above
+    lower_width, lower_height, lower_left, lower_top, _ = below
+
+    assert left == lower_left, 'a reviewer shares its worker column'
+    assert width == lower_width == tmux_place.even_share(WINDOW, 2)
+    assert top < lower_top, 'the reviewer sits below its worker, never above it'
+    assert height + lower_height + 1 == column, 'the pair divides the column the worker had, less a divider row'
+    assert tmux_place.readable(width, height)
+    assert tmux_place.readable(lower_width, lower_height)
     assert reviewer.as_planned
 
 
@@ -1200,8 +1234,8 @@ def test_a_real_second_pair_reaches_the_three_column_target(tmux_place, server):
         review = tmux_place.Request(role=tmux_place.Role.REVIEWER, caller=caller, partner=worker.pane)
         tmux_place.execute(tmux_place.place(tmux_place.read_workspace(), review), server.idle_command, '', 'agents')
 
-    widths = sorted({width for _, width, _, _, _ in server.geometry()})
-    lefts = sorted({left for _, _, _, left, _ in server.geometry()})
+    widths = sorted({width for width, _, _, _, _ in server.geometry().values()})
+    lefts = sorted({left for _, _, left, _, _ in server.geometry().values()})
     assert widths == [tmux_place.even_share(WINDOW, 3)]
     assert lefts == [0, 126, 252]
 
@@ -1216,7 +1250,7 @@ def test_a_real_hand_made_pane_is_never_resized_by_a_placement(tmux_place, serve
     # taking half the window would be refused for having no room, and the test
     # would pass without the invariant doing any work.
     server.run('split-window', '-d', '-h', '-l', str(tmux_place.MIN_COLUMNS), '-t', caller)
-    theirs = {pane: width for pane, width, _, _, role in server.geometry() if pane != caller and role == ''}
+    theirs = {pane: seen[0] for pane, seen in server.geometry().items() if pane != caller and seen[4] == ''}
     assert theirs, 'the fixture did not produce an unmarked pane'
 
     request = tmux_place.Request(role=tmux_place.Role.WORKER, caller=caller)
@@ -1227,7 +1261,7 @@ def test_a_real_hand_made_pane_is_never_resized_by_a_placement(tmux_place, serve
     assert placement.opens_window
 
     tmux_place.execute(placement, server.idle_command, '', 'agents')
-    after = {pane: width for pane, width, _, _, _ in server.geometry()}
+    after = {pane: seen[0] for pane, seen in server.geometry().items()}
     for pane, width in theirs.items():
         assert after[pane] == width, f'{pane} was resized from {width} to {after[pane]}'
 

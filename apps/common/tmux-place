@@ -283,6 +283,11 @@ def fits_down(height: int) -> int:
     So `n` panes need `n * MIN_ROWS + (n - 1)` out of `height - 1`, which is
     `height // (MIN_ROWS + 1)`. Two 35-row panes need 72 rows, not 71 -- and at 71
     the split really does produce a 34-row pane, which is under the minimum.
+
+    How many rows a pane gives up is a tmux setting rather than a constant:
+    `pane-border-status` takes one per pane and an unconfigured server takes
+    none. Assuming one is the conservative direction, so on a server that spends
+    nothing this under-reports by a pane and never over-reports.
     """
     return max(0, height // (MIN_ROWS + 1))
 
