@@ -229,9 +229,14 @@ jobs:
   # green having run a third of this directory.
   #
   # So the tier gets its own job that installs them, and --require-interpreters
-  # turns the skips into a refusal to start. The suite is the gate: the flag
-  # enforces the set the collected tests actually ask for, so a test that starts
-  # driving a third interpreter is covered here without this file changing.
+  # turns the skips into a refusal to start.
+  #
+  # The flag only reaches what its invocation collects, and interpreter marks are
+  # not confined to tests/shell — tests/apps drives a real tmux as well. So the
+  # run below is joined by a collection pass over the whole suite, which is what
+  # makes the enforced set the one the collected tests actually ask for. A test
+  # that starts driving a third interpreter is then covered without this file
+  # changing.
   #
   # Its own job rather than a step inside `python`: it needs apt packages that
   # job has no reason to carry, and a separate job runs it in parallel.
@@ -254,3 +259,9 @@ jobs:
 
       - name: Test
         run: uv run pytest tests/shell --require-interpreters -rs
+
+      # Collection alone, because the point is the refusal rather than the run: the
+      # generic python job already runs these, and a missing interpreter would make it
+      # skip them and still report green. Whole suite, four seconds.
+      - name: Every interpreter the suite asks for is installed
+        run: uv run pytest --require-interpreters --collect-only -q
