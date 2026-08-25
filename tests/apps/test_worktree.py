@@ -1688,6 +1688,34 @@ class TestSpawnLayout:
         assert spawned_width == caller_width
 
 
+class TestHelp:
+    """Every subcommand renders its own help.
+
+    argparse runs a help string through %-formatting, so a percent sign in a default
+    raises instead of printing — and it breaks only the leaf carrying it. The root help
+    still renders, so nothing about the failure is visible until someone asks that one
+    command for help.
+
+    The commands are read off the parser rather than listed here, so one added later is
+    covered on the day it arrives rather than on the day someone remembers this file.
+    """
+
+    def commands(self, app) -> list[str]:
+        # argparse exposes its subcommands only through the action holding them, and the
+        # action list is private. A hand-written list is the alternative, and that is the
+        # thing this test exists to not depend on.
+        holders = [action for action in app.build_parser()._actions if isinstance(getattr(action, 'choices', None), dict)]
+        assert len(holders) == 1, 'expected one subcommand group'
+        return sorted(holders[0].choices)
+
+    def test_every_subcommand_renders_its_help(self, worktree_app, fleet, run):
+        for command in self.commands(worktree_app):
+            result = run(fleet['primary'], command, '--help')
+
+            assert result.returncode == 0, f'{command} --help exited {result.returncode}: {plain(result.stderr)}'
+            assert result.stdout.startswith('usage:'), f'{command} --help printed no usage'
+
+
 class TestSpawnRefusals:
     """What it will not do, none of which needs a tmux server to assert."""
 
