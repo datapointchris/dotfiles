@@ -27,19 +27,12 @@ from dotfiles.vocabulary import ExitCode
 class Started:
     """A resource is about to be measured, and nothing about it is known yet.
 
-    The one payload that carries no finding. It exists because every other event
-    a resource produces arrives *after* the measurement, so a reader watching the
-    stream learns a resource's name at the moment it already has its answer —
-    which on a fast machine is invisible and on a slow one is a blank screen for
-    the whole of the wait — a slow `check` prints nothing for minutes and then
-    everything at once, with neither the output nor the record saying which
-    resource the time went to.
+    The one payload carrying no finding. Every other event arrives *after* the
+    measurement, so without this a slow `check` is a blank screen for minutes with
+    nothing saying which resource the time went to.
 
-    Carried in the stream rather than printed from the walk, for the reason the
-    walk yields values at all: what a reader does with it — render it, drop it,
-    time from it — is that reader's business. `sinks.record` drops it, because a
-    run record is what was found and this is the statement that nothing has been
-    found yet.
+    Carried in the stream rather than printed from the walk, so a reader decides
+    what to do with it. `sinks.record` drops it: a run record is what was found.
     """
 
     detail: str = ''
@@ -49,16 +42,12 @@ class Started:
 class Summary:
     """What a resource examined, in its own terms, and the items behind it.
 
-    A sentence and not a count, deliberately. Each resource measures a different
-    kind of thing — declared packages, deployed links, runtimes a tool list
-    implies — so one `examined: int` across all of them would be a number meaning
-    something different in every row, which is worse than no number.
+    **A sentence and not a count.** Each resource measures a different kind of
+    thing, so one `examined: int` across all of them means something different in
+    every row.
 
-    `examined` is that sentence itemised, for the reader who wants to see what was
-    looked at rather than take a count for it. It rides here rather than arriving
-    as changes of its own, because a `Change` is a unit of work: one carrying
-    `MATCHED` would travel into the run record and be written out per item, which
-    is a hundred and seventy-three rows of nothing for every `check` of symlinks.
+    `examined` rides here rather than arriving as changes, because a `Change`
+    carrying `MATCHED` would write 173 rows of nothing into every symlinks record.
     """
 
     detail: str

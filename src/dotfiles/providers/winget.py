@@ -68,15 +68,10 @@ FIRST_DIGIT = re.compile(r'[0-9].*')
 def version_num(tag: str) -> str:
     """The tag from its first digit on: `v0.9.8` and `jq-1.7.1` both give the number.
 
-    Deliberately not `releases.expand_pattern`, which is where every other section
-    fills a `binary_pattern` in. Two reasons, and the second holds whatever the
-    tags happen to be. It spells this one `lstrip('v')`, which agrees on every tag
-    the eight rows resolve to today and is not what `catalog.WingetPackage`
-    declares — jq tags `jq-1.7.1`. And its vocabulary answers `{Os}`, `{os_mac}`,
-    `{Os_mac}` and `{platform}` from `target.is_darwin` alone, so a Windows entry
-    reaching any of the four is told it is Linux. That is the failure
-    `coordinates.platform_label` answers winget explicitly to avoid, and importing
-    it here would be reintroducing it one module over.
+    **Deliberately not `releases.expand_pattern`.** Its vocabulary answers `{Os}`,
+    `{os_mac}`, `{Os_mac}` and `{platform}` from `target.is_darwin` alone, so a
+    Windows entry reaching any of the four is told it is Linux — the failure
+    `coordinates.platform_label` answers winget explicitly to avoid.
     """
     found = FIRST_DIGIT.search(tag)
     return found.group(0) if found else tag
@@ -142,18 +137,12 @@ def copy_installed(home: Path, into: Path, entry: catalog.WingetPackage) -> bool
 def install(entry: catalog.WingetPackage, into: Path, *, offline: bool) -> Result:
     """Install one package from whichever source this run can reach.
 
-    `into` is a parameter rather than `providers.bin_dir()` read here, so a test
-    can point the whole of an install at a tmp directory — the same reason
-    `copy_installed` takes a `home`, and between them they leave nothing about
-    which source a run picks that needs a Windows box to exercise. `registry` is
-    the only caller and passes `bin_dir()`, which is the one spelling of
-    `~/.local/bin` this package keeps.
+    `into` is a parameter rather than `providers.bin_dir()` read here, so nothing
+    about which source a run picks needs a Windows box to exercise.
 
-    Offline goes straight to the bundle and never calls winget, which needs the
-    Store the network blocks. Online tries winget first and falls back, because
-    reaching a network is not the same as reaching the Store: on this box it never
-    is, and without the fallback every row here stays uninstalled while a current
-    bundle sits staged on disk.
+    **Online tries winget first and still falls back**, because reaching a network
+    is not reaching the Store — without the fallback every row stays uninstalled
+    while a current bundle sits staged on disk.
     """
     if offline:
         return _from_bundle(entry, into) or Result(False, _unstaged(entry), kind=Kind.NOT_IN_BUNDLE)

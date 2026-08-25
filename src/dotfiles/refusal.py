@@ -74,47 +74,30 @@ def report(refused: Refusal) -> ExitCode:
 class Boundary(TyperGroup):
     """The one place a `Refusal` becomes an exit status.
 
-    On the *root* group rather than on each sub-app, because click nests
-    invocation: a leaf's `invoke` runs inside its group's, which runs inside this
-    one, so a single handler here sees every command's failure. Sub-apps
-    therefore need no `cls=` of their own, and a new one cannot forget it.
+    On the *root* group, because click nests invocation — so one handler sees every
+    command's failure and a new sub-app cannot forget its own `cls=`.
 
-    **Inside click rather than around `app()` in the console script.** A wrapper
-    there does catch a `Refusal` — measured, `standalone_mode` re-raises anything
-    that is not a click exception — but `typer.testing.CliRunner` never calls the
-    entry point. Every test asserting an exit code invokes the app directly, so a
-    handler outside click is a handler the suite cannot reach, on the one branch
-    where being wrong is silent. `declaration.cli` is the wrapper form, and it
-    exists only because that door has no click group at all.
+    **Inside click rather than around `app()` in the console script.**
+    `typer.testing.CliRunner` never calls the entry point, so a handler outside
+    click is one the suite cannot reach, on the branch where being wrong is silent.
 
-    `ctx` is untyped because its type is whichever click the installed typer
-    carries. typer 0.24 subclasses the real `click.Context`; 0.27 vendors its own
-    and ships no `click` at all. Naming either narrows the supertype's parameter
-    on the version that has the other, and importing `click` to name it is a
-    dependency this package deliberately does not take.
+    **`ctx` is untyped because its type is whichever click the installed typer
+    carries.** typer 0.24 subclasses the real `click.Context`; 0.27 vendors its own
+    and ships no `click` at all.
     """
 
     def invoke(self, ctx: Any) -> Any:
         """Every exit this tool owns, including the ones the framework hardcodes to 1.
 
         **A tool that spends 1 on a verdict owes a branch for the framework's
-        default.** click exits 1 on `Abort`, which is what a prompt raises at EOF
-        and what Ctrl-D produces at a live terminal. 1 is `DRIFT` here — pending
-        changes — so a run that measured nothing and changed nothing reports the
-        machine as differing from its declaration. The TTY guard beside each prompt
-        covers the piped case and stops at the keyboard.
+        default.** click exits 1 on `Abort`, and 1 is `DRIFT` here — so Ctrl-D at a
+        prompt reports the machine as differing from its declaration.
 
-        Here rather than at each prompt because the branch is about what an exit
-        code means in this tool, and there are four prompts. `typer.Abort` is
-        `click.exceptions.Abort` re-exported, so naming it costs no `click` import
-        — which is the seam this class is careful to protect.
-
-        **The two do not get the same sentence, because only one of them knows.**
-        `Abort` is raised by a prompt and nothing has happened yet, so `nothing was
-        done` is a fact. `KeyboardInterrupt` arrives from the keyboard at any
-        instant this group is running — after eighty downloads, after three
-        unlinks, after an upload has landed — and a boundary that claimed nothing
-        happened would be asserting something it cannot see.
+        **`Abort` and `KeyboardInterrupt` do not get the same sentence, because
+        only one of them knows.** A prompt raises `Abort` before anything has
+        happened, so `nothing was done` is a fact. `KeyboardInterrupt` arrives at
+        any instant — after eighty downloads, after an upload has landed — and
+        claiming nothing happened would assert something unmeasured.
         """
         try:
             return super().invoke(ctx)

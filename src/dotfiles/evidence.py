@@ -120,35 +120,22 @@ def macos_app(name: str) -> Path | None:
 def executables_on_path(checkout: Path, search: str | None = None, wanted: frozenset[str] | None = None) -> dict[str, tuple[str, ...]]:
     """Every name PATH can resolve, to every location that answers for it.
 
-    `shutil.which` answers with the winner alone, which is the right answer to
-    "is it installed" and no answer at all to "how many of it are there". One walk
-    of the PATH directories rather than a `which -a` per item, which is a
-    subprocess per declared tool.
+    `shutil.which` answers with the winner alone, which says nothing about how many
+    copies there are. Deduplicated by real path, so `~/.local/bin/fd` pointing at
+    `/usr/bin/fd` is one installation. Order is PATH order.
 
-    Deduplicated by real path, because `~/.local/bin/fd` pointing at `/usr/bin/fd`
-    is one installation reachable by two names and not two installations. Order is
-    PATH order, so the first entry is the copy that wins.
+    **`checkout` is excluded**: `uv run dotfiles check` from the repo puts
+    `.venv/bin` in front, and a `mypy` that exists for one command is not machine
+    state.
 
-    `checkout` is left out entirely: `uv run dotfiles check` from the repo puts
-    `.venv/bin` in front, and a second `mypy` that exists for the duration of a
-    development command is not machine state. Taken as an argument rather than
-    read from `paths` because the run's own checkout is the one that matters — the
-    same reason `Session` carries `repo`.
+    **`wanted` bounds the three syscalls per entry, not the walk.** `is_file`,
+    `access` and `realpath` are three round trips each. On WSL with Windows PATH
+    interop on, `$PATH` carries `/mnt/c/Windows/System32` and its neighbours, every
+    syscall crosses drvfs, and the count is in the tens of thousands — none of them
+    ever asked about.
 
-    **`wanted` bounds the three syscalls per entry, not the walk.** The directory
-    listing is one read whatever is asked for, while `is_file`, `access` and
-    `realpath` are three round trips *each*, and the only caller wants an answer
-    about the binaries a machine declares — never about every name a PATH resolves.
-    Unbounded, this pays thousands of realpaths to answer a hundred questions.
-
-    That is a rounding error on ext4 and is not one on WSL: with Windows PATH
-    interop left on, `$PATH` carries `/mnt/c/Windows/System32` and its neighbours,
-    every syscall against them crosses drvfs, and the count is in the tens of
-    thousands. None of those names is ever asked about.
-
-    None keeps the whole index, because "every name on PATH" is a legitimate
-    question and a default that silently answered a narrower one would be a trap
-    for the next caller.
+    None keeps the whole index, because a default that silently answered a narrower
+    question would trap the next caller.
     """
     found: dict[str, list[str]] = {}
     seen: dict[str, set[str]] = {}
@@ -239,28 +226,21 @@ def by_command(item: DesiredItem) -> Evidence:
 def in_provider_dir(item: DesiredItem, directory: Path) -> Evidence:
     """The binary in the directory this provider installs into, not any of that name.
 
-    `by_command` answers "is a syncthing installed", which is a different question
-    from "is the syncthing this declaration asks for installed" — and the two
-    disagree wherever another manager ships the same tool. Measured on macmini
-    2026-08-16: Homebrew's syncthing sat on PATH answering the version the release
-    publishes, so `dotfiles packages plan` had nothing to say about an entry no part
-    of this repo had ever satisfied. `brew uninstall` would have taken the tool off
-    the machine with every verb still calling it converged. Measured on mbp
-    2026-08-24: `oxker` and `rg` are `cargo_packages` entries whose only copy is a
-    brew formula somebody chose, and both report `MATCHED` off `/usr/local/bin`.
+    `by_command` answers "is a syncthing installed", which differs from "is the
+    syncthing this declaration asks for installed" wherever another manager ships
+    the same tool — and then `brew uninstall` takes the tool off a machine every
+    verb calls converged.
 
-    Narrow on purpose. The claim is that a binary *this* provider installed is in a
-    directory it owns — nothing here reads a receipt or asks who wrote the file, so
-    a copy placed there by hand still counts. That is the same trust `by_command`
-    already puts in PATH, moved to one directory.
+    **Narrow on purpose**: the claim is that a binary sits in a directory this
+    provider owns. Nothing reads a receipt, so a copy placed there by hand counts —
+    the same trust `by_command` puts in PATH, moved to one directory.
 
-    `directory` comes from whichever module installs into it, so a provider that
-    moves its directory moves this with it. `toolchain.TOOL_PATH_DIRS` records what
-    retyping one costs.
+    `directory` comes from whichever module installs into it, so a provider moving
+    its directory moves this with it.
 
-    The other copy is named where there is one. A row reading "not installed" on a
-    machine whose `syncthing --version` answers is the reading that sends somebody
-    looking for a broken installer.
+    The other copy is named where there is one, or a row reading "not installed" on
+    a machine whose `syncthing --version` answers sends somebody hunting a broken
+    installer.
     """
     if not item.executable:
         return Evidence(Verdict.UNKNOWN, 'installs no binary and declares no path, so nothing here can measure it')
@@ -450,28 +430,19 @@ def _unmeasured_currency(manager: str) -> Evidence:
 def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     """Whether one package manager has anything installed and behind.
 
-    STALE rather than MISSING, because the manager is there and doing its job —
-    what has drifted is the machine's distance from what its repositories now
-    hold. `Change.actionable` covers STALE, so this is repaired by `apply` without
-    anything else having to know it is a different kind of row.
+    STALE rather than MISSING: the manager is there and doing its job, and
+    `Change.actionable` covers STALE so `apply` repairs it.
 
-    A named sample rather than a bare count. "23 pacman package(s) behind" says a
-    machine is behind and nothing about whether that matters; the first few names
-    are usually enough to tell a routine sync from a kernel bump.
+    A named sample rather than a bare count, since the first few names tell a
+    routine sync from a kernel bump.
 
-    UNKNOWN has three causes and they take different repairs, so each is a
-    `Unmeasured` member and the sentence is rendered from it. A row whose cause
-    lives only in its English cannot be asserted except by matching the English,
-    which is the shape `code-quality.md` § "A failure mode gets a name callers can
-    branch on" names — and it is why the wrong binary below went unnoticed.
+    UNKNOWN's three causes take different repairs, so each is an `Unmeasured`
+    member — `code-quality.md` § "A failure mode gets a name callers can branch on".
 
     **The manager and its reader are two questions.** `INSTALL[name][0]` is the
-    manager itself and `OUTDATED[name][0]` is whatever answers its currency, which
-    since `checkupdates` is a different program. Reading the second as the first
-    told an Arch box `no pacman on this machine` — on a machine pacman installed
-    everything on — for the whole window before an apply lands `pacman-contrib`.
-    `syspkg.available` already draws this line and is the reason `INSTALL` is the
-    table asked.
+    manager and `OUTDATED[name][0]` is whatever answers its currency, which since
+    `checkupdates` is a different program. Reading the second as the first tells an
+    Arch box `no pacman on this machine` until an apply lands `pacman-contrib`.
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
@@ -634,39 +605,27 @@ on its event loop until a person closes a window, and the scheduled
 def reported_version(executable: str) -> str | None:
     """What a binary says its version is, or None when it will not say.
 
-    A non-zero exit is None rather than "whatever it printed": a tool that does
-    not recognise the probe prints its usage, and usage text is full of numbers
-    `versions.parse` would otherwise read as a version and report as behind. A
-    probe that runs past `PROBE_SECONDS` is one more way of not saying.
+    **A non-zero exit is None, never "whatever it printed".** A tool that does not
+    recognise the probe prints usage, which is full of numbers `versions.parse`
+    reads as a version and reports as behind.
 
-    A `go install`-ed binary is asked its toolchain first, and its own banner only
-    where the toolchain resolved a commit rather than a tag. `found` sitting in
-    `gotool.gobin()` is what "a `go install`-ed binary" means; everywhere else this
-    is unchanged, whatever the first probe printed, read or not.
-
-    Asking the banner first and falling back only where nothing could *parse* is
-    the failure `standards/release.md` § "Never detect a dev build from a version
-    string" names — a placeholder that happens to look like a version carries no
-    evidence about what produced it. `0.0.0` parses, so it wins, and the tool
-    reports permanently behind and is reinstalled on every apply.
+    A `go install`-ed binary is asked its toolchain first and its own banner only
+    where the toolchain resolved a commit. Asking the banner first and falling back
+    on a parse failure is what `standards/release.md` § "Never detect a dev build
+    from a version string" names: `0.0.0` parses, so it wins, and the tool reports
+    permanently behind.
 
     **Neither record is authoritative, and preferring the module unconditionally
-    moves the fault rather than fixing it.** `go install` never passes the
-    `-ldflags -X` a release build stamps a version with, so a banner is whatever
-    placeholder the source hardcodes. But `go install <module>@latest` resolves a
-    *commit* wherever no tag matches the module path, and then the toolchain's
-    answer is a pseudo-version that reads `(0, 0, 0)` while the banner is correct.
-    What separates them is that only the module's
-    failure announces itself: `gotool.tagged` reads a format the toolchain defines,
-    where telling `0.0.0` from a real `0.0.0` means guessing.
+    moves the fault.** `go install` never passes the `-ldflags -X` a release build
+    stamps, so a banner is a hardcoded placeholder — but it also resolves a *commit*
+    where no tag matches, and the pseudo-version then reads `(0, 0, 0)` while the
+    banner is correct. Only the module's failure announces itself, which
+    `gotool.tagged` reads.
 
     **Three answers from the toolchain, not two.** A tag is the answer. A
-    pseudo-version is `go` saying there was no tag, which leaves the banner as the
-    only remaining record and is why `cheat` measures correctly. Silence — `go`
-    absent, or a binary it does not recognise as one it built — is `go` saying
-    nothing, and then there is no second record to weigh a placeholder against. The
-    banner is not promoted by being the only string available, and `by_currency`'s
-    UNKNOWN says so where a fabricated number would read as a measurement.
+    pseudo-version leaves the banner as the only record. Silence leaves no second
+    record to weigh a placeholder against, so the banner is not promoted by being
+    the only string available and `by_currency` answers UNKNOWN.
     """
     found = shutil.which(executable)
     if not found:

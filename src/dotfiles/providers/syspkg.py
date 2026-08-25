@@ -189,21 +189,14 @@ workstation `ripgrep` and `fzf` are there for the same kind of reason.
 def _answers(binary: str) -> bool:
     """Whether a package manager is here and will run.
 
-    `owner_of` is called once per stray copy and asks two managers each time, so a
-    machine with several strays spent dozens of forks re-establishing a constant.
-    What is cached is the probe, and the fix for that is one `shutil.which` — a
-    stat rather than a fork — in front of it.
+    **The cache is keyed on the resolved path, never on the name.** PATH changes
+    within a process — `toolchain.put_on_path` extends it as each runtime lands,
+    and a test hands the resource its own — so a bare name lets one test's fake
+    `pacman` answer for the next test's.
 
-    **Keyed on the resolved path, never on the name.** PATH is not fixed for the
-    life of a process: `providers/toolchain.put_on_path` extends it as each
-    runtime lands, and a test hands the resource a PATH of its own. Cached under
-    the bare name, one test's fake `pacman` answers for the next test's — green on
-    a desk where a real pacman makes the two agree, red on a runner without one.
-
-    Still a probe rather than `which` alone, because the question is whether the
-    manager *runs*: a `dpkg-query` present but broken and one absent are the same
-    answer to this caller and different answers to `which`. `which` only decides
-    *which* binary is being asked about, and answers the absent case for free.
+    A probe rather than `which` alone, because the question is whether the manager
+    *runs*: a `dpkg-query` present but broken and one absent are the same answer
+    here and different answers to `which`.
     """
     found = shutil.which(binary)
     return bool(found) and _probe(found)
@@ -290,19 +283,15 @@ def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
 def stop_service(manager: str, package: str, unit: str) -> None:
     """Stop whatever supervises a package, before the package goes.
 
-    Neither `pacman -R` nor `brew uninstall` stops a running daemon: the process
-    outlives its own package, holding the ports and the state directory the
-    replacement is about to be pointed at — which is the two-daemons-over-one-config
-    state `GithubRelease.supersedes` exists to prevent, recreated by the very act of
-    honouring it.
+    Neither `pacman -R` nor `brew uninstall` stops a running daemon, so the process
+    outlives its package holding the ports and state directory the replacement is
+    about to be pointed at.
 
-    Best effort, and deliberately so. A package with no service, a service already
-    stopped, and a `brew` that never registered one all report failure, and all three
-    are the ordinary case. What is not tolerable is not trying.
+    **Best effort by design**: a package with no service, one already stopped, and a
+    `brew` that never registered one all report failure and are all ordinary.
 
-    `unit` comes from the release's own declaration rather than from the package,
-    because upstream and the distro package publish the same unit filename — which
-    is what makes the name knowable here at all.
+    `unit` comes from the release's declaration rather than the package, because
+    upstream and the distro publish the same unit filename.
     """
     if manager in REMOVES_AS_ROOT and unit and systemd.available():
         systemd.disable(unit)
@@ -376,80 +365,53 @@ OUTDATED: dict[str, tuple[str, ...]] = {
 }
 """How each manager is asked what it has installed and behind.
 
-**A manager that compares against a local index answers from whenever that index
-was last synced.** `pacman -Qu` reads `/var/lib/pacman/sync`, so it reports what
-was behind at the last `-Sy` and nothing since. Measured on this machine
-2026-08-22, against a database 39 hours old: `pacman -Qu` printed nothing while
-ten packages were behind, and `plan` said "pacman has nothing to upgrade". That
-is the release cache's bug in a second manager — a figure correct when written,
-answering a question asked later.
+**A manager comparing against a local index answers from whenever that index was
+last synced.** `pacman -Qu` reports what was behind at the last `-Sy` and nothing
+since. `checkupdates` cures it by refreshing a private copy under `fakeroot`;
+refreshing the real one is not an option, because `pacman -Sy` without the `-u` is
+the partial-upgrade state Arch does not support. apt has the same defect and no
+equivalent, which is what `_apt_outdated` does by hand.
 
-`checkupdates` is pacman-contrib's answer to it. It copies the sync database to a
-private path, refreshes *that* under `fakeroot`, and reads the copy — so the
-machine's own database is untouched and nothing needs root. Refreshing the real
-one is not an option: `pacman -Sy` without the `-u` is the partial-upgrade state
-Arch does not support, and a read verb must not leave a machine in it.
+`--nocolor` because `Color` in `pacman.conf` puts escape codes in front of the
+first field, which `_names` reads.
 
-apt has the same defect and ships no equivalent, so `_apt_outdated` does the same
-thing by hand and the row here is only its second half — the listing, which that
-function runs against the copy it refreshed.
+`yay -Qu --aur` rather than a bare `-Qu`: only yay knows an AUR package's upstream
+version, and `--aur` stops the two Arch rows counting the same repo package twice.
 
-`--nocolor` because `Color` in `pacman.conf` would otherwise put escape codes in
-front of the first field, and `_names` reads that field. A parser that depends on
-a config file is one that works here and not on the next box.
-
-`yay -Qu --aur` rather than a bare `-Qu`: both list the same local packages, but
-only yay knows an AUR package's upstream version, so pacman reports every one of
-them current forever. `--aur` is what keeps the two Arch rows from counting the
-same repo package twice once `checkupdates` starts finding them.
-
-The cask read is Homebrew's default, which excludes a cask declaring
-`auto_updates`. Such a cask carries its own updater, and brew's idea of its
-version is the Caskroom metadata rather than the bundle on disk — so asking
-greedily reports an app that already updated itself as behind, and the row never
-converges however many times `apply` runs. `UPGRADE` says what acting on that
-answer costs.
+**The cask read is deliberately not greedy.** A cask declaring `auto_updates`
+carries its own updater, and brew reads the Caskroom metadata rather than the
+bundle — so a greedy ask reports an app that already updated itself as behind, and
+the row never converges however often `apply` runs.
 """
 
 EMPTY_IS_NONZERO: frozenset[str] = frozenset({'pacman', 'aur'})
 """Which currency queries report "nothing to upgrade" as a failure.
 
-`checkupdates` exits 2 having printed nothing when every package is current, and
-`yay -Qu` exits 1 — both the query's convention for an empty result rather than an
-error, the same one `grep` uses. Reading that as "the manager could not answer" is
-what the first version of this did, and it reported a fully-current Arch box as
-unmeasurable.
+`checkupdates` exits 2 and `yay -Qu` exits 1 having printed nothing when every
+package is current — the empty-result convention `grep` uses. Read as "could not
+answer", a fully-current Arch box is unmeasurable.
 
-Only these two, and only with no output: a genuine failure prints to stderr, which
-`Output.QUIET` keeps in the same transcript, so a non-zero exit that said something
-is still a non-answer. `checkupdates` dies that way for every real fault it has —
-no fakeroot, an unwritable database copy, a sync that failed.
+**Only with no output.** A genuine failure prints to stderr, which `Output.QUIET`
+keeps in the same transcript, so a non-zero exit that said something is still a
+non-answer — which is how `checkupdates` dies for every real fault it has.
 """
 
 NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman', 'apt'})
 """Which currency reads reach the network, and so are the ones `--cached` declines.
 
-None of them has a local answer worth giving. Flathub's available versions live on
-Flathub, the App Store has no offline catalogue, and `yay -Qu --aur` asks the AUR's
-RPC about every AUR package — measured at 41% CPU against `yay -Qu --repo`'s 103%,
-which is the tell that a process is waiting rather than working.
+None has a local answer worth giving: Flathub's versions live on Flathub, the App
+Store has no offline catalogue, and `yay -Qu --aur` asks the AUR's RPC per package.
 
-`pacman` and `apt` are the two that look wrong and are not. Each names a read that
-refreshes a private copy of an index before consulting it, and the local answer
-each replaced was worse than no answer: `pacman -Qu` and `apt list --upgradable`
-against stale indexes report a machine current, which reads as measured. `OUTDATED`
-and `_apt_outdated` carry what each was measured at.
+**`pacman` and `apt` look wrong here and are not.** Each names a read that
+refreshes a private index copy first, replacing a local answer that was worse than
+none — a stale index reports a machine current, which reads as measured.
 
-brew and its casks are the ones genuinely left out. `brew outdated` reads a local
-tap clone that goes stale the same way, and this has not been measured on a Mac —
-so their absence here records what was checked rather than a claim they are exempt.
+**brew and its casks are left out because nobody has measured them on a Mac**, not
+because they are exempt. `brew outdated` reads a tap clone that goes stale the same
+way.
 
-**This names round trips; it does not ration them.** Every read verb measures, so
-all five are asked on a plain `plan` or `check`, and the set is what a run declining
-the network consults to know which reads it must skip. Together they are a couple of
-seconds, worth not spending when somebody has said they do not want the network —
-and worth spending every other time, because what a machine is behind on is exactly
-what they asked about.
+This names round trips and does not ration them: all five are asked on a plain
+`plan` or `check`, and this is what a run declining the network skips.
 """
 
 UPGRADE: dict[str, tuple[str, ...]] = {
@@ -468,19 +430,15 @@ support partial upgrades at all, and for the rest a declared package's
 dependencies are as much this repo's business as the package. `pacman -S <name>`
 would upgrade one package and leave the machine in a combination nobody tests.
 
-The pacman and yay rows are the same command as their `REFRESH`, because on Arch
-the sync *is* the upgrade. Spelling it twice is deliberate: `refresh` runs before
-an install, `upgrade` runs because a machine is behind, and a later change to one
-should not silently move the other.
+The pacman and yay rows repeat their `REFRESH` command, because on Arch the sync
+*is* the upgrade. Spelled twice deliberately: a later change to one must not
+silently move the other.
 
-Brew is the cask's installer and never its updater, which is what leaving
-`--greedy` off buys. An upgrade deletes the app bundle and unpacks a fresh copy,
-and macOS can read the replacement as a different app and drop the TCC grants the
-old one held. For an app holding Accessibility that is not cosmetic:
-BetterTouchTool's event tap dies with the grant, and macOS can freeze mouse and
-keyboard input until it is re-granted by hand. `--adopt` on `INSTALL` is the other
-half — a cask arrives once, over whatever bundle is already there, and afterwards
-the app's own updater owns its version.
+**Brew is the cask's installer and never its updater**, which is what leaving
+`--greedy` off buys. An upgrade unpacks a fresh bundle, macOS can read it as a
+different app and drop the TCC grants the old one held — and for an app holding
+Accessibility that freezes mouse and keyboard until it is re-granted by hand.
+`--adopt` on `INSTALL` is the other half.
 """
 
 
@@ -506,31 +464,20 @@ def _apt_redirect(scratch: Path) -> tuple[str, ...]:
 def _apt_outdated() -> frozenset[str] | None:
     """apt's currency, measured against an index this run refreshed itself.
 
-    The same defect `checkupdates` exists to cure on Arch, and apt ships nothing
-    equivalent. `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers
-    from whenever that was last `apt-get update`d. Measured 2026-08-22 in the
-    Ubuntu test image: the machine's own lists reported nothing upgradable while a
-    refreshed copy reported eighteen packages.
+    `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers from whenever
+    that was last updated — the defect `checkupdates` cures on Arch, with no apt
+    equivalent. A redirected `update` needs no root and touches nothing the machine
+    reads, seeded from `APT_LISTS` because a cold fetch is 25.6 MB against a 2.8 MB
+    delta.
 
-    apt takes its whole state layout from options, so a redirected `update` needs no
-    root and touches nothing the machine reads. The copy is seeded from
-    `APT_LISTS` for the reason checkupdates copies the pacman database: a cold fetch
-    is 25.6 MB and a delta from what the machine already has is 2.8 MB. Thrown away
-    afterwards, so nothing accumulates and there is no second index on disk.
+    **A refresh that fails is a non-answer, never a smaller one.** An empty seed
+    reports *nothing behind*, which declares a machine current on a run that
+    reached no archive — and the Debian test image builds exactly that state.
+    `by_currency` turns the `None` into UNKNOWN with a cause.
 
-    **A refresh that fails is a non-answer, not a smaller one.** Listing against
-    whatever the seed happened to hold reports a count nobody measured, and an empty
-    seed reports *nothing behind* — a machine declared current by a run that reached
-    no archive. That is `NETWORKED`'s own thesis inverted, and this repo's Debian
-    image builds exactly that state: `tests/install/docker/Dockerfile` runs `rm -rf
-    /var/lib/apt/lists/*`, so the seed there is empty by construction and only the
-    network is missing. `None` is what the pacman path already answers for the same
-    failure, and `by_currency` turns it into UNKNOWN with a cause.
-
-    An `apply` therefore runs `apt-get update` twice: this one to decide what is
-    behind, and `REFRESH`'s privileged one before installing. That is the order
-    doing its job rather than a duplicate — measuring must not escalate, and
-    installing must resolve against the machine's real index.
+    An `apply` therefore runs `apt-get update` twice, which is the order working:
+    measuring must not escalate, and installing must resolve against the machine's
+    real index.
     """
     with tempfile.TemporaryDirectory(prefix='dotfiles-apt-') as directory:
         scratch = Path(directory)
@@ -552,19 +499,14 @@ def _apt_outdated() -> frozenset[str] | None:
 def outdated(manager: str) -> frozenset[str] | None:
     """What this manager has installed and behind, or None where it cannot say.
 
-    None rather than an empty set, because "nothing is behind" and "nobody
-    asked" are the difference between MATCHED and UNKNOWN — and reporting a
-    machine current because its package manager is absent is the failure this
-    whole resource exists to avoid.
+    **None rather than an empty set**: "nothing is behind" and "nobody asked" are
+    MATCHED against UNKNOWN, and reporting a machine current because its package
+    manager is absent is the failure this resource exists to avoid. An empty set is
+    the answer for a manager that listed nothing.
 
-    An empty result is also returned for a manager with nothing to upgrade, and
-    that is the answer, not a non-answer: the command exited 0 having listed
-    nothing.
-
-    apt is the one manager whose read is two commands and a scratch directory
-    rather than a row of argv, which is why it branches here instead of being
-    expressed in `OUTDATED`. The probe still guards it: `apt-get` ships in the same
-    package as `apt`, so one answering `--version` vouches for both.
+    apt branches here rather than in `OUTDATED` because its read is two commands
+    and a scratch directory. `apt-get` ships with `apt`, so one `--version` vouches
+    for both.
     """
     command = OUTDATED.get(manager)
     if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
@@ -625,18 +567,12 @@ to answer does not hold the run. Same bound and same reason as
 CURRENCY_SECONDS = 90.0
 """How long a currency read may take before it is a non-answer.
 
-Every read in `NETWORKED` reaches a network through a subprocess, and a subprocess
-is the one shape a network call can wear that nothing else here bounds — `httpx2`
-carries `REQUEST_TIMEOUT_SECONDS` and `effects.run` defaults to no deadline at all.
+**Bounded here because no layer above does**: `httpx2` carries its own timeout and
+`effects.run` defaults to none, so a subprocess reaching the network is unbounded
+otherwise. A `checkupdates` hanging behind a firewall hangs `dotfiles plan` with
+nothing on screen, and hangs the timer's `Type=oneshot` unit — whose start timeout
+systemd disables by default, so an active unit suppresses its own next fire.
 
-Bounded at *this* layer because no layer above does. Every read verb makes these
-calls now, so a `checkupdates` that hangs behind a firewall hangs `dotfiles plan`
-at a prompt with nothing on screen, and hangs the timer's `Type=oneshot` unit,
-whose start timeout systemd disables by default — an active unit then suppresses
-its own next fire.
-
-Much longer than `PROBE_SECONDS` on purpose: this is a sync of a package index
-over whatever link the machine has, where that one is a local binary answering
-`--version`. Expiry is `effects.run` returning not-ok, which each caller already
-turns into the non-answer it is.
+Much longer than `PROBE_SECONDS`, which bounds a local binary answering
+`--version` rather than a package-index sync.
 """

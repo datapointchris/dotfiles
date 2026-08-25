@@ -508,16 +508,13 @@ SPARSE_SUFFIX = '-sparse'
 def carries_everything(name: str, described: bundle.Description | None = None) -> bool:
     """Whether a bundle holds the whole declaration rather than a difference.
 
-    From the name unless a caller already has the document. A remote listing is
-    names and nothing else — the sidecar carries `completeness` and reading one
-    per row is a transfer per bundle, which `bundle list` already declined to
-    spend for this same fact — so a rule that needs the document cannot serve both
-    sweeps. The two cannot disagree on a bundle this tool built: `build` computes
-    the name's suffix and sets `built_from` under one condition, and `describe`
-    reads completeness off `built_from` alone.
+    From the name unless a caller already has the document, because a remote
+    listing is names alone and reading a sidecar per row is a transfer per bundle.
+    The two cannot disagree on a bundle this tool built: one condition sets both
+    the name's suffix and `built_from`.
 
-    An unnamed shape reads as full, which is the direction that costs one retained
-    file rather than a deleted one.
+    An unnamed shape reads as full, which costs a retained file rather than a
+    deleted one.
     """
     if described is not None:
         return not described.sparse
@@ -527,19 +524,16 @@ def carries_everything(name: str, described: bundle.Description | None = None) -
 def base_of(names: tuple[str, ...]) -> str | None:
     """The newest full bundle in one machine's set, which retention must not remove.
 
-    `providers.locate` reads the stack newest-first, so a sparse bundle wins for
-    what it carries and falls through to the older full bundle for the rest. That
-    fallthrough is what makes a sparse bundle possible, and retention could not
-    see it: a name sorts as its stamp does and a full bundle is always the oldest,
-    so it was always the first thing a sweep took. `prune` promised the newest is
-    never removed, which is true and insufficient when the newest is sparse.
+    A sparse bundle falls through to the older full one for what it does not carry.
+    Retention sorts by stamp and a full bundle is always the oldest, so without this
+    pin a sweep takes the base first — "the newest is never removed" is true and
+    insufficient when the newest is sparse.
 
-    Pinned only while it is the newest full one, so a newer full build releases the
-    older and the stack stays bounded at the limit plus one.
+    Pinned only while it is the newest full one, so the stack stays bounded at the
+    limit plus one.
 
-    None for a machine holding only sparse bundles. Nothing is pinned there and
-    retention behaves as it did, which is right — a stack with no base is already
-    broken and holding one of its members back cannot repair it.
+    None where only sparse bundles exist: a stack with no base is already broken,
+    and holding a member back cannot repair it.
     """
     return max((name for name in names if carries_everything(name)), default=None)
 
@@ -576,25 +570,16 @@ class Sweep:
 def retention(names: tuple[str, ...], keep: int) -> Sweep:
     """What a sweep of one machine's bundles would remove, and what it pins.
 
-    **One function, because the rule has three parts and three callers need all
-    three.** The local sweep, the remote sweep and the post-upload nudge each want
-    `base_of`, `superseded` and drop-the-base, in that order. Composed at each
-    site they agree only while somebody keeps them agreeing, and the drift is
-    invisible — a nudge counting against a different limit from the sweep it
-    points at reads as a correct number. `standards/python.md` § "Ask whatever owns
-    a fact; never work it out a second time" is the rule.
+    **One function, because three callers need all three parts in order.**
+    Composed at each site they drift invisibly — a nudge counting against a
+    different limit from the sweep it points at reads as a correct number.
 
-    **The floor is not enforced here, and that is deliberate.** `remote.read`
-    refuses a declared `keep_bundles` below one and `bundle prune` refuses a
-    `--keep` below one, so a value arriving here has already been through a parser
-    that said so. A third clamp would be the silent behaviour those two refusals
-    exist to replace: a caller passing zero would get one and no sentence saying
-    the flag was not honoured. Where the number is wrong, it is wrong loudly at
-    the door it came in through.
+    **The floor is not enforced here, deliberately.** `remote.read` and `bundle
+    prune` both refuse a value below one, and a third clamp would silently hand a
+    caller passing zero a one with no sentence saying the flag was not honoured.
 
-    Pure and taking names, so the two sweeps that read a remote and the one that
-    reads a cache all answer by the identical rule without any of them holding a
-    transport.
+    Pure and taking names, so both remote sweeps and the cache sweep answer by the
+    identical rule without holding a transport.
     """
     past = transport.superseded(names, keep)
     base = base_of(names)
@@ -620,22 +605,16 @@ def swept(grouped: dict[str, tuple[str, ...]], keep: int) -> Sweep:
 def newest(*searched: Path, machine: str = '') -> Path | None:
     """The bundle archive to stage, or None where there is none to find.
 
-    Ranked across every directory rather than taking the first that holds any.
-    The stamp in a name is now to the second, so two archives in different
-    directories order unambiguously — and the cache a download writes into is a
-    third place a tarball legitimately sits, which no first-directory-wins order
-    can rank against a copy beside the checkout.
+    Ranked across every directory rather than taking the first that holds any: the
+    stamp in a name is to the second, so archives in different directories order
+    unambiguously.
 
-    `machine` skips archives built for another one. Without it the ranking and
-    the refusal disagree: `bundle download --machine X` writes a peer's archive
-    into the same cache, so a peer bundle that sorts newest wins here and is then
-    refused by `stage`, ending the run while this machine's own installable
-    bundle sits in the same directory with nothing able to reach it.
+    **`machine` skips archives built for another one**, or the ranking and the
+    refusal disagree — a peer bundle sorting newest wins here and is then refused
+    by `stage`, ending the run while this machine's own bundle sits beside it.
 
-    A stranger — a name this tool did not write, which `manifest_of` answers `''`
-    for — still passes, because a hand-carried tarball is a legitimate thing to
-    stage and `stage`'s own `bundle.json` check is the backstop. `''` means no
-    filter at all, which is the half-configured box `stage` already tolerates.
+    A stranger still passes, because a hand-carried tarball is legitimate and
+    `stage`'s `bundle.json` check is the backstop. `''` means no filter at all.
     """
     directories = searched or (paths.archive_dir(), Path.cwd(), Path.home())
     found = [archive for directory in directories if directory.is_dir() for archive in directory.glob(ARCHIVES)]
@@ -647,41 +626,25 @@ def newest(*searched: Path, machine: str = '') -> Path | None:
 def stage(archive: Path, machine: str, box: str) -> Path:
     """Unpack a bundle into its own directory, and say which one.
 
-    One directory per bundle rather than one tree they all merge into. Merging
-    refreshes the *files* and replaces `manifest.txt`, so a bundle staged over
-    another leaves everything the first carried on disk and unlisted — and under
-    `--offline` the manifest is the only door in, which makes those files
-    unreachable and the tools they install unmeasurable. Keeping them apart also
-    means a machine can say which bundle any staged file came from.
+    **One directory per bundle, never one merged tree.** Merging replaces
+    `manifest.txt`, and under `--offline` the manifest is the only door in — so
+    everything the first bundle carried is left on disk, unlisted and unreachable.
 
-    Unpacked into a sibling directory and moved, rather than extracted straight
-    into the staging directory. The archive's single member is named `installers`,
-    so extracting in place would land on a directory of that name whatever the
-    archive is called.
+    Unpacked into a sibling and moved, because the archive's single member is named
+    `installers` whatever the archive is called.
 
-    Re-staging the same archive replaces its own directory and touches no other,
-    so an interrupted run can be repeated without losing what a different bundle
-    staged.
+    Re-staging the same archive replaces its own directory and touches no other.
 
-    **A bundle built for another machine is refused**, and `machine` is what it is
-    measured against. `bundle download --machine X` writes into the same cache
-    `newest` ranks, so fetching another box's bundle to look at it is now one
-    command away from `apply --offline` staging it — a hazard that did not exist
-    while a bundle could only be carried in by hand. `Staging.headline` already
-    records why failing up front beats failing one tool at a time; what was
-    missing until `bundle.json` was anything that knew the target.
+    **A bundle built for another machine is refused.** `bundle download --machine X`
+    writes into the same cache `newest` ranks, so fetching another box's bundle to
+    look at it is one command away from `apply --offline` staging it.
 
-    **`box` is the second identity and is threaded the same way**, because the
-    manifest cannot answer which of two machines sharing it a sparse bundle was
-    planned against. Injected rather than resolved here: an ambient read answers
-    `$MACHINE` or the default, so `apply --machine X --offline` where X's manifest
-    carries a different `network_trust` would compare a digest against a hostname
-    and refuse a valid bundle. The caller already resolved a session to get
-    `machine`; both come from it.
+    **`box` is the second identity and is injected, never resolved here**: the
+    manifest cannot say which of two machines sharing it a sparse bundle was
+    planned against, and an ambient read would compare a digest against a hostname.
 
-    Either empty means the caller could not resolve one, which is a real state on
-    a half-configured box. The check that needs it does not run there and the
-    archive stages, because unpacking is this verb's job and refusing would make a
+    Either empty means the caller could not resolve one, which is real on a
+    half-configured box. The archive still stages, because refusing would leave a
     machine with no `$MACHINE` unable to install at all.
     """
     staged = paths.staging_dir() / stem(archive)

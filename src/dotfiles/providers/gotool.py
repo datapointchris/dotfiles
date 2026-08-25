@@ -69,21 +69,15 @@ def module_version(binary: Path) -> str | None:
     """The module version `go install` actually resolved, read back from the
     binary rather than asked of it.
 
-    Exact where `--version` is not: the toolchain has stamped this into every
-    binary it links since 1.18, using the same module-and-version pair `go
-    install <module>@latest` resolved, while a vendor's own banner is whatever
-    `-ldflags -X` a *release* build stamped it with — a flag `go install` never
-    passes, which is why `gdu --version` says `development` for every copy this
-    machine has ever built.
+    Exact where `--version` is not: a vendor's banner is whatever `-ldflags -X` a
+    *release* build stamped, a flag `go install` never passes — which is why `gdu
+    --version` says `development` for every copy built here.
 
-    The `mod` line is the one to read, not `path`: `path` carries the module
-    below its command directory and, for gdu and sesh, a `/v5` or `/v2` major
-    version suffix that is part of the import path and not a version at all.
-    `mod` names the same module once more and follows it with the version on its
-    own, so nothing here has to strip a suffix to tell the two apart.
+    **Read the `mod` line, never `path`.** `path` carries the command subdirectory
+    and a `/v5` or `/v2` major-version suffix that is part of the import path
+    rather than a version.
 
-    None where `go` cannot answer this — not installed, or a binary it does not
-    recognise as one it built — same as a probe that would not say.
+    None where `go` cannot answer, same as a probe that would not say.
     """
     go = toolchain.go_command()
     if not go:
@@ -127,18 +121,14 @@ restored from a bundle.
 def tagged(version: str | None) -> bool:
     """Whether `go` resolved this binary from a release rather than a commit.
 
-    The half of `module_version` that decides whether its answer is a version at
-    all. `cheat` installs at `v0.0.0-20260216134545-b8098dc1b9de`, which
-    `versions.parse` reads as `(0, 0, 0)` — below every release anyone publishes,
-    so a currency comparison makes it permanently behind and reinstalls it on
-    every apply. That is the same failure `0.0.0` in a vendor banner produces, one
-    record over, and preferring the module unconditionally moved it rather than
-    fixed it.
+    A pseudo-version like `v0.0.0-20260216134545-b8098dc1b9de` parses as `(0, 0,
+    0)`, below every published release — so a currency comparison makes it
+    permanently behind and reinstalls it on every apply.
 
-    Every combination occurs across the declared tools: pseudo-versioned with a
-    correct banner, correctly tagged with a `0.0.0` banner, correctly tagged with a
-    `development` banner. No single record is authoritative; each fails in its own
-    way, and only the module's failure announces itself.
+    **No single record is authoritative.** Across the declared tools every
+    combination occurs: pseudo-versioned with a correct banner, correctly tagged
+    with a `0.0.0` banner, correctly tagged with a `development` banner. Only the
+    module's failure announces itself, which is what this reads.
     """
     return bool(version) and version != UNVERSIONED and PSEUDO_VERSION.search(version or '') is None
 
@@ -146,28 +136,18 @@ def tagged(version: str | None) -> bool:
 def installed_modules(directory: Path) -> dict[str, str]:
     """Every binary in `directory`, to the module it was built from.
 
-    One `go version -m` over the whole directory rather than one per binary: the
-    toolchain accepts a directory and answers for everything in it, which is the
-    difference between one subprocess and one per tool every time a check runs.
+    One `go version -m` over the whole directory rather than one per binary.
 
-    Reads the `mod` line for the reason `module_version` records — `path` carries
-    a command subdirectory and a major-version suffix, while `mod` names the
-    module once and cleanly.
+    **Takes the directory rather than calling `gobin()`**, or a caller measuring a
+    run's own home is answered about the home of the measuring process — which made
+    every test in the packages suite read the machine it ran on.
 
-    Takes the directory rather than calling `gobin()`, for the reason
-    `evidence.executables_on_path` takes the checkout: a caller measuring a run's
-    own home must not be answered about the home of the process doing the
-    measuring. Reading `Path.home()` here made every test in the packages suite
-    read the machine it ran on.
+    **Asked of `toolchain.go_command`, never of PATH.** A Mac has no `go` on PATH
+    and answers `unknown` for every declared tool; an Arch box reached over ssh
+    finds the pacman `/usr/bin/go` and answers plausibly with the wrong toolchain.
 
-    Asked of `toolchain.go_command` rather than of PATH, which is the difference
-    between measuring the machine and measuring the shell that launched the run.
-    A Mac has no `go` on PATH at all and answers `unknown` for every declared Go
-    tool; an Arch box reached over ssh finds the pacman `/usr/bin/go` and answers
-    plausibly with the wrong toolchain.
-
-    Empty where `go` is absent or the directory has never been created, which is
-    a machine with no Go tools rather than a failure.
+    Empty where `go` is absent or the directory does not exist, which is a machine
+    with no Go tools rather than a failure.
     """
     go = toolchain.go_command()
     if not go or not directory.is_dir():

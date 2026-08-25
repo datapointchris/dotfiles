@@ -44,17 +44,13 @@ def open_log(identity: runs.Identity) -> None:
 def intention(change: Change) -> str:
     """What the run meant to do about one measured item.
 
-    Asked of the change, never dispatched on the payload's *type*. The engine is
-    right to yield everything it measured, and three categories of that are things
-    the run never intended to touch: items nothing could measure, items only a
-    person can repair, and — on a `plan` or `check` — every row in the walk.
-    Calling those `planned` makes the record claim work nobody was going to do,
-    and the record is the only artefact a person reads afterwards.
+    **Asked of the change, never dispatched on the payload's type.** Three
+    categories the engine yields were never going to be touched — unmeasurable,
+    only a person can repair, and every row under `plan` or `check` — and calling
+    those `planned` makes the record claim work nobody intended.
 
-    Values rather than a new field, and no schema bump: `RunOutcome.action` is a
-    bare `str`, so every existing reader absorbs these. Deliberately not members of
-    `OutcomeStatus` — that enum is what `perform` did, and none of these ever reaches
-    `perform`.
+    Not members of `OutcomeStatus`: that enum is what `perform` did, and none of
+    these reaches `perform`.
     """
     if change.unmeasured:
         return 'unmeasured'
@@ -112,19 +108,12 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
 def keep(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> Path | None:
     """Write the run record and hand back where it landed, or write nothing.
 
-    Every verb records, through one function, because recording is a reader of the
-    event stream rather than a step each verb has to remember.
+    The path is returned so a failed apply can name the file rather than a command
+    to go and find it with.
 
-    **The path is returned because the caller is the only one who can say it at
-    the moment it is wanted.** A failed apply tells the reader where the full
-    record is, and naming a command there instead of a file left the one thing
-    they needed to do with it — upload it — as a hunt through
-    `$XDG_STATE_HOME`.
-
-    Failing here must not fail the run: `$XDG_STATE_HOME` is a Syncthing folder on
-    the fleet and absent on a fresh machine, and neither is a reason for a verb to
-    exit non-zero when it answered the question it was asked. Same rule as
-    `status.record`.
+    **Failing here must not fail the run**: `$XDG_STATE_HOME` is a Syncthing folder
+    on the fleet and absent on a fresh machine, and neither is a reason to exit
+    non-zero on a verb that answered its question.
     """
     try:
         return runs.write(record(events, identity, flags))
