@@ -690,8 +690,9 @@ class TestNothingIsDestroyed:
         assert 'Cannot tell whether the work here is already on origin/main' in plain(result.stderr)
 
     def test_dropping_a_rewritten_history_that_landed_needs_no_force(self, fleet, run):
-        """`drop` refused this on the same count `sweep` kept it on, and told the reader
-        the commits were on no other branch. They were — under other shas."""
+        """A history rewritten on its way onto the base carries new shas, so the local
+        ref still counts the originals. `drop` reads content rather than that count,
+        so it needs no --force here."""
         alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
 
         result = run(alpha, 'drop')
@@ -1214,7 +1215,7 @@ class TestSweep:
 
         assert alpha.exists()
         assert (alpha / 'only-copy.txt').exists()
-        assert 'changes that are on no other branch' in plain(result.stderr)
+        assert 'does not match it at the paths it touched' in plain(result.stderr)
 
     def test_a_branch_deleted_without_merging_is_kept_whatever_its_files_are_called(self, fleet, run):
         """The same shape as the test above, with one file whose name git does not print
@@ -1235,7 +1236,7 @@ class TestSweep:
         assert alpha.exists()
         assert (alpha / 'café.txt').exists()
         assert 'alpha' in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
-        assert 'changes that are on no other branch' in plain(result.stderr)
+        assert 'does not match it at the paths it touched' in plain(result.stderr)
 
     def test_ignored_build_output_does_not_block_removal(self, fleet, run):
         """`new` runs `task setup`, so a real worktree carries a .venv or a

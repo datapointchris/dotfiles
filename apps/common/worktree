@@ -164,7 +164,7 @@ class Kept(StrEnum):
     UNFETCHED_REMOTE = 'its origin could not be reached, so nothing about the remote is known'
     UNFETCHED_BASE = 'its base branch has never been fetched, so nothing can be counted'
     UNREADABLE_LANDING = 'git could not say whether its changes are on the base branch'
-    UNLANDED = 'changes that are on no other branch'
+    UNLANDED = 'the base branch does not match it at the paths it touched'
     UNPUBLISHED = 'never pushed under its own name'
     REMOTE_LIVE = 'its remote branch still exists'
     REMOTE_UNREADABLE = "git could not list origin's branches"
@@ -1685,8 +1685,9 @@ def cmd_drop(force: bool) -> int:
         if not elsewhere:
             unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
             raise Refused(
-                f'{unlanded} commit(s) here carry changes that are on no other branch',
-                "'worktree land' to keep them, or 'worktree drop --force' to lose them",
+                f'{unlanded} commit(s) here, and origin/{base} does not match them at the paths they touch',
+                f"'git cherry origin/{base} HEAD' if they landed under new shas; "
+                "'worktree land' to keep them, 'worktree drop --force' to lose them",
             )
 
     outcome, detail = dispose(checkout, path, branch, force=True)
