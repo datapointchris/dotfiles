@@ -91,7 +91,7 @@ required:
   # homelab authorize a fleet machine from one declaration rather than from a
   # copy that goes stale the day a machine is rebuilt.
   - name: WORKSTATIONS_JSON
-    description: Absolute path to this machine's fleet workstation roster
+    description: Absolute path to this machine's workstation roster
     network_trust: fleet
     capacity: workstation
     file_must_exist: true
