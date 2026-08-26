@@ -283,16 +283,24 @@ about where it belongs, and be filed once that is obvious.
 ## Regrouping the Whole Workspace
 
 Filing a window at a time keeps up only while the drift is small. `tmux-rearrange` is the bulk
-version: it reads every pane's scrollback, asks a model which panes belong together, and writes a
-script that moves them. `plan` proposes, `apply` runs what plan wrote, `show` prints the scan
-without spending a model call.
+version: it reads the scrollback of every pane in scope, asks a model which panes belong together,
+and writes a script that moves them. `plan` proposes, `apply` runs what plan wrote, `show` prints
+the scan without spending a model call.
+
+**Which panes it may touch is an argument, and the narrow reading of an absent one won.** Two
+readings were available and the deciding question was which is safe to do by accident. A second
+guard sits above the argument, because one argument cannot report that it was mistyped — an agent's
+workspace only relocates where the argument named the window holding it. `tmux-rearrange --help`
+carries the forms.
 
 **The model gets exactly one job — which panes group, and what to call each group.** That is the
 half needing judgement over prose, and it is the half nothing else can do: titles alone will not
 reveal that two conversations two windows apart both turn on the same issue. Everything geometric
 is computed locally and the tmux commands are rendered locally, so the half that can destroy work
-never comes back from a model. One invariant is enforced before a single command runs — the set of
-pane ids returned must equal the set sent, exactly once each.
+never comes back from a model. Two invariants are enforced before a single command runs. The set of
+pane ids returned must equal the set sent, exactly once each. And a window holds at most six panes.
+That second one is imposed on the answer rather than requested of it, since a limit the model is
+merely told about is honoured most of the time and a limit applied afterwards is honoured always.
 
 Layout intent is read, not guessed. **A new window opens with one pane, so any split at all was made
 by hand** — an even 188|188 is as deliberate as a dragged 183|193, and treating only the uneven case

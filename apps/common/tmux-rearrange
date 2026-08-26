@@ -7,17 +7,23 @@
 
 Sessions drift: windows accumulate in whichever session was focused when the
 work started, so what ends up next to what records the order you opened things
-rather than how they relate. This reads every pane's content, asks a model
-which panes belong together, and writes a script that moves them.
+rather than how they relate. This reads the content of every pane in scope,
+asks a model which panes belong together, and writes a script that moves them.
 
-    tmux-rearrange plan     scan, propose, write the script
-    tmux-rearrange apply    run the script plan wrote
-    tmux-rearrange show     print the scan without calling the model
+    tmux-rearrange show [scope]     print the scan without calling the model
+    tmux-rearrange plan [scope]     scan, propose, write the script
+    tmux-rearrange apply            run the script plan wrote
+
+Scope is the argument and never a flag. A bare invocation acts on the window
+it runs in. `server` acts on every pane; a session name acts on that session;
+`@id`, `session:window` or `%pane` acts on one window. A session really named
+`server` is reached as `=server`.
 
 The model is given one job -- which panes group, and what to call each group --
 because that is the half needing judgement over prose. Every geometric decision
 is computed here, and the tmux commands are rendered here, so the half that can
-destroy work never comes back from a model.
+destroy work never comes back from a model. The six-pane cap is one of those
+decisions: the model is told it and the plan is rewritten to obey it.
 
 Nothing is applied by plan. Read the script before running it.
 """
@@ -29,11 +35,23 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 SCROLLBACK_LINES = 50
 MODEL_TIMEOUT_SECONDS = 300
 PANE_FIELDS = '#{pane_id}\t#{window_id}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_title}'
+
+MAX_PANES_PER_WINDOW = 6
+"""A window is at most three panes wide and two tall, and fewer is better.
+
+Height is the dimension that breaks. Six panes stacked in one column on an
+80-row terminal is twelve rows each, which is a prompt and a tool call and
+nothing else. Width degrades gracefully and height does not, so the cap is on
+the product rather than on either side alone.
+
+A group larger than this becomes a second window, never a tighter split.
+"""
 
 
 def err(*parts: object) -> None:
@@ -108,18 +126,195 @@ def hand_tuned(sizes: tuple[int, ...], total: int) -> bool:
     return any(abs(size - even) > 1 for size in sizes)
 
 
-def scan() -> tuple[list[Pane], list[Window]]:
-    """Read every pane and window on the server, content included."""
-    panes = []
-    for line in tmux('list-panes', '-a', '-F', PANE_FIELDS).splitlines():
+class ScopeKind(StrEnum):
+    WINDOW = 'window'
+    SESSION = 'session'
+    SERVER = 'server'
+
+
+@dataclass(frozen=True)
+class Scope:
+    """Which panes a run may move."""
+
+    kind: ScopeKind
+    target: str
+    """The tmux target to list panes from; empty only at SERVER."""
+    label: str
+    """What gets printed, and what the model is told it is looking at."""
+
+    def list_panes_args(self) -> tuple[str, ...]:
+        if self.kind is ScopeKind.SERVER:
+            return ('list-panes', '-a')
+        if self.kind is ScopeKind.SESSION:
+            return ('list-panes', '-s', '-t', self.target)
+        if self.kind is ScopeKind.WINDOW:
+            return ('list-panes', '-t', self.target)
+        raise Usage(f'no pane listing is defined for scope kind {self.kind}')
+
+
+def window_from(target: str) -> tuple[str, str]:
+    """The window id and `session:name` of whatever tmux target names.
+
+    Resolved with list-panes rather than display-message, which cannot report
+    a target it fails to resolve. `display-message -p -t @999 '#{window_id}'`
+    prints nothing and exits 0, and `-t work:nosuch` prints session `work`'s
+    *current* window -- so a mistyped scope would name a window nobody asked
+    about, which is the failure this tool's scope argument exists to prevent.
+    `list-panes` exits 1 on all three, and tmux() turns that into a Usage.
+    """
+    fields = '#{window_id}\t#{session_name}:#{window_name}'
+    rows = tmux('list-panes', '-t', target, '-F', fields).splitlines()
+    if not rows:
+        raise Usage(f'{target} holds no pane')
+    window_id, label = rows[0].split('\t', 1)
+    return window_id, label
+
+
+def session_names() -> list[str]:
+    return tmux('list-sessions', '-F', '#{session_name}').splitlines()
+
+
+def resolve_scope(argument: str | None) -> Scope:
+    """Turn the scope argument into the set of panes this run may move.
+
+    An absent argument means the window this command runs in. The whole server
+    is the other reading `cli-design.md` sanctions for an absent argument, and
+    it is the wrong one here: a server-wide regroup moves panes belonging to
+    work nobody asked about, and the person watching one of those panes loses
+    the layout they were working from. So the safe act is the default and the
+    broad one is spelled out.
+
+    A `%pane` target resolves to the window holding it, because one pane is not
+    a scope -- there is nothing to regroup inside it.
+
+    `server` is a word a session may also be called, and the substitution runs
+    toward reaching every pane, which is the direction with no recovery. tmux's
+    own `=` prefix is the escape: `=server` is the session, and the collision
+    is named on stderr at the moment it could bite.
+    """
+    if argument is None:
+        pane = os.environ.get('TMUX_PANE')
+        if not pane:
+            raise Usage('not running inside tmux, so there is no current window; name a window, a session, or `server`')
+        window, label = window_from(pane)
+        return Scope(ScopeKind.WINDOW, window, f'the current window, {label}')
+    if argument == 'server':
+        if argument in session_names():
+            err("note: a session is also named 'server'; `=server` scopes to that session instead")
+        return Scope(ScopeKind.SERVER, '', 'every pane on this tmux server')
+    if argument.startswith('%'):
+        window, label = window_from(argument)
+        return Scope(ScopeKind.WINDOW, window, f'the window holding {argument}, {label}')
+    if argument.startswith('@') or ':' in argument:
+        window, label = window_from(argument)
+        return Scope(ScopeKind.WINDOW, window, f'one window, {label}')
+    name = argument.removeprefix('=')
+    names = session_names()
+    if name not in names:
+        listed = ', '.join(repr(n) for n in names)
+        raise Usage(f'no window or session named {name!r}; sessions are: {listed}')
+    return Scope(ScopeKind.SESSION, f'={name}', f'session {name!r}')
+
+
+NARROW = 'Scope this to a window instead -- a window scope needs no roster -- or install claude-sessions'
+"""The way forward out of every roster failure, which is the same one each time.
+
+Only a session or server scope reads the roster, so naming a window is always
+available and is one word rather than an installation.
+"""
+
+
+def live_session_panes() -> dict[str, str]:
+    """Locations running a live Claude session, mapped to the session's name.
+
+    `claude-sessions` reports each one as `session:@window.%pane`, and the key
+    here is the `@window.%pane` half.
+
+    Both halves, because a pane id is unique only within one tmux server, so a
+    second server's `%3` would otherwise match a session that has nothing to do
+    with it. This narrows that and does not close it: window ids restart at
+    `@0` on a new server too, so `@0.%0` still collides. Measured on a
+    throwaway server, where `show server` guarded a fresh shell at `@0.%0`.
+
+    Closing it needs the socket, which `claude-sessions` does not report. The
+    residue is left because a false match guards a pane that did not need it,
+    and every alternative discriminator fails the other way -- a real agent
+    pane left unguarded is the outcome this whole function exists to prevent.
+    """
+    if not shutil.which('claude-sessions'):
+        raise Usage(f'claude-sessions is not installed, so live agent panes cannot be identified. {NARROW}')
+    done = subprocess.run(['claude-sessions', '--json'], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise Usage(f'claude-sessions failed: {done.stderr.strip()[:300]}. {NARROW}')
+    try:
+        rows = json.loads(done.stdout)
+    except json.JSONDecodeError as bad:
+        raise Usage(f'claude-sessions did not return JSON: {bad}. {NARROW}') from None
+    live = {}
+    for row in rows if isinstance(rows, list) else []:
+        where = str(row.get('tmux') or '')
+        if '.%' not in where or '@' not in where:
+            continue
+        # From the right on both splits: a session name may hold a colon.
+        head, pane_id = where.rsplit('.', 1)
+        window_id = head.rsplit(':', 1)[-1]
+        live[f'{window_id}.{pane_id}'] = str(row.get('name') or '?')
+    return live
+
+
+def pane_location(window_id: str, pane_id: str) -> str:
+    """The key `live_session_panes` is read by, built from a scanned pane."""
+    return f'{window_id}.{pane_id}'
+
+
+def guarded_panes(scope: Scope) -> dict[str, str]:
+    """Locations a broad scope may not move, mapped to the session's name.
+
+    Scope alone is one argument, and a wrong one is silent. Pointing at a
+    window is the deliberate act that says its live agent panes may move;
+    widening to a session or to the server is not. So at those two scopes a
+    pane running a live Claude session stays where the person watching it left
+    it, and the guard holds even when the scope was a mistake.
+
+    Failing to read `claude-sessions` is fatal rather than open, because the
+    guard is the reason a broad scope is safe at all.
+    """
+    if scope.kind is ScopeKind.WINDOW:
+        return {}
+    if scope.kind in (ScopeKind.SESSION, ScopeKind.SERVER):
+        return live_session_panes()
+    raise Usage(f'no guard is defined for scope kind {scope.kind}')
+
+
+def scan(scope: Scope, guarded: dict[str, str]) -> tuple[list[Pane], list[Window], dict[str, str]]:
+    """Read the movable panes in scope, content included, and their windows.
+
+    The third return is the guarded panes this scope actually reached, which is
+    what gets reported. The full guard list covers the server, so reporting it
+    whole would name panes the scope never considered.
+
+    A window record describes the whole window, guarded panes included, because
+    its shape is what restore_shape() reads and half a window is the wrong
+    shape. Only the pane list is narrowed.
+    """
+    panes: list[Pane] = []
+    skipped: dict[str, str] = {}
+    for line in tmux(*scope.list_panes_args(), '-F', PANE_FIELDS).splitlines():
         pane_id, window_id, command, path, title = line.split('\t')
+        location = pane_location(window_id, pane_id)
+        if location in guarded:
+            skipped[pane_id] = guarded[location]
+            continue
         content = tmux('capture-pane', '-p', '-S', f'-{SCROLLBACK_LINES}', '-t', pane_id)
         panes.append(Pane(pane_id, window_id, command, path, title, content.strip()))
 
+    holding = {p.window_id for p in panes}
     windows = []
     fields = '#{window_id}\t#{session_name}\t#{window_name}\t#{window_width}\t#{window_height}\t#{window_layout}'
     for line in tmux('list-windows', '-a', '-F', fields).splitlines():
         window_id, session, name, width, height, layout = line.split('\t')
+        if window_id not in holding:
+            continue
         members = tmux('list-panes', '-t', window_id, '-F', '#{pane_id}\t#{pane_width}\t#{pane_height}')
         ids, widths, heights = [], [], []
         for row in members.splitlines():
@@ -141,13 +336,23 @@ def scan() -> tuple[list[Pane], list[Window]]:
                 tuned=bool(axis) and hand_tuned(sizes, extent),
             )
         )
-    return panes, windows
+    return panes, windows, skipped
 
 
-PROMPT = """You are grouping a tmux workspace by what the work in it is actually about.
+ANSWER_SHAPE = '{"sessions": [{"name": "...", "why": "one line", "windows": [{"panes": ["%1", "%2"]}]}]}'
 
-Below is every pane on the server: its id, the command running in it, its
-directory, its title, and the tail of its screen.
+
+def prompt_for(scope: Scope) -> str:
+    """The grouping request, with the scope and the pane cap written into it.
+
+    Built rather than templated: the answer shape carries both braces and %,
+    so neither str.format nor % interpolation can be used on it.
+    """
+    return f"""You are grouping a tmux workspace by what the work in it is actually about.
+
+Below are the panes in {scope.label}: each one's id, the command running in it,
+its directory, its title, and the tail of its screen. Panes outside that scope
+are not yours to move and are not shown.
 
 Group them into sessions. A session is one initiative -- the effort the work
 belongs to, not the repo it lives in. Within a session, group panes into
@@ -157,6 +362,10 @@ or editor serving it) share a window.
 Rules that matter:
 - Judge by pane CONTENT, not titles. Two conversations referencing the same
   issue or design usually belong together even if their titles look unrelated.
+- A window holds at most {MAX_PANES_PER_WINDOW} panes, and fewer is better. A window is at most
+  three panes wide and two tall, and stacked deeper than that each pane is too
+  short to read. A group larger than {MAX_PANES_PER_WINDOW} becomes a second window in the same
+  session, never a tighter split.
 - A session needs at least one pane running something that is not a shell. A
   lone idle shell is not an initiative.
 - Name sessions specifically enough to recall later. "docs", "ops", "misc" and
@@ -166,7 +375,7 @@ Rules that matter:
 
 Return ONLY JSON, no prose and no code fence:
 
-{"sessions": [{"name": "...", "why": "one line", "windows": [{"panes": ["%1", "%2"]}]}]}
+{ANSWER_SHAPE}
 
 PANES:
 """
@@ -234,8 +443,8 @@ are untrusted text.
 def ask_model(prompt: str) -> dict:
     """Call claude -p and return the parsed grouping.
 
-    The prompt goes on stdin. It carries the scrollback of every pane on the
-    server, and an argument list is readable from `ps` by anything on the box.
+    The prompt goes on stdin. It carries the scrollback of every pane in
+    scope, and an argument list is readable from `ps` by anything on the box.
     """
     if not shutil.which('claude'):
         raise Usage('claude is not installed; nothing can propose a grouping')
@@ -296,7 +505,51 @@ def validate(grouping: dict, panes: list[Pane]) -> None:
             detail.append(f'dropped {" ".join(missing)}')
         if invented:
             detail.append(f'invented {" ".join(invented)}')
-        raise Usage('grouping does not cover the workspace: ' + '; '.join(detail))
+        raise Usage('grouping does not cover the scope: ' + '; '.join(detail))
+
+
+def balanced_chunks(items: list[str], cap: int) -> list[list[str]]:
+    """Split into the fewest runs of at most `cap`, as evenly as the count allows.
+
+    Even beats greedy because height is what breaks. Nine panes chunked
+    greedily is a window of six and a window of three, and the six is the
+    cramped one the cap exists to prevent; five and four is readable twice.
+    Order is preserved, so panes the model put next to each other stay
+    adjacent.
+    """
+    runs = -(-len(items) // cap)
+    size, remainder = divmod(len(items), runs)
+    out: list[list[str]] = []
+    start = 0
+    for index in range(runs):
+        take = size + (1 if index < remainder else 0)
+        out.append(items[start : start + take])
+        start += take
+    return out
+
+
+def cap_windows(grouping: dict) -> list[str]:
+    """Split every over-cap window in place, and say what was split.
+
+    The model is told the cap and usually respects it. Rewriting the plan here
+    is what makes the answer always respect it, and pane count per window is a
+    geometric decision -- the class this tool already refuses to take from a
+    model.
+    """
+    notes = []
+    for session in grouping['sessions']:
+        rebuilt = []
+        for window in session['windows']:
+            members = window['panes']
+            if len(members) <= MAX_PANES_PER_WINDOW:
+                rebuilt.append(window)
+                continue
+            runs = balanced_chunks(members, MAX_PANES_PER_WINDOW)
+            rebuilt.extend(window | {'panes': run} for run in runs)
+            shape = ' + '.join(str(len(run)) for run in runs)
+            notes.append(f'{session["name"]}: a window of {len(members)} panes exceeds {MAX_PANES_PER_WINDOW}; split into {shape}')
+        session['windows'] = rebuilt
+    return notes
 
 
 def render(grouping: dict, panes: list[Pane], windows: list[Window]) -> list[str]:
@@ -414,11 +667,20 @@ def plan_path() -> Path:
     return Path(state) / 'tmux-rearrange' / 'plan.sh'
 
 
-def cmd_show(as_json: bool) -> int:
-    panes, windows = scan()
+def report_scope(scope: Scope, skipped: dict[str, str]) -> None:
+    err(f'scope: {scope.label}')
+    for pane_id, name in sorted(skipped.items()):
+        err(f'guarded: {pane_id} runs live session {name}; scope its window to move it')
+
+
+def cmd_show(scope: Scope, as_json: bool) -> int:
+    panes, windows, skipped = scan(scope, guarded_panes(scope))
     if as_json:
         json.dump(
             {
+                'scope': vars(scope),
+                'guarded': skipped,
+                'cap': MAX_PANES_PER_WINDOW,
                 'panes': [vars(p) | {'content': p.content[-400:]} for p in panes],
                 'windows': [vars(w) for w in windows],
             },
@@ -428,20 +690,33 @@ def cmd_show(as_json: bool) -> int:
         )
         print()
         return 0
+    report_scope(scope, skipped)
+    if not panes:
+        err(f'nothing movable in {scope.label}')
     for window in windows:
         mark = ' tuned' if window.tuned else ''
+        if len(window.pane_ids) > MAX_PANES_PER_WINDOW:
+            mark += ' over the cap'
         print(f'{window.session}:{window.name}  {len(window.pane_ids)} panes  {"x".join(map(str, window.sizes))}{mark}')
         for pane_id in window.pane_ids:
-            pane = next(p for p in panes if p.pane_id == pane_id)
+            pane = next((p for p in panes if p.pane_id == pane_id), None)
+            if pane is None:
+                print(f'  {pane_id:5} {"guarded":8} {skipped.get(pane_id, "")}')
+                continue
             print(f'  {pane_id:5} {pane.command:8} {pane.title}')
     return 0
 
 
-def cmd_plan(as_json: bool) -> int:
-    panes, windows = scan()
+def cmd_plan(scope: Scope, as_json: bool) -> int:
+    panes, windows, skipped = scan(scope, guarded_panes(scope))
+    report_scope(scope, skipped)
+    if not panes:
+        raise Usage(f'nothing movable in {scope.label}')
     err(f'scanned {len(panes)} panes in {len(windows)} windows; asking the model')
-    grouping = ask_model(PROMPT + describe(panes, windows))
+    grouping = ask_model(prompt_for(scope) + describe(panes, windows))
     validate(grouping, panes)
+    for note in cap_windows(grouping):
+        err(note)
 
     broken = [w for w in windows if w.tuned and not stays_together(w, grouping)]
     for window in broken:
@@ -479,24 +754,65 @@ def cmd_apply() -> int:
     return subprocess.run(['bash', str(script)]).returncode
 
 
+SCOPE_HELP = f"""\
+scope:
+  (none)             the window this command runs in
+  @5, work:2, %3     the window named, or the one holding that pane
+  work, =work        every window in that session
+  server             every pane on this tmux server
+
+`server` is a word a session may also be called, and it wins. Write `=server`
+to reach a session of that name; the `=` is tmux's own exact-match prefix and
+works on any session name.
+
+At session and server scope a pane running a live Claude session is left where
+it is. Scoping to its window is what says it may move.
+
+A window holds at most {MAX_PANES_PER_WINDOW} panes. A larger group is split across as many
+windows as it needs before the script is written, whatever the model proposed.
+
+Calling this from a dispatcher: after spawning agents into panes, run
+`tmux-rearrange plan` and then `tmux-rearrange apply` from a pane in that
+window. The bare form is scoped to that one window, so every other window on
+the server keeps its panes at the same ids and the same sizes.
+"""
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(prog='tmux-rearrange', description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        prog='tmux-rearrange',
+        description=__doc__.splitlines()[0],
+        epilog=SCOPE_HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest='verb', required=True)
     for verb, help_text in [
         ('show', 'print the scan without calling the model'),
         ('plan', 'scan, propose a regroup, write the script'),
         ('apply', 'run the script plan wrote'),
     ]:
-        p = sub.add_parser(verb, help=help_text)
+        p = sub.add_parser(
+            verb,
+            help=help_text,
+            epilog=SCOPE_HELP if verb != 'apply' else None,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
         if verb != 'apply':
+            p.add_argument(
+                'scope',
+                nargs='?',
+                metavar='SCOPE',
+                help='a window, a session, or `server`; default is the window this runs in',
+            )
             p.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
     args = parser.parse_args()
+    if args.verb == 'apply':
+        return cmd_apply()
+    scope = resolve_scope(args.scope)
     if args.verb == 'show':
-        return cmd_show(args.json)
-    if args.verb == 'plan':
-        return cmd_plan(args.json)
-    return cmd_apply()
+        return cmd_show(scope, args.json)
+    return cmd_plan(scope, args.json)
 
 
 if __name__ == '__main__':
