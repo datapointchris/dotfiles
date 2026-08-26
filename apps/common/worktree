@@ -682,6 +682,19 @@ def landed(path: Path, base: str) -> bool | None:
     took the addition without the deletion reads as having the whole change. Turning
     detection off lists both halves and asks about both.
 
+    The listing is read `-z` and split on NUL, because git's default output is not the
+    names. It C-quotes any path holding a non-ASCII byte, a quote, a backslash or a
+    control character, so a name carrying an accent comes back wrapped in quotes with
+    that character spelled as two backslash escapes. A leading or trailing space is lost
+    separately, to the strip that reads a normal git answer. A name that no longer
+    selects its own file selects nothing, the comparison finds no difference, and the
+    worktree is deleted holding the only copy of the work.
+
+    `:(literal)` on each path so a name is never read as a pattern. Nothing measured
+    turns on it: a `*` or a `[` in a filename widens the pathspec rather than missing
+    the file, and widening errs toward keeping. It is here because the pathspec is data
+    and the default is to interpret it, not because a case was found.
+
     A branch whose commits net out to no change has nothing to lose, so it has landed.
     The commits go with the directory and what they carried is nothing. None wherever
     git could not be asked, which is a third answer rather than a false one: both
@@ -698,13 +711,13 @@ def landed(path: Path, base: str) -> bool | None:
     fork = git_optional(path, 'merge-base', f'origin/{base}', 'HEAD')
     if fork is None:
         return None
-    touched = git_optional(path, 'diff', '--no-renames', '--name-only', fork, 'HEAD')
-    if touched is None:
+    listing = git_effect(path, 'diff', '-z', '--no-renames', '--name-only', fork, 'HEAD')
+    if listing.returncode != 0:
         return None
-    paths = touched.splitlines()
+    paths = [name for name in listing.stdout.split('\0') if name]
     if not paths:
         return True
-    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *paths)
+    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *(f':(literal){name}' for name in paths))
     if comparison.returncode > 1:
         return None
     return comparison.returncode == 0
@@ -1593,6 +1606,12 @@ def cmd_land() -> int:
     # Not `ahead == 0`, which a branch rewritten on its way onto the base branch never
     # reaches. The rebase below would replay patches whose content is already there,
     # and the push would put a second copy of merged work on the base branch.
+    #
+    # True refuses and both False and None proceed, which is the opposite of what the
+    # other two callers do with None. They decide a deletion off the measurement; this
+    # one does not. `dispose` runs after a push that returned zero, so what proves the
+    # commits are elsewhere is the push rather than anything measured here. A landing
+    # git could not read costs a rebase that finds nothing to replay.
     if landed(cwd, base) is True:
         raise Refused(f'Nothing to land: the work here is already on origin/{base}')
 
@@ -1760,9 +1779,12 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
         # before the write. Everything above was measured during the scan, and a session
         # that committed into the worktree since then would lose the only copy. Anything
         # other than a plain True holds the tree, so a read that failed cannot pass for
-        # a branch with nothing left to lose.
-        if landed(worktree.path, worktree.base) is not True:
-            say_warning(f'{display_path(worktree.path)} — kept, {Kept.UNLANDED}')
+        # a branch with nothing left to lose — and it keeps its own reason here, as it
+        # does on the scan path, because the two send a reader to different places.
+        still_landed = landed(worktree.path, worktree.base)
+        if still_landed is not True:
+            reason = Kept.UNLANDED if still_landed is False else Kept.UNREADABLE_LANDING
+            say_warning(f'{display_path(worktree.path)} — kept, {reason}')
             continue
 
         outcome, detail = dispose(owners[worktree.path], worktree.path, worktree.branch, force=False)
@@ -1860,7 +1882,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             'Remove every worktree whose work is finished, and delete its branch. '
             'A worktree qualifies only when its tree is clean, no session is standing in it, '
-            'it holds no commits missing from origin/<base>, and the branch it was pushed to '
+            'its changes are already on origin/<base>, and the branch it was pushed to '
             'under its own name has since been deleted on the remote. Everything else is kept, '
             'with the reason printed. '
             'It lists what it will remove and asks first; without a terminal it removes nothing '

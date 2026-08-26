@@ -840,8 +840,37 @@ class TestLanded:
         git(alpha, 'update-index', '--chmod=+x', 'f.txt')
         git(alpha, 'commit', '-qm', 'chore: make f executable')
 
-        assert git(alpha, 'diff', '--name-only', 'origin/main', 'HEAD') == 'f.txt', 'the contents are identical'
+        blobs = (git(alpha, 'rev-parse', 'origin/main:f.txt'), git(alpha, 'rev-parse', 'HEAD:f.txt'))
+
+        assert blobs[0] == blobs[1], 'one blob on both sides, so the mode is the only thing left to differ'
         assert worktree_app.landed(alpha, 'main') is False
+
+    def test_each_path_git_cannot_print_plainly_is_still_compared(self, worktree_app, fleet, run):
+        """git's default listing is not the names. It C-quotes any path holding a
+        non-ASCII byte, a quote, a backslash or a control character, and the strip that
+        reads an ordinary git answer takes a leading or trailing space off the rest.
+
+        A name that arrives in any of those forms selects no file as a pathspec, so the
+        comparison finds no difference and the branch reads as landed. Each of these is
+        its own worktree, so a failure names the character that got through rather than
+        reporting that one of five did.
+        """
+        awkward = {
+            'leading-space': ' leading.txt',
+            'non-ascii': 'café.txt',
+            'double-quote': 'say "hi".txt',
+            'backslash': 'back\\slash.txt',
+            'pathspec-magic': 'star*.txt',
+        }
+
+        for slug, name in awkward.items():
+            run(fleet['primary'], 'new', slug)
+            worktree = fleet['roots'] / 'primary' / slug
+            (worktree / name).write_text('only copy\n')
+            git(worktree, 'add', name)
+            git(worktree, 'commit', '-qm', f'feat: {slug}')
+
+            assert worktree_app.landed(worktree, 'main') is False, name
 
     def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, worktree_app, fleet, run):
         """Decided rather than left to whichever way the code happens to fall.
@@ -1154,6 +1183,27 @@ class TestSweep:
 
         assert alpha.exists()
         assert (alpha / 'only-copy.txt').exists()
+        assert 'changes that are on no other branch' in plain(result.stderr)
+
+    def test_a_branch_deleted_without_merging_is_kept_whatever_its_files_are_called(self, fleet, run):
+        """The same shape as the test above, with one file whose name git does not print
+        plainly. Reading the listing as text turned that name into something that
+        selects nothing, and the sweep removed the directory and force-deleted the
+        branch with the only copy of the work in it.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        (alpha / 'café.txt').write_text('only copy\n')
+        git(alpha, 'add', 'café.txt')
+        git(alpha, 'commit', '-qm', 'feat: only copy')
+        publish(fleet['primary'], alpha, 'alpha')
+        delete_on_origin(fleet['primary'], 'alpha')
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert alpha.exists()
+        assert (alpha / 'café.txt').exists()
+        assert 'alpha' in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
         assert 'changes that are on no other branch' in plain(result.stderr)
 
     def test_ignored_build_output_does_not_block_removal(self, fleet, run):
