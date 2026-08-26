@@ -76,7 +76,7 @@ required:
   # machine's answer to where it lives, which is the same service ~/.env performs
   # for everything else that runs on the box.
   - name: HOSTS_JSON
-    description: Absolute path to this machine's fleet host inventory
+    description: Absolute path to this machine's homelab host inventory
     network_trust: fleet
     capacity: workstation
     file_must_exist: true
@@ -91,7 +91,7 @@ required:
   # homelab authorize a fleet machine from one declaration rather than from a
   # copy that goes stale the day a machine is rebuilt.
   - name: MACHINES_JSON
-    description: Absolute path to this machine's fleet machine roster
+    description: Absolute path to this machine's fleet workstation roster
     network_trust: fleet
     capacity: workstation
     file_must_exist: true
