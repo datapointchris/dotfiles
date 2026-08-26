@@ -1849,8 +1849,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     spawn.add_argument('--below', action='store_true', help='split under the caller rather than beside it, and leave the layout alone')
     # No default here, so an absent flag is distinguishable from one spelling the default
-    # out. `cli-design.md` § "A sentinel never steals a value the flag can mean" — with
-    # the default as the sentinel, `--below --width 66%` reads as no --width at all.
+    # out. `cli-design.md` § "A sentinel never steals a value the caller can mean" —
+    # with the default as the sentinel, `--below --width 66%` reads as no --width at all.
     # argparse also runs a help string through %-formatting, so a literal percent in the
     # default has to arrive doubled or `--help` dies rather than the command.
     spawn.add_argument(
