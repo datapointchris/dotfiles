@@ -28,4 +28,4 @@ repos_registry: ~/.local/share/terminal-library-fleet/repos.json
 # deploys to. A machine holding one without the other is mid-provision, and
 # forge names the key rather than guessing. `forge config show` reports which
 # layer answered.
-versions_file: ~/.local/share/terminal-library-fleet/versions.json
+versions_file: ~/.local/share/terminal-library-fleet/pinned-versions.json
