@@ -6,8 +6,8 @@
 # nothing. See standards/data.md § "A shared file is named in config; only the
 # tool's own default is compiled in".
 
-# Where the declarations live — the repo registry, the machine roster, the host
-# inventory, the standards, the schedule, the tool contracts and the secret
+# Where the declarations live — the repo registry, the workstation roster, the
+# host inventory, the standards, the schedule, the tool contracts and the secret
 # declaration. One key, because they ship as one git repo and their location is
 # one fact.
 #
