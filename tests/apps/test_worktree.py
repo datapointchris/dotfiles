@@ -208,6 +208,42 @@ def merged_worktree(clone: Path, roots: Path, run: Any, branch: str) -> Path:
     return worktree
 
 
+def rewrite_onto_main(clone: Path, worktree: Path, name: str) -> None:
+    """Put this branch's content on main under a sha the branch has never held.
+
+    What a squash merge leaves behind, and what GitHub's "update with rebase" leaves
+    behind: main carries the work, and the local ref still points at the commits the
+    work was written as. Pushing `HEAD:main` from the worktree is the shape this
+    cannot be — that puts the branch's own commits on main, which is the merge that
+    already worked.
+
+    The subject carries a PR number, as GitHub's squash subject does. Without something
+    to differ on this commit is byte-identical to the branch's own — same tree, same
+    parent, same message, same second — so git hands back the sha that already exists
+    and the fixture quietly builds the clean merge instead.
+    """
+    (clone / name).write_text((worktree / name).read_text())
+    git(clone, 'add', name)
+    git(clone, 'commit', '-qm', f'feat: {name} (#1)')
+    git(clone, 'push', '-q', 'origin', 'main')
+
+
+def rewritten_worktree(clone: Path, roots: Path, run: Any, branch: str) -> Path:
+    """A worktree whose work merged under different shas, with its remote branch gone.
+
+    The bug this shape produced: `origin/main..HEAD` counts commits that will never be
+    in main's history, so the count stays above zero for as long as the directory
+    exists and every sweep keeps it for having unlanded work.
+    """
+    run(clone, 'new', branch)
+    worktree = roots / clone.name / branch
+    commit_in(worktree, f'{branch}.txt')
+    publish(clone, worktree, branch)
+    rewrite_onto_main(clone, worktree, f'{branch}.txt')
+    delete_on_origin(clone, branch)
+    return worktree
+
+
 def plain(text: str) -> str:
     """The text with its colour stripped, which is what an assertion reads."""
     return ANSI.sub('', text)
@@ -240,7 +276,7 @@ def fake_evidence(app: Any, **overrides: Any) -> Any:
     An empty `remote` means origin carries no branch of this name, which with
     `published` is the pair that says *pushed once, deleted since*.
     """
-    fields: dict[str, Any] = {'published': True, 'fetched': True, 'remote': frozenset()}
+    fields: dict[str, Any] = {'published': True, 'fetched': True, 'remote': frozenset(), 'landed': True}
     return app.Evidence(**(fields | overrides))
 
 
@@ -258,7 +294,8 @@ def held_by_cases(app: Any) -> list[tuple[Any, dict[str, Any], dict[str, Any]]]:
         (app.Kept.DETACHED, {'branch': 'HEAD', 'detached': True}, {}),
         (app.Kept.UNFETCHED_REMOTE, {}, {'fetched': False}),
         (app.Kept.UNFETCHED_BASE, {'ahead': None}, {}),
-        (app.Kept.UNLANDED, {'ahead': 2}, {}),
+        (app.Kept.UNREADABLE_LANDING, {'ahead': 2}, {'landed': None}),
+        (app.Kept.UNLANDED, {'ahead': 2}, {'landed': False}),
         (app.Kept.UNPUBLISHED, {}, {'published': False}),
         (app.Kept.REMOTE_UNREADABLE, {}, {'remote': None}),
         (app.Kept.REMOTE_LIVE, {}, {'remote': frozenset({'alpha'})}),
@@ -632,6 +669,32 @@ class TestNothingIsDestroyed:
         assert forced.returncode == 0
         assert not alpha.exists()
 
+    def test_dropping_a_rewritten_history_that_landed_needs_no_force(self, fleet, run):
+        """`drop` refused this on the same count `sweep` kept it on, and told the reader
+        the commits were on no other branch. They were — under other shas."""
+        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        result = run(alpha, 'drop')
+
+        assert result.returncode == 0
+        assert not alpha.exists()
+
+    def test_landing_work_that_is_already_on_the_base_branch_is_refused(self, fleet, run):
+        """The rebase would replay patches whose content main already carries, and the
+        push would put a second copy of merged work on it.
+
+        Asserted against origin rather than the exit code alone: a refusal that still
+        moved the base branch is the failure this is about.
+        """
+        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        before = git(fleet['primary'], 'rev-parse', 'origin/main')
+
+        result = run(alpha, 'land')
+
+        assert result.returncode != 0
+        assert 'already on origin/main' in plain(result.stderr)
+        assert git(fleet['primary'], 'rev-parse', 'origin/main') == before
+
     def test_a_removal_that_failed_is_said_rather_than_announced_as_cleaned_up(self, fleet, run):
         """A removal git refuses leaves the worktree standing after the landing has
         already announced success, and $WORKTREE_ROOT then holds a tree whose work is
@@ -682,6 +745,64 @@ class TestNothingIsDestroyed:
         assert (fleet['primary'] / 'f.txt').read_text() == 'someone is editing this\n'
 
 
+class TestLanded:
+    """The read that replaced the commit count, against repositories rather than fakes.
+
+    `held_by` is where the decision is asserted and it takes this as a boolean, so a
+    class of fakes can never say whether git answers what the boolean claims. These
+    cases build each shape in a real repository and ask.
+    """
+
+    def test_a_branch_merged_under_its_own_shas_has_landed(self, worktree_app, fleet, run):
+        """The ordinary merge, and the case the commit count was already right about."""
+        alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') == '0'
+        assert worktree_app.landed(alpha, 'main') is True
+
+    def test_a_branch_merged_under_new_shas_has_landed(self, worktree_app, fleet, run):
+        """The bug. Ancestry says no and the count says four, and both are honest —
+        the shas here are not the shas that reached main. The content is."""
+        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+
+        ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', 'HEAD', 'origin/main'], cwd=alpha, capture_output=True)
+
+        assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') != '0'
+        assert ancestry.returncode != 0, 'the fixture has to leave the tip off main, or this proves nothing'
+        assert worktree_app.landed(alpha, 'main') is True
+
+    def test_a_branch_whose_work_is_nowhere_else_has_not_landed(self, worktree_app, fleet, run):
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        run(fleet['primary'], 'new', 'alpha')
+        commit_in(alpha, 'only-copy.txt')
+
+        assert worktree_app.landed(alpha, 'main') is False
+
+    def test_a_base_branch_that_was_never_fetched_is_unanswerable(self, worktree_app, fleet, run):
+        """None rather than False. `sweep` holds the worktree either way, but `drop`
+        tells a human to go and look instead of claiming the work is unlanded."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+
+        assert worktree_app.landed(alpha, 'no-such-base') is None
+
+    def test_a_base_branch_that_moved_on_over_the_same_file_reads_as_unlanded(self, worktree_app, fleet, run):
+        """The conservative half of the content comparison, stated so it is a decision
+        rather than a surprise.
+
+        The changes did land and main has since edited the same file, so the paths no
+        longer match and the worktree is kept. Keeping a finished worktree costs a
+        directory; sweeping an unfinished one costs the work in it.
+        """
+        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        (fleet['primary'] / 'alpha.txt').write_text('main moved on\n')
+        git(fleet['primary'], 'commit', '-qam', 'feat: revise alpha.txt')
+        git(fleet['primary'], 'push', '-q', 'origin', 'main')
+        git(alpha, 'fetch', '-q', 'origin')
+
+        assert worktree_app.landed(alpha, 'main') is False
+
+
 class TestHeldBy:
     """The decision that deletes a directory, exercised with no repository behind it.
 
@@ -715,7 +836,7 @@ class TestHeldBy:
         assert covered == set(worktree_app.Kept)
 
     def test_an_unanswerable_check_never_reads_as_cleared(self, worktree_app):
-        """The three reads that can fail, each proved to hold the worktree rather than
+        """The four reads that can fail, each proved to hold the worktree rather than
         resolve to a falsy value the next check walks past.
 
         This is the direction that costs work: `held_by` ends in *remove*, so a failed
@@ -726,10 +847,38 @@ class TestHeldBy:
             (fake_worktree(worktree_app, '/w/alpha', sessions=None), fake_evidence(worktree_app)),
             (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, fetched=False)),
             (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, remote=None)),
+            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, landed=None)),
         ]
 
         for worktree, evidence in unanswerable:
             assert worktree_app.held_by(worktree, evidence) is not None
+
+    def test_commits_above_the_base_do_not_hold_a_worktree_whose_work_landed(self, worktree_app):
+        """The count is not the question. A history rewritten on its way onto the base
+        branch carries new shas, so the branch keeps commits the base will never hold.
+
+        Asserted at four commits ahead because that is the count a real rewrite left,
+        and a fix that only cleared zero would pass every other test in this class.
+        """
+        rewritten = fake_worktree(worktree_app, '/w/alpha', ahead=4)
+
+        assert worktree_app.held_by(rewritten, fake_evidence(worktree_app)) is None
+
+    def test_work_that_never_landed_is_held_however_it_reached_that_state(self, worktree_app):
+        """The two shapes `ahead > 0` was protecting, now protected by what it stood in
+        for. Neither may be swept.
+
+        The first is the never-pushed branch — one commit, no remote of its own, and the
+        worktree is the only copy. The second is the near-miss of the new rule: pushed
+        once and deleted on the remote without ever merging, which reads exactly like a
+        merged branch until the changes themselves are compared.
+        """
+        never_pushed = fake_evidence(worktree_app, published=False, landed=False)
+        deleted_unmerged = fake_evidence(worktree_app, published=True, remote=frozenset(), landed=False)
+        worktree = fake_worktree(worktree_app, '/w/alpha', ahead=1)
+
+        assert worktree_app.held_by(worktree, never_pushed) is worktree_app.Kept.UNLANDED
+        assert worktree_app.held_by(worktree, deleted_unmerged) is worktree_app.Kept.UNLANDED
 
 
 class TestSweep:
@@ -746,6 +895,25 @@ class TestSweep:
 
     def test_a_merged_branch_with_its_remote_deleted_is_removed(self, fleet, run):
         alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') == '0', 'this is the shape whose tip is on main'
+
+        result = run(fleet['primary'], 'sweep', '--yes')
+
+        assert result.returncode == 0
+        assert not alpha.exists()
+        assert 'alpha' not in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
+
+    def test_a_branch_whose_history_was_rewritten_on_the_way_in_is_removed(self, fleet, run):
+        """A squash merge, and GitHub's "update with rebase", both put the work on main
+        under shas the branch never held. `origin/main..HEAD` counts the originals for
+        as long as the directory exists, so the sweep kept it for having unlanded work
+        and would have gone on keeping it forever.
+
+        The count is asserted first. Without it this passes for the same reason the
+        test above does, and the bug it is here for is invisible.
+        """
+        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
+        assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') != '0', 'the whole bug is that this is not zero'
 
         result = run(fleet['primary'], 'sweep', '--yes')
 
@@ -888,7 +1056,13 @@ class TestSweep:
 
     def test_a_branch_deleted_without_merging_is_kept(self, fleet, run):
         """A deleted remote branch is not evidence of a merge. The commits are here
-        and nowhere else, which is the one thing that must never be swept."""
+        and nowhere else, which is the one thing that must never be swept.
+
+        This is the near-miss of the rewritten-history case above, and the two are
+        identical on everything except the work: pushed once, deleted on the remote,
+        and commits the base branch will never hold. Only comparing the changes
+        themselves separates them.
+        """
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
         commit_in(alpha, 'only-copy.txt')
@@ -899,7 +1073,7 @@ class TestSweep:
 
         assert alpha.exists()
         assert (alpha / 'only-copy.txt').exists()
-        assert 'commits that are on no other branch' in plain(result.stderr)
+        assert 'changes that are on no other branch' in plain(result.stderr)
 
     def test_ignored_build_output_does_not_block_removal(self, fleet, run):
         """`new` runs `task setup`, so a real worktree carries a .venv or a

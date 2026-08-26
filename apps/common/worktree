@@ -29,8 +29,9 @@ A worktree that went the PR route is finished somewhere this tool never sees: th
 merge happens on the forge and the branch is deleted there, so `land` never runs
 and nothing disposes of the directory. `sweep` is what collects them, from wherever
 you are standing, and it removes one only when the tree is clean, no session is in
-it, its commits are on the base branch, and the remote branch it was pushed to is
-gone. `drop` remains the verb for work you are abandoning rather than finishing.
+it, its changes are already on the base branch, and the remote branch it was pushed
+to is gone. `drop` remains the verb for work you are abandoning rather than
+finishing.
 
 `list`, `show` and `choose` read every repo on the machine rather than the one you
 happen to be standing in: the worktrees exist because several sessions are running
@@ -152,8 +153,8 @@ class Kept(StrEnum):
     Every member names something that could still be lost, or something that could
     not be measured. `held_by` ends in a bare "remove", so an unanswerable check
     resolving to a falsy value is a deletion authorised by a question nobody asked.
-    Four members exist only to stop that: SESSIONS_UNREADABLE, UNFETCHED_REMOTE,
-    UNFETCHED_BASE and REMOTE_UNREADABLE.
+    Five members exist only to stop that: SESSIONS_UNREADABLE, UNFETCHED_REMOTE,
+    UNFETCHED_BASE, UNREADABLE_LANDING and REMOTE_UNREADABLE.
     """
 
     DIRTY = 'uncommitted changes'
@@ -162,7 +163,8 @@ class Kept(StrEnum):
     DETACHED = 'a detached HEAD, so it has no branch to have merged'
     UNFETCHED_REMOTE = 'its origin could not be reached, so nothing about the remote is known'
     UNFETCHED_BASE = 'its base branch has never been fetched, so nothing can be counted'
-    UNLANDED = 'commits that are on no other branch'
+    UNREADABLE_LANDING = 'git could not say whether its changes are on the base branch'
+    UNLANDED = 'changes that are on no other branch'
     UNPUBLISHED = 'never pushed under its own name'
     REMOTE_LIVE = 'its remote branch still exists'
     REMOTE_UNREADABLE = "git could not list origin's branches"
@@ -654,6 +656,54 @@ def published(path: Path, branch: str) -> bool:
     return merge == f'refs/heads/{branch}'
 
 
+def landed(path: Path, base: str) -> bool | None:
+    """Whether this branch's work is already on origin/<base>, by ancestry or by content.
+
+    Ancestry is asked first and is the whole answer whenever it holds: a tip reachable
+    from origin/<base> is the same history, so nothing here is anywhere else. That is
+    the ordinary merge, and it is the case the commit count was already right about.
+
+    A history rewritten on its way onto the base branch is the case it was wrong about.
+    A squash collapses the branch into one commit. GitHub's "update branch with rebase"
+    replays it onto a newer base, server-side, where nothing can move the local ref.
+    Either way the landed work carries new shas and this ref still points at the
+    originals. `origin/<base>..HEAD` then counts those originals for as long as the
+    branch exists, so work merged months ago cannot be told apart from work that never
+    left the machine.
+
+    Content is what tells them apart. The paths come from the merge base, so work the
+    base branch gained elsewhere is not counted against this branch, and the comparison
+    is against origin/<base> as it stands, so a path the base has since moved on from
+    reads as unlanded. Both of those err toward keeping the worktree, which is the
+    direction a deletion has to err in.
+
+    A branch that touched nothing has nothing to lose, so it has landed. None wherever
+    git could not be asked, which is a third answer rather than a false one: both
+    `--is-ancestor` and `--quiet` exit 1 for *no* and above that for a failure, and
+    reading a failure as a *no* would keep a worktree on a question nobody answered —
+    while reading it as a *yes* would delete one on the same.
+    """
+    ancestry = git_effect(path, 'merge-base', '--is-ancestor', 'HEAD', f'origin/{base}')
+    if ancestry.returncode == 0:
+        return True
+    if ancestry.returncode > 1:
+        return None
+
+    fork = git_optional(path, 'merge-base', f'origin/{base}', 'HEAD')
+    if fork is None:
+        return None
+    touched = git_optional(path, 'diff', '--name-only', fork, 'HEAD')
+    if touched is None:
+        return None
+    paths = touched.splitlines()
+    if not paths:
+        return True
+    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *paths)
+    if comparison.returncode > 1:
+        return None
+    return comparison.returncode == 0
+
+
 @dataclass(frozen=True)
 class Evidence:
     """Everything read from git or the machine before a sweep decides anything.
@@ -667,6 +717,7 @@ class Evidence:
     published: bool
     fetched: bool
     remote: frozenset[str] | None
+    landed: bool | None
 
 
 def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
@@ -679,6 +730,11 @@ def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
     being false. The two are one value in git's own vocabulary — an empty session list,
     a missing remote ref — and collapsing them here means an unreachable origin reads
     as a deleted branch, which is the reading that authorises the removal.
+
+    What is in the branch is asked as *are its changes on the base branch*, never as
+    *are its commits*. The commit count answers the second and is right about it; a
+    branch rewritten on its way onto the base branch keeps a count above zero for the
+    rest of its life, and no later check can undo a keep the count already decided.
     """
     if worktree.state is State.DIRTY:
         return Kept.DIRTY
@@ -692,7 +748,9 @@ def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
         return Kept.UNFETCHED_REMOTE
     if worktree.ahead is None:
         return Kept.UNFETCHED_BASE
-    if worktree.ahead > 0:
+    if evidence.landed is None:
+        return Kept.UNREADABLE_LANDING
+    if not evidence.landed:
         return Kept.UNLANDED
     if not evidence.published:
         return Kept.UNPUBLISHED
@@ -933,7 +991,7 @@ def dispose(checkout: Path, path: Path, branch: str, *, force: bool) -> tuple[Di
     and the checkout is a different tree whose local base branch is only as current as
     its last pull. It refuses a branch that merged on the remote hours ago, and it
     accepts one merged into a base that has since been rewritten. Every caller here
-    proves the commits are elsewhere against `origin/<base>` — the branch they were
+    proves the branch's changes are already on `origin/<base>` — the branch they were
     actually merged into — immediately before calling.
     """
     removal = git_effect(checkout, 'worktree', 'remove', *(['--force'] if force else []), str(path))
@@ -1526,8 +1584,11 @@ def cmd_land() -> int:
 
     git_effect(cwd, 'fetch', '--quiet', 'origin')
     ahead = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
-    if ahead == 0:
-        raise Refused(f'Nothing to land: no commits above origin/{base}')
+    # Not `ahead == 0`, which a branch rewritten on its way onto the base branch never
+    # reaches. The rebase below would replay patches whose content is already there,
+    # and the push would put a second copy of merged work on the base branch.
+    if landed(cwd, base) is True:
+        raise Refused(f'Nothing to land: the work here is already on origin/{base}')
 
     # Never abort on our own initiative: a conflicted rebase holds the only copy of
     # the resolution in progress, and the standard resolves a conflict inside the
@@ -1585,10 +1646,21 @@ def cmd_drop(force: bool) -> int:
 
     if not force:
         require_clean(cwd)
-        unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
-        if unlanded > 0:
+        # The same question `sweep` asks, for the same reason: a count above zero is a
+        # rewritten history as often as it is unlanded work, and the two need opposite
+        # answers. This one runs on local refs alone, so a base branch nobody has
+        # fetched since the merge reads as unlanded — which refuses, and refusing is
+        # the half of this that costs nothing to be wrong about.
+        elsewhere = landed(cwd, base)
+        if elsewhere is None:
             raise Refused(
-                f'{unlanded} commit(s) here are on no other branch',
+                f'Cannot tell whether the work here is already on origin/{base}',
+                "Fetch and look; 'worktree drop --force' drops it either way",
+            )
+        if not elsewhere:
+            unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
+            raise Refused(
+                f'{unlanded} commit(s) here carry changes that are on no other branch',
                 "'worktree land' to keep them, or 'worktree drop --force' to lose them",
             )
 
@@ -1643,6 +1715,7 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
             published=published(worktree.path, worktree.branch),
             fetched=owner not in unreached,
             remote=remotes[owner],
+            landed=landed(worktree.path, worktree.base),
         )
         reason = held_by(worktree, evidence)
         if reason is None:
@@ -1677,11 +1750,12 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
 
     swept = 0
     for worktree in finished:
-        # The count is re-read against the branch these commits actually merged into,
-        # immediately before the write. Everything above was measured during the scan,
-        # and a session that committed into the worktree since then would lose the only
-        # copy. git_optional answering None is a read that failed, which is not a zero.
-        if git_optional(worktree.path, 'rev-list', '--count', f'origin/{worktree.base}..HEAD') != '0':
+        # Re-read against the branch these changes actually merged into, immediately
+        # before the write. Everything above was measured during the scan, and a session
+        # that committed into the worktree since then would lose the only copy. Anything
+        # other than a plain True holds the tree, so a read that failed cannot pass for
+        # a branch with nothing left to lose.
+        if landed(worktree.path, worktree.base) is not True:
             say_warning(f'{display_path(worktree.path)} — kept, {Kept.UNLANDED}')
             continue
 
