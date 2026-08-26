@@ -677,7 +677,13 @@ def landed(path: Path, base: str) -> bool | None:
     reads as unlanded. Both of those err toward keeping the worktree, which is the
     direction a deletion has to err in.
 
-    A branch that touched nothing has nothing to lose, so it has landed. None wherever
+    `--no-renames` for the same reason. A detected rename is reported as the new path
+    alone, and the old one then never enters the comparison — so a base branch that
+    took the addition without the deletion reads as having the whole change. Turning
+    detection off lists both halves and asks about both.
+
+    A branch whose commits net out to no change has nothing to lose, so it has landed.
+    The commits go with the directory and what they carried is nothing. None wherever
     git could not be asked, which is a third answer rather than a false one: both
     `--is-ancestor` and `--quiet` exit 1 for *no* and above that for a failure, and
     reading a failure as a *no* would keep a worktree on a question nobody answered —
@@ -692,7 +698,7 @@ def landed(path: Path, base: str) -> bool | None:
     fork = git_optional(path, 'merge-base', f'origin/{base}', 'HEAD')
     if fork is None:
         return None
-    touched = git_optional(path, 'diff', '--name-only', fork, 'HEAD')
+    touched = git_optional(path, 'diff', '--no-renames', '--name-only', fork, 'HEAD')
     if touched is None:
         return None
     paths = touched.splitlines()

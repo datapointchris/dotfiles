@@ -669,6 +669,26 @@ class TestNothingIsDestroyed:
         assert forced.returncode == 0
         assert not alpha.exists()
 
+    def test_dropping_when_the_base_branch_cannot_be_read_refuses_without_naming_a_verdict(self, fleet, run):
+        """A landing git could not measure is not an unlanded one, and `drop` is the
+        caller where the difference is visible.
+
+        Reporting it as unlanded would send the reader to `worktree land`, which cannot
+        run against a base branch that is not there. The refusal says what is unknown
+        and leaves --force as the way past it.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'x')
+        git(fleet['primary'], 'update-ref', '-d', 'refs/remotes/origin/main')
+        git(fleet['primary'], 'symbolic-ref', '-d', 'refs/remotes/origin/HEAD')
+
+        result = run(alpha, 'drop')
+
+        assert result.returncode != 0
+        assert alpha.exists()
+        assert 'Cannot tell whether the work here is already on origin/main' in plain(result.stderr)
+
     def test_dropping_a_rewritten_history_that_landed_needs_no_force(self, fleet, run):
         """`drop` refused this on the same count `sweep` kept it on, and told the reader
         the commits were on no other branch. They were — under other shas."""
@@ -777,6 +797,67 @@ class TestLanded:
         commit_in(alpha, 'only-copy.txt')
 
         assert worktree_app.landed(alpha, 'main') is False
+
+    def test_a_rename_whose_deletion_never_landed_has_not_landed(self, worktree_app, fleet, run):
+        """Rename detection reports a rename as the new path alone, so the old path
+        never enters the comparison and a base branch that took only the addition reads
+        as having the whole change.
+
+        Here main gained the new file and kept the original. The branch's deletion of
+        the original is on no other branch, and removing the worktree would lose it.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        git(alpha, 'mv', 'f.txt', 'g.txt')
+        git(alpha, 'commit', '-qm', 'refactor: rename f to g')
+        (fleet['primary'] / 'g.txt').write_text('base\n')
+        git(fleet['primary'], 'add', 'g.txt')
+        git(fleet['primary'], 'commit', '-qm', 'feat: add g (#1)')
+        git(fleet['primary'], 'push', '-q', 'origin', 'main')
+        git(alpha, 'fetch', '-q', 'origin')
+
+        assert worktree_app.landed(alpha, 'main') is False
+
+    def test_a_deletion_the_base_branch_took_has_landed(self, worktree_app, fleet, run):
+        """The other half of asking about a path the branch no longer has. Both sides
+        are missing it, so there is nothing here that is not there."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        git(alpha, 'rm', '-q', 'f.txt')
+        git(alpha, 'commit', '-qm', 'refactor: drop f')
+        git(fleet['primary'], 'rm', '-q', 'f.txt')
+        git(fleet['primary'], 'commit', '-qm', 'refactor: drop f (#1)')
+        git(fleet['primary'], 'push', '-q', 'origin', 'main')
+        git(alpha, 'fetch', '-q', 'origin')
+
+        assert worktree_app.landed(alpha, 'main') is True
+
+    def test_a_mode_the_base_branch_did_not_take_has_not_landed(self, worktree_app, fleet, run):
+        """Every byte of every touched path matches and the branch has still not
+        landed. What differs is the file mode, which is tracked and is work."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        git(alpha, 'update-index', '--chmod=+x', 'f.txt')
+        git(alpha, 'commit', '-qm', 'chore: make f executable')
+
+        assert git(alpha, 'diff', '--name-only', 'origin/main', 'HEAD') == 'f.txt', 'the contents are identical'
+        assert worktree_app.landed(alpha, 'main') is False
+
+    def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, worktree_app, fleet, run):
+        """Decided rather than left to whichever way the code happens to fall.
+
+        Two commits that cancel leave the base branch's content untouched, so a removal
+        takes the commits and no work. Every other case here errs toward keeping,
+        because every other case has work at stake.
+        """
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        commit_in(alpha, 'transient.txt')
+        git(alpha, 'rm', '-q', 'transient.txt')
+        git(alpha, 'commit', '-qm', 'revert: drop transient.txt')
+
+        assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') == '2'
+        assert worktree_app.landed(alpha, 'main') is True
 
     def test_a_base_branch_that_was_never_fetched_is_unanswerable(self, worktree_app, fleet, run):
         """None rather than False. `sweep` holds the worktree either way, but `drop`
