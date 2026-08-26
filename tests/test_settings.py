@@ -31,8 +31,8 @@ def config_home(no_ambient_answer: Path) -> Path:
     """A scratch `$XDG_CONFIG_HOME` with no variable set that could answer.
 
     The name each test here reads it under. What it clears and why is
-    `no_ambient_answer` in `tests/conftest.py`, which derives the set from
-    `install/flags.yml` — so `test_an_ordinary_declared_value_reads_no_prefixed_twin`
+    `no_ambient_answer` in `tests/conftest.py`, which takes the set from
+    `machine.load` — so `test_an_ordinary_declared_value_reads_no_prefixed_twin`
     below asserts about the rungs rather than about the machine that ran it.
     """
     return no_ambient_answer
@@ -163,6 +163,17 @@ def test_an_ordinary_declared_value_reads_no_prefixed_twin(config_home: Path, mo
     monkeypatch.setenv('DOTFILES_WINDOWS_USER', 'someone')
 
     assert resolve('WINDOWS_USER') is None
+
+
+def test_the_isolated_set_reaches_a_name_that_has_no_other_rung(isolated_names: tuple[str, ...]) -> None:
+    """`WINDOWS_USER` by name, because it is the shape the register alone can supply.
+
+    The test above resolves it, and `resolve` ends on the bare spelling for any name
+    `SHARED_PATHS` does not carry — so an export of it decides that assertion. A
+    derivation that stopped reading the register would still return the three
+    `SHARED_PATHS` keys and their twins, and every fixture would look intact.
+    """
+    assert 'WINDOWS_USER' in isolated_names
 
 
 # ─────────────────────────────────────────────────────────────────────────────

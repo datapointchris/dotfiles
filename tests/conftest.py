@@ -33,7 +33,6 @@ from types import ModuleType  # noqa: E402
 import httpx2  # noqa: E402
 import levels  # noqa: E402
 import pytest  # noqa: E402
-import yaml  # noqa: E402
 
 from dotfiles import github_release  # noqa: E402
 from dotfiles.privilege import Privilege  # noqa: E402
@@ -57,6 +56,45 @@ REPO = Path(__file__).resolve().parent.parent
 # does rather than silently reading the wrong tree again.
 assert 'dotfiles.paths' not in sys.modules, 'something above imported dotfiles.paths, so DOTFILES_DIR is already resolved'
 os.environ['DOTFILES_DIR'] = str(REPO)
+
+# Below the line above rather than with the imports at the top, because both reach
+# `dotfiles.paths` and the assert holds that module out until the root is pinned.
+# `github_release` and `Privilege` reach it through nothing, so they stay up there.
+from dotfiles import machine as machines  # noqa: E402
+from dotfiles import settings  # noqa: E402
+
+
+def declared_names() -> tuple[str, ...]:
+    """Every name this repo's register says a machine has to answer.
+
+    Read through `machine.load` rather than parsed out of `install/flags.yml`. That
+    loader owns the register and knows two things a hand-parse of `required:` does
+    not: a `required_files:` entry is named by the variables in its `path` rather
+    than by its `name`, and every entry carries a narrowing. Each manifest therefore
+    sees a different subset — `WINDOWS_USER` is `host: wsl` and `HOSTS_JSON` is fleet
+    plus workstation — so the union over every manifest is what a test could resolve.
+    """
+    return tuple(
+        sorted(
+            {
+                name
+                for machine_name in machines.names(REPO)
+                for entry in machines.load(machine_name, REPO).requirements
+                for name in entry.declared_names
+            }
+        )
+    )
+
+
+def answerable_names() -> tuple[str, ...]:
+    """Every variable that could answer over a scratch config file, so every one to clear.
+
+    `SHARED_PATHS` adds its own keys and their `DOTFILES_`-prefixed twins, which the
+    register does not all declare — `REPOS_REGISTRY` is named by no `required:` entry.
+    """
+    twins = {shared.env_var for shared in settings.SHARED_PATHS.values()}
+    return tuple(sorted(set(declared_names()) | set(settings.SHARED_PATHS) | twins))
+
 
 GIT_LOCATION = (
     'GIT_DIR',
@@ -544,38 +582,61 @@ def tmux_place():
     return load_app('tmux-place')
 
 
+ANSWERED_BY_A_SHELL = 'set-by-a-shell-nothing-here-may-consult'
+"""What a seeded name holds, spelled so a leak names itself in the failure."""
+
+
 @pytest.fixture
-def no_ambient_answer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def isolated_names() -> tuple[str, ...]:
+    """`answerable_names` as a fixture, for a test whose subject is the set itself.
+
+    A fixture rather than an import, because `import conftest` is ambiguous once
+    `tests/resources/conftest.py` is collected alongside this one and resolves to
+    whichever landed in `sys.modules` first.
+    """
+    return answerable_names()
+
+
+@pytest.fixture
+def a_shell_that_answers_everything(monkeypatch: pytest.MonkeyPatch) -> tuple[str, ...]:
+    """Export every name `no_ambient_answer` clears, before it clears them.
+
+    The isolation is otherwise exercised on one machine in the fleet. `~/.env`
+    exports `WINDOWS_USER` on a WSL box and nowhere else, and CI sets no variable
+    at all — so on every desk but that one, and on every runner, the clearing has
+    nothing to clear and deleting it lands green. Seeding first makes each machine
+    reproduce the condition, so the clearing is what the suite passes on.
+
+    Seeded from `declared_names` while `no_ambient_answer` clears `answerable_names`.
+    One source for both would put the register's half of the set behind a single
+    call, and dropping it would delete the seed along with the clearing — leaving
+    the two green together, which is the state this exists to make impossible.
+    """
+    for name in declared_names():
+        monkeypatch.setenv(name, ANSWERED_BY_A_SHELL)
+    return declared_names()
+
+
+@pytest.fixture
+def no_ambient_answer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, a_shell_that_answers_everything: tuple[str, ...]) -> Path:
     """A scratch `$XDG_CONFIG_HOME`, with every rung that could answer over it cleared.
 
     The returned path is where a test writes the config file it means to resolve.
 
-    **The set is derived from `install/flags.yml`, never restated.** `settings.resolve`
-    ends on the variable spelled exactly as declared, so a name in that register
-    and missing from a hand-written list answers from the shell that started
-    pytest. `WINDOWS_USER` is that shape by design and `~/.env` exports it on a WSL
-    box, which is enough to decide a test by which machine ran it.
+    `settings.resolve` ends on the variable spelled exactly as declared, so a name
+    in the register that no fixture clears answers from the shell that started
+    pytest. `WINDOWS_USER` is that shape by design — a Windows account name is a
+    fact about the machine rather than a setting of this tool, so it takes no
+    `DOTFILES_` twin and `SHARED_PATHS` does not name it.
 
-    `SHARED_PATHS` contributes the `DOTFILES_`-prefixed twins and its own keys,
-    which `required:` does not all declare. `REPOS_JSON` is in neither: it is the
-    retired unprefixed name, cleared because an interactive shell on this fleet
-    still exports it.
-
-    `settings` is imported here rather than at module scope, because it reaches
-    `dotfiles.paths` and the assert above this file's imports holds that module
-    out until `$DOTFILES_DIR` has been pinned to the checkout.
+    The redirect is set after the clearing rather than before it. A `required_files:`
+    entry naming `$XDG_CONFIG_HOME` in its `path` would put that name in the set, and
+    in the other order this would delete the scratch home it had just pointed at.
     """
-    from dotfiles import settings
-
+    for name in answerable_names():
+        monkeypatch.delenv(name, raising=False)
     scratch = tmp_path / 'xdg-config'
     monkeypatch.setenv('XDG_CONFIG_HOME', str(scratch))
-    declared = yaml.safe_load((REPO / 'install' / 'flags.yml').read_text())
-    for entry in declared.get('required') or ():
-        monkeypatch.delenv(entry['name'], raising=False)
-    for name, shared in settings.SHARED_PATHS.items():
-        monkeypatch.delenv(name, raising=False)
-        monkeypatch.delenv(shared.env_var, raising=False)
-    monkeypatch.delenv('REPOS_JSON', raising=False)
     return scratch
 
 
