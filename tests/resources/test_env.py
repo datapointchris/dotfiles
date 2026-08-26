@@ -69,6 +69,26 @@ def changes(root: Path, **kwargs: Any) -> tuple:
     return env_resource.RESOURCE.diff(live.plan, env_resource.RESOURCE.observe(live, live.plan))
 
 
+@pytest.fixture(autouse=True)
+def a_config_rung_rooted_in_tmp_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The half of a run `session` cannot root, because it is not reached through `home`.
+
+    `settings.config_file()` derives from `$XDG_CONFIG_HOME`, so a synthetic
+    machine resolves `SHARED_PATHS` through this desk's own config.toml however
+    thoroughly its repo and home are confined. `_named_files` then reports on
+    every name that file answers, and an assertion that a machine declaring
+    nothing finds nothing is really an assertion about the developer's library.
+
+    The `DOTFILES_`-prefixed variables go with it. They are the rung above the
+    file, and one exported in the shell that started pytest answers just as
+    loudly. A test whose subject *is* a rung sets it in its own body, which runs
+    after this and wins.
+    """
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg-config'))
+    for shared in settings.SHARED_PATHS.values():
+        monkeypatch.delenv(shared.env_var, raising=False)
+
+
 def items(found: tuple) -> dict[str, Verdict]:
     return {change.item: change.verdict for change in found}
 
