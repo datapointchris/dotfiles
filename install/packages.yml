@@ -1596,7 +1596,7 @@ go_tools:
     description: Generate terraform documentation
 
   - name: gum
-    package: github.com/charmbracelet/gum
+    package: charm.land/gum/v2
     github_repo: charmbracelet/gum
     binary_pattern: "gum_{version_num}_{Os}_{Arch}.tar.gz"
     description: Tool for glamorous shell scripts (used by menu/notes apps)
