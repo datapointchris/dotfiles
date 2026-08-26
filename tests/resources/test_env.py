@@ -524,14 +524,14 @@ def test_a_value_naming_a_file_that_is_not_there_is_stale(tmp_path: Path, env_fi
     """The value arrived, so nothing looked further, and the machine answers with
     a path holding no file. Its consumers are outside this repo and fail at deploy
     time, which is later than a check that fails now."""
-    monkeypatch.delenv('HOSTS_JSON', raising=False)
-    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    monkeypatch.delenv('HOMELAB_HOSTS_JSON', raising=False)
+    declared = {**FLAGS, 'required': [{'name': 'HOMELAB_HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write(f'export HOSTS_JSON={tmp_path / "nowhere.json"}\n')
+        target.write(f'export HOMELAB_HOSTS_JSON={tmp_path / "nowhere.json"}\n')
 
-    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOSTS_JSON']
+    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOMELAB_HOSTS_JSON']
 
     assert found[0].verdict is Verdict.STALE
     assert 'names a file that is not there' in found[0].detail
@@ -539,14 +539,14 @@ def test_a_value_naming_a_file_that_is_not_there_is_stale(tmp_path: Path, env_fi
 
 
 def test_a_value_naming_a_file_that_is_there_reports_nothing(tmp_path: Path, env_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    monkeypatch.delenv('HOMELAB_HOSTS_JSON', raising=False)
     present = tmp_path / 'hosts.json'
     present.write_text('{}\n')
-    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    declared = {**FLAGS, 'required': [{'name': 'HOMELAB_HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write(f'export HOSTS_JSON={present}\n')
+        target.write(f'export HOMELAB_HOSTS_JSON={present}\n')
 
     assert changes(tmp_path, flags=declared) == ()
 
@@ -555,15 +555,15 @@ def test_a_value_naming_home_resolves_to_the_file_it_points_at(tmp_path: Path, u
     """`$HOME` is how a hand-written answer names a path without naming an account,
     and `expanduser` leaves it literal — which reports a file sitting right there as
     one that is not."""
-    monkeypatch.delenv('HOSTS_JSON', raising=False)
+    monkeypatch.delenv('HOMELAB_HOSTS_JSON', raising=False)
     monkeypatch.setenv('HOME', str(tmp_path))
     present = tmp_path / 'hosts.json'
     present.write_text('{}\n')
-    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    declared = {**FLAGS, 'required': [{'name': 'HOMELAB_HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write('export HOSTS_JSON="$HOME/hosts.json"\n')
+        target.write('export HOMELAB_HOSTS_JSON="$HOME/hosts.json"\n')
 
     assert changes(tmp_path, flags=declared) == ()
 
@@ -573,12 +573,12 @@ def test_an_unset_value_that_names_a_file_is_missing_rather_than_stale(
 ) -> None:
     """One finding, not two. Nothing answered, so there is no path to test and the
     remedy is to answer — the file question does not arise yet."""
-    monkeypatch.delenv('HOSTS_JSON', raising=False)
-    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
+    monkeypatch.delenv('HOMELAB_HOSTS_JSON', raising=False)
+    declared = {**FLAGS, 'required': [{'name': 'HOMELAB_HOSTS_JSON', 'description': 'Fleet host inventory', 'file_must_exist': True}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
 
-    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOSTS_JSON']
+    found = [change for change in changes(tmp_path, flags=declared) if change.item == 'HOMELAB_HOSTS_JSON']
 
     assert len(found) == 1
     assert found[0].verdict is Verdict.MISSING
@@ -596,20 +596,20 @@ def test_a_value_that_names_no_file_is_never_tested_for_one(tmp_path: Path) -> N
 
 
 def test_a_required_value_is_named_without_its_value_wherever_it_sits(tmp_path: Path, monkeypatch) -> None:
-    """The register holds an employer's account name and an employee id. `Examined`
-    reaches a screen and `--json`, so no half of the file prints one. `HOSTS_JSON`
-    is the one the generated section does carry, which is what makes it the case
-    worth pinning."""
-    monkeypatch.setenv('DOTFILES_HOSTS_JSON', '/srv/hosts.json')
-    declared = {**FLAGS, 'required': [{'name': 'HOSTS_JSON', 'description': 'Fleet host inventory'}]}
+    """The register holds an employer's account name and an employee id.
+    `Examined` reaches a screen and `--json`, so no half of the file prints one.
+    `HOMELAB_HOSTS_JSON` is the one the generated section does carry, which is
+    what makes it the case worth pinning."""
+    monkeypatch.setenv('DOTFILES_HOMELAB_HOSTS_JSON', '/srv/hosts.json')
+    declared = {**FLAGS, 'required': [{'name': 'HOMELAB_HOSTS_JSON', 'description': 'Fleet host inventory'}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
 
-    assert 'HOSTS_JSON' in envfile.read_generated(live.env_file), 'the generated half carries it, so the screen is load-bearing'
+    assert 'HOMELAB_HOSTS_JSON' in envfile.read_generated(live.env_file), 'the generated half carries it, so the screen is load-bearing'
 
     inventory = env_resource.RESOURCE.observe(live, live.plan).inventory
 
-    assert {row.item: row.detail for row in inventory}['HOSTS_JSON'] == 'set by hand'
+    assert {row.item: row.detail for row in inventory}['HOMELAB_HOSTS_JSON'] == 'set by hand'
     assert not any('/srv/hosts.json' in row.detail for row in inventory)
 
 

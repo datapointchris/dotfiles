@@ -208,8 +208,8 @@ class Requirement:
 
     The value half of `requires_values`, and the same rule: a declaration records
     what has to be true, never only that something was answered. A machine can
-    name `$HOSTS_JSON` and have no inventory at that path, and today the register
-    reports it satisfied — the answer arrived, so nothing looks further.
+    name `$HOMELAB_HOSTS_JSON` and have no inventory at that path, and today the
+    register reports it satisfied — the answer arrived, so nothing looks further.
 
     Worth checking here even though every consumer refuses loudly, because the
     entry's own declaration says why: the consumers are outside this repo and fail
