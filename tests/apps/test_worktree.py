@@ -872,6 +872,37 @@ class TestLanded:
 
             assert worktree_app.landed(worktree, 'main') is False, name
 
+    def test_a_rename_across_names_git_quotes_needs_both_guards_at_once(self, worktree_app, fleet, run):
+        """The one shape where dropping either guard on its own loses the work.
+
+        Rename detection alone would report the new path and the base branch has that
+        path, so the branch reads as landed while its deletion of the old one is on no
+        other branch. Reading the listing as text alone would hand back two quoted names
+        that select nothing, which reads as landed for the same reason by another route.
+
+        The two other tests each hold one guard and would stay green without the other:
+        the rename case uses ASCII names, and the quoted-names case adds files rather
+        than renaming them.
+        """
+        body = 'a body long enough for rename detection to latch onto\nand more of it\n'
+        (fleet['primary'] / 'æ file.txt').write_text(body)
+        git(fleet['primary'], 'add', 'æ file.txt')
+        git(fleet['primary'], 'commit', '-qm', 'feat: add a non-ascii name')
+        git(fleet['primary'], 'push', '-q', 'origin', 'main')
+
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        git(alpha, 'mv', 'æ file.txt', 'ø other.txt')
+        git(alpha, 'commit', '-qm', 'refactor: rename it')
+
+        (fleet['primary'] / 'ø other.txt').write_text(body)
+        git(fleet['primary'], 'add', 'ø other.txt')
+        git(fleet['primary'], 'commit', '-qm', 'feat: take the addition and keep the original (#1)')
+        git(fleet['primary'], 'push', '-q', 'origin', 'main')
+        git(alpha, 'fetch', '-q', 'origin')
+
+        assert worktree_app.landed(alpha, 'main') is False
+
     def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, worktree_app, fleet, run):
         """Decided rather than left to whichever way the code happens to fall.
 
