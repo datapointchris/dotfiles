@@ -33,6 +33,7 @@ from types import ModuleType  # noqa: E402
 import httpx2  # noqa: E402
 import levels  # noqa: E402
 import pytest  # noqa: E402
+import yaml  # noqa: E402
 
 from dotfiles import github_release  # noqa: E402
 from dotfiles.privilege import Privilege  # noqa: E402
@@ -541,6 +542,41 @@ def tmux_rearrange():
 @pytest.fixture(scope='session')
 def tmux_place():
     return load_app('tmux-place')
+
+
+@pytest.fixture
+def no_ambient_answer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A scratch `$XDG_CONFIG_HOME`, with every rung that could answer over it cleared.
+
+    The returned path is where a test writes the config file it means to resolve.
+
+    **The set is derived from `install/flags.yml`, never restated.** `settings.resolve`
+    ends on the variable spelled exactly as declared, so a name in that register
+    and missing from a hand-written list answers from the shell that started
+    pytest. `WINDOWS_USER` is that shape by design and `~/.env` exports it on a WSL
+    box, which is enough to decide a test by which machine ran it.
+
+    `SHARED_PATHS` contributes the `DOTFILES_`-prefixed twins and its own keys,
+    which `required:` does not all declare. `REPOS_JSON` is in neither: it is the
+    retired unprefixed name, cleared because an interactive shell on this fleet
+    still exports it.
+
+    `settings` is imported here rather than at module scope, because it reaches
+    `dotfiles.paths` and the assert above this file's imports holds that module
+    out until `$DOTFILES_DIR` has been pinned to the checkout.
+    """
+    from dotfiles import settings
+
+    scratch = tmp_path / 'xdg-config'
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(scratch))
+    declared = yaml.safe_load((REPO / 'install' / 'flags.yml').read_text())
+    for entry in declared.get('required') or ():
+        monkeypatch.delenv(entry['name'], raising=False)
+    for name, shared in settings.SHARED_PATHS.items():
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(shared.env_var, raising=False)
+    monkeypatch.delenv('REPOS_JSON', raising=False)
+    return scratch
 
 
 @pytest.fixture

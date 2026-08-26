@@ -27,17 +27,15 @@ RETIRED = 'REPOS_JSON'
 
 
 @pytest.fixture
-def config_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def config_home(no_ambient_answer: Path) -> Path:
     """A scratch `$XDG_CONFIG_HOME` with no variable set that could answer.
 
-    The suite runs from an interactive shell that exports both the prefixed
-    variable and the retired shared one, so every test here would otherwise pass
-    on the machine's own answer rather than the one it wrote.
+    The name each test here reads it under. What it clears and why is
+    `no_ambient_answer` in `tests/conftest.py`, which derives the set from
+    `install/flags.yml` — so `test_an_ordinary_declared_value_reads_no_prefixed_twin`
+    below asserts about the rungs rather than about the machine that ran it.
     """
-    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
-    monkeypatch.delenv(ENV, raising=False)
-    monkeypatch.delenv(RETIRED, raising=False)
-    return tmp_path / 'config'
+    return no_ambient_answer
 
 
 def write_config(config_home: Path, body: str) -> Path:

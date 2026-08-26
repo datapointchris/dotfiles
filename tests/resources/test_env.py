@@ -70,23 +70,19 @@ def changes(root: Path, **kwargs: Any) -> tuple:
 
 
 @pytest.fixture(autouse=True)
-def a_config_rung_rooted_in_tmp_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def every_run_here_is_rooted_in_tmp_path(no_ambient_answer: Path) -> None:
     """The half of a run `session` cannot root, because it is not reached through `home`.
 
     `settings.config_file()` derives from `$XDG_CONFIG_HOME`, so a synthetic
-    machine resolves `SHARED_PATHS` through this desk's own config.toml however
-    thoroughly its repo and home are confined. `_named_files` then reports on
-    every name that file answers, and an assertion that a machine declaring
-    nothing finds nothing is really an assertion about the developer's library.
+    machine resolves through this desk's own config.toml however thoroughly its
+    repo and home are confined. `_named_files` then reports on every name that
+    file answers, and an assertion that a machine declaring nothing finds nothing
+    is really an assertion about the developer's library.
 
-    The `DOTFILES_`-prefixed variables go with it. They are the rung above the
-    file, and one exported in the shell that started pytest answers just as
-    loudly. A test whose subject *is* a rung sets it in its own body, which runs
-    after this and wins.
+    Autouse rather than requested, because the assertion it protects is
+    `changes(...) == ()` and that names no fixture. A test whose subject *is* a
+    rung sets it in its own body, which runs after this and wins.
     """
-    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg-config'))
-    for shared in settings.SHARED_PATHS.values():
-        monkeypatch.delenv(shared.env_var, raising=False)
 
 
 def items(found: tuple) -> dict[str, Verdict]:
@@ -706,24 +702,15 @@ REGISTRY_FILE: dict[str, Any] = {**FLAGS, 'required_files': [{'name': 'repos.jso
 
 
 @pytest.fixture
-def unshelled(tmp_path: Path, monkeypatch) -> Path:
+def unshelled(no_ambient_answer: Path) -> Path:
     """A run with no shell behind it, and a scratch config home to answer in.
 
-    The prefixed variable and the retired unprefixed one are both dropped rather
-    than merely left alone: the suite runs from an interactive shell that exports
-    the second, so without this every test below could pass on the machine's own
-    answer through a rung that no longer exists.
-
-    Every name in the register rather than the one this file names, so a path
-    added to `SHARED_PATHS` cannot leave a test resolving against the machine it
-    runs on. The scratch config home covers the file rung the same way.
+    The name each test below reads it under. What it clears and why is
+    `no_ambient_answer` in `tests/conftest.py`, which the autouse fixture at the
+    top of this file requests as well — so both reach one scratch config home
+    rather than two under the same `tmp_path`.
     """
-    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'xdg'))
-    for name, shared in settings.SHARED_PATHS.items():
-        monkeypatch.delenv(shared.env_var, raising=False)
-        monkeypatch.delenv(name, raising=False)
-    monkeypatch.delenv('REPOS_JSON', raising=False)
-    return tmp_path / 'xdg'
+    return no_ambient_answer
 
 
 def name_registry(config_home: Path, registry: Path) -> None:
