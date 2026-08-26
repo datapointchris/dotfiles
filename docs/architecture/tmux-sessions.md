@@ -287,25 +287,20 @@ version: it reads the scrollback of every pane in scope, asks a model which pane
 and writes a script that moves them. `plan` proposes, `apply` runs what plan wrote, `show` prints
 the scan without spending a model call.
 
-**Scope is the argument, and a bare invocation acts on the window it runs in.** A regroup computed
-over the whole server moves panes belonging to work nobody asked about. Relocating a pane somebody
-is watching costs them the mental map they were working from, so the narrow act is the default and
-the broad one is spelled out. `server` reaches every pane, a session name reaches that session, and
-`@id` or `session:window` reaches one window. At session and server scope a pane running a live
-Claude session is left where it is; scoping to its window is what says it may move. That guard is
-what holds when the scope itself was the mistake, which a single argument cannot report on its own.
+**Which panes it may touch is an argument, and the narrow reading of an absent one won.** Two
+readings were available and the deciding question was which is safe to do by accident. A second
+guard sits above the argument, because one argument cannot report that it was mistyped — an agent's
+workspace only relocates where the argument named the window holding it. `tmux-rearrange --help`
+carries the forms.
 
 **The model gets exactly one job — which panes group, and what to call each group.** That is the
 half needing judgement over prose, and it is the half nothing else can do: titles alone will not
 reveal that two conversations two windows apart both turn on the same issue. Everything geometric
 is computed locally and the tmux commands are rendered locally, so the half that can destroy work
 never comes back from a model. Two invariants are enforced before a single command runs. The set of
-pane ids returned must equal the set sent, exactly once each. And no window may hold more than six
-panes — three across and two down. Height is what fails first: width degrades gracefully, while a
-deep column leaves each pane too short to show a prompt and its answer together. The model is told
-that cap. A group exceeding it anyway is split across as many windows as it needs, evenly rather
-than greedily: nine chunked greedily leaves a window of six, which is the cramped one the cap
-exists to prevent.
+pane ids returned must equal the set sent, exactly once each. And a window holds at most six panes.
+That second one is imposed on the answer rather than requested of it, since a limit the model is
+merely told about is honoured most of the time and a limit applied afterwards is honoured always.
 
 Layout intent is read, not guessed. **A new window opens with one pane, so any split at all was made
 by hand** — an even 188|188 is as deliberate as a dragged 183|193, and treating only the uneven case

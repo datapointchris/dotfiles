@@ -16,7 +16,8 @@ asks a model which panes belong together, and writes a script that moves them.
 
 Scope is the argument and never a flag. A bare invocation acts on the window
 it runs in. `server` acts on every pane; a session name acts on that session;
-`@id` or `session:window` acts on one window.
+`@id`, `session:window` or `%pane` acts on one window. A session really named
+`server` is reached as `=server`.
 
 The model is given one job -- which panes group, and what to call each group --
 because that is the half needing judgement over prose. Every geometric decision
@@ -34,6 +35,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 SCROLLBACK_LINES = 50
@@ -124,31 +126,52 @@ def hand_tuned(sizes: tuple[int, ...], total: int) -> bool:
     return any(abs(size - even) > 1 for size in sizes)
 
 
+class ScopeKind(StrEnum):
+    WINDOW = 'window'
+    SESSION = 'session'
+    SERVER = 'server'
+
+
 @dataclass(frozen=True)
 class Scope:
     """Which panes a run may move."""
 
-    kind: str
-    """'window', 'session' or 'server'."""
+    kind: ScopeKind
     target: str
-    """The tmux target to list panes from; empty for the whole server."""
+    """The tmux target to list panes from; empty only at SERVER."""
     label: str
     """What gets printed, and what the model is told it is looking at."""
 
     def list_panes_args(self) -> tuple[str, ...]:
-        if self.kind == 'server':
+        if self.kind is ScopeKind.SERVER:
             return ('list-panes', '-a')
-        if self.kind == 'session':
+        if self.kind is ScopeKind.SESSION:
             return ('list-panes', '-s', '-t', self.target)
-        return ('list-panes', '-t', self.target)
+        if self.kind is ScopeKind.WINDOW:
+            return ('list-panes', '-t', self.target)
+        raise Usage(f'no pane listing is defined for scope kind {self.kind}')
 
 
-def window_label(window_id: str) -> str:
-    return tmux('display-message', '-p', '-t', window_id, '#{session_name}:#{window_name}').strip()
+def window_from(target: str) -> tuple[str, str]:
+    """The window id and `session:name` of whatever tmux target names.
+
+    Resolved with list-panes rather than display-message, which cannot report
+    a target it fails to resolve. `display-message -p -t @999 '#{window_id}'`
+    prints nothing and exits 0, and `-t work:nosuch` prints session `work`'s
+    *current* window -- so a mistyped scope would name a window nobody asked
+    about, which is the failure this tool's scope argument exists to prevent.
+    `list-panes` exits 1 on all three, and tmux() turns that into a Usage.
+    """
+    fields = '#{window_id}\t#{session_name}:#{window_name}'
+    rows = tmux('list-panes', '-t', target, '-F', fields).splitlines()
+    if not rows:
+        raise Usage(f'{target} holds no pane')
+    window_id, label = rows[0].split('\t', 1)
+    return window_id, label
 
 
-def window_of(target: str) -> str:
-    return tmux('display-message', '-p', '-t', target, '#{window_id}').strip()
+def session_names() -> list[str]:
+    return tmux('list-sessions', '-F', '#{session_name}').splitlines()
 
 
 def resolve_scope(argument: str | None) -> Scope:
@@ -163,57 +186,89 @@ def resolve_scope(argument: str | None) -> Scope:
 
     A `%pane` target resolves to the window holding it, because one pane is not
     a scope -- there is nothing to regroup inside it.
+
+    `server` is a word a session may also be called, and the substitution runs
+    toward reaching every pane, which is the direction with no recovery. tmux's
+    own `=` prefix is the escape: `=server` is the session, and the collision
+    is named on stderr at the moment it could bite.
     """
     if argument is None:
-        window = current_window()
-        return Scope('window', window, f'the current window, {window_label(window)}')
+        pane = os.environ.get('TMUX_PANE')
+        if not pane:
+            raise Usage('not running inside tmux, so there is no current window; name a window, a session, or `server`')
+        window, label = window_from(pane)
+        return Scope(ScopeKind.WINDOW, window, f'the current window, {label}')
     if argument == 'server':
-        return Scope('server', '', 'every pane on this tmux server')
+        if argument in session_names():
+            err("note: a session is also named 'server'; `=server` scopes to that session instead")
+        return Scope(ScopeKind.SERVER, '', 'every pane on this tmux server')
     if argument.startswith('%'):
-        window = window_of(argument)
-        return Scope('window', window, f'the window holding {argument}, {window_label(window)}')
+        window, label = window_from(argument)
+        return Scope(ScopeKind.WINDOW, window, f'the window holding {argument}, {label}')
     if argument.startswith('@') or ':' in argument:
-        window = window_of(argument)
-        return Scope('window', window, f'one window, {window_label(window)}')
-    names = tmux('list-sessions', '-F', '#{session_name}').splitlines()
-    if argument not in names:
-        raise Usage(f'no window or session named {argument!r}; sessions are: ' + ', '.join(repr(n) for n in names))
-    return Scope('session', f'={argument}', f'session {argument!r}')
+        window, label = window_from(argument)
+        return Scope(ScopeKind.WINDOW, window, f'one window, {label}')
+    name = argument.removeprefix('=')
+    names = session_names()
+    if name not in names:
+        listed = ', '.join(repr(n) for n in names)
+        raise Usage(f'no window or session named {name!r}; sessions are: {listed}')
+    return Scope(ScopeKind.SESSION, f'={name}', f'session {name!r}')
 
 
-def current_window() -> str:
-    pane = os.environ.get('TMUX_PANE')
-    if not pane:
-        raise Usage('not running inside tmux, so there is no current window; name a window, a session, or `server`')
-    return window_of(pane)
+NARROW = 'Scope this to a window instead -- a window scope needs no roster -- or install claude-sessions'
+"""The way forward out of every roster failure, which is the same one each time.
+
+Only a session or server scope reads the roster, so naming a window is always
+available and is one word rather than an installation.
+"""
 
 
 def live_session_panes() -> dict[str, str]:
-    """Pane ids running a live Claude session, mapped to the session's name.
+    """Locations running a live Claude session, mapped to the session's name.
 
-    `claude-sessions` reports each one's location as `session:@window.%pane`.
+    `claude-sessions` reports each one as `session:@window.%pane`, and the key
+    here is the `@window.%pane` half.
+
+    Both halves, because a pane id is unique only within one tmux server, so a
+    second server's `%3` would otherwise match a session that has nothing to do
+    with it. This narrows that and does not close it: window ids restart at
+    `@0` on a new server too, so `@0.%0` still collides. Measured on a
+    throwaway server, where `show server` guarded a fresh shell at `@0.%0`.
+
+    Closing it needs the socket, which `claude-sessions` does not report. The
+    residue is left because a false match guards a pane that did not need it,
+    and every alternative discriminator fails the other way -- a real agent
+    pane left unguarded is the outcome this whole function exists to prevent.
     """
     if not shutil.which('claude-sessions'):
-        raise Usage('claude-sessions is not installed, so live agent panes cannot be identified')
+        raise Usage(f'claude-sessions is not installed, so live agent panes cannot be identified. {NARROW}')
     done = subprocess.run(['claude-sessions', '--json'], capture_output=True, text=True)
     if done.returncode != 0:
-        raise Usage(f'claude-sessions failed: {done.stderr.strip()[:300]}')
+        raise Usage(f'claude-sessions failed: {done.stderr.strip()[:300]}. {NARROW}')
     try:
         rows = json.loads(done.stdout)
     except json.JSONDecodeError as bad:
-        raise Usage(f'claude-sessions did not return JSON: {bad}') from None
+        raise Usage(f'claude-sessions did not return JSON: {bad}. {NARROW}') from None
     live = {}
     for row in rows if isinstance(rows, list) else []:
         where = str(row.get('tmux') or '')
-        if '.%' not in where:
+        if '.%' not in where or '@' not in where:
             continue
-        pane_id = where.rsplit('.', 1)[1]
-        live[pane_id] = str(row.get('name') or '?')
+        # From the right on both splits: a session name may hold a colon.
+        head, pane_id = where.rsplit('.', 1)
+        window_id = head.rsplit(':', 1)[-1]
+        live[f'{window_id}.{pane_id}'] = str(row.get('name') or '?')
     return live
 
 
+def pane_location(window_id: str, pane_id: str) -> str:
+    """The key `live_session_panes` is read by, built from a scanned pane."""
+    return f'{window_id}.{pane_id}'
+
+
 def guarded_panes(scope: Scope) -> dict[str, str]:
-    """Panes a broad scope may not move, mapped to the session's name.
+    """Locations a broad scope may not move, mapped to the session's name.
 
     Scope alone is one argument, and a wrong one is silent. Pointing at a
     window is the deliberate act that says its live agent panes may move;
@@ -224,9 +279,11 @@ def guarded_panes(scope: Scope) -> dict[str, str]:
     Failing to read `claude-sessions` is fatal rather than open, because the
     guard is the reason a broad scope is safe at all.
     """
-    if scope.kind == 'window':
+    if scope.kind is ScopeKind.WINDOW:
         return {}
-    return live_session_panes()
+    if scope.kind in (ScopeKind.SESSION, ScopeKind.SERVER):
+        return live_session_panes()
+    raise Usage(f'no guard is defined for scope kind {scope.kind}')
 
 
 def scan(scope: Scope, guarded: dict[str, str]) -> tuple[list[Pane], list[Window], dict[str, str]]:
@@ -240,11 +297,13 @@ def scan(scope: Scope, guarded: dict[str, str]) -> tuple[list[Pane], list[Window
     its shape is what restore_shape() reads and half a window is the wrong
     shape. Only the pane list is narrowed.
     """
-    panes, skipped = [], {}
+    panes: list[Pane] = []
+    skipped: dict[str, str] = {}
     for line in tmux(*scope.list_panes_args(), '-F', PANE_FIELDS).splitlines():
         pane_id, window_id, command, path, title = line.split('\t')
-        if pane_id in guarded:
-            skipped[pane_id] = guarded[pane_id]
+        location = pane_location(window_id, pane_id)
+        if location in guarded:
+            skipped[pane_id] = guarded[location]
             continue
         content = tmux('capture-pane', '-p', '-S', f'-{SCROLLBACK_LINES}', '-t', pane_id)
         panes.append(Pane(pane_id, window_id, command, path, title, content.strip()))
@@ -460,7 +519,8 @@ def balanced_chunks(items: list[str], cap: int) -> list[list[str]]:
     """
     runs = -(-len(items) // cap)
     size, remainder = divmod(len(items), runs)
-    out, start = [], 0
+    out: list[list[str]] = []
+    start = 0
     for index in range(runs):
         take = size + (1 if index < remainder else 0)
         out.append(items[start : start + take])
@@ -698,8 +758,12 @@ SCOPE_HELP = f"""\
 scope:
   (none)             the window this command runs in
   @5, work:2, %3     the window named, or the one holding that pane
-  work               every window in that session
+  work, =work        every window in that session
   server             every pane on this tmux server
+
+`server` is a word a session may also be called, and it wins. Write `=server`
+to reach a session of that name; the `=` is tmux's own exact-match prefix and
+works on any session name.
 
 At session and server scope a pane running a live Claude session is left where
 it is. Scoping to its window is what says it may move.
