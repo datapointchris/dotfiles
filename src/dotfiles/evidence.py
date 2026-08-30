@@ -328,6 +328,26 @@ it wants. A second method makes a dict stop being an Inventory, and every test
 that measures a package would need a fake instead.
 """
 
+REQUESTED_PREFIX = 'requested:'
+"""What turns an inventory key into "which of these did somebody choose":
+`requested:brew`.
+
+The same device as `OUTDATED_PREFIX` and for the same reason. It is also why the
+answer is cached beside the inventory it is compared against: both come from one
+`Inventories`, so the two sets a machine is judged on were read in one pass
+rather than either side of whatever else the run did.
+"""
+
+DERIVED_PREFIXES: tuple[str, ...] = (OUTDATED_PREFIX, REQUESTED_PREFIX)
+"""The keys that ask a manager something other than what it has installed.
+
+`asked` is what vouches for the package inventory, so each of these has to stay
+out of it: a manager that answered `requested:` while its `brew list` failed
+vouched for nothing. Named here rather than spelled at the one call site, because
+a third prefix added without touching `asked` would silently start counting as an
+inventory answer.
+"""
+
 
 def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     """What one manager says, or None when it cannot answer or was not asked.
@@ -345,6 +365,12 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)
         return None if manager in syspkg.NETWORKED and not refresh else syspkg.outdated(manager)
+
+    # Ungated by `refresh`: which packages were asked for by name is local
+    # bookkeeping the manager already holds, so `--cached` and `--offline` have
+    # nothing to decline here.
+    if name.startswith(REQUESTED_PREFIX):
+        return syspkg.requested(name.removeprefix(REQUESTED_PREFIX))
 
     command = QUERIES.get(name)
     if command is None or not shutil.which(command[0]):
@@ -528,15 +554,32 @@ def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str], *,
     return None
 
 
+def entry_names(entry: catalog.Entry | None) -> dict[str, list[str]]:
+    """The names one declaration entry goes by, per installer.
+
+    Split out from `declared_names` so a caller holding an `Entry` can ask the same
+    question as one holding a `DesiredItem`. `system._undeclared_packages` is that
+    caller: it compares a manager's inventory against the plan and then against the
+    whole catalog, and the catalog side has entries and no items. It derived the
+    catalog half from `entry.name` alone, which disagreed with the plan half about
+    every entry whose package name differs from it — `7zip` installs as `sevenzip`
+    on brew, and the two halves of one comparison reached opposite answers.
+
+    Empty for an entry no package manager installs. A release, a Go tool and a
+    cargo crate are all answered by PATH, so no installer has a name for them.
+    """
+    if isinstance(entry, catalog.SystemPackage):
+        return {installer: [name] for installer in ('apt', 'pacman', 'aur', 'brew') if (name := entry.package_for(installer))}
+    if isinstance(entry, catalog.FlatpakApp):
+        return {'flatpak': [entry.flatpak_id]}
+    if isinstance(entry, catalog.MacosCask):
+        return {'cask': [entry.name]}
+    return {}
+
+
 def declared_names(item: DesiredItem) -> dict[str, list[str]]:
     """The names this item goes by, per installer."""
-    if isinstance(item.entry, catalog.SystemPackage):
-        return {installer: [name] for installer in ('apt', 'pacman', 'aur', 'brew') if (name := item.entry.package_for(installer))}
-    if isinstance(item.entry, catalog.FlatpakApp):
-        return {'flatpak': [item.entry.flatpak_id]}
-    if isinstance(item.entry, catalog.MacosCask):
-        return {'cask': [item.entry.name]}
-    return {}
+    return entry_names(item.entry)
 
 
 class Inventories:
@@ -575,7 +618,7 @@ class Inventories:
         names who vouched for the package inventory, and a manager that answered
         `outdated:` while its `pacman -Qq` failed vouched for nothing.
         """
-        return frozenset(name for name, answer in self._answers.items() if answer is not None and not name.startswith(OUTDATED_PREFIX))
+        return frozenset(name for name, answer in self._answers.items() if answer is not None and not name.startswith(DERIVED_PREFIXES))
 
 
 VERSION_PROBES = ('--version', 'version')

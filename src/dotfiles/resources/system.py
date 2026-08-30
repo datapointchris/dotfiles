@@ -22,12 +22,15 @@ through `providers.sysconfig`, behind the one authorization in `privilege.py`.
 from __future__ import annotations
 
 import dataclasses as dc
+import enum
 from collections.abc import Sequence
 
+from dotfiles import catalog
 from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles.privilege import Privilege
 from dotfiles.providers import sysconfig
+from dotfiles.providers import syspkg
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
 from dotfiles.resolve import Preconditions
@@ -35,12 +38,51 @@ from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
+from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import advice_for
 from dotfiles.resources import repair_for
 from dotfiles.session import Session
 
 NAME = 'system'
+
+
+class Standing(enum.StrEnum):
+    """Why the declaration does not account for a package a manager was asked for.
+
+    A closed vocabulary with every member named, per `python.md` § "Dispatch over a
+    closed vocabulary names every member, enum or not". This was a bool over the
+    first two, and the third fell through to whichever of them the `else` held —
+    telling a reader that their machine declines an entry which declares no package
+    for their manager at all, when the machine subscribes perfectly well.
+    """
+
+    UNKNOWN = 'unknown'
+    """No entry anywhere in `packages.yml` goes by this name."""
+
+    DECLINED = 'declined'
+    """An entry installs it under this manager and this machine does not take it.
+
+    The machine holds something it stopped asking for, which is drift in the
+    manifest rather than a hand-install.
+    """
+
+    OTHER_MANAGERS = 'other_managers'
+    """An entry goes by this name and names no package for this manager.
+
+    The declaration knows the package and cannot install this copy of it: the entry
+    reaches apt and pacman, and the machine has the brew one. Distinct from
+    `DECLINED`, which the manifest could take, and from `UNKNOWN`, which the file
+    has never heard of.
+    """
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Stray:
+    """A package a manager was asked for by name that this machine does not declare."""
+
+    manager: str
+    standing: Standing = Standing.UNKNOWN
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -77,6 +119,15 @@ class Observed:
     declares, and folding them in made a 96-package machine report 99. Addresses
     rather than the count that was here, so `summary` can ask each row how it
     turned out instead of being handed a number with nothing behind it.
+    """
+
+    undeclared: dict[str, Stray] = dc.field(default_factory=dict)
+    """Package name → what is known about it, for one this machine does not declare.
+
+    Apart from `packages` above for the reason the manager rows are: `summary`
+    counts how much of the *declaration* is installed, and these are the opposite
+    reading. Folded in, a machine carrying eight of them would report `96 of 104
+    declared system packages installed` and none of the eight is declared.
     """
 
     @property
@@ -146,6 +197,11 @@ class SystemResource:
             described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
             met=session.preconditions,
             packages=frozenset(item.address for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
+            # No `plan` argument, and that is the finding rather than a tidy-up: this
+            # reads `session.plan` so a narrowed walk cannot shrink the declaration
+            # side of a subtraction. Taking one would put the narrowed plan back in
+            # reach of the next edit.
+            undeclared=_undeclared_packages(session),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -168,7 +224,29 @@ class SystemResource:
             for item in _config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED
         )
-        return packages + configuration
+        # `Repair.BY_HAND`, and the advice is a command to read rather than one
+        # this repo runs. `syspkg.REMOVE`'s own rule is that removal is inferred
+        # nowhere: an uninstall worked out from what a declaration does not name
+        # takes a package off a machine on the strength of a typo. Naming the
+        # package and leaving the judgement is the whole of what this row does.
+        undeclared = tuple(
+            Change(
+                NAME,
+                Stage.SYSTEM,
+                name,
+                Verdict.UNDECLARED,
+                repair=Repair.BY_HAND,
+                detail=FOUND[stray.standing].format(manager=stray.manager),
+                advice=ADVICE[stray.standing].format(
+                    manager=stray.manager,
+                    name=name,
+                    remove=syspkg.REMOVE[stray.manager],
+                    machine=plan.machine.name,
+                ),
+            )
+            for name, stray in sorted(observed.undeclared.items())
+        )
+        return packages + configuration + undeclared
 
     def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
@@ -200,6 +278,140 @@ def _package_change(item: DesiredItem, observed: Observed) -> Change:
         desired=item,
         privileged=registry.needs_root(item),
     )
+
+
+FOUND = {
+    Standing.UNKNOWN: 'found: {manager} was asked for it by name, and nothing declares it',
+    Standing.DECLINED: 'found: {manager} was asked for it by name, and this machine does not declare it',
+    Standing.OTHER_MANAGERS: 'found: {manager} was asked for it by name, and the entry names no {manager} package',
+}
+"""What was found, per standing. Keyed by the enum so a member added without a
+sentence fails at the lookup rather than rendering the wrong one."""
+
+ADVICE = {
+    Standing.UNKNOWN: 'undeclared: not in install/packages.yml -> {remove} {name}',
+    Standing.DECLINED: 'undeclared: install/packages.yml declares it -> dotfiles machines edit {machine}',
+    Standing.OTHER_MANAGERS: 'undeclared: no {manager} package is declared for it -> {remove} {name}',
+}
+"""What to do about one, per standing, and never something this repo does itself.
+
+`syspkg.REMOVE` holds a string to read and paste rather than argv, and the reason
+is the rule this obeys: removal is inferred nowhere, because an uninstall worked
+out from what a declaration does not name takes a package off a machine on the
+strength of a typo.
+
+**Every pointer is a command**, per `help.md` § "Point onward with a command,
+never with a location". `DECLINED` pointed at "the manifest" and named neither
+which manifest nor how to reach it; `dotfiles machines edit` is in the same CLI
+and opens the one this run resolved.
+"""
+
+
+def _undeclared_packages(session: Session) -> dict[str, Stray]:
+    """Packages a manager was asked for by name that this declaration never names.
+
+    The direction nothing else in this resource looks. Every other measurement
+    here reads down from the declaration and asks whether the machine matches it;
+    this reads up from the machine and asks whether the declaration explains what
+    is there. `packages._undeclared_own_tools` is the same question asked of Go
+    binaries, and it exists because `fleet` sat installed on two workstations with
+    no entry in `packages.yml` and no verb could say so. A system package can go
+    missing the same way and had no equivalent: `stylua` is named by
+    `configs/common/.config/nvim/lua/plugins/conform.lua`, is declared in no
+    section, and reached this Mac by hand — so a rebuilt one gets nvim with its
+    Lua formatter silently absent.
+
+    Which managers are asked is `syspkg.REQUESTED`, which is brew alone and says
+    there why.
+
+    Measured against the *plan* and then against the catalog, because the two
+    answer different questions and the advice differs. The plan is what this
+    machine declares; `packages.yml` is what any machine could. `Standing` is the
+    three answers that comparison has.
+
+    **`session.plan`, never the plan this resource was handed.** Every other
+    measurement here loses rows when the walk narrows, and this one gains them: a
+    subtraction whose declaration side shrinks accuses the reader of packages the
+    declaration explains perfectly well. `--through system` narrows by stage across
+    every resource, which dropped the `github_releases` and `go_tools` entries and
+    reported `ntfy`, `sops`, `hadolint` and `ascii-image-converter` as strays — the
+    four that **What this does not do** promises are excluded. `session.plan` is
+    the whole machine's declaration, narrowed by `--package` and `--owner` and by
+    nothing else.
+
+    **A whole-machine run only**, for the reason the Go check gives: `--package`
+    narrows the declaration to one entry, and everything else the machine holds
+    then falls outside the declared set and reads as undeclared.
+    """
+    if session.packages:
+        return {}
+    found: dict[str, Stray] = {}
+    for manager in syspkg.REQUESTED:
+        chosen = session.inventories.get(f'{ev.REQUESTED_PREFIX}{manager}')
+        if chosen is None:
+            continue
+        declared = _declared_names(session.plan, manager)
+        installable, known = _catalogued_names(session.catalog, manager)
+        for name in chosen - declared:
+            found[name] = Stray(manager, _standing(name, installable, known))
+    return found
+
+
+def _standing(name: str, installable: frozenset[str], known: frozenset[str]) -> Standing:
+    """Which of the three the declaration's silence about this package is.
+
+    `installable` before `known`, because a name in both is one the file can install
+    here and the manifest declines — the more specific answer, and the actionable one.
+    """
+    if name in installable:
+        return Standing.DECLINED
+    return Standing.OTHER_MANAGERS if name in known else Standing.UNKNOWN
+
+
+def _catalogued_names(catalogue: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
+    """Every name `packages.yml` carries: those installable under this manager, and all of them.
+
+    Both from `evidence.entry_names`, so the catalog side of the comparison spells a
+    package exactly as the plan side does. Deriving it from `entry.name` alone is
+    what made `7zip`'s brew package `sevenzip` unknown to one half and declared to
+    the other.
+    """
+    installable: set[str] = set()
+    known: set[str] = set()
+    for entries in catalogue.entries.values():
+        for entry in entries:
+            names = ev.entry_names(entry)
+            installable.update(names.get(manager, ()))
+            known.add(entry.name)
+            known.update(name for spellings in names.values() for name in spellings)
+    return frozenset(installable), frozenset(known)
+
+
+def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
+    """Every spelling this declaration knows a package by, under one manager.
+
+    Three, because one entry is spelled differently in three places: the entry
+    name, the package name under a manager — `7zip` installs as `sevenzip` on brew
+    — and the binary it installs. Matching any of them is enough to be explained.
+
+    The per-installer spelling is `evidence.entry_names`' to answer, per `python.md`
+    § "Ask whatever owns a fact; never work it out a second time". Re-deriving it
+    here also narrowed it to `SystemPackage`, so adding `cask` to `syspkg.REQUESTED`
+    would have reported every declared cask as undeclared on its first run.
+
+    Over the whole plan rather than this resource's items, because an entry
+    installing through another mechanism still explains the package. `ntfy` is a
+    `github_releases` entry and brew has a copy of it too; that is a duplicate
+    rather than something undeclared, and `packages._shadowing` is what reports a
+    duplicate.
+    """
+    names: set[str] = set()
+    for item in plan.items:
+        names.add(item.name)
+        if item.executable:
+            names.add(item.executable)
+        names.update(ev.declared_names(item).get(manager, ()))
+    return frozenset(names)
 
 
 def _config_items(plan: Plan) -> list[DesiredItem]:
