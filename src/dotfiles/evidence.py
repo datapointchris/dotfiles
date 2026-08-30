@@ -554,15 +554,32 @@ def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str], *,
     return None
 
 
+def entry_names(entry: catalog.Entry | None) -> dict[str, list[str]]:
+    """The names one declaration entry goes by, per installer.
+
+    Split out from `declared_names` so a caller holding an `Entry` can ask the same
+    question as one holding a `DesiredItem`. `system._undeclared_packages` is that
+    caller: it compares a manager's inventory against the plan and then against the
+    whole catalog, and the catalog side has entries and no items. It derived the
+    catalog half from `entry.name` alone, which disagreed with the plan half about
+    every entry whose package name differs from it — `7zip` installs as `sevenzip`
+    on brew, and the two halves of one comparison reached opposite answers.
+
+    Empty for an entry no package manager installs. A release, a Go tool and a
+    cargo crate are all answered by PATH, so no installer has a name for them.
+    """
+    if isinstance(entry, catalog.SystemPackage):
+        return {installer: [name] for installer in ('apt', 'pacman', 'aur', 'brew') if (name := entry.package_for(installer))}
+    if isinstance(entry, catalog.FlatpakApp):
+        return {'flatpak': [entry.flatpak_id]}
+    if isinstance(entry, catalog.MacosCask):
+        return {'cask': [entry.name]}
+    return {}
+
+
 def declared_names(item: DesiredItem) -> dict[str, list[str]]:
     """The names this item goes by, per installer."""
-    if isinstance(item.entry, catalog.SystemPackage):
-        return {installer: [name] for installer in ('apt', 'pacman', 'aur', 'brew') if (name := item.entry.package_for(installer))}
-    if isinstance(item.entry, catalog.FlatpakApp):
-        return {'flatpak': [item.entry.flatpak_id]}
-    if isinstance(item.entry, catalog.MacosCask):
-        return {'cask': [item.entry.name]}
-    return {}
+    return entry_names(item.entry)
 
 
 class Inventories:

@@ -22,6 +22,7 @@ through `providers.sysconfig`, behind the one authorization in `privilege.py`.
 from __future__ import annotations
 
 import dataclasses as dc
+import enum
 from collections.abc import Sequence
 
 from dotfiles import catalog
@@ -46,23 +47,42 @@ from dotfiles.session import Session
 NAME = 'system'
 
 
+class Standing(enum.StrEnum):
+    """Why the declaration does not account for a package a manager was asked for.
+
+    A closed vocabulary with every member named, per `python.md` § "Dispatch over a
+    closed vocabulary names every member, enum or not". This was a bool over the
+    first two, and the third fell through to whichever of them the `else` held —
+    telling a reader that their machine declines an entry which declares no package
+    for their manager at all, when the machine subscribes perfectly well.
+    """
+
+    UNKNOWN = 'unknown'
+    """No entry anywhere in `packages.yml` goes by this name."""
+
+    DECLINED = 'declined'
+    """An entry installs it under this manager and this machine does not take it.
+
+    The machine holds something it stopped asking for, which is drift in the
+    manifest rather than a hand-install.
+    """
+
+    OTHER_MANAGERS = 'other_managers'
+    """An entry goes by this name and names no package for this manager.
+
+    The declaration knows the package and cannot install this copy of it: the entry
+    reaches apt and pacman, and the machine has the brew one. Distinct from
+    `DECLINED`, which the manifest could take, and from `UNKNOWN`, which the file
+    has never heard of.
+    """
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Stray:
     """A package a manager was asked for by name that this machine does not declare."""
 
     manager: str
-
-    subscribed_elsewhere: bool = False
-    """Whether `packages.yml` carries an entry for it that this manifest declines.
-
-    Two different faults with two different repairs, and one advice line cannot
-    serve both. A package the file does not name at all is somebody's hand-install,
-    and removing it or declaring it are the choices. A package the file names and
-    this manifest does not subscribe to is a machine holding something it stopped
-    asking for, and the fix is usually the manifest. Telling the second "not in
-    install/packages.yml" sends the reader to a file where they will find it, which
-    is worse than saying nothing.
-    """
+    standing: Standing = Standing.UNKNOWN
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -177,7 +197,11 @@ class SystemResource:
             described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
             met=session.preconditions,
             packages=frozenset(item.address for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
-            undeclared=_undeclared_packages(session, plan),
+            # No `plan` argument, and that is the finding rather than a tidy-up: this
+            # reads `session.plan` so a narrowed walk cannot shrink the declaration
+            # side of a subtraction. Taking one would put the narrowed plan back in
+            # reach of the next edit.
+            undeclared=_undeclared_packages(session),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -212,8 +236,13 @@ class SystemResource:
                 name,
                 Verdict.UNDECLARED,
                 repair=Repair.BY_HAND,
-                detail=f'found: {stray.manager} was asked for it by name',
-                advice=_undeclared_advice(name, stray),
+                detail=FOUND[stray.standing].format(manager=stray.manager),
+                advice=ADVICE[stray.standing].format(
+                    manager=stray.manager,
+                    name=name,
+                    remove=syspkg.REMOVE[stray.manager],
+                    machine=plan.machine.name,
+                ),
             )
             for name, stray in sorted(observed.undeclared.items())
         )
@@ -251,20 +280,34 @@ def _package_change(item: DesiredItem, observed: Observed) -> Change:
     )
 
 
-def _undeclared_advice(name: str, stray: Stray) -> str:
-    """What to do about one, which is never for this repo to decide.
+FOUND = {
+    Standing.UNKNOWN: 'found: {manager} was asked for it by name, and nothing declares it',
+    Standing.DECLINED: 'found: {manager} was asked for it by name, and this machine does not declare it',
+    Standing.OTHER_MANAGERS: 'found: {manager} was asked for it by name, and the entry names no {manager} package',
+}
+"""What was found, per standing. Keyed by the enum so a member added without a
+sentence fails at the lookup rather than rendering the wrong one."""
 
-    `syspkg.REMOVE` is a string to read and paste rather than argv, and that is the
-    rule this obeys: removal is inferred nowhere, because an uninstall worked out
-    from what a declaration does not name takes a package off a machine on the
-    strength of a typo.
-    """
-    if stray.subscribed_elsewhere:
-        return 'undeclared: install/packages.yml has it, this machine does not subscribe -> add it to the manifest'
-    return f'undeclared: not in install/packages.yml -> {syspkg.REMOVE[stray.manager]} {name}'
+ADVICE = {
+    Standing.UNKNOWN: 'undeclared: not in install/packages.yml -> {remove} {name}',
+    Standing.DECLINED: 'undeclared: install/packages.yml declares it -> dotfiles machines edit {machine}',
+    Standing.OTHER_MANAGERS: 'undeclared: no {manager} package is declared for it -> {remove} {name}',
+}
+"""What to do about one, per standing, and never something this repo does itself.
+
+`syspkg.REMOVE` holds a string to read and paste rather than argv, and the reason
+is the rule this obeys: removal is inferred nowhere, because an uninstall worked
+out from what a declaration does not name takes a package off a machine on the
+strength of a typo.
+
+**Every pointer is a command**, per `help.md` § "Point onward with a command,
+never with a location". `DECLINED` pointed at "the manifest" and named neither
+which manifest nor how to reach it; `dotfiles machines edit` is in the same CLI
+and opens the one this run resolved.
+"""
 
 
-def _undeclared_packages(session: Session, plan: Plan) -> dict[str, Stray]:
+def _undeclared_packages(session: Session) -> dict[str, Stray]:
     """Packages a manager was asked for by name that this declaration never names.
 
     The direction nothing else in this resource looks. Every other measurement
@@ -283,9 +326,18 @@ def _undeclared_packages(session: Session, plan: Plan) -> dict[str, Stray]:
 
     Measured against the *plan* and then against the catalog, because the two
     answer different questions and the advice differs. The plan is what this
-    machine declares; `packages.yml` is what any machine could. A package in
-    neither is a hand-install, and one the file carries that this manifest does not
-    subscribe to is a machine still holding something it stopped asking for.
+    machine declares; `packages.yml` is what any machine could. `Standing` is the
+    three answers that comparison has.
+
+    **`session.plan`, never the plan this resource was handed.** Every other
+    measurement here loses rows when the walk narrows, and this one gains them: a
+    subtraction whose declaration side shrinks accuses the reader of packages the
+    declaration explains perfectly well. `--through system` narrows by stage across
+    every resource, which dropped the `github_releases` and `go_tools` entries and
+    reported `ntfy`, `sops`, `hadolint` and `ascii-image-converter` as strays — the
+    four that **What this does not do** promises are excluded. `session.plan` is
+    the whole machine's declaration, narrowed by `--package` and `--owner` and by
+    nothing else.
 
     **A whole-machine run only**, for the reason the Go check gives: `--package`
     narrows the declaration to one entry, and everything else the machine holds
@@ -293,23 +345,59 @@ def _undeclared_packages(session: Session, plan: Plan) -> dict[str, Stray]:
     """
     if session.packages:
         return {}
-    declared = _declared_names(plan)
-    catalogued = {entry.name for entries in session.catalog.entries.values() for entry in entries}
     found: dict[str, Stray] = {}
     for manager in syspkg.REQUESTED:
         chosen = session.inventories.get(f'{ev.REQUESTED_PREFIX}{manager}')
         if chosen is None:
             continue
-        found |= {name: Stray(manager, name in catalogued) for name in chosen if name not in declared}
+        declared = _declared_names(session.plan, manager)
+        installable, known = _catalogued_names(session.catalog, manager)
+        for name in chosen - declared:
+            found[name] = Stray(manager, _standing(name, installable, known))
     return found
 
 
-def _declared_names(plan: Plan) -> frozenset[str]:
-    """Every spelling this declaration knows a package by.
+def _standing(name: str, installable: frozenset[str], known: frozenset[str]) -> Standing:
+    """Which of the three the declaration's silence about this package is.
+
+    `installable` before `known`, because a name in both is one the file can install
+    here and the manifest declines — the more specific answer, and the actionable one.
+    """
+    if name in installable:
+        return Standing.DECLINED
+    return Standing.OTHER_MANAGERS if name in known else Standing.UNKNOWN
+
+
+def _catalogued_names(catalogue: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
+    """Every name `packages.yml` carries: those installable under this manager, and all of them.
+
+    Both from `evidence.entry_names`, so the catalog side of the comparison spells a
+    package exactly as the plan side does. Deriving it from `entry.name` alone is
+    what made `7zip`'s brew package `sevenzip` unknown to one half and declared to
+    the other.
+    """
+    installable: set[str] = set()
+    known: set[str] = set()
+    for entries in catalogue.entries.values():
+        for entry in entries:
+            names = ev.entry_names(entry)
+            installable.update(names.get(manager, ()))
+            known.add(entry.name)
+            known.update(name for spellings in names.values() for name in spellings)
+    return frozenset(installable), frozenset(known)
+
+
+def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
+    """Every spelling this declaration knows a package by, under one manager.
 
     Three, because one entry is spelled differently in three places: the entry
     name, the package name under a manager — `7zip` installs as `sevenzip` on brew
     — and the binary it installs. Matching any of them is enough to be explained.
+
+    The per-installer spelling is `evidence.entry_names`' to answer, per `python.md`
+    § "Ask whatever owns a fact; never work it out a second time". Re-deriving it
+    here also narrowed it to `SystemPackage`, so adding `cask` to `syspkg.REQUESTED`
+    would have reported every declared cask as undeclared on its first run.
 
     Over the whole plan rather than this resource's items, because an entry
     installing through another mechanism still explains the package. `ntfy` is a
@@ -322,8 +410,7 @@ def _declared_names(plan: Plan) -> frozenset[str]:
         names.add(item.name)
         if item.executable:
             names.add(item.executable)
-        if isinstance(item.entry, catalog.SystemPackage):
-            names.update(filter(None, (item.entry.package_for(manager) for manager in syspkg.REQUESTED)))
+        names.update(ev.declared_names(item).get(manager, ()))
     return frozenset(names)
 
 

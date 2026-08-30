@@ -188,21 +188,26 @@ workstation `ripgrep` and `fzf` are there for the same kind of reason.
 REQUESTED: dict[str, tuple[str, ...]] = {
     'brew': ('brew', 'leaves', '--installed-on-request'),
 }
-"""How to ask which packages somebody chose, as opposed to which are present.
+"""How to ask which packages somebody chose, for the managers whose answer is
+comparable to a declaration.
 
 **brew alone, and the other two are not an oversight.** `pacman -Qqe` and
 `apt-mark showmanual` are the same query, and their answer is a different kind of
-thing: pacman and apt own the base system, so `base`, `linux` and `sudo` come
-back explicitly installed and no manifest here would ever name them. Reported
-against `packages.yml` that is a hundred rows advising `pacman -R` on the kernel.
-brew owns nothing it was not asked for, so every name it returns is one somebody
-typed. Same reasoning as `packages._undeclared_own_tools` scoping itself to Go:
-the question is only worth asking where the answer is comparable to a
-declaration.
+thing: pacman and apt own the base system, so what they call explicitly installed
+includes packages no manifest here would ever name. Measured on the fleet's Arch
+workstation — `pacman -Qqe` returns 123 names and 40 of them appear nowhere in
+`packages.yml`, `base`, `linux` and `linux-firmware` among them. Those 40 rows
+would advise `pacman -R` on the kernel. brew owns nothing it was not asked for, so
+every name it returns is one somebody typed. Same reasoning as
+`packages._undeclared_own_tools` scoping itself to Go.
 
 **`--installed-on-request` rather than a bare `brew leaves`.** A dependency
 outliving whatever wanted it is a leaf nobody chose, and reporting it undeclared
 asks someone to tidy up after brew rather than after themselves.
+
+The one-manager membership is pinned by a test rather than left to this sentence,
+because a name claiming a category invites an addition that the paragraph above
+would have refused.
 """
 
 
@@ -247,6 +252,16 @@ def requested(manager: str) -> frozenset[str] | None:
     otherwise both read as a machine whose declaration explains all of it, and the
     second is the state of every machine without brew.
 
+    **That is the one place this and `unchosen` deliberately part**, and they are
+    otherwise complements — `pacman -Qqe` is the exact inverse of the `pacman -Qdq`
+    in `UNCHOSEN`. `unchosen` unions every manager and skips one that fails, because
+    its caller is asking whether *some* manager explains a second copy on PATH and a
+    silent manager subtracts nothing from that. This answers per manager and reports
+    a failed read as unknown, because its caller subtracts the declaration from this
+    set and a silent manager would turn into a clean machine. Whoever adds a manager
+    here inherits the second convention, and the choice is what decides whether a
+    failed read reads as "nothing" or as "cannot say".
+
     Tap-qualified names are reduced to the formula, because that is the spelling
     every other reader uses. `brew leaves` prints `felixkratz/formulae/borders`
     while `brew list --formula` prints `borders`, so a declaration naming the
@@ -255,7 +270,13 @@ def requested(manager: str) -> frozenset[str] | None:
     command = REQUESTED.get(manager)
     if command is None or not _answers(command[0]):
         return None
-    listed = effects.run(list(command), output=Output.QUIET, timeout=CURRENCY_SECONDS)
+    # `PROBE_SECONDS`, not `CURRENCY_SECONDS`. This reads bookkeeping the manager
+    # already holds and touches no network, which is what the currency bound is for
+    # — `unchosen` above is the mirror local read and uses the same one. Measured:
+    # `brew leaves --installed-on-request` answers 67 names in about 1.4s, against a
+    # whole `dotfiles system check` of 4.4s. A wedged brew holds the scheduled timer
+    # for 10 seconds rather than 90.
+    listed = effects.run(list(command), output=Output.QUIET, timeout=PROBE_SECONDS)
     if not listed.ok:
         return None
     return frozenset(line.strip().rsplit('/', 1)[-1] for line in listed.stdout.splitlines() if line.strip())

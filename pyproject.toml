@@ -119,6 +119,7 @@ markers = [
     "docker: installs a whole machine in a container; opt in with --docker",
     "interpreter(name): drives a shell this machine may not have; --require-interpreters makes its absence fatal",
     "replants: spawns its own pytest per mutant, so it costs minutes of CPU; opt in with --replants",
+    "measures_requests: drives the real syspkg.requested; the autouse stub in tests/resources/test_system.py stands aside",
 ]
 # So `harness` imports the same way from tests/e2e and from the root conftest,
 # rather than relying on pytest inserting the test file's directory. `tests` is
