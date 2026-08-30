@@ -1892,6 +1892,18 @@ macos_casks:
     description: Fan control utility
     tags: [gui]
 
+  # Licensed per major version, and the key lives in
+  # ~/Library/Preferences/com.rogueamoeba.soundsource.plist rather than in the
+  # bundle — so replacing the app never loses the licence, but a bundle from a
+  # newer major than the key covers runs unregistered. The cask declares
+  # `auto_updates`, which is what holds that off: `--adopt` skips its version
+  # comparison for such a cask and leaves the installed bundle untouched, and
+  # `brew outdated --cask` without `--greedy` never lists one. Brew is the
+  # declaration that this app belongs on the machine, never its updater.
+  - name: soundsource
+    description: Per-app audio routing, volume and system-wide EQ
+    tags: [gui, audio]
+
   - name: michaelvillar-timer
     description: Timer app
     tags: [gui]
