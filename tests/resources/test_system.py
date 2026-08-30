@@ -80,6 +80,20 @@ def unmeasured_currency(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(syspkg, 'outdated', lambda manager: None)
 
 
+@pytest.fixture(autouse=True)
+def unmeasured_requests(monkeypatch: pytest.MonkeyPatch):
+    """No test in this file asks a package manager what somebody chose.
+
+    Autouse for `unmeasured_currency`'s reason, one manager over. The read is
+    planned from whatever else the plan reached, so every fixture here would grow
+    one without asking — and unstubbed it is `brew leaves` against the machine
+    running the suite, which puts that machine's hand-installed formulae into the
+    changes of tests about something else entirely. The tests that do want an
+    answer set one.
+    """
+    monkeypatch.setattr(syspkg, 'requested', lambda manager: None)
+
+
 def payload(live: Session):
     """Everything the plan holds for this resource but the manager rows."""
     return [item for item in live.plan.for_resource('system') if item.provider != 'manager']
@@ -997,3 +1011,136 @@ def test_an_unnamed_precondition_refuses_rather_than_passing(monkeypatch: pytest
 
     assert met.holds(invented) is False, 'an unnamed precondition must fail closed'
     assert met.holds(Precondition.NONE) is True, 'NONE answers True by being named'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A package the machine has and the declaration does not name
+# ─────────────────────────────────────────────────────────────────────────────
+
+MAC = {'machine': 'box', 'platform': 'macos', 'system_packages': 'workstation'}
+DECLARES_BAT = {'system_packages': [{'name': 'bat', 'brew': 'bat', 'apt': 'bat'}]}
+
+BREW_LEAVES = """#!/bin/sh
+case "$1" in
+  --version) echo 'Homebrew 6.0.0' ;;
+  leaves) printf '%s\\n' {names} ;;
+esac
+"""
+"""A brew answering the two questions `syspkg.requested` asks, and nothing else.
+
+`--version` is what `_answers` probes with, so a script without it is a brew that
+is not there — a different assertion from the one the test using this makes.
+"""
+
+
+def chose(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
+    """What brew reports as asked for by name, stubbed at the subprocess boundary."""
+    monkeypatch.setattr(syspkg, 'requested', lambda manager: frozenset(names) if manager == 'brew' else None)
+
+
+def undeclared(live: Session) -> list[Change]:
+    observed = system.RESOURCE.observe(live, live.plan)
+    return [change for change in system.RESOURCE.diff(live.plan, observed) if change.verdict is Verdict.UNDECLARED]
+
+
+def test_a_package_nothing_declares_is_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The direction nothing else in this resource looks. `stylua` is named by the
+    nvim config, declared in no section, and reached the Mac by hand — so a rebuilt
+    machine gets nvim with its Lua formatter absent and every verb called it
+    converged."""
+    chose(monkeypatch, 'bat', 'stylua')
+    live = session(tmp_path, DECLARES_BAT, MAC)
+
+    assert [change.item for change in undeclared(live)] == ['stylua']
+
+
+def test_the_row_is_by_hand_and_names_the_removal_without_performing_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`syspkg.REMOVE`'s rule: an uninstall inferred from what a declaration does
+    not name takes a package off a machine on the strength of a typo. The row says
+    what it found and hands over the judgement."""
+    chose(monkeypatch, 'stylua')
+    live = session(tmp_path, DECLARES_BAT, MAC)
+    change = undeclared(live)[0]
+
+    assert change.repair is Repair.BY_HAND
+    assert 'brew uninstall stylua' in change.advice
+
+
+def test_a_package_declared_under_its_manager_name_is_explained(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The entry is `nodejs` and brew installs it as `node`, so matching the entry
+    name alone would report every renamed package undeclared."""
+    chose(monkeypatch, 'node')
+    live = session(tmp_path, {'system_packages': [{'name': 'nodejs', 'brew': 'node', 'apt': 'nodejs'}]}, MAC)
+
+    assert undeclared(live) == []
+
+
+NTFY = {'github_releases': [{'name': 'ntfy', 'repo': 'binwiederhier/ntfy'}]}
+
+
+def test_a_package_declared_through_another_mechanism_is_explained(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`ntfy` is a `github_releases` entry and brew has a copy of it too. That is a
+    duplicate, which `packages._shadowing` reports — reporting it here as well
+    would tell someone to uninstall the thing they declared."""
+    chose(monkeypatch, 'ntfy')
+    live = session(tmp_path, NTFY, {**MAC, 'github_releases': ['ntfy']})
+
+    assert undeclared(live) == []
+
+
+def test_a_package_the_manifest_stopped_subscribing_to_is_not_called_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The file carries `ntfy` and this manifest does not ask for it, so the machine
+    holds something it stopped declaring. Real drift, and a different one — advising
+    `not in install/packages.yml` sends the reader to a file where they find it."""
+    chose(monkeypatch, 'ntfy')
+    live = session(tmp_path, NTFY, MAC)
+    change = undeclared(live)[0]
+
+    assert 'this machine does not subscribe' in change.advice
+    assert 'brew uninstall' not in change.advice
+
+
+def test_a_manager_that_cannot_be_asked_reports_nothing_rather_than_everything(tmp_path: Path) -> None:
+    """None and an empty set are different answers. Read as "nobody chose
+    anything", a machine without brew reports its whole declaration explained —
+    and reading it the other way would report every package undeclared."""
+    live = session(tmp_path, DECLARES_BAT, MAC)
+
+    assert undeclared(live) == []
+
+
+def test_a_narrowed_run_reports_nothing_undeclared(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--package` narrows the declaration to one entry, so everything else the
+    machine holds falls outside the declared set. Asking the question against a
+    plan that is deliberately partial answers it wrong."""
+    chose(monkeypatch, 'bat', 'stylua')
+    # `dc.replace` rather than an override on `session`, whose own second argument
+    # is named `packages` and is the declaration rather than the narrowing.
+    live = dc.replace(session(tmp_path, DECLARES_BAT, MAC), packages=frozenset({'bat'}))
+
+    assert undeclared(live) == []
+
+
+def test_a_tap_qualified_name_is_matched_against_the_declared_short_one(tmp_path: Path, fake_bin: Path) -> None:
+    """End to end through the real subprocess, because the command and the parse
+    are one thing. `brew leaves` prints `felixkratz/formulae/borders` while
+    `brew list --formula` prints `borders`, so the long form measured against a
+    declaration naming the short one is a finding on every run, forever."""
+    executable(fake_bin, 'brew', BREW_LEAVES.format(names='felixkratz/formulae/borders'))
+    live = session(tmp_path, {'system_packages': [{'name': 'borders', 'brew': 'borders'}]}, MAC)
+
+    assert undeclared(live) == []
+
+
+def test_the_undeclared_rows_are_kept_out_of_the_declared_package_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`summary` counts how much of the declaration is installed, and these are the
+    opposite reading. Folded in, a machine carrying eight of them reports a total
+    that counts the packages it is reporting as undeclared."""
+    chose(monkeypatch, 'bat', 'stylua')
+    live = session(tmp_path, DECLARES_BAT, MAC)
+    observed = system.RESOURCE.observe(live, live.plan)
+
+    assert 'stylua' not in observed.packages
+    # The denominator is the half a stray would inflate, and it is the declaration's
+    # size. Whether `bat` is installed depends on the machine running the suite.
+    assert 'of 1 declared system packages installed' in observed.summary

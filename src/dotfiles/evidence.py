@@ -328,6 +328,26 @@ it wants. A second method makes a dict stop being an Inventory, and every test
 that measures a package would need a fake instead.
 """
 
+REQUESTED_PREFIX = 'requested:'
+"""What turns an inventory key into "which of these did somebody choose":
+`requested:brew`.
+
+The same device as `OUTDATED_PREFIX` and for the same reason. It is also why the
+answer is cached beside the inventory it is compared against: both come from one
+`Inventories`, so the two sets a machine is judged on were read in one pass
+rather than either side of whatever else the run did.
+"""
+
+DERIVED_PREFIXES: tuple[str, ...] = (OUTDATED_PREFIX, REQUESTED_PREFIX)
+"""The keys that ask a manager something other than what it has installed.
+
+`asked` is what vouches for the package inventory, so each of these has to stay
+out of it: a manager that answered `requested:` while its `brew list` failed
+vouched for nothing. Named here rather than spelled at the one call site, because
+a third prefix added without touching `asked` would silently start counting as an
+inventory answer.
+"""
+
 
 def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     """What one manager says, or None when it cannot answer or was not asked.
@@ -345,6 +365,12 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     if name.startswith(OUTDATED_PREFIX):
         manager = name.removeprefix(OUTDATED_PREFIX)
         return None if manager in syspkg.NETWORKED and not refresh else syspkg.outdated(manager)
+
+    # Ungated by `refresh`: which packages were asked for by name is local
+    # bookkeeping the manager already holds, so `--cached` and `--offline` have
+    # nothing to decline here.
+    if name.startswith(REQUESTED_PREFIX):
+        return syspkg.requested(name.removeprefix(REQUESTED_PREFIX))
 
     command = QUERIES.get(name)
     if command is None or not shutil.which(command[0]):
@@ -575,7 +601,7 @@ class Inventories:
         names who vouched for the package inventory, and a manager that answered
         `outdated:` while its `pacman -Qq` failed vouched for nothing.
         """
-        return frozenset(name for name, answer in self._answers.items() if answer is not None and not name.startswith(OUTDATED_PREFIX))
+        return frozenset(name for name, answer in self._answers.items() if answer is not None and not name.startswith(DERIVED_PREFIXES))
 
 
 VERSION_PROBES = ('--version', 'version')

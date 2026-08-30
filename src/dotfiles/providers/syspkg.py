@@ -185,6 +185,26 @@ because yay needs a compiler to build AUR packages, and on the personal
 workstation `ripgrep` and `fzf` are there for the same kind of reason.
 """
 
+REQUESTED: dict[str, tuple[str, ...]] = {
+    'brew': ('brew', 'leaves', '--installed-on-request'),
+}
+"""How to ask which packages somebody chose, as opposed to which are present.
+
+**brew alone, and the other two are not an oversight.** `pacman -Qqe` and
+`apt-mark showmanual` are the same query, and their answer is a different kind of
+thing: pacman and apt own the base system, so `base`, `linux` and `sudo` come
+back explicitly installed and no manifest here would ever name them. Reported
+against `packages.yml` that is a hundred rows advising `pacman -R` on the kernel.
+brew owns nothing it was not asked for, so every name it returns is one somebody
+typed. Same reasoning as `packages._undeclared_own_tools` scoping itself to Go:
+the question is only worth asking where the answer is comparable to a
+declaration.
+
+**`--installed-on-request` rather than a bare `brew leaves`.** A dependency
+outliving whatever wanted it is a leaf nobody chose, and reporting it undeclared
+asks someone to tidy up after brew rather than after themselves.
+"""
+
 
 def _answers(binary: str) -> bool:
     """Whether a package manager is here and will run.
@@ -217,6 +237,28 @@ def unchosen() -> frozenset[str]:
         if listed.ok:
             found.update(line.strip() for line in listed.stdout.splitlines() if line.strip())
     return frozenset(found)
+
+
+def requested(manager: str) -> frozenset[str] | None:
+    """Which of this manager's packages someone asked for by name, or None.
+
+    **None rather than an empty set where the manager cannot be asked**, for the
+    reason `outdated` gives: "nobody chose anything" and "nobody was asked" would
+    otherwise both read as a machine whose declaration explains all of it, and the
+    second is the state of every machine without brew.
+
+    Tap-qualified names are reduced to the formula, because that is the spelling
+    every other reader uses. `brew leaves` prints `felixkratz/formulae/borders`
+    while `brew list --formula` prints `borders`, so a declaration naming the
+    short form would be reported undeclared against the long one on every run.
+    """
+    command = REQUESTED.get(manager)
+    if command is None or not _answers(command[0]):
+        return None
+    listed = effects.run(list(command), output=Output.QUIET, timeout=CURRENCY_SECONDS)
+    if not listed.ok:
+        return None
+    return frozenset(line.strip().rsplit('/', 1)[-1] for line in listed.stdout.splitlines() if line.strip())
 
 
 def owner_of(path: str) -> str:
