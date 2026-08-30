@@ -435,7 +435,7 @@ def spawn_state(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def rig(tmp_path: Path, bin_dir: Path, spawn_state: Path):
+def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
     """A throwaway tmux server, with a `tmux` on PATH that can only reach it.
 
     The binary is shadowed rather than the socket passed through, because the app calls
@@ -444,8 +444,11 @@ def rig(tmp_path: Path, bin_dir: Path, spawn_state: Path):
 
     The server is started carrying the stub directory on PATH: a pane inherits the
     server's environment, and the pane is where the stub `claude` has to be found.
+
+    The socket sits outside `tmp_path`, which stays the rig's `$HOME` and working
+    directory. `tmux_socket` holds the length limit that forces the split.
     """
-    socket = tmp_path / 'tmux.sock'
+    socket = tmux_socket
     server = os.environ | {'PATH': f'{bin_dir}:{os.environ["PATH"]}', 'HOME': str(tmp_path)}
     subprocess.run(
         [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', '50', '-c', str(tmp_path)],

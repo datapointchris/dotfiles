@@ -27,6 +27,8 @@ import importlib.util  # noqa: E402
 import shutil  # noqa: E402
 import stat  # noqa: E402
 import sys  # noqa: E402
+import tempfile  # noqa: E402
+from collections.abc import Iterator  # noqa: E402
 from pathlib import Path  # noqa: E402
 from types import ModuleType  # noqa: E402
 
@@ -688,6 +690,36 @@ def _executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n')
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
     return target
+
+
+@pytest.fixture
+def tmux_socket() -> Iterator[Path]:
+    """A control socket for a test's own tmux server, short enough to bind.
+
+    Deliberately not under `tmp_path`, which is where it belongs and does not fit.
+    A unix socket address is capped at 104 bytes on macOS, and pytest's temp root
+    there is `/private/var/folders/<2>/<28>/T` before the per-test directory and
+    the xdist worker's — so `tmp_path / 'tmux.sock'` measured 135 bytes and every
+    real-tmux fixture died at setup with `File name too long`. Linux puts the same
+    tree under `/tmp/pytest-of-<user>` and stays inside its 108, which is why three
+    files' worth of these tests passed everywhere they had ever been run.
+
+    Still one socket per test and per parallel worker, which is the property the
+    fixtures using it rely on and state. `mkdtemp` is what keeps that while being
+    short: it invents the unique part atomically, so nothing has to pick a name two
+    workers might both choose — the same reason those fixtures give for addressing
+    a socket by path rather than by `tmux -L <name>`.
+
+    `/tmp` rather than the default, because the default is the long one. It is a
+    symlink to `/private/tmp` on macOS and the real thing on Linux; both are short.
+    """
+    directory = tempfile.mkdtemp(prefix='dfts', dir='/tmp')
+    try:
+        yield Path(directory) / 'tmux.sock'
+    finally:
+        # The server is killed by whoever started it. This is the directory around
+        # the socket, which outlives it either way.
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 @pytest.fixture

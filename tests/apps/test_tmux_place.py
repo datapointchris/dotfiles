@@ -1117,7 +1117,7 @@ def test_release_can_be_pointed_at_one_pane(tmux_place, monkeypatch):
 
 
 @pytest.fixture
-def server(tmux_place, tmp_path, monkeypatch):
+def server(tmux_place, tmux_socket, monkeypatch):
     """A tmux server of this test's own, at the measured geometry.
 
     A stub proves the decisions and cannot prove what tmux does with them. Every
@@ -1126,11 +1126,12 @@ def server(tmux_place, tmp_path, monkeypatch):
     `$TMUX` is what a bare `tmux` reads to find its socket, so pointing it here
     sends the module's own calls to this server without any of them knowing.
 
-    Addressed by socket path rather than by `-L <name>`: `tmp_path` is already
-    unique per test and per parallel worker, so nothing has to invent a name that
-    two workers might both choose.
+    Addressed by socket path rather than by `-L <name>`, so nothing has to invent a
+    name that two workers might both choose. The path comes from `tmux_socket`
+    rather than `tmp_path` because a socket address has a length limit that
+    pytest's temp root does not fit inside; that fixture holds the measurement.
     """
-    socket = str(tmp_path / 'tmux.sock')
+    socket = str(tmux_socket)
     idle = 'bash -c "while :; do sleep 5; done"'
     # `-f /dev/null` starts the server with no configuration, so the geometry is
     # tmux's own rather than whatever the machine running the tests happens to

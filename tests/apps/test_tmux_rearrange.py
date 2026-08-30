@@ -364,18 +364,19 @@ exact failure `--require-interpreters` exists to stop."""
 
 
 @pytest.fixture
-def server(tmux_rearrange, tmp_path, monkeypatch):
+def server(tmux_rearrange, tmux_socket, monkeypatch):
     """A tmux server of this test's own, carrying the shapes scope has to survive.
 
     The stub above proves the decisions and cannot prove what tmux does with
     them, and every scope defect found in review lived in that gap. Two of
     them turned on one command's error behaviour, which no fake can report.
 
-    Addressed by socket path rather than `-L <name>`: `tmp_path` is unique per
-    test and per parallel worker, so nothing has to invent a name two workers
-    might both choose. `-f /dev/null` starts it with no configuration.
+    Addressed by socket path rather than `-L <name>`, so nothing has to invent a
+    name two workers might both choose. `tmux_socket` is where that path comes
+    from and why it is not under `tmp_path`. `-f /dev/null` starts it with no
+    configuration.
     """
-    socket = str(tmp_path / 'tmux.sock')
+    socket = str(tmux_socket)
     blank = ('-f', '/dev/null')
 
     def control(*args: str) -> str:
