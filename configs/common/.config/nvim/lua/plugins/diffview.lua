@@ -1,6 +1,15 @@
 return {
   'sindrets/diffview.nvim',
-  opts = {},
+  opts = {
+    -- Vim's diff engine marks a line that exists on the left and not the right
+    -- as DiffAdd *in the left pane*, so a deletion reads green without this.
+    -- The remap is per-window: the left pane's DiffAdd becomes
+    -- DiffviewDiffAddAsDelete, which copies DiffDelete, and the filler rows on
+    -- both sides become DiffviewDiffDeleteDim, which links Comment and so
+    -- carries no background. Paired with 'fillchars' diff:' ' in core.diff,
+    -- that leaves a removed region blank rather than a red rule.
+    enhanced_diff_hl = true,
+  },
   cmd = {
     'DiffviewOpen',
     'DiffviewClose',
