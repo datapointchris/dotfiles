@@ -808,7 +808,10 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
         )
 
     extracted = None
-    if archive is not None and offline_bundle.stem(archive) not in already:
+    # Ordering rather than membership. An archive on disk older than the top of the
+    # stack changes nothing a provider reads, so unpacking it spends the transfer
+    # and then puts a bundle in the headline that no version here came out of.
+    if archive is not None and (not already or offline_bundle.outranks(archive, already)):
         try:
             offline_bundle.stage(archive, machine, box)
         except offline_bundle.StagingError as unreadable:
@@ -928,7 +931,7 @@ def unstaged_newer(staged: offline_bundle.Staging, machine: str) -> Path | None:
     if not machine:
         return None
     archive = offline_bundle.newest(machine=machine)
-    if archive is None or offline_bundle.stem(archive) <= staged.newest.name:
+    if archive is None or not offline_bundle.outranks(archive, [path.name for path in staged.bundles]):
         return None
     return archive
 

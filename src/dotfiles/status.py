@@ -114,8 +114,6 @@ def document(
     when: dt.datetime,
     verb: str = 'check',
     written_by: str = '',
-    *,
-    measured_against: str,
 ) -> dict[str, object]:
     """The versioned interchange document, from every read door.
 
@@ -126,13 +124,6 @@ def document(
     `verb` names which question produced it — `plan` and `check` measure the same
     machine and keep different findings, and the bundle builder wants the plan's.
 
-    **`measured_against` names the staged bundle every version here was compared
-    to, and is empty where the walk asked upstream.** Always a key rather than one
-    that appears offline, for the reason `scope` is: inferring a generation from
-    which keys are present is what the version exists to end. A document read off
-    the shelf otherwise cannot say whether its figures came from GitHub or from a
-    fortnight-old tarball, and those are different claims about the same machine.
-    Additive, so `VERSION` does not move.
 
     **`scope` names which resources it covers, and a reader has to honour it.** One
     shape comes from three widths, so without it a consumer diffing this against a
@@ -151,7 +142,6 @@ def document(
         'checked': when.isoformat(),
         'scope': sorted({vocabulary.parse_address(result.address)[0] for result in results}),
         'verdict': _worst(results),
-        'measured_against': measured_against,
         'resources': [result.as_dict() for result in results],
     }
     if written_by:

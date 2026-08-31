@@ -722,7 +722,7 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
         # advised extracting a newer bundle to fix something no bundle will ever
         # carry — a permanent finding against the wrong artefact.
         if not bundle.bundlable(item.entry):
-            return f'no bundle carries a {_kind_of(item)}, so an offline run cannot say whether {item.name} is current'
+            return _never_bundled(item)
         # A sparse bundle explains most of what it left out, so an entry it does
         # not explain is a different finding: the declaration gained it after the
         # status the bundle was planned from was taken, and nothing has ever
@@ -740,16 +740,22 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'
 
 
-def _kind_of(item: DesiredItem) -> str:
-    """The declaration section an entry came from, as a reader would name it.
+def _never_bundled(item: DesiredItem) -> str:
+    """Why no bundle carries this entry, read off the entry rather than its section.
 
-    The section rather than the class, because that is the heading the entry sits
-    under in `packages.yml` and the word a reader can search for.
+    A section is the right subject for every kind but one. `custom_installers`
+    answers `bundlable` per entry — `theme` and `claude-code` declare
+    `bundle_install_script` and are staged, `terraform-ls` and `mount-s3` do not —
+    so a sentence blaming the section is false on a machine whose bundle carries
+    five of its siblings.
     """
-    return getattr(type(item.entry), 'section', 'package').replace('_', ' ').rstrip('s')
+    if isinstance(item.entry, catalog.CustomInstaller):
+        return f'{item.name} declares no bundle_install_script, so no bundle stages an installer to compare against'
+    kind = type(item.entry).section.replace('_', ' ').rstrip('s')
+    return f'no bundle carries a {kind}, so an offline run cannot say whether {item.name} is current'
 
 
-def _unmeasurable_advice(observed: Observed, *, bundlable: bool = True) -> str:
+def _unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
     Four states, and only two of them have a next step.

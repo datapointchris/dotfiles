@@ -400,12 +400,15 @@ def download(
     listed = transport.listed(where, directory) or ()
 
     records = sorted((name for name in listed if name.endswith('.json')), reverse=True)
-    wanted = records[:limit]
-    if not wanted:
+    # The shelf, not the slice. Guarding on what `--limit` left reports an empty
+    # remote to a caller who asked for none of it, and sends them to the other
+    # machine to fill a shelf that is already full.
+    if not records:
         error(f'the remote holds no run records for {named} at {directory}')
         hint('send some from that machine with: dotfiles report upload')
         raise typer.Exit(ExitCode.ISSUE)
 
+    wanted = records[:limit]
     fetched = 0
     for name in wanted:
         # Both files, for the reason `upload` sends both: the record carries what a
@@ -419,7 +422,10 @@ def download(
             fetched += 1
 
     if not fetched:
-        render_note(f'{paths.under_home(paths.RUNS_DIR)} already holds every record on that shelf')
+        # Scoped to what was asked for, because that is what was looked at. A shelf
+        # of fifty with the newest twenty local is not a shelf this run drained.
+        held = f'the newest {len(wanted)}' if len(wanted) < len(records) else 'every record'
+        render_note(f'{paths.under_home(paths.RUNS_DIR)} already holds {held} on that shelf')
         raise typer.Exit(ExitCode.CONVERGED)
 
     render_note(f'fetched {fetched} file(s) from {directory}')

@@ -459,8 +459,9 @@ def download(
     otherwise surfaces as a corrupt tarball part way into an apply, which reads as
     a broken bundle rather than a failed download.
 
-    Nothing is staged here. `bundle stage` unpacks, and keeping the two apart is
-    what lets a download be repeated without disturbing what is already staged.
+    Nothing is staged here, so a download can be repeated without touching what is
+    already unpacked. The next `apply --offline` stages what this leaves in the
+    cache, which is why there is no staging step between the two.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
@@ -489,7 +490,7 @@ def download(
         render_note('digest matches the record on the remote')
 
     success(f'downloaded {wanted} to {paths.under_home(destination)}')
-    hint(f'stage it with: dotfiles bundle stage {destination}')
+    hint('install from it with: dotfiles apply --offline')
     raise typer.Exit(ExitCode.CONVERGED)
 
 

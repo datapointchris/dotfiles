@@ -295,6 +295,22 @@ def test_apply_stages_a_newer_archive_over_one_already_staged(tmp_path, home, st
     assert len(providers.staged_bundles()) == 2, 'the older one stays, because a sparse bundle reads through it'
 
 
+def test_apply_leaves_an_archive_older_than_the_stack_in_its_tarball(tmp_path, home, staging, monkeypatch) -> None:
+    """Ordering, not membership. An archive below the top of the stack supplies
+    nothing the stack does not already answer, and unpacking it spends the transfer
+    and then puts a bundle in the run's headline that no version came out of."""
+    monkeypatch.chdir(tmp_path)
+    newer = staging / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    (newer / 'bin').mkdir(parents=True)
+    (newer / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (newer / 'bin' / 'uv').write_text('what the stack answers with')
+    archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'older'})
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'what the stack answers with'
+    assert len(providers.staged_bundles()) == 1, 'the older archive stayed in its tarball'
+
+
 def test_apply_does_not_re_unpack_the_archive_it_already_staged(tmp_path, home, staging, monkeypatch) -> None:
     """The other half. Re-reading a tarball every run costs minutes on the machine
     this exists for, and the newest archive already being staged is the steady state."""

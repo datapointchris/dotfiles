@@ -27,7 +27,6 @@ from pathlib import Path
 import typer
 
 from dotfiles import coordinates as axes
-from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import reconcile
@@ -121,9 +120,7 @@ def composed(machine: str | None) -> Composed:
     # which is exactly what a builder diffs against.
     walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
     trust = session.machine.coordinates.network_trust
-    written_by = publishing.discriminator(trust)
-    staged = offline_bundle.measured_against(True)
-    document = status_document.document(walked.results, named, began, verb='plan', written_by=written_by, measured_against=staged)
+    document = status_document.document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
     return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, trust)
 
 

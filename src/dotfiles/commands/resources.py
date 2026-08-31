@@ -55,7 +55,6 @@ def _report(
     machine: str,
     when: dt.datetime,
     lens: reconcile.Lens,
-    offline: bool,
 ) -> None:
     """Print every resource the walk covered, and exit with the code all of them earn.
 
@@ -74,7 +73,7 @@ def _report(
     says the rest.
     """
     if as_json:
-        emit_json(status.document(results, machine, when, verb=str(lens), measured_against=offline_bundle.measured_against(offline)))
+        emit_json(status.document(results, machine, when, verb=str(lens)))
     else:
         for result in results:
             render_result(result, console)
@@ -135,7 +134,7 @@ def _survey(
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
     walked = reconcile.fold(engine.assess(session, selection), lens)
-    _report(walked, as_json, machine=session.machine_name, when=began, lens=lens, offline=offline)
+    _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
 
 
 def _session(

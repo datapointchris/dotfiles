@@ -28,14 +28,15 @@ from pathlib import Path
 import pytest
 
 from dotfiles import create_bundle
-from dotfiles import offline_bundle
 from dotfiles import status as status_document
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import DECLARES_LAZYGIT
 from matrix.harness import DECLARES_SYNCER
+from matrix.harness import DECLARES_VENDOR_INSTALLER
 from matrix.harness import LAZYGIT
 from matrix.harness import SYNCER
+from matrix.harness import VENDOR_INSTALLER
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 
@@ -308,53 +309,6 @@ class TestWhatTheTargetDecides:
         assert 'carries no version' in found['detail']
 
 
-class TestSayingWhichBundleADocumentWasMeasuredAgainst:
-    """A document read off the shelf has to say where its figures came from.
-
-    Without it, a status carrying `unknown` rows and one carrying current versions
-    are the same shape, and nothing distinguishes a machine measured against GitHub
-    from one measured against a fortnight-old tarball.
-    """
-
-    def test_offline_it_names_the_staged_bundle(self, sandbox: Sandbox, cli) -> None:
-        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
-        staged = sandbox.stage_bundle({'lazygit': '0.46.0'})
-
-        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-
-        assert ran.document['measured_against'] == staged.name
-
-    def test_check_names_it_too_and_not_only_plan(self, sandbox: Sandbox, cli) -> None:
-        """Both composite read doors compose the same document, so a key one of them
-        never fills asserts upstream figures for a walk that never asked upstream."""
-        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
-        staged = sandbox.stage_bundle({'lazygit': '0.46.0'})
-
-        ran = cli('check', '--offline', '--json', catch_exceptions=True)
-
-        assert ran.document['measured_against'] == staged.name
-
-    def test_online_it_is_empty_rather_than_absent(self, sandbox: Sandbox, cli) -> None:
-        """A key either way. Inferring which upstream answered from whether a key is
-        present is the unversioned failure the document's version exists to end."""
-        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
-
-        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
-
-        assert ran.document['measured_against'] == offline_bundle.UPSTREAM
-
-    def test_offline_with_nothing_staged_is_its_own_value(self, sandbox: Sandbox, cli) -> None:
-        """The first turn of the firewalled box's loop. Sharing the online sentinel
-        publishes a document claiming GitHub figures for a walk that measured
-        nothing, to the machine that builds its bundles."""
-        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
-
-        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-
-        assert ran.document['measured_against'] == offline_bundle.NOTHING_STAGED
-        assert offline_bundle.NOTHING_STAGED != offline_bundle.UPSTREAM
-
-
 class TestNamingWhereTheFigureCameFrom:
     """Offline the upstream is one tarball, and the row has to say so.
 
@@ -446,6 +400,21 @@ class TestWhatNoBundleEverCarries:
         packages = next(r for r in ran.document['resources'] if r['address'] == 'packages')
 
         assert packages['unmeasured'] == 1
+
+    def test_a_vendor_installer_is_blamed_on_its_own_entry_not_its_section(self, sandbox: Sandbox, cli) -> None:
+        """`custom_installers` answers per entry, so a machine's bundle can carry
+        five of them and miss this one. Naming the section states something false
+        about the five, and the row offers no fix either way."""
+        sandbox.declare(packages=VENDOR_INSTALLER, manifest=DECLARES_VENDOR_INSTALLER)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('terraform-ls', '0.39.0')
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        found = next(row for row in rows if 'terraform-ls' in row['item'])
+
+        assert 'terraform-ls declares no bundle_install_script' in found['detail']
+        assert 'custom installer' not in found['detail']
 
     def test_online_the_same_tool_is_judged_stale(self, sandbox: Sandbox, cli) -> None:
         """The gate is the upstream in hand, never the entry kind. With a release

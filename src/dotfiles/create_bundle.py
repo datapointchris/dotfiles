@@ -140,10 +140,10 @@ What a missing tool means depends on bundle.json, and on whether a bundle was
 ever built to carry the tool at all -- an apt package, an npm global and a
 git-installed uv tool are outside every bundle, and an offline run says so
 rather than reporting them current or calling them a gap. Of the rest: in a
-full bundle, a tool with no row cannot be measured offline and says so. In a sparse one, the "current" map names the tools the builder
-measured on this machine and deliberately left out, against the version it
-found upstream -- so those read as up to date, and only a tool in neither place
-is unmeasurable.
+full bundle, a tool with no row cannot be measured offline and says so. In a
+sparse one, the "current" map names the tools the builder measured on this
+machine and deliberately left out, against the version it found upstream -- so
+those read as up to date, and only a tool in neither place is unmeasurable.
 
 Go tools take the bundled binary when proxy.golang.org is unreachable, so
 that is how a firewalled machine moves off the version it was built with.

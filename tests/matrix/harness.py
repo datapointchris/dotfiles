@@ -101,11 +101,23 @@ the two halves a matrix row varies independently."""
 SYNCER: dict[str, Any] = {'git_uv_tools': [{'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'}]}
 """One tool with an upstream version that no bundle is ever built to carry.
 
-The counterpart to `LAZYGIT` across the `providers.bundle.carries` line: both have
+The counterpart to `LAZYGIT` across the `providers.bundle.bundlable` line: both have
 a repo to ask about, and only this one is unanswerable when the upstream in hand is
 a staged tarball."""
 
 DECLARES_SYNCER: dict[str, Any] = {**MINIMAL_MANIFEST, 'git_uv_tools': ['syncer']}
+
+VENDOR_INSTALLER: dict[str, Any] = {
+    'custom_installers': [{'name': 'terraform-ls', 'repo': 'hashicorp/terraform-ls', 'description': 'a vendor installer'}]
+}
+"""The kind that answers `providers.bundle.bundlable` per entry rather than per section.
+
+A `custom_installers` entry is staged only where it declares
+`bundle_install_script`, so a machine can hold five of them in one bundle and one
+outside it. A sentence blaming the section is false on that machine, which is why
+this fixture declares no script and `LAZYGIT` cannot stand in for it."""
+
+DECLARES_VENDOR_INSTALLER: dict[str, Any] = {**MINIMAL_MANIFEST, 'custom_installers': ['terraform-ls']}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -22,7 +22,6 @@ from dotfiles import banner
 from dotfiles import commands
 from dotfiles import engine
 from dotfiles import logging
-from dotfiles import offline_bundle
 from dotfiles import reconcile
 from dotfiles import runs
 from dotfiles import sinks
@@ -221,7 +220,7 @@ def plan(
     sinks.keep(walked.events, identity, {'skip': sorted(skipped), 'offline': offline, 'refresh': refreshing})
 
     if as_json:
-        emit_json(status.document(results, named, identity.started, verb='plan', measured_against=offline_bundle.measured_against(offline)))
+        emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
         reconcile.report_summary(results, lens)
     raise typer.Exit(reconcile.exit_code(results))
@@ -293,7 +292,7 @@ def check(
         # a caller asked and is kept by them, so it carries the items behind every
         # count — which is what makes the work box's check output worth handing to
         # a machine that can build it a bundle.
-        emit_json(status.document(results, checked_machine, when, measured_against=offline_bundle.measured_against(offline)))
+        emit_json(status.document(results, checked_machine, when))
     else:
         reconcile.report_summary(results, lens)
 

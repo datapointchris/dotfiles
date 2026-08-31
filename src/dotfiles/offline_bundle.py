@@ -21,6 +21,7 @@ import re
 import shutil
 import tarfile
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -244,34 +245,6 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     absent = set(wanted) - set(covered)
     measured = sorted(name for name in absent if staged.measured(name))
     return Coverage(tuple(covered), tuple(sorted(absent - set(measured))), outside, tuple(measured))
-
-
-UPSTREAM = ''
-"""What `measured_against` answers where the run asked GitHub rather than a bundle."""
-
-NOTHING_STAGED = 'unstaged'
-"""What it answers offline with no readable bundle, which is neither of the others.
-
-Three states and three values, because two of them sharing one is a document that
-positively asserts the wrong thing. Offline with nothing staged is the first turn
-of the firewalled box's loop: every version in that document is unmeasurable, and
-`UPSTREAM` would have the builder read it as a machine measured against GitHub.
-
-A literal no bundle name can collide with — `create_bundle.bundle_name` writes
-`dotfiles-offline-v<stamp>-…` and nothing else lands in the staging directory.
-"""
-
-
-def measured_against(offline: bool) -> str:
-    """Which upstream a run's versions were compared to, named so a reader can tell.
-
-    What `status.document` records, so a document read off the shelf says whether
-    its figures came from GitHub, from a tarball, or from nothing at all.
-    """
-    if not offline:
-        return UPSTREAM
-    staged = describe()
-    return staged.newest.name if staged.readable else NOTHING_STAGED
 
 
 def describe(extracted: Path | None = None) -> Staging:
@@ -623,6 +596,21 @@ def newest(*searched: Path, machine: str = '') -> Path | None:
     if machine:
         found = [archive for archive in found if manifest_of(archive.name) in ('', machine)]
     return max(found, key=lambda archive: archive.name, default=None)
+
+
+def outranks(archive: Path, staged: Iterable[str]) -> bool:
+    """Whether unpacking this archive would change what a provider reads.
+
+    One comparison for both readers of it. `apply --offline` decides whether to
+    unpack and `reconcile.unstaged_newer` decides whether to warn, and they are the
+    same question — split, an apply could stage what the warning called old.
+
+    Ordering rather than membership, because `providers.staged_bundles` ranks on the
+    directory name: an archive below the top of the stack supplies nothing the stack
+    does not already answer, and unpacking it puts a bundle in the run's headline
+    that no version came out of.
+    """
+    return stem(archive) > max(staged, default='')
 
 
 def stage(archive: Path, machine: str, box: str) -> Path:

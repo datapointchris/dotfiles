@@ -504,7 +504,7 @@ def test_show_refuses_rather_than_reporting_a_machine_with_no_configuration(sand
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-DOCUMENT_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict', 'measured_against', 'resources'}
+DOCUMENT_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict', 'resources'}
 """The interchange document's own fields, which a resource-scoped read emits too.
 
 Whole-set equality, because the wrapping is the claim: this door answered a bare
