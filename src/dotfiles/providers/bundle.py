@@ -71,7 +71,7 @@ records `winget/rg` and every lookup searches past it.
 """
 
 type Bundled = catalog.GithubRelease | catalog.GoTool | catalog.CargoPackage | catalog.CustomInstaller | catalog.WingetPackage
-"""What `carries` narrows an entry to, so a caller keeps `executable` and `name`."""
+"""What `bundlable` narrows an entry to, so a caller keeps `executable` and `name`."""
 
 BUNDLED_KINDS = typing.get_args(Bundled.__value__)
 """The declaration kinds `create_bundle` stages, and the only ones a bundle can miss.
@@ -95,12 +95,16 @@ nobody can act on and buries the rows that matter.
 """
 
 
-def carries(entry: object) -> typing.TypeGuard[Bundled]:
-    """Whether a bundle is ever built to hold this declaration entry.
+def bundlable(entry: object) -> typing.TypeGuard[Bundled]:
+    """Whether a bundle is ever *built* to hold this kind of declaration entry.
+
+    About the kind and never about one staged tarball, which is why the name is not
+    `carries`: `offline_bundle.coverage` asks both questions three lines apart, and
+    what this bundle actually holds is the `staged.names` test beside it.
 
     One owner because two readers ask it of the same machine: `bundle check` counts
-    a `False` as `outside`, and the offline currency check declines to judge it.
-    Split, a tool could be outside one and a permanent fault in the other.
+    a `False` as `outside`, and the offline currency row says no bundle can judge
+    it. Split, a tool could be outside one and a permanent fault in the other.
 
     A `CustomInstaller` answers both ways — staged only where the entry declares
     `bundle_install_script`, so `awscli` is outside and `uv` is inside.
@@ -377,8 +381,12 @@ def row_in(root: Path, name: str, *categories: str) -> Staged | None:
     return next((row for row in parse(_text(root)) if row.name == name and row.category in wanted), None)
 
 
-REBUILD = 'dotfiles bundle download, then dotfiles bundle stage'
+REBUILD = 'dotfiles bundle download, then dotfiles apply --offline'
 """What a machine holding a bundle too old to repair a row can run itself.
+
+Two commands and not three: the apply stages the archive the download leaves in
+the cache, so naming a staging step here sends the reader through a verb the
+sequence does not need.
 
 Building and uploading the newer bundle happens on a machine with a network, and
 naming that here would be an instruction the reader cannot follow where they are

@@ -293,7 +293,7 @@ def check(
         # a caller asked and is kept by them, so it carries the items behind every
         # count — which is what makes the work box's check output worth handing to
         # a machine that can build it a bundle.
-        emit_json(status.document(results, checked_machine, when))
+        emit_json(status.document(results, checked_machine, when, measured_against=offline_bundle.measured_against(offline)))
     else:
         reconcile.report_summary(results, lens)
 

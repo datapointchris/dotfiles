@@ -1,4 +1,4 @@
-"""A bundle that carries less, and the three answers an absence can have.
+"""A bundle that carries less, and the four answers an absence can have.
 
 The whole point of `bundle.json`: under a full bundle an absent tool is a gap,
 and reading a sparse bundle's deliberate omissions the same way reports a working
@@ -6,12 +6,13 @@ machine as missing most of itself. That is the sweep-as-deletion failure
 `standards/cli-design.md` measures on todoui, and these are the tests that keep
 this side of it closed.
 
-Three states, and each one is asserted separately because the middle one is new
-and the other two are what it must not become:
+Four states, each asserted separately because they are what the others must not
+collapse into:
 
     in the manifest       install it from the staging directory
     in `current`          MATCHED at the version the builder measured
-    in neither            UNKNOWN, and honest about why
+    in neither            UNKNOWN, and honest about which bundle is missing it
+    no bundle carries it  UNKNOWN, with no fix offered, because none exists
 
 Driven through the CLI against a real staged bundle, so what is asserted is what
 an offline run on the target would decide.
@@ -27,6 +28,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import create_bundle
+from dotfiles import offline_bundle
 from dotfiles import status as status_document
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
@@ -322,6 +324,16 @@ class TestSayingWhichBundleADocumentWasMeasuredAgainst:
 
         assert ran.document['measured_against'] == staged.name
 
+    def test_check_names_it_too_and_not_only_plan(self, sandbox: Sandbox, cli) -> None:
+        """Both composite read doors compose the same document, so a key one of them
+        never fills asserts upstream figures for a walk that never asked upstream."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        staged = sandbox.stage_bundle({'lazygit': '0.46.0'})
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+
+        assert ran.document['measured_against'] == staged.name
+
     def test_online_it_is_empty_rather_than_absent(self, sandbox: Sandbox, cli) -> None:
         """A key either way. Inferring which upstream answered from whether a key is
         present is the unversioned failure the document's version exists to end."""
@@ -329,7 +341,18 @@ class TestSayingWhichBundleADocumentWasMeasuredAgainst:
 
         ran = cli('plan', '--cached', '--json', catch_exceptions=True)
 
-        assert ran.document['measured_against'] == ''
+        assert ran.document['measured_against'] == offline_bundle.UPSTREAM
+
+    def test_offline_with_nothing_staged_is_its_own_value(self, sandbox: Sandbox, cli) -> None:
+        """The first turn of the firewalled box's loop. Sharing the online sentinel
+        publishes a document claiming GitHub figures for a walk that measured
+        nothing, to the machine that builds its bundles."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+
+        assert ran.document['measured_against'] == offline_bundle.NOTHING_STAGED
+        assert offline_bundle.NOTHING_STAGED != offline_bundle.UPSTREAM
 
 
 class TestNamingWhereTheFigureCameFrom:
@@ -378,11 +401,11 @@ class TestNamingWhereTheFigureCameFrom:
 
 
 class TestWhatNoBundleEverCarries:
-    """A fourth state, and the one that read as a fault on every offline run.
+    """The fourth state, and the one that read as a fault on every offline run.
 
     A `uv tool install` from git, an apt package, an npm global, a vendor installer
     fetched at install time — no bundle is built to hold any of them, so a bundle
-    having no row is not an absence to repair. Reported as `unknown` it advised
+    having no row is not an absence to repair. Read as a bundle gap it advises
     extracting a newer bundle, which is a fix that does not exist.
     """
 
@@ -394,33 +417,45 @@ class TestWhatNoBundleEverCarries:
         sandbox.uv_installed('syncer', pin='v11.3.2')
         sandbox.upstream({'datapointchris/syncer': 'v12.0.0'})
 
-    def rows(self, ran: Invocation, *keys: str) -> list[dict[str, str]]:
-        return [row for resource in ran.document['resources'] for key in keys for row in resource[key] if 'syncer' in row['item']]
+    def row(self, ran: Invocation) -> dict[str, str]:
+        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        return next(row for row in rows if 'syncer' in row['item'])
 
-    def test_offline_it_produces_no_row_at_all(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    def test_offline_the_row_names_the_kind_rather_than_the_bundle(self, sandbox: Sandbox, cli) -> None:
+        self.staged(sandbox)
+
+        found = self.row(cli('check', '--offline', '--json', catch_exceptions=True))
+
+        assert found['verdict'] == 'unknown'
+        assert 'no bundle carries a git uv tool' in found['detail']
+
+    def test_offline_it_offers_no_fix_because_none_exists(self, sandbox: Sandbox, cli) -> None:
+        """Advising a newer bundle is a permanent instruction that never resolves,
+        which is what a reader reads as a fault in the machine."""
+        self.staged(sandbox)
+
+        assert self.row(cli('check', '--offline', '--json', catch_exceptions=True))['advice'] == ''
+
+    def test_offline_the_run_still_counts_itself_blind(self, sandbox: Sandbox, cli) -> None:
+        """Dropping the row would report `unmeasured: 0` and `converged` for a
+        resource where a declared tool was never compared against anything, which
+        converts *I could not measure this* into *I measured it and it was fine*."""
         self.staged(sandbox)
 
         ran = cli('check', '--offline', '--json', catch_exceptions=True)
+        packages = next(r for r in ran.document['resources'] if r['address'] == 'packages')
 
-        assert self.rows(ran, 'findings', 'others') == []
+        assert packages['unmeasured'] == 1
 
-    def test_offline_it_is_still_reported_as_installed(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-        """Silence in the findings, not silence in the report. Dropping the tool
-        entirely would say a machine declares less than it does."""
-        self.staged(sandbox)
-
-        ran = cli('check', '--offline', '--json', catch_exceptions=True)
-
-        assert [row['detail'] for row in self.rows(ran, 'examined')] == ['v11.3.2']
-
-    def test_online_the_same_tool_is_judged_stale(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    def test_online_the_same_tool_is_judged_stale(self, sandbox: Sandbox, cli) -> None:
         """The gate is the upstream in hand, never the entry kind. With a release
         cache to ask, the finding this bundle could not reach comes straight back."""
         self.staged(sandbox)
 
         ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
 
-        assert [row['verdict'] for row in self.rows(ran, 'findings')] == ['stale']
+        assert [row['verdict'] for row in rows if 'syncer' in row['item']] == ['stale']
 
 
 class TestWhatBundleCheckReports:

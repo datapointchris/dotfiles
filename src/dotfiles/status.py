@@ -114,7 +114,8 @@ def document(
     when: dt.datetime,
     verb: str = 'check',
     written_by: str = '',
-    measured_against: str = '',
+    *,
+    measured_against: str,
 ) -> dict[str, object]:
     """The versioned interchange document, from every read door.
 

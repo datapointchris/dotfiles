@@ -235,7 +235,7 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     """
     wanted, outside = {}, 0
     for item in plan.items:
-        if not bundle.carries(item.entry):
+        if not bundle.bundlable(item.entry):
             outside += 1
             continue
         wanted[item.name] = {item.name, item.entry.executable} & staged.names
@@ -246,16 +246,32 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     return Coverage(tuple(covered), tuple(sorted(absent - set(measured))), outside, tuple(measured))
 
 
+UPSTREAM = ''
+"""What `measured_against` answers where the run asked GitHub rather than a bundle."""
+
+NOTHING_STAGED = 'unstaged'
+"""What it answers offline with no readable bundle, which is neither of the others.
+
+Three states and three values, because two of them sharing one is a document that
+positively asserts the wrong thing. Offline with nothing staged is the first turn
+of the firewalled box's loop: every version in that document is unmeasurable, and
+`UPSTREAM` would have the builder read it as a machine measured against GitHub.
+
+A literal no bundle name can collide with — `create_bundle.bundle_name` writes
+`dotfiles-offline-v<stamp>-…` and nothing else lands in the staging directory.
+"""
+
+
 def measured_against(offline: bool) -> str:
-    """The staged bundle a run's versions were compared to, or '' where upstream was.
+    """Which upstream a run's versions were compared to, named so a reader can tell.
 
     What `status.document` records, so a document read off the shelf says whether
-    its figures came from GitHub or from a tarball, and which one.
+    its figures came from GitHub, from a tarball, or from nothing at all.
     """
     if not offline:
-        return ''
+        return UPSTREAM
     staged = describe()
-    return staged.newest.name if staged.readable else ''
+    return staged.newest.name if staged.readable else NOTHING_STAGED
 
 
 def describe(extracted: Path | None = None) -> Staging:

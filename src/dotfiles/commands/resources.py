@@ -55,7 +55,7 @@ def _report(
     machine: str,
     when: dt.datetime,
     lens: reconcile.Lens,
-    offline: bool = False,
+    offline: bool,
 ) -> None:
     """Print every resource the walk covered, and exit with the code all of them earn.
 

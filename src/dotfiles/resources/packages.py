@@ -263,7 +263,7 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
-            elif _askable(item, observed):
+            elif _has_currency(item):
                 changes.extend(currency_of(item, observed))
 
             if stray := observed.shadowed.get(item.address):
@@ -411,33 +411,6 @@ def _has_currency(item: DesiredItem) -> bool:
     no version to report.
     """
     return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
-
-
-def unaskable_offline(plan: Plan) -> tuple[str, ...]:
-    """Declared tools with an upstream that no staged bundle can be asked about.
-
-    What an offline run is blind to, named so the bundle section can say how much.
-    A row per item is worse than useless — the fix it would advise is a newer
-    bundle, and no bundle carries these — but a run that judged 60 tools and one
-    that judged 52 are different reports, and nothing else on screen separates them.
-
-    Deliberately not `offline_bundle.coverage(...).outside`, which counts every
-    plan item a bundle does not carry, apt packages included. That answers what a
-    bundle can install, and on a real manifest it is a three-figure number: the
-    context `bundle check` needs, and alarming on a plan that is fine.
-    """
-    return tuple(item.address for item in plan.for_resource(NAME) if _has_currency(item) and not bundle.carries(item.entry))
-
-
-def _askable(item: DesiredItem, observed: Observed) -> bool:
-    """Whether *this run* can compare the item against an upstream.
-
-    `_has_currency` asks whether any run could; this narrows it to the upstream in
-    hand. Offline that upstream is one tarball, which is not built to carry an apt
-    package, an npm global or a git-installed uv tool — so asking it about one has
-    no answer and never will. `bundle check` counts the same set as `outside`.
-    """
-    return _has_currency(item) and (not observed.from_bundle or bundle.carries(item.entry))
 
 
 PROBE_WORKERS = 8
@@ -649,7 +622,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed),
+                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
                 observed=reported,
             ),
@@ -720,7 +693,7 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed),
+                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
             ),
         )
@@ -744,6 +717,12 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
     if observed.from_bundle:
+        # A kind no bundle is built to carry is not a gap in the staged one, so it
+        # is answered before any question about which bundle. Read the other way it
+        # advised extracting a newer bundle to fix something no bundle will ever
+        # carry — a permanent finding against the wrong artefact.
+        if not bundle.bundlable(item.entry):
+            return f'no bundle carries a {_kind_of(item)}, so an offline run cannot say whether {item.name} is current'
         # A sparse bundle explains most of what it left out, so an entry it does
         # not explain is a different finding: the declaration gained it after the
         # status the bundle was planned from was taken, and nothing has ever
@@ -761,10 +740,19 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'
 
 
-def _unmeasurable_advice(observed: Observed) -> str:
+def _kind_of(item: DesiredItem) -> str:
+    """The declaration section an entry came from, as a reader would name it.
+
+    The section rather than the class, because that is the heading the entry sits
+    under in `packages.yml` and the word a reader can search for.
+    """
+    return getattr(type(item.entry), 'section', 'package').replace('_', ' ').rstrip('s')
+
+
+def _unmeasurable_advice(observed: Observed, *, bundlable: bool = True) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
-    Three states, and only two of them have a next step.
+    Four states, and only two of them have a next step.
 
     Every read verb measures, so a row nothing could measure means either the caller
     declined the network or upstream did not answer. The first is undone by dropping
@@ -772,9 +760,14 @@ def _unmeasurable_advice(observed: Observed) -> str:
     would advise the thing that just failed, which is how a machine ends up
     reporting an unrepairable row with the reason unnamed.
 
-    Offline is the third and has no command at all: what is missing is a newer
-    bundle, not a network call this run could make instead.
+    Offline has no command at all: what is missing is a newer bundle, not a network
+    call this run could make instead. And a kind no bundle carries has no next step
+    even in principle, so it gets no sentence — advising a newer bundle there is a
+    permanent instruction that never resolves, which is the state a reader reads as
+    a fault in the machine.
     """
+    if observed.from_bundle and not bundlable:
+        return ''
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
     if not observed.consulted_network:

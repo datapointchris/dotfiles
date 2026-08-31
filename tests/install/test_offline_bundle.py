@@ -378,33 +378,31 @@ class TestSayingWhichBundle:
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
 
-    def test_a_newer_archive_nobody_staged_is_warned_about(self, tmp_path, home, staging, monkeypatch, capsys) -> None:
+    def test_a_newer_archive_nobody_staged_is_named_as_the_one_not_measured(self, tmp_path, home, staging, monkeypatch) -> None:
         """A read verb stages nothing, so a bundle downloaded a minute ago answers
         every version from the old one — a machine reported up to date against a
-        bundle nobody meant to consult. `_stage_bundle` is the apply path and cannot
-        reach this, because it stages the newer one rather than warning about it."""
+        bundle nobody meant to consult. `_stage_bundle` cannot reach this, because
+        it stages the newer archive rather than warning about it."""
         monkeypatch.chdir(tmp_path)
         older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
         older.mkdir(parents=True)
         (older / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
-        archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz')
+        newer = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz')
 
-        reconcile.report_bundle(offline_bundle.describe(), MACHINE_NAME)
+        assert reconcile.unstaged_newer(offline_bundle.describe(), MACHINE_NAME) == newer
 
-        said = ' '.join(capsys.readouterr().err.split())
-        assert 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz is newer than anything staged' in said
-
-    def test_the_newest_archive_being_staged_is_said_nothing_about(self, tmp_path, home, staging, monkeypatch, capsys) -> None:
-        """The steady state. A warning on every offline run is a warning nobody reads."""
+    def test_the_newest_archive_being_staged_leaves_nothing_to_report(self, tmp_path, home, staging, monkeypatch) -> None:
+        """The steady state. Paired with a positive fact, because an assertion that
+        nothing happened is satisfied by a run that never reached the comparison."""
         monkeypatch.chdir(tmp_path)
         unpacked = staging / BUNDLE
         unpacked.mkdir(parents=True)
         (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
         archive(tmp_path, f'{BUNDLE}.tar.gz')
+        staged = offline_bundle.describe()
 
-        reconcile.report_bundle(offline_bundle.describe(), MACHINE_NAME)
-
-        assert 'newer than anything staged' not in capsys.readouterr().err
+        assert staged.newest.name == BUNDLE, 'the comparison had a staged bundle to run against'
+        assert reconcile.unstaged_newer(staged, MACHINE_NAME) is None
 
     def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, home, capsys, monkeypatch, tmp_path) -> None:
         """Every provider reads the bundle through the manifest, so without one the

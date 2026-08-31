@@ -73,7 +73,6 @@ from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
-from dotfiles.resources import packages
 from dotfiles.resources import privileged
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -567,7 +566,7 @@ def survey(
     # `check --offline --json` both pass None and both genuinely install from it.
     session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
     if offline and announce_bundle:
-        report_bundle(offline_bundle.describe(), session.machine_name, session.plan)
+        report_bundle(offline_bundle.describe(), session.machine_name)
     selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
 
     results: list[ResourceResult] = []
@@ -753,7 +752,7 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle(machine: str, box: str, plan: Plan | None = None) -> ExitCode | None:
+def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
     **Both identities are passed in, never resolved from the ambient environment.**
@@ -764,10 +763,10 @@ def _stage_bundle(machine: str, box: str, plan: Plan | None = None) -> ExitCode 
     rebuild, which is exactly when this path runs.
 
     **The newest archive is staged whether or not something is staged already.** A
-    bundle is downloaded precisely because the staged one is out of date, so a run
-    that stops at "some bundle is here" installs from the old one and reports a
-    converged machine. Skipped only when that newest archive is already among the
-    staged directories, so nothing re-unpacks the same tarball every run.
+    bundle is downloaded precisely because the staged one is out of date, so the
+    condition for skipping is that archive's own identity rather than the stack
+    being non-empty — which is also what keeps a machine part way through an
+    offline install from re-unpacking the same tarball on every run.
 
     The remote is consulted only when nothing is staged and nothing is on disk,
     which is the one moment the run is about to refuse anyway.
@@ -817,7 +816,7 @@ def _stage_bundle(machine: str, box: str, plan: Plan | None = None) -> ExitCode 
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
-    report_bundle(staged, machine, plan)
+    report_bundle(staged, machine)
     if not staged.readable:
         return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
     # Every description rather than the newest, because `providers.locate` reads
@@ -874,7 +873,7 @@ def _fetched_bundle(machine: str) -> Path | None:
         return None
 
 
-def report_bundle(staged: offline_bundle.Staging, machine: str = '', plan: Plan | None = None) -> None:
+def report_bundle(staged: offline_bundle.Staging, machine: str) -> None:
     """Name the bundle a run is installing from, in the read verbs' own shape.
 
     Public because all three offline paths print it — the gate in `apply`, and the
@@ -883,8 +882,11 @@ def report_bundle(staged: offline_bundle.Staging, machine: str = '', plan: Plan 
     section rather than as a `success` line so it sits in the same column as the
     verdict rows beneath it, and reads as part of one report.
 
-    `machine` turns on the staleness check and `plan` on the coverage line. Both are
-    optional because `status show` walks offline without either.
+    `machine` is what the staleness check needs, and it has no default: the archive
+    search filters on the manifest name, so guessing it would compare this machine
+    against a peer's shelf. `''` is a live answer — `bundle check` and `bundle show`
+    describe a staged bundle without one — and the parser is what makes each caller
+    say which it means.
     """
     if not staged.readable:
         warn(f'{paths.under_home(staged.directory)} holds no {bundle.MANIFEST}, so nothing can be installed from it')
@@ -896,8 +898,6 @@ def report_bundle(staged: offline_bundle.Staging, machine: str = '', plan: Plan 
         render_note(breakdown)
     else:
         render_note(f'{bundle.MANIFEST} lists no files, so every tool will report its own miss')
-    if plan is not None and (blind := packages.unaskable_offline(plan)):
-        render_note(f'{len(blind)} declared tool(s) have no bundle row to be judged against, so this run did not: {", ".join(blind)}')
     _report_newer_archive(staged, machine)
 
 
@@ -908,13 +908,29 @@ def _report_newer_archive(staged: offline_bundle.Staging, machine: str) -> None:
     version here from the old one — a machine reported up to date against a bundle
     nobody meant to consult.
     """
-    if not machine:
-        return
-    archive = offline_bundle.newest(machine=machine)
-    if archive is None or offline_bundle.stem(archive) <= staged.newest.name:
+    archive = unstaged_newer(staged, machine)
+    if archive is None:
         return
     warn(f'{archive.name} is newer than anything staged, and this run measured against {staged.newest.name}')
     hint(f'stage it first: dotfiles bundle stage {paths.under_home(archive)}')
+
+
+def unstaged_newer(staged: offline_bundle.Staging, machine: str) -> Path | None:
+    """The archive on disk that outranks everything staged, where one does.
+
+    Its own answer rather than a sentence, so what the comparison decided is a
+    value a caller can read. The rendering above is one of its readers.
+
+    `''` for the machine answers None: the archive search filters on the manifest
+    name, so with none resolved a peer's tarball is indistinguishable from this
+    box's and the comparison has no subject.
+    """
+    if not machine:
+        return None
+    archive = offline_bundle.newest(machine=machine)
+    if archive is None or offline_bundle.stem(archive) <= staged.newest.name:
+        return None
+    return archive
 
 
 def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
@@ -1032,7 +1048,7 @@ def apply_machine(
 
     if offline:
         box = publishing.discriminator(session.machine.coordinates.network_trust)
-        if unstaged := _stage_bundle(session.machine_name, box, session.plan):
+        if unstaged := _stage_bundle(session.machine_name, box):
             return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`

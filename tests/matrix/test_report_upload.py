@@ -283,6 +283,18 @@ class TestReadingThemBack:
         assert newer.is_file()
         assert not older.exists()
 
+    def test_limit_zero_asks_for_nothing_on_both_verbs(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        """One flag, one meaning, on the resource's two verbs. `list` already read
+        zero as none, for the caller computing a bound that reaches it; zero
+        returning the whole shelf from `download` is the same flag disagreeing with
+        itself one verb away."""
+        record = self.sent(sandbox, named, cli, stamp='20260817T120000Z')
+
+        ran = cli('report', 'download', '--machine', MACHINE, '-n', '0', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.ISSUE, 'nothing was asked for, so nothing is on the shelf to fetch'
+        assert not record.exists()
+
     def test_an_empty_shelf_is_an_issue_naming_the_verb_that_fills_it(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
         ran = cli('report', 'download', '--machine', MACHINE, catch_exceptions=True)
 

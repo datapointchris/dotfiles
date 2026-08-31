@@ -57,6 +57,20 @@ text. Derived rather than written out a second time — written out, this half s
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
+LimitOption = typer.Option(20, '--limit', '-n', min=0, help='Most recent N only')
+"""One option and one meaning for both verbs that take it.
+
+**Zero asks for nothing on both**, which is the answer `runs.list_runs` already
+gives and which its own docstring argues for: the caller that computes a bound,
+`--limit "$(remaining)"`, is the one that reaches zero, and it means none of them.
+`bundle list` and `status list` read zero as "all" instead, so the meaning is
+consistent within this resource and not across all four — which is the scope
+`cli-design.md` § "A flag means one thing across every verb of a resource" sets,
+and the direction that keeps the decision `test_a_limit_of_zero_lists_nothing`
+pins. Written out at each site, the two verbs of this resource disagreed: zero
+returned the whole shelf from one and nothing from the other.
+"""
+
 
 def _unsuccessful(record: runs.RunRecord) -> str:
     """What kept a run from converging, in the words `apply` used at the time.
@@ -276,7 +290,7 @@ def latest(as_json: bool = JsonOption) -> None:
 def list_runs(
     machine: str = typer.Option(None, '--machine', help='Only runs on this machine'),
     verb: str = typer.Option(None, '--verb', help='Only runs of this verb'),
-    limit: int = typer.Option(20, '--limit', '-n', min=0, help='How many to show'),
+    limit: int = LimitOption,
     as_json: bool = JsonOption,
 ) -> None:
     """List recorded runs, newest first."""
@@ -360,25 +374,24 @@ def upload(
 @app.command('download')
 def download(
     machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
-    limit: int = typer.Option(10, '--limit', '-n', min=0, help='Newest N runs only (0 for all)'),
+    limit: int = LimitOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
     """Fetch a machine's run records off the remote, so they can be read here.
 
-    The counterpart to `upload`, and the reason it exists: a record says what an
-    `apply` decided and what it ran, and on a box off the fleet's Syncthing that is
-    the only copy anyone else can reach. Without this it could be sent and never
-    read back, so the one artefact answering "what did that apply actually install"
-    was unreachable from the machine building its bundles.
+    The counterpart to `upload`. A record says what an `apply` decided and what it
+    ran, and for a box that shares no files with this one the remote holds the only
+    copy — which makes this the route to "what did that apply actually install".
 
     A reconcile in the same shape as `upload`: only what the local runs directory
     does not already hold, so running it twice fetches nothing the second time.
 
     Records land in the same directory `list` and `show` read, and are addressed
-    afterwards by run id. They are the *masked* copies — `publishing.identifying`
-    replaced the hostname on the way up, so a downloaded run names the box by its
-    discriminator and `list --machine` matches on that rather than the manifest.
+    afterwards by run id. What travels is the screened copy: identifying values
+    inside a record are replaced before it is sent, and the filename is not — a
+    published run is filed under the box's own name, which is what `list --machine`
+    matches and what the line printed at the end of a fetch names.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
@@ -387,7 +400,7 @@ def download(
     listed = transport.listed(where, directory) or ()
 
     records = sorted((name for name in listed if name.endswith('.json')), reverse=True)
-    wanted = records[:limit] if limit else records
+    wanted = records[:limit]
     if not wanted:
         error(f'the remote holds no run records for {named} at {directory}')
         hint('send some from that machine with: dotfiles report upload')

@@ -113,9 +113,10 @@ The `plan` in between matters most on this box, where a run started without one
 has sat on a blocked cargo download having never said what it meant to fetch.
 
 Neither of the last two lines needs the bootstrap again. A bundle that arrives
-later — a newer one carried over to a machine already built — is unpacked by
-`dotfiles bundle stage`, and an apply that finds nothing staged unpacks the
-newest archive in `./` or `~/` itself.
+later — a newer one carried over to a machine already built — is unpacked by the
+next `apply --offline`, which stages the newest archive in the download cache,
+`./` or `~/` unless that archive is the one already staged. `dotfiles bundle
+stage` unpacks without installing, for looking at a bundle before it lands.
 
 This box has no Syncthing, so anything the fleet replicates that way — `~/dev`,
 `~/notes`, the `indy` index — is simply absent. Tools depending on those paths

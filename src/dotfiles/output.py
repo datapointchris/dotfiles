@@ -406,10 +406,9 @@ def render_row(label: str, subject: str, detail: str, colour: str = '', width: i
     if not showing_evidence():
         return
     marked = f'[{colour}]{label:<{VERDICT_COLUMN}}[/]' if colour else f'{label:<{VERDICT_COLUMN}}'
-    # A row with nothing to say pads the subject to nothing and stops, rather than
-    # padding a column for an absent third field. A listing whose subject is a
-    # filename passes `width=0` for exactly this, and the trailing space is what a
-    # copied name carries into the next command.
+    # Padded only where a third field follows it. A row with nothing to say would
+    # otherwise end in a column of blanks, and the trailing space is what a copied
+    # filename carries into the next command.
     written = f'{subject:<{width}} {detail}' if detail else subject
     err_console.print(f'{EVIDENCE_INDENT}{marked} {written}')
 

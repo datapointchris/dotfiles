@@ -125,7 +125,7 @@ checksums.txt is what lets the installer verify a cached binary without
 reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
 GitHub release install fail on a missing checksum.
 
-On a machine that is already built, `dotfiles bundle stage` unpacks a newer
+On a machine that is already built, `dotfiles apply --offline` unpacks a newer
 tarball beside this one, needing none of the bootstrap. Each bundle keeps its
 own directory: the newest carrying a file answers for it, and an older one
 still answers for everything the newer left out. That is what lets a sparse
@@ -136,9 +136,11 @@ recorded here reads as out of date, and apply moves it onto the bundled one:
 
   dotfiles packages apply --offline
 
-What a missing tool means depends on bundle.json. In a full bundle, a tool with
-no row cannot be measured offline at all and says so rather than reporting
-itself current. In a sparse one, the "current" map names the tools the builder
+What a missing tool means depends on bundle.json, and on whether a bundle was
+ever built to carry the tool at all -- an apt package, an npm global and a
+git-installed uv tool are outside every bundle, and an offline run says so
+rather than reporting them current or calling them a gap. Of the rest: in a
+full bundle, a tool with no row cannot be measured offline and says so. In a sparse one, the "current" map names the tools the builder
 measured on this machine and deliberately left out, against the version it
 found upstream -- so those read as up to date, and only a tool in neither place
 is unmeasurable.
