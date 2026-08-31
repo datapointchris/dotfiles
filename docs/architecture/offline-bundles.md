@@ -35,15 +35,37 @@ describe in a sentence.
                         bundle download   confirm, sha256, into the cache
                               │
                               ▼
-                        bundle stage      staged/<archive name>/
-                              │
+                        apply --offline   unpacks the newest archive into
+                              │           staged/<archive name>/, then reads
+                              │           across the whole stack
                               ▼
-                        apply --offline   providers read across the stack
+  report download ◀──── report upload     what that apply decided and ran
+        (pull)
 ```
 
 Each round is planned against the last. The blocked box publishes what it has,
 the builder leaves out everything already current, and the next bundle is
 smaller than the one before it. A box that has never published gets everything.
+
+## The apply unpacks; `bundle stage` is for looking first
+
+`apply --offline` stages the newest archive it finds for this machine, and skips
+the unpacking only when that archive is already among the staged directories. So
+downloading and applying is the whole sequence, and a bundle fetched to replace
+an out-of-date one takes effect on the next run.
+
+`bundle stage` unpacks without installing anything, which is what `bundle check`
+and `bundle show` read. Reach for it to see what a bundle covers before letting
+it change the machine, or to unpack a tarball carried across by hand from a path
+the search does not reach.
+
+A newer archive staged on top does not discard what is under it.
+`src/dotfiles/providers/__init__.py` reads the stack newest first, so an older
+full bundle still supplies everything a sparse one on top of it left out.
+
+The read verbs stage nothing — a `check` that unpacked a tarball would be
+writing. They say so instead: `plan --offline` and `check --offline` warn when an
+archive on disk is newer than what they measured against.
 
 ## A machine declares its transport, and every call runs with stdin closed
 
