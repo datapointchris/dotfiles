@@ -72,7 +72,7 @@ from dotfiles.vocabulary import ExitCode
 PUBLISHABLE = ('packages', 'toolchains')
 """The resources whose rows a bundle builder can act on, and the only ones sent.
 
-`offline_bundle.BUNDLED_KINDS` expressed as resources: a bundle stages release
+`providers.bundle.BUNDLED_KINDS` expressed as resources: a bundle stages release
 binaries, Go tools, cargo packages, winget packages and vendor install scripts,
 all of which are `packages`, plus the language runtimes, which are `toolchains`.
 Everything else in a walk is either unbundlable or personal, and usually both.
@@ -167,6 +167,25 @@ def wrote(name: str) -> str:
     """
     stem = name.removesuffix(SUFFIX)
     return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
+
+
+def age_column(name: str) -> str:
+    """A published artefact's age, short enough to sit in the label column.
+
+    The label is what the eye runs down, and every row of a remote listing carried
+    the word `remote` — which the heading has already said. Age is the fact that
+    varies, and putting it here leaves the filename unpadded: these names run to
+    eighty characters, so a listing that pads them wraps every row mid-name on a
+    120-column terminal and the identity a reader is about to paste is split.
+    """
+    stamped = re.search(r'-v(\d{8}T\d{6}Z)-', name)
+    if stamped is None:
+        return 'undated'
+    made = dt.datetime.strptime(stamped.group(1), '%Y%m%dT%H%M%SZ').replace(tzinfo=dt.UTC)
+    since = max(dt.datetime.now(dt.UTC) - made, dt.timedelta(0))
+    if since.days:
+        return f'{since.days}d ago'
+    return f'{since.seconds // 3600}h ago' if since.seconds >= 3600 else f'{since.seconds // 60}m ago'
 
 
 def published_by(document: object, name: str = '') -> str:

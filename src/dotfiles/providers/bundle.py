@@ -34,11 +34,13 @@ from __future__ import annotations
 
 import dataclasses as dc
 import json
+import typing
 from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from dotfiles import catalog
 from dotfiles import versions
 from dotfiles.providers import MANIFEST
 from dotfiles.providers import Kind
@@ -67,6 +69,45 @@ of it. `winget` earns its place from `create_bundle.add_winget_binaries`, one of
 the four writers of `current` — omitted, a sparse bundle for a Windows manifest
 records `winget/rg` and every lookup searches past it.
 """
+
+type Bundled = catalog.GithubRelease | catalog.GoTool | catalog.CargoPackage | catalog.CustomInstaller | catalog.WingetPackage
+"""What `carries` narrows an entry to, so a caller keeps `executable` and `name`."""
+
+BUNDLED_KINDS = typing.get_args(Bundled.__value__)
+"""The declaration kinds `create_bundle` stages, and the only ones a bundle can miss.
+
+Read off its `record` calls: a `GithubRelease` becomes a `binary` row plus an `extra`
+per companion, a `GoTool` a `go-binary`, a `CargoPackage` a `cargo`, a
+`WingetPackage` a `winget`, and a `CustomInstaller` a `script` — and that last only
+where the entry declares `bundle_install_script`.
+
+A `WingetPackage` belongs here for a reason the others do not need stated: its
+machine declares nothing else. Counting it outside would have `bundle check`
+report a Windows box as fully covered by a bundle carrying nothing it can install,
+which is the one machine where that sentence is both wrong and unfalsifiable from
+the other end.
+
+Everything else is deliberately absent and must not be reported as a gap. A system
+package comes from apt or pacman on the machine, an npm global from a registry, a
+shell plugin from a clone. Counting those made the first `bundle check` report `apt`,
+`bash` and `ca-certificates` as things the bundle failed to carry, which is a list
+nobody can act on and buries the rows that matter.
+"""
+
+
+def carries(entry: object) -> typing.TypeGuard[Bundled]:
+    """Whether a bundle is ever built to hold this declaration entry.
+
+    One owner because two readers ask it of the same machine: `bundle check` counts
+    a `False` as `outside`, and the offline currency check declines to judge it.
+    Split, a tool could be outside one and a permanent fault in the other.
+
+    A `CustomInstaller` answers both ways — staged only where the entry declares
+    `bundle_install_script`, so `awscli` is outside and `uv` is inside.
+    """
+    if not isinstance(entry, BUNDLED_KINDS):
+        return False
+    return not isinstance(entry, catalog.CustomInstaller) or bool(entry.bundle_install_script)
 
 
 class Completeness(StrEnum):

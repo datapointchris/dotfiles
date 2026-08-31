@@ -24,7 +24,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from dotfiles import catalog
 from dotfiles import commands
 from dotfiles import effects
 from dotfiles import github_release
@@ -196,28 +195,6 @@ class Staging:
         return ', '.join(f'{category} {count}' for category, count in self.counts.items())
 
 
-BUNDLED_KINDS = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.WingetPackage)
-"""The declaration kinds `create_bundle` stages, and the only ones a bundle can miss.
-
-Read off its `record` calls: a `GithubRelease` becomes a `binary` row plus an `extra`
-per companion, a `GoTool` a `go-binary`, a `CargoPackage` a `cargo`, a
-`WingetPackage` a `winget`, and a `CustomInstaller` a `script` — and that last only
-where the entry declares `bundle_install_script`.
-
-A `WingetPackage` belongs here for a reason the others do not need stated: its
-machine declares nothing else. Counting it `outside` would have `bundle check`
-report a Windows box as fully covered by a bundle carrying nothing it can install,
-which is the one machine where that sentence is both wrong and unfalsifiable from
-the other end.
-
-Everything else is deliberately absent and must not be reported as a gap. A system
-package comes from apt or pacman on the machine, an npm global from a registry, a
-shell plugin from a clone. Counting those made the first `bundle check` report `apt`,
-`bash` and `ca-certificates` as things the bundle failed to carry, which is a list
-nobody can act on and buries the rows that matter.
-"""
-
-
 @dc.dataclass(frozen=True, slots=True)
 class Coverage:
     """What a staged bundle can and cannot install, against one machine's plan."""
@@ -258,10 +235,7 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     """
     wanted, outside = {}, 0
     for item in plan.items:
-        if not isinstance(item.entry, BUNDLED_KINDS):
-            outside += 1
-            continue
-        if isinstance(item.entry, catalog.CustomInstaller) and not item.entry.bundle_install_script:
+        if not bundle.carries(item.entry):
             outside += 1
             continue
         wanted[item.name] = {item.name, item.entry.executable} & staged.names
@@ -270,6 +244,18 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     absent = set(wanted) - set(covered)
     measured = sorted(name for name in absent if staged.measured(name))
     return Coverage(tuple(covered), tuple(sorted(absent - set(measured))), outside, tuple(measured))
+
+
+def measured_against(offline: bool) -> str:
+    """The staged bundle a run's versions were compared to, or '' where upstream was.
+
+    What `status.document` records, so a document read off the shelf says whether
+    its figures came from GitHub or from a tarball, and which one.
+    """
+    if not offline:
+        return ''
+    staged = describe()
+    return staged.newest.name if staged.readable else ''
 
 
 def describe(extracted: Path | None = None) -> Staging:

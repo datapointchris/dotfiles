@@ -278,6 +278,52 @@ def test_apply_refuses_a_peer_s_bundle_already_in_the_stack(tmp_path, home, stag
     assert reconcile._stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
 
 
+def test_apply_stages_a_newer_archive_over_one_already_staged(tmp_path, home, staging, monkeypatch) -> None:
+    """The download is the whole point of downloading. A run that stopped at "some
+    bundle is staged" installed from the one the new archive was fetched to replace,
+    reported a converged machine, and on a real box downgraded a tool to the version
+    a fortnight-old bundle carried."""
+    monkeypatch.chdir(tmp_path)
+    older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    (older / 'bin').mkdir(parents=True)
+    (older / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (older / 'bin' / 'uv').write_text('a fortnight old')
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'just downloaded'})
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'just downloaded'
+    assert len(providers.staged_bundles()) == 2, 'the older one stays, because a sparse bundle reads through it'
+
+
+def test_apply_does_not_re_unpack_the_archive_it_already_staged(tmp_path, home, staging, monkeypatch) -> None:
+    """The other half. Re-reading a tarball every run costs minutes on the machine
+    this exists for, and the newest archive already being staged is the steady state."""
+    monkeypatch.chdir(tmp_path)
+    archive(tmp_path, f'{BUNDLE}.tar.gz', files={'bin/uv': 'from the tarball'})
+    unpacked = staging / BUNDLE
+    (unpacked / 'bin').mkdir(parents=True)
+    (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (unpacked / 'bin' / 'uv').write_text('left alone')
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'left alone'
+
+
+def test_apply_leaves_a_working_stack_alone_when_the_machine_is_unresolved(tmp_path, home, staging, monkeypatch) -> None:
+    """An empty machine name is a box that could not say who it is, so `newest` has
+    nothing to filter a peer's archive out by. Staging one on top of a stack that
+    already works would install another machine's binaries."""
+    monkeypatch.chdir(tmp_path)
+    unpacked = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    (unpacked / 'bin').mkdir(parents=True)
+    (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (unpacked / 'bin' / 'uv').write_text('mine')
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
+
+    assert reconcile._stage_bundle('', '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'mine'
+
+
 def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monkeypatch) -> None:
     """A broken bundle stops the run rather than starting one that will fail as
     every tool in the plan turning up missing."""
@@ -331,6 +377,34 @@ class TestSayingWhichBundle:
         # length of the tmp directory pytest happened to hand out.
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
+
+    def test_a_newer_archive_nobody_staged_is_warned_about(self, tmp_path, home, staging, monkeypatch, capsys) -> None:
+        """A read verb stages nothing, so a bundle downloaded a minute ago answers
+        every version from the old one — a machine reported up to date against a
+        bundle nobody meant to consult. `_stage_bundle` is the apply path and cannot
+        reach this, because it stages the newer one rather than warning about it."""
+        monkeypatch.chdir(tmp_path)
+        older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+        older.mkdir(parents=True)
+        (older / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz')
+
+        reconcile.report_bundle(offline_bundle.describe(), MACHINE_NAME)
+
+        said = ' '.join(capsys.readouterr().err.split())
+        assert 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz is newer than anything staged' in said
+
+    def test_the_newest_archive_being_staged_is_said_nothing_about(self, tmp_path, home, staging, monkeypatch, capsys) -> None:
+        """The steady state. A warning on every offline run is a warning nobody reads."""
+        monkeypatch.chdir(tmp_path)
+        unpacked = staging / BUNDLE
+        unpacked.mkdir(parents=True)
+        (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        archive(tmp_path, f'{BUNDLE}.tar.gz')
+
+        reconcile.report_bundle(offline_bundle.describe(), MACHINE_NAME)
+
+        assert 'newer than anything staged' not in capsys.readouterr().err
 
     def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, home, capsys, monkeypatch, tmp_path) -> None:
         """Every provider reads the bundle through the manifest, so without one the

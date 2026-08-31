@@ -31,7 +31,9 @@ from dotfiles import status as status_document
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import DECLARES_LAZYGIT
+from matrix.harness import DECLARES_SYNCER
 from matrix.harness import LAZYGIT
+from matrix.harness import SYNCER
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 
@@ -302,6 +304,123 @@ class TestWhatTheTargetDecides:
 
         assert found['verdict'] == 'unknown'
         assert 'carries no version' in found['detail']
+
+
+class TestSayingWhichBundleADocumentWasMeasuredAgainst:
+    """A document read off the shelf has to say where its figures came from.
+
+    Without it, a status carrying `unknown` rows and one carrying current versions
+    are the same shape, and nothing distinguishes a machine measured against GitHub
+    from one measured against a fortnight-old tarball.
+    """
+
+    def test_offline_it_names_the_staged_bundle(self, sandbox: Sandbox, cli) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        staged = sandbox.stage_bundle({'lazygit': '0.46.0'})
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+
+        assert ran.document['measured_against'] == staged.name
+
+    def test_online_it_is_empty_rather_than_absent(self, sandbox: Sandbox, cli) -> None:
+        """A key either way. Inferring which upstream answered from whether a key is
+        present is the unversioned failure the document's version exists to end."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+
+        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+
+        assert ran.document['measured_against'] == ''
+
+
+class TestNamingWhereTheFigureCameFrom:
+    """Offline the upstream is one tarball, and the row has to say so.
+
+    `the newest release` is a claim about what upstream publishes. Offline it is a
+    claim about what a builder resolved on the day the bundle was built, and the
+    two are the same sentence only while the bundle is fresh.
+    """
+
+    def test_ahead_of_the_bundle_says_apply_will_install_the_older_build(self, sandbox: Sandbox, cli) -> None:
+        """The sentence that hid a real downgrade. A fortnight-old bundle staged
+        under a newer one that never unpacked took broot from 1.59.0 back to
+        1.58.0, and the plan above it read as an ordinary repair."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.44.0'})
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        found = next(row for row in rows if 'lazygit' in row['item'])
+
+        assert 'what the staged bundle carries' in found['detail']
+        assert 'applying installs that older build' in found['detail']
+
+    def test_behind_the_bundle_names_the_bundle_rather_than_upstream(self, sandbox: Sandbox, cli) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is what the staged bundle carries'
+
+    def test_online_the_wording_still_names_the_release(self, sandbox: Sandbox, cli) -> None:
+        """The online sentence is correct and stays. Two sources, two sentences."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.installed('lazygit', INSTALLED)
+        sandbox.upstream({'jesseduffield/lazygit': '0.46.0'})
+
+        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is the latest release'
+
+
+class TestWhatNoBundleEverCarries:
+    """A fourth state, and the one that read as a fault on every offline run.
+
+    A `uv tool install` from git, an apt package, an npm global, a vendor installer
+    fetched at install time — no bundle is built to hold any of them, so a bundle
+    having no row is not an absence to repair. Reported as `unknown` it advised
+    extracting a newer bundle, which is a fix that does not exist.
+    """
+
+    def staged(self, sandbox: Sandbox) -> None:
+        """A tool behind its upstream, on a machine with a bundle that cannot say so."""
+        sandbox.declare(packages=SYNCER, manifest=DECLARES_SYNCER)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('syncer')
+        sandbox.uv_installed('syncer', pin='v11.3.2')
+        sandbox.upstream({'datapointchris/syncer': 'v12.0.0'})
+
+    def rows(self, ran: Invocation, *keys: str) -> list[dict[str, str]]:
+        return [row for resource in ran.document['resources'] for key in keys for row in resource[key] if 'syncer' in row['item']]
+
+    def test_offline_it_produces_no_row_at_all(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        self.staged(sandbox)
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+
+        assert self.rows(ran, 'findings', 'others') == []
+
+    def test_offline_it_is_still_reported_as_installed(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """Silence in the findings, not silence in the report. Dropping the tool
+        entirely would say a machine declares less than it does."""
+        self.staged(sandbox)
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+
+        assert [row['detail'] for row in self.rows(ran, 'examined')] == ['v11.3.2']
+
+    def test_online_the_same_tool_is_judged_stale(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+        """The gate is the upstream in hand, never the entry kind. With a release
+        cache to ask, the finding this bundle could not reach comes straight back."""
+        self.staged(sandbox)
+
+        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+
+        assert [row['verdict'] for row in self.rows(ran, 'findings')] == ['stale']
 
 
 class TestWhatBundleCheckReports:

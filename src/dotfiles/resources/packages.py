@@ -263,7 +263,7 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
-            elif _has_currency(item):
+            elif _askable(item, observed):
                 changes.extend(currency_of(item, observed))
 
             if stray := observed.shadowed.get(item.address):
@@ -411,6 +411,33 @@ def _has_currency(item: DesiredItem) -> bool:
     no version to report.
     """
     return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
+
+
+def unaskable_offline(plan: Plan) -> tuple[str, ...]:
+    """Declared tools with an upstream that no staged bundle can be asked about.
+
+    What an offline run is blind to, named so the bundle section can say how much.
+    A row per item is worse than useless — the fix it would advise is a newer
+    bundle, and no bundle carries these — but a run that judged 60 tools and one
+    that judged 52 are different reports, and nothing else on screen separates them.
+
+    Deliberately not `offline_bundle.coverage(...).outside`, which counts every
+    plan item a bundle does not carry, apt packages included. That answers what a
+    bundle can install, and on a real manifest it is a three-figure number: the
+    context `bundle check` needs, and alarming on a plan that is fine.
+    """
+    return tuple(item.address for item in plan.for_resource(NAME) if _has_currency(item) and not bundle.carries(item.entry))
+
+
+def _askable(item: DesiredItem, observed: Observed) -> bool:
+    """Whether *this run* can compare the item against an upstream.
+
+    `_has_currency` asks whether any run could; this narrows it to the upstream in
+    hand. Offline that upstream is one tarball, which is not built to carry an apt
+    package, an npm global or a git-installed uv tool — so asking it about one has
+    no answer and never will. `bundle check` counts the same set as `outside`.
+    """
+    return _has_currency(item) and (not observed.from_bundle or bundle.carries(item.entry))
 
 
 PROBE_WORKERS = 8
@@ -637,21 +664,38 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.STALE,
                 repair=repair,
-                detail=f'ahead of {cached.version}, which is the newest release and what a fresh install produces',
+                detail=_ahead_of(cached.version, observed),
                 advice=advice_for(item, repair),
                 desired=item,
                 observed=reported,
             ),
         )
 
-    return _compared(
-        item,
-        reported,
-        cached.version,
-        versions.at_least(reported, cached.version),
-        f'{cached.version} is the latest release',
-        observed.met,
-    )
+    current = versions.at_least(reported, cached.version)
+    return _compared(item, reported, cached.version, current, _behind(cached.version, observed), observed.met)
+
+
+def _ahead_of(version: str, observed: Observed) -> str:
+    """Why an installed version newer than the target is drift, in that target's terms.
+
+    Offline the figure is what one tarball holds, so the repair is an older build
+    replacing a newer one, and the row says so. A downgrade under the wording that
+    calls a bundle's row the newest release reads as an ordinary repair — measured
+    on a box whose bundle was a fortnight stale, where broot went 1.59.0 to 1.58.0.
+    """
+    if observed.from_bundle:
+        return f'ahead of {version}, which is what the staged bundle carries — applying installs that older build'
+    return f'ahead of {version}, which is the newest release and what a fresh install produces'
+
+
+def _behind(version: str, observed: Observed) -> str:
+    """What the installed version is being measured against, named by its source.
+
+    A bundle's row is what its builder resolved on the day it was built, not what
+    upstream publishes now, and a machine that cannot reach GitHub has no way to
+    tell the two apart from the sentence alone.
+    """
+    return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is the latest release'
 
 
 def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:

@@ -507,7 +507,7 @@ def test_a_plan_scoped_to_an_owner_that_matches_nothing_refuses_as_apply_does(sa
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-INTERCHANGE_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict', 'resources'}
+INTERCHANGE_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict', 'measured_against', 'resources'}
 
 
 @pytest.mark.parametrize(

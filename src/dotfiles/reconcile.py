@@ -73,6 +73,7 @@ from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import packages
 from dotfiles.resources import privileged
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -564,9 +565,9 @@ def survey(
     # away from the next real step, in the state that is the first turn of the
     # loop. Not gated on `report is not None`: `plan --offline --json` and
     # `check --offline --json` both pass None and both genuinely install from it.
-    if offline and announce_bundle:
-        report_bundle(offline_bundle.describe())
     session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
+    if offline and announce_bundle:
+        report_bundle(offline_bundle.describe(), session.machine_name, session.plan)
     selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
 
     results: list[ResourceResult] = []
@@ -752,7 +753,7 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle(machine: str, box: str) -> ExitCode | None:
+def _stage_bundle(machine: str, box: str, plan: Plan | None = None) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
     **Both identities are passed in, never resolved from the ambient environment.**
@@ -762,8 +763,14 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     the wrong name and refuses it — and `--machine` is typed explicitly during a
     rebuild, which is exactly when this path runs.
 
-    Nothing is staged over an existing bundle, so a machine part way through an
-    offline install does not re-read the archive each run.
+    **The newest archive is staged whether or not something is staged already.** A
+    bundle is downloaded precisely because the staged one is out of date, so a run
+    that stops at "some bundle is here" installs from the old one and reports a
+    converged machine. Skipped only when that newest archive is already among the
+    staged directories, so nothing re-unpacks the same tarball every run.
+
+    The remote is consulted only when nothing is staged and nothing is on disk,
+    which is the one moment the run is about to refuse anyway.
 
     **Both branches report**, because the bundle is the upstream under this flag and
     the already-staged branch is the one every run after the first takes.
@@ -774,29 +781,35 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     warning is shared with `plan` and `check`, where it is a caveat rather than a
     stop.
     """
-    extracted = None
-    if not providers.staged_bundles():
-        archive = offline_bundle.newest(machine=machine) or _fetched_bundle(machine)
-        if archive is None:
-            # Two different findings, and the second is the one a person cannot
-            # work out from the first. A directory under staging that carries no
-            # manifest is not a bundle — every provider reads through the manifest,
-            # so a run started on one installs nothing and reports each tool as its
-            # own mystery. "There is none" would be true and would send the reader
-            # looking for a tarball they already have.
-            unusable = [path.name for path in paths.staging_dir().iterdir() if path.is_dir()] if paths.staging_dir().is_dir() else []
-            because = (
-                f'nothing under {paths.staging_dir()} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
-                if unusable
-                else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
-            )
-            return refusal.report(
-                NoBundle(
-                    because,
-                    advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
-                )
-            )
+    already = {path.name for path in providers.staged_bundles()}
+    # A resolved machine name is what makes a peer's archive skippable, so without
+    # one nothing is staged on top of a stack that already works.
+    archive = offline_bundle.newest(machine=machine) if machine or not already else None
+    if archive is None and not already:
+        archive = _fetched_bundle(machine)
 
+    if archive is None and not already:
+        # Two different findings, and the second is the one a person cannot
+        # work out from the first. A directory under staging that carries no
+        # manifest is not a bundle — every provider reads through the manifest,
+        # so a run started on one installs nothing and reports each tool as its
+        # own mystery. "There is none" would be true and would send the reader
+        # looking for a tarball they already have.
+        unusable = [path.name for path in paths.staging_dir().iterdir() if path.is_dir()] if paths.staging_dir().is_dir() else []
+        because = (
+            f'nothing under {paths.staging_dir()} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
+            if unusable
+            else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
+        )
+        return refusal.report(
+            NoBundle(
+                because,
+                advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
+            )
+        )
+
+    extracted = None
+    if archive is not None and offline_bundle.stem(archive) not in already:
         try:
             offline_bundle.stage(archive, machine, box)
         except offline_bundle.StagingError as unreadable:
@@ -804,7 +817,7 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
-    report_bundle(staged)
+    report_bundle(staged, machine, plan)
     if not staged.readable:
         return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
     # Every description rather than the newest, because `providers.locate` reads
@@ -861,7 +874,7 @@ def _fetched_bundle(machine: str) -> Path | None:
         return None
 
 
-def report_bundle(staged: offline_bundle.Staging) -> None:
+def report_bundle(staged: offline_bundle.Staging, machine: str = '', plan: Plan | None = None) -> None:
     """Name the bundle a run is installing from, in the read verbs' own shape.
 
     Public because all three offline paths print it — the gate in `apply`, and the
@@ -869,6 +882,9 @@ def report_bundle(staged: offline_bundle.Staging) -> None:
     fact is what "the bundle is the upstream" cannot survive. Rendered as a resource
     section rather than as a `success` line so it sits in the same column as the
     verdict rows beneath it, and reads as part of one report.
+
+    `machine` turns on the staleness check and `plan` on the coverage line. Both are
+    optional because `status show` walks offline without either.
     """
     if not staged.readable:
         warn(f'{paths.under_home(staged.directory)} holds no {bundle.MANIFEST}, so nothing can be installed from it')
@@ -880,6 +896,25 @@ def report_bundle(staged: offline_bundle.Staging) -> None:
         render_note(breakdown)
     else:
         render_note(f'{bundle.MANIFEST} lists no files, so every tool will report its own miss')
+    if plan is not None and (blind := packages.unaskable_offline(plan)):
+        render_note(f'{len(blind)} declared tool(s) have no bundle row to be judged against, so this run did not: {", ".join(blind)}')
+    _report_newer_archive(staged, machine)
+
+
+def _report_newer_archive(staged: offline_bundle.Staging, machine: str) -> None:
+    """Say when an archive on disk is newer than anything staged, and name it.
+
+    A read verb stages nothing, so a bundle downloaded a minute ago answers every
+    version here from the old one — a machine reported up to date against a bundle
+    nobody meant to consult.
+    """
+    if not machine:
+        return
+    archive = offline_bundle.newest(machine=machine)
+    if archive is None or offline_bundle.stem(archive) <= staged.newest.name:
+        return
+    warn(f'{archive.name} is newer than anything staged, and this run measured against {staged.newest.name}')
+    hint(f'stage it first: dotfiles bundle stage {paths.under_home(archive)}')
 
 
 def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
@@ -995,8 +1030,10 @@ def apply_machine(
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
 
-    if offline and (unstaged := _stage_bundle(session.machine_name, publishing.discriminator(session.machine.coordinates.network_trust))):
-        return unstaged
+    if offline:
+        box = publishing.discriminator(session.machine.coordinates.network_trust)
+        if unstaged := _stage_bundle(session.machine_name, box, session.plan):
+            return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`
     # measures the whole machine before it writes anything, and on the work box

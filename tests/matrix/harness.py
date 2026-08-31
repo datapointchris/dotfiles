@@ -98,6 +98,15 @@ DECLARES_LAZYGIT: dict[str, Any] = {**MINIMAL_MANIFEST, 'github_releases': ['laz
 """The manifest subscribing to it. Separate because declaring and subscribing are
 the two halves a matrix row varies independently."""
 
+SYNCER: dict[str, Any] = {'git_uv_tools': [{'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'}]}
+"""One tool with an upstream version that no bundle is ever built to carry.
+
+The counterpart to `LAZYGIT` across the `providers.bundle.carries` line: both have
+a repo to ask about, and only this one is unanswerable when the upstream in hand is
+a staged tarball."""
+
+DECLARES_SYNCER: dict[str, Any] = {**MINIMAL_MANIFEST, 'git_uv_tools': ['syncer']}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Files on disk: the declaration, an installed tool, an upstream release
