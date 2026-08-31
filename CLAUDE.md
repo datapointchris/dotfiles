@@ -148,6 +148,33 @@ This dotfiles setup maintains a clear separation between system package managers
 - Homebrew Python only kept if required by `brew uses --installed python@X.XX`
 - All development uses uv-managed Python, not system Python
 
+**Homebrew builds no new Intel macOS bottles, and both Macs are Intel**: a formula keeps whatever
+Intel bottle it last published and has none once it is rebuilt, so the set with no bottle only
+grows. Intel drops to Tier 3 in September 2026 and is unsupported from September 2027. Do not
+re-derive this — it is settled, and the errors below are the expected consequence rather than a
+defect to chase.
+
+- **`brew upgrade` fails and the run is unconverged.** `dotfiles apply` reports
+  `system/manager/brew: brew upgrade exited 1`, because `UPGRADE` in `providers/syspkg.py` is
+  whole-manager and brew refuses a formula with no bottle. `dotfiles packages check` stays green
+  regardless: it measures presence, and a broken binary is present.
+- **A half-done upgrade breaks a linked binary**, reported as `Library not loaded` from `dlopen`.
+  brew builds a formula from source without asking when it is pulled in as a *dependency*, and
+  refuses when it is the *dependent* being upgraded. So a library stack moves to a new soname
+  while the tool linked against it stays behind.
+- **The repair is `brew install --build-from-source <name>`.** The dependencies are already
+  installed by the upgrade that broke it, so only that formula compiles. Confirm with `otool -L`
+  that the extension picked up the new library rather than trusting the exit code.
+- **Ask whether a formula still has an Intel bottle** before assuming a source build is needed.
+  The bare macOS keys are Intel; `arm64_*` is Apple Silicon:
+
+```bash
+curl -sf https://formulae.brew.sh/api/formula/<name>.json | jq -r '.bottle.stable.files | keys | join(" ")'
+```
+
+The `Tier 3 configuration` line brew prints with a no-bottle error is boilerplate on every such
+message. It describes building from source, not the machine's tier.
+
 ## Project Overview
 
 A cross-platform dotfiles repository with manifest-driven installation and shared configurations, overridden per coordinate rather than per platform. The repository emphasizes automation, documentation, and ergonomic developer workflows.
