@@ -38,6 +38,7 @@ from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.output import hint
 from dotfiles.output import render_note
 from dotfiles.output import warn
 from dotfiles.resources import UNCONVERGED
@@ -275,7 +276,7 @@ def latest(as_json: bool = JsonOption) -> None:
 def list_runs(
     machine: str = typer.Option(None, '--machine', help='Only runs on this machine'),
     verb: str = typer.Option(None, '--verb', help='Only runs of this verb'),
-    limit: int = typer.Option(20, '--limit', min=0, help='How many to show'),
+    limit: int = typer.Option(20, '--limit', '-n', min=0, help='How many to show'),
     as_json: bool = JsonOption,
 ) -> None:
     """List recorded runs, newest first."""
@@ -354,6 +355,63 @@ def upload(
         render_note(f'{directory} already has every record for this machine')
         raise typer.Exit(ExitCode.CONVERGED)
     render_note(f'sent {sent} file(s) to {directory}')
+
+
+@app.command('download')
+def download(
+    machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
+    limit: int = typer.Option(10, '--limit', '-n', min=0, help='Newest N runs only (0 for all)'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Fetch a machine's run records off the remote, so they can be read here.
+
+    The counterpart to `upload`, and the reason it exists: a record says what an
+    `apply` decided and what it ran, and on a box off the fleet's Syncthing that is
+    the only copy anyone else can reach. Without this it could be sent and never
+    read back, so the one artefact answering "what did that apply actually install"
+    was unreachable from the machine building its bundles.
+
+    A reconcile in the same shape as `upload`: only what the local runs directory
+    does not already hold, so running it twice fetches nothing the second time.
+
+    Records land in the same directory `list` and `show` read, and are addressed
+    afterwards by run id. They are the *masked* copies — `publishing.identifying`
+    replaced the hostname on the way up, so a downloaded run names the box by its
+    discriminator and `list --machine` matches on that rather than the manifest.
+    """
+    verbosity(verbose, quiet)
+    where = transport.reachable()
+    named = machine or resolved(None).machine_name
+    directory = transport.reports_for(where, named)
+    listed = transport.listed(where, directory) or ()
+
+    records = sorted((name for name in listed if name.endswith('.json')), reverse=True)
+    wanted = records[:limit] if limit else records
+    if not wanted:
+        error(f'the remote holds no run records for {named} at {directory}')
+        hint('send some from that machine with: dotfiles report upload')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    fetched = 0
+    for name in wanted:
+        # Both files, for the reason `upload` sends both: the record carries what a
+        # run decided and the log carries what it ran, and each answers half of a
+        # failure. A log the shelf never received is skipped rather than refused.
+        for one in (name, f'{Path(name).stem}.jsonl'):
+            local = paths.RUNS_DIR / one
+            if local.exists() or one not in listed:
+                continue
+            transport.pull(where, f'{directory}/{one}', local)
+            fetched += 1
+
+    if not fetched:
+        render_note(f'{paths.under_home(paths.RUNS_DIR)} already holds every record on that shelf')
+        raise typer.Exit(ExitCode.CONVERGED)
+
+    render_note(f'fetched {fetched} file(s) from {directory}')
+    hint(f'read them with: dotfiles report list --machine {runs.machine_of(Path(wanted[0]).stem)}')
+    raise typer.Exit(ExitCode.CONVERGED)
 
 
 def _send(identifier: str | None) -> tuple[str, int]:
