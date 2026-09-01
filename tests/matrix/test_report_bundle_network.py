@@ -1067,6 +1067,7 @@ def test_no_results_file_is_written_unless_output_names_one(sandbox: Sandbox, cl
 
     ran = cli('network', 'check', catch_exceptions=True)
 
+    assert ran.exit_code == ExitCode.ISSUE, ran.output
     assert f'0 reachable, {BASELINE_PROBES} blocked' in ran.stdout, ran.output
     assert sorted(path.name for path in sandbox.root.iterdir() if path.is_file()) == []
 

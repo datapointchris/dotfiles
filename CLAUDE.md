@@ -195,7 +195,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `offline/` - Offline installation support (connectivity testing, bundles)
   - `wsl/` - The one platform-specific install directory left (Windows font, `.wslconfig`, docker repo and images)
-  - `ops/` - Scripts a human runs against the repo itself rather than against a machine
+  - `ops/` - Scripts whose subject is the repo itself rather than a machine. `docs.sh` is run by hand; the two Python sweeps are pre-commit gates as well as Taskfile targets, so a new one belongs here whether or not a person invokes it
   - `common/` - `lib/`, the shared libraries an installer script sources
   - `packages.yml` - Package definitions
   - `system.yml` - System configuration: group memberships, unit enablement, files under `/etc`, the login shell. What a machine *is* once the packages are on it, and the half `packages.yml` deliberately does not hold (`docs/architecture/system-configuration.md`)

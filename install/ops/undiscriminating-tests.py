@@ -28,10 +28,16 @@ exempt with. A hit is repaired or it is a finding.
 
 Exits non-zero above `--max`, which defaults to zero, so it gates.
 
-Deliberately narrow. It finds the confounded-observation shape only where an AST
-can see it, and says nothing about the other shape the rule names — a sweep over
-a hand-written list that omits the failing cases. That one needs a person who
-knows what the list left out.
+Deliberately narrow, and it fails silent rather than loud. `EFFECT` is an
+allow-list, so a read it cannot name — `envfile.read_generated(path)` is the live
+one — reads as *not external* rather than as *unknown*, and one of those in a
+test exempts the whole test. Loosening the composition trades that at about ten
+to one: `any(external(...))` reports eleven more tests, and ten are the
+return-value case named safe above. So the blind spot is kept and written down.
+
+It also says nothing about the other shape the rule names — a sweep over a
+hand-written list that omits the failing cases. That one needs a person who knows
+what the list left out.
 """
 
 from __future__ import annotations
@@ -59,6 +65,18 @@ def absent(node: ast.expr) -> bool:
     if isinstance(node, ast.Dict):
         return not node.keys
     return isinstance(node, ast.Constant) and node.value in (None, False, 0, '')
+
+
+def claims(test: ast.expr) -> list[ast.expr]:
+    """The separate claims in one assertion.
+
+    `assert not a.exists() and not b.exists()` is two assertions written as one,
+    and is judged as two. Without this the whole test is skipped, because a
+    `BoolOp` is neither a `UnaryOp` nor a `Compare` and reads as positive.
+    """
+    if isinstance(test, ast.BoolOp):
+        return [claim for value in test.values for claim in claims(value)]
+    return [test]
 
 
 def negative(test: ast.expr) -> bool:
@@ -109,7 +127,8 @@ def undiscriminating(path: Path) -> list[tuple[int, str, list[str]]]:
         checks = [child for child in ast.walk(node) if isinstance(child, ast.Assert)]
         if not checks:
             continue
-        if not all(negative(check.test) and external(check.test) for check in checks):
+        parts = [claim for check in checks for claim in claims(check.test)]
+        if not all(negative(part) and external(part) for part in parts):
             continue
         if any(marker in code(node) for marker in STATUS):
             continue
