@@ -304,8 +304,10 @@ def test_show_writes_nothing_at_all(sandbox: Sandbox, cli: Run) -> None:
     machine nobody applied to."""
     sandbox.env_file.unlink()
 
-    cli('env', 'show')
+    ran = cli('env', 'show')
 
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert 'export MACHINE=' in ran.stdout, 'it rendered the file it declined to write'
     assert not sandbox.env_file.exists()
 
 

@@ -91,6 +91,7 @@ def test_home_gitconfig_carrying_no_identity_is_removed(entry_point: Path, home_
 
     deploy._ensure_git_config_entry(NONFLEET)
 
+    assert entry_point.read_text() == deploy.GIT_CONFIG_STUB, 'the chain it clears the way for was written'
     assert not home_gitconfig.exists()
 
 

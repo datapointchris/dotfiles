@@ -283,6 +283,7 @@ class TestChecksumStaging:
     def test_the_staged_file_and_its_directory_are_gone_afterwards(self, tmp_path, monkeypatch):
         staged = self.stage(tmp_path, monkeypatch)[0]
 
+        assert (tmp_path / self.ASSET).exists(), 'the sweep took the staging area and not the asset it verified'
         assert not staged.exists()
         assert not staged.parent.exists()
 

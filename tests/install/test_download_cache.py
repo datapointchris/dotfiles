@@ -478,10 +478,19 @@ def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_worki
 
 def test_a_cache_that_was_never_created_is_swept_without_complaint(cache_home):
     """`build` prunes unconditionally at the end, including a run with
-    `--no-cache`, where the directory does not exist at all."""
+    `--no-cache`, where the directory does not exist at all.
+
+    The enabled sweep beside it is the control. An absent root is what a fresh
+    `tmp_path` looks like too, so on its own the first assertion is satisfied by
+    the fixture rather than by anything `prune` did.
+    """
     DownloadCache(enabled=False).prune()
 
     assert not cache_home.exists()
+
+    DownloadCache(enabled=True).prune()
+
+    assert cache_home.is_dir(), 'enabling is what creates the root, and the sweep leaves it'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

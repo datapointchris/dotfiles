@@ -737,8 +737,9 @@ def test_apply_retires_an_empty_home_gitconfig_that_would_outrank_the_entry_poin
     both, so one left behind silently outranks the whole include chain."""
     (sandbox.home / '.gitconfig').write_text('[core]\n\tpager = less\n')
 
-    cli('symlinks', 'apply')
+    ran = cli('symlinks', 'apply')
 
+    assert ran.exit_code == ExitCode.CONVERGED
     assert not (sandbox.home / '.gitconfig').exists()
 
 

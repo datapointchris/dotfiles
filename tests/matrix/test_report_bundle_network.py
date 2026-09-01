@@ -1065,8 +1065,9 @@ def test_no_results_file_is_written_unless_output_names_one(sandbox: Sandbox, cl
     sandbox.shadow('curl', REFUSES)
     sandbox.shadow('git', REFUSES)
 
-    cli('network', 'check', catch_exceptions=True)
+    ran = cli('network', 'check', catch_exceptions=True)
 
+    assert f'0 reachable, {BASELINE_PROBES} blocked' in ran.stdout, ran.output
     assert sorted(path.name for path in sandbox.root.iterdir() if path.is_file()) == []
 
 

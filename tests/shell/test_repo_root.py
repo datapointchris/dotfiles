@@ -60,7 +60,10 @@ def test_a_script_defers_to_an_exported_repo_root_before_asking_git(script: Path
 
 @pytest.mark.parametrize('script', shell_scripts(), ids=identifier)
 def test_no_script_walks_up_the_tree_by_hand(script: Path) -> None:
-    assert not RELATIVE_NAVIGATION.search(script.read_text())
+    text = script.read_text()
+
+    assert text.strip(), f'{identifier(script)} is empty, so it satisfies the sweep by carrying nothing'
+    assert not RELATIVE_NAVIGATION.search(text), identifier(script)
 
 
 def test_the_glob_finds_the_scripts_it_is_meant_to_cover() -> None:

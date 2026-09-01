@@ -456,6 +456,8 @@ def test_the_report_verb_answers_about_the_directory_it_is_pointed_at(tmp_path: 
 def test_every_default_target_is_a_file_in_the_checkout() -> None:
     """A renamed module drops out of the routine run silently otherwise, which is the failure this file exists to make loud."""
     repo = harness.repo_root()
+
+    assert targets.DEFAULT_TARGETS, 'an emptied list satisfies the sweep below by having nothing to sweep'
     assert [name for name in targets.DEFAULT_TARGETS if not (repo / name).is_file()] == []
 
 
