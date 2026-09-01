@@ -63,18 +63,26 @@ Then, from the work box:
 
 ```bash
 dotfiles bundle download
-dotfiles bundle stage
 dotfiles apply --machine wsl-work-workstation --offline
 dotfiles status upload
 ```
 
 `bundle download` takes the newest archive built for this machine. It describes
-what it found and asks before the transfer. `bundle stage` unpacks the newest
-archive it finds. The apply does that step unasked when it reaches a box with
-nothing staged, so the second line is only needed to stage something specific.
-`--offline` on the apply sends every provider to the staged bundle instead of the
-network. `status upload` publishes what the box now has, so the next bundle can
-be built against it.
+what it found and asks before the transfer. The apply unpacks that archive
+itself, and skips the unpacking only when it is already staged — so there is no
+staging step to remember and a bundle fetched to replace an old one takes effect
+on the next run. `--offline` sends every provider to the staged bundle instead of
+the network. `status upload` publishes what the box now has, so the next bundle
+can be built against it.
+
+`dotfiles bundle stage PATH` is still there for unpacking without installing,
+which is what `bundle check` and `bundle show` read, and for a tarball carried
+across by hand from somewhere the search does not look.
+
+To read back what an apply did, `dotfiles report upload` from the work box and
+`dotfiles report download --machine wsl-work-workstation` where the network is.
+The record says what the run decided and the log beside it says what it ran,
+which is the pair that answers a converge nobody was watching.
 
 On a machine with no CLI yet the bootstrap comes first.
 `./install.sh --machine NAME --offline` finds the newest archive in the download

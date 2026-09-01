@@ -109,7 +109,11 @@ a resource's `--json` answers an object keyed on `resources`, not on `pending`.
 
 
 def document(
-    results: Sequence[ResourceResult], machine: str, when: dt.datetime, verb: str = 'check', written_by: str = ''
+    results: Sequence[ResourceResult],
+    machine: str,
+    when: dt.datetime,
+    verb: str = 'check',
+    written_by: str = '',
 ) -> dict[str, object]:
     """The versioned interchange document, from every read door.
 
@@ -119,6 +123,7 @@ def document(
 
     `verb` names which question produced it — `plan` and `check` measure the same
     machine and keep different findings, and the bundle builder wants the plan's.
+
 
     **`scope` names which resources it covers, and a reader has to honour it.** One
     shape comes from three widths, so without it a consumer diffing this against a

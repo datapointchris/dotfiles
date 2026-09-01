@@ -622,7 +622,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed),
+                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
                 observed=reported,
             ),
@@ -637,21 +637,38 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.STALE,
                 repair=repair,
-                detail=f'ahead of {cached.version}, which is the newest release and what a fresh install produces',
+                detail=_ahead_of(cached.version, observed),
                 advice=advice_for(item, repair),
                 desired=item,
                 observed=reported,
             ),
         )
 
-    return _compared(
-        item,
-        reported,
-        cached.version,
-        versions.at_least(reported, cached.version),
-        f'{cached.version} is the latest release',
-        observed.met,
-    )
+    current = versions.at_least(reported, cached.version)
+    return _compared(item, reported, cached.version, current, _behind(cached.version, observed), observed.met)
+
+
+def _ahead_of(version: str, observed: Observed) -> str:
+    """Why an installed version newer than the target is drift, in that target's terms.
+
+    Offline the figure is what one tarball holds, so the repair is an older build
+    replacing a newer one, and the row says so. A downgrade under the wording that
+    calls a bundle's row the newest release reads as an ordinary repair — measured
+    on a box whose bundle was a fortnight stale, where broot went 1.59.0 to 1.58.0.
+    """
+    if observed.from_bundle:
+        return f'ahead of {version}, which is what the staged bundle carries — applying installs that older build'
+    return f'ahead of {version}, which is the newest release and what a fresh install produces'
+
+
+def _behind(version: str, observed: Observed) -> str:
+    """What the installed version is being measured against, named by its source.
+
+    A bundle's row is what its builder resolved on the day it was built, not what
+    upstream publishes now, and a machine that cannot reach GitHub has no way to
+    tell the two apart from the sentence alone.
+    """
+    return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is the latest release'
 
 
 def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -676,7 +693,7 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed),
+                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
             ),
         )
@@ -700,6 +717,12 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
     if observed.from_bundle:
+        # A kind no bundle is built to carry is not a gap in the staged one, so it
+        # is answered before any question about which bundle. Read the other way it
+        # advised extracting a newer bundle to fix something no bundle will ever
+        # carry — a permanent finding against the wrong artefact.
+        if not bundle.bundlable(item.entry):
+            return _never_bundled(item)
         # A sparse bundle explains most of what it left out, so an entry it does
         # not explain is a different finding: the declaration gained it after the
         # status the bundle was planned from was taken, and nothing has ever
@@ -717,10 +740,25 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
     return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'
 
 
-def _unmeasurable_advice(observed: Observed) -> str:
+def _never_bundled(item: DesiredItem) -> str:
+    """Why no bundle carries this entry, read off the entry rather than its section.
+
+    A section is the right subject for every kind but one. `custom_installers`
+    answers `bundlable` per entry — `theme` and `claude-code` declare
+    `bundle_install_script` and are staged, `terraform-ls` and `mount-s3` do not —
+    so a sentence blaming the section is false on a machine whose bundle carries
+    five of its siblings.
+    """
+    if isinstance(item.entry, catalog.CustomInstaller):
+        return f'{item.name} declares no bundle_install_script, so no bundle stages an installer to compare against'
+    kind = type(item.entry).section.replace('_', ' ').rstrip('s')
+    return f'no bundle carries a {kind}, so an offline run cannot say whether {item.name} is current'
+
+
+def _unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
     """The fix for `_unmeasurable`, which is not always a command.
 
-    Three states, and only two of them have a next step.
+    Four states, and only two of them have a next step.
 
     Every read verb measures, so a row nothing could measure means either the caller
     declined the network or upstream did not answer. The first is undone by dropping
@@ -728,9 +766,14 @@ def _unmeasurable_advice(observed: Observed) -> str:
     would advise the thing that just failed, which is how a machine ends up
     reporting an unrepairable row with the reason unnamed.
 
-    Offline is the third and has no command at all: what is missing is a newer
-    bundle, not a network call this run could make instead.
+    Offline has no command at all: what is missing is a newer bundle, not a network
+    call this run could make instead. And a kind no bundle carries has no next step
+    even in principle, so it gets no sentence — advising a newer bundle there is a
+    permanent instruction that never resolves, which is the state a reader reads as
+    a fault in the machine.
     """
+    if observed.from_bundle and not bundlable:
+        return ''
     if observed.from_bundle:
         return 'extract a newer offline bundle; this one has nothing to compare against'
     if not observed.consulted_network:

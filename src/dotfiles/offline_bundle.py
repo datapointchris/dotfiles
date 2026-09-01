@@ -21,10 +21,10 @@ import re
 import shutil
 import tarfile
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from dotfiles import catalog
 from dotfiles import commands
 from dotfiles import effects
 from dotfiles import github_release
@@ -196,28 +196,6 @@ class Staging:
         return ', '.join(f'{category} {count}' for category, count in self.counts.items())
 
 
-BUNDLED_KINDS = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.WingetPackage)
-"""The declaration kinds `create_bundle` stages, and the only ones a bundle can miss.
-
-Read off its `record` calls: a `GithubRelease` becomes a `binary` row plus an `extra`
-per companion, a `GoTool` a `go-binary`, a `CargoPackage` a `cargo`, a
-`WingetPackage` a `winget`, and a `CustomInstaller` a `script` — and that last only
-where the entry declares `bundle_install_script`.
-
-A `WingetPackage` belongs here for a reason the others do not need stated: its
-machine declares nothing else. Counting it `outside` would have `bundle check`
-report a Windows box as fully covered by a bundle carrying nothing it can install,
-which is the one machine where that sentence is both wrong and unfalsifiable from
-the other end.
-
-Everything else is deliberately absent and must not be reported as a gap. A system
-package comes from apt or pacman on the machine, an npm global from a registry, a
-shell plugin from a clone. Counting those made the first `bundle check` report `apt`,
-`bash` and `ca-certificates` as things the bundle failed to carry, which is a list
-nobody can act on and buries the rows that matter.
-"""
-
-
 @dc.dataclass(frozen=True, slots=True)
 class Coverage:
     """What a staged bundle can and cannot install, against one machine's plan."""
@@ -258,10 +236,7 @@ def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
     """
     wanted, outside = {}, 0
     for item in plan.items:
-        if not isinstance(item.entry, BUNDLED_KINDS):
-            outside += 1
-            continue
-        if isinstance(item.entry, catalog.CustomInstaller) and not item.entry.bundle_install_script:
+        if not bundle.bundlable(item.entry):
             outside += 1
             continue
         wanted[item.name] = {item.name, item.entry.executable} & staged.names
@@ -621,6 +596,21 @@ def newest(*searched: Path, machine: str = '') -> Path | None:
     if machine:
         found = [archive for archive in found if manifest_of(archive.name) in ('', machine)]
     return max(found, key=lambda archive: archive.name, default=None)
+
+
+def outranks(archive: Path, staged: Iterable[str]) -> bool:
+    """Whether unpacking this archive would change what a provider reads.
+
+    One comparison for both readers of it. `apply --offline` decides whether to
+    unpack and `reconcile.unstaged_newer` decides whether to warn, and they are the
+    same question — split, an apply could stage what the warning called old.
+
+    Ordering rather than membership, because `providers.staged_bundles` ranks on the
+    directory name: an archive below the top of the stack supplies nothing the stack
+    does not already answer, and unpacking it puts a bundle in the run's headline
+    that no version came out of.
+    """
+    return stem(archive) > max(staged, default='')
 
 
 def stage(archive: Path, machine: str, box: str) -> Path:

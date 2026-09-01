@@ -233,3 +233,70 @@ def test_a_send_leaves_nothing_behind_in_the_temporary_directory(
     assert ran.exit_code == ExitCode.CONVERGED
     assert sorted(path.name for path in shelf(server).iterdir()), 'the send did happen'
     assert list(scratch.iterdir()) == [], 'and staged nothing that outlived it'
+
+
+class TestReadingThemBack:
+    """The half `upload` had no counterpart for.
+
+    A record says what an `apply` decided and what it ran, and on a box off the
+    fleet's Syncthing the shelf holds the only copy anyone else can reach. Sent and
+    never fetched, the one artefact answering "what did that apply install" was
+    unreachable from the machine that builds its bundles.
+    """
+
+    def sent(self, sandbox: Sandbox, named: str, cli: Callable[..., Invocation], stamp: str = '20260817T120000Z') -> Path:
+        """One record on the shelf, and gone from this machine."""
+        record = a_record(sandbox, named, stamp=stamp)
+        cli('report', 'upload')
+        record.unlink()
+        record.with_suffix('.jsonl').unlink()
+        return record
+
+    def test_a_record_comes_back_where_list_and_show_read(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        record = self.sent(sandbox, named, cli)
+
+        ran = cli('report', 'download', '--machine', MACHINE)
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert record.is_file(), 'the record itself'
+        assert record.with_suffix('.jsonl').is_file(), 'and the log that says what it ran'
+
+    def test_a_second_download_fetches_nothing_and_still_converges(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        """A reconcile in the same shape as `upload`, so it is the whole answer to
+        keeping a local copy current."""
+        self.sent(sandbox, named, cli)
+        cli('report', 'download', '--machine', MACHINE)
+
+        ran = cli('report', 'download', '--machine', MACHINE)
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert 'already holds' in ran.stderr
+
+    def test_a_limit_takes_the_newest_and_leaves_the_rest(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        """A shelf keeps every run a box ever sent, and the one worth reading is
+        almost always the last."""
+        older = self.sent(sandbox, named, cli, stamp='20260817T120000Z')
+        newer = self.sent(sandbox, named, cli, stamp='20260819T120000Z')
+
+        cli('report', 'download', '--machine', MACHINE, '-n', '1')
+
+        assert newer.is_file()
+        assert not older.exists()
+
+    def test_limit_zero_asks_for_nothing_and_says_so_as_nothing(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        """One flag, one meaning, on the resource's two verbs — and a full shelf is
+        never reported as an empty one. Guarding on the slice sent a caller who
+        asked for none of it to the other machine to fill a shelf already full."""
+        record = self.sent(sandbox, named, cli, stamp='20260817T120000Z')
+
+        ran = cli('report', 'download', '--machine', MACHINE, '-n', '0')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert 'holds no run records' not in ran.stderr, 'the shelf has one'
+        assert not record.exists(), 'and none of it was asked for'
+
+    def test_an_empty_shelf_is_an_issue_naming_the_verb_that_fills_it(self, sandbox: Sandbox, server: Path, named: str, cli) -> None:
+        ran = cli('report', 'download', '--machine', MACHINE, catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.ISSUE
+        assert 'report upload' in ran.stderr

@@ -1,4 +1,4 @@
-"""A bundle that carries less, and the three answers an absence can have.
+"""A bundle that carries less, and the four answers an absence can have.
 
 The whole point of `bundle.json`: under a full bundle an absent tool is a gap,
 and reading a sparse bundle's deliberate omissions the same way reports a working
@@ -6,12 +6,13 @@ machine as missing most of itself. That is the sweep-as-deletion failure
 `standards/cli-design.md` measures on todoui, and these are the tests that keep
 this side of it closed.
 
-Three states, and each one is asserted separately because the middle one is new
-and the other two are what it must not become:
+Four states, each asserted separately because they are what the others must not
+collapse into:
 
     in the manifest       install it from the staging directory
     in `current`          MATCHED at the version the builder measured
-    in neither            UNKNOWN, and honest about why
+    in neither            UNKNOWN, and honest about which bundle is missing it
+    no bundle carries it  UNKNOWN, with no fix offered, because none exists
 
 Driven through the CLI against a real staged bundle, so what is asserted is what
 an offline run on the target would decide.
@@ -31,7 +32,11 @@ from dotfiles import status as status_document
 from dotfiles.providers import bundle
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import DECLARES_LAZYGIT
+from matrix.harness import DECLARES_SYNCER
+from matrix.harness import DECLARES_VENDOR_INSTALLER
 from matrix.harness import LAZYGIT
+from matrix.harness import SYNCER
+from matrix.harness import VENDOR_INSTALLER
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 
@@ -302,6 +307,124 @@ class TestWhatTheTargetDecides:
 
         assert found['verdict'] == 'unknown'
         assert 'carries no version' in found['detail']
+
+
+class TestNamingWhereTheFigureCameFrom:
+    """Offline the upstream is one tarball, and the row has to say so.
+
+    `the newest release` is a claim about what upstream publishes. Offline it is a
+    claim about what a builder resolved on the day the bundle was built, and the
+    two are the same sentence only while the bundle is fresh.
+    """
+
+    def test_ahead_of_the_bundle_says_apply_will_install_the_older_build(self, sandbox: Sandbox, cli) -> None:
+        """The sentence that hid a real downgrade. A fortnight-old bundle staged
+        under a newer one that never unpacked took broot from 1.59.0 back to
+        1.58.0, and the plan above it read as an ordinary repair."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.44.0'})
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        found = next(row for row in rows if 'lazygit' in row['item'])
+
+        assert 'what the staged bundle carries' in found['detail']
+        assert 'applying installs that older build' in found['detail']
+
+    def test_behind_the_bundle_names_the_bundle_rather_than_upstream(self, sandbox: Sandbox, cli) -> None:
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('lazygit', INSTALLED)
+
+        ran = cli('plan', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is what the staged bundle carries'
+
+    def test_online_the_wording_still_names_the_release(self, sandbox: Sandbox, cli) -> None:
+        """The online sentence is correct and stays. Two sources, two sentences."""
+        sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
+        sandbox.installed('lazygit', INSTALLED)
+        sandbox.upstream({'jesseduffield/lazygit': '0.46.0'})
+
+        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is the latest release'
+
+
+class TestWhatNoBundleEverCarries:
+    """The fourth state, and the one that read as a fault on every offline run.
+
+    A `uv tool install` from git, an apt package, an npm global, a vendor installer
+    fetched at install time — no bundle is built to hold any of them, so a bundle
+    having no row is not an absence to repair. Read as a bundle gap it advises
+    extracting a newer bundle, which is a fix that does not exist.
+    """
+
+    def staged(self, sandbox: Sandbox) -> None:
+        """A tool behind its upstream, on a machine with a bundle that cannot say so."""
+        sandbox.declare(packages=SYNCER, manifest=DECLARES_SYNCER)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('syncer')
+        sandbox.uv_installed('syncer', pin='v11.3.2')
+        sandbox.upstream({'datapointchris/syncer': 'v12.0.0'})
+
+    def row(self, ran: Invocation) -> dict[str, str]:
+        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        return next(row for row in rows if 'syncer' in row['item'])
+
+    def test_offline_the_row_names_the_kind_rather_than_the_bundle(self, sandbox: Sandbox, cli) -> None:
+        self.staged(sandbox)
+
+        found = self.row(cli('check', '--offline', '--json', catch_exceptions=True))
+
+        assert found['verdict'] == 'unknown'
+        assert 'no bundle carries a git uv tool' in found['detail']
+
+    def test_offline_it_offers_no_fix_because_none_exists(self, sandbox: Sandbox, cli) -> None:
+        """Advising a newer bundle is a permanent instruction that never resolves,
+        which is what a reader reads as a fault in the machine."""
+        self.staged(sandbox)
+
+        assert self.row(cli('check', '--offline', '--json', catch_exceptions=True))['advice'] == ''
+
+    def test_offline_the_run_still_counts_itself_blind(self, sandbox: Sandbox, cli) -> None:
+        """Dropping the row would report `unmeasured: 0` and `converged` for a
+        resource where a declared tool was never compared against anything, which
+        converts *I could not measure this* into *I measured it and it was fine*."""
+        self.staged(sandbox)
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+        packages = next(r for r in ran.document['resources'] if r['address'] == 'packages')
+
+        assert packages['unmeasured'] == 1
+
+    def test_a_vendor_installer_is_blamed_on_its_own_entry_not_its_section(self, sandbox: Sandbox, cli) -> None:
+        """`custom_installers` answers per entry, so a machine's bundle can carry
+        five of them and miss this one. Naming the section states something false
+        about the five, and the row offers no fix either way."""
+        sandbox.declare(packages=VENDOR_INSTALLER, manifest=DECLARES_VENDOR_INSTALLER)
+        sandbox.stage_bundle({'lazygit': '0.46.0'})
+        sandbox.installed('terraform-ls', '0.39.0')
+
+        ran = cli('check', '--offline', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        found = next(row for row in rows if 'terraform-ls' in row['item'])
+
+        assert 'terraform-ls declares no bundle_install_script' in found['detail']
+        assert 'custom installer' not in found['detail']
+
+    def test_online_the_same_tool_is_judged_stale(self, sandbox: Sandbox, cli) -> None:
+        """The gate is the upstream in hand, never the entry kind. With a release
+        cache to ask, the finding this bundle could not reach comes straight back."""
+        self.staged(sandbox)
+
+        ran = cli('plan', '--cached', '--json', catch_exceptions=True)
+        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+
+        assert [row['verdict'] for row in rows if 'syncer' in row['item']] == ['stale']
 
 
 class TestWhatBundleCheckReports:

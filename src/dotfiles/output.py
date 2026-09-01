@@ -406,7 +406,11 @@ def render_row(label: str, subject: str, detail: str, colour: str = '', width: i
     if not showing_evidence():
         return
     marked = f'[{colour}]{label:<{VERDICT_COLUMN}}[/]' if colour else f'{label:<{VERDICT_COLUMN}}'
-    err_console.print(f'{EVIDENCE_INDENT}{marked} {subject:<{width}} {detail}')
+    # Padded only where a third field follows it. A row with nothing to say would
+    # otherwise end in a column of blanks, and the trailing space is what a copied
+    # filename carries into the next command.
+    written = f'{subject:<{width}} {detail}' if detail else subject
+    err_console.print(f'{EVIDENCE_INDENT}{marked} {written}')
 
 
 def render_advice(line: str, width: int = SUBJECT_COLUMN) -> None:

@@ -364,13 +364,13 @@ def list_runs(
 
     found = sorted(directory.glob('*.json'), reverse=True)
     if machine:
-        found = [path for path in found if _machine_of(path.stem) == machine]
+        found = [path for path in found if machine_of(path.stem) == machine]
     if verb:
         found = [path for path in found if path.stem.rsplit('-', 1)[-1] == verb]
     return found if limit is None else found[:limit]
 
 
-def _machine_of(stem: str) -> str:
+def machine_of(stem: str) -> str:
     """The machine a run filename names, or '' where the name is not a run's.
 
     The stem is `<timestamp>-<machine>-<verb>` and a machine name carries hyphens
@@ -404,7 +404,7 @@ def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None,
 
     found = sorted(directory.glob('*.jsonl'), reverse=True)
     if machine:
-        found = [path for path in found if _machine_of(path.stem) == machine]
+        found = [path for path in found if machine_of(path.stem) == machine]
     return found if limit is None else found[:limit]
 
 

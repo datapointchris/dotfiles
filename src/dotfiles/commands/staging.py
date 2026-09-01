@@ -16,7 +16,6 @@ import contextlib
 import dataclasses as dc
 import datetime as dt
 import json
-import re
 import shutil
 import sys
 import tempfile
@@ -402,23 +401,20 @@ def list_bundles(
     word = str(ResourceVerdict.CONVERGED)
     console.print(section_line(VERDICT_MARKS[word], 'bundles', f'{len(listed)} for {named}', VERDICT_COLOURS[word]))
     for name in shown:
-        render_row('remote', name, _age_of(name))
+        render_row(publishing.age_column(name), name, '')
     if limit and len(listed) > limit:
         hint(f'see the rest with: dotfiles bundle list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
 def _age_of(name: str) -> str:
-    """How long ago a bundle was built, from the stamp in its own name.
+    """How long ago a bundle was built, as the sentence a nudge carries.
 
-    From the name rather than the record, so a listing costs one transfer however
-    many rows it has. The name is what the stamp went into for this.
+    The stamp is read by `publishing.age_of`, which `bundle list` renders the other
+    way; this is one of its two renderings rather than a second parse.
     """
-    stamped = re.search(r'-v(\d{8}T\d{6}Z)-', name)
-    if stamped is None:
-        return 'built at an unrecorded time'
-    built = dt.datetime.strptime(stamped.group(1), '%Y%m%dT%H%M%SZ').replace(tzinfo=dt.UTC)
-    return f'built {_elapsed(dt.datetime.now(dt.UTC) - built)} ago'
+    since = publishing.age_of(name)
+    return f'built {_elapsed(since)} ago' if since is not None else 'built at an unrecorded time'
 
 
 def _elapsed(since: dt.timedelta) -> str:
@@ -463,8 +459,9 @@ def download(
     otherwise surfaces as a corrupt tarball part way into an apply, which reads as
     a broken bundle rather than a failed download.
 
-    Nothing is staged here. `bundle stage` unpacks, and keeping the two apart is
-    what lets a download be repeated without disturbing what is already staged.
+    Nothing is staged here, so a download can be repeated without touching what is
+    already unpacked. The next `apply --offline` stages what this leaves in the
+    cache, which is why there is no staging step between the two.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
@@ -493,7 +490,7 @@ def download(
         render_note('digest matches the record on the remote')
 
     success(f'downloaded {wanted} to {paths.under_home(destination)}')
-    hint(f'stage it with: dotfiles bundle stage {destination}')
+    hint('install from it with: dotfiles apply --offline')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -586,7 +583,7 @@ def check(
         )
         raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
-    reconcile.report_bundle(staged)
+    reconcile.report_bundle(staged, '')
     # Here rather than in `report_bundle`, which the apply gate and the `--offline`
     # rehearsals of `plan` and `check` all share — a per-bundle listing in four
     # places is browse density inside a nudge. Rendered without colour, matching
@@ -642,7 +639,7 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
         )
         raise typer.Exit(ExitCode.CONVERGED)
 
-    reconcile.report_bundle(staged)
+    reconcile.report_bundle(staged, '')
     for row in sorted(staged.carried, key=lambda one: (one.category, one.name)):
         render_row(row.category, row.name, f'{row.version}  {row.filename}')
     raise typer.Exit(ExitCode.CONVERGED)

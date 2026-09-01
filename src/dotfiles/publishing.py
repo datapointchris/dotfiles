@@ -72,7 +72,7 @@ from dotfiles.vocabulary import ExitCode
 PUBLISHABLE = ('packages', 'toolchains')
 """The resources whose rows a bundle builder can act on, and the only ones sent.
 
-`offline_bundle.BUNDLED_KINDS` expressed as resources: a bundle stages release
+`providers.bundle.BUNDLED_KINDS` expressed as resources: a bundle stages release
 binaries, Go tools, cargo packages, winget packages and vendor install scripts,
 all of which are `packages`, plus the language runtimes, which are `toolchains`.
 Everything else in a walk is either unbundlable or personal, and usually both.
@@ -167,6 +167,58 @@ def wrote(name: str) -> str:
     """
     stem = name.removesuffix(SUFFIX)
     return stem.rsplit('-', 1)[-1] if stem.startswith(PREFIX) and '-' in stem else ''
+
+
+STAMPED = re.compile(r'-v(\d{8}T\d{6}Z)-')
+"""The build stamp inside a published artefact's name, for both readers of it.
+
+One parse, because a bundle's age is rendered two ways — `bundle list` in a label
+column and `bundle download` in a sentence — and two parses disagree about the
+unparseable name while nothing compares them.
+"""
+
+
+def built_at(name: str) -> dt.datetime | None:
+    """When a published artefact was built, read off its own name.
+
+    From the name rather than the record, so a listing costs one transfer however
+    many rows it has. `None` where the name is not one this tool wrote, which each
+    caller words for itself.
+    """
+    stamped = STAMPED.search(name)
+    if stamped is None:
+        return None
+    return dt.datetime.strptime(stamped.group(1), '%Y%m%dT%H%M%SZ').replace(tzinfo=dt.UTC)
+
+
+def age_of(name: str, now: dt.datetime | None = None) -> dt.timedelta | None:
+    """How long ago that was, clamped at zero, or `None` for an unparseable name.
+
+    Clamped because the builder stamps the name and another box renders it, so a
+    few minutes of clock skew is ordinary — and `timedelta` normalises a negative
+    by borrowing, which reads as 23 hours ago rather than as five minutes hence.
+    """
+    made = built_at(name)
+    if made is None:
+        return None
+    return max((now or dt.datetime.now(dt.UTC)) - made, dt.timedelta(0))
+
+
+def age_column(name: str) -> str:
+    """A published artefact's age, short enough to sit in the label column.
+
+    The label is what the eye runs down and age is the fact that varies down it.
+    Putting it there leaves the filename unpadded, which matters because these
+    names run to eighty characters: padded into a fixed column, every row wraps
+    mid-name on a 120-column terminal and splits the identity a reader is about to
+    paste into the next command.
+    """
+    since = age_of(name)
+    if since is None:
+        return 'undated'
+    if since.days:
+        return f'{since.days}d ago'
+    return f'{since.seconds // 3600}h ago' if since.seconds >= 3600 else f'{since.seconds // 60}m ago'
 
 
 def published_by(document: object, name: str = '') -> str:

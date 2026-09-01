@@ -278,6 +278,68 @@ def test_apply_refuses_a_peer_s_bundle_already_in_the_stack(tmp_path, home, stag
     assert reconcile._stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
 
 
+def test_apply_stages_a_newer_archive_over_one_already_staged(tmp_path, home, staging, monkeypatch) -> None:
+    """The download is the whole point of downloading. A run that stopped at "some
+    bundle is staged" installed from the one the new archive was fetched to replace,
+    reported a converged machine, and on a real box downgraded a tool to the version
+    a fortnight-old bundle carried."""
+    monkeypatch.chdir(tmp_path)
+    older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    (older / 'bin').mkdir(parents=True)
+    (older / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (older / 'bin' / 'uv').write_text('a fortnight old')
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'just downloaded'})
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'just downloaded'
+    assert len(providers.staged_bundles()) == 2, 'the older one stays, because a sparse bundle reads through it'
+
+
+def test_apply_leaves_an_archive_older_than_the_stack_in_its_tarball(tmp_path, home, staging, monkeypatch) -> None:
+    """Ordering, not membership. An archive below the top of the stack supplies
+    nothing the stack does not already answer, and unpacking it spends the transfer
+    and then puts a bundle in the run's headline that no version came out of."""
+    monkeypatch.chdir(tmp_path)
+    newer = staging / 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
+    (newer / 'bin').mkdir(parents=True)
+    (newer / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (newer / 'bin' / 'uv').write_text('what the stack answers with')
+    archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'older'})
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'what the stack answers with'
+    assert len(providers.staged_bundles()) == 1, 'the older archive stayed in its tarball'
+
+
+def test_apply_does_not_re_unpack_the_archive_it_already_staged(tmp_path, home, staging, monkeypatch) -> None:
+    """The other half. Re-reading a tarball every run costs minutes on the machine
+    this exists for, and the newest archive already being staged is the steady state."""
+    monkeypatch.chdir(tmp_path)
+    archive(tmp_path, f'{BUNDLE}.tar.gz', files={'bin/uv': 'from the tarball'})
+    unpacked = staging / BUNDLE
+    (unpacked / 'bin').mkdir(parents=True)
+    (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (unpacked / 'bin' / 'uv').write_text('left alone')
+
+    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'left alone'
+
+
+def test_apply_leaves_a_working_stack_alone_when_the_machine_is_unresolved(tmp_path, home, staging, monkeypatch) -> None:
+    """An empty machine name is a box that could not say who it is, so `newest` has
+    nothing to filter a peer's archive out by. Staging one on top of a stack that
+    already works would install another machine's binaries."""
+    monkeypatch.chdir(tmp_path)
+    unpacked = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+    (unpacked / 'bin').mkdir(parents=True)
+    (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+    (unpacked / 'bin' / 'uv').write_text('mine')
+    archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
+
+    assert reconcile._stage_bundle('', '') is None
+    assert providers.bundle_file('bin/uv').read_text() == 'mine'
+
+
 def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monkeypatch) -> None:
     """A broken bundle stops the run rather than starting one that will fail as
     every tool in the plan turning up missing."""
@@ -331,6 +393,32 @@ class TestSayingWhichBundle:
         # length of the tmp directory pytest happened to hand out.
         said = ' '.join(capsys.readouterr().err.split())
         assert 'unpacked dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz' in said
+
+    def test_a_newer_archive_nobody_staged_is_named_as_the_one_not_measured(self, tmp_path, home, staging, monkeypatch) -> None:
+        """A read verb stages nothing, so a bundle downloaded a minute ago answers
+        every version from the old one — a machine reported up to date against a
+        bundle nobody meant to consult. `_stage_bundle` cannot reach this, because
+        it stages the newer archive rather than warning about it."""
+        monkeypatch.chdir(tmp_path)
+        older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
+        older.mkdir(parents=True)
+        (older / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        newer = archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz')
+
+        assert reconcile.unstaged_newer(offline_bundle.describe(), MACHINE_NAME) == newer
+
+    def test_the_newest_archive_being_staged_leaves_nothing_to_report(self, tmp_path, home, staging, monkeypatch) -> None:
+        """The steady state. Paired with a positive fact, because an assertion that
+        nothing happened is satisfied by a run that never reached the comparison."""
+        monkeypatch.chdir(tmp_path)
+        unpacked = staging / BUNDLE
+        unpacked.mkdir(parents=True)
+        (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
+        archive(tmp_path, f'{BUNDLE}.tar.gz')
+        staged = offline_bundle.describe()
+
+        assert staged.newest.name == BUNDLE, 'the comparison had a staged bundle to run against'
+        assert reconcile.unstaged_newer(staged, MACHINE_NAME) is None
 
     def test_a_directory_with_no_manifest_is_named_as_the_reason(self, staged, home, capsys, monkeypatch, tmp_path) -> None:
         """Every provider reads the bundle through the manifest, so without one the

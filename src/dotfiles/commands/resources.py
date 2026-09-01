@@ -48,7 +48,14 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-def _report(results: Sequence[reconcile.ResourceResult], as_json: bool, *, machine: str, when: dt.datetime, lens: reconcile.Lens) -> None:
+def _report(
+    results: Sequence[reconcile.ResourceResult],
+    as_json: bool,
+    *,
+    machine: str,
+    when: dt.datetime,
+    lens: reconcile.Lens,
+) -> None:
     """Print every resource the walk covered, and exit with the code all of them earn.
 
     Every one, because a selection can hold more than the noun it was typed under:
@@ -122,11 +129,12 @@ def _survey(
     machine was `""` while the walk had correctly read `~/.env`.
     """
     began = dt.datetime.now(dt.UTC)
-    if offline:
-        reconcile.report_bundle(offline_bundle.describe())
     session = _session(machine, owner=owner, packages=packages, offline=offline, refresh=refresh)
+    if offline:
+        reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
-    _report(reconcile.fold(engine.assess(session, selection), lens), as_json, machine=session.machine_name, when=began, lens=lens)
+    walked = reconcile.fold(engine.assess(session, selection), lens)
+    _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
 
 
 def _session(

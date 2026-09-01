@@ -38,6 +38,7 @@ from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
+from dotfiles.output import hint
 from dotfiles.output import render_note
 from dotfiles.output import warn
 from dotfiles.resources import UNCONVERGED
@@ -55,6 +56,20 @@ text. Derived rather than written out a second time — written out, this half s
 """
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
+
+LimitOption = typer.Option(20, '--limit', '-n', min=0, help='Most recent N only')
+"""One option and one meaning for both verbs that take it.
+
+**Zero asks for nothing on both**, which is the answer `runs.list_runs` already
+gives and which its own docstring argues for: the caller that computes a bound,
+`--limit "$(remaining)"`, is the one that reaches zero, and it means none of them.
+`bundle list` and `status list` read zero as "all" instead, so the meaning is
+consistent within this resource and not across all four — which is the scope
+`cli-design.md` § "A flag means one thing across every verb of a resource" sets,
+and the direction that keeps the decision `test_a_limit_of_zero_lists_nothing`
+pins. Written out at each site, the two verbs of this resource disagreed: zero
+returned the whole shelf from one and nothing from the other.
+"""
 
 
 def _unsuccessful(record: runs.RunRecord) -> str:
@@ -275,7 +290,7 @@ def latest(as_json: bool = JsonOption) -> None:
 def list_runs(
     machine: str = typer.Option(None, '--machine', help='Only runs on this machine'),
     verb: str = typer.Option(None, '--verb', help='Only runs of this verb'),
-    limit: int = typer.Option(20, '--limit', min=0, help='How many to show'),
+    limit: int = LimitOption,
     as_json: bool = JsonOption,
 ) -> None:
     """List recorded runs, newest first."""
@@ -354,6 +369,68 @@ def upload(
         render_note(f'{directory} already has every record for this machine')
         raise typer.Exit(ExitCode.CONVERGED)
     render_note(f'sent {sent} file(s) to {directory}')
+
+
+@app.command('download')
+def download(
+    machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
+    limit: int = LimitOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Fetch a machine's run records off the remote, so they can be read here.
+
+    The counterpart to `upload`. A record says what an `apply` decided and what it
+    ran, and for a box that shares no files with this one the remote holds the only
+    copy — which makes this the route to "what did that apply actually install".
+
+    A reconcile in the same shape as `upload`: only what the local runs directory
+    does not already hold, so running it twice fetches nothing the second time.
+
+    Records land in the same directory `list` and `show` read, and are addressed
+    afterwards by run id. What travels is the screened copy: identifying values
+    inside a record are replaced before it is sent, and the filename is not — a
+    published run is filed under the box's own name, which is what `list --machine`
+    matches and what the line printed at the end of a fetch names.
+    """
+    verbosity(verbose, quiet)
+    where = transport.reachable()
+    named = machine or resolved(None).machine_name
+    directory = transport.reports_for(where, named)
+    listed = transport.listed(where, directory) or ()
+
+    records = sorted((name for name in listed if name.endswith('.json')), reverse=True)
+    # The shelf, not the slice. Guarding on what `--limit` left reports an empty
+    # remote to a caller who asked for none of it, and sends them to the other
+    # machine to fill a shelf that is already full.
+    if not records:
+        error(f'the remote holds no run records for {named} at {directory}')
+        hint('send some from that machine with: dotfiles report upload')
+        raise typer.Exit(ExitCode.ISSUE)
+
+    wanted = records[:limit]
+    fetched = 0
+    for name in wanted:
+        # Both files, for the reason `upload` sends both: the record carries what a
+        # run decided and the log carries what it ran, and each answers half of a
+        # failure. A log the shelf never received is skipped rather than refused.
+        for one in (name, f'{Path(name).stem}.jsonl'):
+            local = paths.RUNS_DIR / one
+            if local.exists() or one not in listed:
+                continue
+            transport.pull(where, f'{directory}/{one}', local)
+            fetched += 1
+
+    if not fetched:
+        # Scoped to what was asked for, because that is what was looked at. A shelf
+        # of fifty with the newest twenty local is not a shelf this run drained.
+        held = f'the newest {len(wanted)}' if len(wanted) < len(records) else 'every record'
+        render_note(f'{paths.under_home(paths.RUNS_DIR)} already holds {held} on that shelf')
+        raise typer.Exit(ExitCode.CONVERGED)
+
+    render_note(f'fetched {fetched} file(s) from {directory}')
+    hint(f'read them with: dotfiles report list --machine {runs.machine_of(Path(wanted[0]).stem)}')
+    raise typer.Exit(ExitCode.CONVERGED)
 
 
 def _send(identifier: str | None) -> tuple[str, int]:

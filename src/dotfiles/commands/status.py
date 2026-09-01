@@ -271,7 +271,7 @@ def list_statuses(
     word = str(ResourceVerdict.CONVERGED)
     console.print(section_line(VERDICT_MARKS[word], 'statuses', f'{len(listed)} for {named}', VERDICT_COLOURS[word]))
     for name in shown:
-        render_row('remote', name, '')
+        render_row(publishing.age_column(name), name, '')
     if limit and len(listed) > limit:
         hint(f'see the rest with: dotfiles status list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
