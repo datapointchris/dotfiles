@@ -318,3 +318,66 @@ def test_a_completion_that_compinit_would_skip_is_refused_rather_than_written(tm
 
     assert 'not a #compdef tag' in result.stderr, f'a file compinit would skip was accepted:\n{result.stderr}'
     assert result.stdout.strip().endswith('removed'), 'the unusable file was left on fpath, where it holds the dump count'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A cache directory compaudit would refuse is repaired, not complained about
+# ─────────────────────────────────────────────────────────────────────────────
+
+CACHE_DIRECTORIES = ('.', 'functions', 'completions', 'generator-state')
+"""Every directory the repair loop walks, relative to `$XDG_CACHE_HOME/zsh`.
+
+`.` is the parent, which compaudit checks as well as the fpath directories
+themselves — a group-writable parent condemns children that are each correct.
+"""
+
+
+def cache_modes(home: Path) -> dict[str, int]:
+    """The permission bits of each cache directory, keyed by the name above."""
+    root = home / '.cache' / 'zsh'
+    return {name: (root / name).stat().st_mode & 0o777 for name in CACHE_DIRECTORIES}
+
+
+def test_a_group_writable_cache_directory_is_tightened_rather_than_reported(tmp_path: Path) -> None:
+    """The repair has to run, and it has to run silently.
+
+    `zf_chmod` from zsh/files takes an octal mode alone. Handed `go-w` it writes
+    `invalid mode` to stderr and changes nothing, so the directory stays as
+    compaudit found it and every subsequent start says the same thing again.
+    That is two failures from one call — a shell that talks on every start, and
+    a repair that never happens — and only the first is visible.
+
+    Asserted on both, because the noisy half is the one that gets noticed and
+    the silent half is the one that matters.
+    """
+    home = deployed_home(tmp_path)
+    loose = home / '.cache' / 'zsh'
+    loose.mkdir(parents=True)
+    loose.chmod(0o775)
+
+    result = start(home)
+
+    assert 'invalid mode' not in result.stderr, f'the repair was refused:\n{result.stderr}'
+    written = {name: oct(mode) for name, mode in cache_modes(home).items() if mode & 0o022}
+    assert not written, f'compaudit would refuse these after a start meant to repair them: {written}'
+
+
+def test_the_repair_settles_so_a_later_start_has_nothing_to_do(tmp_path: Path) -> None:
+    """A repair that does not stick is a fork paid on every start, forever.
+
+    The external `chmod` is reached for on the grounds that the cost is paid
+    once. That holds only if the second start no longer matches the glob, which
+    is what this measures — the first start does the work and the second finds
+    the directories already tight.
+    """
+    home = deployed_home(tmp_path)
+    loose = home / '.cache' / 'zsh'
+    loose.mkdir(parents=True)
+    loose.chmod(0o775)
+
+    start(home)
+    after_first = cache_modes(home)
+    second = start(home)
+
+    assert 'invalid mode' not in second.stderr, f'a settled machine still reported:\n{second.stderr}'
+    assert cache_modes(home) == after_first, 'the second start moved modes the first had already settled'

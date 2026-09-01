@@ -244,19 +244,22 @@ ZSH_GENERATOR_STATE="$XDG_CACHE_HOME/zsh/generator-state"
 #
 # Unconditional, because a machine that already holds a `775` directory from an
 # earlier umask is exactly the one that needs repairing, and a guard on absence
-# never reaches it. `chmod` is a builtin here, so this forks nothing.
-zmodload -F zsh/files b:zf_chmod b:zf_mkdir 2>/dev/null
+# never reaches it.
 for _zsh_cache_dir in "$XDG_CACHE_HOME/zsh" "$ZSH_AUTOLOADED" "$ZSH_SOURCED" "$ZSH_GENERATOR_STATE"; do
   [[ -d "$_zsh_cache_dir" ]] || (umask 022; mkdir -p "$_zsh_cache_dir")
-  # `(#qN-f:g+w:,-f:o+w:)` is compaudit's own test: the directory, and only when
-  # it is group-writable or other-writable. A shell without zsh/files falls back
-  # to the external chmod, which then forks only on a machine actually at fault.
+  # `(#qN-f:g+w:,-f:o+w:)` selects the directory, and only when it is group- or
+  # other-writable. That is wider than compaudit, which exempts a group that is
+  # the user's own private one — so a `775` directory owned by `chris:chris`
+  # gets tightened here even though compaudit would have accepted it. Left
+  # wide on purpose: a cache directory has no reason to be group-writable, and
+  # narrowing the test means carrying a copy of compaudit's group check.
+  #
+  # The external `chmod` is the only one that takes a symbolic mode. `zf_chmod`
+  # from zsh/files parses octal alone and answers `invalid mode go-w`, so
+  # reaching for the builtin to save the fork costs the repair instead. The
+  # fork is paid once per machine, because the repair sticks.
   if [[ -n "$_zsh_cache_dir"(#qN-f:g+w:,-f:o+w:) ]]; then
-    if (( $+builtins[zf_chmod] )); then
-      zf_chmod go-w "$_zsh_cache_dir"
-    else
-      chmod go-w "$_zsh_cache_dir"
-    fi
+    chmod go-w "$_zsh_cache_dir"
     log "Setup" "tightened $_zsh_cache_dir, which compaudit would refuse"
   fi
 done
