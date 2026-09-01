@@ -1,14 +1,13 @@
-"""The join between a `Refusal`, the console it prints on, and the exit status it becomes.
+"""The click group that turns a `Refusal` into an exit status.
 
-`report` renders the failure and answers with its code. `Boundary` is the click
-group that turns that code into an exit. Both live here because they are one
-concern reached through two doors: `dotfiles` arrives through click, and
-`packages` arrives at `declaration.cli`, which never touches a click group.
+Only the typer door needs this. `packages` enters at `declaration.cli`, has no
+click group to carry a failure, and reports through `output.report` instead — so
+that function lives in `output` and this module holds the group alone.
 
-The exception lives in `refusal` and the rendering lives in `output`. Joining them
-here is what keeps `refusal` importable by `catalog` and `machine` — the two
-lowest domain modules, both of which raise — without `rich` and `typer` arriving
-behind it.
+Keeping them apart is what lets the `packages` console script import neither
+typer nor click. `docs/learnings/undeclared-transitive-dependency.md` is why that
+is worth a module boundary: a click import in this package once stopped the
+installed binary from starting, and every local gate passed.
 """
 
 from __future__ import annotations
@@ -18,34 +17,10 @@ from typing import Any
 import typer
 from typer.core import TyperGroup
 
-from dotfiles.output import err_console
 from dotfiles.output import error
-from dotfiles.output import hint
+from dotfiles.output import report
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
-
-
-def report(refused: Refusal) -> ExitCode:
-    """Print a refusal the way every door prints it, and answer with its code.
-
-    A function rather than a method on `Boundary`, because there are two console
-    scripts onto this package and only one of them is a Typer app. `packages`
-    enters at `declaration.cli` and never touches a click group, so a handler
-    living inside `Boundary.invoke` left that door printing a traceback for a
-    misspelt name — losing the sentence, losing the `did you mean:` advice, and
-    exiting 1, which is the DRIFT this whole change exists to stop reporting.
-    """
-    first, *rest = str(refused).splitlines() or ['']
-    error(first)
-    for line in rest:
-        # Aligned under the first line's text rather than its marker, so a
-        # manifest with three faults reads as one refusal with three reasons.
-        # Unindented, the second reason has no marker and looks like a separate
-        # unattributed line.
-        err_console.print(f'  {line}', markup=False, highlight=False)
-    if refused.advice:
-        hint(refused.advice)
-    return refused.code
 
 
 class Boundary(TyperGroup):

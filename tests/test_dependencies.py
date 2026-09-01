@@ -15,6 +15,7 @@ on the strength of it is a bet that the next resolution keeps it.
 from __future__ import annotations
 
 import ast
+import subprocess
 import sys
 import tomllib
 from importlib.metadata import packages_distributions
@@ -82,3 +83,54 @@ def test_the_import_scan_finds_what_it_is_asserting_about() -> None:
     """Guards the test above: a walk that finds nothing passes vacuously."""
     assert declared()
     assert len(imported()) >= len(declared())
+
+
+def roots_of(module: str) -> set[str]:
+    """Every top-level import in one module of the package, `dotfiles.x` kept whole.
+
+    The scan above collapses `dotfiles.output` to `dotfiles` because its question
+    is which distribution provides a name. This one asks what a single file sits
+    on top of, so the part after the dot is the whole answer.
+    """
+    tree = ast.parse((PACKAGE / module).read_text())
+    roots = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots |= {alias.name for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            roots.add(node.module)
+    return {root for root in roots if root != '__future__' and root.split('.')[0] not in sys.stdlib_module_names}
+
+
+def test_refusal_sits_on_vocabulary_and_nothing_else() -> None:
+    """`catalog` and `machine` are the lowest domain modules and both raise, so
+    anything reachable from `refusal` is reachable from them.
+
+    It held `rich` and `typer` through `output` until they moved to `output.report`
+    and `boundary.Boundary`, which put the whole rendering layer under two modules
+    that exist to describe a machine. An import added back here is invisible at the
+    call site and arrives everywhere at once.
+    """
+    assert roots_of('refusal.py') == {'dotfiles.vocabulary'}
+
+
+def test_the_packages_door_reaches_a_refusal_without_typer_or_click() -> None:
+    """`packages` enters at `declaration.cli`, which has no click group to carry a
+    failure and reports through `output.report` instead.
+
+    A fresh interpreter, because pytest has already imported both by the time this
+    runs. `docs/learnings/undeclared-transitive-dependency.md` is the incident: a
+    click import in this package stopped the installed binary from starting while
+    every local gate stayed green.
+    """
+    probe = (
+        'import sys, dotfiles.declaration;'
+        "print('output' if 'dotfiles.output' in sys.modules else 'MISSING');"
+        "print(sorted(name for name in ('typer', 'click') if name in sys.modules))"
+    )
+    ran = subprocess.run([sys.executable, '-c', probe], capture_output=True, text=True, check=False)
+
+    assert ran.returncode == 0, ran.stderr
+    reached, pulled = ran.stdout.split('\n')[:2]
+    assert reached == 'output', 'the probe never reached the reporting path, so it proves nothing'
+    assert pulled == '[]', f'the packages door imported {pulled}'

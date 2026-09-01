@@ -9,7 +9,7 @@ as pending changes.
 
 A domain module already knows which kind of failure it has — a name nothing
 declares is retryable, a manifest that will not parse is not — so it says so here,
-and `boundary.py` is the one place that turns it into an exit status.
+and `boundary.Boundary` is the one place that turns it into an exit status.
 
 `advice` is the `hint` line, kept on the exception rather than printed at the
 raise site: the thing that knows a bundle is missing is also the thing that knows
@@ -19,7 +19,8 @@ come to disagree.
 **`vocabulary` is the only thing this module imports, and that is a constraint
 rather than an accident.** `catalog` and `machine` are the lowest domain modules
 in the package and both raise, so whatever is reachable from here is reachable
-from them. Rendering a refusal and exiting on one both live in `boundary.py`.
+from them. `tests/test_dependencies.py` pins it. Printing a refusal is
+`output.report` and exiting on one is `boundary.Boundary`.
 """
 
 from __future__ import annotations

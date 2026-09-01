@@ -22,6 +22,8 @@ from rich.control import Control
 from rich.segment import ControlType
 
 from dotfiles import vocabulary
+from dotfiles.refusal import Refusal
+from dotfiles.vocabulary import ExitCode
 
 if TYPE_CHECKING:
     from dotfiles.reconcile import ResourceResult
@@ -458,3 +460,29 @@ def warn(message: str) -> None:
 
 def hint(message: str) -> None:
     err_console.print(f'[blue]→[/] {message}')
+
+
+def report(refused: Refusal) -> ExitCode:
+    """Print a refusal the way every door prints it, and answer with its code.
+
+    A function rather than a method on `boundary.Boundary`, because there are two
+    console scripts onto this package and only one of them is a Typer app.
+    `packages` enters at `declaration.cli` and never touches a click group, so a
+    handler living inside `Boundary.invoke` would leave that door printing a
+    traceback for a misspelt name — losing the sentence, losing the `did you
+    mean:` advice, and exiting 1, which this tool spends on DRIFT.
+
+    Here rather than beside `Boundary`, so the door that has no click group can
+    reach it without importing typer. `tests/test_dependencies.py` pins that.
+    """
+    first, *rest = str(refused).splitlines() or ['']
+    error(first)
+    for line in rest:
+        # Aligned under the first line's text rather than its marker, so a
+        # manifest with three faults reads as one refusal with three reasons.
+        # Unindented, the second reason has no marker and looks like a separate
+        # unattributed line.
+        err_console.print(f'  {line}', markup=False, highlight=False)
+    if refused.advice:
+        hint(refused.advice)
+    return refused.code
