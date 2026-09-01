@@ -597,6 +597,24 @@ def test_the_front_door_and_the_console_script_list_the_same_declaration(declare
     assert json.loads(ran.stdout) == direct
 
 
+def test_the_front_door_shows_one_package_as_json(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """`show` is a read verb, so the flag `list` beside it carries reaches it too
+    — standards/api-design.md § "`--json` on every read".
+
+    Both doors, because the leaf only forwards: the declaration renders the
+    document either way, so a difference between the two is the bridge
+    translating rather than calling.
+    """
+    declaration.main(['show', 'lazygit', '--json'])
+    direct = json.loads(capsys.readouterr().out)
+
+    ran = CliRunner().invoke(app, ['packages', 'show', 'lazygit', '--json'], catch_exceptions=False)
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert json.loads(ran.stdout) == direct
+    assert [record['name'] for record in direct] == ['lazygit']
+
+
 def test_the_console_script_reports_a_refusal_rather_than_raising_it(declared: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`main` raises so the typer boundary can carry the code; `cli` is the other
     door and has no boundary, so it reports through the same `refusal.report`.

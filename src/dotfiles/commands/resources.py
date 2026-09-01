@@ -477,9 +477,14 @@ def packages_list(source: str = SourceOption, as_json: bool = JsonOption) -> Non
 
 
 @packages_app.command('show')
-def packages_show(name: str = typer.Argument(..., help='Package name')) -> None:
-    """Show one package's declaration."""
-    bridge.declaration('show', name)
+def packages_show(name: str = typer.Argument(..., help='Package name'), as_json: bool = JsonOption) -> None:
+    """Show one package's declaration.
+
+    A read verb, so it speaks `--json` — standards/api-design.md § "`--json` on
+    every read". The declaration renders the document; this leaf only carries
+    the flag to it.
+    """
+    bridge.declaration('show', name, *(('--json',) if as_json else ()))
     raise typer.Exit(ExitCode.CONVERGED)
 
 
