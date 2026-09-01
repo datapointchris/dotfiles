@@ -149,28 +149,20 @@ unset.
 
 ## Why Switching Needs a Helper
 
-The status line lists sessions with `#{S:}`, which walks them in **session-id order** — creation
-order. tmux's own `switch-client -n`/`-p` walk them **alphabetically**. Using the built-ins would
-mean "next" skipping past the session shown next to the current one, so `tmux-sessions` re-derives
-the status line's order before stepping. Windows need no such helper, which is why the two pairs are
-bound differently: `next-window`/`previous-window` already walk windows in the order line 2 draws
-them.
+The status line and tmux's own `switch-client -n`/`-p` disagree about what "next" means, so
+`tmux-sessions` re-derives the line's order before stepping. Its header comment carries why, and
+`shift_session` beside it carries how the reordering keys get around there being no
+`swap-session`. Windows need no helper at all, which is why the two pairs are bound differently:
+`next-window`/`previous-window` already walk windows in the order line 2 draws them.
 
-Creation order is the right choice for the display, and the reason is worth keeping: it is stable.
-Renaming a session leaves it where it is and a new one is appended at the end. Alphabetical
-ordering would reshuffle the list whenever a session was created or renamed, which destroys the
-positional memory that makes it fast to read.
+Creation order was chosen for the display because it is stable, and that stability is what makes
+the line fast to read. Stable is not fixed — the four reorder keys move a session within a
+server's life.
 
-Stable is not fixed, though. tmux has no `swap-session` and ids only ever ascend with no way to
-renumber, but a session recreated now sorts after every session that was not — so `move-left`,
-`move-right`, `move-first` and `move-last` reorder by rebuilding the shortest run of sessions that
-produces the order wanted, carrying windows and their processes across with `move-window`. Moving
-left leaves the focused session alone and rebuilds the neighbour it jumped; moving right has to
-rebuild the focused one, since a rebuild can only send a session later.
-
-The order does not survive a restart. tmux-resurrect saves by session **name** and its file lists
-them alphabetically, so a restore recreates them in that order and hands out ids to match. A
-deliberate order lasts as long as the server does; a name is what orders sessions across restarts.
+What the code cannot say is what happens across one. tmux-resurrect saves by session **name** and
+its file lists them alphabetically, so a restore recreates them in that order and hands out ids to
+match. A deliberate order lasts as long as the server does; a name is what orders sessions across
+restarts.
 
 Because the order only matters at keypress time, line 1 stays a pure tmux format rather than a
 `#(shell-command)`. Formats re-evaluate on tmux's own redraw events, so the list updates the moment
@@ -179,22 +171,20 @@ a session is created, renamed, or killed; a shell command would inherit the 15-s
 
 ## Finding a Window in Another Session
 
-`prefix w` opens a fuzzy picker over every window in every session, session column left-justified,
-window name after it, previewing the window's live pane content. It replaced `choose-tree` on that
-key: both list the same thing, but this one is typed at rather than navigated with arrows, and
+`prefix w` opens a fuzzy picker over every window in every session. It replaced `choose-tree` on
+that key: both list the same thing, but this one is typed at rather than navigated with arrows, and
 recognition beats recall.
 
-Deliberately, this is a picker and not more status bar. [Visual search is measurably faster down a
-left-justified vertical list than along a horizontal one](https://www.nngroup.com/articles/vertical-nav/)
-— fewer fixations, because each one takes in more candidates — so the two questions want opposite
-layouts. The status line answers "where am I", which colour resolves in a glance; the picker
-answers "where did I leave that", which needs a list. Widening the bar until every window fit would
-make the second question no easier and the first one harder, and it is the documented failure mode
-of tab bars at scale: the [CHI 2010 study of tabbed browsing](https://dubroy.com/blog/my-chi2010-talk-a-study-of-tabbed-browsing/)
-found heavy users' bars scrolling with titles too small to read.
+Deliberately a picker and not more status bar. The bar answers "where am I" and the picker answers
+"where did I leave that", and `find_window` in `apps/common/tmux-sessions` gives the layout reason
+those two want opposite shapes, resting on
+[the vertical-list finding](https://www.nngroup.com/articles/vertical-nav/) that measures it.
 
-The preview shows pane content rather than a directory listing because two windows of the same task
-usually share a directory — what is running in them is the only thing that distinguishes them.
+What belongs here is the alternative that was rejected. A bar carrying every window would answer
+"where did I leave that" no better and "where am I" worse, and it is the documented failure mode
+of tab bars at scale. The
+[CHI 2010 study of tabbed browsing](https://dubroy.com/blog/my-chi2010-talk-a-study-of-tabbed-browsing/)
+found heavy users' bars scrolling with titles too small to read.
 
 ## Interaction with sesh
 
@@ -283,9 +273,8 @@ about where it belongs, and be filed once that is obvious.
 ## Regrouping the Whole Workspace
 
 Filing a window at a time keeps up only while the drift is small. `tmux-rearrange` is the bulk
-version: it reads the scrollback of every pane in scope, asks a model which panes belong together,
-and writes a script that moves them. `plan` proposes, `apply` runs what plan wrote, `show` prints
-the scan without spending a model call.
+version, and its module docstring says what it does and how the work is split between the model and
+the local code. Three decisions behind it are not in there.
 
 **Which panes it may touch is an argument, and the narrow reading of an absent one won.** Two
 readings were available and the deciding question was which is safe to do by accident. A second
@@ -293,30 +282,19 @@ guard sits above the argument, because one argument cannot report that it was mi
 workspace only relocates where the argument named the window holding it. `tmux-rearrange --help`
 carries the forms.
 
-**The model gets exactly one job — which panes group, and what to call each group.** That is the
-half needing judgement over prose, and it is the half nothing else can do: titles alone will not
-reveal that two conversations two windows apart both turn on the same issue. Everything geometric
-is computed locally and the tmux commands are rendered locally, so the half that can destroy work
-never comes back from a model. Two invariants are enforced before a single command runs. The set of
-pane ids returned must equal the set sent, exactly once each. And a window holds at most six panes.
-That second one is imposed on the answer rather than requested of it, since a limit the model is
-merely told about is honoured most of the time and a limit applied afterwards is honoured always.
+**The six-pane cap is imposed on the answer rather than requested of it.** A limit the model is
+merely told about is honoured most of the time. A limit applied afterwards is honoured always.
 
-Layout intent is read, not guessed. **A new window opens with one pane, so any split at all was made
-by hand** — an even 188|188 is as deliberate as a dragged 183|193, and treating only the uneven case
-as intentional is what once collapsed six windows to a single pane. Proportion is the finer signal:
-past the one-cell remainder tmux leaves when dividing, a border was dragged. The axis comes from the
-layout string rather than the numbers, because an even vertical split leaves every pane both the
-same width *and* the same height, so nothing in the dimensions distinguishes it from a horizontal
-one; `{}` is a row and `[]` is a column.
+**A new window opens with one pane, so any split at all was made by hand.** An even 188|188 is as
+deliberate as a dragged 183|193, and treating only the uneven case as intentional is what once
+collapsed six windows to a single pane.
 
 What it cannot do is worth knowing before trusting it. Two-across versus three is undetectable —
 both are default-shaped for their pane count — so that is a preference, not an observation. A
 hand-tuned window whose panes get split across sessions loses its layout permanently, since the
 layout string encodes pane ids and the old geometry; only the per-pane fraction transfers, and only
 where the group stays together. It sees content, never intent: it can tell that two conversations
-cite the same item, not that you want them apart. And it proposes rather than applies, because
-reading the script is what catches the run where it was wrong.
+cite the same item, not that you want them apart.
 
 ## Files
 
