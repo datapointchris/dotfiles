@@ -618,7 +618,10 @@ def test_a_value_only_a_shell_can_answer_is_never_written_above_the_marker(tmp_p
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
 
-    assert 'WINDOWS_USER' not in envfile.read_generated(live.env_file)
+    generated = envfile.read_generated(live.env_file)
+
+    assert 'MACHINE' in generated, 'the generated half was written, so what it omits means something'
+    assert 'WINDOWS_USER' not in generated
     assert 'ab12345' not in live.env_file.read_text()
 
 

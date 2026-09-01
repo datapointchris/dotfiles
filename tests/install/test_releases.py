@@ -335,5 +335,7 @@ def test_an_entry_with_no_etag_is_written_without_the_key(tmp_path: Path) -> Non
     """A repo offering no `ETag` reads the same on disk as one nobody has asked."""
     path = cache(tmp_path)
     releases.save({'owner/repo': releases.Cached('v1.2.3', NOW)}, path)
+    written = json.loads(path.read_text())['owner/repo']
 
-    assert 'etag' not in json.loads(path.read_text())['owner/repo']
+    assert written['version'] == 'v1.2.3'
+    assert 'etag' not in written

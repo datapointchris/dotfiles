@@ -124,6 +124,9 @@ def test_apply_leaves_the_machine_alone_and_does_not_fail(cli: Callable[..., Inv
 def test_an_unforced_apply_asks_brew_nothing_but_its_inventory(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Declining is not a quiet removal. `apply` reads the formula list to decide the
     row and stops there, so the only argv brew is handed is the read."""
-    cli('packages', 'apply')
+    ran = cli('packages', 'apply')
+    argv = (sandbox.home / 'brew-argv').read_text()
 
-    assert 'uninstall' not in (sandbox.home / 'brew-argv').read_text()
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert 'list --formula' in argv, 'the inventory read is what the removal is being measured against'
+    assert 'uninstall' not in argv

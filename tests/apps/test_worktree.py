@@ -602,8 +602,9 @@ class TestLanding:
         alpha = fleet['roots'] / 'primary' / 'alpha'
         commit_in(alpha, 'x')
 
-        run(alpha, 'land')
+        landed = run(alpha, 'land')
 
+        assert landed.returncode == 0, landed.stderr
         assert not (fleet['roots'] / 'primary').exists()
 
     def test_a_repo_directory_with_a_worktree_left_in_it_stays(self, fleet, run):
@@ -1346,6 +1347,8 @@ class TestUsage:
         """`cd "$(worktree choose)"` would otherwise cd into an error message."""
         result = run(fleet['primary'], 'land')
 
+        assert result.returncode != 0
+        assert plain(result.stderr).strip() != '', 'the refusal it is withholding from stdout went to stderr'
         assert result.stdout == ''
 
 
@@ -1552,7 +1555,10 @@ class TestListing:
     def test_json_of_an_empty_set_is_an_empty_array(self, fleet, run):
         """An empty here-string was one empty row in the shell version, and its
         empty path prefix-matched every session on the machine."""
-        assert json.loads(run(fleet['primary'], 'list', '--json').stdout) == []
+        listed = run(fleet['primary'], 'list', '--json')
+
+        assert listed.returncode == 0, listed.stderr
+        assert json.loads(listed.stdout) == []
 
 
 class TestSessions:
@@ -1703,8 +1709,10 @@ class TestChoose:
         run(fleet['other'], 'new', 'beta')
 
         _, fed, _ = picker(fleet['primary'], 'primary', behaviour='exit 130')
+        offered = fed.read_text()
 
-        assert 'beta' not in fed.read_text()
+        assert str(populated) in offered, "the named repo's own worktree is still offered"
+        assert 'beta' not in offered
 
     def test_nothing_to_choose_is_a_refusal_not_an_empty_picker(self, fleet, picker):
         result, fed, _ = picker(fleet['primary'], behaviour='exit 130')

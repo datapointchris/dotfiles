@@ -136,7 +136,11 @@ def test_a_successful_item_does_not_repeat_its_detail_below_the_table(runs_dir: 
     done = Outcome(change('zk', Verdict.MISSING), OutcomeStatus.DONE, 'installed zk 0.14')
     recorded(runs_dir, Event('packages', done))
 
-    assert 'installed zk 0.14' not in runner.invoke(app, ['report', 'latest']).stdout
+    result = runner.invoke(app, ['report', 'latest'])
+
+    assert result.exit_code == 0
+    assert 'zk' in result.stdout, 'the row is in the table, and only its detail line is withheld'
+    assert 'installed zk 0.14' not in result.stdout
 
 
 def churn_record(machine: str, started: str, *done: str) -> runs.RunRecord:

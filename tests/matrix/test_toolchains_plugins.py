@@ -807,8 +807,9 @@ def test_an_offline_plugins_apply_refuses_the_clone_nothing_staged(
     sandbox.shadow('git', RECORDS_ARGV)
     declares(sandbox, shell_plugins=True)
 
-    cli('plugins', 'apply', '--offline')
+    ran = cli('plugins', 'apply', '--offline')
 
+    assert ran.exit_code == ExitCode.CONVERGED, ran.output
     assert 'clone' not in attempts.read_text()
 
 

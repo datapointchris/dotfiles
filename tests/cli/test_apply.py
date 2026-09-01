@@ -781,7 +781,12 @@ class TestTheRecordSaysWhatTheRunMeant:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())['issues'] == []
+        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+
+        actions = {outcome['address']: outcome['action'] for outcome in written['outcomes']}
+
+        assert actions['packages/rustup'] == 'refused'
+        assert written['issues'] == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

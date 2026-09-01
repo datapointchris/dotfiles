@@ -132,6 +132,8 @@ def test_neovim_starts_without_errors(converged_machine: Machine) -> None:
     runs".
     """
     started = converged_machine.exec('timeout 30 nvim --headless +qa 2>&1')
+
+    assert started.returncode == 0, started.stdout[-2000:]
     assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 
@@ -139,6 +141,8 @@ def test_yazi_starts_without_errors(converged_machine: Machine) -> None:
     """Its own check because it has its own failure: `package.toml` had two owners,
     so a fresh install deployed the file twice and yazi refused every start."""
     started = converged_machine.exec('timeout 20 yazi --clear-cache 2>&1')
+
+    assert started.returncode == 0, started.stdout[-2000:]
     assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 

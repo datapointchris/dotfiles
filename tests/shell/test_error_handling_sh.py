@@ -35,9 +35,10 @@ def test_enable_strict_mode_turns_on_all_three_options() -> None:
 def test_it_registers_no_trap_whatever_the_section_is_called() -> None:
     """The name says strict mode because that is the whole body. A caller wanting
     its cleanup to run writes `trap run_cleanup EXIT` itself."""
-    result = source('error-handling.sh', 'enable_strict_mode; trap -p EXIT')
+    result = source('error-handling.sh', 'enable_strict_mode; trap -p EXIT; echo end')
 
-    assert result.stdout == ''
+    assert result.ok, result.stderr
+    assert result.stdout == 'end\n', 'the shell reached the end with `trap -p EXIT` printing nothing'
 
 
 def test_a_registered_cleanup_runs_when_the_caller_traps_it() -> None:
@@ -50,8 +51,10 @@ def test_a_registered_cleanup_runs_when_the_caller_traps_it() -> None:
 
 
 def test_a_registered_cleanup_does_not_run_without_the_trap() -> None:
-    result = source('error-handling.sh', 'register_cleanup "echo swept"')
+    result = source('error-handling.sh', 'register_cleanup "echo swept"; echo "queued ${#CLEANUP_FUNCTIONS[@]}"')
 
+    assert result.ok, result.stderr
+    assert 'queued 1' in result.stdout, 'it has to be registered for its not running to mean anything'
     assert 'swept' not in result.stdout
 
 

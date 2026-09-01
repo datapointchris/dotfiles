@@ -263,6 +263,7 @@ def test_a_system_unit_is_not_asked_of_the_user_manager(fake_bin: Path, tmp_path
 
     sysconfig.observe(unit(enabled=True))
 
+    assert log.read_text().splitlines()[0].startswith('is-enabled'), 'a manager was asked at all'
     assert '--user' not in log.read_text()
 
 

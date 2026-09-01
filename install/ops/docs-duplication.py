@@ -75,6 +75,15 @@ def source(root: Path, where: str) -> str:
     return ' '.join(collected)
 
 
+def named(page: Path, root: Path) -> Path:
+    """The page as a reader would type it, repo-relative where it is in the repo.
+
+    `--pages` takes any directory, and a ranking is unreadable if half of it is
+    absolute — so the relative form is used where there is one and never assumed.
+    """
+    return page.relative_to(root) if page.is_relative_to(root) else page
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runs', metavar='PAGE', help='print the shared runs for one page instead of the ranking')
@@ -99,10 +108,10 @@ def main() -> int:
 
     scored = sorted(((len(shingles(page.read_text()) & package), page) for page in (root / parsed.pages).rglob('*.md')), reverse=True)
     for score, page in scored:
-        print(f'{score:5d}  {page.relative_to(root)}')
+        print(f'{score:5d}  {named(page, root)}')
     print(f'\n{sum(score for score, _ in scored)} across {len(scored)} pages')
 
-    loud = [page.relative_to(root) for score, page in scored if score > parsed.max]
+    loud = [named(page, root) for score, page in scored if score > parsed.max]
     if loud:
         print(f'\nabove {parsed.max}: {", ".join(str(page) for page in loud)}', file=sys.stderr)
         print('read the runs with --runs <page> before cutting', file=sys.stderr)

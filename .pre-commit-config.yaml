@@ -307,6 +307,23 @@ repos:
         files: ^(configs/|shell/)
         stages: [pre-commit]
 
+      # Tests a broken run would satisfy: every assertion a negative claim about
+      # an external effect, with nothing pinning how the run ended. A command
+      # that died before reaching the write leaves exactly that state.
+      # `standards/testing.md` § "An assertion that nothing happened is
+      # satisfied by a crash" is the repair, and it is the only exemption —
+      # pair the negative with the exit code and one positive fact.
+      #
+      # It reads `tests/` and nothing else, so no commit under `src/` can move
+      # its answer.
+      - id: undiscriminating-tests
+        name: undiscriminating tests (a crash would pass these)
+        entry: uv run python install/ops/undiscriminating-tests.py
+        language: system
+        pass_filenames: false
+        files: '^(tests/|install/ops/undiscriminating-tests\.py$)'
+        stages: [pre-commit]
+
       # Strict docs build — catches broken links/anchors before CI deploy fails.
       # Gated to docs changes so unrelated commits skip the ~5s build cost.
       - id: mkdocs-strict
@@ -315,4 +332,21 @@ repos:
         language: system
         pass_filenames: false
         files: ^(docs/|mkdocs\.yml$)
+        stages: [pre-commit]
+
+      # How much of each page is a second copy of a docstring, per
+      # `standards/documentation.md` § "A page never restates a module
+      # docstring". The threshold is `LOUD` in the script, calibrated against
+      # the corpus rather than chosen.
+      #
+      # `src/dotfiles/` and `apps/` are in the selector because a page's score
+      # moves when the docstring it restates is edited and the page is not —
+      # `standards/ci.md` § "A `paths:` filter names every file the build reads,
+      # not only the ones it renders".
+      - id: docs-duplication
+        name: docs duplication (pages restating a docstring)
+        entry: uv run python install/ops/docs-duplication.py
+        language: system
+        pass_filenames: false
+        files: '^(docs/|src/dotfiles/|apps/|install/ops/docs-duplication\.py$)'
         stages: [pre-commit]
