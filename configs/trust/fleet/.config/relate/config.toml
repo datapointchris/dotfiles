@@ -13,3 +13,14 @@
 # and a registry named anywhere a machine of either domain would load it is
 # refused.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
+
+# relate's corpus reaches every machine because ~/shart is a Syncthing folder, which
+# is a fact about this fleet and not about relate — so relate defaults to
+# $XDG_DATA_HOME/relate and is pointed here instead of carrying the answer.
+#
+# Under trust/fleet for the reason above it: ~/shart exists on this domain's machines
+# and nowhere else, so a machine of the other domain gets no key and the XDG default.
+#
+# The log deliberately does not follow. It stays at $XDG_STATE_HOME/relate, because it
+# describes the machine that wrote it and replicating it to the others is noise.
+data_dir = "~/shart/relate"
