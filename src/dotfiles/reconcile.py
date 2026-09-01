@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from dotfiles import boundary
 from dotfiles import checkout
 from dotfiles import deploy
 from dotfiles import engine
@@ -800,7 +801,7 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
             if unusable
             else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
         )
-        return refusal.report(
+        return boundary.report(
             NoBundle(
                 because,
                 advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
@@ -815,20 +816,20 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
         try:
             offline_bundle.stage(archive, machine, box)
         except offline_bundle.StagingError as unreadable:
-            return refusal.report(NoBundle(str(unreadable), advice=unreadable.advice or 'name a readable one: dotfiles bundle stage PATH'))
+            return boundary.report(NoBundle(str(unreadable), advice=unreadable.advice or 'name a readable one: dotfiles bundle stage PATH'))
         extracted = archive
 
     staged = offline_bundle.describe(extracted)
     report_bundle(staged, machine)
     if not staged.readable:
-        return refusal.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
+        return boundary.report(NoBundle('the staged bundle has nothing to install from, so there is nothing to apply'))
     # Every description rather than the newest, because `providers.locate` reads
     # across the whole stack — a peer's bundle underneath a good one still supplies
     # files. `stage` refuses at the moment of unpacking and this catches what is
     # already there, staged by hand or left by an earlier run under another name.
     foreign = sorted({one.machine for one in staged.descriptions if one.machine and machine and one.machine != machine})
     if foreign:
-        return refusal.report(
+        return boundary.report(
             NoBundle(
                 f'a staged bundle was built for {", ".join(foreign)} and this machine is {machine}',
                 advice=f'remove it from {paths.staging_dir()}, or apply with --machine',
@@ -992,7 +993,7 @@ def apply_machine(
     heading where the document should be.
 
     **A run that measured something closes on a verdict line; one that never started
-    closes through `refusal.report`.** A verdict line is composed from counts this
+    closes through `boundary.report`.** A verdict line is composed from counts this
     walk decided, and a refusal has none — so a verdict word in front of a sentence
     about how the command was typed claims a measurement nobody made.
     """
@@ -1025,10 +1026,10 @@ def apply_machine(
         # exception's to state and never this frame's. Reported through the shared
         # boundary, which is what every other door in the tool prints a refusal
         # with, marker and advice line included.
-        return refusal.report(refused)
+        return boundary.report(refused)
 
     if not selection.resources:
-        return refusal.report(NothingSelected('nothing selected', advice='drop a --skip, or name the resource you meant'))
+        return boundary.report(NothingSelected('nothing selected', advice='drop a --skip, or name the resource you meant'))
 
     # Every scope refusal above the run record, and none below it: a run refused
     # for how it was typed never measured this machine, and filing one under it
@@ -1040,7 +1041,7 @@ def apply_machine(
         # answering in exit codes. A run that completed and found drift is a
         # result, and one idiom covering both would make the ordinary outcome an
         # exception.
-        return refusal.report(refused)
+        return boundary.report(refused)
 
     # Here rather than at the top, because a run is filed under the machine it
     # ran on and nothing before this knows which that is. `began` is carried down

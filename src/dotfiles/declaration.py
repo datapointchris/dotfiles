@@ -23,9 +23,9 @@ from typing import Any
 import yaml
 
 import dotfiles
+from dotfiles import boundary
 from dotfiles import catalog
 from dotfiles import paths
-from dotfiles import refusal
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
@@ -607,15 +607,15 @@ def cli() -> None:
     """The `packages` console script, which is the other door onto `main`.
 
     `main` raises `Refusal` and does not report it, because the `dotfiles` CLI
-    calls it in-process and wants the refusal to travel to `refusal.Boundary`.
+    calls it in-process and wants the refusal to travel to `boundary.Boundary`.
     This door has no click group to carry one, so it reports here — through the
-    same `refusal.report` the boundary uses, so a misspelt package name reads
+    same `boundary.report` the boundary uses, so a misspelt package name reads
     identically whichever binary was typed.
     """
     try:
         main()
     except Refusal as refused:
-        sys.exit(refusal.report(refused))
+        sys.exit(boundary.report(refused))
 
 
 def main(argv: list[str] | None = None) -> None:
