@@ -50,17 +50,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 travel = head - tail;
     float dist = length(travel);
-
-    // A move that changes row lands on whatever column the new line's length
-    // allows, so its horizontal component is chosen by the text rather than by
-    // the motion. Measuring against the vertical component alone is what keeps
-    // j and k quiet in a diff, where neighbouring lines differ by tens of cells
-    // and the clamp drags the cursor that far sideways on every keypress. Only
-    // the threshold ignores it; the smear is still drawn along the real travel.
-    float motion = abs(travel.y) > size.y * 0.5 ? abs(travel.y) : dist;
     // Row height rather than cell width, so stepping down a single line — the
     // most common motion there is — stays below the threshold.
-    if (motion < size.y * MIN_TRAVEL_ROWS) return;
+    if (dist < size.y * MIN_TRAVEL_ROWS) return;
 
     // Clamped so a jump across the screen smears the same distance as a word
     // motion rather than painting a bar the full width of the window.
