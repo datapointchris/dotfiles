@@ -25,7 +25,6 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from dotfiles import commands
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
@@ -35,6 +34,7 @@ from dotfiles import publishing
 from dotfiles import remote as transport
 from dotfiles.providers import bundle
 from dotfiles.refusal import Refusal
+from dotfiles.session import Session
 
 ARCHIVE_SUFFIX = '.tar.gz'
 """What a bundle archive ends in, and the only thing that makes a listed name one.
@@ -418,7 +418,7 @@ def target() -> str:
     refused here would make the check the reason the machine cannot be built.
     """
     try:
-        return commands.resolved(None).machine_name
+        return Session.resolve(None).machine_name
     except Refusal:
         return ''
 
@@ -435,7 +435,7 @@ def this_box() -> str:
     machine has to be able to unpack a bundle.
     """
     try:
-        return publishing.discriminator(commands.resolved(None).machine.coordinates.network_trust)
+        return publishing.discriminator(Session.resolve(None).machine.coordinates.network_trust)
     except Refusal:
         return ''
 

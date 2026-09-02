@@ -40,6 +40,7 @@ from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
 from dotfiles.results import Lens
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 answered = functools.partial(render_result, stream=console)
@@ -198,7 +199,7 @@ def plan(
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
     skipped = _skipped(skip)
-    named = commands.resolved(machine).machine_name
+    named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
     lens = Lens.PLAN
@@ -267,7 +268,7 @@ def check(
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
     skipped = _skipped(skip)
-    checked_machine = commands.resolved(machine).machine_name
+    checked_machine = Session.resolve(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)

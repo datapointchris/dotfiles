@@ -649,7 +649,7 @@ class TestRefusingAPremiseFromTheOtherBox:
         assert offline_bundle.stage(tarball, 'macos-personal-workstation', '').is_dir()
 
     def test_the_resolver_answers_empty_rather_than_raising_on_a_bare_machine(self, home, monkeypatch) -> None:
-        """What feeds the case above. `commands.resolved` refuses a machine nothing
+        """What feeds the case above. `Session.resolve` refuses a machine nothing
         names, and that refusal must not reach the caller as a failed stage.
 
         `$MACHINE` and `~/.env` both, because the resolver reads the second where

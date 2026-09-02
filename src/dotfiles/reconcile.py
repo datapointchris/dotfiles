@@ -393,9 +393,8 @@ def survey(
     **Reported a resource at a time, not once at the end**, because the walk is a
     generator and materialising it makes a slow resource look like a hung one.
 
-    `offline` swaps the upstream for the staged bundle and never stages one.
-    `refresh` is dropped rather than refused: there is no network to spend, and
-    `resources.packages._upstream` already ignores it on this branch.
+    `offline` swaps the upstream for the staged bundle and never stages one, and
+    `Session.resolve` drops `refresh` alongside it.
     """
     # `announce_bundle` is off for a caller that is not rehearsing an install.
     # `status show` walks offline to get versions rather than to install anything,
@@ -404,7 +403,7 @@ def survey(
     # away from the next real step, in the state that is the first turn of the
     # loop. Not gated on `report is not None`: `plan --offline --json` and
     # `check --offline --json` both pass None and both genuinely install from it.
-    session = Session.resolve(machine, refresh=refresh and not offline, owner=owner, packages=packages, offline=offline)
+    session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
     if offline and announce_bundle:
         report_bundle(offline_bundle.describe(), session.machine_name)
     selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
@@ -818,6 +817,10 @@ def apply_machine(
     before the walk: a run measured against a declaration that will not hold
     together installs whatever survived the parse and reports success.
 
+    **An apply always asks to refresh, and `Session.resolve` drops that ask when the
+    run is offline.** So `--offline` spends nothing on GitHub, on a plugin remote, or
+    on a manager in `syspkg.NETWORKED`.
+
     **A whole-machine apply refuses on any error; a scoped one refuses on the errors
     concerning what it was asked to converge.** Keyed on what the fault is, never on
     whether the selection holds a resource with a *provider*.
@@ -849,9 +852,7 @@ def apply_machine(
         return exit_code([gate])
 
     try:
-        session = Session.resolve(
-            machine, offline=offline, owner=owner, packages=packages, refresh=not offline, force=force, reinstall=reinstall
-        )
+        session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=True, force=force, reinstall=reinstall)
         plan = session.plan
     except refusal.Refusal as refused:
         # Every one of these carries its own code — `NoMachine` and `NoSuchMachine`

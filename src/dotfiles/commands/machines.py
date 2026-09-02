@@ -84,7 +84,7 @@ def _loaded(name: str) -> machines.Machine:
 
     A name nothing declares is a usage error. A manifest that exists and will not
     parse is an Issue, with every reason printed — the same split `_plan` makes,
-    and the same one `commands.resolved` makes for the verbs that want a Session.
+    and the same one `Session.resolve` makes for the verbs that want a Session.
 
     A caller wanting only the exception should reach for this rather than calling
     `manifest_path` for its side effect: that answers whether the *file* is there

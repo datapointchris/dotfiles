@@ -138,7 +138,17 @@ class Session:
     """
 
     @classmethod
-    def resolve(cls, machine: str | None = None, **kwargs: object) -> Session:
+    def resolve(
+        cls,
+        machine: str | None = None,
+        owner: str | None = None,
+        packages: frozenset[str] = frozenset(),
+        *,
+        offline: bool = False,
+        refresh: bool = False,
+        force: bool = False,
+        reinstall: bool = False,
+    ) -> Session:
         """Name the machine from the argument, else the environment, else `~/.env`.
 
         **Reading the *file* and not only the environment is what makes this work
@@ -149,10 +159,29 @@ class Session:
         lazy, `MachineError` surfaces from wherever the property is first touched
         — inside `survey`, past every handler, as a traceback and exit 1.
 
+        **An offline run does not refresh.** There is no network to spend, and
+        `resources.packages._upstream` ignores the flag on that branch anyway. It
+        is narrowed here rather than left to each caller because `refresh` reaches
+        this door already decided: `commands.currency` returns the
+        `MEASURES_UPSTREAM` default whenever nothing was typed, so `--offline`
+        alone arrives asking for a network read. An `--offline --refresh` a person
+        actually typed is refused by `commands.contradiction` long before this,
+        which is why dropping it silently here costs no instruction.
+
         Not in `__init__`: constructing a Session directly is the bootstrap and
-        test affordance, and only the front door carries the guarantee.
+        test affordance, and only the front door carries the guarantees. The four
+        fields no caller passes — `repo`, `home`, `interactive`, `as_json` — are
+        that affordance, and are set by naming the class.
         """
-        session = cls(machine_name=resolve_machine(machine), **kwargs)  # type: ignore[arg-type]
+        session = cls(
+            machine_name=resolve_machine(machine),
+            owner=owner,
+            packages=packages,
+            offline=offline,
+            refresh=refresh and not offline,
+            force=force,
+            reinstall=reinstall,
+        )
         _ = session.machine
         return session
 

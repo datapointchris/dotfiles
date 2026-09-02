@@ -30,6 +30,7 @@ from __future__ import annotations
 import dataclasses as dc
 import enum
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import runtime_checkable
 
@@ -41,7 +42,9 @@ from dotfiles.plan import Precondition
 from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.session import Session
+
+if TYPE_CHECKING:
+    from dotfiles.session import Session
 
 
 class Verdict(enum.StrEnum):

@@ -14,9 +14,13 @@ import datetime as dt
 from collections.abc import Sequence
 
 import typer
+import yaml
 
 from dotfiles import bridge
+from dotfiles import catalog
+from dotfiles import deploy
 from dotfiles import engine
+from dotfiles import envfile
 from dotfiles import gitconfig
 from dotfiles import offline_bundle
 from dotfiles import paths
@@ -30,7 +34,6 @@ from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import currency
 from dotfiles.commands import refresh_flag
-from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import CHANGE_COLOURS
 from dotfiles.output import SUBJECT_COLUMN
@@ -42,6 +45,8 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_result
 from dotfiles.output import warn
+from dotfiles.resources import auth
+from dotfiles.resources import credentials
 from dotfiles.resources import symlinks
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
@@ -131,22 +136,12 @@ def _survey(
     machine was `""` while the walk had correctly read `~/.env`.
     """
     began = dt.datetime.now(dt.UTC)
-    session = _session(machine, owner=owner, packages=packages, offline=offline, refresh=refresh)
+    session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
     if offline:
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
     walked = reconcile.fold(engine.assess(session, selection), lens)
     _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
-
-
-def _session(
-    machine: str | None,
-    owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
-    offline: bool = False,
-    refresh: bool = False,
-) -> Session:
-    return resolved(machine, owner, packages=packages, offline=offline, refresh=refresh)
 
 
 def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
@@ -206,8 +201,6 @@ def _prerequisites(packages: frozenset[str]) -> tuple[str, ...]:
     if not packages:
         return ()
 
-    from dotfiles import catalog
-
     declared = catalog.load()
     sections = {entry.section for entry in declared.all_entries() if entry.name in packages}
     wanted = (addressed(one.resource, one.name) for section in sections for one in registry.required_by(section))
@@ -232,8 +225,6 @@ def available_sources() -> list[str]:
     A hand-listed enum is missing sections the day it is written, and misses every
     section added afterwards — which is the whole argument against writing one.
     """
-    import yaml
-
     declared = yaml.safe_load(paths.PACKAGES_FILE.read_text())
     return sorted(declared)
 
@@ -250,8 +241,6 @@ def declared_names() -> list[str]:
     the shell's completion process, where a traceback is printed over whatever the
     user was typing, and `apply` refuses on an invalid declaration anyway.
     """
-    from dotfiles import catalog
-
     try:
         return sorted({entry.name for entry in catalog.load().all_entries()})
     except catalog.CatalogError:
@@ -664,7 +653,7 @@ def symlinks_apply(
     # the command was typed, and the run it would authorise is the run that
     # happens anyway — so a record filed under it would answer for nothing.
     if force:
-        session = _session(machine)
+        session = Session.resolve(machine)
         if session.machine.wants(symlinks.DEPLOY_BY_COPY):
             raise symlinks.ForceUnavailable(
                 f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
@@ -676,9 +665,7 @@ def symlinks_apply(
 @symlinks_app.command('show')
 def symlinks_show(machine: str = MachineOption) -> None:
     """List every symlink this repo declares, and where each one stands."""
-    from dotfiles import deploy
-
-    deploy.show(_session(machine))
+    deploy.show(Session.resolve(machine))
 
 
 @symlinks_app.command('unlink')
@@ -698,9 +685,7 @@ def symlinks_unlink(
         hint('re-run with --force if that is what you want')
         raise typer.Exit(ExitCode.USAGE)
 
-    from dotfiles import deploy
-
-    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(_session(machine)) else ExitCode.ISSUE)
+    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(Session.resolve(machine)) else ExitCode.ISSUE)
 
 
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')
@@ -730,9 +715,7 @@ def env_apply(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
 @env_app.command('show')
 def env_show(machine: str = MachineOption) -> None:
     """Print the generated section without writing anything."""
-    from dotfiles import envfile
-
-    emit_text(envfile.render(_session(machine).machine))
+    emit_text(envfile.render(Session.resolve(machine).machine))
 
 
 system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
@@ -901,9 +884,7 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     moving between this and a `check` row is reading the same verdicts — a second
     palette would make one of them mean something else.
     """
-    from dotfiles.resources import auth
-
-    session = _session(machine)
+    session = Session.resolve(machine)
     found = auth.RESOURCE.observe(session, session.plan).found
     if as_json:
         emit_json({tool: {'verdict': str(credential.verdict), 'detail': credential.detail} for tool, credential in found.items()})
@@ -963,9 +944,7 @@ def credentials_show(
     credential request and reports whether one came back. Opt-in because that is
     what reaches the network and what a GUI helper answers with a window.
     """
-    from dotfiles.resources import credentials
-
-    session = _session(machine)
+    session = Session.resolve(machine)
     found = credentials.RESOURCE.observe(session, session.plan).found
     # Positional, not keyed. It was `{entry.helper.label: ...}`, and a label is the
     # scope or `every remote` — so two helpers on one scope, which is the ordinary

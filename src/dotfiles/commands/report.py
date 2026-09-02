@@ -32,7 +32,6 @@ from dotfiles import remote as transport
 from dotfiles import runs
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
-from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import console
@@ -42,6 +41,7 @@ from dotfiles.output import hint
 from dotfiles.output import render_note
 from dotfiles.output import warn
 from dotfiles.resources import UNCONVERGED
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
@@ -395,7 +395,7 @@ def download(
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
-    named = machine or resolved(None).machine_name
+    named = machine or Session.resolve(None).machine_name
     directory = transport.reports_for(where, named)
     listed = transport.listed(where, directory) or ()
 
@@ -450,7 +450,7 @@ def _send(identifier: str | None) -> tuple[str, int]:
     see.
     """
     where = transport.reachable()
-    session = resolved(None)
+    session = Session.resolve(None)
     trust = session.machine.coordinates.network_trust
 
     directory = transport.reports_for(where, session.machine_name)
