@@ -269,7 +269,7 @@ def test_a_run_that_repaired_everything_converges(quiet: None, monkeypatch: pyte
     assert reconcile.apply_machine(engine.Selection.everything()) is ExitCode.CONVERGED
 
 
-def test_apply_json_is_the_record_the_run_wrote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+def test_apply_json_is_the_record_the_run_wrote(runs_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
     """`apply --json` is an execution transcript, and `plan --json` is the versioned
     interchange document a network-blocked machine hands over to have a bundle built
     from it. Two different artifacts, which is why this is the stored record rather
@@ -285,13 +285,12 @@ def test_apply_json_is_the_record_the_run_wrote(tmp_path: Path, monkeypatch: pyt
     """
     monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
     monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
     walked(monkeypatch, Walk(drift('ripgrep'), outcomes=(done('ripgrep'),)))
 
     reconcile.apply_machine(engine.Selection.everything(), as_json=True)
 
     emitted = json.loads(capsys.readouterr().out)
-    stored = json.loads(next((tmp_path / 'runs').glob('*.json')).read_text())
+    stored = json.loads(next(runs_dir.glob('*.json')).read_text())
     assert emitted == stored
     assert emitted['verb'] == 'apply'
 
@@ -755,46 +754,43 @@ class TestWhatApplyDeclinedToTouch:
 
 
 class TestTheRecordSaysWhatTheRunMeant:
-    def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """An item nothing could measure is not work the run intended to do. Recorded
         as `planned` it inflates the record with rows carrying `verdict: unknown`,
         and the record is the only artifact a person reads afterwards to find out
         what the run meant."""
-        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), drift('ripgrep'), outcomes=()))
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+        written = json.loads(sorted(runs_dir.glob('*.json'))[-1].read_text())
         actions = {outcome['address']: outcome['action'] for outcome in written['outcomes']}
         assert actions['packages/doit'] == 'unmeasured'
         assert actions['packages/atuin'] == 'declined'
         assert actions['packages/ripgrep'] == 'planned'
 
-    def test_a_failed_write_reaches_the_records_issues(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_a_failed_write_reaches_the_records_issues(self, runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """`issues` held Refusals alone, which are raised exceptions — and a provider
         answering `Result(ok=False)` returns normally. So the record of the run that
         failed the claude-code install carried `issues: []` beside `action: failed`,
         and a person sending it to the fleet was sending a record claiming nothing
         had gone wrong."""
-        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(drift('claude-code'), outcomes=(done('claude-code', OutcomeStatus.FAILED),)))
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+        written = json.loads(sorted(runs_dir.glob('*.json'))[-1].read_text())
         assert [issue['address'] for issue in written['issues']] == ['packages']
         assert 'claude-code' in written['issues'][0]['message']
 
-    def test_a_refusal_is_still_not_a_failed_write(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_a_refusal_is_still_not_a_failed_write(self, runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """A source the bundle was never designed to stage comes back REFUSED, and an
         offline machine doing exactly what it was built to do must not file an issue."""
-        monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(drift('rustup'), outcomes=(done('rustup', OutcomeStatus.REFUSED),)))
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        written = json.loads(sorted(tmp_path.glob('*.json'))[-1].read_text())
+        written = json.loads(sorted(runs_dir.glob('*.json'))[-1].read_text())
 
         actions = {outcome['address']: outcome['action'] for outcome in written['outcomes']}
 

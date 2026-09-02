@@ -68,20 +68,18 @@ def test_why_an_item_failed_is_carried_onto_the_record() -> None:
     assert written.outcomes[0].message == 'checksum mismatch'
 
 
-def test_keeping_a_record_hands_back_where_it_landed(tmp_path: Path, monkeypatch) -> None:
+def test_keeping_a_record_hands_back_where_it_landed(runs_dir: Path) -> None:
     """The verb prints the path, so `keep` has to say what it wrote rather than
     leaving the caller to name a command that would go and find out."""
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
     written = sinks.keep([Event('packages', change('zk'))], identity('plan'))
 
     assert written is not None
     assert written.exists()
 
 
-def test_a_record_that_cannot_be_written_says_so_without_failing_the_run(tmp_path: Path, monkeypatch) -> None:
+def test_a_record_that_cannot_be_written_says_so_without_failing_the_run(runs_dir: Path, monkeypatch) -> None:
     """`$XDG_STATE_HOME` is absent on a fresh machine, and that is not a reason for
     a verb to exit non-zero on a question it answered."""
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
     monkeypatch.setattr('dotfiles.runs.write', _refuse)
 
     assert sinks.keep([Event('packages', change('zk'))], identity('plan')) is None
@@ -91,11 +89,10 @@ def _refuse(*_args, **_kwargs):
     raise OSError('read-only file system')
 
 
-def test_the_log_and_the_record_are_one_run_under_two_extensions(tmp_path: Path, monkeypatch) -> None:
+def test_the_log_and_the_record_are_one_run_under_two_extensions(runs_dir: Path) -> None:
     """Opened at the start, written at the end, and they have to meet. Nothing
     reconciles them afterwards — an id minted at either end would file half a run
     under a name the other half never used."""
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
     who = identity('apply')
 
     sinks.open_log(who)
@@ -108,11 +105,10 @@ def test_the_log_and_the_record_are_one_run_under_two_extensions(tmp_path: Path,
     assert json.loads(written.with_suffix('.jsonl').read_text().splitlines()[0])['run_id'] == who.id
 
 
-def test_a_log_that_cannot_be_opened_leaves_the_console_working(tmp_path: Path, monkeypatch) -> None:
+def test_a_log_that_cannot_be_opened_leaves_the_console_working(runs_dir: Path, monkeypatch) -> None:
     """`$XDG_STATE_HOME` is absent on a fresh machine and read-only in more
     containers than it should be. Neither is a reason for a verb to fail a
     question it can answer, which is the same rule `keep` holds at the other end."""
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', tmp_path / 'runs')
     monkeypatch.setattr('dotfiles.logging.configure', _refuse_once())
 
     sinks.open_log(identity('check'))

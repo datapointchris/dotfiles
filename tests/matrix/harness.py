@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import rebind as rebind_paths
 import yaml
 from typer.testing import CliRunner
 
@@ -634,11 +635,10 @@ def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     """Re-run the derivations that already happened, now that the variables say this.
 
-    Nothing here invents a value. `paths` is asked for its own answers a second
-    time — `_repo_root()`, `xdg_home()` and `cache_home()` are the very calls the
-    module body makes — so `$DOTFILES_DIR` and the XDG variables stay the thing
-    that decides, and a change to how a path is derived reaches the sandbox with no
-    edit here.
+    `rebind_paths.derive` covers everything `paths` computed at import, and is
+    shared with the trees outside this one that need the same thing. What is left
+    here is the sandbox's own half: the symlink manager's two roots, and the
+    captured defaults below.
 
     The two that are not module constants are captured *function defaults*,
     evaluated when the function object was created and unreachable through the
@@ -649,23 +649,8 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     from dotfiles import checkout
     from dotfiles.symlinks import core
 
-    repo = paths._repo_root()  # noqa: SLF001 — the module's own derivation, re-run rather than reimplemented
-    state = paths.xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
-
-    derived = {
-        'REPO_ROOT': repo,
-        'PYPROJECT_FILE': repo / 'pyproject.toml',
-        'INSTALL_DIR': repo / 'install',
-        'PACKAGES_FILE': repo / 'install' / 'packages.yml',
-        'MANIFESTS_DIR': repo / 'install' / 'manifests',
-        'FLAGS_FILE': repo / 'install' / 'flags.yml',
-        'STATE_HOME': state,
-        'RUNS_DIR': state / 'runs',
-        'LATEST_RUN': state / f'latest-{paths.MACHINE_ID}',
-        'STATUS_FILE': state / f'status-{paths.MACHINE_ID}.json',
-    }
-    for name, value in derived.items():
-        monkeypatch.setattr(paths, name, value)
+    rebind_paths.derive(monkeypatch)
+    repo = paths.REPO_ROOT
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
     monkeypatch.setattr(core, 'TARGET_DIR', box.home.resolve())
