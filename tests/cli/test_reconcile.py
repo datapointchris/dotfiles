@@ -14,6 +14,7 @@ from collections.abc import Iterable
 import pytest
 
 from dotfiles import engine
+from dotfiles import output
 from dotfiles import reconcile
 from dotfiles import vocabulary
 from dotfiles.event import Event
@@ -448,7 +449,7 @@ def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, cap
     detail = 'however the fold happened to word it'
     results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=Lens.CHECK, attention=3)]
 
-    assert f'auth        {detail}' in ' '.join(summarised(results, capsys))
+    assert f'{"auth":<{output.ADDRESS_COLUMN}} {detail}' in ' '.join(summarised(results, capsys))
 
 
 def test_a_converged_resource_is_left_out(steady_checkout, capsys: pytest.CaptureFixture) -> None:

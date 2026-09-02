@@ -81,7 +81,23 @@ singleton is what its message asks for and what every other option here already
 is."""
 
 
-def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool) -> str:
+def _asking(interactive: bool | None) -> bool:
+    """Whether there is somebody to put a question to.
+
+    Injected rather than detected, per standards/python.md § "Inject terminal
+    detection; never monkeypatch it". A test patching the stream has it reinstalled
+    by pytest's capture between fixture setup and the test body, so the gate reads
+    the real terminal and every case passes for the wrong reason.
+
+    `None` keeps the detection as the default, so no call site carries an argument
+    it has no opinion about.
+    """
+    return sys.stdin.isatty() if interactive is None else interactive
+
+
+def _pointed_at(
+    value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool, interactive: bool | None = None
+) -> str:
     """The value a flag carries, or the one a person points at in a list.
 
     Click's own `prompt=` does this in one argument and is not used, for a reason
@@ -102,7 +118,7 @@ def _pointed_at(value: str | None, flag: str, options: Sequence[str], question: 
     """
     if value is not None:
         return value
-    if no_input or not sys.stdin.isatty():
+    if no_input or not _asking(interactive):
         raise typer.BadParameter(f'{flag} is required without a terminal to ask. Valid: {", ".join(options)}')
 
     for index, option in enumerate(options, start=1):
@@ -516,7 +532,7 @@ def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
     render_note(f'{held} bundle(s) on the remote for this machine')
 
 
-def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool) -> bool:
+def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, interactive: bool | None = None) -> bool:
     """Whether to go ahead, asked the way every prompt here is asked.
 
     **One helper for all three prompts.** Written out at each site they drift into
@@ -532,7 +548,7 @@ def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool) -> 
     """
     if yes:
         return True
-    if no_input or not sys.stdin.isatty():
+    if no_input or not _asking(interactive):
         raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have {would_have}')
     return typer.confirm(question, default=False, err=True)
 
