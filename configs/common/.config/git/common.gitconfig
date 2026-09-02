@@ -4,8 +4,8 @@ addIgnoredFile = false
 # No identity here, by design — it differs per machine, not per platform, so it
 # arrives through the trust include at the foot of this file. useConfigOnly stops
 # git synthesizing one from hostname and username when nothing sets it: on a
-# machine where two identities coexist, a guessed author is a wrong
-# author that commits silently.
+# machine where two identities coexist, a guessed author is a wrong author that
+# commits silently.
 [user]
 useConfigOnly = true
 

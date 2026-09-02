@@ -518,7 +518,7 @@ class WingetPackage(Entry):
 
     `repo` and `asset` name where the same binary is published on GitHub, which is
     the offline channel rather than a note about one: the machine that needs these
-    most cannot use winget at all, because its network blocks the Store outright.
+    most cannot use winget at all, because its network blocks winget outright.
     `create_bundle.add_winget_binaries` stages from that coordinate and
     `providers.winget` installs what it staged — in the general bundler beside
     every other category, because Windows is one more machine to build a bundle

@@ -1,7 +1,7 @@
 # Nonfleet is the default and personal is the exception, never the reverse. A
-# repo that slips through the match then commits under the default address —
-# wrong, but it stays inside — where the inverse puts a personal address into
-# history.
+# repo that slips through the match then commits under the default address, which
+# is wrong and stays inside. The inverse puts a personal address into history that
+# is not personal, which does not come back.
 #
 # local.gitconfig is the one identity this repo does not ship, so it is
 # declared in install/flags.yml and `dotfiles check` fails while it is missing.

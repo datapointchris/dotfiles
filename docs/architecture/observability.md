@@ -16,8 +16,8 @@ the thing none of them can state, because each knows only its own end.
 
 All three sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
 folder. The fleet shares one history that way, and a machine outside that sync
-keeps its own by construction rather than by a rule. Every name
-carries the box because the directory is shared — a run id embeds it
+keeps its own by construction rather than by a rule. Every name carries the box
+because the directory is shared — a run id embeds it
 (`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
 What collided before they did is `src/dotfiles/paths.py`.
 

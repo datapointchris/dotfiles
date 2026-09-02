@@ -687,8 +687,7 @@ system_packages:
   # No `apt:` key deliberately. Upstream's Linux build is a Debian package
   # served from its own apt repo, so an apt entry would work — and would put a
   # personal Anthropic account's desktop app on a machine off the fleet. AUR-only
-  # keeps it
-  # on the fleet. The PKGBUILD repackages that same official .deb payload from
+  # keeps it on the fleet. The PKGBUILD repackages that same official .deb payload from
   # downloads.claude.ai with pinned checksums, so nothing here is a third-party
   # build of the app.
   - name: claude-desktop

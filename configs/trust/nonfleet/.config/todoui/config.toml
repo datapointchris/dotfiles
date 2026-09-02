@@ -18,7 +18,7 @@ repos_registry = "~/.config/repos.json"
 # managed machine sends personal data across a monitored egress to a domain that
 # is nobody's business but mine, authenticated with a personal key — which is the
 # arrangement data-loss monitoring is built to notice, and it is the same standing
-# rule the atuin config follows: nothing written at work travels home.
+# rule the atuin config follows: nothing written on this box travels back.
 #
 # The URL stays so the file still says where sync would go, and turning it on is
 # then one word rather than a lookup.
