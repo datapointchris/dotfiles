@@ -17,6 +17,7 @@ from __future__ import annotations
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import plan as planning
+from dotfiles import registry
 
 
 def resolve(
@@ -42,16 +43,7 @@ def resolve(
     `packages` is `--package`, and it narrows the same way. None is every entry;
     an empty set would be a plan with nothing in it, which is a different
     instruction and one no caller means by not passing the flag.
-
-    The registry is asked for inside the call because it reaches back to this
-    module by two routes, and naming it at import time closes both. `registry`
-    imports `session` outright, and a `Session` resolves a plan. It also imports
-    `evidence`, which takes its vocabulary from `resources`, which builds that
-    same `Session`. Cutting either one on its own leaves the other, so a reader
-    testing this by deleting one import will still find no entry point starts.
     """
-    from dotfiles import registry
-
     items: list[planning.DesiredItem] = []
     for provider in registry.PROVIDERS:
         if owner is not None and not provider.ownable:
@@ -83,8 +75,6 @@ def _named(items: list[planning.DesiredItem], packages: frozenset[str]) -> list[
     the finished list asks one question of every row: was it named, or is it
     required by something that was.
     """
-    from dotfiles import registry
-
     sections = {item.section for item in items if item.name in packages}
     prerequisites = {provider.name for section in sections for provider in registry.required_by(section)}
     return [item for item in items if item.name in packages or item.provider in prerequisites]

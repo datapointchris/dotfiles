@@ -31,6 +31,7 @@ import shutil
 from collections.abc import Callable
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotfiles import catalog as catalogs
 from dotfiles import coordinates
@@ -63,7 +64,9 @@ from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
-from dotfiles.session import Session
+
+if TYPE_CHECKING:
+    from dotfiles.session import Session
 
 
 @dc.dataclass(frozen=True, slots=True)
