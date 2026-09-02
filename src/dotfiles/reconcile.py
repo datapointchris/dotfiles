@@ -34,6 +34,7 @@ from dotfiles import privilege as privileges
 from dotfiles import providers
 from dotfiles import publishing
 from dotfiles import refusal
+from dotfiles import registry
 from dotfiles import remote
 from dotfiles import runs
 from dotfiles import sinks
@@ -790,11 +791,6 @@ def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -
     all of them, but because it was traced to none, and a fault nobody can
     attribute is one nobody can rule out.
     """
-    # Imported here for the reason `resolve.resolve` gives: the registry reaches
-    # back through `evidence` and `resources` to the `Session` that resolves a
-    # plan, so asking for it at module scope closes that loop.
-    from dotfiles import registry
-
     owner = {provider.section: provider.resource for provider in registry.PROVIDERS if provider.section}
     selected = set(selection.resources)
 
