@@ -50,7 +50,15 @@ none of it.
    - Binary location: `~/go/bin/`
 
 2. **Symlinked Script Apps** (notes): Symlinked from repo
-   - Located in `apps/common/` or an `apps/<axis>/<value>/` variant as executable files (bash, or Python via a `uv run --script` / `python3` shebang). A Python app that outgrows a single file becomes a module in `src/dotfiles/` with a `[project.scripts]` entry instead
+   - Located in `apps/common/` or an `apps/<axis>/<value>/` variant as executable files (bash, or Python via a `uv run --script` / `python3` shebang)
+   - **Coupling is what moves an app out of here, never size.** An app that is part of the CLI's
+     own surface becomes a module in `src/dotfiles/` with a `[project.scripts]` entry. A standalone
+     tool stays here however large it grows, because the move buys the package's dependency
+     closure, install lifecycle and release, and a standalone tool pays all three for nothing.
+     `prs` cannot make the move at all: its git-sourced `pytermstyle` would have to enter
+     `[project.dependencies]`, and `declared_closure()` in `create_bundle.py` keeps only
+     requirements containing `==`, so a git URL is dropped with no error and the offline bootstrap
+     builds a bundle missing a dependency
    - Symlinked to `~/.local/bin/`, flattened — the axis path is dropped at the destination
    - Deployed by `TREES` in `src/dotfiles/resources/symlinks.py`, which names that destination
 
@@ -64,7 +72,8 @@ none of it.
    - Installer: `src/dotfiles/providers/uvtool.py`; binary lands in `~/.local/bin/`
    - **Each machine's manifest also lists it** — unlike a symlinked app, which every machine
      with `apps/` symlinks gets automatically, a git uv tool reaches only the machines naming it
-   - This is where a Python app goes once it outgrows being a single file in `apps/`
+   - This is where a Python app goes once it is its own project, with a repo, a release and a
+     version of its own — again what the thing is, not how large it got
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 
