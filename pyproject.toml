@@ -98,9 +98,21 @@ blank = false
 # import in the violations it has closed was wrong on its own, and every one of
 # them was a chain.
 #
-# Modules not named here are unconstrained and still carry violations — a route
-# through `session`, `resources` or `evidence` breaks a layer pair as surely as a
-# direct import does.
+# A module not named here is unconstrained, and a route through one still breaks a
+# layer pair as surely as a direct import does. So the modules a closed cycle ran
+# through are named alongside its ends: `session` carried `registry -> session ->
+# resolve`, `context` is what broke it, and `evidence` is why `context` imports
+# under `TYPE_CHECKING`. Left out, a cycle between any two of those three reads
+# green — `evidence` importing `registry` back is measured and reported by the
+# list below, and was not by a list naming only the ends.
+#
+# `resources` is the one that cannot join, and the reason is structural rather
+# than a choice. A layer covers the package and every descendant, so naming it
+# pulls in `resources.packages`, which imports `registry` — while
+# `resources/__init__.py` is imported *by* `registry` and sits under it. That is
+# three broken pairs: `resources` against `session`, against `registry`, and
+# `evidence` against `resources`. Splitting the resource vocabulary out of
+# `resources/__init__.py` is what would let it in.
 
 [tool.importlinter]
 root_package = "dotfiles"
@@ -114,8 +126,11 @@ layers = [
     "dotfiles.commands",
     "dotfiles.reconcile",
     "dotfiles.engine",
+    "dotfiles.session",
     "dotfiles.resolve",
     "dotfiles.registry",
+    "dotfiles.context",
+    "dotfiles.evidence",
     "dotfiles.catalog",
     "dotfiles.paths",
 ]

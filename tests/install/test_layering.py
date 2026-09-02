@@ -11,10 +11,10 @@ grimp's build of this package, and the layer check — where a synthetic package
 would exercise none of it, and a second copy of the layer list would drift from
 the real one.
 
-**The chain case is the one that matters.** Every violation this contract was
-written for is a route rather than an edge: the last one closed ran `registry ->
-session -> resolve`, and no single import in it was wrong. A gate reporting only
-direct imports would have passed on all of them.
+**The chain case is the one that matters.** A violation here is a route rather
+than an edge, and every import along it is ordinary — `evidence` reaches `paths`
+in three hops and names it nowhere. A gate reporting only direct imports sees
+none of them.
 
 **`--no-cache` on every run.** `lint-imports` keys its cache on mtime, so a
 `git restore`, a branch change or an edit inside the same second each answer
@@ -43,6 +43,7 @@ CONFIG = paths.PYPROJECT_FILE
 """The file the hook reads. `paths.REPO_ROOT` is the checkout the suite lives in,
 because the root conftest pins `DOTFILES_DIR` to it before anything resolves."""
 
+CONTRACT = 'name = "Layered architecture"\n'
 OPENS = 'layers = [\n'
 CLOSES = ']\n'
 
@@ -63,11 +64,15 @@ def relayered(tmp_path: Path, move: str, *, above: str) -> Path:
     is built, with `Modules can only belong to one layer`, and that exit is not the
     violation any of these cases is about.
 
+    Found from the contract's `name` rather than from the first `layers = [`. A
+    second contract in `[tool.importlinter]` would otherwise be the one mutated,
+    and every case below would keep passing while measuring it.
+
     Written as `pyproject.toml`, because that is how `lint-imports` decides to
     parse a config as TOML rather than as INI.
     """
     lines = CONFIG.read_text().splitlines(keepends=True)
-    opens = lines.index(OPENS)
+    opens = lines.index(OPENS, lines.index(CONTRACT))
     closes = lines.index(CLOSES, opens)
 
     declared = lines[opens + 1 : closes]
@@ -87,9 +92,9 @@ def stale_order(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def resolve_above_everything(tmp_path: Path) -> Path:
-    """`resolve` at the top, which every layer below it is then forbidden to reach."""
-    return relayered(tmp_path, 'dotfiles.resolve', above='dotfiles.main')
+def paths_above_evidence(tmp_path: Path) -> Path:
+    """`paths` lifted over `evidence`, which reaches it only through other modules."""
+    return relayered(tmp_path, 'dotfiles.paths', above='dotfiles.evidence')
 
 
 def test_the_declared_layers_hold() -> None:
@@ -108,31 +113,34 @@ def test_a_direct_import_against_the_layer_order_is_reported(stale_order: Path) 
     assert 'dotfiles.resolve is not allowed to import dotfiles.registry' in ran.stdout
 
 
-def test_a_route_with_no_direct_import_between_its_ends_is_reported(resolve_above_everything: Path) -> None:
-    """The shape every violation this contract has closed actually had.
+def test_a_route_with_no_direct_import_between_its_ends_is_reported(paths_above_evidence: Path) -> None:
+    """The shape a violation of this contract has, and the reason it exists.
 
-    `reconcile` reaches `resolve` through `session` and imports it nowhere. So the
-    assertion is the headline plus the absence of a direct edge, never the hops
-    between — `lint-imports` prints one exemplar per violated contract and picks a
-    different route between runs on identical code.
+    `evidence` names `paths` nowhere. It reaches it in three hops through
+    `resources`, `providers` and `diagnose`, and every import along the way is
+    ordinary. So the assertion is the headline plus the absence of a direct edge,
+    never the hops between — `lint-imports` prints one exemplar per violated
+    contract and picks a different route between runs on identical code.
     """
-    ran = contract(resolve_above_everything)
+    ran = contract(paths_above_evidence)
 
     assert ran.returncode == 1
-    assert 'dotfiles.reconcile is not allowed to import dotfiles.resolve' in ran.stdout
-    assert 'dotfiles.reconcile -> dotfiles.resolve' not in ran.stdout
+    assert 'dotfiles.evidence is not allowed to import dotfiles.paths' in ran.stdout
+    assert 'dotfiles.evidence -> dotfiles.paths' not in ran.stdout
 
 
-def test_a_red_run_and_a_green_one_measured_the_same_package(stale_order: Path) -> None:
-    """So the red is the layer list, and not a graph one of them failed to build.
+def test_every_mutation_still_produces_a_config_the_tool_can_analyse(stale_order: Path, paths_above_evidence: Path) -> None:
+    """A guard on `relayered`, which is the only thing here that can be wrong silently.
 
-    `Analyzed N files, M dependencies` is what grimp arrived at. Equal counts rule
-    out the alternative explanation for a broken contract — the package resolved
-    differently, or did not resolve at all.
+    Layer order is not an input to graph construction, so equal `Analyzed` lines
+    prove nothing about the package. What they prove is that each mutation parsed:
+    a `relayered` that mangled the TOML exits before analysing anything, and the
+    three red cases above would then be red for that rather than for a violation.
+    A layer named twice is enough to cause it.
     """
-    kept, broken = contract(CONFIG), contract(stale_order)
 
     def analysed(ran: subprocess.CompletedProcess[str]) -> str:
         return next(line for line in ran.stdout.splitlines() if line.startswith('Analyzed '))
 
-    assert analysed(kept) == analysed(broken)
+    assert analysed(contract(stale_order)) == analysed(contract(CONFIG))
+    assert analysed(contract(paths_above_evidence)) == analysed(contract(CONFIG))
