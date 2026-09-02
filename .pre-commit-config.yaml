@@ -199,14 +199,14 @@ repos:
         name: ruff format (uv run scripts)
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
       - id: ruff-check
         alias: ruff-check-scripts
         name: ruff check (uv run scripts)
         args: [--fix]
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
 
   # A separate hook from the repo-wide mypy rather than a wider selection on it.
   # That one runs `mypy .` with pass_filenames: false, and mypy collects a
@@ -224,7 +224,7 @@ repos:
         entry: uv run mypy --scripts-are-modules --install-types --non-interactive
         language: system
         types: [text]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
 
 # generated:lua - Lua
   - repo: https://github.com/JohnnyMorganz/StyLua

@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.13"
-# dependencies = []
-# ///
 """Regroup the tmux workspace from what its panes are actually doing.
 
 Sessions drift: windows accumulate in whichever session was focused when the
@@ -779,6 +774,13 @@ the server keeps its panes at the same ids and the same sizes.
 
 
 def main() -> int:
+    """The whole command, including what a refusal exits with.
+
+    `Usage` is turned into an exit code here rather than anywhere above, because
+    `[project.scripts]` names this function and calls it directly — so nothing
+    outside it runs, and a refusal handled further out would reach a terminal as a
+    traceback.
+    """
     parser = argparse.ArgumentParser(
         prog='tmux-rearrange',
         description=__doc__.splitlines()[0],
@@ -807,17 +809,17 @@ def main() -> int:
             p.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
     args = parser.parse_args()
-    if args.verb == 'apply':
-        return cmd_apply()
-    scope = resolve_scope(args.scope)
-    if args.verb == 'show':
-        return cmd_show(scope, args.json)
-    return cmd_plan(scope, args.json)
+    try:
+        if args.verb == 'apply':
+            return cmd_apply()
+        scope = resolve_scope(args.scope)
+        if args.verb == 'show':
+            return cmd_show(scope, args.json)
+        return cmd_plan(scope, args.json)
+    except Usage as problem:
+        err(f'tmux-rearrange: {problem}')
+        return 2
 
 
 if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except Usage as problem:
-        err(f'tmux-rearrange: {problem}')
-        sys.exit(2)
+    sys.exit(main())

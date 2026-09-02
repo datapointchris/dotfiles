@@ -571,7 +571,9 @@ def aws_profiles():
 
 @pytest.fixture(scope='session')
 def tmux_rearrange():
-    return load_app('tmux-rearrange')
+    from dotfiles import tmux_rearrange as module
+
+    return module
 
 
 @pytest.fixture(scope='session')

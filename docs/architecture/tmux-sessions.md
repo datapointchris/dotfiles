@@ -301,6 +301,6 @@ cite the same item, not that you want them apart.
 | File | Role |
 | --- | --- |
 | `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation |
-| `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
+| `src/dotfiles/tmux_rearrange.py` | Bulk regroup: scan, propose, render a script |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colours |
