@@ -94,6 +94,66 @@ function mkd() {
   mkdir -p "$1" && cd "$1" || exit
 }
 
+# The list commands. `cl` below calls the `ls` defined here.
+#
+# eza reads its file list from stdin when it is handed no path and stdin is not a
+# terminal, so a caller whose stdin is redirected gets an empty listing at exit 0
+# — a result nothing tells apart from an empty directory. `eza_listing` answers
+# that read with `.`. A path on the command line still wins, because eza consults
+# stdin only when it has no path of its own, and that is what lets one mechanism
+# cover every flag without the wrapper knowing which flags take a value.
+#
+# Functions rather than aliases: an alias can only prepend, so a default path
+# written into one lands after the caller's own argument and lists two
+# directories. `sudo ls` reaches /usr/bin/ls as a result, because a trailing
+# space in `alias sudo='sudo '` makes the next word alias-expandable and a
+# function is never alias-expanded.
+
+#@eza_listing
+#--> eza with the working directory offered on stdin. Usage: eza_listing <eza args>
+# Arguments:
+#   Passed to eza unchanged.
+# Outputs:
+#   eza's listing, on stdout.
+# Returns:
+#   eza's exit status.
+eza_listing() {
+  command eza "$@" <<<.
+}
+
+#@ls
+#--> Long listing, hidden entries included, directories first. Usage: ls [path...]
+#@ll
+#--> `ls` plus a header row and a trailing `/` on directories. Usage: ll [path...]
+#@la
+#--> The same listing as `ll`, since `ls` already carries the --all that would separate them.
+#@lsd
+#--> Only the directories. Usage: lsd [path...]
+# Arguments:
+#   Paths to list; the working directory when none are named.
+# Outputs:
+#   The listing, on stdout.
+# Returns:
+#   The listing tool's exit status.
+if command -v eza &>/dev/null; then
+  # `--classify` and `--color` take a WHEN that eza treats as optional, so either
+  # one standing immediately before "$@" claims the caller's path as its value.
+  # Binding with `=` is what keeps `ll <path>` from exiting 2.
+  ls() { eza_listing -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time "$@"; }
+  ll() { ls -lh --classify=always "$@"; }
+  la() { ls -lhA --classify=always "$@"; }
+  lsd() { eza_listing -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs "$@"; }
+else
+  ls() { command ls -lhAFgo --color "$@"; }
+  ll() { ls -lhF --color "$@"; }
+  la() { ls -lhAF --color "$@"; }
+  # find rather than a `*/` glob. The glob delivers its own literal pattern where
+  # a directory holds no subdirectory, and it lists the caller's path beside the
+  # working directory instead of in place of it. `env` names the binary, which is
+  # what find execs — the `ls` defined above is a function and out of its reach.
+  lsd() { command find "${@:-.}" -maxdepth 1 -mindepth 1 -type d -exec env ls -ldh -- {} +; }
+fi
+
 #@cl
 #--> Move to new directory and list contents
 function cl() {

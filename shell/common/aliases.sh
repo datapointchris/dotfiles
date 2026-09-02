@@ -25,48 +25,7 @@ alias ....='z ../../..'
 
 # ---------- List / Display ---------- #
 
-# eza reads its file list from stdin whenever it is handed no path and stdin is
-# not a terminal, and then prints nothing while exiting 0 — a result no caller
-# can tell apart from an empty directory. `--stdin` is its documented opt-in for
-# that, so a call arriving without one wants the working directory. Name it here
-# rather than at each list command, and stay out of the way when the caller has
-# named a path already.
-eza_with_path() {
-  local arg
-  for arg in "$@"; do
-    if [[ $arg != -* || $arg == --stdin ]]; then
-      command eza "$@"
-      return
-    fi
-  done
-  command eza "$@" .
-}
-
-# Color LS commands. Long format, human-readable, hidden entries included, with
-# a directory trailing `/`. `ll` and `la` build on `ls`, so they carry its
-# `--all` too and add a header row on top of it.
-#
-# Prefer eza when installed; fall back to native ls so machines without eza
-# (e.g. WSL where the binary is blocked) still have a working `ls`.
-#
-# Functions, because an alias can only prepend. A default path appended to one
-# would land after the caller's own argument and list two directories.
-#
-# eza reads the WHEN on `--color` and on `-F`/`--classify` as optional, so
-# whichever of them is written last claims the path after it as its value and
-# the command fails on it. The eza branch binds the value with `=`, and drops
-# `--color` for the auto its default already asks for.
-if command -v eza &>/dev/null; then
-  ls() { eza_with_path -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time "$@"; }
-  ll() { ls -lh --classify=always "$@"; }
-  la() { ls -lhA --classify=always "$@"; }
-  lsd() { eza_with_path -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs "$@"; }
-else
-  ls() { command ls -lhAFgo --color "$@"; }
-  ll() { ls -lhF --color "$@"; }
-  la() { ls -lhAF --color "$@"; }
-  lsd() { ls -ldh -- */ "$@"; }
-fi
+# ls, ll, la and lsd are defined in functions.sh.
 
 # Print each PATH entry on a separate line
 alias paths='echo -e ${PATH//:/\\n}'
