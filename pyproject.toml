@@ -147,7 +147,17 @@ warn_return_any = false
 # __init__.py would fix mypy and break pytest, which resolves `harness` by
 # putting the first directory without one on sys.path.
 explicit_package_bases = true
-mypy_path = "tests/e2e"
+# `src` is what resolves `dotfiles.*` to the package. Without it, and with
+# ignore_missing_imports on above, every intra-package import is an unresolved
+# name that becomes `Any` — so `mypy .` reports success having checked nothing
+# across a module boundary. `tests/e2e` resolves bare `harness`, matching the
+# pythonpath below.
+#
+# `tests` cannot be a third entry, which is why `matrix.harness`, `mutation`,
+# `relay`, `runlogs` and `shells` are still `Any` here. It maps tests/conftest.py
+# to `conftest`, where tests/e2e already maps tests/e2e/conftest.py, and mypy
+# aborts the whole crawl on a duplicate module.
+mypy_path = ["src", "tests/e2e"]
 
 # `standard` replaces the per-rule opt-outs repos used to accumulate; basedpyright
 # defaults to `recommended`, which turns every one of them back on. Named
