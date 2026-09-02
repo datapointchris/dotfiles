@@ -154,6 +154,7 @@ nav:
       - Minimal Manifest for Servers: learnings/minimal-manifest-for-servers.md
       - Undeclared Transitive Dependency: learnings/undeclared-transitive-dependency.md
       - Symlinks Path Gotchas: learnings/symlinks-path-gotchas.md
+      - A Test Writes Through a Deployed Symlink: learnings/a-test-writes-through-a-deployed-symlink.md
       - WSL Credential Helper Exec Format Error: learnings/wsl-credential-helper-exec-format-error.md
       - pre-commit Stash Recovery: learnings/pre-commit-stash-recovery.md
       - Shared Stash Across Worktrees: learnings/shared-stash-across-worktrees.md
