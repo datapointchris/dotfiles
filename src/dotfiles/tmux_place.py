@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.13"
-# dependencies = []
-# ///
 """Decide where an agent's pane goes, so that no pane ends up too small to read.
 
     tmux-place list                     every window this tool can place into
@@ -1138,28 +1133,35 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """The whole command, including what each refusal exits with.
+
+    The two refusals are turned into exit codes here rather than anywhere above,
+    because `[project.scripts]` names this function and calls it directly — so
+    nothing outside it runs, and a `Usage` handled further out would reach a
+    terminal as a traceback.
+    """
     parser = build_parser()
-    args = parser.parse_args()
-    # No args shows help rather than an error: a namespace can be walked down one
-    # token at a time only if every node answers with what is under it.
-    if not args.verb:
-        parser.print_help()
-        return 0
-    if args.verb == 'list':
-        return cmd_list(args.json)
-    if args.verb == 'plan':
-        return cmd_plan(args)
-    if args.verb == 'release':
-        return cmd_release(args.panes)
-    return cmd_open(args)
+    try:
+        args = parser.parse_args()
+        # No args shows help rather than an error: a namespace can be walked down one
+        # token at a time only if every node answers with what is under it.
+        if not args.verb:
+            parser.print_help()
+            return 0
+        if args.verb == 'list':
+            return cmd_list(args.json)
+        if args.verb == 'plan':
+            return cmd_plan(args)
+        if args.verb == 'release':
+            return cmd_release(args.panes)
+        return cmd_open(args)
+    except Usage as problem:
+        err(f'tmux-place: {problem}')
+        return USAGE_ERROR
+    except TmuxFailed as problem:
+        err(f'tmux-place: {problem}')
+        return FAILURE
 
 
 if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except Usage as problem:
-        err(f'tmux-place: {problem}')
-        sys.exit(USAGE_ERROR)
-    except TmuxFailed as problem:
-        err(f'tmux-place: {problem}')
-        sys.exit(FAILURE)
+    sys.exit(main())

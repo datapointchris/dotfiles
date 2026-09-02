@@ -576,7 +576,9 @@ def tmux_rearrange():
 
 @pytest.fixture(scope='session')
 def tmux_place():
-    return load_app('tmux-place')
+    from dotfiles import tmux_place as module
+
+    return module
 
 
 ANSWERED_BY_A_SHELL = 'set-by-a-shell-nothing-here-may-consult'
