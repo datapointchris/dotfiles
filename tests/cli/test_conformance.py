@@ -104,8 +104,8 @@ from `evidence.by_currency`, which reads an inventory built from the session's
 answer one level down. Reading the resource modules alone reports `system` as
 currency-free, which is exactly how it came to have no flag for a release.
 
-Derived rather than listed, per `testing.md` § "A surface invariant is derived
-from the command tree": a table cannot tell "nobody added a networked resource"
+Derived rather than listed, because a surface invariant comes from the command
+tree: a table cannot tell "nobody added a networked resource"
 from "somebody added one and nothing looked".
 """
 
@@ -327,7 +327,7 @@ def test_no_read_verb_offers_a_ceiling() -> None:
 def test_no_read_verb_offers_force() -> None:
     """`--force` authorises a write that cannot be undone — a foreign file replaced,
     a package removed — so it belongs on the verb that writes and nowhere else.
-    `standards/cli-design.md` § "A flag appears only on the commands that read it".
+    A flag appears only on the commands that read it.
 
     Over the whole tree rather than over the one resource that has it today, which
     is the difference this section exists for: a literal list of resources cannot
@@ -356,8 +356,8 @@ def test_the_currency_flag_is_always_the_whole_pair() -> None:
     """One axis, two spellings, and a verb offering one of them is a verb a caller
     cannot reverse.
 
-    Derived rather than listed, per `testing.md` § "A surface invariant is derived
-    from the command tree": a table naming which verbs take the pair cannot tell
+    Derived rather than listed, because a surface invariant comes from the command
+    tree: a table naming which verbs take the pair cannot tell
     "nobody added a door" from "somebody added one and nothing looked". Six leaves
     gained the pair in one branch, each by hand.
     """
@@ -516,8 +516,8 @@ def phrase_sites(phrase: str) -> tuple[set[str], list[str]]:
     """Which constants are assigned this phrase, and everywhere else it is written.
 
     The second list is the invariant: a rendered literal, or a docstring pasting
-    one, is a copy nothing keeps in step. `documentation.md` § "A comment explains
-    the thing, not the change that produced it" refuses the docstring case for the
+    one, is a copy nothing keeps in step. A comment explains the thing rather than
+    the change that produced it, which refuses the docstring case for the
     same reason, and no linter or type checker reads either.
     """
     owners, copies = set(), []
@@ -621,8 +621,8 @@ def rebind(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> list[st
 def capture(monkeypatch: pytest.MonkeyPatch) -> io.StringIO:
     """Both consoles, writing into one buffer.
 
-    Neither the width nor the colour is pinned — `testing.md` § "Never assert on
-    rendered output — assert the value it was built from" refuses both, and a
+    Neither the width nor the colour is pinned — a test asserts the value the
+    output was built from rather than the rendering, which refuses both, and a
     pinned width only picks which terminal the suite pretends to be. Rich answers
     `is_terminal` false for a `StringIO` and emits no escape sequence into one, so
     the buffer is already the plain text these tests index into.
@@ -875,9 +875,8 @@ def test_the_two_attention_spellings_agree() -> None:
 
 @pytest.mark.parametrize(('interactive', 'no_input'), [(True, True), (False, False)], ids=['--no-input', 'no terminal'])
 def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(interactive: bool, no_input: bool) -> None:
-    """A centralization pins the invariant it created, or it is one refactor and no
-    guarantee — standards/testing.md § "A refactor that centralizes scattered
-    handling pins the invariant it created".
+    """A refactor that centralizes scattered handling pins the invariant it
+    created, or it is one refactor and no guarantee.
 
     Three prompts written out longhand drift into three different declines, and the
     one that drifts furthest prints nothing at all — a non-zero status with no

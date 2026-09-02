@@ -2,8 +2,8 @@
 
 Universal rules live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
 `standards/`. Neither is restated here. `fleet standards applies dotfiles` is which ones reach
-this repo — an enumeration in this line would drift, which is the failure
-`standards/documentation.md` § "Where rules live" names.
+this repo — an enumeration in this line would drift, which is exactly why a rule
+lives in one place and is cited from the others.
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
@@ -33,7 +33,7 @@ none of it.
 
 **File Naming and Organization**:
 
-- Markdown filenames follow `standards/documentation.md` § "Markdown filenames are lowercase with hyphens"
+- Markdown filenames are lowercase with hyphens
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
 **Shell Script Patterns**:
@@ -226,7 +226,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
 - **Theme System** (`theme`) - Unified theming from one palette per theme. It installs each app config under the theme's own id and points a stable `current` symlink at it, so this repo's configs name `current` and never a theme — `rg -l --hidden '/current\b' configs/` finds the pointers — `--hidden` is load-bearing, since every one of them is under a `.config` directory — and `~/tools/theme/CLAUDE.md` § "Where an applied theme lands" says why the pointer keeps that name
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
-- **Pre-commit Hooks** - Quality control. The inventory is generated; read `.pre-commit-config.yaml` rather than a list here, per `standards/ci.md` § "Never restate the hook inventory in a repo's `CLAUDE.md`"
+- **Pre-commit Hooks** - Quality control. The inventory is generated, so read `.pre-commit-config.yaml` rather than a list here — a restated inventory goes stale on the next regeneration
 
 **Symlink Management Critical Rule**:
 
@@ -244,8 +244,8 @@ at `~/dotfiles/src`). Switching branches therefore changes both the config this 
 the tool that deploys it — a coupling almost no other repo has, and one nothing announces.
 
 - **Every change here starts in a worktree, without checking for peers first.** `worktree new
-  <slug>` is the first tool call, before reading files. This is the one repo where the size rule
-  in `standards/git-workflow.md` § "The default is a commit to main" does not decide it, because
+  <slug>` is the first tool call, before reading files. This is the one repo where the usual
+  size rule — small work commits straight to the main branch — does not decide it, because
   the cost of being on the wrong branch is not a lost commit but a machine running that branch —
   the coupling above. The check for a peer session costs a `ListAgents` call and gets skipped;
   the worktree costs seconds and never does. `worktree land` catches this checkout back up
@@ -309,9 +309,8 @@ hub (`~/docs`), not here.
 - Technical and factual, not promotional
 - Add new docs to `mkdocs.yml` navigation
 
-Leading with why, and pointing at a file rather than pasting its contents, are
-`standards/documentation.md` § "Lead with what and why, then link to details" and
-§ "Never duplicate content that has a canonical source".
+Lead with what and why, then link to the details. Never duplicate content that
+has a canonical source elsewhere.
 
 **Never write a list a command produces** (⚠️ MANDATORY):
 
@@ -336,9 +335,9 @@ imitate; the shared property is that nothing in them changes when code changes.
 
 **A page never explains a mechanism the module docstring explains**:
 
-The rule and its reasoning are `standards/documentation.md` § "A page never
-restates a module docstring", which holds in every repo that has docstrings.
-Two things here are local to this repo. The instrument is `task
+A page that walks through a mechanism the module docstring already explains is
+two sources for one subject, and they diverge. Two things here are local to this
+repo. The instrument is `task
 docs:duplication`, which ranks every page by six-word runs it shares with any
 docstring under `src/dotfiles/`. And the worked example is
 `docs/development/docs-audit.md` § "Third pass", where four pages scoring

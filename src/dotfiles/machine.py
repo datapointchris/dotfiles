@@ -223,8 +223,8 @@ class Requirement:
     and a check that only asks whether it is there reports converged on a machine
     where the file exists and the variable its contents read was never set — so
     the one mechanism built to make a missing value loud goes quiet at the moment
-    the value is present and useless. `standards/configuration.md` § "A declared
-    requirement states what has to be true, not only that the thing exists".
+    the value is present and useless. A declared requirement states what has to be
+    true, not only that the thing exists.
 
     On the declaration and never in the file, because such a file is machine-local
     by construction — it is declared precisely because the repo must not hold it,

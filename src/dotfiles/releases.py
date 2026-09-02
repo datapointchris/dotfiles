@@ -17,7 +17,7 @@ entry answers `UNKNOWN`, never `ok`. That is the same rule `Verdict.UNKNOWN` exi
 bash it replaces got wrong: an empty version string there falls through into "will
 reinstall", which is a guess wearing a measurement's clothes.
 
-Cache rather than state by `data.md`'s test — deleting the file costs a recompute
+Cache rather than state — deleting the file costs a recompute
 and nothing else — which is why it lives under `$XDG_CACHE_HOME` while the run
 records live under `$XDG_STATE_HOME`.
 """

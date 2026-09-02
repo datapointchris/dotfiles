@@ -9,9 +9,8 @@ rather than `apply` with a flag turned off:
 No method takes a `dry_run`. `diff` is pure and cannot write. `observe` reads.
 `perform` is the only writer and is unreachable from the read-only verbs, because
 neither calls it. There is no branch inside any resource asking whether it is
-allowed to write, so there is no branch that can be wrong — which is what
-`cli-design.md`'s "the read verb IS the write verb's dry run, by construction
-rather than by flag" is a statement about.
+allowed to write, so there is no branch that can be wrong. The read verb IS the
+write verb's dry run, by construction rather than by flag.
 
 `perform` re-verifies live rather than trusting what `diff` saw: `observe` ran
 before the report was printed and before anything upstream in the stage order
@@ -159,8 +158,7 @@ class Change:
     A field rather than a phrase inside `detail`: it separates two findings sharing
     a verdict, where a registry absent at the path the shells chose and one absent
     at the path the config file chose are different problems. Empty where an
-    address answers for itself — standards/configuration.md § "A resolved value
-    reports which layer set it".
+    address answers for itself, since a resolved value reports which layer set it.
     """
 
     advice: str = ''

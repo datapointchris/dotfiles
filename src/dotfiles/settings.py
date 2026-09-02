@@ -9,8 +9,8 @@ missing and advised restoring it with safekeep, about a file that was on disk
 the whole time. A machine's answer has to survive into a process with no shell,
 and this config file is where it does.
 
-Two rungs, highest first, per standards/data.md § "A shared file is named in
-config; only the tool's own default is compiled in": this tool's own
+Two rungs, highest first, because a shared file is named in config and only a
+tool's own default is ever compiled in: this tool's own
 `DOTFILES_`-prefixed variable, then the config key. One answers this invocation
 and the other answers this machine.
 
@@ -115,7 +115,7 @@ class Resolution:
     """Named because the value alone does not explain itself. A check reporting a
     registry missing at a path nobody recognises is a different problem from one
     reporting it missing at the path the machine declared, and only the rung
-    separates them — standards/data.md § "Report which layer supplied the value".
+    separates them, so the layer that supplied the value is reported with it.
     """
 
     @property
@@ -282,8 +282,8 @@ def describe(config: Config, env_file: Path) -> tuple[Setting, ...]:
     """Every setting this tool's config can answer, with the rung that answered it.
 
     Built by calling `resolve`, never by re-walking the rungs beside it, so the
-    attribution a reader is shown cannot drift from the value the tool will use —
-    standards/configuration.md § "A resolved value reports which layer set it".
+    attribution a reader is shown cannot drift from the value the tool will use. A
+    resolved value reports which layer set it.
 
     The value is expanded, because the question this answers is what the tool will
     do rather than what someone typed: `repos_registry = "~/dev/repos.json"` is a

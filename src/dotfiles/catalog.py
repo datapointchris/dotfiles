@@ -151,8 +151,8 @@ def _repo_segments(value: str) -> list[str]:
 def owner_of(value: str) -> str | None:
     """The GitHub owner carried by a `repo`, `github_repo` or `package` field.
 
-    Derived rather than tagged, per `data.md` § "Ownership is derived from data,
-    never from a tag" — it is what `--owner` filters on, and it caught an entry
+    Derived from the data rather than carried on a tag — it is what `--owner`
+    filters on, and it caught an entry
     the four hand-written tags had missed.
     """
     segments = _repo_segments(value)

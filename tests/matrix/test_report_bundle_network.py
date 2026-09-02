@@ -681,8 +681,8 @@ def test_a_reconcile_verb_files_a_record_report_can_read_back(verb: str, cli: Ca
 def test_pruning_a_machine_with_nothing_staged_converges(cli: Callable[..., Invocation]) -> None:
     """A sweep that found nothing past the limit is a result, not a voided run.
 
-    The distinction standards/cli-design.md § "A command the machine voids
-    refuses" draws is whether the machine *can* have the thing. Its worked failure
+    A command the machine voids refuses, and the distinction it draws is whether
+    the machine *can* have the thing. Its worked failure
     is `symlinks unlink` on a deploy-by-copy box, which can never have one. Any
     machine can have staged bundles, so "none were superseded" is an answer.
     """
@@ -1030,7 +1030,7 @@ def test_the_human_rendering_names_only_what_is_blocked(sandbox: Sandbox, cli: C
 
     Asserted per stream rather than on the two joined. The tally is the answer and
     belongs on stdout; the rows are the evidence behind it and belong on stderr,
-    per `standards/cli-design.md` § "stdout is data, stderr is everything else".
+    because stdout is data and stderr is everything else.
     An assertion over both at once cannot tell a row on the wrong stream from a row
     on the right one, which is how an empty stdout goes unnoticed.
     """

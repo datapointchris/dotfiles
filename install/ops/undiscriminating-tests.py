@@ -4,9 +4,9 @@
 # ///
 """List tests whose assertions a broken run would also satisfy.
 
-`standards/testing.md` § "A passing check is evidence only when failing would
-have looked different" is the rule. This is the sweep that applies it to one
-shape of it — the shape that can be found mechanically.
+A passing check is evidence only when failing would have looked different. This is
+the sweep that applies that to one shape of it — the shape that can be found
+mechanically.
 
 **The shape**: every assertion in the test is a *negative claim about an external
 effect* — a file absent, a stream empty, a directory unwritten — and nothing in
@@ -21,8 +21,8 @@ there" are the same observation. Read each hit and ask which one it is.
 
 **The repair is one line**, and it is almost always already in the file: capture
 the result and assert it succeeded, plus one positive fact the run should have
-left behind. `standards/testing.md` § "An assertion that nothing happened is
-satisfied by a crash" is the form — the exit code it expects and one positive
+left behind. An assertion that nothing happened is satisfied by a crash, so the
+form is the exit code it expects plus one positive
 fact — and it has no exemption clause, so there is nothing here to mark a hit
 exempt with. A hit is repaired or it is a finding.
 

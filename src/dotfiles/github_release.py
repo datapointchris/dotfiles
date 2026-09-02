@@ -292,8 +292,8 @@ def request(url: str, accept: str | None = None) -> bytes:
     CDN, and a client that carried the header through would leak the credential on
     the request path that runs most often.
 
-    Both of httpx2's sharp edges are stated here rather than inherited, per
-    `python.md`: redirects are *not* followed by default, and the default timeout
+    Both of httpx2's sharp edges are stated here rather than inherited: redirects
+    are *not* followed by default, and the default timeout
     is 5s — which a 200MB neovim tarball would meet as a failure.
     """
     response = httpx2.get(url, headers=_headers(url, accept=accept), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
@@ -423,8 +423,8 @@ def _version_from(payload: object, tag_prefix: str) -> str | None:
     every one. Filtering `draft` and not `prerelease` let `cli/v0.26.1-rc1` outrank
     `cli/v0.26.0`, because `_version_key` reads the suffix as a fourth component —
     so a machine would be told it was behind, and an install would put a release
-    candidate on it. `release.md` § "Pre-releases are excluded by default
-    everywhere" is the rule, and the two endpoints agreeing is the point.
+    candidate on it. Pre-releases are excluded by default everywhere, and the two
+    endpoints agreeing is the point.
     """
     if not tag_prefix:
         return payload.get('tag_name') if isinstance(payload, dict) else None

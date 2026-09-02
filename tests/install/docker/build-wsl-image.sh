@@ -3,9 +3,8 @@
 #
 # The rootfs is the real thing rather than an approximation of it — the same
 # 563-package filesystem WSL unpacks — which is why the WSL install is tested
-# against this and not against `ubuntu:26.04`. standards/testing.md § "An
-# end-to-end environment is the production image, not an approximation of it"
-# records what the approximation cost.
+# against this and not against `ubuntu:26.04`. An end-to-end environment is the
+# production image rather than an approximation of it.
 #
 #   bash build-wsl-image.sh [VERSION]     # default: whatever wsl-rootfs.sh pins
 set -euo pipefail

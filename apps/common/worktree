@@ -16,8 +16,8 @@
 A working tree is shared state. Every session standing in one shares its index,
 its untracked files, and the tree pre-commit assembles to run hooks against — so
 a second session commits the first one's staged work, and whole-repo hooks lint a
-tree that neither session ever had. See standards/git-workflow.md § "Concurrent
-sessions isolate with a worktree".
+tree that neither session ever had. A worktree of its own is what isolates a
+concurrent session from all three.
 
 The branch `new` creates is not a proposal. `land` pushes it straight onto main
 as a fast-forward, so a single commit stays a single commit and the resulting
@@ -449,8 +449,8 @@ def worktree_root() -> Path:
 
 
 def briefs_dir() -> Path:
-    """Where a spawned session's brief is kept, per standards/data.md § "Every path a
-    tool writes is an XDG base directory".
+    """Where a spawned session's brief is kept, which is an XDG base directory like
+    every other path this tool writes.
 
     State rather than cache or data: nothing recomputes a brief, no human authored it,
     and deleting one changes what a session was told rather than costing a rebuild. Not
@@ -1156,8 +1156,8 @@ def require_unoccupied(path: Path) -> None:
 def resolve_destination(cwd: Path, checkout: Path, slug: str | None) -> Destination:
     """Where the session will stand: a worktree of its own, or the checkout itself.
 
-    The absent slug is `cli-design.md` § "Scope is structural: the argument's presence
-    selects it, never a flag".
+    The absent slug is structural scope: the argument's presence selects it, never a
+    flag.
 
     An existing worktree is attached to rather than refused, and its branch is read back
     out of git rather than assumed to be the slug: a session standing there may have
@@ -1522,8 +1522,7 @@ def announce(spawned: Spawned, timeout: float) -> None:
 def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout: float, as_json: bool) -> int:
     """Start a Claude session in a pane of its own, and name it.
 
-    Everything that can refuse is settled before anything is created, per
-    `cli-design.md` § "Everything that can refuse runs before the first byte of data" —
+    Everything that can refuse is settled before anything is created —
     a missing tmux, an absent brief or an occupied worktree costs nothing to discover
     and would otherwise be found after a pane, a branch and a directory already exist.
     """
@@ -1849,8 +1848,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     spawn.add_argument('--below', action='store_true', help='split under the caller rather than beside it, and leave the layout alone')
     # No default here, so an absent flag is distinguishable from one spelling the default
-    # out. `cli-design.md` § "A sentinel never steals a value the caller can mean" —
-    # with the default as the sentinel, `--below --width 66%` reads as no --width at all.
+    # out. A sentinel never steals a value the caller can mean, and with the default
+    # as the sentinel, `--below --width 66%` reads as no --width at all.
     # argparse also runs a help string through %-formatting, so a literal percent in the
     # default has to arrive doubled or `--help` dies rather than the command.
     spawn.add_argument(
@@ -1919,7 +1918,7 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         case 'spawn':
             # `--width` is spawn's own flag and `--below` is what voids it: a below split
             # leaves the layout alone, so main-pane-width would parse and reach nothing.
-            # `cli-design.md` § "A flag the run cannot honour says so" makes that a usage
+            # A flag the run cannot honour says so, which makes that a usage
             # error rather than a silent no-op.
             if args.below and args.width is not None:
                 args.subparser.error('no --width with --below: a split below leaves the layout alone, so there is no main pane to size')

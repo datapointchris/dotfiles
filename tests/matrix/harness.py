@@ -175,8 +175,8 @@ def bundle_manifest(
     and the test that would catch it is the one using the other spelling.
 
     The keyword arguments are the shapes a bundle comes in, all of them reachable
-    from one fixture — standards/testing.md § "A fixture with one shape tests one
-    shape". A sparse bundle and a full one differ only in `bundle.json`, so a
+    from one fixture, because a fixture with one shape tests one
+    shape. A sparse bundle and a full one differ only in `bundle.json`, so a
     fixture that could write only the second would leave every sparse branch with
     no test able to reach it.
     """

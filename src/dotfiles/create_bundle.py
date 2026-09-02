@@ -500,8 +500,8 @@ class Bundle:
         bare name lets two providers naming one tool answer for each other.
 
         `versions.exactly` is the comparator a pinned entry is already checked
-        with, asked rather than reimplemented — standards/python.md § "Ask
-        whatever owns a fact; never work it out a second time". A reported string
+        with, asked rather than reimplemented: ask whatever owns a fact, and never
+        work it out a second time. A reported string
         that is not a version at all compares False, so the tool goes into the
         bundle, which is the direction a wrong answer has to fail in.
         """

@@ -144,8 +144,7 @@ class ResourceResult:
         """This resource's verdict and how much of it stands where. No items.
 
         `detail` is prose and will be reworded; the numbers are the answer. Read
-        this rather than parsing the sentence, per `standards/testing.md` § "Never
-        assert on rendered output".
+        this rather than parsing the sentence, and never assert on rendered output.
 
         The half `status.state` writes per resource on every scheduled check.
         `lens` is held back, since the document names the verb once at the top.
@@ -168,10 +167,9 @@ class ResourceResult:
         many, and every question anyone actually has is *which* — so a caller
         wanting the row it narrowed to had nothing to name it by and asserted on
         the total instead. That works until a second row moves, and then the
-        failure reads `assert 3 == 2` and names neither. `standards/cli-design.md`
-        § "A fact on screen is reachable through some machine door" is the
-        property: `render_result` prints all four of these lists, so all four are
-        reachable here.
+        failure reads `assert 3 == 2` and names neither. Every fact on screen is
+        reachable through some machine door: `render_result` prints all four of
+        these lists, so all four are reachable here.
 
         **All four unconditionally, because `--json` is not a rendering.** The
         screen shows `findings` always, and `others` and `examined` below a size

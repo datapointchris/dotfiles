@@ -1050,9 +1050,9 @@ custom_installers:
   #
   # An `install_url` on datapointchris/* names a release tag, never `main`. The
   # provider fetches that URL and executes it, which is the widest reach anything
-  # in this engine has — standards/dependencies.md § "Classify a dependency by
-  # what it can reach" puts repo code at "reputable registries and taps, pinned",
-  # and a branch ref was the one place this repo did not meet the second half.
+  # in this engine has. A dependency is classified by what it can reach, which
+  # puts repo code at "reputable registries and taps, pinned", and a branch ref
+  # was the one place this repo did not meet the second half.
   # On `main` a fresh machine executed whatever had been pushed that morning.
   #
   # What the tag pins is the INSTALLER, not the version installed. Each of these

@@ -8,7 +8,7 @@ linear, that a stale one rebases itself rather than failing, and that no refusal
 path ever discards commits the session has not landed anywhere else.
 
 The git history is asserted directly rather than through the tool's own output,
-per `standards/testing.md`: a tool reporting that it landed something is not
+because a tool reporting that it landed something is not
 evidence that origin has it.
 
 The reads have a second axis. `list`, `show` and `choose` answer for every repo on
@@ -1786,8 +1786,8 @@ def stub_silent_claude(bin_dir: Path) -> None:
 class TestSpawnScope:
     """A slug is the branch, so its presence is what decides whether a worktree is cut.
 
-    `cli-design.md` § "Scope is structural: the argument's presence selects it, never a
-    flag" is the rule, and the two forms are not variations on one another — a worker
+    Scope is structural — the argument's presence selects it, never a
+    flag — and the two forms are not variations on one another — a worker
     needs an index nobody else is in, and a reviewer needs to be able to read a repo from
     outside a worktree, because a session inside one is refused any `git -C` that leaves it.
     """
@@ -2216,8 +2216,8 @@ class TestSpawnRefusals:
         assert result.returncode == 1
 
     def test_width_with_below_is_a_usage_error(self, fleet, run, tmp_path):
-        """`cli-design.md` § "A flag the run cannot honour says so; it never parses into
-        silence" — a below split leaves the layout alone, so there is no main pane to size."""
+        """A flag the run cannot honour says so and never parses into
+        silence — a below split leaves the layout alone, so there is no main pane to size."""
         result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--below', '--width', '50')
 
         assert result.returncode == 2
@@ -2343,7 +2343,7 @@ class TestPaneState:
 class TestRefusalFaults:
     """A refusal is asserted by what it is, never by the sentence it prints.
 
-    `testing.md` § "Never assert on rendered output — assert the value it was built from".
+    Assert the value the output was built from, never the rendering.
     Matching the prose means rewording an error breaks the suite, and it means the suite
     passes when the right sentence is raised for the wrong reason. These call the refusing
     functions directly, which is the only way the member is reachable at all.

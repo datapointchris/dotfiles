@@ -825,7 +825,7 @@ def _write_agent(home: Path, agent: LaunchAgent) -> Path:
 def recording(home: Path, name: str, *, exit_code: int = 0) -> Path:
     """A binary on this test's PATH that writes its arguments down and exits.
 
-    `standards/testing.md` § "Assert invariants by spying on argv": the question is
+    Invariants are asserted by spying on argv: the question is
     which command the engine built, and the real `launchctl` would answer about the
     machine the suite happens to run on.
     """

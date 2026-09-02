@@ -178,8 +178,8 @@ def resolve_scope(argument: str | None) -> Scope:
     """Turn the scope argument into the set of panes this run may move.
 
     An absent argument means the window this command runs in. The whole server
-    is the other reading `cli-design.md` sanctions for an absent argument, and
-    it is the wrong one here: a server-wide regroup moves panes belonging to
+    is the other reading an absent argument can carry, and it is the wrong one
+    here: a server-wide regroup moves panes belonging to
     work nobody asked about, and the person watching one of those panes loses
     the layout they were working from. So the safe act is the default and the
     broad one is spelled out.

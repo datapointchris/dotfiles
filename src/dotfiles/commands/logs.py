@@ -8,7 +8,7 @@ debug, in whatever shape that module chose — and it stays behind saying what t
 command actually printed. `docs/architecture/observability.md` places both among
 the artefacts a run leaves.
 
-`show` rather than `read`, per `standards/cli-design.md` § "One word per job":
+`show` rather than `read`, because one word does one job:
 `read` earns its place only where something is left over for `show` to say, and
 everything knowable *about* a run's stream is already on the record beside it.
 Nothing installed spells this `read` either — `docker logs`, `kubectl logs`,

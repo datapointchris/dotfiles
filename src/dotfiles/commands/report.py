@@ -64,10 +64,9 @@ LimitOption = typer.Option(20, '--limit', '-n', min=0, help='Most recent N only'
 gives and which its own docstring argues for: the caller that computes a bound,
 `--limit "$(remaining)"`, is the one that reaches zero, and it means none of them.
 `bundle list` and `status list` read zero as "all" instead, so the meaning is
-consistent within this resource and not across all four — which is the scope
-`cli-design.md` § "A flag means one thing across every verb of a resource" sets,
-and the direction that keeps the decision `test_a_limit_of_zero_lists_nothing`
-pins. Written out at each site, the two verbs of this resource disagreed: zero
+consistent within this resource and not across all four. A flag means one thing
+across every verb of a resource, and that is the scope, with the direction kept by
+`test_a_limit_of_zero_lists_nothing`. Written out at each site, the two verbs of this resource disagreed: zero
 returned the whole shelf from one and nothing from the other.
 """
 
@@ -119,8 +118,8 @@ def _listed(path: Path) -> dict[str, str]:
     stream needs the second one.** Two machines legitimately share one manifest —
     macmini and mbp are both `macos-personal-workstation` — so a count grouped on
     `machine` reports three boxes where four wrote runs, and either Mac's history
-    stands in for the other's. `standards/data.md` § "A reader of a shared
-    directory selects by the key that made the writes unique" is the rule: the
+    stands in for the other's. A reader of a shared directory selects by the key
+    that made the writes unique: the
     filenames were keyed on the host precisely so the two could be told apart, and
     a discriminator that reaches only the filename is half a mechanism.
 
@@ -349,10 +348,9 @@ def upload(
     Bare it is a reconcile rather than a push: the shelf is listed, and only the
     records missing from it are sent. So it is idempotent, it is the whole answer
     to "keep these in sync", and it needs no second verb — running it twice sends
-    nothing the second time. `standards/cli-design.md` § "One closed verb
-    vocabulary across every resource" is why this is `upload` beside `status
-    upload` and `bundle upload` rather than a `sync` that means the same act under
-    a third name.
+    nothing the second time. One closed verb vocabulary runs across every resource,
+    which is why this is `upload` beside `status upload` and `bundle upload` rather
+    than a `sync` that means the same act under a third name.
 
     **Both files, always.** A run writes a `.json` of what it decided and a
     `.jsonl` of what it ran, and each answers half of a failure — the first its

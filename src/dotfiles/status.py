@@ -127,9 +127,9 @@ def document(
 
     **`scope` names which resources it covers, and a reader has to honour it.** One
     shape comes from three widths, so without it a consumer diffing this against a
-    declaration reads "not mentioned" as "this machine has nothing for it" —
-    `standards/cli-design.md` § "A narrowing default reads as a deletion to
-    anything that reconciles by sweep". Additive, so `VERSION` does not move.
+    declaration reads "not mentioned" as "this machine has nothing for it", which
+    is a narrowing default reading as a deletion to anything that reconciles by
+    sweep. Additive, so `VERSION` does not move.
 
     **One shape for one resource and for nine.** A bare row for a single result
     makes a consumer branch on a count it did not choose: `--source` reaching a
@@ -160,9 +160,9 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
 
     A caller wanting the items asks for them: `dotfiles check --json > wherever`
     is the composed-on-request half, and it is the same walk through a door that
-    knows somebody is holding the result. `standards/cli-design.md` § "A fact on
-    screen is reachable through some machine door" is satisfied by that door and
-    asks nothing of this file.
+    knows somebody is holding the result. Every fact on screen has to be reachable
+    through some machine door, and that door satisfies it without asking anything
+    of this file.
 
     `verb` is here and constant, because only `check` writes this file — kept so
     the file says what produced it rather than leaving a reader to infer it from

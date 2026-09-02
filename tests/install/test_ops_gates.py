@@ -3,8 +3,8 @@
 Both are gates now, so the exit code is the contract and a false positive costs
 whoever is committing. Each sweep is handed a corpus built here rather than the
 repo's own, because a gate measured against a tree that is green today says
-nothing about what it rejects — `standards/testing.md` § "A guard is proved by
-breaking what it names and watching it go red".
+nothing about what it rejects. A guard is proved by breaking what it names and
+watching it go red.
 
 `negative()` decides four kinds of claim and each one carries findings, so each
 gets a corpus that has to be reported. Deleting any single branch reddens a case
@@ -121,7 +121,7 @@ class TestEveryKindOfNegativeClaimIsReported:
 
 class TestWhatTheGateLetsThrough:
     def test_the_paired_exit_code_is_what_clears_it(self, tmp_path: Path) -> None:
-        """The repair `standards/testing.md` prescribes, and the whole exemption."""
+        """The prescribed repair, and the whole exemption."""
         ran = sweep(corpus(tmp_path, PAIRED))
 
         assert ran.returncode == 0

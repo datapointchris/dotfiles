@@ -15,7 +15,7 @@ from enum import IntEnum
 
 
 class ExitCode(IntEnum):
-    """What a caller branches on. See `cli-design.md` § Machine contract.
+    """What a caller branches on, and the machine contract this CLI promises.
 
     Three exists to stop `check` reporting "a checker crashed" as "no drift".
     Without it a caller reads a converged machine whose checker could not run as

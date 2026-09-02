@@ -206,8 +206,8 @@ def _prune(cache_dir: Path, keep: Path, limit: int = 3) -> None:
     checkout.** `cache_for` puts each repo root under its own subdirectory, so
     three maps are kept *each* rather than three between every worktree — and a
     worktree is the normal way to work here. Each wrong eviction costs the next
-    run a whole-suite pass under `--cov-context=test`. `data.md` § "A cache
-    holding several subjects is swept per subject".
+    run a whole-suite pass under `--cov-context=test`. A cache holding several
+    subjects is swept per subject.
     """
     found = sorted(cache_dir.glob('contexts-*.json'), key=lambda path: path.stat().st_mtime, reverse=True)
     for stale in [path for path in found if path != keep][limit:]:

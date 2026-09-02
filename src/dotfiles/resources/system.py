@@ -50,8 +50,8 @@ NAME = 'system'
 class Standing(enum.StrEnum):
     """Why the declaration does not account for a package a manager was asked for.
 
-    A closed vocabulary with every member named, per `python.md` § "Dispatch over a
-    closed vocabulary names every member, enum or not". This was a bool over the
+    A closed vocabulary with every member named, because dispatch over one names
+    every member, enum or not. This was a bool over the
     first two, and the third fell through to whichever of them the `else` held —
     telling a reader that their machine declines an entry which declares no package
     for their manager at all, when the machine subscribes perfectly well.
@@ -300,8 +300,7 @@ is the rule this obeys: removal is inferred nowhere, because an uninstall worked
 out from what a declaration does not name takes a package off a machine on the
 strength of a typo.
 
-**Every pointer is a command**, per `help.md` § "Point onward with a command,
-never with a location". `DECLINED` pointed at "the manifest" and named neither
+**Every pointer is a command**, never a location. `DECLINED` pointed at "the manifest" and named neither
 which manifest nor how to reach it; `dotfiles machines edit` is in the same CLI
 and opens the one this run resolved.
 """
@@ -394,8 +393,8 @@ def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
     name, the package name under a manager — `7zip` installs as `sevenzip` on brew
     — and the binary it installs. Matching any of them is enough to be explained.
 
-    The per-installer spelling is `evidence.entry_names`' to answer, per `python.md`
-    § "Ask whatever owns a fact; never work it out a second time". Re-deriving it
+    The per-installer spelling is `evidence.entry_names`' to answer: ask whatever
+    owns a fact, and never work it out a second time. Re-deriving it
     here also narrowed it to `SystemPackage`, so adding `cask` to `syspkg.REQUESTED`
     would have reported every declared cask as undeclared on its first run.
 

@@ -1,7 +1,7 @@
 """What one invocation did, kept so it can be asked about afterwards.
 
-Every run writes a record. It is state by data.md's test — it survives the run,
-nobody authored it, and deleting it changes what the tool can answer — so it
+Every run writes a record. It is state rather than cache or data — it survives the
+run, nobody authored it, and deleting it changes what the tool can answer — so it
 lands under `$XDG_STATE_HOME/dotfiles/runs/`, beside the debug event stream for
 the same run that `event_log_path` names.
 
@@ -73,7 +73,7 @@ class Identity:
     verb: str
     started: dt.datetime
     host: str = ''
-    """Which *box*, per data.md § "Machine identity is a bare lowercased hostname".
+    """Which *box*, as a bare lowercased hostname.
 
     Separate from `machine`, which names the manifest — two boxes legitimately
     share one, and macmini and mbp both declare `macos-personal-workstation`. The

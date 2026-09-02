@@ -68,8 +68,8 @@ def refresh_flag(sources: str = EVERY_SOURCE) -> Any:
     itself as a contradiction for typing neither flag.
 
     **The default is in parentheses, never brackets.** Rich parses `[...]` in help
-    text as a style tag and drops what it cannot resolve — `cli-design.md` § "Never
-    use `[dim]` in text you write". `show_default` cannot do it either, since the
+    text as a style tag and drops what it cannot resolve, so never write `[dim]`
+    into text of your own. `show_default` cannot do it either, since the
     declared value is the tri-state `None`.
 
     **`sources` is a parameter because one line on eight leaves is wrong on four.**

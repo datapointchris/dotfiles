@@ -286,7 +286,7 @@ def test_an_install_script_is_fetched_from_a_tag_rather_than_a_branch(name, url)
     """`providers/custom.py` downloads this URL and executes it, which is the
     widest reach anything in the install engine has.
 
-    standards/dependencies.md § "Classify a dependency by what it can reach" puts
+    A dependency is classified by what it can reach, which puts
     repo code at "reputable registries and taps, pinned". A `main` ref met the
     first half and not the second: two machines converging a day apart executed
     whatever had been pushed in between, and neither run could say what it ran.

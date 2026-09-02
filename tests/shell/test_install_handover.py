@@ -347,8 +347,8 @@ def test_a_truncated_archive_leaves_the_copy_already_staged_under_that_name(tmp_
     the suite ran thirteen cases and handed the script no archive that fails.
 
     `offline_bundle.stage` unpacks into a scratch directory and moves for the same
-    reason, which is what `code-quality.md` § "A duplicated implementation copies
-    the original's failure order, not only its result" is about.
+    reason: a duplicated implementation copies the original's failure order, not
+    only its result.
     """
     name = 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64'
     bootstrap_bundle(tmp_path, name)

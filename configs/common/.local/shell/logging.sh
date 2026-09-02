@@ -14,8 +14,7 @@
 # bad news", and progress a human reads is a diagnostic.
 #
 # The payoff is that any script can be put in a pipeline without a flag, a
-# redirect dance, or a mode. See standards/cli-design.md § "stdout is data,
-# stderr is everything else".
+# redirect dance, or a mode.
 #
 # A worked example is in docs/architecture/shell-libraries.md.
 # ================================================================

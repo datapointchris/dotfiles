@@ -271,8 +271,8 @@ def test_a_package_reaches_the_runtime_its_section_declares(sandbox: Sandbox, cl
     """The same widening `--source` makes, one row further down, through the same
     `needed_by` relation.
 
-    `cli-design.md` § "A narrowing flag reaches the whole run, or what it cannot
-    reach is left out of the run". The resolver already kept the runtime in the
+    A narrowing flag reaches the whole run, or what it cannot
+    reach is left out of the run. The resolver already kept the runtime in the
     *plan*, and the resource-scoped door widened its `Selection` for `--source`
     alone — so `--package task` rehearsed a run that would have installed a Go
     tool with no Go, which is the `cargo: No such file or directory` failure the

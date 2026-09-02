@@ -42,8 +42,7 @@ BREW_HOLDING_SYNCTHING = (
 recording every argv it was handed.
 
 Answering both lists would report one installed package as two, under whichever
-was asked first — `standards/testing.md` § "A fake enforces the service's
-constraints". The log is how a row asserts that a removal did *not* happen, which
+was asked first, and a fake enforces the service's constraints. The log is how a row asserts that a removal did *not* happen, which
 a refusing uninstall cannot say: an exit 1 looks the same whether the run reached
 it or stopped before it. `reports_version: false` covers the route to GitHub that
 the version check would otherwise take, for the reason `test_packages_selection`'s
@@ -97,7 +96,7 @@ def test_apply_refuses_it_rather_than_installing_beside_the_package(cli: Callabl
 
 def test_the_row_names_the_package_and_both_ways_out(cli: Callable[..., Invocation]) -> None:
     """A reader gets the removal to paste and the apply that does it for them.
-    `standards/help.md` § "An error is the help screen for the failure in hand"."""
+    An error is the help screen for the failure in hand."""
     advice = finding(cli('packages', 'check', '--json'))['advice']
 
     assert 'brew uninstall syncthing' in advice

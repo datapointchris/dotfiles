@@ -202,7 +202,7 @@ class TestListing:
         Every other case here reads the document, and the terminal render shipped
         a KeyError against `VERDICT_MARKS` that all of them passed straight over —
         the marks are keyed on a verdict word and `matched` is a change label.
-        `standards/testing.md` § "Never assert on rendered output" exempts nothing
+        Never asserting on rendered output exempts nothing
         from being *run*; what it forbids is asserting the wording, so this asserts
         the exit code and one fact the row must carry.
         """
@@ -297,7 +297,7 @@ class TestDownloading:
     def test_without_a_terminal_the_flag_that_would_have_answered_is_named(
         self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
     ) -> None:
-        """Never blocks: `standards/cli-design.md` § "Non-interactive by default"."""
+        """Never blocks: the CLI is non-interactive by default."""
         published(server, NEWEST)
 
         ran = cli('bundle', 'download', '--no-input', catch_exceptions=True)
@@ -335,7 +335,7 @@ class TestDownloading:
 class TestReportingTheRemoteSettings:
     """Every `[remote]` setting says which layer decided it.
 
-    standards/configuration.md § "A resolved value reports which layer set it" —
+    A resolved value reports which layer set it, because
     the failure is a plausible value rather than a wrong one. One of these governs
     deletion from a server and another decides whether a document leaves the
     machine unasked, and both defaulted silently beside register rows that all
@@ -512,8 +512,8 @@ class TestPruning:
 def test_an_uploaded_bundle_comes_back_byte_for_byte(sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
     """The round trip, which neither half asserts on its own.
 
-    `standards/testing.md` § "A green unit suite is not evidence the feature
-    works": a push and a pull that each pass against their own fixture can still
+    A green unit suite is not evidence the feature
+    works: a push and a pull that each pass against their own fixture can still
     disagree about the name, the shelf or the record between them.
     """
     built = archive(sandbox.root, NEWEST, files={'binaries/fd': 'the payload'})

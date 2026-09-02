@@ -264,8 +264,7 @@ class Unreadable(NamedTuple):
 
     `errno` is the field a caller branches on; `strerror` is libc's sentence for
     it and varies by platform and locale, so a test comparing that string is
-    asserting on rendered output — `standards/testing.md` § "Never assert on
-    rendered output".
+    asserting on rendered output, which no test may do.
     """
 
     path: Path
@@ -293,8 +292,8 @@ class Scan:
 def _find_symlinks(base_dir: Path) -> Scan:
     """Every symlink under base_dir, depth-limited and exclusion-aware.
 
-    `os.scandir` departs from `python.md` § "Use `pathlib.Path` for every
-    filesystem operation" with a number behind it: over one home directory,
+    `os.scandir` departs from using `pathlib.Path` for every filesystem
+    operation, with a number behind it: over one home directory,
     `iterdir` 0.59s, `Path.walk` 0.54s, this 0.13s. Both alternatives discard the
     entry type the directory read already carried, so every is-it-a-link question
     costs another syscall.

@@ -74,7 +74,7 @@ def describe() -> tuple[settings.Setting, ...]:
 
 def test_nothing_names_it_and_nothing_is_invented(config_home: Path) -> None:
     """No third rung. A default naming a path outside this tool's own XDG dirs is
-    what standards/data.md forbids, and one inside them would be dotfiles claiming
+    not allowed at all, and one inside them would be dotfiles claiming
     to own the fleet's registry — so the honest answer to silence is silence."""
     assert resolve() is None
 

@@ -9,8 +9,8 @@ transport reroutes somewhere no `list` will ever find it.
 
 One module rather than a copy per suite, because a second fake drifts from the
 first and the test that would catch the drift is the one using the other copy.
-That is the same failure `standards/testing.md` § "A fake enforces the service's
-constraints" describes about replaying responses.
+That is the same failure a fake enforcing the service's constraints exists to
+prevent when responses are replayed.
 
 A plain module and not a `conftest.py`: two conftests are both the module
 `conftest` to an importer, so `from conftest import ...` resolves to whichever
