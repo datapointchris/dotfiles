@@ -29,6 +29,7 @@ import pytest
 from dotfiles import diagnose
 from dotfiles import effects
 from dotfiles import registry
+from dotfiles.context import MachineContext
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.plan import DesiredItem
@@ -234,7 +235,7 @@ class Recording(registry.Provider):
 
     seen: list[str] = dc.field(default_factory=list)
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         self.seen.append(item.name)
         return Outcome(change, OutcomeStatus.DONE, '')
 
