@@ -105,7 +105,7 @@ configure_zsh: true
 # how each is asked, and never repairs one — a login is interactive and personal.
 #
 # The personal data CLIs are absent because this box does not install them. bbkt
-# and jira are the work box's own, and neither is on any other machine.
+# and jira are this machine's own, and neither is on any other.
 #
 # Not atuin. Its `trust/nonfleet` config turns `auto_sync` off, so no server holds
 # an account for this box and there is no login to be missing — the binary still

@@ -8,8 +8,8 @@ machine: windows-work-workstation
 #
 # nonfleet, because this is the Windows side of the same physical box as
 # wsl-work-workstation. The two halves boot from one disk and sit on one
-# employer network; a trust axis that answered differently either side of the
-# WSL boundary would be describing the boundary rather than the network.
+# network; a trust axis that answered differently either side of the WSL
+# boundary would be describing the boundary rather than the network.
 #
 # host: native rather than wsl. WSL is what runs inside this machine, not what
 # this machine runs inside — `coordinates.incoherent` refuses the other spelling
@@ -25,7 +25,7 @@ coordinates:
 # Group policy on this box refuses to create a symlink, so the three deployed
 # trees arrive as copies. Declared rather than derived from `os_family: windows`,
 # because Windows 10 and later can symlink perfectly well with Developer Mode on
-# — what refuses is one employer's administration of one machine, and the next
+# — what refuses is one administrator's policy on one machine, and the next
 # Windows machine would be told the wrong thing.
 #
 # What it costs is in `resources/symlinks.py`: a copy carries no provenance, so
