@@ -123,11 +123,11 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
 def _layer(found: transport.Remote, key: str) -> str:
     """Which layer decided one setting, the way the registers above say it.
 
-    A resolved value reports which layer set it, and the failure that prevents is
-    a plausible value rather than a wrong one. These
-    govern deletion from a server and whether a document leaves the machine
-    unasked, and unattributed beside rows that all carry `from {source}` they read
-    as declared on a machine that declared nothing.
+    A resolved value reports which layer set it, and the failure this prevents is a
+    plausible value rather than a wrong one. These govern deletion from a server and
+    whether a document leaves the machine unasked, and unattributed beside rows that
+    all carry `from {source}` they read as declared on a machine that declared
+    nothing.
     """
     return f'from {transport.TABLE}.{key}' if key in found.from_table else 'this tool’s default'
 

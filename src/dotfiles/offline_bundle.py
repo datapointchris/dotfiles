@@ -274,10 +274,10 @@ def describe(extracted: Path | None = None) -> Staging:
 SIDECAR_SUFFIX = '.json'
 """What a bundle's record on the remote is called: the archive's name plus this.
 
-Derived from the archive rather than kept in an index file. An index is one
-object several machines write, and having every machine write its own file is what
-makes that collision unreachable —
-and it goes stale against the directory listing that is the actual truth.
+Derived from the archive rather than kept in an index file. An index is one object
+several machines write, and having every machine write its own file is what makes
+that collision unreachable — and it goes stale against the directory listing that
+is the actual truth.
 """
 
 

@@ -62,11 +62,11 @@ def _named(items: list[planning.DesiredItem], packages: frozenset[str]) -> list[
     """The entries `--package` named, plus whatever those entries need to install.
 
     The prerequisite is kept rather than dropped, because a narrowing flag reaches
-    the whole run or what it cannot reach is left out of
-    the run: `--package task` on a machine with no Go plans the Go runtime too,
-    because a narrowing that left it out would ask for something that cannot
-    install. `registry.required_by` is where that relation is declared, so a
-    section growing a prerequisite gets one here without this function changing.
+    the whole run or what it cannot reach is left out of the run: `--package task`
+    on a machine with no Go plans the Go runtime too, because a narrowing that left
+    it out would ask for something that cannot install. `registry.required_by` is
+    where that relation is declared, so a section growing a prerequisite gets one
+    here without this function changing.
 
     After the loop rather than inside it, unlike `owner`. Three providers derive
     their rows from what earlier ones planned — the manager upgrades, the plugin

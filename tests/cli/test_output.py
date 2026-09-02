@@ -453,8 +453,8 @@ def narrated(monkeypatch: pytest.MonkeyPatch, *, quiet: bool) -> str:
 
 
 def test_quiet_removes_the_progress_line(monkeypatch: pytest.MonkeyPatch) -> None:
-    """cli-design.md § "Quieten the evidence, never the answer" names the progress
-    headings as exactly what `-q` removes. Ungated, `dotfiles apply -q` was louder
+    """`-q` quietens the evidence and never the answer, and the progress headings
+    are evidence. Ungated, `dotfiles apply -q` was louder
     after these lines were added than before them."""
     assert narrated(monkeypatch, quiet=True) == ''
 

@@ -85,9 +85,9 @@ def _asking(interactive: bool | None) -> bool:
     """Whether there is somebody to put a question to.
 
     Injected rather than detected, and never monkeypatched. A test patching the
-    stream has it reinstalled
-    by pytest's capture between fixture setup and the test body, so the gate reads
-    the real terminal and every case passes for the wrong reason.
+    stream has it reinstalled by pytest's capture between fixture setup and the
+    test body, so the gate reads the real terminal and every case passes for the
+    wrong reason.
 
     `None` keeps the detection as the default, so no call site carries an argument
     it has no opinion about.

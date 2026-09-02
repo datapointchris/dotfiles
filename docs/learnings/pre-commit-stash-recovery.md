@@ -32,7 +32,7 @@ git checkout-index -a -f                 # restore the working tree from the ind
 `git diff-index`. What it stashes is whatever the working tree holds that the index does not.
 Staged files match that tree and are never stashed. Unstaged edits are stashed whether or not the
 commit named a pathspec. Commit by pathspec because the index is shared with every session in
-the checkout, not for this reason.
+the checkout — not because of the stash.
 
 ## Key Learnings
 

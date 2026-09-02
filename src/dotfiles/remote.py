@@ -14,9 +14,9 @@ rather than a program: a fixed argv with one substituted placeholder carries no
 conditional, no reference between keys and no evaluation order.
 
 `root` has no compiled-in default and cannot have one. A shared file is named in
-config, and only a tool's own default is ever compiled in. A
-machine that names nothing has no remote, which is an ordinary state for every box
-that never exchanges a bundle.
+config, and only a tool's own default is ever compiled in. A machine that names
+nothing has no remote, which is an ordinary state for every box that never
+exchanges a bundle.
 """
 
 from __future__ import annotations
@@ -171,9 +171,10 @@ class Remote:
 
     Carried rather than inferred from the values, because a machine that declares
     the same value as the default is indistinguishable by comparison. A resolved
-    value reports which layer set it, because *the failure this prevents is not a
-    wrong value, it is a plausible one.* One set rather than a boolean per key, so a setting added
-    later reports its layer without anyone remembering to add a second field.
+    value reports which layer set it, because the failure this prevents is not a
+    wrong value but a plausible one. One set rather than a boolean per key, so a
+    setting added later reports its layer without anyone remembering to add a
+    second field.
     """
 
     fetch_bundle_when_none_is_staged: bool = False
@@ -688,9 +689,9 @@ def measure(found: Configured) -> tuple[Reach, ...]:
 
     Presence of the program is measured *and* an actual listing is attempted,
     because presence is not readiness. A declared requirement states what has to
-    be true, not only that the thing exists. A
-    machine with the binary installed and no credential for it is exactly the state
-    that otherwise reports converged and fails at the first upload.
+    be true, not only that the thing exists. A machine with the binary installed
+    and no credential for it is exactly the state that otherwise reports converged
+    and fails at the first upload.
     """
     if found.problem:
         return tuple(Reach('config', False, line) for line in found.problem.splitlines())

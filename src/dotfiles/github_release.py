@@ -293,8 +293,8 @@ def request(url: str, accept: str | None = None) -> bytes:
     the request path that runs most often.
 
     Both of httpx2's sharp edges are stated here rather than inherited: redirects
-    are *not* followed by default, and the default timeout
-    is 5s — which a 200MB neovim tarball would meet as a failure.
+    are *not* followed by default, and the default timeout is 5s — which a 200MB
+    neovim tarball would meet as a failure.
     """
     response = httpx2.get(url, headers=_headers(url, accept=accept), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()

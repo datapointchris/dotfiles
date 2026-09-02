@@ -8,8 +8,8 @@ linear, that a stale one rebases itself rather than failing, and that no refusal
 path ever discards commits the session has not landed anywhere else.
 
 The git history is asserted directly rather than through the tool's own output,
-because a tool reporting that it landed something is not
-evidence that origin has it.
+because a tool reporting that it landed something is not evidence that origin
+has it.
 
 The reads have a second axis. `list`, `show` and `choose` answer for every repo on
 the machine, so the fixture builds two — a single-repo fixture cannot tell "every
@@ -1786,10 +1786,10 @@ def stub_silent_claude(bin_dir: Path) -> None:
 class TestSpawnScope:
     """A slug is the branch, so its presence is what decides whether a worktree is cut.
 
-    Scope is structural — the argument's presence selects it, never a
-    flag — and the two forms are not variations on one another — a worker
-    needs an index nobody else is in, and a reviewer needs to be able to read a repo from
-    outside a worktree, because a session inside one is refused any `git -C` that leaves it.
+    Scope is structural: the argument's presence selects it, never a flag. The two
+    forms are not variations on one another — a worker needs an index nobody else is
+    in, and a reviewer needs to be able to read a repo from outside a worktree,
+    because a session inside one is refused any `git -C` that leaves it.
     """
 
     def test_a_slug_cuts_a_worktree_and_stands_the_session_in_it(self, fleet, spawn, spawn_state, tmp_path):
@@ -1860,7 +1860,7 @@ class TestSpawnBrief:
         assert briefs_in(tmp_path)[0].read_text() == 'the whole brief\n'
 
     def test_the_copy_lands_under_the_state_directory(self, fleet, spawn, tmp_path):
-        """standards/data.md § "Every path a tool writes is an XDG base directory"."""
+        """Every path this tool writes is an XDG base directory, and a brief is state."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
         kept = briefs_in(tmp_path)

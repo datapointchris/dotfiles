@@ -789,9 +789,8 @@ def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Pat
     itself.
 
     One command per stray and nothing beside it, because an error is the help
-    screen for the failure in hand. Changing the declaration
-    is a repo edit rather than a repair of this machine, so it is not an
-    alternative offered here.
+    screen for the failure in hand. Changing the declaration is a repo edit rather
+    than a repair of this machine, so it is not an alternative offered here.
 
     Every path is asked about separately. Two strays for one tool are two
     different packages more often than not, and one removal command covering both

@@ -1,9 +1,7 @@
 # Claude Code - Dotfiles Development Context
 
-Universal rules live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
-`standards/`. Neither is restated here. `fleet standards applies dotfiles` is which ones reach
-this repo — an enumeration in this line would drift, which is exactly why a rule
-lives in one place and is cited from the others.
+General conventions this repo follows are maintained outside it, and none of them is
+restated here.
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
@@ -335,13 +333,12 @@ imitate; the shared property is that nothing in them changes when code changes.
 
 **A page never explains a mechanism the module docstring explains**:
 
-A page that walks through a mechanism the module docstring already explains is
-two sources for one subject, and they diverge. Two things here are local to this
-repo. The instrument is `task
+A page that walks through a mechanism the module docstring already explains is two
+sources for one subject, and they diverge. The instrument for finding one is `task
 docs:duplication`, which ranks every page by six-word runs it shares with any
-docstring under `src/dotfiles/`. And the worked example is
-`docs/development/docs-audit.md` § "Third pass", where four pages scoring
-between 529 and 613 came down to single digits.
+docstring under `src/dotfiles/`. The worked example is
+`docs/development/docs-audit.md` § "Third pass", where four pages scoring between
+529 and 613 came down to single digits.
 
 `refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
 markdown as well as shell, so a doc citing a moved file now fails the commit.

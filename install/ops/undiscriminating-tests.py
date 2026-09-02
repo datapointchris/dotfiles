@@ -22,9 +22,9 @@ there" are the same observation. Read each hit and ask which one it is.
 **The repair is one line**, and it is almost always already in the file: capture
 the result and assert it succeeded, plus one positive fact the run should have
 left behind. An assertion that nothing happened is satisfied by a crash, so the
-form is the exit code it expects plus one positive
-fact — and it has no exemption clause, so there is nothing here to mark a hit
-exempt with. A hit is repaired or it is a finding.
+form is the exit code it expects plus one positive fact — and it has no exemption
+clause, so there is nothing here to mark a hit exempt with. A hit is repaired or
+it is a finding.
 
 Exits non-zero above `--max`, which defaults to zero, so it gates.
 

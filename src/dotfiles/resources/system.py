@@ -51,10 +51,10 @@ class Standing(enum.StrEnum):
     """Why the declaration does not account for a package a manager was asked for.
 
     A closed vocabulary with every member named, because dispatch over one names
-    every member, enum or not. This was a bool over the
-    first two, and the third fell through to whichever of them the `else` held —
-    telling a reader that their machine declines an entry which declares no package
-    for their manager at all, when the machine subscribes perfectly well.
+    every member, enum or not. This was a bool over the first two, and the third
+    fell through to whichever of them the `else` held — telling a reader that their
+    machine declines an entry which declares no package for their manager at all,
+    when the machine subscribes perfectly well.
     """
 
     UNKNOWN = 'unknown'
@@ -394,9 +394,9 @@ def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
     — and the binary it installs. Matching any of them is enough to be explained.
 
     The per-installer spelling is `evidence.entry_names`' to answer: ask whatever
-    owns a fact, and never work it out a second time. Re-deriving it
-    here also narrowed it to `SystemPackage`, so adding `cask` to `syspkg.REQUESTED`
-    would have reported every declared cask as undeclared on its first run.
+    owns a fact, and never work it out a second time. Re-deriving it here also
+    narrowed it to `SystemPackage`, so adding `cask` to `syspkg.REQUESTED` would
+    have reported every declared cask as undeclared on its first run.
 
     Over the whole plan rather than this resource's items, because an entry
     installing through another mechanism still explains the package. `ntfy` is a

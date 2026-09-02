@@ -121,7 +121,7 @@ class TestEveryKindOfNegativeClaimIsReported:
 
 class TestWhatTheGateLetsThrough:
     def test_the_paired_exit_code_is_what_clears_it(self, tmp_path: Path) -> None:
-        """The prescribed repair, and the whole exemption."""
+        """The repair — the exit code it expects plus one positive fact — and the whole exemption."""
         ran = sweep(corpus(tmp_path, PAIRED))
 
         assert ran.returncode == 0

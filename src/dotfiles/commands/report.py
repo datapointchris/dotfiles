@@ -119,9 +119,9 @@ def _listed(path: Path) -> dict[str, str]:
     macmini and mbp are both `macos-personal-workstation` — so a count grouped on
     `machine` reports three boxes where four wrote runs, and either Mac's history
     stands in for the other's. A reader of a shared directory selects by the key
-    that made the writes unique: the
-    filenames were keyed on the host precisely so the two could be told apart, and
-    a discriminator that reaches only the filename is half a mechanism.
+    that made the writes unique: the filenames were keyed on the host precisely so
+    the two could be told apart, and a discriminator that reaches only the filename
+    is half a mechanism.
 
     `RunRecord.box` rather than `RunRecord.host`, because a record written before
     schema 3 carries no host at all and a bare field would pool the whole of that

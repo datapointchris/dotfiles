@@ -103,8 +103,8 @@ def _survey(
 
     **`refresh` has no default, so every door states its own answer.** Both answers
     are live, and failing fast beats defaulting: a parameter defaulted to what its
-    first callers wanted has every site
-    written afterwards silently answering for them. That is not hypothetical here —
+    first callers wanted has every site written afterwards silently answering for
+    them. That is not hypothetical here —
     `system` and `plugins` each spent a release answering `False` while the
     composite verbs measured, and a person found both. The parser is the one check
     that reaches a door nobody has written yet.

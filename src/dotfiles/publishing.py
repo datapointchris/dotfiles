@@ -130,8 +130,8 @@ def discriminator(trust: axes.NetworkTrust) -> str:
     """What tells this box apart from the others sharing its manifest.
 
     Two machines legitimately share one, so a filename keyed on the manifest alone
-    has one overwrite the other. In a shared directory, every machine writes its
-    own file.
+    has one overwrite the other. Every machine writing its own file is what makes
+    that collision unreachable, because the replication has no merge step.
 
     **The trust coordinate decides which answer**, because the constraint does. On
     the fleet the hostname is not a secret and is what a reader wants. Anything
@@ -310,8 +310,8 @@ def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
     halves. The account name is on the list everywhere.
 
     Separate from `redacted` so the decision is pure and the reads sit at the edge,
-    which structures the effects as impure -> pure -> impure. Read
-    inside the gate, it can only be tested against the machine the suite runs on.
+    which structures the effects as impure -> pure -> impure. Read inside the
+    gate, it can only be tested against the machine the suite runs on.
     """
     named = {'the account this runs as': getpass.getuser()}
     if trust is axes.NetworkTrust.FLEET:
