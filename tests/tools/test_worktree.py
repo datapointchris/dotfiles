@@ -2214,9 +2214,9 @@ class TestHelp:
         # argparse exposes its subcommands only through the action holding them, and the
         # action list is private. A hand-written list is the alternative, and that is the
         # thing this test exists to not depend on.
-        holders = [action for action in cli.build_parser()._actions if isinstance(getattr(action, 'choices', None), dict)]
+        holders = [choices for action in cli.build_parser()._actions if isinstance(choices := action.choices, dict)]
         assert len(holders) == 1, 'expected one subcommand group'
-        return sorted(holders[0].choices)
+        return sorted(holders[0])
 
     def test_every_subcommand_renders_its_help(self, fleet, run):
         for command in self.commands():
