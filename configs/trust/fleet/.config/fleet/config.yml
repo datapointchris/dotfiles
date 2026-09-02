@@ -16,9 +16,9 @@
 # all seven here said the same thing seven times — after which the directory
 # could only be recovered by inferring it back out of the paths.
 #
-# The clone, not the ~/dev symlink that resolves into it. ~/dev is a Syncthing
-# folder, so the link is a second hop a rebuilt machine has not restored yet,
-# while the clone is what `fleet machine library clone` puts there.
+# The clone, not a symlink that resolves into it. The symlink sits in a directory
+# replicated between machines, so it is a second hop a rebuilt machine has not
+# restored yet, while the clone is what `fleet machine library clone` puts there.
 library_dir: ~/.local/share/terminal-library-fleet
 
 # Where that clone comes from, for a machine that has none of it.

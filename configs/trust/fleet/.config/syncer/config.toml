@@ -10,9 +10,9 @@
 # compiled into the tool, so a machine that keeps it elsewhere changes this file
 # and nothing else.
 #
-# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
-# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
-# yet, while the clone is what `dotfiles apply` puts there.
+# The clone rather than a symlink that resolves into it: the symlink sits in a
+# directory replicated between machines, so it is a second hop a rebuilt machine
+# has not restored yet, while the clone is what `dotfiles apply` puts there.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
 default_policy = "standard"
