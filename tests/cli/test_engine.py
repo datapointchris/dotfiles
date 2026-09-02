@@ -342,24 +342,6 @@ def test_skipping_a_whole_resource_drops_it_from_the_walk() -> None:
     assert 'plugins' not in engine.Selection.excluding(['plugins']).resources
 
 
-def test_a_stage_selects_the_providers_that_run_at_it() -> None:
-    """The system-configuration providers are not a list anyone should keep in
-    step by hand."""
-    selection = engine.Selection.at(Stage.SYSTEM_CONFIG)
-
-    assert selection.resources == ('system',)
-    assert selection.providers == {'group', 'systemd', 'file', 'login-shell', 'macos-default', 'step'}
-
-
-def test_the_system_config_stage_leaves_the_package_half_out_of_the_plan(session: Session) -> None:
-    """The debt A2 recorded here. That phase registry observed the whole `system` resource
-    and filtered afterwards, spending a package-inventory query on rows it was
-    about to discard."""
-    narrowed = engine.Selection.at(Stage.SYSTEM_CONFIG).plan_for('system', session.plan)
-
-    assert all(item.stage is Stage.SYSTEM_CONFIG for item in narrowed.for_resource('system'))
-
-
 def test_a_ceiling_keeps_everything_up_to_and_including_the_stage(session: Session) -> None:
     """`Stage` is an IntEnum because execution order is a property of the work, so
     "everything through this" is a projection of an order that already exists
@@ -371,9 +353,10 @@ def test_a_ceiling_keeps_everything_up_to_and_including_the_stage(session: Sessi
 
 
 def test_a_ceiling_keeps_the_stages_below_it_rather_than_only_its_own(session: Session) -> None:
-    """The difference from `Selection.at`, which is exactly-these-stages. A base a
-    test installs over is everything *up to* a point, and saying that with `at`
-    means enumerating every stage below — the list nothing should keep by hand."""
+    """A ceiling is inclusive-downward rather than exactly-this-stage. A base a test
+    installs over is everything *up to* a point, and an exactly-these-stages
+    narrowing says that only by enumerating every stage below — the list nothing
+    should keep by hand."""
     ceiling = engine.Selection.everything().capped_at(Stage.SYMLINKS)
 
     stages = {item.stage for item in ceiling.plan_for('system', session.plan).for_resource('system')}
