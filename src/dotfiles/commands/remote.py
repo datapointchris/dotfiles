@@ -29,7 +29,7 @@ from dotfiles.output import hint
 from dotfiles.output import render_row
 from dotfiles.output import render_verdict
 from dotfiles.output import section_line
-from dotfiles.reconcile import ResourceVerdict
+from dotfiles.results import ResourceVerdict
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artefact with the remote')

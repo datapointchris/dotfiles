@@ -26,9 +26,9 @@ from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
 if TYPE_CHECKING:
-    from dotfiles.reconcile import ResourceResult
     from dotfiles.resources import Change
     from dotfiles.resources import Examined
+    from dotfiles.results import ResourceResult
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
@@ -208,7 +208,7 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     answer where a redirect will not find it.
 
     Keyed on the verdict's string value rather than the enum, so this module does
-    not import `reconcile` at runtime.
+    not import `results` at runtime.
     """
     colour = VERDICT_COLOURS[str(result.verdict)]
     mark = VERDICT_MARKS[str(result.verdict)]

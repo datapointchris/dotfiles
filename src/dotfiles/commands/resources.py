@@ -43,18 +43,20 @@ from dotfiles.output import hint
 from dotfiles.output import render_result
 from dotfiles.output import warn
 from dotfiles.resources import symlinks
+from dotfiles.results import Lens
+from dotfiles.results import ResourceResult
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
 def _report(
-    results: Sequence[reconcile.ResourceResult],
+    results: Sequence[ResourceResult],
     as_json: bool,
     *,
     machine: str,
     when: dt.datetime,
-    lens: reconcile.Lens,
+    lens: Lens,
 ) -> None:
     """Print every resource the walk covered, and exit with the code all of them earn.
 
@@ -83,7 +85,7 @@ def _report(
 def _survey(
     address: str,
     machine: str | None,
-    lens: reconcile.Lens,
+    lens: Lens,
     as_json: bool,
     refresh: bool,
     *,
@@ -367,7 +369,7 @@ def packages_plan(
     _survey(
         'packages',
         machine,
-        reconcile.Lens.PLAN,
+        Lens.PLAN,
         as_json,
         source=source,
         owner=owner,
@@ -403,7 +405,7 @@ def packages_check(
     _survey(
         'packages',
         machine,
-        reconcile.Lens.CHECK,
+        Lens.CHECK,
         as_json,
         offline=offline,
         refresh=currency(refresh, offline=offline),
@@ -508,7 +510,7 @@ def toolchains_plan(
 ) -> None:
     """Show which language runtimes `apply` would install or raise."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.PLAN, as_json, refresh=False, offline=offline)
+    _survey('toolchains', machine, Lens.PLAN, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -521,7 +523,7 @@ def toolchains_check(
 ) -> None:
     """Report toolchain drift."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, reconcile.Lens.CHECK, as_json, refresh=False, offline=offline)
+    _survey('toolchains', machine, Lens.CHECK, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command('apply')
@@ -577,7 +579,7 @@ def plugins_plan(
     what makes measuring here cost about as much as measuring one.
     """
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    _survey('plugins', machine, Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('check')
@@ -591,7 +593,7 @@ def plugins_check(
 ) -> None:
     """Report plugin drift, including clones behind their remote."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    _survey('plugins', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('apply')
@@ -624,7 +626,7 @@ def symlinks_plan(
 ) -> None:
     """Show which declared links `apply` would deploy or prune."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.PLAN, as_json, refresh=False)
+    _survey('symlinks', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @symlinks_app.command('check')
@@ -633,7 +635,7 @@ def symlinks_check(
 ) -> None:
     """Report broken or missing symlinks without touching any."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, reconcile.Lens.CHECK, as_json, refresh=False)
+    _survey('symlinks', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @symlinks_app.command('apply')
@@ -708,14 +710,14 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.PLAN, as_json, refresh=False)
+    _survey('env', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
     verbosity(verbose, quiet)
-    _survey('env', machine, reconcile.Lens.CHECK, as_json, refresh=False)
+    _survey('env', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @env_app.command('apply')
@@ -762,7 +764,7 @@ def system_plan(
     _survey(
         'system',
         machine,
-        reconcile.Lens.PLAN,
+        Lens.PLAN,
         as_json,
         source=source,
         packages=frozenset(package or ()),
@@ -782,7 +784,7 @@ def system_check(
 ) -> None:
     """Report system configuration drift, and which managers are behind."""
     verbosity(verbose, quiet)
-    _survey('system', machine, reconcile.Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    _survey('system', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @system_app.command('apply')
@@ -816,7 +818,7 @@ def identity_plan(
 ) -> None:
     """Show whether `apply` would set this machine’s git identity."""
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.PLAN, as_json, refresh=False)
+    _survey('identity', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @identity_app.command('check')
@@ -830,7 +832,7 @@ def identity_check(
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
     verbosity(verbose, quiet)
-    _survey('identity', machine, reconcile.Lens.CHECK, as_json, refresh=False)
+    _survey('identity', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @identity_app.command('show')
@@ -871,7 +873,7 @@ def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
     every finding is `BY_HAND`, so there is nothing for the write half to keep.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.PLAN, as_json, refresh=False)
+    _survey('auth', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @auth_app.command('check')
@@ -884,7 +886,7 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     runs unattended on a timer.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, reconcile.Lens.CHECK, as_json, refresh=False)
+    _survey('auth', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @auth_app.command('show')
@@ -928,7 +930,7 @@ def credentials_plan(
     `test_conformance.py` exists to catch.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.PLAN, as_json, refresh=False)
+    _survey('credentials', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @credentials_app.command('check')
@@ -942,7 +944,7 @@ def credentials_check(
     where that lives.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, reconcile.Lens.CHECK, as_json, refresh=False)
+    _survey('credentials', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @credentials_app.command('show')

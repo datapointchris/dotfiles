@@ -20,12 +20,13 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
 from dotfiles.plan import Stage
-from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.results import Lens
+from dotfiles.results import ResourceResult
+from dotfiles.results import ResourceVerdict
 from dotfiles.runs import Timing
 from dotfiles.vocabulary import ExitCode
 
@@ -67,7 +68,7 @@ def test_every_resource_answers_for_itself() -> None:
     """There was a fourth verdict, `PENDING`, for a resource whose checker had not
     been written. Every one of them answers now, so nothing can report "no evidence either
     way" — and a gate built on `check` is no longer partly blind."""
-    assert set(reconcile.ResourceVerdict) == {ResourceVerdict.CONVERGED, ResourceVerdict.DRIFT, ResourceVerdict.ISSUE}
+    assert set(ResourceVerdict) == {ResourceVerdict.CONVERGED, ResourceVerdict.DRIFT, ResourceVerdict.ISSUE}
     assert set(engine.resources()) == set(vocabulary.RESOURCES)
 
 
@@ -83,7 +84,7 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
     monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(ResourceVerdict.CONVERGED, 'machines'))
 
     measured = summaries(None, [name for name in vocabulary.RESOURCES if name not in {'packages', 'system'}])
-    addresses = [item.address for item in reconcile.fold_walk(measured, reconcile.Lens.CHECK)]
+    addresses = [item.address for item in reconcile.fold_walk(measured, Lens.CHECK)]
 
     assert 'packages' not in addresses
     assert 'system' not in addresses
@@ -104,7 +105,7 @@ def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkey
         Event('symlinks', Summary('all fine')),
     ]
 
-    walked = {item.address: item.verdict for item in reconcile.fold_walk(measured, reconcile.Lens.CHECK)}
+    walked = {item.address: item.verdict for item in reconcile.fold_walk(measured, Lens.CHECK)}
 
     assert walked['packages'] is ResourceVerdict.ISSUE
     assert walked['symlinks'] is ResourceVerdict.CONVERGED
@@ -172,8 +173,8 @@ def test_an_unknown_someone_could_repair_is_reported_by_check_not_plan() -> None
     """
     changes = [change(Verdict.UNKNOWN, Repair.BY_HAND)]
 
-    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN).verdict is ResourceVerdict.CONVERGED
-    assert reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK).verdict is ResourceVerdict.ISSUE
+    assert reconcile.from_changes('packages', changes, 'all installed', Lens.PLAN).verdict is ResourceVerdict.CONVERGED
+    assert reconcile.from_changes('packages', changes, 'all installed', Lens.CHECK).verdict is ResourceVerdict.ISSUE
 
 
 def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
@@ -185,8 +186,8 @@ def test_plan_keeps_what_apply_can_do_and_check_keeps_what_it_cannot() -> None:
         change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER'),
     ]
 
-    planned = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN)
-    checked = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+    planned = reconcile.from_changes('packages', changes, 'all installed', Lens.PLAN)
+    checked = reconcile.from_changes('packages', changes, 'all installed', Lens.CHECK)
 
     assert planned.verdict is ResourceVerdict.DRIFT
     assert planned.pending == 1
@@ -209,7 +210,7 @@ def test_the_issue_line_names_every_item_and_the_shared_fix_once() -> None:
         change(Verdict.STALE, Repair.BY_HAND, item='symlinks/.config/git/ignore', advice='remove the stray copy'),
     ]
 
-    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+    folded = reconcile.from_changes('packages', changes, 'all installed', Lens.CHECK)
 
     assert 'ghrelease/shellcheck' in folded.detail
     assert 'symlinks/.config/git/ignore' in folded.detail
@@ -225,7 +226,7 @@ def test_the_issue_line_names_items_without_a_fix_when_their_advice_differs() ->
         change(Verdict.MISSING, Repair.BY_HAND, item='identity/user.name', advice='git config --global user.name ...'),
     ]
 
-    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+    folded = reconcile.from_changes('packages', changes, 'all installed', Lens.CHECK)
 
     assert 'env/WINDOWS_USER' in folded.detail
     assert 'identity/user.name' in folded.detail
@@ -237,7 +238,7 @@ def test_the_issue_line_caps_how_many_items_it_names() -> None:
     into the screen of rows it exists to summarize."""
     changes = [change(Verdict.MISSING, Repair.BY_HAND, item=f'ghrelease/tool{n}', advice='fix it') for n in range(6)]
 
-    folded = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.CHECK)
+    folded = reconcile.from_changes('packages', changes, 'all installed', Lens.CHECK)
 
     assert '2 more' in folded.detail
 
@@ -248,8 +249,8 @@ def test_a_package_a_version_behind_is_not_something_wrong() -> None:
     red on a box with nothing to fix."""
     behind = [change(Verdict.STALE, Repair.AUTOMATIC)]
 
-    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.PLAN).verdict is ResourceVerdict.DRIFT
-    assert reconcile.from_changes('packages', behind, 'all installed', reconcile.Lens.CHECK).verdict is ResourceVerdict.CONVERGED
+    assert reconcile.from_changes('packages', behind, 'all installed', Lens.PLAN).verdict is ResourceVerdict.DRIFT
+    assert reconcile.from_changes('packages', behind, 'all installed', Lens.CHECK).verdict is ResourceVerdict.CONVERGED
 
 
 def test_a_plan_counts_what_will_ask_for_a_password() -> None:
@@ -262,7 +263,7 @@ def test_a_plan_counts_what_will_ask_for_a_password() -> None:
         change(Verdict.MISSING, item='ghrelease/zk'),
     ]
 
-    folded = reconcile.from_changes('system', changes, 'all installed', reconcile.Lens.PLAN)
+    folded = reconcile.from_changes('system', changes, 'all installed', Lens.PLAN)
 
     assert folded.pending == 2
     assert folded.privileged == 1
@@ -286,7 +287,7 @@ def test_a_row_carries_the_items_it_kept_rather_than_printing_them() -> None:
     `credentials`, and `credentials` reported converged two lines below them."""
     changes = [change(Verdict.MISSING, Repair.BY_HAND, item='auth/nomad')]
 
-    folded = reconcile.from_changes('auth', changes, '3 of 7 authenticated', reconcile.Lens.CHECK)
+    folded = reconcile.from_changes('auth', changes, '3 of 7 authenticated', Lens.CHECK)
 
     assert [kept.item for kept in folded.findings] == ['auth/nomad']
 
@@ -299,7 +300,7 @@ def test_each_verb_keeps_its_own_findings_and_carries_the_others() -> None:
         change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER'),
     ]
 
-    planned = reconcile.from_changes('packages', changes, 'all installed', reconcile.Lens.PLAN)
+    planned = reconcile.from_changes('packages', changes, 'all installed', Lens.PLAN)
 
     assert [kept.item for kept in planned.findings] == ['ghrelease/zk']
     assert [rest.item for rest in planned.others] == ['env/WINDOWS_USER']
@@ -331,7 +332,7 @@ def test_the_fix_is_dropped_from_the_summary_when_it_needs_more_than_a_line() ->
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def folded(address: str, changes: list[Change], lens: reconcile.Lens) -> ResourceResult:
+def folded(address: str, changes: list[Change], lens: Lens) -> ResourceResult:
     """One resource's result the way the walk builds it, items and all.
 
     Constructed straight from counts, a result carries numbers with nothing behind
@@ -350,7 +351,7 @@ def test_a_plan_with_nothing_to_do_names_the_items_the_other_verb_owns() -> None
         change(Verdict.MISSING, Repair.BY_HAND, item='auth/atuin'),
     ]
 
-    line = reconcile.verdict_line([folded('auth', logged_out, reconcile.Lens.PLAN)], reconcile.Lens.PLAN)
+    line = reconcile.verdict_line([folded('auth', logged_out, Lens.PLAN)], Lens.PLAN)
 
     # `nothing for apply to change` is produced at one site and read by nothing
     # else, so asserting the items alone leaves the head this test is named for
@@ -364,7 +365,7 @@ def test_a_plan_with_work_to_do_names_what_would_change() -> None:
     not know is which two items it would touch."""
     drifting = [change(Verdict.MISSING, item='ghrelease/zk'), change(Verdict.STALE, item='go/forge')]
 
-    line = reconcile.verdict_line([folded('packages', drifting, reconcile.Lens.PLAN)], reconcile.Lens.PLAN)
+    line = reconcile.verdict_line([folded('packages', drifting, Lens.PLAN)], Lens.PLAN)
 
     assert line == '2 item(s) to change: ghrelease/zk, go/forge'
 
@@ -374,12 +375,12 @@ def test_a_check_names_the_items_needing_attention_across_every_resource() -> No
     nothing: the rows above already show which resources, and the thing a reader
     goes looking for is what to do next."""
     results = [
-        folded('env', [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER')], reconcile.Lens.CHECK),
-        folded('auth', [change(Verdict.MISSING, Repair.BY_HAND, item='auth/atuin')], reconcile.Lens.CHECK),
-        folded('packages', [change(Verdict.MATCHED)], reconcile.Lens.CHECK),
+        folded('env', [change(Verdict.MISSING, Repair.BY_HAND, item='env/WINDOWS_USER')], Lens.CHECK),
+        folded('auth', [change(Verdict.MISSING, Repair.BY_HAND, item='auth/atuin')], Lens.CHECK),
+        folded('packages', [change(Verdict.MATCHED)], Lens.CHECK),
     ]
 
-    line = reconcile.verdict_line(results, reconcile.Lens.CHECK)
+    line = reconcile.verdict_line(results, Lens.CHECK)
 
     assert 'env/WINDOWS_USER' in line
     assert 'auth/atuin' in line
@@ -389,9 +390,9 @@ def test_a_check_names_the_items_needing_attention_across_every_resource() -> No
 def test_a_check_names_a_resource_that_could_not_be_measured_at_all() -> None:
     """A refusal has no item to name, and calling it an item needing a person says
     a person can go and do something about it."""
-    results = [ResourceResult('packages', ResourceVerdict.ISSUE, 'the release cache is unreadable', lens=reconcile.Lens.CHECK)]
+    results = [ResourceResult('packages', ResourceVerdict.ISSUE, 'the release cache is unreadable', lens=Lens.CHECK)]
 
-    assert reconcile.verdict_line(results, reconcile.Lens.CHECK) == '1 resource(s) could not be measured: packages'
+    assert reconcile.verdict_line(results, Lens.CHECK) == '1 resource(s) could not be measured: packages'
 
 
 def test_a_clean_check_names_the_drift_it_deliberately_ignored() -> None:
@@ -401,7 +402,7 @@ def test_a_clean_check_names_the_drift_it_deliberately_ignored() -> None:
     no row anywhere in the block above, so a count alone left it unreachable."""
     behind = [change(Verdict.STALE, item='ghrelease/yazi'), change(Verdict.MISSING, item='go/forge')]
 
-    line = reconcile.verdict_line([folded('packages', behind, reconcile.Lens.CHECK)], reconcile.Lens.CHECK)
+    line = reconcile.verdict_line([folded('packages', behind, Lens.CHECK)], Lens.CHECK)
 
     assert line == 'nothing wrong; 2 item(s) differ from what this machine declares: ghrelease/yazi, go/forge'
 
@@ -412,7 +413,7 @@ def test_an_unmeasurable_item_never_reaches_the_drift_clause() -> None:
     Named as drift, a healthy machine reads as one with a screen of pending work."""
     mixed = [change(Verdict.UNKNOWN, Repair.NONE, item='ghrelease/yazi'), change(Verdict.STALE, item='go/forge')]
 
-    line = reconcile.verdict_line([folded('packages', mixed, reconcile.Lens.CHECK)], reconcile.Lens.CHECK)
+    line = reconcile.verdict_line([folded('packages', mixed, Lens.CHECK)], Lens.CHECK)
 
     assert line == 'nothing wrong; 1 item(s) differ from what this machine declares: go/forge'
 
@@ -433,7 +434,7 @@ def steady_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def summarised(results: list[ResourceResult], capsys: pytest.CaptureFixture) -> list[str]:
-    reconcile.report_summary(results, reconcile.Lens.CHECK)
+    reconcile.report_summary(results, Lens.CHECK)
     return [line.rstrip() for line in capsys.readouterr().out.splitlines() if line.strip()]
 
 
@@ -445,13 +446,13 @@ def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, cap
     """A recap worded afresh makes the reader compare phrasings to decide whether
     it is the same finding."""
     detail = 'however the fold happened to word it'
-    results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=reconcile.Lens.CHECK, attention=3)]
+    results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=Lens.CHECK, attention=3)]
 
     assert f'auth        {detail}' in ' '.join(summarised(results, capsys))
 
 
 def test_a_converged_resource_is_left_out(steady_checkout, capsys: pytest.CaptureFixture) -> None:
-    results = [ResourceResult('symlinks', ResourceVerdict.CONVERGED, '144 in place', lens=reconcile.Lens.CHECK)]
+    results = [ResourceResult('symlinks', ResourceVerdict.CONVERGED, '144 in place', lens=Lens.CHECK)]
 
     assert not [line for line in summarised(results, capsys) if 'symlinks' in line]
 
@@ -509,6 +510,6 @@ def test_a_short_shared_fix_still_rides_on_the_heading() -> None:
     """
     short = change(Verdict.MISSING, Repair.BY_HAND, item='atuin', advice='log in with `atuin login`')
 
-    folded = reconcile.from_changes('auth', [short], '3 of 7 authenticated', reconcile.Lens.CHECK)
+    folded = reconcile.from_changes('auth', [short], '3 of 7 authenticated', Lens.CHECK)
 
     assert folded.detail == '1 item(s) need attention: atuin — log in with `atuin login`'

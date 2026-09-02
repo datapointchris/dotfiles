@@ -16,8 +16,8 @@ import pytest
 
 from dotfiles import paths
 from dotfiles import status
-from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import ResourceVerdict
+from dotfiles.results import ResourceResult
+from dotfiles.results import ResourceVerdict
 
 NOT_ROOT = pytest.mark.skipif(os.geteuid() == 0, reason='root is refused nothing, so the directory stays writable')
 
