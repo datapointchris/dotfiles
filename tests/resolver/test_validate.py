@@ -290,7 +290,7 @@ def test_fnm_overrides_both_target_triples() -> None:
     """
     fnm = catalog.load(paths.PACKAGES_FILE).find('cargo_packages', 'fnm')
 
-    assert fnm is not None, 'fnm is the node toolchain; nothing else puts a node on PATH'
+    assert isinstance(fnm, catalog.CargoPackage), 'fnm is the node toolchain; nothing else puts a node on PATH'
     assert (fnm.linux_target, fnm.darwin_target) == ('linux', 'macos')
 
 

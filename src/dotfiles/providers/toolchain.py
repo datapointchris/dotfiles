@@ -35,7 +35,7 @@ from dotfiles import github_release
 from dotfiles import paths
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import BIN_DIR
@@ -185,7 +185,7 @@ falls through to git, which authenticates through `gh auth git-credential`. This
 setting alone is what makes a private-namespace tool build."""
 
 
-def install_go(target: Target, privilege: Privilege, *, offline: bool) -> Result:
+def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result:
     """Whatever go.dev currently serves, unpacked over `/usr/local/go`.
 
     Go is the one runtime with no version manager of its own, so this is the
@@ -278,7 +278,7 @@ def _tarball(name: str, into: Path) -> Path | None:
     return None
 
 
-def _replace_goroot(unpacked: Path, privilege: Privilege) -> Result:
+def _replace_goroot(unpacked: Path, privilege: Escalates) -> Result:
     """Swap the whole tree, which is the only supported way to move Go versions.
 
     Unpacked as this user first and copied in as root, rather than handing the

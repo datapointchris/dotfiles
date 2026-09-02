@@ -219,14 +219,18 @@ def derive(machine: machines.Machine) -> Derived:
     )
 
 
-def _entries(plan: planning.Plan, kind: type[catalog.Entry]) -> tuple[catalog.Entry, ...]:
+def _entries[E: catalog.Entry](plan: planning.Plan, kind: type[E]) -> tuple[E, ...]:
     """Every declaration row of one type the plan resolved, deduplicated by name.
 
     A tool can enter the plan more than once — a runtime is pulled in by each tool
     that needs it — and probing one URL twice reports a host as two rows without
     measuring anything the first did not.
+
+    Generic in `kind`, so a caller asking for `GithubRelease` rows gets rows it can
+    read `repo` off. Returning the base would hand every caller an `Entry` and put
+    the narrowing this already did back on them.
     """
-    seen: dict[str, catalog.Entry] = {}
+    seen: dict[str, E] = {}
     for item in plan.items:
         if isinstance(item.entry, kind) and item.entry.name not in seen:
             seen[item.entry.name] = item.entry

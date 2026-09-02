@@ -24,7 +24,7 @@ from dotfiles import versions
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.providers import toolchain
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
@@ -205,7 +205,7 @@ class ToolchainsResource:
             )
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever version manager planned it installs it, or says why it cannot.
 
         The module env is the one change here that installs nothing, so it is the

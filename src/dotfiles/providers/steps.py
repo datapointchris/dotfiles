@@ -34,7 +34,7 @@ from pathlib import Path
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
@@ -134,8 +134,8 @@ def _make_screenshots() -> Result:
 def _xcode_licence() -> State:
     """The exception `check` is built to survive rather than to hide.
 
-    `xcodebuild -license status` needs root, and `observe` is never handed a
-    `Privilege` — so this reports what it cannot answer instead of prompting from
+    `xcodebuild -license status` needs root, and `observe` is never handed an
+    `Escalates` — so this reports what it cannot answer instead of prompting from
     the half of the run that must never prompt. Two cheaper questions come first,
     because they settle it without root on every machine that has no full Xcode:
     no `xcodebuild` at all, or an active developer directory that is the Command
@@ -155,7 +155,7 @@ def _xcodebuild_present() -> bool:
     return run(['xcodebuild', '-version'], output=Output.QUIET).returncode != 127
 
 
-def _accept_xcode_licence(privilege: Privilege) -> Result:
+def _accept_xcode_licence(privilege: Escalates) -> Result:
     """Accept, then run the first-launch setup the licence gates.
 
     `-runFirstLaunch` is unprivileged and frequently a no-op; it fails on an
@@ -401,17 +401,17 @@ def _link_psql() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 Observer = Callable[[], State]
-Applier = Callable[[Privilege], Result]
+Applier = Callable[[Escalates], Result]
 
 
 def _unprivileged(apply: Callable[[], Result]) -> Applier:
     """Adapt a step that needs no root to the one signature the table carries.
 
     One signature rather than two, so the resource never has to ask which kind a
-    row is — the `Privilege` it hands down is simply ignored by four of the five.
+    row is — the `Escalates` it hands down is simply ignored by four of the five.
     """
 
-    def run_it(_privilege: Privilege) -> Result:
+    def run_it(_privilege: Escalates) -> Result:
         return apply()
 
     return run_it
@@ -435,7 +435,7 @@ def observe(entry_name: str) -> State:
     return STEPS[entry_name][0]()
 
 
-def apply(entry_name: str, privilege: Privilege) -> Result:
+def apply(entry_name: str, privilege: Escalates) -> Result:
     if entry_name not in STEPS:
         return Result(False, f'no function in providers/steps.py for {entry_name}', kind=Kind.DECLARATION_INVALID)
     return STEPS[entry_name][1](privilege)

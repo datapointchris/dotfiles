@@ -68,9 +68,14 @@ def every_expressible_machine() -> list[axes.Coordinates]:
     hit is found now rather than by that machine. macOS-on-WSL is in the
     product too and is filtered out, by the same rule a manifest declaring it
     would be rejected with.
+
+    The six enums are named rather than read off `AXIS_TYPES`, because a splat of
+    that mapping is six `StrEnum` values to a constructor wanting six different
+    types. `test_axes_and_the_dataclass_agree` in tests/resolver/test_coordinates.py
+    is what fails when a seventh axis arrives and this list does not grow.
     """
-    product = itertools.product(*(axes.AXIS_TYPES[axis] for axis in axes.AXES))
-    return [point for point in map(lambda values: axes.Coordinates(*values), product) if not axes.incoherent(point)]
+    product = itertools.product(axes.PackageManager, axes.OSFamily, axes.DisplayStack, axes.Host, axes.NetworkTrust, axes.Capacity)
+    return [point for point in (axes.Coordinates(*values) for values in product) if not axes.incoherent(point)]
 
 
 @functools.cache

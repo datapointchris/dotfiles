@@ -53,6 +53,21 @@ def bin_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
+def _relocated(provider: registry.Provider, path: Path) -> registry.Provider:
+    """The Go toolchain with its fixed home moved, and every other provider as it was.
+
+    `installed_at` belongs to `ToolchainProvider` rather than to `Provider`, so the
+    isinstance is what lets the replacement be written at all. It also says what a
+    bare name match cannot: a `go-toolchain` that stopped being a toolchain
+    provider would swap nothing, and every test resting on this would then measure
+    `/usr/local/go` on the developer's own machine.
+    """
+    if provider.name != 'go-toolchain':
+        return provider
+    assert isinstance(provider, registry.ToolchainProvider), provider
+    return dc.replace(provider, installed_at=str(path))
+
+
 @pytest.fixture(autouse=True)
 def go_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point the Go toolchain's fixed home somewhere this test controls.
@@ -71,9 +86,7 @@ def go_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     while the resources reach through `BY_NAME`.
     """
     path = tmp_path / 'bin' / 'go'
-    swapped = tuple(
-        dc.replace(provider, installed_at=str(path)) if provider.name == 'go-toolchain' else provider for provider in registry.PROVIDERS
-    )
+    swapped = tuple(_relocated(provider, path) for provider in registry.PROVIDERS)
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
     monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
@@ -189,9 +202,7 @@ def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_d
     unpacked.write_text('#!/bin/sh\necho "go version go9.9.9 linux/amd64"\n')
     unpacked.chmod(0o755)
     stub(bin_dir, 'go', 'go version go1.0.0 linux/amd64')
-    swapped = tuple(
-        dc.replace(provider, installed_at=str(unpacked)) if provider.name == 'go-toolchain' else provider for provider in registry.PROVIDERS
-    )
+    swapped = tuple(_relocated(provider, unpacked) for provider in registry.PROVIDERS)
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
 

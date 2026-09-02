@@ -59,7 +59,7 @@ def state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def results(*verdicts: tuple[str, Verdict]) -> list[ResourceResult]:
+def results(*verdicts: tuple[str, ResourceVerdict]) -> list[ResourceResult]:
     return [ResourceResult(address, verdict, 'because') for address, verdict in verdicts]
 
 

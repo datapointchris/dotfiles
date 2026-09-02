@@ -52,7 +52,7 @@ from dotfiles import paths
 from dotfiles import refusal
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -429,7 +429,7 @@ class SymlinksResource:
         )
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Create one link, or remove one orphan.
 
         Re-checked live rather than trusting what `diff` saw: an earlier change in

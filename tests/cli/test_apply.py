@@ -177,7 +177,7 @@ def test_owner_narrowing_reaches_the_walk_and_not_only_the_plan(name: str) -> No
     assert 'env' not in narrowed.resources
     assert 'identity' not in narrowed.resources
     assert 'auth' not in narrowed.resources
-    assert set(narrowed.resources) <= {registry.named(provider).resource for provider in plan.providers}
+    assert set(narrowed.resources) <= {registry.BY_NAME[provider].resource for provider in plan.providers}
 
 
 def test_owner_narrowing_composes_with_skip() -> None:
@@ -236,6 +236,19 @@ class Walk:
 def drift(item: str, repair: Repair = Repair.AUTOMATIC) -> Event:
     advice = 'do it by hand' if repair is Repair.BY_HAND else ''
     return Event('packages', Change('packages', Stage.TOOLS, item, Verdict.MISSING, repair=repair, advice=advice), stage=Stage.TOOLS)
+
+
+def change_of(event: Event) -> Change:
+    """The Change an Event carries, for the helpers here that always build one.
+
+    `Event.payload` is a union of five types and `applied_line` takes Changes, so
+    reading `.payload` straight into it types as none of them. The assertion is
+    what makes this narrowing rather than a claim: a helper rewritten to wrap an
+    Outcome fails here instead of reaching the renderer as the wrong shape.
+    """
+    payload = event.payload
+    assert isinstance(payload, Change), payload
+    return payload
 
 
 def done(item: str, status: OutcomeStatus = OutcomeStatus.DONE) -> Event:
@@ -872,7 +885,7 @@ class TestTheClosingLine:
         """`Repair.BY_HAND` is not a failure, so it is not counted as work this verb
         did not do. Its row is already on screen with its own command, so naming
         another verb sends a reader to reprint what they just read."""
-        deferred = [drift('atuin', Repair.BY_HAND).payload]
+        deferred = [change_of(drift('atuin', Repair.BY_HAND))]
 
         line = reconcile.applied_line(1, [], deferred, [])
 
@@ -882,7 +895,7 @@ class TestTheClosingLine:
     def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:
         """The rows are gone by the time this line is read, and a hole in the run's
         coverage that nobody can name is one nobody can go and look at."""
-        blind = [unmeasurable('doit').payload, unmeasurable('syncer').payload]
+        blind = [change_of(unmeasurable('doit')), change_of(unmeasurable('syncer'))]
 
         line = reconcile.applied_line(0, [], [], blind)
 

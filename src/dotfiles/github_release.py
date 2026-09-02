@@ -533,7 +533,8 @@ def _tag_from(payload: object, tag_prefix: str) -> str | None:
     """The greatest tag by version in a decoded page, never the first in it."""
     if not isinstance(payload, list):
         return None
-    best, highest = None, ()
+    best: str | None = None
+    highest: tuple[int, ...] = ()
     for entry in payload:
         name = entry.get('name') or ''
         if not name.startswith(tag_prefix):

@@ -32,7 +32,7 @@ from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
 from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
 from dotfiles.resources import Change
@@ -248,11 +248,11 @@ class SystemResource:
         )
         return packages + configuration + undeclared
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
 
-    def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Escalates) -> list[Outcome]:
         """The `Batched` half of the protocol, which this resource exists to use.
 
         Every change in a group shares a provider — the engine grouped them that

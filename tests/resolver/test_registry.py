@@ -226,6 +226,7 @@ def test_every_runtime_can_actually_install_itself() -> None:
     description — so `converge` is abstract and this is what catches the omission.
     """
     for provider in registry.for_resource('toolchains'):
+        assert isinstance(provider, registry.ToolchainProvider), provider.name
         assert type(provider).converge is not registry.ToolchainProvider.converge, provider.name
 
 

@@ -29,6 +29,7 @@ import pytest
 from dotfiles import diagnose
 from dotfiles import effects
 from dotfiles import registry
+from dotfiles.context import MachineContext
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.plan import DesiredItem
@@ -36,6 +37,7 @@ from dotfiles.plan import Precondition
 from dotfiles.plan import Reason
 from dotfiles.plan import Stage
 from dotfiles.privilege import Authorization
+from dotfiles.privilege import Escalates
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
@@ -64,11 +66,13 @@ def executable(directory: Path, name: str, script: str) -> Path:
 
 
 class Escalation:
-    """A `Privilege` that records what it was handed instead of asking for root.
+    """An `Escalates` that records what it was handed instead of asking for root.
 
     Not a `Privilege` subclass. What is being measured is exactly what `install`
     passes across that boundary, and inheriting the real `run` would answer it
-    with this machine's sudo — which no unit test may spend.
+    with this machine's sudo — which no unit test may spend. `Escalates` is the
+    protocol that boundary is written as, so this satisfies it structurally and
+    mypy checks the fit rather than the annotation being taken on trust.
 
     `kwargs['reason']` is read rather than defaulted, so an `install` that stopped
     naming what the password is for fails here instead of prompting a person with
@@ -231,7 +235,7 @@ class Recording(registry.Provider):
 
     seen: list[str] = dc.field(default_factory=list)
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         self.seen.append(item.name)
         return Outcome(change, OutcomeStatus.DONE, '')
 

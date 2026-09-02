@@ -95,7 +95,7 @@ class Fetches:
 
 
 class Root:
-    """A `Privilege` that records rather than escalating.
+    """An `Escalates` that records rather than escalating.
 
     `granted=False` is the machine with no sudo and the declined password at once:
     both raise `PrivilegeUnavailable` from `run`, and both are what the container

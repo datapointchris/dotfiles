@@ -127,7 +127,7 @@ def _spelled(value: object) -> str:
 def apply_default(entry: catalog.MacosDefault) -> Result:
     """One `defaults write`, spelled the way the entry declares.
 
-    Unprivileged, so no `Privilege` is threaded here: a Mac's preferences are its
+    Unprivileged, so no `Escalates` is threaded here: a Mac's preferences are its
     user's, and asking for a password to set the Dock's tile size would be asking
     for one that is never checked.
     """

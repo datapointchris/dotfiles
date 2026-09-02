@@ -28,7 +28,7 @@ from dotfiles.event import Summary
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.resources import Batched
 from dotfiles.resources import Change
 from dotfiles.resources import Resource
@@ -323,7 +323,7 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
             yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
 
 
-def execute(session: Session, planned: Iterable[Event], privilege: Privilege) -> Iterator[Event]:
+def execute(session: Session, planned: Iterable[Event], privilege: Escalates) -> Iterator[Event]:
     """Act on what `assess` decided, in the order the machine converges.
 
     Takes the stream rather than a fresh measurement, which is the whole of "apply
@@ -405,7 +405,7 @@ def _owner(event: Event) -> tuple[str, str]:
     return (event.resource, desired.provider if desired else '')
 
 
-def _act(session: Session, resource: Resource, group: list[Event], privilege: Privilege) -> Iterator[Event]:
+def _act(session: Session, resource: Resource, group: list[Event], privilege: Escalates) -> Iterator[Event]:
     """One group's repairs, isolated at the granularity the resource acts at.
 
     Item by item unless the resource declares itself `Batched` and there is more
@@ -428,7 +428,7 @@ def _act(session: Session, resource: Resource, group: list[Event], privilege: Pr
             yield Event(event.resource, outcome, stage=change.stage, timing=clock.finish())
 
 
-def _act_together(session: Session, resource: Batched, group: list[Event], changes: list[Change], privilege: Privilege) -> Iterator[Event]:
+def _act_together(session: Session, resource: Batched, group: list[Event], changes: list[Change], privilege: Escalates) -> Iterator[Event]:
     """One transaction, and the isolation that is honest about being one.
 
     A raising batch takes its whole group down, unlike the item-by-item path. That

@@ -238,4 +238,7 @@ def declared() -> catalog.Catalog:
 def test_no_declared_preference_needs_root() -> None:
     """A Mac converges its own preferences without a password. Marking them
     privileged would put a prompt in front of a machine that needs none."""
-    assert all(not entry.needs_root for entry in declared().section('macos_defaults'))
+    rows = declared().section('macos_defaults')
+
+    assert rows, 'a section with no rows would pass this vacuously'
+    assert all(isinstance(entry, catalog.MacosDefault) and not entry.needs_root for entry in rows)
