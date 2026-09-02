@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# rss - Open the FreshRSS web reader in its own webview window.
+#
+# A wrapper rather than the address in rss.desktop, because a Desktop Entry runs
+# no shell: `Exec=` expands no variable, so a private address there could only be
+# a literal in a public repo.
+#
+# Sources ~/.env itself. The compositor launches a .desktop entry from a process
+# that has never read a shell profile, so nothing that ~/.env sets is in this
+# environment yet. Every other consumer of a declared value runs from a shell and
+# gets it for free; this one is the exception, and that is why the line is here.
+
+set -euo pipefail
+
+# shellcheck source=/dev/null
+[[ -f "$HOME/.env" ]] && source "$HOME/.env"
+
+: "${FRESHRSS_URL:?set FRESHRSS_URL in ~/.env; install/flags.yml declares it}"
+
+exec "$HOME/.cargo/bin/webviewrs" -n rss -t RSS --dark "$FRESHRSS_URL"

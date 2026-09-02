@@ -39,9 +39,13 @@ alias reload-dev='sudo nginx -s reload && sudo supervisorctl reload'
 
 # ---------- Miscellaneous ---------- #
 
-# Audio control for greenpi
-alias pausepi="ssh chris@192.168.10.40 'pacmd suspend 1'"
-alias playpi="ssh chris@192.168.10.40 'pacmd suspend 0'"
+# Audio control for a Pi on the local network. Single-quoted so the target is
+# read when the alias runs rather than when this file is sourced, and `:?` so a
+# machine that never set it is told which variable to set. The value is a user
+# and an address on somebody's own network, so it is set in ~/.env below the
+# OVERRIDES marker and never carried here.
+alias pausepi='ssh "${PI_AUDIO_SSH_TARGET:?set PI_AUDIO_SSH_TARGET in ~/.env}" "pacmd suspend 1"'
+alias playpi='ssh "${PI_AUDIO_SSH_TARGET:?set PI_AUDIO_SSH_TARGET in ~/.env}" "pacmd suspend 0"'
 
 # Copy shrug to clipboard
 alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"

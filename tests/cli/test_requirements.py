@@ -9,6 +9,7 @@ fleet is the failure the command exists to prevent.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import json
 import tomllib
 
@@ -16,6 +17,7 @@ import pytest
 from typer.testing import CliRunner
 
 from dotfiles import machine as machines
+from dotfiles.commands import machines as commands
 from dotfiles.main import app
 from dotfiles.vocabulary import ExitCode
 
@@ -40,9 +42,17 @@ def test_the_register_names_every_value_and_file_the_machine_needs(work: machine
         assert (entry.path or entry.name) in printed
 
 
-def test_a_machine_that_needs_nothing_says_so_rather_than_printing_a_bare_name() -> None:
-    """The LXC server declares no requirement at all. An empty section reads as a
-    command that failed to find the file it was looking in."""
+def test_a_machine_that_needs_nothing_says_so_rather_than_printing_a_bare_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An empty section reads as a command that failed to find the file it was
+    looking in.
+
+    The one case in this module reached through a stand-in rather than a real
+    manifest. Every machine the repo declares needs at least one thing by hand,
+    so the empty register has no machine to be asserted against — and the
+    rendering still has to be right the first time one does."""
+    empty = dc.replace(machines.load('linux-lxc-server'), requirements=())
+    monkeypatch.setattr(commands, '_loaded', lambda _: empty)
+
     printed = run('linux-lxc-server')
 
     assert 'nothing' in printed

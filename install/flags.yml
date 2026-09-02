@@ -36,10 +36,16 @@
 # Arch-on-WSL box that `platform: wsl` would have missed entirely. The generated section names the ones that apply, and
 # `dotfiles check` fails while one is missing — without that, an unset value
 # just silently produces a wrong path at the point of use.
-# Only values whose absence is *silent* belong here. An unset WINDOWS_USER builds
-# /mnt/c/Users// and mounts a share with an empty username; an unset
-# JIRA_API_TOKEN just makes `jira` print an auth error, which names itself — that
-# one stays undeclared.
+# What earns an entry is that the machine has to supply the value, not that its
+# absence is quiet. A silent absence is the clearest case: an unset WINDOWS_USER
+# builds /mnt/c/Users// and mounts a share with an empty username. A loud one
+# qualifies too, because a `dotfiles check` that fails now is earlier than a
+# consumer that fails when somebody next runs it — HOMELAB_HOSTS_JSON below is
+# declared on exactly that reasoning.
+#
+# What stays out is a credential a tool mints for itself. JIRA_API_TOKEN is not
+# here because `jira` has a login: the manifest's `auth:` list names it and
+# `dotfiles auth check` asks. A value no login can produce is this register's.
 #
 # ~/.env is not the only place an entry can be answered. A name listed in
 # `settings.SHARED_PATHS` resolves through several rungs and `dotfiles check`
@@ -98,6 +104,41 @@ required:
     consumers:
       - ~/homelab/pyinfra/deploys/ssh_trust.py
       - ~/homelab/scripts/lib/machines.sh
+
+  # A service address on the machine's own network, which this repo is public and
+  # must not carry. The consumer refuses by name when it is unset, and that is
+  # late: it is an interactive command, so nothing reports the gap until somebody
+  # runs it. Declared here, `dotfiles check` says so on a fresh machine instead.
+  #
+  # Two axes. Trust matches the consumer, which lives under apps/trust/fleet/ for
+  # the reason its own header gives — a subscriber that reconnects forever against
+  # a private address is pointed at a stranger's machine on any other network.
+  # Capacity is what the consumer's *purpose* decides: it exists so a Claude
+  # session can watch the repo it is working in, and nobody works in a repo on a
+  # server. Trust alone required it on both servers, which deploy the app and will
+  # never run it.
+  - name: CLAUDE_CI_WATCH_NTFY_HOST
+    description: The ntfy server this machine's CI watcher subscribes to
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - apps/trust/fleet/claude-ci-watch
+
+  # The FreshRSS base URL, for the webview launcher alone. newsboat reaches the
+  # same server and cannot read this: it expands no environment variable
+  # anywhere in its config, so its half is the `local.config` file below. The two
+  # name one server and have to agree, which is the cost of a reader that takes
+  # only a file and a launcher that can take only a value.
+  #
+  # Narrowed on the display stack, which is the axis that decides it: the
+  # consumer is a Desktop Entry, and a machine with no desk has nothing to launch
+  # it from. Trust would be the obvious axis and reaches further than the
+  # consumer does.
+  - name: FRESHRSS_URL
+    description: Base URL of this machine's FreshRSS, for the RSS desktop entry
+    display_stack: wayland
+    consumers:
+      - apps/display/wayland/rss
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
@@ -242,6 +283,61 @@ required_files:
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
       - safekeep
+
+  # A file rather than a value, because newsboat expands no environment variable
+  # anywhere in its config. `include` is the only seam it offers, so the address
+  # and the account go in an included file and the shared config carries the rest.
+  #
+  # Absence is loud and immediate: newsboat treats a missing include as a fatal
+  # config error and refuses to start. That is why the consumer sits under
+  # trust/fleet rather than common/ — a machine with no FreshRSS to reach cannot
+  # write this file, so it must not deploy a config demanding one.
+  #
+  # Capacity narrows it the rest of the way, and leaves one asymmetry worth
+  # naming: the two servers are fleet, so they deploy that config and are not
+  # asked for this file. Nothing there runs newsboat — both take
+  # `system_packages: core` and the package is workstation-tier — so the config
+  # sits inert. A path lives in exactly one directory, and trust is the axis that
+  # keeps it off the machine where its absence would actually bite.
+  - name: newsboat local.config
+    path: ~/.config/newsboat/local.config
+    description: This machine's FreshRSS server and account, included by the shared newsboat config
+    network_trust: fleet
+    capacity: workstation
+    file_must_exist: true
+    restore: >-
+      write two lines — freshrss-url "<base>/api/greader.php" and freshrss-login "<user>" — naming
+      the same server as FRESHRSS_URL
+    consumers:
+      - configs/trust/fleet/.config/newsboat/config
+
+  # The whole file, which no other entry here asks for, and the reason is that
+  # atuin offers no seam at all. Measured on 18.21.0: ATUIN_CONFIG_DIR is the only
+  # environment variable it reads, per `atuin info`; a scratch config naming one
+  # address and ATUIN_SYNC_ADDRESS naming another resolved to the file both times;
+  # and TOML has no include.
+  #
+  # Dropping the address alone was the alternative and is worse than the
+  # disclosure it repairs. atuin's compiled default is https://api.atuin.sh, so a
+  # machine with auto_sync on and no address starts pushing shell history at a
+  # third party — silently, which is the failure a missing value is supposed to
+  # replace.
+  #
+  # What that costs: auto_sync, sync_frequency, update_check and ai.enabled stop
+  # being repo-managed on fleet machines and can drift between them. The header
+  # prose is not lost — the nonfleet copy carries the same block, and every
+  # setting is named in `restore:` below.
+  - name: atuin config.toml
+    path: ~/.config/atuin/config.toml
+    description: atuin's client config, including the history-sync server this machine reaches
+    network_trust: fleet
+    file_must_exist: true
+    restore: >-
+      write auto_sync = true, sync_frequency = "5m", update_check = false, [ai] enabled = false,
+      and sync_address naming this machine's own atuin server; keep the encryption key beside it,
+      because losing that loses the history
+    consumers:
+      - atuin
 
 flags:
   - name: ZSHRC_DEBUG
