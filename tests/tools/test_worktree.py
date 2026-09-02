@@ -18,7 +18,7 @@ commands make. `claude-sessions` and `fzf` are shadowed on PATH rather than
 reimplemented: the session registry and the picker each have one owner, and this
 file only decides what a row says and where the path goes.
 
-Run with: pytest tests/apps/test_worktree.py
+Run with: pytest tests/tools/test_worktree.py
 """
 
 from __future__ import annotations
@@ -37,14 +37,37 @@ from typing import Any
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[2]
-WORKTREE = REPO / 'apps' / 'common' / 'worktree'
+from dotfiles.worktree import Disposal
+from dotfiles.worktree import Evidence
+from dotfiles.worktree import Fault
+from dotfiles.worktree import Kept
+from dotfiles.worktree import Pane
+from dotfiles.worktree import Refused
+from dotfiles.worktree import Session
+from dotfiles.worktree import State
+from dotfiles.worktree import Worktree
+from dotfiles.worktree import cli
+from dotfiles.worktree import operations
+from dotfiles.worktree import panes
+from dotfiles.worktree import render
+from dotfiles.worktree import repo
+from dotfiles.worktree import require_tool
+from dotfiles.worktree import survey
 
-# `worktree` runs under `uv run --script`, and the fixtures below give it a
-# throwaway HOME so nothing reads real config. uv's cache hangs off HOME, so
-# without this every test resolves and downloads its dependencies again — and on
-# a machine with no network, fails. Read at import, while HOME is still real.
-UV_CACHE = os.environ.get('UV_CACHE_DIR') or str(Path.home() / '.cache' / 'uv')
+REPO = Path(__file__).resolve().parents[2]
+
+WORKTREE = (sys.executable, '-m', 'dotfiles.worktree')
+"""How a fresh process reaches the command.
+
+The module rather than the console script `[project.scripts]` declares. Both run
+`cli.main`, and only this one is reachable before an install has written an entry
+point — so the suite is the same run on a machine that has never installed this
+package. `sys.executable` is the interpreter running the suite, which is the
+environment the package is importable from.
+
+Every case below still goes through a fresh process, because the fixtures give it
+a throwaway HOME and a PATH of fakes, and neither can be imposed on this one.
+"""
 
 # The em dash in `show` is non-ASCII, so an env without a UTF-8 locale measures
 # escaping rather than the line. Named per platform because there is no portable
@@ -148,11 +171,10 @@ def run(tmp_path: Path, fleet: dict[str, Path], bin_dir: Path):
             'HOME': str(tmp_path),
             'PATH': f'{bin_dir}:{os.environ["PATH"]}',
             'LC_ALL': UTF8_LOCALE,
-            'UV_CACHE_DIR': UV_CACHE,
             'WORKTREE_ROOT': str(fleet['roots']),
         } | (env or {})
         return subprocess.run(
-            [str(WORKTREE), *args],
+            [*WORKTREE, *args],
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -249,7 +271,7 @@ def plain(text: str) -> str:
     return ANSI.sub('', text)
 
 
-def fake_worktree(app: Any, path: str, **overrides: Any) -> Any:
+def fake_worktree(path: str, **overrides: Any) -> Any:
     """A Worktree with no repository behind it, for the renderers to lay out.
 
     Its defaults are also the shape `sweep` removes — clean, nobody in it, nothing
@@ -263,42 +285,42 @@ def fake_worktree(app: Any, path: str, **overrides: Any) -> Any:
         'base': 'main',
         'ahead': 0,
         'behind': 0,
-        'state': app.State.CLEAN,
+        'state': State.CLEAN,
         'sessions': (),
         'detached': False,
     }
-    return app.Worktree(**(fields | overrides))
+    return Worktree(**(fields | overrides))
 
 
-def fake_evidence(app: Any, **overrides: Any) -> Any:
+def fake_evidence(**overrides: Any) -> Any:
     """Evidence that clears every check, so a case states only its one difference.
 
     An empty `remote` means origin carries no branch of this name, which with
     `published` is the pair that says *pushed once, deleted since*.
     """
     fields: dict[str, Any] = {'published': True, 'fetched': True, 'remote': frozenset(), 'landed': True}
-    return app.Evidence(**(fields | overrides))
+    return Evidence(**(fields | overrides))
 
 
-def held_by_cases(app: Any) -> list[tuple[Any, dict[str, Any], dict[str, Any]]]:
+def held_by_cases() -> list[tuple[Any, dict[str, Any], dict[str, Any]]]:
     """Every reason a worktree survives, as (member, worktree fields, evidence fields).
 
     One table rather than one test each, because the claim worth asserting is that it
     covers `Kept` exactly. A member with no row here is a reason nothing can produce.
     """
-    occupant = app.Session(name='reviewer', status='idle', waiting=None, cwd=Path('/w/alpha'), tmux=None)
+    occupant = Session(name='reviewer', status='idle', waiting=None, cwd=Path('/w/alpha'), tmux=None)
     return [
-        (app.Kept.DIRTY, {'state': app.State.DIRTY}, {}),
-        (app.Kept.SESSIONS_UNREADABLE, {'sessions': None}, {}),
-        (app.Kept.SESSION, {'sessions': (occupant,)}, {}),
-        (app.Kept.DETACHED, {'branch': 'HEAD', 'detached': True}, {}),
-        (app.Kept.UNFETCHED_REMOTE, {}, {'fetched': False}),
-        (app.Kept.UNFETCHED_BASE, {'ahead': None}, {}),
-        (app.Kept.UNREADABLE_LANDING, {'ahead': 2}, {'landed': None}),
-        (app.Kept.UNLANDED, {'ahead': 2}, {'landed': False}),
-        (app.Kept.UNPUBLISHED, {}, {'published': False}),
-        (app.Kept.REMOTE_UNREADABLE, {}, {'remote': None}),
-        (app.Kept.REMOTE_LIVE, {}, {'remote': frozenset({'alpha'})}),
+        (Kept.DIRTY, {'state': State.DIRTY}, {}),
+        (Kept.SESSIONS_UNREADABLE, {'sessions': None}, {}),
+        (Kept.SESSION, {'sessions': (occupant,)}, {}),
+        (Kept.DETACHED, {'branch': 'HEAD', 'detached': True}, {}),
+        (Kept.UNFETCHED_REMOTE, {}, {'fetched': False}),
+        (Kept.UNFETCHED_BASE, {'ahead': None}, {}),
+        (Kept.UNREADABLE_LANDING, {'ahead': 2}, {'landed': None}),
+        (Kept.UNLANDED, {'ahead': 2}, {'landed': False}),
+        (Kept.UNPUBLISHED, {}, {'published': False}),
+        (Kept.REMOTE_UNREADABLE, {}, {'remote': None}),
+        (Kept.REMOTE_LIVE, {}, {'remote': frozenset({'alpha'})}),
     ]
 
 
@@ -739,7 +761,7 @@ class TestNothingIsDestroyed:
         assert alpha.exists()
         assert 'still here' in plain(result.stderr)
 
-    def test_a_kept_branch_is_not_reported_as_a_worktree_still_standing(self, fleet, run, worktree_app):
+    def test_a_kept_branch_is_not_reported_as_a_worktree_still_standing(self, fleet, run):
         """The two halves of a disposal fail separately, and after the branch deletion
         fails the directory is already gone.
 
@@ -751,9 +773,9 @@ class TestNothingIsDestroyed:
         run(checkout, 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
 
-        outcome, detail = worktree_app.dispose(checkout, alpha, 'no-such-branch', force=False)
+        outcome, detail = operations.dispose(checkout, alpha, 'no-such-branch', force=False)
 
-        assert outcome is worktree_app.Disposal.BRANCH_KEPT
+        assert outcome is Disposal.BRANCH_KEPT
         assert not alpha.exists(), 'the removal half succeeded, so the path is gone'
         assert detail
 
@@ -778,14 +800,14 @@ class TestLanded:
     cases build each shape in a real repository and ask.
     """
 
-    def test_a_branch_merged_under_its_own_shas_has_landed(self, worktree_app, fleet, run):
+    def test_a_branch_merged_under_its_own_shas_has_landed(self, fleet, run):
         """The ordinary merge, and the case the commit count was already right about."""
         alpha = merged_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
 
         assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') == '0'
-        assert worktree_app.landed(alpha, 'main') is True
+        assert repo.landed(alpha, 'main') is True
 
-    def test_a_branch_merged_under_new_shas_has_landed(self, worktree_app, fleet, run):
+    def test_a_branch_merged_under_new_shas_has_landed(self, fleet, run):
         """The bug. Ancestry says no and the count says four, and both are honest —
         the shas here are not the shas that reached main. The content is."""
         alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
@@ -794,16 +816,16 @@ class TestLanded:
 
         assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') != '0'
         assert ancestry.returncode != 0, 'the fixture has to leave the tip off main, or this proves nothing'
-        assert worktree_app.landed(alpha, 'main') is True
+        assert repo.landed(alpha, 'main') is True
 
-    def test_a_branch_whose_work_is_nowhere_else_has_not_landed(self, worktree_app, fleet, run):
+    def test_a_branch_whose_work_is_nowhere_else_has_not_landed(self, fleet, run):
         alpha = fleet['roots'] / 'primary' / 'alpha'
         run(fleet['primary'], 'new', 'alpha')
         commit_in(alpha, 'only-copy.txt')
 
-        assert worktree_app.landed(alpha, 'main') is False
+        assert repo.landed(alpha, 'main') is False
 
-    def test_a_rename_whose_deletion_never_landed_has_not_landed(self, worktree_app, fleet, run):
+    def test_a_rename_whose_deletion_never_landed_has_not_landed(self, fleet, run):
         """Rename detection reports a rename as the new path alone, so the old path
         never enters the comparison and a base branch that took only the addition reads
         as having the whole change.
@@ -821,9 +843,9 @@ class TestLanded:
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
         git(alpha, 'fetch', '-q', 'origin')
 
-        assert worktree_app.landed(alpha, 'main') is False
+        assert repo.landed(alpha, 'main') is False
 
-    def test_a_deletion_the_base_branch_took_has_landed(self, worktree_app, fleet, run):
+    def test_a_deletion_the_base_branch_took_has_landed(self, fleet, run):
         """The other half of asking about a path the branch no longer has. Both sides
         are missing it, so there is nothing here that is not there."""
         run(fleet['primary'], 'new', 'alpha')
@@ -835,9 +857,9 @@ class TestLanded:
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
         git(alpha, 'fetch', '-q', 'origin')
 
-        assert worktree_app.landed(alpha, 'main') is True
+        assert repo.landed(alpha, 'main') is True
 
-    def test_a_mode_the_base_branch_did_not_take_has_not_landed(self, worktree_app, fleet, run):
+    def test_a_mode_the_base_branch_did_not_take_has_not_landed(self, fleet, run):
         """Every byte of every touched path matches and the branch has still not
         landed. What differs is the file mode, which is tracked and is work."""
         run(fleet['primary'], 'new', 'alpha')
@@ -848,9 +870,9 @@ class TestLanded:
         blobs = (git(alpha, 'rev-parse', 'origin/main:f.txt'), git(alpha, 'rev-parse', 'HEAD:f.txt'))
 
         assert blobs[0] == blobs[1], 'one blob on both sides, so the mode is the only thing left to differ'
-        assert worktree_app.landed(alpha, 'main') is False
+        assert repo.landed(alpha, 'main') is False
 
-    def test_each_path_git_cannot_print_plainly_is_still_compared(self, worktree_app, fleet, run):
+    def test_each_path_git_cannot_print_plainly_is_still_compared(self, fleet, run):
         """git's default listing is not the names. It C-quotes any path holding a
         non-ASCII byte, a quote, a backslash or a control character, and the strip that
         reads an ordinary git answer takes a leading or trailing space off the rest.
@@ -875,9 +897,9 @@ class TestLanded:
             git(worktree, 'add', name)
             git(worktree, 'commit', '-qm', f'feat: {slug}')
 
-            assert worktree_app.landed(worktree, 'main') is False, name
+            assert repo.landed(worktree, 'main') is False, name
 
-    def test_a_rename_across_names_git_quotes_needs_both_guards_at_once(self, worktree_app, fleet, run):
+    def test_a_rename_across_names_git_quotes_needs_both_guards_at_once(self, fleet, run):
         """The one shape where dropping either guard on its own loses the work.
 
         Rename detection alone would report the new path and the base branch has that
@@ -906,9 +928,9 @@ class TestLanded:
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
         git(alpha, 'fetch', '-q', 'origin')
 
-        assert worktree_app.landed(alpha, 'main') is False
+        assert repo.landed(alpha, 'main') is False
 
-    def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, worktree_app, fleet, run):
+    def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, fleet, run):
         """Decided rather than left to whichever way the code happens to fall.
 
         Two commits that cancel leave the base branch's content untouched, so a removal
@@ -922,17 +944,17 @@ class TestLanded:
         git(alpha, 'commit', '-qm', 'revert: drop transient.txt')
 
         assert git(alpha, 'rev-list', '--count', 'origin/main..HEAD') == '2'
-        assert worktree_app.landed(alpha, 'main') is True
+        assert repo.landed(alpha, 'main') is True
 
-    def test_a_base_branch_that_was_never_fetched_is_unanswerable(self, worktree_app, fleet, run):
+    def test_a_base_branch_that_was_never_fetched_is_unanswerable(self, fleet, run):
         """None rather than False. `sweep` holds the worktree either way, but `drop`
         tells a human to go and look instead of claiming the work is unlanded."""
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
 
-        assert worktree_app.landed(alpha, 'no-such-base') is None
+        assert repo.landed(alpha, 'no-such-base') is None
 
-    def test_a_base_branch_that_moved_on_over_the_same_file_reads_as_unlanded(self, worktree_app, fleet, run):
+    def test_a_base_branch_that_moved_on_over_the_same_file_reads_as_unlanded(self, fleet, run):
         """The conservative half of the content comparison, stated so it is a decision
         rather than a surprise.
 
@@ -946,7 +968,7 @@ class TestLanded:
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
         git(alpha, 'fetch', '-q', 'origin')
 
-        assert worktree_app.landed(alpha, 'main') is False
+        assert repo.landed(alpha, 'main') is False
 
 
 class TestHeldBy:
@@ -959,29 +981,29 @@ class TestHeldBy:
     valid repository — so without this class they are guards no test can reach.
     """
 
-    def test_a_finished_worktree_clears_every_check(self, worktree_app):
-        cleared = fake_worktree(worktree_app, '/w/alpha')
+    def test_a_finished_worktree_clears_every_check(self):
+        cleared = fake_worktree('/w/alpha')
 
-        assert worktree_app.held_by(cleared, fake_evidence(worktree_app)) is None
+        assert survey.held_by(cleared, fake_evidence()) is None
 
-    def test_each_reason_is_what_its_own_state_produces(self, worktree_app):
-        for member, worktree_fields, evidence_fields in held_by_cases(worktree_app):
-            worktree = fake_worktree(worktree_app, '/w/alpha', **worktree_fields)
-            evidence = fake_evidence(worktree_app, **evidence_fields)
-            assert worktree_app.held_by(worktree, evidence) is member, member
+    def test_each_reason_is_what_its_own_state_produces(self):
+        for member, worktree_fields, evidence_fields in held_by_cases():
+            worktree = fake_worktree('/w/alpha', **worktree_fields)
+            evidence = fake_evidence(**evidence_fields)
+            assert survey.held_by(worktree, evidence) is member, member
 
-    def test_every_reason_is_reachable(self, worktree_app):
+    def test_every_reason_is_reachable(self):
         """A `Kept` member nothing returns is a guard that was written and never wired.
 
         The enum is where the guards are declared, so it is the side to compare
         against — a table that only covered what the code happens to do would agree
         with the code by construction and assert nothing.
         """
-        covered = {member for member, _, _ in held_by_cases(worktree_app)}
+        covered = {member for member, _, _ in held_by_cases()}
 
-        assert covered == set(worktree_app.Kept)
+        assert covered == set(Kept)
 
-    def test_an_unanswerable_check_never_reads_as_cleared(self, worktree_app):
+    def test_an_unanswerable_check_never_reads_as_cleared(self):
         """The four reads that can fail, each proved to hold the worktree rather than
         resolve to a falsy value the next check walks past.
 
@@ -990,27 +1012,27 @@ class TestHeldBy:
         strength of a question nobody managed to ask.
         """
         unanswerable = [
-            (fake_worktree(worktree_app, '/w/alpha', sessions=None), fake_evidence(worktree_app)),
-            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, fetched=False)),
-            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, remote=None)),
-            (fake_worktree(worktree_app, '/w/alpha'), fake_evidence(worktree_app, landed=None)),
+            (fake_worktree('/w/alpha', sessions=None), fake_evidence()),
+            (fake_worktree('/w/alpha'), fake_evidence(fetched=False)),
+            (fake_worktree('/w/alpha'), fake_evidence(remote=None)),
+            (fake_worktree('/w/alpha'), fake_evidence(landed=None)),
         ]
 
         for worktree, evidence in unanswerable:
-            assert worktree_app.held_by(worktree, evidence) is not None
+            assert survey.held_by(worktree, evidence) is not None
 
-    def test_commits_above_the_base_do_not_hold_a_worktree_whose_work_landed(self, worktree_app):
+    def test_commits_above_the_base_do_not_hold_a_worktree_whose_work_landed(self):
         """The count is not the question. A history rewritten on its way onto the base
         branch carries new shas, so the branch keeps commits the base will never hold.
 
         Asserted at four commits ahead because that is the count a real rewrite left,
         and a fix that only cleared zero would pass every other test in this class.
         """
-        rewritten = fake_worktree(worktree_app, '/w/alpha', ahead=4)
+        rewritten = fake_worktree('/w/alpha', ahead=4)
 
-        assert worktree_app.held_by(rewritten, fake_evidence(worktree_app)) is None
+        assert survey.held_by(rewritten, fake_evidence()) is None
 
-    def test_work_that_never_landed_is_held_however_it_reached_that_state(self, worktree_app):
+    def test_work_that_never_landed_is_held_however_it_reached_that_state(self):
         """The two shapes `ahead > 0` was protecting, now protected by what it stood in
         for. Neither may be swept.
 
@@ -1019,12 +1041,12 @@ class TestHeldBy:
         once and deleted on the remote without ever merging, which reads exactly like a
         merged branch until the changes themselves are compared.
         """
-        never_pushed = fake_evidence(worktree_app, published=False, landed=False)
-        deleted_unmerged = fake_evidence(worktree_app, published=True, remote=frozenset(), landed=False)
-        worktree = fake_worktree(worktree_app, '/w/alpha', ahead=1)
+        never_pushed = fake_evidence(published=False, landed=False)
+        deleted_unmerged = fake_evidence(published=True, remote=frozenset(), landed=False)
+        worktree = fake_worktree('/w/alpha', ahead=1)
 
-        assert worktree_app.held_by(worktree, never_pushed) is worktree_app.Kept.UNLANDED
-        assert worktree_app.held_by(worktree, deleted_unmerged) is worktree_app.Kept.UNLANDED
+        assert survey.held_by(worktree, never_pushed) is Kept.UNLANDED
+        assert survey.held_by(worktree, deleted_unmerged) is Kept.UNLANDED
 
 
 class TestSweep:
@@ -1152,7 +1174,7 @@ class TestSweep:
         assert alpha.exists()
         assert 'could not say whether anyone is in it' in plain(result.stderr)
 
-    def test_claude_sessions_missing_reads_as_unknown_not_as_empty(self, worktree_app, monkeypatch, tmp_path):
+    def test_claude_sessions_missing_reads_as_unknown_not_as_empty(self, monkeypatch, tmp_path):
         """Absent from PATH is the same unanswerable question reached another way, and
         it is the one that used to pass in complete silence — no warning, no mention of
         sessions at all, and a removal.
@@ -1165,7 +1187,7 @@ class TestSweep:
         empty.mkdir()
         monkeypatch.setenv('PATH', str(empty))
 
-        assert worktree_app.live_sessions() is None
+        assert survey.live_sessions() is None
 
     def test_an_unreachable_origin_keeps_everything(self, fleet, run):
         """Every remote fact below the fetch is read out of refs/remotes/origin, which
@@ -1728,27 +1750,27 @@ class TestRendering:
     of rows becomes a table. Both are cheap to enumerate here and expensive to
     reach through a fixture."""
 
-    def test_a_session_deeper_in_the_tree_belongs_to_the_worktree(self, worktree_app):
-        found = worktree_app.sessions_at(
-            [worktree_app.Session('a', 'idle', None, Path('/w/alpha/src/deep'), None)],
+    def test_a_session_deeper_in_the_tree_belongs_to_the_worktree(self):
+        found = survey.sessions_at(
+            [Session('a', 'idle', None, Path('/w/alpha/src/deep'), None)],
             Path('/w/alpha'),
         )
 
         assert [session.name for session in found] == ['a']
 
-    def test_a_sibling_sharing_a_name_prefix_does_not(self, worktree_app):
-        found = worktree_app.sessions_at(
-            [worktree_app.Session('a', 'idle', None, Path('/w/alpha-two'), None)],
+    def test_a_sibling_sharing_a_name_prefix_does_not(self):
+        found = survey.sessions_at(
+            [Session('a', 'idle', None, Path('/w/alpha-two'), None)],
             Path('/w/alpha'),
         )
 
         assert found == ()
 
-    def test_columns_line_up_under_their_headers(self, worktree_app):
-        header, *body = worktree_app.render_table(
+    def test_columns_line_up_under_their_headers(self):
+        header, *body = render.render_table(
             [
-                fake_worktree(worktree_app, '/w/a', branch='short'),
-                fake_worktree(worktree_app, '/w/a-very-long-one', branch='considerably-longer'),
+                fake_worktree('/w/a', branch='short'),
+                fake_worktree('/w/a-very-long-one', branch='considerably-longer'),
             ]
         )
         branch_at = header.index('BRANCH')
@@ -1756,9 +1778,9 @@ class TestRendering:
         assert body[0].index('short') == branch_at
         assert body[1].index('considerably-longer') == branch_at
 
-    def test_the_last_column_is_never_padded(self, worktree_app):
+    def test_the_last_column_is_never_padded(self):
         """Session names run long, and nothing follows them."""
-        table = worktree_app.render_table([fake_worktree(worktree_app, '/w/a')])
+        table = render.render_table([fake_worktree('/w/a')])
 
         assert all(row == row.rstrip() for row in table)
 
@@ -1880,7 +1902,7 @@ class TestSpawnBrief:
         assert (first.returncode, second.returncode) == (0, 0), plain(first.stderr + second.stderr)
         assert sorted(path.read_text() for path in briefs_in(tmp_path)) == ['first\n', 'second\n']
 
-    def test_a_brief_is_not_overwritten_by_one_minted_in_the_same_second(self, worktree_app, tmp_path, monkeypatch):
+    def test_a_brief_is_not_overwritten_by_one_minted_in_the_same_second(self, tmp_path, monkeypatch):
         """A timestamp at second resolution is not a distinguishing part. Two no-slug
         spawns into one repo have nothing else left, and that is the reviewer form — the
         one a coordinator dispatches several of at once."""
@@ -1888,8 +1910,8 @@ class TestSpawnBrief:
         one = brief_at(tmp_path / 'one.md', 'review PR 33\n')
         two = brief_at(tmp_path / 'two.md', 'review PR 41\n')
 
-        first = worktree_app.keep_brief(one, 'dotfiles', None)
-        second = worktree_app.keep_brief(two, 'dotfiles', None)
+        first = operations.keep_brief(one, 'dotfiles', None)
+        second = operations.keep_brief(two, 'dotfiles', None)
 
         assert first != second
         assert first.read_text() == 'review PR 33\n'
@@ -2188,16 +2210,16 @@ class TestHelp:
     covered on the day it arrives rather than on the day someone remembers this file.
     """
 
-    def commands(self, app) -> list[str]:
+    def commands(self) -> list[str]:
         # argparse exposes its subcommands only through the action holding them, and the
         # action list is private. A hand-written list is the alternative, and that is the
         # thing this test exists to not depend on.
-        holders = [action for action in app.build_parser()._actions if isinstance(getattr(action, 'choices', None), dict)]
+        holders = [choices for action in cli.build_parser()._actions if isinstance(choices := action.choices, dict)]
         assert len(holders) == 1, 'expected one subcommand group'
-        return sorted(holders[0].choices)
+        return sorted(holders[0])
 
-    def test_every_subcommand_renders_its_help(self, worktree_app, fleet, run):
-        for command in self.commands(worktree_app):
+    def test_every_subcommand_renders_its_help(self, fleet, run):
+        for command in self.commands():
             result = run(fleet['primary'], command, '--help')
 
             assert result.returncode == 0, f'{command} --help exited {result.returncode}: {plain(result.stderr)}'
@@ -2237,67 +2259,67 @@ class TestSessionMatching:
     ways a live tmux server cannot be made to reproduce on demand.
     """
 
-    def registered(self, app, name: str, tmux: str | None, pid: int = 100):
-        return app.Session(name=name, status='idle', waiting=None, cwd=Path('/anywhere'), tmux=tmux, pid=pid)
+    def registered(self, name: str, tmux: str | None, pid: int = 100):
+        return Session(name=name, status='idle', waiting=None, cwd=Path('/anywhere'), tmux=tmux, pid=pid)
 
-    def test_a_stale_window_does_not_prevent_the_match(self, worktree_app):
+    def test_a_stale_window_does_not_prevent_the_match(self):
         """`tmux join-pane` moves a pane between windows and the registry keeps the window it
         was recorded in. The pane id survives the move, so only the pane id is compared."""
-        moved = self.registered(worktree_app, 'moved', 'system:@13.%24')
+        moved = self.registered('moved', 'system:@13.%24')
 
-        assert worktree_app.session_in_pane([moved], '%24', 100) == 'moved'
+        assert panes.session_in_pane([moved], '%24', 100) == 'moved'
 
-    def test_a_pane_moved_to_another_tmux_session_still_matches(self, worktree_app):
+    def test_a_pane_moved_to_another_tmux_session_still_matches(self):
         """The same move between tmux sessions rather than between windows, which rots the
         first field as well. Two of the address's three parts go stale and the pane id does
         not, so it is the only part worth comparing."""
-        relocated = self.registered(worktree_app, 'relocated', 'the-old-one:@13.%24')
+        relocated = self.registered('relocated', 'the-old-one:@13.%24')
 
-        assert worktree_app.session_in_pane([relocated], '%24', 100) == 'relocated'
+        assert panes.session_in_pane([relocated], '%24', 100) == 'relocated'
 
-    def test_a_tmux_session_name_containing_a_dot_still_resolves(self, worktree_app):
-        awkward = self.registered(worktree_app, 'awkward', 'de.initiative:@0.%7')
+    def test_a_tmux_session_name_containing_a_dot_still_resolves(self):
+        awkward = self.registered('awkward', 'de.initiative:@0.%7')
 
-        assert worktree_app.session_in_pane([awkward], '%7', 100) == 'awkward'
+        assert panes.session_in_pane([awkward], '%7', 100) == 'awkward'
 
-    def test_a_session_outside_tmux_is_never_matched(self, worktree_app):
-        headless = self.registered(worktree_app, 'headless', None)
+    def test_a_session_outside_tmux_is_never_matched(self):
+        headless = self.registered('headless', None)
 
-        assert worktree_app.session_in_pane([headless], '%7', 100) is None
+        assert panes.session_in_pane([headless], '%7', 100) is None
 
-    def test_a_different_pane_is_not_a_match(self, worktree_app):
-        elsewhere = self.registered(worktree_app, 'elsewhere', 'rig:@0.%7')
+    def test_a_different_pane_is_not_a_match(self):
+        elsewhere = self.registered('elsewhere', 'rig:@0.%7')
 
-        assert worktree_app.session_in_pane([elsewhere], '%77', 100) is None
+        assert panes.session_in_pane([elsewhere], '%77', 100) is None
 
-    def test_a_pane_id_that_is_a_prefix_of_another_is_not_a_match(self, worktree_app):
+    def test_a_pane_id_that_is_a_prefix_of_another_is_not_a_match(self):
         """%7 and %77 are different panes, and a startswith would join them."""
-        seven = self.registered(worktree_app, 'seven', 'rig:@0.%7')
+        seven = self.registered('seven', 'rig:@0.%7')
 
-        assert worktree_app.session_in_pane([seven], '%77', 100) is None
-        assert worktree_app.session_in_pane([seven], '%7', 100) == 'seven'
+        assert panes.session_in_pane([seven], '%77', 100) is None
+        assert panes.session_in_pane([seven], '%7', 100) == 'seven'
 
-    def test_a_second_row_on_the_same_pane_is_told_apart_by_its_process(self, worktree_app):
+    def test_a_second_row_on_the_same_pane_is_told_apart_by_its_process(self):
         """A `claude` started from inside a session's pane inherits that pane's $TMUX_PANE
         and registers against it, so one pane id can carry two rows."""
-        child = self.registered(worktree_app, 'child', 'rig:@0.%7', pid=999)
-        real = self.registered(worktree_app, 'real', 'rig:@0.%7', pid=100)
+        child = self.registered('child', 'rig:@0.%7', pid=999)
+        real = self.registered('real', 'rig:@0.%7', pid=100)
 
-        assert worktree_app.session_in_pane([child, real], '%7', 100) == 'real'
+        assert panes.session_in_pane([child, real], '%7', 100) == 'real'
 
-    def test_nothing_is_answered_with_when_no_claimant_owns_the_process(self, worktree_app):
+    def test_nothing_is_answered_with_when_no_claimant_owns_the_process(self):
         """Waiting is the right answer, because the caller's next act is to send this name
         an instruction. A wrong name is worse than a second of delay."""
-        child = self.registered(worktree_app, 'child', 'rig:@0.%7', pid=999)
+        child = self.registered('child', 'rig:@0.%7', pid=999)
 
-        assert worktree_app.session_in_pane([child], '%7', 100) is None
+        assert panes.session_in_pane([child], '%7', 100) is None
 
-    def test_the_pane_alone_decides_when_the_process_cannot_be_read(self, worktree_app):
+    def test_the_pane_alone_decides_when_the_process_cannot_be_read(self):
         """A pane tmux will not report a pid for is almost certainly already dead, and the
         wait has a pane check of its own for that."""
-        only = self.registered(worktree_app, 'only', 'rig:@0.%7', pid=999)
+        only = self.registered('only', 'rig:@0.%7', pid=999)
 
-        assert worktree_app.session_in_pane([only], '%7', None) == 'only'
+        assert panes.session_in_pane([only], '%7', None) == 'only'
 
 
 class TestPaneState:
@@ -2307,37 +2329,37 @@ class TestPaneState:
     and reading the first row would report whichever tmux happened to list first.
     """
 
-    def listing(self, monkeypatch, worktree_app, stdout: str, returncode: int = 0):
+    def listing(self, monkeypatch, stdout: str, returncode: int = 0):
         def fake(argv, **kwargs):
             return subprocess.CompletedProcess(argv, returncode, stdout, '')
 
-        monkeypatch.setattr(worktree_app, 'run', fake)
+        monkeypatch.setattr(panes, 'run', fake)
 
-    def test_a_pane_still_running_is_running(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 0 \n')
+    def test_a_pane_still_running_is_running(self, monkeypatch):
+        self.listing(monkeypatch, '%0 0 \n%1 0 \n')
 
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.RUNNING, None)
+        assert panes.pane_state('%1') == (Pane.RUNNING, None)
 
-    def test_a_dead_pane_carries_the_status_its_command_exited_with(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 1 127\n')
+    def test_a_dead_pane_carries_the_status_its_command_exited_with(self, monkeypatch):
+        self.listing(monkeypatch, '%0 0 \n%1 1 127\n')
 
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.DEAD, 127)
+        assert panes.pane_state('%1') == (Pane.DEAD, 127)
 
-    def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 1 127\n')
+    def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(self, monkeypatch):
+        self.listing(monkeypatch, '%0 0 \n%1 1 127\n')
 
-        assert worktree_app.pane_state('%0') == (worktree_app.Pane.RUNNING, None)
+        assert panes.pane_state('%0') == (Pane.RUNNING, None)
 
-    def test_a_pane_tmux_refuses_to_list_is_gone(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '', returncode=1)
+    def test_a_pane_tmux_refuses_to_list_is_gone(self, monkeypatch):
+        self.listing(monkeypatch, '', returncode=1)
 
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.GONE, None)
+        assert panes.pane_state('%1') == (Pane.GONE, None)
 
-    def test_an_unreadable_status_is_reported_as_dead_without_one(self, worktree_app, monkeypatch):
+    def test_an_unreadable_status_is_reported_as_dead_without_one(self, monkeypatch):
         """A dead pane whose status tmux will not give up is still a launch that failed."""
-        self.listing(monkeypatch, worktree_app, '%1 1 \n')
+        self.listing(monkeypatch, '%1 1 \n')
 
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.DEAD, None)
+        assert panes.pane_state('%1') == (Pane.DEAD, None)
 
 
 class TestRefusalFaults:
@@ -2349,34 +2371,34 @@ class TestRefusalFaults:
     functions directly, which is the only way the member is reachable at all.
     """
 
-    def refusal(self, app, call) -> Any:
-        with pytest.raises(app.Refused) as raised:
+    def refusal(self, call) -> Any:
+        with pytest.raises(Refused) as raised:
             call()
         return raised.value.fault
 
-    def test_a_missing_binary_is_a_tool_fault(self, worktree_app, monkeypatch):
-        monkeypatch.setattr(worktree_app.shutil, 'which', lambda _name: None)
+    def test_a_missing_binary_is_a_tool_fault(self, monkeypatch):
+        monkeypatch.setattr(shutil, 'which', lambda _name: None)
 
-        assert self.refusal(worktree_app, lambda: worktree_app.require_tool('tmux', 'why')) is worktree_app.Fault.TOOL_MISSING
+        assert self.refusal(lambda: require_tool('tmux', 'why')) is Fault.TOOL_MISSING
 
-    def test_being_outside_tmux_is_its_own_fault(self, worktree_app, monkeypatch):
-        monkeypatch.setattr(worktree_app.shutil, 'which', lambda name: f'/usr/bin/{name}')
+    def test_being_outside_tmux_is_its_own_fault(self, monkeypatch):
+        monkeypatch.setattr(shutil, 'which', lambda name: f'/usr/bin/{name}')
         monkeypatch.delenv('TMUX', raising=False)
         monkeypatch.delenv('TMUX_PANE', raising=False)
 
-        assert self.refusal(worktree_app, worktree_app.require_caller_pane) is worktree_app.Fault.NO_TMUX
+        assert self.refusal(panes.require_caller_pane) is Fault.NO_TMUX
 
-    def test_an_occupied_worktree_and_an_unreadable_registry_are_different_faults(self, worktree_app, monkeypatch, tmp_path):
-        occupant = worktree_app.Session(name='someone', status='idle', waiting=None, cwd=tmp_path, tmux=None, pid=1)
+    def test_an_occupied_worktree_and_an_unreadable_registry_are_different_faults(self, monkeypatch, tmp_path):
+        occupant = Session(name='someone', status='idle', waiting=None, cwd=tmp_path, tmux=None, pid=1)
 
-        monkeypatch.setattr(worktree_app, 'live_sessions', lambda: (occupant,))
-        occupied = self.refusal(worktree_app, lambda: worktree_app.require_unoccupied(tmp_path))
+        monkeypatch.setattr(operations, 'live_sessions', lambda: (occupant,))
+        occupied = self.refusal(lambda: operations.require_unoccupied(tmp_path))
 
-        monkeypatch.setattr(worktree_app, 'live_sessions', lambda: None)
-        unreadable = self.refusal(worktree_app, lambda: worktree_app.require_unoccupied(tmp_path))
+        monkeypatch.setattr(operations, 'live_sessions', lambda: None)
+        unreadable = self.refusal(lambda: operations.require_unoccupied(tmp_path))
 
-        assert occupied is worktree_app.Fault.WORKTREE_OCCUPIED
-        assert unreadable is worktree_app.Fault.SESSIONS_UNREADABLE
+        assert occupied is Fault.WORKTREE_OCCUPIED
+        assert unreadable is Fault.SESSIONS_UNREADABLE
         assert occupied is not unreadable, 'nobody is here and nobody could be asked are the same empty list'
 
 
@@ -2388,22 +2410,22 @@ class TestUsableWidth:
     first of those three looks wrong.
     """
 
-    def test_columns_and_percentages_are_taken(self, worktree_app):
-        assert all(worktree_app.usable_width(value) for value in ('1', '80', '120', '1%', '66%', '100%'))
+    def test_columns_and_percentages_are_taken(self):
+        assert all(panes.usable_width(value) for value in ('1', '80', '120', '1%', '66%', '100%'))
 
-    def test_a_value_tmux_would_ignore_is_refused(self, worktree_app):
+    def test_a_value_tmux_would_ignore_is_refused(self):
         for value in ('abc', '-5', '0', '0%', '101%', '999%', '66%%', '', '12.5', '80 '):
-            assert not worktree_app.usable_width(value), value
+            assert not panes.usable_width(value), value
 
 
 class TestBriefsDirectory:
-    def test_it_follows_xdg_state_home(self, worktree_app, monkeypatch, tmp_path):
+    def test_it_follows_xdg_state_home(self, monkeypatch, tmp_path):
         monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
 
-        assert worktree_app.briefs_dir() == tmp_path / 'state' / 'worktree' / 'briefs'
+        assert repo.briefs_dir() == tmp_path / 'state' / 'worktree' / 'briefs'
 
-    def test_it_falls_back_under_home_when_the_variable_is_unset(self, worktree_app, monkeypatch, tmp_path):
+    def test_it_falls_back_under_home_when_the_variable_is_unset(self, monkeypatch, tmp_path):
         monkeypatch.delenv('XDG_STATE_HOME', raising=False)
         monkeypatch.setenv('HOME', str(tmp_path))
 
-        assert worktree_app.briefs_dir() == tmp_path / '.local' / 'state' / 'worktree' / 'briefs'
+        assert repo.briefs_dir() == tmp_path / '.local' / 'state' / 'worktree' / 'briefs'

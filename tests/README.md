@@ -1,7 +1,7 @@
 # Dotfiles Testing
 
 One runner. `eza -1 tests/` lists the directories; each is named for what it
-covers, and the three that are not obvious:
+covers, and the four that are not obvious:
 
 - `tests/shell/` — the shell code, driven from pytest through a real `bash`,
   `zsh` or `tmux`. The runner is Python; the subject is not.
@@ -10,6 +10,11 @@ covers, and the three that are not obvious:
 - `tests/matrix/` — one synthetic machine built from files, with the real CLI
   driven against it in process. Where a property visible through a verb belongs,
   and the routing rule is in `docs/development/testing.md`.
+- `tests/tools/` — the commands this package ships besides `dotfiles` itself.
+  Each is a module under `src/dotfiles/` and an entry in `[project.scripts]`,
+  which is the list. `tests/apps/` is the other half of the same question: a tool
+  that is still a standalone script under `apps/`, carrying its own dependency
+  closure in a PEP 723 header and reached by the test through its file path.
 
 **`tests/matrix/` and `task test:matrix` are unrelated.** The task is the
 container grid below — every level over every environment, an hour of wall

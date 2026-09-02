@@ -20,6 +20,9 @@ dependencies = [
 [project.scripts]
 dotfiles = "dotfiles.main:app"
 packages = "dotfiles.declaration:cli"
+worktree = "dotfiles.worktree.cli:main"
+tmux-place = "dotfiles.tmux_place:main"
+tmux-rearrange = "dotfiles.tmux_rearrange:main"
 
 
 # ---------- Tool Configurations ---------- #

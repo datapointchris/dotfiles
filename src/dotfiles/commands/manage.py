@@ -40,8 +40,10 @@ DEPENDENCY_FILES = ('pyproject.toml', 'uv.lock')
 """The exact bound on when an editable install goes stale.
 
 Code changes never stale it — uv points at the working tree, so a pull *is* the
-new code. Only the dependency set is resolved once at install time, so these two
-files are the whole of what a rebuild can be needed for."""
+new code. Two things are settled once, at install time, and both are declared in
+these files: the resolved dependency set, and the console scripts written into the
+tool venv's bin. A `[project.scripts]` entry added by a pull is a command that does
+not exist on the machine until this rebuild runs."""
 
 
 @repo_app.command('show')

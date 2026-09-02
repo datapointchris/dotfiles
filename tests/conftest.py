@@ -508,7 +508,7 @@ def resolve_interpreters(config, items):
     """Skip what needs a missing interpreter, or refuse the whole run.
 
     `tests/shell` drives real bash and zsh, `tests/install/test_pluginsync.py` a
-    real tmux, and `tests/apps/test_worktree.py` a real tmux server. A machine
+    real tmux, and `tests/tools/test_worktree.py` a real tmux server. A machine
     without one should skip those cases and still run the rest; CI must do the
     opposite, because a runner image that has no zsh reports green having run a
     third of that directory. Both readings are right for their runner, which is
@@ -570,18 +570,24 @@ def aws_profiles():
 
 
 @pytest.fixture(scope='session')
-def worktree_app():
-    return load_app('worktree')
-
-
-@pytest.fixture(scope='session')
 def tmux_rearrange():
-    return load_app('tmux-rearrange')
+    """The module itself, so a test can call into it and patch what it imported.
+
+    A fixture rather than an import in each file, because that is how several
+    hundred assertions already spell it. Imported inside the body rather than at
+    the top of this file: the guard above holds `dotfiles.paths` out of
+    `sys.modules` until `DOTFILES_DIR` is pinned, and a fixture runs long after.
+    """
+    from dotfiles import tmux_rearrange as module
+
+    return module
 
 
 @pytest.fixture(scope='session')
 def tmux_place():
-    return load_app('tmux-place')
+    from dotfiles import tmux_place as module
+
+    return module
 
 
 ANSWERED_BY_A_SHELL = 'set-by-a-shell-nothing-here-may-consult'
