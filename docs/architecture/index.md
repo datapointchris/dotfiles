@@ -175,8 +175,8 @@ platform string draws. `gh` unqualified resolves everywhere git runs here.
 
 Identity rides the trust axis, because that is the thing it actually varies with.
 A machine hosting two identities needs a different default from one hosting one.
-A fleet machine's `fleet.gitconfig` includes
-`personal.gitconfig` unconditionally, so the personal machines take their
+A fleet machine's `fleet.gitconfig` includes `personal.gitconfig`
+unconditionally, so the personal machines take their
 identity from the repo and nobody sets one by hand. The personal address is in
 the repo because it is already in every commit object here. Shipping it discloses
 nothing, and a value the repo owns cannot drift on one machine or vanish when a
@@ -187,8 +187,8 @@ A machine off the fleet inverts the pair. `local.gitconfig` is the default, and
 `includeIf "hasconfig:remote.*.url:..."`. That direction is deliberate. A repo
 slipping through the match commits under the other address, which is wrong and
 stays inside. The reverse puts a personal address into history that is not
-personal, which does not come back. `hasconfig`
-keys on the remote rather than the checkout path, so it holds wherever a repo is
+personal, which does not come back. `hasconfig` keys on the remote rather than
+the checkout path, so it holds wherever a repo is
 cloned. It takes two blocks, because the condition matches the URL literally and
 HTTPS and SSH spell the same remote differently.
 

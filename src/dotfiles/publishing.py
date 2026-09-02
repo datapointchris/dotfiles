@@ -3,7 +3,7 @@
 The offline loop needs one thing to travel *from* the firewalled box: what it has
 installed, so a machine with a network can build it a bundle carrying only what it
 lacks. `~/dev/workstations.md` § "The seam between them" records the standing
-arrangement that nothing written at work travels home, and this is the one narrow
+arrangement that nothing written on that machine travels back, and this is the one narrow
 exception to it. Narrow has to be a property of the code rather than of whoever
 is looking.
 
@@ -11,8 +11,7 @@ is looking.
 `resources/identity.py` examines `user.name` and `user.email`, and its own
 docstring records that a nonfleet box defaults to its non-personal identity — so
 `check --json` there contains an address that is not the personal one.
-`resources/env.py` examines
-every `~/.env` key, `WINDOWS_DOMAIN` among them.
+`resources/env.py` examines every `~/.env` key, `WINDOWS_DOMAIN` among them.
 
 So the document is composed over an **allowlist** and never filtered down to one.
 A denylist admits whatever is added next; an allowlist excludes it until somebody

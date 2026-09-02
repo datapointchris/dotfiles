@@ -26,10 +26,12 @@ POSITION="${WORK_MONITOR_POSITION:-auto-right}"
 SCALE="${WORK_MONITOR_SCALE:-1}"
 WORKSPACE="9"
 
+# The monitor at that desk has a second computer on another of its inputs, which
+# is what makes this tool necessary and what makes querying the compositor wrong.
 # Intent has to be tracked here rather than read back from `hyprctl monitors`:
-# whenever the Dell is showing the other machine's input it drops hotplug detect,
-# so an enabled output vanishes from that list. Querying it would make toggle
-# fail in exactly the situation this tool exists for.
+# whenever the Dell is showing that other input it drops hotplug detect, so an
+# enabled output vanishes from that list. Querying it would make toggle fail in
+# exactly the situation this tool exists for.
 STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/work-monitor/enabled"
 
 show_help() {

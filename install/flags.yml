@@ -189,7 +189,7 @@ required_files:
   # below and arrived at from the other side of it. There, the consumer is itself
   # `configs/trust/nonfleet/`; here both consumers sit in `configs/common/`, so
   # every machine deploys one and the two nonfleet machines are the two halves of
-  # one laptop. Naming a single machine had the Windows half declare no
+  # one laptop. Naming `wsl-work-workstation` had the Windows half declare no
   # need for a file it reads: `check` never asked whether it was there and
   # `machines requirements --safekeep` emitted no block to restore it, while the
   # shell code it holds names the same network either side of the WSL boundary.

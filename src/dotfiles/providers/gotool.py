@@ -113,8 +113,8 @@ Every goreleaser build writes it, which makes this the normal state of a Go tool
 installed from a release asset rather than through the module proxy — the offline
 bundle's whole path. Measured 2026-08-17 against upstream's own
 `ascii-image-converter_Linux_amd64_64bit.tar.gz`: `mod (devel)` beside a banner
-reading `v1.13.1`, and the restored box had carried the tool as unmeasurable since it
-restored from a bundle.
+reading `v1.13.1`, and the box that installed it from a bundle had carried the tool
+as unmeasurable ever since.
 """
 
 
