@@ -5,21 +5,22 @@
 # any process that sources no profile. See standards/data.md § "A shared file is
 # named in config; only the tool's own default is compiled in".
 #
-# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
-# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
-# yet, while the clone is what `dotfiles apply` puts there.
+# The clone rather than a symlink that resolves into it: the symlink sits in a
+# directory replicated between machines, so it is a second hop a rebuilt machine
+# has not restored yet, while the clone is what `dotfiles apply` puts there.
 #
 # Under trust/fleet rather than common/ because the path differs by trust domain,
 # and a registry named anywhere a machine of either domain would load it is
 # refused.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
-# relate's corpus reaches every machine because ~/shart is a Syncthing folder, which
+# relate's corpus reaches every machine because that directory is replicated, which
 # is a fact about this fleet and not about relate — so relate defaults to
 # $XDG_DATA_HOME/relate and is pointed here instead of carrying the answer.
 #
-# Under trust/fleet for the reason above it: ~/shart exists on this domain's machines
-# and nowhere else, so a machine of the other domain gets no key and the XDG default.
+# Under trust/fleet for the reason above it: that directory exists on this domain's
+# machines and nowhere else, so a machine of the other domain gets no key and the
+# XDG default.
 #
 # The log deliberately does not follow. It stays at $XDG_STATE_HOME/relate, because it
 # describes the machine that wrote it and replicating it to the others is noise.

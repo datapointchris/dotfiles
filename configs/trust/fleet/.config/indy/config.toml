@@ -5,14 +5,14 @@
 # to any process that sources no profile. See standards/data.md § "A shared file is
 # named in config; only the tool's own default is compiled in".
 #
-# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
-# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
-# yet, while the clone is what `dotfiles apply` puts there.
+# The clone rather than a symlink that resolves into it: the symlink sits in a
+# directory replicated between machines, so it is a second hop a rebuilt machine
+# has not restored yet, while the clone is what `dotfiles apply` puts there.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 exemplar_registry = "~/.local/share/terminal-library-fleet/exemplar-repos.json"
 
 # data_dir is deliberately unset: the index is derived state and belongs in
-# $XDG_DATA_HOME/indy, which Syncthing replicates as its own folder.
+# $XDG_DATA_HOME/indy, which is replicated between machines as its own folder.
 
 # Non-repo roots worth searching — the reasoning behind decisions that no repo records.
 [[extra_paths]]

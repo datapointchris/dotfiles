@@ -11,9 +11,9 @@
 # A bare key, so it has to stay above the first [section] — TOML reads anything
 # after one as belonging to it.
 #
-# The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
-# Syncthing folder, so the link is a second hop a rebuilt machine has not restored
-# yet, while the clone is what `dotfiles apply` puts there.
+# The clone rather than a symlink that resolves into it: the symlink sits in a
+# directory replicated between machines, so it is a second hop a rebuilt machine
+# has not restored yet, while the clone is what `dotfiles apply` puts there.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
 # api_key is deliberately absent and belongs in $TODOUI_SYNC_KEY below the

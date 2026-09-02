@@ -15,9 +15,9 @@
 #
 # `dotfiles config show` reports what each key resolved to and which rung answered.
 
-# The clone itself rather than the ~/dev symlink that resolves into it. ~/dev is
-# a Syncthing folder, so pointing at the link would make this line depend on a
-# second hop that a rebuilt machine has not restored yet.
+# The clone itself rather than a symlink that resolves into it. The symlink sits
+# in a directory replicated between machines, so pointing at it would make this
+# line depend on a second hop that a rebuilt machine has not restored yet.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 homelab_hosts_json = "~/.local/share/terminal-library-fleet/homelab-hosts.json"
 workstations_json = "~/.local/share/terminal-library-fleet/workstations.json"
