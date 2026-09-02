@@ -27,19 +27,20 @@
 # reconnects every five seconds forever. On another network that address belongs
 # to somebody else's machine, so the loop is an authenticated request repeated at
 # whatever is really there — which is the shape lateral movement has. The
-# coordinate is what keeps it off machines that are not on that network. Before
-# it existed, the only thing keeping it off them was their happening to have no
-# ntfy config.
+# coordinate is what keeps it off machines that are not on that network.
 #
 # The host is never compiled in. A default would be this repo carrying one
 # network's topology, and on any other network it would send the token to
 # whatever answered at that address — the wrong answer, arrived at silently.
 # CLAUDE_CI_WATCH_NTFY_HOST is a `required:` entry in install/flags.yml instead,
 # so an unset value is a `dotfiles check` failure rather than a surprise here.
+#
+# It is read below the argument dispatch, never above it. The machine that has
+# not set it is the machine reading `--help` to find out that it must, so a
+# refusal ahead of the dispatch hides the only screen that names the variable.
 
 set -euo pipefail
 
-NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:?set it in ~/.env; install/flags.yml declares it}"
 NTFY_TOPICS="${CLAUDE_CI_WATCH_TOPICS:-ci-failures,homelab-alerts}"
 NTFY_CONFIG="${CLAUDE_CI_WATCH_CONFIG:-$HOME/.config/ntfy/client.yml}"
 
@@ -82,6 +83,8 @@ case "${1:-}" in
   -*) die "unknown option: $1" ;;
   *) repo="$1" ;;
 esac
+
+NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:?set it in ~/.env; install/flags.yml declares it}"
 
 [ -r "$NTFY_CONFIG" ] || die "no readable ntfy config at $NTFY_CONFIG"
 token=$(rg -o 'default-token:\s*(\S+)' -r '$1' "$NTFY_CONFIG" || true)

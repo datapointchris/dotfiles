@@ -115,8 +115,7 @@ required:
   # a private address is pointed at a stranger's machine on any other network.
   # Capacity is what the consumer's *purpose* decides: it exists so a Claude
   # session can watch the repo it is working in, and nobody works in a repo on a
-  # server. Trust alone required it on both servers, which deploy the app and will
-  # never run it.
+  # server.
   - name: CLAUDE_CI_WATCH_NTFY_HOST
     description: The ntfy server this machine's CI watcher subscribes to
     network_trust: fleet
@@ -124,21 +123,45 @@ required:
     consumers:
       - apps/trust/fleet/claude-ci-watch
 
-  # The FreshRSS base URL, for the webview launcher alone. newsboat reaches the
-  # same server and cannot read this: it expands no environment variable
-  # anywhere in its config, so its half is the `local.config` file below. The two
-  # name one server and have to agree, which is the cost of a reader that takes
-  # only a file and a launcher that can take only a value.
+  # The FreshRSS server and account, named once and read by both consumers.
+  # newsboat evaluates a backtick in its config, so it takes the same variable the
+  # launcher does rather than a file of its own.
   #
-  # Narrowed on the display stack, which is the axis that decides it: the
-  # consumer is a Desktop Entry, and a machine with no desk has nothing to launch
-  # it from. Trust would be the obvious axis and reaches further than the
-  # consumer does.
+  # Two axes, and neither is the display stack. The launcher is a Desktop Entry
+  # and reaches only a machine with a desk, but newsboat is a workstation package
+  # under `configs/common/`, so the reader is on the two Macs as well. Trust is
+  # what says a FreshRSS is reachable at all, and capacity keeps it off the
+  # servers, which install neither consumer.
   - name: FRESHRSS_URL
-    description: Base URL of this machine's FreshRSS, for the RSS desktop entry
-    display_stack: wayland
+    description: Base URL of this machine's FreshRSS
+    network_trust: fleet
+    capacity: workstation
     consumers:
       - apps/display/wayland/rss
+      - configs/common/.config/newsboat/config
+
+  # Beside the URL because newsboat sends them together and neither is useful
+  # alone. An account name rather than a credential: the password is
+  # FRESHRSS_PASSWORD, which no register declares because `freshrss-passwordeval`
+  # already fails loudly and a secret belongs in the vault rather than here.
+  - name: FRESHRSS_LOGIN
+    description: Account name this machine authenticates to FreshRSS with
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - configs/common/.config/newsboat/config
+
+  # Not a service this repo deploys — an audio host on somebody's own network,
+  # reached by two aliases. Declared for the reason the block above gives: the
+  # generated block in `~/.env` is the only thing that tells a rebuilt machine a
+  # value exists, so an undeclared one is a value nobody is ever asked for again.
+  #
+  # The os axis alone, because the consumer is a darwin-only shell layer.
+  - name: PI_AUDIO_SSH_TARGET
+    description: user@host of the Pi the pausepi and playpi aliases reach
+    os_family: darwin
+    consumers:
+      - shell/os/darwin/darwin.sh
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
@@ -283,33 +306,6 @@ required_files:
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
       - safekeep
-
-  # A file rather than a value, because newsboat expands no environment variable
-  # anywhere in its config. `include` is the only seam it offers, so the address
-  # and the account go in an included file and the shared config carries the rest.
-  #
-  # Absence is loud and immediate: newsboat treats a missing include as a fatal
-  # config error and refuses to start. That is why the consumer sits under
-  # trust/fleet rather than common/ — a machine with no FreshRSS to reach cannot
-  # write this file, so it must not deploy a config demanding one.
-  #
-  # Capacity narrows it the rest of the way, and leaves one asymmetry worth
-  # naming: the two servers are fleet, so they deploy that config and are not
-  # asked for this file. Nothing there runs newsboat — both take
-  # `system_packages: core` and the package is workstation-tier — so the config
-  # sits inert. A path lives in exactly one directory, and trust is the axis that
-  # keeps it off the machine where its absence would actually bite.
-  - name: newsboat local.config
-    path: ~/.config/newsboat/local.config
-    description: This machine's FreshRSS server and account, included by the shared newsboat config
-    network_trust: fleet
-    capacity: workstation
-    file_must_exist: true
-    restore: >-
-      write two lines — freshrss-url "<base>/api/greader.php" and freshrss-login "<user>" — naming
-      the same server as FRESHRSS_URL
-    consumers:
-      - configs/trust/fleet/.config/newsboat/config
 
   # The whole file, which no other entry here asks for, and the reason is that
   # atuin offers no seam at all. Measured on 18.21.0: ATUIN_CONFIG_DIR is the only
