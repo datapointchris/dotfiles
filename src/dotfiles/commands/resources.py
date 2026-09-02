@@ -14,9 +14,13 @@ import datetime as dt
 from collections.abc import Sequence
 
 import typer
+import yaml
 
 from dotfiles import bridge
+from dotfiles import catalog
+from dotfiles import deploy
 from dotfiles import engine
+from dotfiles import envfile
 from dotfiles import gitconfig
 from dotfiles import offline_bundle
 from dotfiles import paths
@@ -41,6 +45,8 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_result
 from dotfiles.output import warn
+from dotfiles.resources import auth
+from dotfiles.resources import credentials
 from dotfiles.resources import symlinks
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
@@ -195,8 +201,6 @@ def _prerequisites(packages: frozenset[str]) -> tuple[str, ...]:
     if not packages:
         return ()
 
-    from dotfiles import catalog
-
     declared = catalog.load()
     sections = {entry.section for entry in declared.all_entries() if entry.name in packages}
     wanted = (addressed(one.resource, one.name) for section in sections for one in registry.required_by(section))
@@ -221,8 +225,6 @@ def available_sources() -> list[str]:
     A hand-listed enum is missing sections the day it is written, and misses every
     section added afterwards — which is the whole argument against writing one.
     """
-    import yaml
-
     declared = yaml.safe_load(paths.PACKAGES_FILE.read_text())
     return sorted(declared)
 
@@ -239,8 +241,6 @@ def declared_names() -> list[str]:
     the shell's completion process, where a traceback is printed over whatever the
     user was typing, and `apply` refuses on an invalid declaration anyway.
     """
-    from dotfiles import catalog
-
     try:
         return sorted({entry.name for entry in catalog.load().all_entries()})
     except catalog.CatalogError:
@@ -665,8 +665,6 @@ def symlinks_apply(
 @symlinks_app.command('show')
 def symlinks_show(machine: str = MachineOption) -> None:
     """List every symlink this repo declares, and where each one stands."""
-    from dotfiles import deploy
-
     deploy.show(Session.resolve(machine))
 
 
@@ -686,8 +684,6 @@ def symlinks_unlink(
         error('unlink removes everything this repo deployed, leaving the machine unconfigured')
         hint('re-run with --force if that is what you want')
         raise typer.Exit(ExitCode.USAGE)
-
-    from dotfiles import deploy
 
     raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(Session.resolve(machine)) else ExitCode.ISSUE)
 
@@ -719,8 +715,6 @@ def env_apply(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
 @env_app.command('show')
 def env_show(machine: str = MachineOption) -> None:
     """Print the generated section without writing anything."""
-    from dotfiles import envfile
-
     emit_text(envfile.render(Session.resolve(machine).machine))
 
 
@@ -890,8 +884,6 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     moving between this and a `check` row is reading the same verdicts — a second
     palette would make one of them mean something else.
     """
-    from dotfiles.resources import auth
-
     session = Session.resolve(machine)
     found = auth.RESOURCE.observe(session, session.plan).found
     if as_json:
@@ -952,8 +944,6 @@ def credentials_show(
     credential request and reports whether one came back. Opt-in because that is
     what reaches the network and what a GUI helper answers with a window.
     """
-    from dotfiles.resources import credentials
-
     session = Session.resolve(machine)
     found = credentials.RESOURCE.observe(session, session.plan).found
     # Positional, not keyed. It was `{entry.helper.label: ...}`, and a label is the

@@ -817,6 +817,10 @@ def apply_machine(
     before the walk: a run measured against a declaration that will not hold
     together installs whatever survived the parse and reports success.
 
+    **An apply always asks to refresh, and `Session.resolve` drops that ask when the
+    run is offline.** So `--offline` spends nothing on GitHub, on a plugin remote, or
+    on a manager in `syspkg.NETWORKED`.
+
     **A whole-machine apply refuses on any error; a scoped one refuses on the errors
     concerning what it was asked to converge.** Keyed on what the fault is, never on
     whether the selection holds a resource with a *provider*.
